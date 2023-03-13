@@ -11,10 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
+import numpy
 
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from .arr import array
+from .utils import try_convert_from_interoperable_type
+from modin.error_message import ErrorMessage
 
 
-class CSVDispatcher(TextFileDispatcher):
-    """Class handles utils for reading `.csv` files."""
+def norm(x, ord=None, axis=None, keepdims=False):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("linalg.norm", type(x))
+        return numpy.linalg.norm(x, ord=ord, axis=axis, keepdims=keepdims)
+    return x._norm(ord=ord, axis=axis, keepdims=keepdims)

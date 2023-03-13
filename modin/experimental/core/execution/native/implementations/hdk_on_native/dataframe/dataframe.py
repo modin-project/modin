@@ -30,6 +30,7 @@ from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 import pandas as pd
+import typing
 from typing import List, Hashable, Optional, Tuple, Union
 
 from ..df_algebra import (
@@ -969,6 +970,19 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        # In case of different number of columns, HDK performs
+        # slowly and supports only numeric column types.
+        # See https://github.com/intel-ai/hdk/issues/182
+        # To work around this issue, perform concatenation
+        # with arrow.
+        if (
+            len(other_modin_frames) == 0
+            or len(self.columns) == 0
+            or any((len(f.columns) != len(self.columns) for f in other_modin_frames))
+            or any((set(f._dtypes) != set(self._dtypes) for f in other_modin_frames))
+        ):
+            return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
+
         # determine output columns
         new_cols_map = OrderedDict()
         for col in self.columns:
@@ -1016,8 +1030,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = frame.ref(col)
                 else:
                     assert index_width == 1, "unexpected index width"
-                    aligned_index = ["__index__"]
-                    exprs["__index__"] = frame.ref("__rowid__")
+                    aligned_index = self._mangle_index_names([None])
+                    exprs[aligned_index[0]] = frame.ref("__rowid__")
                     aligned_index_dtypes = [get_dtype(int)]
                     uses_rowid = True
                 aligned_dtypes = aligned_index_dtypes + new_dtypes
@@ -1053,6 +1067,202 @@ class HdkOnNativeDataframe(PandasDataframe):
             )
 
         return new_frame
+
+    def _union_all_arrow(self, other_modin_frames, join, sort, ignore_index):
+        """
+        Concatenate frames' rows, using the PyArrow API.
+
+        Parameters
+        ----------
+        other_modin_frames : list of HdkOnNativeDataframe
+            Frames to concat.
+        join : {"outer", "inner"}
+            How to handle columns with mismatched names.
+            "inner" - drop such columns. "outer" - fill
+            with NULLs.
+        sort : bool
+            Sort unaligned columns for 'outer' join.
+        ignore_index : bool
+            Ignore index columns.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            The new frame.
+        """
+
+        class FrameData:
+            def __init__(self, frame):
+                if not frame._has_arrow_table():
+                    frame._execute()
+                if not frame._has_arrow_table():
+                    raise NotImplementedError("PyArrow tables concatenation")
+                self.index = frame.index
+                self.columns = frame.columns
+                self.index_cols = frame._index_cols
+                self.table: pyarrow.Table = frame._partitions[0][0].arrow_table
+                # To be removed after #5567 merge
+                if self.index_cols is not None:
+                    self.index_cols = [f"F_{n}" for n in self.index_cols]
+
+        # This function to be removed after #5567 merge
+        def mangle_index_names(names):
+            return [
+                f"F___index__{i}_{'__None__' if n is None else n}"
+                for i, n in enumerate(names)
+            ]
+
+        frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
+        col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
+
+        def add_col_field(table, col_name, table_col_name):
+            key = (col_name, table_col_name)
+            field = table.field(table_col_name)
+            cur_field = col_fields.get(key, None)
+            if (
+                (cur_field is None)
+                or pyarrow.types.is_null(cur_field.type)
+                or (
+                    (not pyarrow.types.is_string(cur_field.type))
+                    and (not pyarrow.types.is_null(field.type))
+                    and (
+                        pyarrow.types.is_string(field.type)
+                        or (field.type.bit_width > cur_field.type.bit_width)
+                    )
+                )
+            ):
+                col_fields[key] = field
+
+        if join == "outer":
+            frames = [f for f in frames if len(f.columns) != 0 or len(f.index) != 0]
+            for frame in frames:
+                table = frame.table
+                idx_width = 0 if frame.index_cols is None else len(frame.index_cols)
+                table_cols = table.column_names[idx_width:]
+                for col_name, table_col_name in zip(frame.columns, table_cols):
+                    add_col_field(table, col_name, table_col_name)
+        else:
+            col_names = {c for c in frames[0].columns} if len(frames) > 1 else []
+            if len(col_names) != 0:
+                for frame in frames[1:]:
+                    for name in list(col_names):
+                        if name not in frame.columns:
+                            col_names.remove(name)
+                if len(col_names) != 0:
+                    for frame in frames:
+                        table = frame.table
+                        idx_width = (
+                            0 if frame.index_cols is None else len(frame.index_cols)
+                        )
+                        table_cols = table.column_names[idx_width:]
+                        for col_name, table_col_name in zip(frame.columns, table_cols):
+                            if col_name in col_names:
+                                add_col_field(table, col_name, table_col_name)
+
+        if len(col_fields) == 0:
+            if ignore_index or len(frames) == 0:
+                idx = RangeIndex(0, sum(len(f.table) for f in frames))
+            else:
+                idx = frames[0].index.append([f.index for f in frames[1:]])
+            idx_cols = mangle_index_names(idx.names)
+            idx_df = pd.DataFrame(index=idx).reset_index()
+            union = pyarrow.Table.from_pandas(idx_df).rename_columns(idx_cols)
+        else:
+            # Process empty frames with non-empty index
+            for frame in frames:
+                if len(frame.table) == 0 and len(frame.index) != 0:
+                    if ignore_index:
+                        frame.index = pd.RangeIndex(0, len(frame.index))
+                    idx = frame.index
+                    frame.index_cols = mangle_index_names(idx.names)
+                    idx_df = pd.DataFrame(index=idx).reset_index()
+                    frame.table = pyarrow.Table.from_pandas(idx_df)
+                    frame.table = frame.table.rename_columns(frame.index_cols)
+
+            idx_cols = None
+            idx_table = None
+            idx_fields: typing.OrderedDict[str, pyarrow.Field] = OrderedDict()
+
+            if not ignore_index:
+                idx_cols = frames[0].index_cols
+                idx_equal = idx_cols is not None
+
+                if idx_equal:
+                    idx_width = len(idx_cols)
+                    idx_types = [frames[0].table.field(c).type for c in idx_cols]
+                    for frame in frames[1:]:
+                        table = frame.table
+                        frame_idx_cols = frame.index_cols
+                        if (
+                            (frame_idx_cols is None)
+                            or (len(frame_idx_cols) != idx_width)
+                            or any(
+                                idx_types[i] != table.field(frame_idx_cols[i]).type
+                                for i in range(idx_width)
+                            )
+                        ):
+                            idx_equal = False
+                            break
+
+                if idx_equal:
+                    idx = frames[0].index
+                    if isinstance(idx, MultiIndex):
+                        idx_cols = mangle_index_names(idx.names)
+                    else:
+                        idx_names = {f.index.name for f in frames}
+                        idx_names = [None] if len(idx_names) > 1 else [idx.name]
+                        idx_cols = mangle_index_names(idx_names)
+
+                    # Rename index columns
+                    for frame in frames:
+                        table = frame.table
+                        new_names = idx_cols + table.column_names[len(idx_cols) :]
+                        frame.table = table.rename_columns(new_names)
+
+                    for name in idx_cols:
+                        idx_fields[name] = frames[0].table.field(name)
+                else:
+                    # Align index columns
+                    idx = frames[0].index.append([f.index for f in frames[1:]])
+                    idx_cols = mangle_index_names(idx.names)
+                    idx_df = pd.DataFrame(index=idx).reset_index()
+                    idx_table = pyarrow.Table.from_pandas(idx_df)
+                    idx_table = idx_table.rename_columns(idx_cols)
+
+            if sort:
+                col_fields = OrderedDict(sorted(col_fields.items(), key=lambda i: i[0]))
+
+            schema = pyarrow.schema(
+                list(idx_fields.values()) + list(col_fields.values())
+            )
+
+            tables = []
+            for frame in frames:
+                data = []
+                table = frame.table
+                col_names = table.column_names
+                for field in schema:
+                    if field.name in col_names:
+                        data.append(table.column(field.name))
+                    else:
+                        data.append(pyarrow.nulls(len(table), field.type))
+                tables.append(pyarrow.table(data, schema=schema))
+
+            union = pyarrow.concat_tables(tables)
+
+            if idx_table is not None:
+                for i, name in enumerate(idx_table.column_names):
+                    union = union.add_column(i, idx_table.field(i), idx_table.column(i))
+
+        # To be removed after #5567 merge
+        if idx_cols is not None:
+            idx_cols = [n[2:] for n in idx_cols]
+
+        return self.from_arrow(
+            union,
+            index_cols=idx_cols,
+            columns=[k[0] for k in col_fields.keys()],
+        )
 
     def _join_by_index(self, other_modin_frames, how, sort, ignore_index):
         """
@@ -1174,13 +1384,13 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         axis = Axis(axis)
-        if not other_modin_frames:
-            return self
-
         if axis == Axis.ROW_WISE:
             return self._union_all(
                 axis.value, other_modin_frames, join, sort, ignore_index
             )
+
+        if not other_modin_frames:
+            return self
 
         base = self
         for frame in other_modin_frames:
@@ -2505,7 +2715,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if columns is not None:
             new_columns = columns
-            new_index = pd.RangeIndex(at.num_rows) if index is None else index
+            new_index = index
         elif index_cols:
             data_cols = [col for col in at.column_names if col not in index_cols]
             new_columns = pd.Index(data=data_cols, dtype="O")
@@ -2513,8 +2723,10 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             assert index is None
             new_columns = pd.Index(data=at.column_names, dtype="O")
-            new_index = pd.RangeIndex(at.num_rows)
+            new_index = None
 
+        dtype_index = [] if index_cols is None else list(index_cols)
+        dtype_index.extend(new_columns)
         new_dtypes = []
 
         for col in at.columns:
@@ -2535,7 +2747,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=new_columns,
             row_lengths=new_lengths,
             column_widths=new_widths,
-            dtypes=pd.Series(data=new_dtypes, index=at.column_names),
+            dtypes=pd.Series(data=new_dtypes, index=dtype_index),
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )

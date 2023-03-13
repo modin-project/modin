@@ -11,10 +11,28 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
+import numpy
 
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from .arr import array
+from .utils import try_convert_from_interoperable_type
+from modin.error_message import ErrorMessage
 
 
-class CSVDispatcher(TextFileDispatcher):
-    """Class handles utils for reading `.csv` files."""
+def tanh(
+    x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("tanh", type(x))
+        return numpy.tanh(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    return x.tanh(
+        out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
+    )

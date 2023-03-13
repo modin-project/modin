@@ -34,9 +34,7 @@ def _create_array(dtype, shape, order, subok, numpy_method):
 
 def zeros_like(a, dtype=None, order="K", subok=True, shape=None):
     if not isinstance(a, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for zeros_like, not {type(a)}. Defaulting to NumPy."
-        )
+        ErrorMessage.bad_type_for_numpy_op("zeros_like", type(a))
         return numpy.zeros_like(a, dtype=dtype, order=order, subok=subok, shape=shape)
     dtype = a.dtype if dtype is None else dtype
     shape = a.shape if shape is None else shape
@@ -45,10 +43,17 @@ def zeros_like(a, dtype=None, order="K", subok=True, shape=None):
 
 def ones_like(a, dtype=None, order="K", subok=True, shape=None):
     if not isinstance(a, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for ones_like, not {type(a)}. Defaulting to NumPy."
-        )
+        ErrorMessage.bad_type_for_numpy_op("ones_like", type(a))
         return numpy.ones_like(a, dtype=dtype, order=order, subok=subok, shape=shape)
     dtype = a.dtype if dtype is None else dtype
     shape = a.shape if shape is None else shape
     return _create_array(dtype, shape, order, subok, "ones")
+
+
+def tri(N, M=None, k=0, dtype=float, like=None):
+    if like is not None:
+        ErrorMessage.single_warning(
+            "Modin NumPy does not support the `like` argument for np.tri. Defaulting to `like=None`."
+        )
+    ErrorMessage.single_warning("np.tri defaulting to NumPy.")
+    return array(numpy.tri(N, M=M, k=k, dtype=dtype))

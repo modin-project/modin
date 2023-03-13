@@ -42,10 +42,6 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 class TextFileDispatcher(FileDispatcher):
     """Class handles utils for reading text formats files."""
 
-    # The variable allows to set a function with which one partition will be read;
-    # Used in dispatchers and parsers
-    read_callback = None
-
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
         """
@@ -913,19 +909,14 @@ class TextFileDispatcher(FileDispatcher):
             New query compiler, created from `new_frame`.
         """
         new_index, row_lengths = cls._define_index(index_ids, index_name)
+        # Compose modin partitions from `partition_ids`
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+
         # Compute dtypes by collecting and combining all of the partition dtypes. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
-        # Compose modin partitions from `partition_ids`
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
         new_frame = cls.frame_cls(
             partition_ids,
@@ -1033,7 +1024,6 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
-                callback=cls.read_callback,
                 reason=fallback_reason,
                 **kwargs,
             )
@@ -1121,7 +1111,7 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=cls.read_callback, **partition_kwargs
+            splits, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(

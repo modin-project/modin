@@ -93,6 +93,8 @@ class Series(BasePandasDataset):
         fastpath=False,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
@@ -106,6 +108,18 @@ class Series(BasePandasDataset):
                         + "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler
+        if isinstance(data, array):
+            if data._ndim == 2:
+                raise ValueError("Data must be 1-dimensional")
+            query_compiler = data._query_compiler.copy()
+            if index is not None:
+                query_compiler.index = index
+            if dtype is not None:
+                query_compiler = query_compiler.astype(
+                    {col_name: dtype for col_name in query_compiler.columns}
+                )
+            if name is None:
+                query_compiler.columns = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
         if query_compiler is None:
             # Defaulting to pandas
             warnings.warn(
@@ -1196,6 +1210,12 @@ class Series(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).isin(values, shape_hint="column")
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
@@ -1260,6 +1280,14 @@ class Series(BasePandasDataset):
         """
         Map values of Series according to input correspondence.
         """
+        if isinstance(arg, type(self)):
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
+            # some performance problems.
+            # TODO: A better way of doing so could be passing this `arg` as a query compiler
+            # and broadcast accordingly.
+            arg = arg._to_pandas()
+
         if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 
@@ -1951,7 +1979,7 @@ class Series(BasePandasDataset):
         else:
             from ..numpy.arr import array
 
-            return array(_query_compiler=self._query_compiler, _ndim=1)
+            return array(self, copy=copy)
 
     tolist = to_list
 
@@ -2110,14 +2138,6 @@ class Series(BasePandasDataset):
             errors=errors,
             try_cast=try_cast,
         )
-
-    def xs(
-        self, key, axis=0, level=None, drop_level=True
-    ):  # pragma: no cover # noqa: PR01, D200
-        """
-        Return cross-section from the Series/DataFrame.
-        """
-        raise NotImplementedError("Not Yet implemented.")
 
     @property
     def attrs(self):  # noqa: RT01, D200

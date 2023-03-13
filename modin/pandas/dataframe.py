@@ -124,6 +124,8 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
@@ -160,7 +162,18 @@ class DataFrame(BasePandasDataset):
                 if columns is None:
                     columns = slice(None)
                 self._query_compiler = data.loc[index, columns]._query_compiler
-
+        elif isinstance(data, array):
+            self._query_compiler = data._query_compiler.copy()
+            if copy is not None and not copy:
+                data._add_sibling(self)
+            if columns is not None and not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if columns is not None:
+                self.set_axis(columns, axis=1, inplace=True)
+            if index is not None:
+                self.set_axis(index, axis=0, inplace=True)
+            if dtype is not None:
+                self.astype(dtype, copy=False)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -318,8 +331,6 @@ class DataFrame(BasePandasDataset):
         df = self[subset] if subset is not None else self
         new_qc = df._query_compiler.duplicated(keep=keep)
         duplicates = self._reduce_dimension(new_qc)
-        # remove Series name which was assigned automatically by .apply in QC
-        duplicates.name = None
         return duplicates
 
     @property
@@ -1258,6 +1269,12 @@ class DataFrame(BasePandasDataset):
             downcast=downcast,
             **kwargs,
         )
+
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `DataFrame` are contained in `values`.
+        """
+        return super(DataFrame, self).isin(values)
 
     def iterrows(self):  # noqa: D200
         """
@@ -2567,14 +2584,6 @@ class DataFrame(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(query_compiler, inplace)
 
-    def xs(self, key, axis=0, level=None, drop_level=True):  # noqa: PR01, RT01, D200
-        """
-        Return cross-section from the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
-        )
-
     def _getitem_column(self, key):
         """
         Get column specified by `key`.
@@ -2760,7 +2769,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
+            if not isinstance(value, (Series, Categorical, np.ndarray)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

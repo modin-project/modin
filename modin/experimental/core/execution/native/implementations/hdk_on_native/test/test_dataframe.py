@@ -1765,6 +1765,21 @@ class TestBinaryOp:
         run_and_compare(filter_and, data=self.cmp_data)
         run_and_compare(filter_or, data=self.cmp_data)
 
+    def test_string_bin_op(self):
+        def test_bin_op(df, op_name, op_arg, **kwargs):
+            return getattr(df, op_name)(op_arg)
+
+        bin_ops = {
+            "__add__": "_sfx",
+            "__radd__": "pref_",
+            "__mul__": 10,
+        }
+
+        for op, arg in bin_ops.items():
+            run_and_compare(
+                test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
+            )
+
 
 class TestDateTime:
     datetime_data = {
@@ -2252,6 +2267,7 @@ class TestArrowExecution:
             drop_rename_concat,
             data=self.data1,
             data2=self.data2,
+            force_lazy=False,
             force_arrow_execute=True,
         )
 

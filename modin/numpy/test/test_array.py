@@ -18,8 +18,30 @@ import warnings
 import modin.numpy as np
 
 
-@pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
-def test_repr(size):
+@pytest.fixture
+def change_numpy_print_threshold():
+    prev_threshold = numpy.get_printoptions()["threshold"]
+    numpy.set_printoptions(threshold=50)
+    yield prev_threshold
+    numpy.set_printoptions(threshold=prev_threshold)
+
+
+@pytest.mark.parametrize(
+    "size",
+    [
+        100,
+        (2, 100),
+        (100, 2),
+        (1, 100),
+        (100, 1),
+        (100, 100),
+        (6, 100),
+        (100, 6),
+        (100, 7),
+        (7, 100),
+    ],
+)
+def test_repr(size, change_numpy_print_threshold):
     numpy_arr = numpy.random.randint(-100, 100, size=size)
     modin_arr = np.array(numpy_arr)
     assert repr(modin_arr) == repr(numpy_arr)
@@ -39,6 +61,88 @@ def test_dtype():
     modin_arr = modin_arr == modin_arr.T
     numpy_arr = numpy_arr == numpy_arr.T
     assert modin_arr.dtype == numpy_arr.dtype
+
+
+def test_conversion():
+    import modin.pandas as pd
+    from modin.numpy.utils import try_convert_from_interoperable_type
+
+    df = pd.DataFrame(numpy.random.randint(0, 100, size=(100, 100)))
+    series = df.iloc[0]
+    df_converted = try_convert_from_interoperable_type(df)
+    assert isinstance(df_converted, np.array)
+    series_converted = try_convert_from_interoperable_type(series)
+    assert isinstance(series_converted, np.array)
+    numpy.testing.assert_array_equal(df_converted._to_numpy(), df.to_numpy())
+    numpy.testing.assert_array_equal(series_converted._to_numpy(), series.to_numpy())
+    pandas_df = df._to_pandas()
+    pandas_series = series._to_pandas()
+    pandas_converted = try_convert_from_interoperable_type(pandas_df)
+    assert isinstance(pandas_converted, type(pandas_df))
+    assert pandas_converted.equals(pandas_df)
+    pandas_converted = try_convert_from_interoperable_type(pandas_series)
+    assert isinstance(pandas_converted, type(pandas_series))
+    assert pandas_converted.equals(pandas_series)
+
+
+def test_to_df():
+    import modin.pandas as pd
+    from modin.pandas.test.utils import df_equals
+
+    import pandas
+
+    modin_df = pd.DataFrame(np.array([1, 2, 3]))
+    pandas_df = pandas.DataFrame(numpy.array([1, 2, 3]))
+    df_equals(pandas_df, modin_df)
+    modin_df = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6]]))
+    pandas_df = pandas.DataFrame(numpy.array([[1, 2, 3], [4, 5, 6]]))
+    df_equals(pandas_df, modin_df)
+    for kw in [{}, {"dtype": str}]:
+        modin_df, pandas_df = [
+            lib[0].DataFrame(
+                lib[1].array([[1, 2, 3], [4, 5, 6]]),
+                columns=["col 0", "col 1", "col 2"],
+                index=pd.Index([4, 6]),
+                **kw
+            )
+            for lib in ((pd, np), (pandas, numpy))
+        ]
+        df_equals(pandas_df, modin_df)
+    df_equals(pandas_df, modin_df)
+
+
+def test_to_series():
+    import modin.pandas as pd
+    from modin.pandas.test.utils import df_equals
+
+    import pandas
+
+    with pytest.raises(ValueError, match="Data must be 1-dimensional"):
+        pd.Series(np.array([[1, 2, 3], [4, 5, 6]]))
+    modin_series = pd.Series(np.array([1, 2, 3]), index=pd.Index([-1, -2, -3]))
+    pandas_series = pandas.Series(
+        numpy.array([1, 2, 3]), index=pandas.Index([-1, -2, -3])
+    )
+    df_equals(modin_series, pandas_series)
+    modin_series = pd.Series(
+        np.array([1, 2, 3]), index=pd.Index([-1, -2, -3]), dtype=str
+    )
+    pandas_series = pandas.Series(
+        numpy.array([1, 2, 3]), index=pandas.Index([-1, -2, -3]), dtype=str
+    )
+    df_equals(modin_series, pandas_series)
+
+
+def test_update_inplace():
+    out = np.array([1, 2, 3])
+    arr1 = np.array([1, 2, 3])
+    arr2 = np.array(out, copy=False)
+    np.add(arr1, arr1, out=out)
+    numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
+    out = np.array([1, 2, 3])
+    arr2 = np.array(out, copy=False)
+    np.add(arr1, arr1, out=out, where=False)
+    numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
 
 
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])

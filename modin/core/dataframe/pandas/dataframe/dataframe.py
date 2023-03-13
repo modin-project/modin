@@ -1103,14 +1103,19 @@ class PandasDataframe(ClassLogger):
         """
         new_dtypes = self._dtypes
         if row_positions is not None:
+            # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
+            # in order to use the cached `row_lengths` values for the new frame.
+            # If the frame's is re-partitioned using the "standard" partitioning,
+            # then knowing that, we can compute new row lengths.
             ordered_rows = self._partition_mgr_cls.map_axis_partitions(
-                0, self._partitions, lambda df: df.iloc[row_positions]
+                0,
+                self._partitions,
+                lambda df: df.iloc[row_positions],
+                keep_partitioning=True,
             )
             row_idx = self.index[row_positions]
 
-            if self._partitions.shape[0] != ordered_rows.shape[0] or len(
-                row_idx
-            ) != len(self.index):
+            if len(row_idx) != len(self.index):
                 # The frame was re-partitioned along the 0 axis during reordering using
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new row lengths.
@@ -1126,16 +1131,21 @@ class PandasDataframe(ClassLogger):
             row_idx = self.index
             new_lengths = self._row_lengths_cache
         if col_positions is not None:
+            # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
+            # in order to use the cached `column_widths` values for the new frame.
+            # If the frame's is re-partitioned using the "standard" partitioning,
+            # then knowing that, we can compute new column widths.
             ordered_cols = self._partition_mgr_cls.map_axis_partitions(
-                1, ordered_rows, lambda df: df.iloc[:, col_positions]
+                1,
+                ordered_rows,
+                lambda df: df.iloc[:, col_positions],
+                keep_partitioning=True,
             )
             col_idx = self.columns[col_positions]
             if new_dtypes is not None:
                 new_dtypes = self._dtypes.iloc[col_positions]
 
-            if self._partitions.shape[1] != ordered_cols.shape[1] or len(
-                col_idx
-            ) != len(self.columns):
+            if len(col_idx) != len(self.columns):
                 # The frame was re-partitioned along the 1 axis during reordering using
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new column widths.
@@ -1599,7 +1609,7 @@ class PandasDataframe(ClassLogger):
 
         return _tree_reduce_func
 
-    def _compute_tree_reduce_metadata(self, axis, new_parts):
+    def _compute_tree_reduce_metadata(self, axis, new_parts, dtypes=None):
         """
         Compute the metadata for the result of reduce function.
 
@@ -1609,6 +1619,10 @@ class PandasDataframe(ClassLogger):
             The axis on which reduce function was applied.
         new_parts : NumPy 2D array
             Partitions with the result of applied function.
+        dtypes : str, optional
+            The data types for the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and this allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -1623,12 +1637,18 @@ class PandasDataframe(ClassLogger):
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
-        new_dtypes = None
+        if dtypes == "copy":
+            dtypes = self._dtypes
+        elif dtypes is not None:
+            dtypes = pandas.Series(
+                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+            )
+
         result = self.__constructor__(
             new_parts,
             *new_axes,
             *new_axes_lengths,
-            new_dtypes,
+            dtypes,
         )
         return result
 
@@ -1667,7 +1687,7 @@ class PandasDataframe(ClassLogger):
         new_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, self._partitions, function
         )
-        return self._compute_tree_reduce_metadata(axis.value, new_parts)
+        return self._compute_tree_reduce_metadata(axis.value, new_parts, dtypes=dtypes)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def tree_reduce(
@@ -1783,7 +1803,7 @@ class PandasDataframe(ClassLogger):
         pass
 
     @lazy_metadata_decorator(apply_axis="both")
-    def fold(self, axis, func):
+    def fold(self, axis, func, new_columns=None):
         """
         Perform a function across an entire axis.
 
@@ -1793,6 +1813,11 @@ class PandasDataframe(ClassLogger):
             The axis to apply over.
         func : callable
             The function to apply.
+        new_columns : list-like, optional
+            The columns of the result.
+            Must be the same length as the columns' length of `self`.
+            The column labels of `self` may change during an operation so
+            we may want to pass the new column labels in (e.g., see `cat.codes`).
 
         Returns
         -------
@@ -1803,6 +1828,13 @@ class PandasDataframe(ClassLogger):
         -----
         The data shape is not changed (length and width of the table).
         """
+        if new_columns is not None:
+            if self._columns_cache is not None:
+                assert len(self._columns_cache) == len(
+                    new_columns
+                ), "The length of `new_columns` doesn't match the columns' length of `self`"
+            self._columns_cache = new_columns
+
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
         )
@@ -2019,13 +2051,48 @@ class PandasDataframe(ClassLogger):
         # If this df is empty, we don't want to try and shuffle or sort.
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()
-        # If this df only has one row partition, we don't want to do a shuffle and sort - we can
-        # just do a full-axis sort.
-        if len(self._partitions) == 1:
-            return self.apply_full_axis(
-                1,
-                sort_function,
-            )
+
+        ideal_num_new_partitions = len(self._partitions)
+        m = len(self.index) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(
+            ideal_num_new_partitions * len(self.index)
+        )
+        # If this df is overpartitioned, we try to sample each partition with probability
+        # greater than 1, which leads to an error. In this case, we can do one of the following
+        # two things. If there is only enough rows for one partition, and we have only 1 column
+        # partition, we can just combine the overpartitioned df into one partition, and sort that
+        # partition. If there is enough data for more than one partition, we can tell the sorting
+        # algorithm how many partitions we want to end up with, so it samples and finds pivots
+        # according to that.
+        if sampling_probability >= 1:
+            from modin.config import MinPartitionSize
+
+            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
+            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                modin_frame = self
+                if self._partitions.shape[1] != 1:
+                    # In this case, we have more than one column partition, so we first need
+                    # to create row-wise partitions with all of the columns, so we don't have
+                    # a KeyError when sorting. This method can be slow if we have very very
+                    # many columns.
+                    new_partitions = self._partition_mgr_cls.row_partitions(
+                        self._partitions
+                    )
+                    new_partitions = np.array(
+                        [[partition] for partition in new_partitions]
+                    )
+                    modin_frame = self.__constructor__(
+                        new_partitions,
+                        *self.axes,
+                        self._row_lengths_cache,
+                        [len(self.columns)],
+                        self.dtypes,
+                    )
+                return modin_frame.apply_full_axis(
+                    0,
+                    sort_function,
+                )
+
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
@@ -2038,8 +2105,33 @@ class PandasDataframe(ClassLogger):
             columns[0],
             method,
             ascending[0] if is_list_like(ascending) else ascending,
+            ideal_num_new_partitions,
             **kwargs,
         )
+        if ideal_num_new_partitions < len(self._partitions):
+            if len(self._partitions) % ideal_num_new_partitions == 0:
+                joining_partitions = np.split(
+                    self._partitions, ideal_num_new_partitions
+                )
+            else:
+                joining_partitions = np.split(
+                    self._partitions,
+                    range(
+                        0,
+                        len(self._partitions),
+                        round(len(self._partitions) / ideal_num_new_partitions),
+                    )[1:],
+                )
+
+            new_partitions = np.array(
+                [
+                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
+                    for ptn_grp in joining_partitions
+                ]
+            )
+        else:
+            new_partitions = self._partitions
+
         major_col_partition_index = self.columns.get_loc(columns[0])
         cols_seen = 0
         index = -1
@@ -2049,7 +2141,7 @@ class PandasDataframe(ClassLogger):
                 index = i
                 break
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
-            self._partitions,
+            new_partitions,
             index,
             shuffling_functions,
             sort_function,
@@ -2193,6 +2285,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions: bool = False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2221,8 +2314,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2250,6 +2348,7 @@ class PandasDataframe(ClassLogger):
             dtypes=dtypes,
             other=None,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             sync_labels=sync_labels,
             pass_axis_lengths_to_partitions=pass_axis_lengths_to_partitions,
         )
@@ -2643,6 +2742,7 @@ class PandasDataframe(ClassLogger):
         enumerate_partitions=False,
         dtypes=None,
         keep_partitioning=True,
+        num_splits=None,
         sync_labels=True,
         pass_axis_lengths_to_partitions=False,
     ):
@@ -2673,8 +2773,13 @@ class PandasDataframe(ClassLogger):
             because there are functions that always result in a particular data
             type, and allows us to avoid (re)computing it.
         keep_partitioning : boolean, default: True
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         sync_labels : boolean, default: True
             Synchronize external indexes (`new_index`, `new_columns`) with internal indexes.
             This could be used when you're certain that the indices in partitions are equal to
@@ -2724,6 +2829,7 @@ class PandasDataframe(ClassLogger):
             apply_indices=apply_indices,
             enumerate_partitions=enumerate_partitions,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}
@@ -2745,24 +2851,27 @@ class PandasDataframe(ClassLogger):
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
                     )
-                elif (
-                    axis == 1
-                    and self._row_lengths_cache is not None
-                    and len(new_index) == sum(self._row_lengths_cache)
-                ):
-                    kw["row_lengths"] = self._row_lengths_cache
+                elif axis == 1:
+                    if self._row_lengths_cache is not None and len(new_index) == sum(
+                        self._row_lengths_cache
+                    ):
+                        kw["row_lengths"] = self._row_lengths_cache
+                    elif len(new_index) == 1 and new_partitions.shape[0] == 1:
+                        kw["row_lengths"] = [1]
             if kw["column_widths"] is None and new_columns is not None:
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
                     )
-                elif (
-                    axis == 0
-                    and self._column_widths_cache is not None
-                    and len(new_columns) == sum(self._column_widths_cache)
-                ):
-                    kw["column_widths"] = self._column_widths_cache
+                elif axis == 0:
+                    if self._column_widths_cache is not None and len(
+                        new_columns
+                    ) == sum(self._column_widths_cache):
+                        kw["column_widths"] = self._column_widths_cache
+                    elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
+                        kw["column_widths"] = [1]
+
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
         )
