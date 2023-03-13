@@ -18,12 +18,12 @@ import warnings
 import pandas
 import numpy as np
 
-from modin.core.io.file_dispatcher import FileDispatcher
+from modin.core.io import SQLDispatcher
 from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
 from modin.config import NPartitions
 
 
-class SQLExperimentalDispatcher(FileDispatcher):
+class SQLExperimentalDispatcher(SQLDispatcher):
     """Class handles experimental utils for reading SQL queries or database tables."""
 
     __read_sql_with_offset = None
@@ -116,7 +116,7 @@ class SQLExperimentalDispatcher(FileDispatcher):
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
             warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnDaskIO.read_sql(
+            return cls.base_io.read_sql(
                 sql,
                 con,
                 index_col,

@@ -55,6 +55,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         frame_partition_cls=PandasOnRayDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayDataframe,
+        base_io=PandasOnRayIO,
     )
     read_csv_glob = type(
         "", (RayWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args

@@ -57,6 +57,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
         frame_partition_cls=PandasOnUnidistDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnUnidistDataframe,
+        base_io=PandasOnUnidistIO,
     )
     read_csv_glob = type(
         "", (UnidistWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args

@@ -57,6 +57,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         frame_partition_cls=PandasOnDaskDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnDaskDataframe,
+        base_io=PandasOnDaskIO,
     )
     read_csv_glob = type(
         "", (DaskWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args
