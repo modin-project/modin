@@ -489,6 +489,9 @@ class TestCsv:
                 str_non_unique_cols, unique_filename, mangle_dupe_cols=True
             )
 
+    @pytest.mark.filterwarnings(
+        "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
+    )
     def test_read_csv_does_not_warn_mangle_dupe_cols_kwarg(self):
         with ensure_clean() as unique_filename:
             eval_io_from_str(
