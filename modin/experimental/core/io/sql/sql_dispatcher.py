@@ -19,7 +19,6 @@ import pandas
 import numpy as np
 
 from modin.core.io import SQLDispatcher
-from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
 from modin.config import NPartitions
 
 
@@ -43,66 +42,21 @@ class SQLExperimentalDispatcher(SQLDispatcher):
         cls,
         sql,
         con,
-        index_col=None,
-        coerce_float=True,
-        params=None,
-        parse_dates=None,
-        columns=None,
-        chunksize=None,
-        partition_column=None,
-        lower_bound=None,
-        upper_bound=None,
-        max_sessions=None,
-    ):
+        index_col,
+        coerce_float,
+        params,
+        parse_dates,
+        columns,
+        chunksize,
+        partition_column,
+        lower_bound,
+        upper_bound,
+        max_sessions,
+    ):  # noqa: PR01
         """
         Read SQL query or database table into a DataFrame.
 
-        The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
-        such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
-        parameters, the user will be able to specify how to partition the imported data.
-
-        Parameters
-        ----------
-        sql : str or SQLAlchemy Selectable (select or text object)
-            SQL query to be executed or a table name.
-        con : SQLAlchemy connectable or str
-             Connection to database (sqlite3 connections are not supported).
-        index_col : str or list of str, optional
-            Column(s) to set as index(MultiIndex).
-        coerce_float : bool, default: True
-            Attempts to convert values of non-string, non-numeric objects
-            (like decimal.Decimal) to floating point, useful for SQL result sets.
-        params : list, tuple or dict, optional
-            List of parameters to pass to ``execute`` method. The syntax used
-            to pass parameters is database driver dependent. Check your
-            database driver documentation for which of the five syntax styles,
-            described in PEP 249's paramstyle, is supported.
-        parse_dates : list or dict, optional
-            The behavior is as follows:
-
-            - List of column names to parse as dates.
-            - Dict of `{column_name: format string}` where format string is
-              strftime compatible in case of parsing string times, or is one of
-              (D, s, ns, ms, us) in case of parsing integer timestamps.
-            - Dict of `{column_name: arg dict}`, where the arg dict corresponds
-              to the keyword arguments of ``pandas.to_datetime``.
-              Especially useful with databases without native Datetime support,
-              such as SQLite.
-        columns : list, optional
-            List of column names to select from SQL table (only used when reading a
-            table).
-        chunksize : int, optional
-            If specified, return an iterator where `chunksize` is the number of rows
-            to include in each chunk.
-        partition_column : str, optional
-            Column name used for data partitioning between the workers
-            (MUST be an INTEGER column).
-        lower_bound : int, optional
-            The minimum value to be requested from the `partition_column`.
-        upper_bound : int, optional
-            The maximum value to be requested from the `partition_column`.
-        max_sessions : int, optional
-            The maximum number of simultaneous connections allowed to use.
+        Documentation for parameters can be found at `modin.read_sql`.
 
         Returns
         -------
