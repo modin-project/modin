@@ -602,18 +602,18 @@ class TextFileDispatcher(FileDispatcher):
 
     @classmethod
     def _launch_tasks(
-        cls, *args, splits: list, **partition_kwargs
+        cls, splits: list, *partition_args, **partition_kwargs
     ) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
 
         Parameters
         ----------
-        *args : tuple
-            Positional arguments to be passed to the parser function.
         splits : list
             List of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.).
+        *partition_args : tuple
+            Positional arguments to be passed to the parser function.
         **partition_kwargs : dict
             `kwargs` that should be passed to the parser function.
 
@@ -629,11 +629,12 @@ class TextFileDispatcher(FileDispatcher):
         partition_ids = [None] * len(splits)
         index_ids = [None] * len(splits)
         dtypes_ids = [None] * len(splits)
+        func = cls.preprocess_func()
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                func=cls.preprocess_func(),
-                f_args=args,
+                func=func,
+                f_args=partition_args,
                 f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
             )
@@ -1126,9 +1127,9 @@ class TextFileDispatcher(FileDispatcher):
         fname = partition_kwargs.pop("fname")
         kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
+            splits,
             fname,
             kwargs_ref,
-            splits=splits,
             num_splits=num_splits,
         )
 
