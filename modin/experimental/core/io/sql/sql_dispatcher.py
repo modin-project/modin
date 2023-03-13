@@ -116,7 +116,6 @@ class SQLExperimentalDispatcher(SQLDispatcher):
                     chunksize,
                 ),
                 num_returns=num_splits + 1,
-                pure=False,
             )
             partition_ids.append(
                 [cls.frame_partition_cls(obj) for obj in partition_id[:-1]]

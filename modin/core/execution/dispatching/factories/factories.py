@@ -474,7 +474,7 @@ class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
-        supported_engines = ("Ray", "Unidist")
+        supported_engines = ("Ray", "Unidist", "Dask")
         if Engine.get() not in supported_engines:
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
