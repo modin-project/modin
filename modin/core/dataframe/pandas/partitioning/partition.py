@@ -15,12 +15,16 @@
 
 from abc import ABC
 from copy import copy
+import logging
+import uuid
 
 import pandas
 from pandas.api.types import is_scalar
+from pandas.util import cache_readonly
 
 from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
+from modin.logging import get_logger
 
 
 class PandasDataframePartition(ABC):  # pragma: no cover
@@ -32,6 +36,20 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
+    _identity_cache = None
+    _data = None
+
+    @cache_readonly
+    def __constructor__(self):
+        """
+        Create a new instance of this object.
+
+        Returns
+        -------
+        PandasDataframePartition
+            New instance of pandas partition.
+        """
+        return type(self)
 
     def get(self):
         """
@@ -49,6 +67,21 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         always return 1.
         """
         pass
+
+    @property
+    def list_of_blocks(self):
+        """
+        Get the list of physical partition objects that compose this partition.
+
+        Returns
+        -------
+        list
+            A list of physical partition objects (``ray.ObjectRef``, ``distributed.Future`` e.g.).
+        """
+        # Defer draining call queue until we get the partitions.
+        # TODO Look into draining call queue at the same time as the task
+        self.drain_call_queue()
+        return [self._data]
 
     def apply(self, func, *args, **kwargs):
         """
@@ -76,7 +109,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         pass
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -86,6 +119,10 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : reference or int, optional
+            Length, or reference to length, of wrapped ``pandas.DataFrame``.
+        width : reference or int, optional
+            Width, or reference to width, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -99,7 +136,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         This function will be executed when `apply` is called. It will be executed
         in the order inserted; apply's func operates the last and return.
         """
-        pass
+        return self.__constructor__(
+            self._data,
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
+        )
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -146,6 +188,11 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
 
+    @staticmethod
+    def _iloc(df, row_labels, col_labels):  # noqa: RT01, PR01
+        """Perform `iloc` on dataframes wrapped in partitions (helper function)."""
+        return df.iloc[row_labels, col_labels]
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -184,7 +231,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(lambda df: df.iloc[row_labels, col_labels])
+        new_obj = self.add_to_apply_calls(self._iloc, row_labels, col_labels)
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
@@ -263,37 +310,87 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return width_fn_pandas
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The length of the object.
         """
         if self._length_cache is None:
-            cls = type(self)
-            func = cls._length_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._length_cache = self.apply(preprocessed_func)
+            self._length_cache = self.apply(self._length_extraction_fn()).get()
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The width of the object.
         """
         if self._width_cache is None:
-            cls = type(self)
-            func = cls._width_extraction_fn()
-            preprocessed_func = cls.preprocess_func(func)
-            self._width_cache = self.apply(preprocessed_func)
+            self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
+
+    @property
+    def _identity(self):
+        """
+        Calculate identifier on request for debug logging mode.
+
+        Returns
+        -------
+        str
+        """
+        if self._identity_cache is None:
+            self._identity_cache = uuid.uuid4().hex
+        return self._identity_cache
+
+    def split(self, split_func, num_splits, *args):
+        """
+        Split the object wrapped by the partition into multiple partitions.
+
+        Parameters
+        ----------
+        split_func : Callable[pandas.DataFrame, List[Any]] -> List[pandas.DataFrame]
+            The function that will split this partition into multiple partitions. The list contains
+            pivots to split by, and will have the same dtype as the major column we are shuffling on.
+        num_splits : int
+            The number of resulting partitions (may be empty).
+        *args : List[Any]
+            Arguments to pass to ``split_func``.
+
+        Returns
+        -------
+        list
+            A list of partitions.
+        """
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.split::{self._identity}")
+
+        self._is_debug(log) and log.debug(f"SUBMIT::_split_df::{self._identity}")
+        outputs = self.execution_wrapper.deploy(
+            split_func, [self._data] + list(args), num_returns=num_splits
+        )
+        self._is_debug(log) and log.debug(f"EXIT::Partition.split::{self._identity}")
+        return [self.__constructor__(output) for output in outputs]
 
     @classmethod
     def empty(cls):
@@ -306,3 +403,23 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
+
+    def _is_debug(self, logger=None):
+        """
+        Check that the logger is set to debug mode.
+
+        Parameters
+        ----------
+        logger : logging.logger, optional
+            Logger obtained from Modin's `get_logger` utility.
+            Explicit transmission of this parameter can be used in the case
+            when within the context of `_is_debug` call there was already
+            `get_logger` call. This is an optimization.
+
+        Returns
+        -------
+        bool
+        """
+        if logger is None:
+            logger = get_logger()
+        return logger.isEnabledFor(logging.DEBUG)

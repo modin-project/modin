@@ -79,7 +79,7 @@ class ResampleDefault(DefaultMethod):
             Function that takes query compiler and does fallback to pandas to resample
             time-series data and apply aggregation on it.
         """
-        return cls.call(
+        return super().register(
             Resampler.build_resample(func, squeeze_self),
             fn_name=func.__name__,
             **kwargs

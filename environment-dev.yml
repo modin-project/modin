@@ -2,24 +2,27 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.4.0
+  - pandas==1.5.3
   - numpy>=1.18.5
-  - pyarrow>=4.0.1
-  - dask[complete]>=2.22.0,<2022.2.0
-  - distributed>=2.22.0,<2022.2.0
+  - ray-default>=1.13.0
+  - pyarrow
+  # workaround for https://github.com/conda/conda/issues/11744
+  - grpcio!=1.45.*
+  - grpcio!=1.46.*
+  - dask>=2.22.0
+  - distributed>=2.22.0
   - fsspec
   - xarray
   - Jinja2
-  - pathlib
   - scipy
   - pip
   - s3fs>=2021.8
   - feather-format
   - lxml
-  - openpyxl
+  - openpyxl<3.1.0
   - xlrd
-  - matplotlib<=3.2.2
-  - sqlalchemy>=1.4.0
+  - matplotlib
+  - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq
   - pytables
   - msgpack-python
@@ -29,15 +32,36 @@ dependencies:
   - pytest-cov>=2.10.1
   - pytest-xdist>=2.1.0
   - packaging
-  - coverage<5.0
-  - pygithub==1.53
-  - ray-default
+  - coverage
+  - pygithub
   - rpyc==4.1.5
   - cloudpickle
   - boto3
   - scikit-learn
+  - pymssql
+  - psycopg2
+  # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206  
+  - mypy!=0.990
+  - pandas-stubs
+  - fastparquet<2023.1.0
+  # for release script
+  - pygit2
+  # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+  # when we use collective instead of rabit.
+  - xgboost>=1.7.1,<2.0.0
+  - tqdm
+  # code linters
+  - black
+  - flake8
+  - flake8-no-implicit-concat
+  - flake8-print
   - pip:
-      - xgboost>=1.3
-      - modin-spreadsheet>=0.1.1
-      - tqdm
+      # Fixes breaking ipywidgets changes, but didn't release yet.
+      - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
+      # no conda package for windows so we install it with pip
+      - connectorx>=0.2.6a4
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0
+      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+      - fuzzydata>=0.0.6

@@ -1,34 +1,54 @@
-pandas==1.4.0
+pandas==1.5.3
 numpy>=1.18.5
-pyarrow>=4.0.1
-dask[complete]>=2.22.0,<2022.2.0
-distributed>=2.22.0,<2022.2.0
-ray[default]>=1.4.0
-psutil==5.6.6
+dask[complete]>=2.22.0
+distributed>=2.22.0
+ray[default]>=1.13.0
+pyarrow
+psutil
 fsspec
 xarray
 Jinja2
-pathlib
 tables
 scipy
 s3fs>=2021.8
 pytest
 pytest-benchmark
-coverage<5.0
+coverage
 pytest-cov
 pytest-xdist
 feather-format
 lxml
-openpyxl
+openpyxl<3.1.0
 xlrd
-matplotlib<=3.2.2
-sqlalchemy>=1.4.0
+matplotlib
+sqlalchemy>=1.4.0,<1.4.46
 msgpack
 pandas_gbq
 cloudpickle
 rpyc==4.1.5
 scikit-learn
 git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-xgboost>=1.3
+# TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+# when we use collective instead of rabit.
+xgboost>=1.7.1,<2.0.0
 tqdm
-modin-spreadsheet>=0.1.1
+# Latest modin-spreadsheet with widget fix
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
+pymssql
+psycopg2
+connectorx>=0.2.6a4
+black
+flake8
+flake8-no-implicit-concat
+flake8-print
+# The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+numpydoc==1.1.0
+# experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+fuzzydata>=0.0.6
+# Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206
+mypy!=0.990
+pandas-stubs
+fastparquet<2023.1.0
+# for release script
+PyGithub
+pygit2

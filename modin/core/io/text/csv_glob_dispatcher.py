@@ -17,18 +17,17 @@ from contextlib import ExitStack
 import csv
 import glob
 import os
-import sys
 from typing import List, Tuple
 import warnings
+import fsspec
 
 import pandas
 import pandas._libs.lib as lib
+from pandas.io.common import is_url, is_fsspec_url, stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.file_dispatcher import S3_ADDRESS_REGEX
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
-from modin.utils import import_optional_dependency
 
 
 class CSVGlobDispatcher(CSVDispatcher):
@@ -52,7 +51,7 @@ class CSVGlobDispatcher(CSVDispatcher):
             Query compiler with imported data for further processing.
         """
         # Ensures that the file is a string file path. Otherwise, default to pandas.
-        filepath_or_buffer = cls.get_path_or_buffer(filepath_or_buffer)
+        filepath_or_buffer = cls.get_path_or_buffer(stringify_path(filepath_or_buffer))
         if isinstance(filepath_or_buffer, str):
             # os.altsep == None on Linux
             is_folder = any(
@@ -61,13 +60,21 @@ class CSVGlobDispatcher(CSVDispatcher):
             if "*" not in filepath_or_buffer and not is_folder:
                 warnings.warn(
                     "Shell-style wildcard '*' must be in the filename pattern in order to read multiple "
-                    f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
+                    + f"files at once. Did you forget it? Passed filename: '{filepath_or_buffer}'"
                 )
-            if not cls.file_exists(filepath_or_buffer):
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            if not cls.file_exists(filepath_or_buffer, kwargs.get("storage_options")):
+                return cls.single_worker_read(
+                    filepath_or_buffer,
+                    reason=cls._file_not_found_msg(filepath_or_buffer),
+                    **kwargs,
+                )
             filepath_or_buffer = cls.get_path(filepath_or_buffer)
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason=cls.BUFFER_UNSUPPORTED_MSG,
+                **kwargs,
+            )
 
         # We read multiple csv files when the file path is a list of absolute file paths. We assume that all of the files will be essentially replicas of the
         # first file but with different data values.
@@ -77,30 +84,22 @@ class CSVGlobDispatcher(CSVDispatcher):
         compression_type = cls.infer_compression(
             filepath_or_buffer, kwargs.get("compression")
         )
-        if compression_type is not None:
-            if (
-                compression_type == "gzip"
-                or compression_type == "bz2"
-                or compression_type == "xz"
-            ):
-                kwargs["compression"] = compression_type
-            elif (
-                compression_type == "zip"
-                and sys.version_info[0] == 3
-                and sys.version_info[1] >= 7
-            ):
-                # need python3.7 to .seek and .tell ZipExtFile
-                kwargs["compression"] = compression_type
-            else:
-                return cls.single_worker_read(filepath_or_buffer, **kwargs)
 
         chunksize = kwargs.get("chunksize")
         if chunksize is not None:
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason="`chunksize` parameter is not supported",
+                **kwargs,
+            )
 
         skiprows = kwargs.get("skiprows")
         if skiprows is not None and not isinstance(skiprows, int):
-            return cls.single_worker_read(filepath_or_buffer, **kwargs)
+            return cls.single_worker_read(
+                filepath_or_buffer,
+                reason="Non-integer `skiprows` value not supported",
+                **kwargs,
+            )
 
         nrows = kwargs.pop("nrows", None)
         names = kwargs.get("names", lib.no_default)
@@ -128,17 +127,17 @@ class CSVGlobDispatcher(CSVDispatcher):
                 if len(index_col) == 1:
                     index_col = index_col[0]
                 kwargs["index_col"] = index_col
-        empty_pd_df = pandas.read_csv(
-            filepath_or_buffer, **dict(kwargs, nrows=0, skipfooter=0)
+        pd_df_metadata = pandas.read_csv(
+            filepath_or_buffer, **dict(kwargs, nrows=1, skipfooter=0)
         )
-        column_names = empty_pd_df.columns
+        column_names = pd_df_metadata.columns
         skipfooter = kwargs.get("skipfooter", None)
         skiprows = kwargs.pop("skiprows", None)
         usecols_md = cls._validate_usecols_arg(usecols)
         if usecols is not None and usecols_md[1] != "integer":
             del kwargs["usecols"]
             all_cols = pandas.read_csv(
-                OpenFile(filepath_or_buffer, "rb"),
+                filepath_or_buffer,
                 **dict(kwargs, nrows=0, skipfooter=0),
             ).columns
             usecols = all_cols.get_indexer_for(list(usecols_md[0]))
@@ -160,7 +159,14 @@ class CSVGlobDispatcher(CSVDispatcher):
 
         with ExitStack() as stack:
             files = [
-                stack.enter_context(OpenFile(fname, "rb", compression_type))
+                stack.enter_context(
+                    OpenFile(
+                        fname,
+                        "rb",
+                        compression_type,
+                        **(kwargs.get("storage_options", None) or {}),
+                    )
+                )
                 for fname in glob_filepaths
             ]
 
@@ -184,10 +190,9 @@ class CSVGlobDispatcher(CSVDispatcher):
             if kwargs.get("encoding", None) is not None:
                 partition_kwargs["skiprows"] = 1
             # Launch tasks to read partitions
-            partition_ids = []
-            index_ids = []
-            dtypes_ids = []
-            column_widths, num_splits = cls._define_metadata(empty_pd_df, column_names)
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
 
             args = {
                 "num_splits": num_splits,
@@ -204,13 +209,16 @@ class CSVGlobDispatcher(CSVDispatcher):
                 quotechar=quotechar,
                 is_quoting=is_quoting,
             )
-
-            for chunks in splits:
+            partition_ids = [None] * len(splits)
+            index_ids = [None] * len(splits)
+            dtypes_ids = [None] * len(splits)
+            for idx, chunks in enumerate(splits):
                 args.update({"chunks": chunks})
-                partition_id = cls.deploy(cls.parse, num_splits + 2, args)
-                partition_ids.append(partition_id[:-2])
-                index_ids.append(partition_id[-2])
-                dtypes_ids.append(partition_id[-1])
+                *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
+                    func=cls.parse,
+                    f_kwargs=args,
+                    num_returns=num_splits + 2,
+                )
 
         # Compute the index based on a sum of the lengths of each partition (by default)
         # or based on the column(s) that were requested.
@@ -221,38 +229,16 @@ class CSVGlobDispatcher(CSVDispatcher):
             index_objs = cls.materialize(index_ids)
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
-            new_index.name = empty_pd_df.index.name
+            new_index.name = pd_df_metadata.index.name
+
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-        # If parse_dates is present, the column names that we have might not be
-        # the same length as the returned column names. If we do need to modify
-        # the column names, we remove the old names from the column names and
-        # insert the new one at the front of the Index.
-        if parse_dates is not None:
-            # We have to recompute the column widths if `parse_dates` is set because
-            # we are not guaranteed to have the correct information regarding how many
-            # columns are on each partition.
-            column_widths = None
-            # Check if is list of lists
-            if isinstance(parse_dates, list) and isinstance(parse_dates[0], list):
-                for group in parse_dates:
-                    new_col_name = "_".join(group)
-                    column_names = column_names.drop(group).insert(0, new_col_name)
-            # Check if it is a dictionary
-            elif isinstance(parse_dates, dict):
-                for new_col_name, group in parse_dates.items():
-                    column_names = column_names.drop(group).insert(0, new_col_name)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             partition_ids,
             new_index,
@@ -274,7 +260,7 @@ class CSVGlobDispatcher(CSVDispatcher):
         return new_query_compiler
 
     @classmethod
-    def file_exists(cls, file_path: str) -> bool:
+    def file_exists(cls, file_path: str, storage_options=None) -> bool:
         """
         Check if the `file_path` is valid.
 
@@ -282,31 +268,45 @@ class CSVGlobDispatcher(CSVDispatcher):
         ----------
         file_path : str
             String representing a path.
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
         bool
             True if the path is valid.
         """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+        if is_url(file_path):
+            raise NotImplementedError("`read_csv_glob` does not support urllib paths.")
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = len(s3fs.glob(file_path)) > 0 or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or len(s3fs.glob(file_path)) > 0
-        return len(glob.glob(file_path)) > 0
+        if not is_fsspec_url(file_path):
+            return len(glob.glob(file_path)) > 0
+
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
+
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+        exists = False
+        try:
+            exists = fs.exists(file_path)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
+            exists = fs.exists(file_path)
+        return exists or len(fs.glob(file_path)) > 0
 
     @classmethod
     def get_path(cls, file_path: str) -> list:
@@ -323,32 +323,35 @@ class CSVGlobDispatcher(CSVDispatcher):
         list
             List of strings of absolute file paths.
         """
-        if S3_ADDRESS_REGEX.search(file_path):
-            # S3FS does not allow captial S in s3 addresses.
-            if file_path[0] == "S":
-                file_path = "{}{}".format("s", file_path[1:])
-
-            S3FS = import_optional_dependency(
-                "s3fs", "Module s3fs is required to read S3FS files."
-            )
-            from botocore.exceptions import NoCredentialsError
-
-            def get_file_path(fs_handle) -> List[str]:
-                file_paths = fs_handle.glob(file_path)
-                s3_addresses = ["{}{}".format("s3://", path) for path in file_paths]
-                return s3_addresses
-
-            s3fs = S3FS.S3FileSystem(anon=False)
-            try:
-                return get_file_path(s3fs)
-            except NoCredentialsError:
-                pass
-            s3fs = S3FS.S3FileSystem(anon=True)
-            return get_file_path(s3fs)
-        else:
+        if not is_fsspec_url(file_path) and not is_url(file_path):
             relative_paths = glob.glob(file_path)
             abs_paths = [os.path.abspath(path) for path in relative_paths]
             return abs_paths
+
+        from botocore.exceptions import (
+            NoCredentialsError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        )
+
+        def get_file_path(fs_handle) -> List[str]:
+            file_paths = fs_handle.glob(file_path)
+            if len(file_paths) == 0 and not fs_handle.exists(file_path):
+                raise FileNotFoundError(f"Path <{file_path}> isn't available.")
+            fs_addresses = [fs_handle.unstrip_protocol(path) for path in file_paths]
+            return fs_addresses
+
+        fs, _ = fsspec.core.url_to_fs(file_path)
+        try:
+            return get_file_path(fs)
+        except (
+            NoCredentialsError,
+            PermissionError,
+            EndpointConnectionError,
+            ConnectTimeoutError,
+        ):
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
+        return get_file_path(fs)
 
     @classmethod
     def partitioned_file(

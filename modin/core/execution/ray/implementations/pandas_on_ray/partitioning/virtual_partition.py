@@ -20,7 +20,16 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.core.execution.ray.common.utils import deserialize, wait
+from modin.core.execution.ray.common import RayWrapper
 from .partition import PandasOnRayDataframePartition
+from modin.utils import _inherit_docstrings
+
+
+# If Ray has not been initialized yet by Modin,
+# it will be initialized when calling `RayWrapper.put`.
+_DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
+_DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -29,7 +38,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : Union[list, PandasOnRayDataframePartition]
+    list_of_partitions : Union[list, PandasOnRayDataframePartition]
         List of ``PandasOnRayDataframePartition`` and
         ``PandasOnRayDataframeVirtualPartition`` objects, or a single
         ``PandasOnRayDataframePartition``.
@@ -39,84 +48,90 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : ray.ObjectRef or int, optional
+        Length, or reference to length, of wrapped ``pandas.DataFrame``.
+    width : ray.ObjectRef or int, optional
+        Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
     partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
     axis = None
 
-    def __init__(self, list_of_blocks, get_ip=False, full_axis=True, call_queue=None):
-        if isinstance(list_of_blocks, PandasOnRayDataframePartition):
-            list_of_blocks = [list_of_blocks]
+    def __init__(
+        self,
+        list_of_partitions,
+        get_ip=False,
+        full_axis=True,
+        call_queue=None,
+        length=None,
+        width=None,
+    ):
+        if isinstance(list_of_partitions, PandasOnRayDataframePartition):
+            list_of_partitions = [list_of_partitions]
         self.full_axis = full_axis
         self.call_queue = call_queue or []
-        # In the simple case, none of the partitions that will compose this
-        # partition are themselves virtual partition. The partitions that will
-        # be combined are just the partitions as given to the constructor.
-        if not any(
-            isinstance(o, PandasOnRayDataframeVirtualPartition) for o in list_of_blocks
-        ):
-            self.list_of_partitions_to_combine = list_of_blocks
-            return
-        # Check that all axis are the same in `list_of_blocks`
+        self._length_cache = length
+        self._width_cache = width
+        # Check that all virtual partition axes are the same in `list_of_partitions`
         # We should never have mismatching axis in the current implementation. We add this
         # defensive assertion to ensure that undefined behavior does not happen.
         assert (
             len(
                 set(
-                    o.axis
-                    for o in list_of_blocks
-                    if isinstance(o, PandasOnRayDataframeVirtualPartition)
+                    obj.axis
+                    for obj in list_of_partitions
+                    if isinstance(obj, PandasOnRayDataframeVirtualPartition)
                 )
             )
-            == 1
+            <= 1
         )
-        # When the axis of all virtual partitions matches this axis,
-        # extend and combine the lists of physical partitions.
-        if (
-            next(
-                o
-                for o in list_of_blocks
-                if isinstance(o, PandasOnRayDataframeVirtualPartition)
-            ).axis
-            == self.axis
-        ):
-            new_list_of_blocks = []
-            for o in list_of_blocks:
-                new_list_of_blocks.extend(
-                    o.list_of_partitions_to_combine
-                ) if isinstance(
-                    o, PandasOnRayDataframeVirtualPartition
-                ) else new_list_of_blocks.append(
-                    o
-                )
-            self.list_of_partitions_to_combine = new_list_of_blocks
-        # Materialize partitions if the axis of this virtual does not match the virtual partitions
-        else:
-            self.list_of_partitions_to_combine = [
-                obj.force_materialization().list_of_partitions_to_combine[0]
-                if isinstance(obj, PandasOnRayDataframeVirtualPartition)
-                else obj
-                for obj in list_of_blocks
-            ]
+        self._list_of_constituent_partitions = list_of_partitions
+        # Defer computing _list_of_block_partitions because we might need to
+        # drain call queues for that.
+        self._list_of_block_partitions = None
 
     @property
-    def list_of_blocks(self):
+    def list_of_block_partitions(self) -> list:
         """
-        Get the list of physical partition objects that compose this partition.
+        Get the list of block partitions that compose this partition.
 
         Returns
         -------
         List
-            A list of ``ray.ObjectRef``.
+            A list of ``PandasOnRayDataframePartition``.
         """
-        # Defer draining call queue until we get the partitions
-        # TODO Look into draining call queue at the same time as the task
-        result = [None] * len(self.list_of_partitions_to_combine)
-        for idx, partition in enumerate(self.list_of_partitions_to_combine):
-            partition.drain_call_queue()
-            result[idx] = partition.oid
-        return result
+        if self._list_of_block_partitions is not None:
+            return self._list_of_block_partitions
+        self._list_of_block_partitions = []
+        # Extract block partitions from the block and virtual partitions that
+        # constitute this partition.
+        for partition in self._list_of_constituent_partitions:
+            if isinstance(partition, PandasOnRayDataframeVirtualPartition):
+                if partition.axis == self.axis:
+                    # We are building a virtual partition out of another
+                    # virtual partition `partition` that contains its own list
+                    # of block partitions, partition.list_of_block_partitions.
+                    # `partition` may have its own call queue, which has to be
+                    # applied to the entire `partition` before we execute any
+                    # further operations on its block parittions.
+                    partition.drain_call_queue()
+                    self._list_of_block_partitions.extend(
+                        partition.list_of_block_partitions
+                    )
+                else:
+                    # If this virtual partition is made of virtual partitions
+                    # for the other axes, squeeze such partitions into a single
+                    # block so that this partition only holds a one-dimensional
+                    # list of blocks. We could change this implementation to
+                    # hold a 2-d list of blocks, but that would complicate the
+                    # code quite a bit.
+                    self._list_of_block_partitions.append(
+                        partition.force_materialization().list_of_block_partitions[0]
+                    )
+            else:
+                self._list_of_block_partitions.append(partition)
+        return self._list_of_block_partitions
 
     @property
     def list_of_ips(self):
@@ -129,15 +144,25 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of IPs as ``ray.ObjectRef`` or str.
         """
         # Defer draining call queue until we get the ip address
-        result = [None] * len(self.list_of_partitions_to_combine)
-        for idx, partition in enumerate(self.list_of_partitions_to_combine):
+        result = [None] * len(self.list_of_block_partitions)
+        for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
             result[idx] = partition._ip_cache
         return result
 
     @classmethod
     def deploy_axis_func(
-        cls, axis, func, num_splits, kwargs, maintain_partitioning, *partitions
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        maintain_partitioning,
+        *partitions,
+        lengths=None,
+        manual_partition=False,
+        max_retries=None,
     ):
         """
         Deploy a function along a full axis.
@@ -148,39 +173,56 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         maintain_partitioning : bool
             If True, keep the old partitioning if possible.
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        lengths : list, optional
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with `lengths`.
+        max_retries : int, default: None
+            The max number of times to retry the func.
 
         Returns
         -------
         list
             A list of ``ray.ObjectRef``-s.
         """
-        lengths = kwargs.get("_lengths", None)
-        max_retries = kwargs.pop("max_retries", None)
-        return deploy_ray_func.options(
+        return _deploy_ray_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            PandasDataframeAxisPartition.deploy_axis_func,
+            _DEPLOY_AXIS_FUNC,
             axis,
             func,
+            f_args,
+            f_kwargs,
             num_splits,
-            kwargs,
             maintain_partitioning,
             *partitions,
+            manual_partition=manual_partition,
+            lengths=lengths,
         )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
-        cls, axis, func, num_splits, len_of_left, other_shape, kwargs, *partitions
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        len_of_left,
+        other_shape,
+        *partitions,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -191,6 +233,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             The axis to perform the function along.
         func : callable
             The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``func``.
         num_splits : int
             The number of splits to return (see ``split_result_of_axis_func_pandas``).
         len_of_left : int
@@ -198,8 +244,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         other_shape : np.ndarray
             The shape of right frame in terms of partitions, i.e.
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
-        kwargs : dict
-            Additional keywords arguments to be passed in `func`.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
 
@@ -208,14 +252,15 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        return deploy_ray_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_ray_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
+            f_args,
+            f_kwargs,
             num_splits,
             len_of_left,
             other_shape,
-            kwargs,
             *partitions,
         )
 
@@ -241,9 +286,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     def apply(
         self,
         func,
+        *args,
         num_splits=None,
         other_axis_partition=None,
         maintain_partitioning=True,
+        lengths=None,
+        manual_partition=False,
         **kwargs,
     ):
         """
@@ -253,6 +301,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         ----------
         func : callable
             The function to apply.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
         num_splits : int, default: None
             The number of times to split the result object.
         other_axis_partition : PandasDataframeAxisPartition, default: None
@@ -265,6 +315,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             In this case, we have to return the partitioning to its previous
             orientation (the lengths will remain the same). This is ignored between
             two axis partitions.
+        lengths : list, optional
+            The list of lengths to shuffle the object.
+        manual_partition : bool, default: False
+            If True, partition the result with `lengths`.
         **kwargs : dict
             Additional keywords arguments to be passed in `func`.
 
@@ -272,15 +326,29 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         -------
         list
             A list of `PandasOnRayDataframeVirtualPartition` objects.
+
+        Notes
+        -----
+        In older versions of Modin, ``args`` was passed internally as ``kwargs["args"]``, and
+        deserialization was handled in a special case in ``_deploy_ray_func``, making control flow
+        difficult to follow. All deserialization is still handled in ``_deploy_ray_func``, but
+        in a more direct fashion.
         """
-        # If this is not a full axis partition, it already contains a subset of
-        # the full axis, so we shouldn't split the result further.
         if not self.full_axis:
+            # If this is not a full axis partition, it already contains a subset of
+            # the full axis, so we shouldn't split the result further.
             num_splits = 1
         if len(self.call_queue) > 0:
             self.drain_call_queue()
         result = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            func, num_splits, other_axis_partition, maintain_partitioning, **kwargs
+            func,
+            *args,
+            num_splits=num_splits,
+            other_axis_partition=other_axis_partition,
+            maintain_partitioning=maintain_partitioning,
+            lengths=lengths,
+            manual_partition=manual_partition,
+            **kwargs,
         )
         if self.full_axis:
             return result
@@ -305,7 +373,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         materialized = super(
             PandasOnRayDataframeVirtualPartition, self
         ).force_materialization(get_ip=get_ip)
-        self.list_of_partitions_to_combine = materialized.list_of_partitions_to_combine
+        self._list_of_block_partitions = materialized.list_of_block_partitions
         return materialized
 
     def mask(self, row_indices, col_indices):
@@ -327,7 +395,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         return (
             self.force_materialization()
-            .list_of_partitions_to_combine[0]
+            .list_of_block_partitions[0]
             .mask(row_indices, col_indices)
         )
 
@@ -339,7 +407,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         -------
         pandas DataFrame.
         """
-        return self.force_materialization().list_of_partitions_to_combine[0].to_pandas()
+        return self.force_materialization().list_of_block_partitions[0].to_pandas()
 
     _length_cache = None
 
@@ -355,10 +423,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._length_cache is None:
             if self.axis == 0:
                 self._length_cache = sum(
-                    o.length() for o in self.list_of_partitions_to_combine
+                    obj.length() for obj in self.list_of_block_partitions
                 )
             else:
-                self._length_cache = self.list_of_partitions_to_combine[0].length()
+                self._length_cache = self.list_of_block_partitions[0].length()
         return self._length_cache
 
     _width_cache = None
@@ -375,25 +443,38 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         if self._width_cache is None:
             if self.axis == 1:
                 self._width_cache = sum(
-                    o.width() for o in self.list_of_partitions_to_combine
+                    obj.width() for obj in self.list_of_block_partitions
                 )
             else:
-                self._width_cache = self.list_of_partitions_to_combine[0].width()
+                self._width_cache = self.list_of_block_partitions[0].width()
         return self._width_cache
 
-    def drain_call_queue(self):
-        """Execute all operations stored in this partition's call queue."""
+    def drain_call_queue(self, num_splits=None):
+        """
+        Execute all operations stored in this partition's call queue.
 
-        def drain(df):
-            for func, args, kwargs in self.call_queue:
-                df = func(df, *args, **kwargs)
-            return df
-
-        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(drain)
-        self.list_of_partitions_to_combine = drained
+        Parameters
+        ----------
+        num_splits : int, default: None
+            The number of times to split the result object.
+        """
+        if len(self.call_queue) == 0:
+            # this implicitly calls `drain_call_queue`
+            _ = self.list_of_blocks
+            return
+        drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
+            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
+        )
+        self._list_of_block_partitions = drained
         self.call_queue = []
 
-    def add_to_apply_calls(self, func, *args, **kwargs):
+    def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
+        self.drain_call_queue()
+        futures = self.list_of_blocks
+        wait(futures)
+
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
         """
         Add a function to the call queue.
 
@@ -403,6 +484,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        length : ray.ObjectRef or int, optional
+            Length, or reference to it, of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width, or reference to it, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -417,78 +502,65 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return type(self)(
-            self.list_of_partitions_to_combine,
+            self.list_of_block_partitions,
             full_axis=self.full_axis,
-            call_queue=self.call_queue + [(func, args, kwargs)],
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
         )
 
 
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
 class PandasOnRayDataframeColumnPartition(PandasOnRayDataframeVirtualPartition):
-    """
-    The column partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, default: None
-        Call queue that needs to be executed on the partition.
-    """
-
     axis = 0
 
 
+@_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)
 class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
-    """
-    The row partition implementation.
-
-    All of the implementation for this class is in the parent class,
-    and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List of ``PandasOnRayDataframePartition`` objects.
-    get_ip : bool, default: False
-        Whether to get node IP addresses to conforming partitions or not.
-    full_axis : bool, default: True
-        Whether this partition spans an entire axis of the dataframe.
-    call_queue : list, default: None
-        Call queue that needs to be executed on the partition.
-    """
-
     axis = 1
 
 
 @ray.remote
-def deploy_ray_func(func, *args):  # pragma: no cover
+def _deploy_ray_func(
+    deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
+):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
 
+    This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
+    or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
+    serve to deploy another dataframe function on a Ray worker process. The provided ``f_args``
+    is thus are deserialized here (on the Ray worker) before the function is called (``f_kwargs``
+    will never contain more Ray objects, and thus does not require deserialization).
+
     Parameters
     ----------
-    func : callable
-        Function to be executed on an axis partition.
-    *args : iterable
-        Additional arguments that need to passed in ``func``.
+    deployer : callable
+        A `PandasDataFrameAxisPartition.deploy_*` method that will call ``f_to_deploy``.
+    axis : {0, 1}
+        The axis to perform the function along.
+    f_to_deploy : callable or RayObjectID
+        The function to deploy.
+    f_args : list or tuple
+        Positional arguments to pass to ``f_to_deploy``.
+    f_kwargs : dict
+        Keyword arguments to pass to ``f_to_deploy``.
+    *args : list
+        Positional arguments to pass to ``deployer``.
+    **kwargs : dict
+        Keyword arguments to pass to ``deployer``.
 
     Returns
     -------
-    list
-        The result of the function ``func`` and metadata for it.
+    list : Union[tuple, list]
+        The result of the function call, and metadata for it.
 
     Notes
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    result = func(*args)
+    f_args = deserialize(f_args)
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

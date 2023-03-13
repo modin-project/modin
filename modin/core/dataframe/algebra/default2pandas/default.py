@@ -14,10 +14,43 @@
 """Module houses default functions builder class."""
 
 from modin.core.dataframe.algebra import Operator
-from modin.utils import try_cast_to_pandas
+from modin.utils import try_cast_to_pandas, MODIN_UNNAMED_SERIES_LABEL
 
 from pandas.core.dtypes.common import is_list_like
 import pandas
+
+
+class ObjTypeDeterminer:
+    """
+    Class that routes work to the frame.
+
+    Provides an instance which forwards all of the `__getattribute__` calls
+    to an object under which `key` function is applied.
+    """
+
+    def __getattr__(self, key):
+        """
+        Build function that executes `key` function over passed frame.
+
+        Parameters
+        ----------
+        key : str
+
+        Returns
+        -------
+        callable
+            Function that takes DataFrame and executes `key` function on it.
+        """
+
+        def func(df, *args, **kwargs):
+            """Access specified attribute of the passed object and call it if it's callable."""
+            prop = getattr(df, key)
+            if callable(prop):
+                return prop(*args, **kwargs)
+            else:
+                return prop
+
+        return func
 
 
 class DefaultMethod(Operator):
@@ -28,12 +61,15 @@ class DefaultMethod(Operator):
     ----------
     OBJECT_TYPE : str
         Object type name that will be shown in default-to-pandas warning message.
+    DEFAULT_OBJECT_TYPE : object
+        Default place to search for a function.
     """
 
     OBJECT_TYPE = "DataFrame"
+    DEFAULT_OBJECT_TYPE = ObjTypeDeterminer
 
     @classmethod
-    def call(cls, func, obj_type=pandas.DataFrame, inplace=None, fn_name=None):
+    def register(cls, func, obj_type=None, inplace=None, fn_name=None):
         """
         Build function that do fallback to default pandas implementation for passed `func`.
 
@@ -42,7 +78,7 @@ class DefaultMethod(Operator):
         func : callable or str,
             Function to apply to the casted to pandas frame or its property accesed
             by ``cls.frame_wrapper``.
-        obj_type : object, default: pandas.DataFrame
+        obj_type : object, optional
             If `func` is a string with a function name then `obj_type` provides an
             object to search function in.
         inplace : bool, optional
@@ -61,6 +97,8 @@ class DefaultMethod(Operator):
         fn_name = getattr(func, "__name__", str(func)) if fn_name is None else fn_name
 
         if isinstance(func, str):
+            if obj_type is None:
+                obj_type = cls.DEFAULT_OBJECT_TYPE
             fn = getattr(obj_type, func)
         else:
             fn = func
@@ -76,6 +114,8 @@ class DefaultMethod(Operator):
             function under it and processes result so it is possible to create a valid
             query compiler from it.
             """
+            # pandas default implementation doesn't know how to handle `dtypes` keyword argument
+            kwargs.pop("dtypes", None)
             df = cls.frame_wrapper(df)
             result = fn(df, *args, **kwargs)
 
@@ -85,14 +125,28 @@ class DefaultMethod(Operator):
                 and func != "to_numpy"
                 and func != pandas.DataFrame.to_numpy
             ):
+                # When applying a DatetimeProperties or TimedeltaProperties function,
+                # if we don't specify the dtype for the DataFrame, the frame might
+                # get the wrong dtype, e.g. for to_pydatetime in
+                # https://github.com/modin-project/modin/issues/4436
+                astype_kwargs = {}
+                dtype = getattr(result, "dtype", None)
+                if dtype and isinstance(
+                    df,
+                    (
+                        pandas.core.indexes.accessors.DatetimeProperties,
+                        pandas.core.indexes.accessors.TimedeltaProperties,
+                    ),
+                ):
+                    astype_kwargs["dtype"] = dtype
                 result = (
-                    pandas.DataFrame(result)
+                    pandas.DataFrame(result, **astype_kwargs)
                     if is_list_like(result)
-                    else pandas.DataFrame([result])
+                    else pandas.DataFrame([result], **astype_kwargs)
                 )
             if isinstance(result, pandas.Series):
                 if result.name is None:
-                    result.name = "__reduced__"
+                    result.name = MODIN_UNNAMED_SERIES_LABEL
                 result = result.to_frame()
 
             inplace_method = kwargs.get("inplace", False)
@@ -101,28 +155,6 @@ class DefaultMethod(Operator):
             return result if not inplace_method else df
 
         return cls.build_wrapper(applyier, fn_name)
-
-    @classmethod
-    # FIXME: `register` is an alias for `call` method. One of them should be removed.
-    def register(cls, func, **kwargs):
-        """
-        Build function that do fallback to default pandas implementation for passed `func`.
-
-        Parameters
-        ----------
-        func : callable or str,
-            Function to apply to the casted to pandas frame or its property accesed
-            by ``cls.frame_wrapper``.
-        **kwargs : kwargs
-            Additional parameters that will be used for building.
-
-        Returns
-        -------
-        callable
-            Function that takes query compiler, does fallback to pandas and applies `func`
-            to the casted to pandas frame or its property accesed by ``cls.frame_wrapper``.
-        """
-        return cls.call(func, **kwargs)
 
     @classmethod
     # FIXME: this method is almost a duplicate of `cls.build_default_to_pandas`.

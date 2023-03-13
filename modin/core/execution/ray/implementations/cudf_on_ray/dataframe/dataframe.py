@@ -13,18 +13,20 @@
 
 """Module houses class that implements ``PandasOnRayDataframe`` class using cuDF."""
 
+from typing import List, Hashable, Optional
+
 import numpy as np
-import ray
 
-from ..partitioning.partition import cuDFOnRayDataframePartition
-from ..partitioning.partition_manager import cuDFOnRayDataframePartitionManager
-
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
+from modin.error_message import ErrorMessage
+from modin.pandas.utils import check_both_not_none
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
-from modin.error_message import ErrorMessage
-from typing import List, Hashable, Optional
-from modin.pandas.utils import check_both_not_none
+from modin.core.execution.ray.common import RayWrapper
+from ..partitioning import (
+    cuDFOnRayDataframePartition,
+    cuDFOnRayDataframePartitionManager,
+)
 
 
 class cuDFOnRayDataframe(PandasOnRayDataframe):
@@ -64,8 +66,8 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             axis is not None and axis not in [0, 1]
         )
 
-        cum_row_lengths = np.cumsum([0] + self._row_lengths)
-        cum_col_widths = np.cumsum([0] + self._column_widths)
+        cum_row_lengths = np.cumsum([0] + self.row_lengths)
+        cum_col_widths = np.cumsum([0] + self.column_widths)
 
         def apply_idx_objs(df, idx, cols, axis):
             # cudf does not support set_axis. It only supports rename with 1-to-1 mapping.
@@ -115,7 +117,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             ]
         )
 
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -178,7 +180,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
                 new_row_lengths = [
-                    len(range(*idx.indices(self._row_lengths[p])))
+                    len(range(*idx.indices(self.row_lengths[p])))
                     for p, idx in row_partitions_list.items()
                 ]
                 # Use the slice to calculate the new row index
@@ -187,10 +189,8 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 new_row_lengths = [len(idx) for _, idx in row_partitions_list.items()]
                 new_index = self.index[sorted(row_positions)]
         else:
-            row_partitions_list = {
-                i: slice(None) for i in range(len(self._row_lengths))
-            }
-            new_row_lengths = self._row_lengths
+            row_partitions_list = {i: slice(None) for i in range(len(self.row_lengths))}
+            new_row_lengths = self.row_lengths
             new_index = self.index
 
         if col_labels is not None:
@@ -202,7 +202,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                 # on the partition. Often this will be the same length as the current
                 # length, but sometimes it is different, thus the extra calculation.
                 new_col_widths = [
-                    len(range(*idx.indices(self._column_widths[p])))
+                    len(range(*idx.indices(self.column_widths[p])))
                     for p, idx in col_partitions_list.items()
                 ]
                 # Use the slice to calculate the new columns
@@ -213,7 +213,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                     sum(new_col_widths),
                     len(new_columns),
                     col_positions,
-                    self._column_widths,
+                    self.column_widths,
                     col_partitions_list,
                 )
                 if self._dtypes is not None:
@@ -229,9 +229,9 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                     new_dtypes = None
         else:
             col_partitions_list = {
-                i: slice(None) for i in range(len(self._column_widths))
+                i: slice(None) for i in range(len(self.column_widths))
             }
-            new_col_widths = self._column_widths
+            new_col_widths = self.column_widths
             new_columns = self.columns
             if self._dtypes is not None:
                 new_dtypes = self.dtypes
@@ -258,7 +258,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
         )
 
         shape = key_and_gpus.shape[:2]
-        keys = ray.get(key_and_gpus[:, :, 0].flatten().tolist())
+        keys = RayWrapper.materialize(key_and_gpus[:, :, 0].flatten().tolist())
         gpu_managers = key_and_gpus[:, :, 1].flatten().tolist()
         new_partitions = self._partition_mgr_cls._create_partitions(
             keys, gpu_managers
@@ -271,40 +271,17 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             new_col_widths,
             new_dtypes,
         )
-        # Check if monotonically increasing, return if it is. Fast track code path for
-        # common case to keep it fast.
-        if (
-            row_positions is None
-            or isinstance(row_positions, slice)
-            or len(row_positions) == 1
-            or np.all(row_positions[1:] >= row_positions[:-1])
-        ) and (
-            col_positions is None
-            or isinstance(col_positions, slice)
-            or len(col_positions) == 1
-            or np.all(col_positions[1:] >= col_positions[:-1])
-        ):
-            return intermediate
-        # The new labels are often smaller than the old labels, so we can't reuse the
-        # original order values because those were mapped to the original data. We have
-        # to reorder here based on the expected order from within the data.
-        # We create a dictionary mapping the position of the numeric index with respect
-        # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `_reorder_labels`.
+
+        sorted_row_positions = sorted_col_positions = None
         if row_positions is not None:
-            row_order_mapping = dict(
-                zip(sorted(row_positions), range(len(row_positions)))
-            )
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
-        else:
-            new_row_order = None
+            sorted_row_positions = sorted(row_positions)
         if col_positions is not None:
-            col_order_mapping = dict(
-                zip(sorted(col_positions), range(len(col_positions)))
-            )
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
-        else:
-            new_col_order = None
-        return intermediate._reorder_labels(
-            row_positions=new_row_order, col_positions=new_col_order
+            sorted_col_positions = sorted(col_positions)
+
+        return self._maybe_reorder_labels(
+            intermediate,
+            row_positions,
+            sorted_row_positions,
+            col_positions,
+            sorted_col_positions,
         )

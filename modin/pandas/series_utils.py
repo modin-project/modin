@@ -16,10 +16,11 @@ Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
-
+from typing import TYPE_CHECKING
 import sys
 import numpy as np
 import pandas
+from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 from .series import Series
 
@@ -30,16 +31,20 @@ else:
     # Python <= 3.6
     from re import _pattern_type
 
+if TYPE_CHECKING:
+    from datetime import tzinfo
+    from pandas._typing import npt
+
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
-class CategoryMethods(object):
+class CategoryMethods(ClassLogger):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
 
     @property
     def categories(self):
-        return self._series._default_to_pandas(pandas.Series.cat).categories
+        return self._series.dtype.categories
 
     @categories.setter
     def categories(self, categories):
@@ -50,7 +55,7 @@ class CategoryMethods(object):
 
     @property
     def ordered(self):
-        return self._series._default_to_pandas(pandas.Series.cat).ordered
+        return self._series.dtype.ordered
 
     @property
     def codes(self):
@@ -123,7 +128,7 @@ class CategoryMethods(object):
 
 
 @_inherit_docstrings(pandas.core.strings.StringMethods)
-class StringMethods(object):
+class StringMethods(ClassLogger):
     def __init__(self, series):
         # Check if dtypes is objects
 
@@ -291,6 +296,14 @@ class StringMethods(object):
         )
 
     def extract(self, pat, flags=0, expand=True):
+        if expand:
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_extract(
+                    pat, flags=flags, expand=expand
+                )
+            )
         return self._default_to_pandas(
             pandas.Series.str.extract, pat, flags=flags, expand=expand
         )
@@ -326,7 +339,7 @@ class StringMethods(object):
             )
 
     def repeat(self, repeats):
-        return self._default_to_pandas(pandas.Series.str.repeat, repeats)
+        return Series(query_compiler=self._query_compiler.str_repeat(repeats))
 
     def rpartition(self, sep=" ", expand=True):
         if sep is not None and len(sep) == 0:
@@ -454,7 +467,7 @@ class StringMethods(object):
 
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
-class DatetimeProperties(object):
+class DatetimeProperties(ClassLogger):
     def __init__(self, series):
         self._series = series
         self._query_compiler = series._query_compiler
@@ -564,8 +577,11 @@ class DatetimeProperties(object):
         return Series(query_compiler=self._query_compiler.dt_days_in_month())
 
     @property
-    def tz(self):
-        return self._query_compiler.dt_tz().to_pandas().squeeze()
+    def tz(self) -> "tzinfo | None":
+        dtype = self._series.dtype
+        if isinstance(dtype, np.dtype):
+            return None
+        return dtype.tz
 
     @property
     def freq(self):
@@ -615,10 +631,9 @@ class DatetimeProperties(object):
             query_compiler=self._query_compiler.dt_total_seconds(*args, **kwargs)
         )
 
-    def to_pytimedelta(self):
-        return self._query_compiler.default_to_pandas(
-            lambda df: pandas.Series.dt.to_pytimedelta(df.squeeze(axis=1).dt)
-        )
+    def to_pytimedelta(self) -> "npt.NDArray[np.object_]":
+        res = self._query_compiler.dt_to_pytimedelta()
+        return res.to_numpy()[:, 0]
 
     @property
     def seconds(self):

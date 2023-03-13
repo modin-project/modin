@@ -23,7 +23,7 @@ The :py:class:`~modin.core.storage_formats.pandas.query_compiler.PandasQueryComp
 processing the query, received from the :py:class:`~modin.pandas.dataframe.DataFrame` `API` layer,
 to determine how to apply it to a subset of the data - either cell-wise or along an axis-wise partition backed by the `pandas`
 storage format. The :py:class:`~modin.core.storage_formats.pandas.query_compiler.PandasQueryCompiler` maps the query to one of the :doc:`Core Algebra Operators </flow/modin/core/dataframe/algebra>` of
-the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.dataframe.dataframe.PandasOnDaskDataframe` which inherits
+the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.dataframe.PandasOnDaskDataframe` which inherits
 generic functionality from the :py:class:`~modin.core.dataframe.pandas.dataframe.dataframe.PandasDataframe`.
 
 PandasOnDask Dataframe implementation
@@ -34,7 +34,7 @@ specifically for the `PandasOnDask` execution.
 
 * :doc:`PandasOnDaskDataframe <dataframe>`
 * :doc:`PandasOnDaskDataframePartition <partitioning/partition>`
-* :doc:`PandasOnDaskDataframeAxisPartition <partitioning/axis_partition>`
+* :doc:`PandasOnDaskDataframeVirtualPartition <partitioning/virtual_partition>`
 * :doc:`PandasOnDaskDataframePartitionManager <partitioning/partition_manager>`
 
 .. toctree::
@@ -42,7 +42,7 @@ specifically for the `PandasOnDask` execution.
 
     dataframe
     partitioning/partition
-    partitioning/axis_partition
+    partitioning/virtual_partition
     partitioning/partition_manager
 
 
@@ -65,11 +65,11 @@ the execution, namely, the :py:class:`~modin.core.execution.dispatching.factorie
 exposes the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` class
 whose responsibility is to perform a parallel read/write from/to a file.
 
-When reading data from a CSV file, for example, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.io.PandasOnDaskIO` class forwards
+When reading data from a CSV file, for example, the :py:class:`~modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO` class forwards
 the user query to the :meth:`~modin.core.io.text.CSVDispatcher._read` method of :py:class:`~modin.core.io.text.CSVDispatcher`, where the query's parameters are preprocessed
 to check if they are supported by the execution (defaulting to pandas if they are not) and computes some metadata
 common for all partitions to be read. Then, the file is split into row chunks, and this data is used to launch remote tasks on the Dask workers
-via the :meth:`~modin.core.execution.dask.common.task_wrapper.DaskTask.deploy` method of :py:class:`~modin.core.execution.dask.common.task_wrapper.DaskTask`.
+via the :meth:`~modin.core.execution.dask.common.engine_wrapper.DaskWrapper.deploy` method of :py:class:`~modin.core.execution.dask.common.engine_wrapper.DaskWrapper`.
 On each Dask worker, the :py:class:`~modin.core.storage_formats.pandas.parsers.PandasCSVParser` parses data.
 After the remote tasks are finished, additional result postprocessing is performed,
 and a new query compiler with the data read is returned.

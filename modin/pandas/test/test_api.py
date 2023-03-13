@@ -11,10 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import pandas
 import inspect
 import numpy as np
+
+import modin.pandas as pd
 
 
 def test_top_level_api_equality():
@@ -23,6 +24,7 @@ def test_top_level_api_equality():
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     extra_in_modin = set(modin_dir) - set(pandas_dir)
     ignore_pandas = [
+        "annotations",
         "np",
         "testing",
         "tests",
@@ -37,11 +39,10 @@ def test_top_level_api_equality():
         "tseries",
         "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished
-        "describe_option",
-        "get_option",
-        "option_context",
-        "reset_option",
         "Panel",  # This is deprecated and throws a warning every time.
+        "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
+        "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
+        "SparseArray",  # usually not available in top-level namespace
     ]
 
     ignore_modin = [
@@ -53,22 +54,10 @@ def test_top_level_api_equality():
         "utils",
         "dataframe",
         "groupby",
-        "threading",
         "general",
-        "datetimes",
-        "reshape",
-        "types",
-        "sys",
-        "initialize_ray",
         "datetime",
-        "ray",
-        "num_cpus",
         "warnings",
         "os",
-        "multiprocessing",
-        "Client",
-        "dask_client",
-        "get_client",
     ]
 
     assert not len(
@@ -172,6 +161,8 @@ def test_dataframe_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
+    allowed_different.append("rename_axis")
     difference = []
 
     # Check that we don't have extra params
@@ -259,6 +250,8 @@ def test_series_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
+    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
+    allowed_different.append("rename_axis")
     difference = []
 
     for m in modin_dir:

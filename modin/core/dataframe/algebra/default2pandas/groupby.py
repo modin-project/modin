@@ -18,6 +18,8 @@ from .default import DefaultMethod
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
 # classes. They should be combined.
@@ -56,7 +58,7 @@ class GroupBy:
                 df = df.squeeze(axis=1)
             if not isinstance(df, pandas.Series):
                 return df
-            if df.name == "__reduced__":
+            if df.name == MODIN_UNNAMED_SERIES_LABEL:
                 df.name = None
             return df
 
@@ -203,7 +205,7 @@ class GroupBy:
                 and by.name in df
                 and df[by.name].equals(by)
             ):
-                by = by.name
+                by = [by.name]
             if isinstance(by, pandas.DataFrame):
                 df = pandas.concat([df] + [by[[o for o in by if o not in df]]], axis=1)
                 by = list(by.columns)
@@ -215,12 +217,12 @@ class GroupBy:
             grp = df.groupby(by, axis=axis, **groupby_kwargs)
             func = cls.get_func(agg_func, **kwargs)
             result = func(grp, *agg_args, **agg_kwargs)
+            method = kwargs.get("method")
 
             if isinstance(result, pandas.Series):
-                result = result.to_frame()
+                result = result.to_frame(MODIN_UNNAMED_SERIES_LABEL)
 
             if not as_index:
-                method = kwargs.get("method")
                 if isinstance(by, pandas.Series):
                     # 1. If `drop` is True then 'by' Series represents a column from the
                     #    source frame and so the 'by' is internal.
@@ -245,7 +247,7 @@ class GroupBy:
                     inplace=True,
                 )
 
-            if result.index.name == "__reduced__":
+            if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
                 result.index.name = None
 
             return result
@@ -465,7 +467,9 @@ class GroupBy:
             internal_by_cols = pandas.Index(internal_by_cols)
 
         internal_by_cols = (
-            internal_by_cols[~internal_by_cols.str.startswith("__reduced__", na=False)]
+            internal_by_cols[
+                ~internal_by_cols.str.startswith(MODIN_UNNAMED_SERIES_LABEL, na=False)
+            ]
             if hasattr(internal_by_cols, "str")
             else internal_by_cols
         )
@@ -537,7 +541,9 @@ class GroupByDefault(DefaultMethod):
             Functiom that takes query compiler and defaults to pandas to do GroupBy
             aggregation.
         """
-        return cls.call(GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs)
+        return super().register(
+            GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs
+        )
 
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
     # it's based on `how` to apply it. Going by pandas documentation:

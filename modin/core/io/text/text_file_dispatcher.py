@@ -34,7 +34,6 @@ from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.config import NPartitions
-from modin.error_message import ErrorMessage
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -42,10 +41,6 @@ IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
 
 class TextFileDispatcher(FileDispatcher):
     """Class handles utils for reading text formats files."""
-
-    # The variable allows to set a function with which one partition will be read;
-    # Used in dispatchers and parsers
-    read_callback = None
 
     @classmethod
     def get_path_or_buffer(cls, filepath_or_buffer):
@@ -68,13 +63,18 @@ class TextFileDispatcher(FileDispatcher):
         use it without having to fall back to pandas and share file objects between
         workers. Given a filepath, return it immediately.
         """
-        if hasattr(filepath_or_buffer, "name"):
+        if (
+            hasattr(filepath_or_buffer, "name")
+            and hasattr(filepath_or_buffer, "seekable")
+            and filepath_or_buffer.seekable()
+            and filepath_or_buffer.tell() == 0
+        ):
             buffer_filepath = filepath_or_buffer.name
             if cls.file_exists(buffer_filepath):
                 warnings.warn(
                     "For performance reasons, the filepath will be "
-                    "used in place of the file handle passed in "
-                    "to load the data"
+                    + "used in place of the file handle passed in "
+                    + "to load the data"
                 )
                 return cls.get_path(buffer_filepath)
         return filepath_or_buffer
@@ -215,6 +215,7 @@ class TextFileDispatcher(FileDispatcher):
         newline: bytes = None,
         header_size: int = 0,
         pre_reading: int = 0,
+        read_callback_kw: dict = None,
     ):
         """
         Compute chunk sizes in bytes for every partition.
@@ -242,6 +243,9 @@ class TextFileDispatcher(FileDispatcher):
             Number of rows, that occupied by header.
         pre_reading : int, default: 0
             Number of rows between header and skipped rows, that should be read.
+        read_callback_kw : dict, optional
+            Keyword arguments for `cls.read_callback` to compute metadata if needed.
+            This option is not compatible with `pre_reading!=0`.
 
         Returns
         -------
@@ -249,7 +253,13 @@ class TextFileDispatcher(FileDispatcher):
             List with the next elements:
                 int : partition start read byte
                 int : partition end read byte
+        pandas.DataFrame or None
+            Dataframe from which metadata can be retrieved. Can be None if `read_callback_kw=None`.
         """
+        if read_callback_kw is not None and pre_reading != 0:
+            raise ValueError(
+                f"Incompatible combination of parameters: {read_callback_kw=}, {pre_reading=}"
+            )
         read_rows_counter = 0
         outside_quotes = True
 
@@ -263,9 +273,9 @@ class TextFileDispatcher(FileDispatcher):
 
         file_size = cls.file_size(f)
 
-        rows_skipper(header_size)
-
+        pd_df_metadata = None
         if pre_reading:
+            rows_skipper(header_size)
             pre_reading_start = f.tell()
             outside_quotes, read_rows = cls._read_rows(
                 f,
@@ -283,11 +293,18 @@ class TextFileDispatcher(FileDispatcher):
             # add outside_quotes
             if is_quoting and not outside_quotes:
                 warnings.warn("File has mismatched quotes")
-
-        rows_skipper(skiprows)
+            rows_skipper(skiprows)
+        else:
+            rows_skipper(skiprows)
+            if read_callback_kw:
+                start = f.tell()
+                # For correct behavior, if we want to avoid double skipping rows,
+                # we need to get metadata after skipping.
+                pd_df_metadata = cls.read_callback(f, **read_callback_kw)
+                f.seek(start)
+            rows_skipper(header_size)
 
         start = f.tell()
-
         if nrows:
             partition_size = max(1, num_partitions, nrows // num_partitions)
             while f.tell() < file_size and read_rows_counter < nrows:
@@ -327,8 +344,7 @@ class TextFileDispatcher(FileDispatcher):
                 # add outside_quotes
                 if is_quoting and not outside_quotes:
                     warnings.warn("File has mismatched quotes")
-
-        return result
+        return result, pd_df_metadata
 
     @classmethod
     def _read_rows(
@@ -597,18 +613,16 @@ class TextFileDispatcher(FileDispatcher):
         dtypes_ids : list
             array with references to the partitions dtypes objects.
         """
-        partition_ids = []
-        index_ids = []
-        dtypes_ids = []
-        for start, end in splits:
+        partition_ids = [None] * len(splits)
+        index_ids = [None] * len(splits)
+        dtypes_ids = [None] * len(splits)
+        for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
-            partition_id = cls.deploy(
-                cls.parse, partition_kwargs.get("num_splits") + 2, partition_kwargs
+            *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
+                func=cls.parse,
+                f_kwargs=partition_kwargs,
+                num_returns=partition_kwargs.get("num_splits") + 2,
             )
-            partition_ids.append(partition_id[:-2])
-            index_ids.append(partition_id[-2])
-            dtypes_ids.append(partition_id[-1])
-
         return partition_ids, index_ids, dtypes_ids
 
     @classmethod
@@ -618,7 +632,7 @@ class TextFileDispatcher(FileDispatcher):
         read_kwargs: dict,
         skiprows_md: Union[Sequence, callable, int],
         header_size: int,
-    ) -> bool:
+    ) -> Tuple[bool, Optional[str]]:
         """
         Check support of only general parameters of `read_*` function.
 
@@ -637,16 +651,34 @@ class TextFileDispatcher(FileDispatcher):
         -------
         bool
             Whether passed parameters are supported or not.
+        Optional[str]
+            `None` if parameters are supported, otherwise an error
+            message describing why parameters are not supported.
         """
         skiprows = read_kwargs.get("skiprows")
         if isinstance(filepath_or_buffer, str):
-            if not cls.file_exists(filepath_or_buffer):
-                return False
+            if not cls.file_exists(
+                filepath_or_buffer, read_kwargs.get("storage_options")
+            ):
+                return (False, cls._file_not_found_msg(filepath_or_buffer))
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
-            return False
+            return (False, cls.BUFFER_UNSUPPORTED_MSG)
 
         if read_kwargs["chunksize"] is not None:
-            return False
+            return (False, "`chunksize` parameter is not supported")
+
+        if read_kwargs.get("dialect") is not None:
+            return (False, "`dialect` parameter is not supported")
+
+        if read_kwargs["lineterminator"] is not None:
+            return (False, "`lineterminator` parameter is not supported")
+
+        if read_kwargs["escapechar"] is not None:
+            return (False, "`escapechar` parameter is not supported")
+
+        if read_kwargs.get("skipfooter"):
+            if read_kwargs.get("nrows") or read_kwargs.get("engine") == "c":
+                return (False, "Exception is raised by pandas itself")
 
         skiprows_supported = True
         if is_list_like(skiprows_md) and skiprows_md[0] < header_size:
@@ -660,20 +692,20 @@ class TextFileDispatcher(FileDispatcher):
                 skiprows_supported = False
 
         if not skiprows_supported:
-            ErrorMessage.single_warning(
-                "Values of `header` and `skiprows` parameters have intersections. "
-                "This case is unsupported by Modin, so pandas implementation will be used"
+            return (
+                False,
+                "Values of `header` and `skiprows` parameters have intersections; "
+                + "this case is unsupported by Modin",
             )
-            return False
 
-        return True
+        return (True, None)
 
     @classmethod
     @_inherit_docstrings(pandas.io.parsers.base_parser.ParserBase._validate_usecols_arg)
     def _validate_usecols_arg(cls, usecols):
         msg = (
             "'usecols' must either be list-like of all strings, all unicode, "
-            "all integers or a callable."
+            + "all integers or a callable."
         )
         if usecols is not None:
             if callable(usecols):
@@ -775,7 +807,7 @@ class TextFileDispatcher(FileDispatcher):
         pre_reading = skiprows_partitioning = skiprows_md = 0
         if isinstance(skiprows, int):
             skiprows_partitioning = skiprows
-        elif is_list_like(skiprows):
+        elif is_list_like(skiprows) and len(skiprows) > 0:
             skiprows_md = np.sort(skiprows)
             if np.all(np.diff(skiprows_md) == 1):
                 # `skiprows` is uniformly distributed array.
@@ -877,19 +909,14 @@ class TextFileDispatcher(FileDispatcher):
             New query compiler, created from `new_frame`.
         """
         new_index, row_lengths = cls._define_index(index_ids, index_name)
+        # Compose modin partitions from `partition_ids`
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+
         # Compute dtypes by collecting and combining all of the partition dtypes. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
-        # Compose modin partitions from `partition_ids`
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
         new_frame = cls.frame_cls(
             partition_ids,
@@ -910,7 +937,7 @@ class TextFileDispatcher(FileDispatcher):
             nrows = kwargs.get("nrows", None)
             index_range = pandas.RangeIndex(len(new_query_compiler.index))
             if is_list_like(skiprows_md):
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     index=index_range.delete(skiprows_md)
                 )
             elif callable(skiprows_md):
@@ -918,7 +945,9 @@ class TextFileDispatcher(FileDispatcher):
                 if not isinstance(skip_mask, np.ndarray):
                     skip_mask = skip_mask.to_numpy("bool")
                 view_idx = index_range[~skip_mask]
-                new_query_compiler = new_query_compiler.view(index=view_idx)
+                new_query_compiler = new_query_compiler.take_2d_positional(
+                    index=view_idx
+                )
             else:
                 raise TypeError(
                     f"Not acceptable type of `skiprows` parameter: {type(skiprows_md)}"
@@ -928,10 +957,10 @@ class TextFileDispatcher(FileDispatcher):
                 new_query_compiler = new_query_compiler.reset_index(drop=True)
 
             if nrows:
-                new_query_compiler = new_query_compiler.view(
+                new_query_compiler = new_query_compiler.take_2d_positional(
                     pandas.RangeIndex(len(new_query_compiler.index))[:nrows]
                 )
-        if index_col is None:
+        if index_col is None or index_col is False:
             new_query_compiler._modin_frame.synchronize_labels(axis=0)
 
         return new_query_compiler
@@ -986,53 +1015,71 @@ class TextFileDispatcher(FileDispatcher):
             skiprows_md, int
         )
 
-        use_modin_impl = cls.check_parameters_support(
-            filepath_or_buffer,
+        (use_modin_impl, fallback_reason) = cls.check_parameters_support(
+            filepath_or_buffer_md,
             kwargs,
             skiprows_md,
             header_size,
         )
         if not use_modin_impl:
             return cls.single_worker_read(
-                filepath_or_buffer, callback=cls.read_callback, **kwargs
+                filepath_or_buffer,
+                reason=fallback_reason,
+                **kwargs,
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
-        # In these cases we should pass additional metadata
-        # to the workers to match pandas output
-        pass_names = names in [None, lib.no_default] and (
-            skiprows is not None or kwargs["skipfooter"] != 0
+        usecols = kwargs["usecols"]
+        use_inferred_column_names = cls._uses_inferred_column_names(
+            names, skiprows, kwargs["skipfooter"], usecols
         )
 
-        pd_df_metadata = cls.read_callback(
-            filepath_or_buffer,
-            **dict(kwargs, nrows=1, skipfooter=0, index_col=index_col),
+        # Computing metadata simultaneously with skipping rows allows us to not
+        # do extra work and improve performance for certain cases, as otherwise,
+        # it would require double re-reading of skipped rows in order to retrieve metadata.
+        can_compute_metadata_while_skipping_rows = (
+            # basic supported case: isinstance(skiprows, int) without any additional params
+            isinstance(skiprows, int)
+            and (usecols is None or skiprows is None)
+            and pre_reading == 0
         )
-        column_names = pd_df_metadata.columns
-        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
+        read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
+        if not can_compute_metadata_while_skipping_rows:
+            pd_df_metadata = cls.read_callback(
+                filepath_or_buffer_md,
+                **read_callback_kw,
+            )
+            column_names = pd_df_metadata.columns
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
+            read_callback_kw = None
+        else:
+            read_callback_kw = dict(read_callback_kw, skiprows=None)
+            # `memory_map` doesn't work with file-like object so we can't use it here.
+            # We can definitely skip it without violating the reading logic
+            # since this parameter is intended to optimize reading.
+            # For reading a couple of lines, this is not essential.
+            read_callback_kw.pop("memory_map", None)
+            # These parameters are already used when opening file `f`,
+            # they do not need to be used again.
+            read_callback_kw.pop("storage_options", None)
+            read_callback_kw.pop("compression", None)
 
-        # kwargs that will be passed to the workers
-        partition_kwargs = dict(
-            kwargs,
-            fname=filepath_or_buffer_md,
-            num_splits=num_splits,
-            header_size=header_size if not pass_names else 0,
-            names=names if not pass_names else column_names,
-            header=header if not pass_names else "infer",
-            skipfooter=0,
-            skiprows=None,
-            nrows=None,
-            compression=compression_infered,
-        )
-
-        with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
+        with OpenFile(
+            filepath_or_buffer_md,
+            "rb",
+            compression_infered,
+            **(kwargs.get("storage_options", None) or {}),
+        ) as f:
             old_pos = f.tell()
             fio = io.TextIOWrapper(f, encoding=encoding, newline="")
             newline, quotechar = cls.compute_newline(
                 fio, encoding, kwargs.get("quotechar", '"')
             )
             f.seek(old_pos)
-            splits = cls.partitioned_file(
+
+            splits, pd_df_metadata_temp = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
                 nrows=kwargs["nrows"] if not should_handle_skiprows else None,
@@ -1043,10 +1090,28 @@ class TextFileDispatcher(FileDispatcher):
                 newline=newline,
                 header_size=header_size,
                 pre_reading=pre_reading,
+                read_callback_kw=read_callback_kw,
             )
+            if can_compute_metadata_while_skipping_rows:
+                pd_df_metadata = pd_df_metadata_temp
 
+        column_names = pd_df_metadata.columns
+        column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
+        # kwargs that will be passed to the workers
+        partition_kwargs = dict(
+            kwargs,
+            fname=filepath_or_buffer_md,
+            num_splits=num_splits,
+            header_size=0 if use_inferred_column_names else header_size,
+            names=column_names if use_inferred_column_names else names,
+            header="infer" if use_inferred_column_names else header,
+            skipfooter=0,
+            skiprows=None,
+            nrows=None,
+            compression=compression_infered,
+        )
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, callback=cls.read_callback, **partition_kwargs
+            splits, **partition_kwargs
         )
 
         new_query_compiler = cls._get_new_qc(
@@ -1094,3 +1159,50 @@ class TextFileDispatcher(FileDispatcher):
             mask = rows_index.map(skiprows)
 
         return mask
+
+    @staticmethod
+    def _uses_inferred_column_names(names, skiprows, skipfooter, usecols):
+        """
+        Tell whether need to use inferred column names in workers or not.
+
+        1) ``False`` is returned in 2 cases and means next:
+            1.a) `names` parameter was provided from the API layer. In this case parameter
+            `names` must be provided as `names` parameter for ``read_csv`` in the workers.
+            1.b) `names` parameter wasn't provided from the API layer. In this case column names
+            inference must happen in each partition.
+        2) ``True`` is returned in case when inferred column names from pre-reading stage must be
+            provided as `names` parameter for ``read_csv`` in the workers.
+
+        In case `names` was provided, the other parameters aren't checked. Otherwise, inferred column
+        names should be used in a case of not full data reading which is defined by `skipfooter` parameter,
+        when need to skip lines at the bottom of file or by `skiprows` parameter, when need to skip lines at
+        the top of file (but if `usecols` was provided, column names inference must happen in the workers).
+
+        Parameters
+        ----------
+        names : array-like
+            List of column names to use.
+        skiprows : list-like, int or callable
+            Line numbers to skip (0-indexed) or number of lines to skip (int) at
+            the start of the file. If callable, the callable function will be
+            evaluated against the row indices, returning ``True`` if the row should
+            be skipped and ``False`` otherwise.
+        skipfooter : int
+            Number of lines at bottom of the file to skip.
+        usecols : list-like or callable
+            Subset of the columns.
+
+        Returns
+        -------
+        bool
+            Whether to use inferred column names in ``read_csv`` of the workers or not.
+        """
+        if names not in [None, lib.no_default]:
+            return False
+        if skipfooter != 0:
+            return True
+        if isinstance(skiprows, int) and skiprows == 0:
+            return False
+        if is_list_like(skiprows):
+            return usecols is None
+        return skiprows is not None

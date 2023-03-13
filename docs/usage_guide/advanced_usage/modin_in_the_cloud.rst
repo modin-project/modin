@@ -69,7 +69,7 @@ Usage examples
       remote_df = pd.DataFrame([1, 2, 3, 4])
       print(len(remote_df))  # len() is executed remotely
 
-Some more examples can be found in ``examples/cluster`` folder.
+Some more examples can be found in ``examples/cloud`` folder.
 
 .. _`RPyC`: https://github.com/tomerfiliba-org/rpyc
 .. _`Cloudpickle`: https://github.com/cloudpipe/cloudpickle

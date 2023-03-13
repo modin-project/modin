@@ -12,3 +12,9 @@
 # governing permissions and limitations under the License.
 
 """Generic partitioning functionality for Ray execution engine."""
+
+from .partition_manager import GenericRayDataframePartitionManager
+
+__all__ = [
+    "GenericRayDataframePartitionManager",
+]

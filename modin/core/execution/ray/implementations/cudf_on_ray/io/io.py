@@ -14,21 +14,15 @@
 """Module holds implementation of ``BaseIO`` using cuDF."""
 
 from modin.core.io import BaseIO
-from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFCSVDispatcher
 from modin.core.storage_formats.cudf.query_compiler import cuDFQueryCompiler
-from modin.core.execution.ray.implementations.cudf_on_ray.dataframe.dataframe import (
-    cuDFOnRayDataframe,
-)
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
+from modin.core.storage_formats.cudf.parser import cuDFCSVParser
+from modin.core.execution.ray.common import RayWrapper
+from ..dataframe import cuDFOnRayDataframe
+from ..partitioning import (
+    cuDFOnRayDataframePartition,
     cuDFOnRayDataframePartitionManager,
 )
-from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition import (
-    cuDFOnRayDataframePartition,
-)
-
-
-from modin.core.execution.ray.common.task_wrapper import RayTask
-from modin.core.storage_formats.cudf.parser import cuDFCSVParser
+from .text import cuDFCSVDispatcher
 
 
 class cuDFOnRayIO(BaseIO):
@@ -44,4 +38,4 @@ class cuDFOnRayIO(BaseIO):
         frame_partition_mgr_cls=cuDFOnRayDataframePartitionManager,
     )
 
-    read_csv = type("", (RayTask, cuDFCSVParser, cuDFCSVDispatcher), build_args).read
+    read_csv = type("", (RayWrapper, cuDFCSVParser, cuDFCSVDispatcher), build_args).read

@@ -19,10 +19,7 @@ from .tree_reduce import TreeReduce
 from .reduce import Reduce
 from .fold import Fold
 from .binary import Binary
-from .groupby import (
-    GroupByReduce,
-    groupby_reduce_functions,
-)
+from .groupby import GroupByReduce
 
 __all__ = [
     "Operator",
@@ -32,5 +29,4 @@ __all__ = [
     "Fold",
     "Binary",
     "GroupByReduce",
-    "groupby_reduce_functions",
 ]

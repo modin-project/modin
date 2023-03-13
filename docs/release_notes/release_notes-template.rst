@@ -1,3 +1,5 @@
+:orphan:
+
 Modin X.X.X
 
 Key Features and Updates
@@ -13,7 +15,7 @@ Key Features and Updates
   *
 * Pandas API implementations and improvements
   *
-* OmniSci enhancements
+* HDK enhancements
   *
 * XGBoost enhancements
   *
@@ -25,6 +27,7 @@ Key Features and Updates
   *
 * Dependencies
   *
+* New Features
 
 Contributors
 ------------

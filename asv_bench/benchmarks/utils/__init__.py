@@ -26,11 +26,13 @@ from .common import (
     gen_nan_data,
     generate_dataframe,
     prepare_io_data,
+    prepare_io_data_parquet,
     random_string,
     random_columns,
     random_booleans,
     translator_groupby_ngroups,
     trigger_import,
+    setup,
 )
 
 __all__ = [
@@ -47,9 +49,11 @@ __all__ = [
     "gen_nan_data",
     "generate_dataframe",
     "prepare_io_data",
+    "prepare_io_data_parquet",
     "random_string",
     "random_columns",
     "random_booleans",
     "translator_groupby_ngroups",
     "trigger_import",
+    "setup",
 ]

@@ -15,10 +15,12 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+
 import modin.pandas as pd
 from modin.utils import to_pandas
 
 from modin.pandas.test.utils import (
+    create_test_dfs,
     random_state,
     df_equals,
     arg_keys,
@@ -35,7 +37,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -327,6 +329,79 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
+@pytest.mark.parametrize("has_index_cache", [True, False])
+def test_merge_on_index(has_index_cache):
+    modin_df1, pandas_df1 = create_test_dfs(
+        {
+            "idx_key1": [1, 2, 3, 4],
+            "idx_key2": [2, 3, 4, 5],
+            "idx_key3": [3, 4, 5, 6],
+            "data_col1": [10, 2, 3, 4],
+            "col_key1": [3, 4, 5, 6],
+            "col_key2": [3, 4, 5, 6],
+        }
+    )
+
+    modin_df1 = modin_df1.set_index(["idx_key1", "idx_key2"])
+    pandas_df1 = pandas_df1.set_index(["idx_key1", "idx_key2"])
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {
+            "idx_key1": [4, 3, 2, 1],
+            "idx_key2": [5, 4, 3, 2],
+            "idx_key3": [6, 5, 4, 3],
+            "data_col2": [10, 2, 3, 4],
+            "col_key1": [6, 5, 4, 3],
+            "col_key2": [6, 5, 4, 3],
+        }
+    )
+
+    modin_df2 = modin_df2.set_index(["idx_key2", "idx_key3"])
+    pandas_df2 = pandas_df2.set_index(["idx_key2", "idx_key3"])
+
+    def setup_cache():
+        if has_index_cache:
+            modin_df1.index  # triggering index materialization
+            modin_df2.index
+            assert modin_df1._query_compiler._modin_frame._index_cache is not None
+            assert modin_df2._query_compiler._modin_frame._index_cache is not None
+        else:
+            # Propagate deferred indices to partitions
+            modin_df1._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df1._query_compiler._modin_frame._index_cache = None
+            modin_df2._query_compiler._modin_frame._propagate_index_objs(axis=0)
+            modin_df2._query_compiler._modin_frame._index_cache = None
+
+    for on in (
+        ["col_key1", "idx_key1"],
+        ["col_key1", "idx_key2"],
+        ["col_key1", "idx_key3"],
+        ["idx_key1"],
+        ["idx_key2"],
+        ["idx_key3"],
+    ):
+        setup_cache()
+        eval_general(
+            (modin_df1, modin_df2),
+            (pandas_df1, pandas_df2),
+            lambda dfs: dfs[0].merge(dfs[1], on=on),
+        )
+
+    for left_on, right_on in (
+        (["idx_key1"], ["col_key1"]),
+        (["col_key1"], ["idx_key3"]),
+        (["idx_key1"], ["idx_key3"]),
+        (["idx_key2"], ["idx_key2"]),
+        (["col_key1", "idx_key2"], ["col_key2", "idx_key2"]),
+    ):
+        setup_cache()
+        eval_general(
+            (modin_df1, modin_df2),
+            (pandas_df1, pandas_df2),
+            lambda dfs: dfs[0].merge(dfs[1], left_on=left_on, right_on=right_on),
+        )
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
@@ -342,14 +417,16 @@ def test_sort_index(axis, ascending, na_position):
         for df in [modin_df, pandas_df]:
             df.index = [(i - length / 2) % length for i in range(length)]
 
+    dfs = [modin_df, pandas_df]
     # Add NaNs to sorted index
-    for df in [modin_df, pandas_df]:
-        sort_index = df.axes[axis]
-        df.set_axis(
+    for idx in range(len(dfs)):
+        sort_index = dfs[idx].axes[axis]
+        dfs[idx] = dfs[idx].set_axis(
             [np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))],
             axis=axis,
-            inplace=True,
+            copy=False,
         )
+    modin_df, pandas_df = dfs
 
     eval_general(
         modin_df,
@@ -403,27 +480,6 @@ def test_sort_multiindex(sort_remaining):
             marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
         ),
         "first,last,middle",
-        pytest.param(
-            "multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level1,multiindex_level0",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
-        pytest.param(
-            "multiindex_level0,last,first,multiindex_level1",
-            marks=pytest.mark.xfail_executions(
-                ["PandasOnPython", "PandasOnRay", "PandasOnDask"],
-                reason="multiindex levels do not work",
-            ),
-        ),
     ],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
@@ -516,6 +572,66 @@ def test_sort_values(
     )
 
 
+def test_sort_overpartitioned_df():
+    # First we test when the final df will have only 1 row and column partition.
+    data = [[4, 5, 6], [1, 2, 3]]
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    # Next we test when the final df will only have 1 row, but starts with multiple column
+    # partitions.
+    data = [list(range(100)), list(range(100, 200))]
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    # Next we test when the final df will have multiple row partitions.
+    data = np.random.choice(650, 650, replace=False).reshape((65, 10))
+    modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(drop=True)
+    pandas_df = pandas.DataFrame(data)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    old_nptns = NPartitions.get()
+    NPartitions.put(24)
+    try:
+        # Next we test when there's only one row per partition.
+        data = np.random.choice(650, 650, replace=False).reshape((65, 10))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+        # And again, when there's more than one column partition.
+        data = np.random.choice(6500, 6500, replace=False).reshape((65, 100))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+        # Additionally, we should test when we have a number of partitions
+        # that doesn't divide cleanly into our desired number of partitions.
+        # In this case, we start with 17 partitions, and want 2.
+        NPartitions.put(21)
+        data = np.random.choice(6500, 6500, replace=False).reshape((65, 100))
+        modin_df = pd.concat([pd.DataFrame(row).T for row in data]).reset_index(
+            drop=True
+        )
+        pandas_df = pandas.DataFrame(data)
+
+        eval_general(modin_df, pandas_df, lambda df: df.sort_values(by=0))
+
+    finally:
+        NPartitions.put(old_nptns)
+
+
 def test_sort_values_with_duplicates():
     modin_df = pd.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
     pandas_df = pandas.DataFrame({"col": [2, 1, 1]}, index=[1, 1, 0])
@@ -544,16 +660,60 @@ def test_sort_values_with_string_index():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+@pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
+@pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
+def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_position):
+    pandas_df = pandas.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    # Need to ensure that one of the partitions has all NA values except for one row
+    pandas_df.iloc[340:] = np.NaN
+    pandas_df.iloc[-1] = -4.0
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(
+            "col 3", ascending=ascending, na_position=na_position
+        ),
+    )
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    reason="We only need to test this case where sort does not default to pandas.",
+)
+def test_sort_values_with_sort_key_on_partition_boundary():
+    modin_df = pd.DataFrame(
+        np.random.rand(1000, 100), columns=[f"col {i}" for i in range(100)]
+    )
+    sort_key = modin_df.columns[modin_df._query_compiler._modin_frame.column_widths[0]]
+    eval_general(modin_df, modin_df._to_pandas(), lambda df: df.sort_values(sort_key))
+
+
 def test_where():
+    columns = list("abcdefghij")
+
     frame_data = random_state.randn(100, 10)
-    pandas_df = pandas.DataFrame(frame_data, columns=list("abcdefghij"))
-    modin_df = pd.DataFrame(frame_data, columns=list("abcdefghij"))
+    modin_df, pandas_df = create_test_dfs(frame_data, columns=columns)
     pandas_cond_df = pandas_df % 5 < 2
     modin_cond_df = modin_df % 5 < 2
 
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # Test that we choose the right values to replace when `other` == `True`
+    # everywhere.
+    other_data = np.full(shape=pandas_df.shape, fill_value=True)
+    modin_other, pandas_other = create_test_dfs(other_data, columns=columns)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other)
+    modin_result = modin_df.where(modin_cond_df, modin_other)
+    df_equals(modin_result, pandas_result)
 
     other = pandas_df.loc[3]
     pandas_result = pandas_df.where(pandas_cond_df, other, axis=1)
@@ -568,6 +728,30 @@ def test_where():
     pandas_result = pandas_df.where(pandas_df < 2, True)
     modin_result = modin_df.where(modin_df < 2, True)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+
+def test_where_different_axis_order():
+    # Test `where` when `cond`, `df`, and `other` each have columns and index
+    # in different orders.
+    data = test_data["float_nan_data"]
+    pandas_df = pandas.DataFrame(data)
+    pandas_cond_df = pandas_df % 5 < 2
+    pandas_cond_df = pandas_cond_df.reindex(
+        columns=pandas_df.columns[::-1], index=pandas_df.index[::-1]
+    )
+    pandas_other_df = -pandas_df
+    pandas_other_df = pandas_other_df.reindex(
+        columns=pandas_df.columns[-1:].append(pandas_df.columns[:-1]),
+        index=pandas_df.index[-1:].append(pandas_df.index[:-1]),
+    )
+
+    modin_df = pd.DataFrame(pandas_df)
+    modin_cond_df = pd.DataFrame(pandas_cond_df)
+    modin_other_df = pd.DataFrame(pandas_other_df)
+
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other_df)
+    modin_result = modin_df.where(modin_cond_df, modin_other_df)
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("align_axis", ["index", "columns"])

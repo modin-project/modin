@@ -23,7 +23,7 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
@@ -54,9 +54,6 @@ NGROUPS = 10
 # Range for values for test data
 RAND_LOW = 0
 RAND_HIGH = 100
-
-# Directory for storing I/O operations test data
-IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 
 # Input data and functions for the tests
 # The test data that we will test our code against
@@ -119,6 +116,22 @@ test_data = {
     #     "col1": "foo",
     #     "col2": True,
     # },
+}
+# The parse_dates param can take several different types and combinations of
+# types. Use the following values to test date parsing on a CSV created for
+# that purpose at `time_parsing_csv_path`
+parse_dates_values_by_id = {
+    "bool": False,
+    "list_of_single_int": [0],
+    "list_of_single_string": ["timestamp"],
+    "list_of_list_of_strings": [["year", "month", "date"]],
+    "list_of_string_and_list_of_strings": ["timestamp", ["year", "month", "date"]],
+    "list_of_list_of_ints": [[1, 2, 3]],
+    "list_of_list_of_strings_and_ints": [["year", 2, "date"]],
+    "empty_list": [],
+    "dict": {"year_and_month": [1, 2], "day": ["date"]},
+    "nonexistent_string_column": ["z"],
+    "nonexistent_int_column": [99],
 }
 
 # See details in #1403
@@ -268,7 +281,7 @@ join_type_values = list(join_type.values())
 # Test functions for applymap
 test_func = {
     "plus one": lambda x: x + 1,
-    "convert to string": lambda x: str(x),
+    "convert to string": str,
     "square": lambda x: x * x,
     "identity": lambda x: x,
     "return false": lambda x: False,
@@ -464,6 +477,52 @@ default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
 
 
+time_parsing_csv_path = "modin/pandas/test/data/test_time_parsing.csv"
+
+
+class CustomIntegerForAddition:
+    def __init__(self, value: int):
+        self.value = value
+
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return other + self.value
+
+
+class NonCommutativeMultiplyInteger:
+    """int-like class with non-commutative multiply operation.
+
+    We need to test that rmul and mul do different things even when
+    multiplication is not commutative, but almost all multiplication is
+    commutative. This class' fake multiplication overloads are not commutative
+    when you multiply an instance of this class with pandas.series, which
+    does not know how to __mul__ with this class. e.g.
+
+    NonCommutativeMultiplyInteger(2) * pd.Series(1, dtype=int) == pd.Series(2, dtype=int)
+    pd.Series(1, dtype=int) * NonCommutativeMultiplyInteger(2) == pd.Series(3, dtype=int)
+    """
+
+    def __init__(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(
+                f"must initialize with integer, but got {value} of type {type(value)}"
+            )
+        self.value = value
+
+    def __mul__(self, other):
+        # Note that we need to check other is an int, otherwise when we (left) mul
+        # this with a series, we'll just multiply self.value by the series, whereas
+        # we want to make the series do an rmul instead.
+        if not isinstance(other, int):
+            return NotImplemented
+        return self.value * other
+
+    def __rmul__(self, other):
+        return self.value * other + 1
+
+
 def categories_equals(left, right):
     assert (left.ordered and right.ordered) or (not left.ordered and not right.ordered)
     assert_extension_array_equal(left, right)
@@ -472,21 +531,23 @@ def categories_equals(left, right):
 def df_categories_equals(df1, df2):
     if not hasattr(df1, "select_dtypes"):
         if isinstance(df1, pandas.CategoricalDtype):
-            return categories_equals(df1, df2)
+            categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
-            getattr(df1, "dtype"), pandas.CategoricalDtype
+            getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
-            return categories_equals(df1.dtype, df2.dtype)
-        else:
-            return True
+            categories_equals(df1.dtype, df2.dtype)
+        return True
 
-    df1_categorical_columns = df1.select_dtypes(include="category").columns
-    df2_categorical_columns = df2.select_dtypes(include="category").columns
-    assert df1_categorical_columns.equals(df2_categorical_columns)
-    for column in df1_categorical_columns:
+    df1_categorical = df1.select_dtypes(include="category")
+    df2_categorical = df2.select_dtypes(include="category")
+    assert df1_categorical.columns.equals(df2_categorical.columns)
+    # Use an index instead of a column name to iterate through columns. There
+    # may be duplicate colum names. e.g. if two columns are named col1,
+    # selecting df1_categorical["col1"] gives a dataframe of width 2 instead of a series.
+    for i in range(len(df1_categorical.columns)):
         assert_extension_array_equal(
-            df1[column].values,
-            df2[column].values,
+            df1_categorical.iloc[:, i].values,
+            df2_categorical.iloc[:, i].values,
             check_dtype=False,
         )
 
@@ -579,6 +640,13 @@ def df_equals(df1, df2):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+    elif (
+        hasattr(df1, "dtype")
+        and hasattr(df2, "dtype")
+        and isinstance(df1.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+        and isinstance(df2.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+    ):
+        assert_extension_array_equal(df1, df2)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
@@ -620,6 +688,18 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
         or diff_max < 0.0001
         or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
     )
+
+
+def try_modin_df_almost_equals_compare(df1, df2):
+    """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
+    # `modin_df_almost_equals_pandas` is numeric-only comparator
+    dtypes1, dtypes2 = [
+        dtype if is_list_like(dtype := df.dtypes) else [dtype] for df in (df1, df2)
+    ]
+    if all(map(is_numeric_dtype, dtypes1)) and all(map(is_numeric_dtype, dtypes2)):
+        modin_df_almost_equals_pandas(df1, df2)
+    else:
+        df_equals(df1, df2)
 
 
 def df_is_empty(df):
@@ -758,6 +838,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    modin_warning_str_match=None,
     md_extra_kwargs=None,
     *args,
     **kwargs,
@@ -783,6 +864,8 @@ def eval_io(
         `check_exception_type` passed as `True`).
     modin_warning: obj
         Warning that should be raised by Modin.
+    modin_warning_str_match: str
+        If `modin_warning` is set, checks that the raised warning matches this string.
     md_extra_kwargs: dict
         Modin operation specific kwargs.
     """
@@ -807,8 +890,9 @@ def eval_io(
             **kwargs,
         )
 
+    warn_match = modin_warning_str_match if modin_warning is not None else None
     if modin_warning:
-        with pytest.warns(modin_warning):
+        with pytest.warns(modin_warning, match=warn_match):
             call_eval_general()
     else:
         call_eval_general()
@@ -953,7 +1037,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = IO_OPS_DATA_DIR,
+    data_dir: str = "",
     suffix: str = "",
     debug_mode=False,
 ):
@@ -1043,7 +1127,6 @@ def insert_lines_to_csv(
     encoding: str
         Encoding type that should be used during file reading and writing.
     """
-    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
     if lines_type == "blank":
         lines_data = []
     elif lines_type == "bad":
@@ -1054,7 +1137,6 @@ def insert_lines_to_csv(
             f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
         )
     lines = []
-    dialect = "excel"
     with open(csv_name, "r", encoding=encoding, newline="") as read_file:
         try:
             dialect = csv.Sniffer().sniff(read_file.read())

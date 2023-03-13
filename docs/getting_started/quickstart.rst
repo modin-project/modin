@@ -64,13 +64,13 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as
   ray.init()
   #############################################
 
-In this toy example, we look at the NYC taxi dataset, which is around 120MB in size. You can download `this dataset <https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv>`_ to run the example locally.
+In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv>`_ to run the example locally.
 
 .. code-block:: python
 
   # This may take a few minutes to download
   import urllib.request
-  s3_path = "https://s3.amazonaws.com/nyc-tlc/trip+data/yellow_tripdata_2021-01.csv"
+  s3_path = "https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv"
   urllib.request.urlretrieve(s3_path, "taxi.csv")  
 
 Faster Data Loading with ``read_csv``
@@ -137,8 +137,8 @@ create the large dataframe, while pandas took close to a minute.
 Faster ``apply`` over a single column
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The performance benefits of Modin becomes aparent when we operate on large 
-gigabyte-scale datasets. For example, let's say that we want to round up the number 
+The performance benefits of Modin become apparent when we operate on large 
+gigabyte-scale datasets. Let's say we want to round up values 
 across a single column via the ``apply`` operation. 
 
 .. code-block:: python
@@ -164,6 +164,11 @@ across a single column via the ``apply`` operation.
 
 Modin is more than 30X faster at applying a single column of data, operating on 130+ 
 million rows in a second.
+
+In short, Modin provides orders of magnitude speed up over pandas for a variety of operations out of the box. 
+
+.. figure:: ../img/quickstart_speedup.svg
+   :align: center
 
 Summary
 -------

@@ -5,7 +5,7 @@ Modin Configuration Settings
 
 To adjust Modin's default behavior, you can set the value of Modin
 configs by setting an environment variable or by using the
-``modin.config`` API. To list all avaliable configs in Modin, please
+``modin.config`` API. To list all available configs in Modin, please
 run ``python -m modin.config`` to print all
 Modin configs with descriptions.
 
@@ -40,7 +40,7 @@ API.
 
     # Setting `MODIN_STORAGE_FORMAT` environment variable.
     # Also can be set outside the script.
-    os.environ["MODIN_STORAGE_FORMAT"] = "OmniSci"
+    os.environ["MODIN_STORAGE_FORMAT"] = "Hdk"
 
     import modin.config
     import modin.pandas as pd
@@ -48,7 +48,7 @@ API.
     # Checking initially set `StorageFormat` config,
     # which corresponds to `MODIN_STORAGE_FORMAT` environment
     # variable
-    print(modin.config.StorageFormat.get()) # prints 'Omnisci'
+    print(modin.config.StorageFormat.get()) # prints 'Hdk'
 
     # Checking default value of `NPartitions`
     print(modin.config.NPartitions.get()) # prints '8'

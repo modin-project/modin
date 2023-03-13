@@ -1,3 +1,6 @@
+# install current modin checkout to bring all required dependencies
+.[all]
+# now install some more optional dependencies
 colorama
 click
 flatbuffers
@@ -7,9 +10,11 @@ opencv-python
 pydata_sphinx_theme
 pyyaml
 recommonmark
-sphinx
+sphinx<6.0.0
 sphinx-click
-git+https://github.com/modin-project/modin.git@master#egg=modin[all]
+ray[default]>=1.13.0
+# Override to latest version of modin-spreadsheet
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 sphinxcontrib_plantuml
 sphinx-issues
-xgboost
+xgboost>=1.7.1,<2.0.0

@@ -53,6 +53,9 @@ to be full-axis, so they do not suffer from the decreasing level of parallelism.
 How to tune partitioning
 ------------------------
 
+Configure Modin's default partitioning scheme
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 As you can see from the examples above, the more the dataframe's shape is closer to a square, the closer the number of
 partitions to the square of ``NPartitions``. In the case of ``NPartitions`` equals to the number of workers,
 that means that a single worker is going to process multiple partitions at once, which slows down overall performance.
@@ -113,6 +116,47 @@ Copy-pastable example, showing how tuning ``NPartitions`` value for wide frames 
   #   The frame has 10x10=100 partitions when the CPU has 112 cores.
   #   10 times of .abs(): 0.25s.
 
+Manually trigger repartitioning
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you're getting unexpectedly poor performance, although you configured ``MODIN_NPARTITIONS``
+correctly, then this might be caused by unbalanced partitioning that occurred during the
+workflow's execution.
+
+Modin's idealogy is to handle partitioning internally and not let users worry about the possible
+consequences of applying a lot of "bad" operations that may affect DataFrame's partitioning.
+We're constantly making efforts to find and fix cases where partitioning may cause a headache
+for users.
+
+However, if you feel that you're dealing with unbalanced partitioning you may try to call an
+internal :py:meth:`modin.pandas.dataframe.DataFrame._repartition` method on your :py:class:`~modin.pandas.dataframe.DataFrame` in order to manually
+trigger partitions rebalancing and see whether it improves performance for your case.
+
+.. automethod:: modin.pandas.dataframe.DataFrame._repartition
+
+An actual use-case for this method may be the following:
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  import timeit
+
+  df = pd.DataFrame({"col0": [1, 2, 3, 4]})
+
+  # Appending a lot of columns may result into unbalanced partitioning
+  for i in range(1, 128):
+      df[f"col{i}"] = pd.Series([1, 2, 3, 4])
+
+  print(
+      "DataFrame with unbalanced partitioning:",
+      timeit.timeit(lambda: df.sum(), number=10)
+  ) # 1.44s
+
+  df = df._repartition()
+  print(
+      "DataFrame after '._repartition()':",
+      timeit.timeit(lambda: df.sum(), number=10)
+  ) # 0.21s.
 
 Avoid iterating over Modin DataFrame
 """"""""""""""""""""""""""""""""""""

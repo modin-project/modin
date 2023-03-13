@@ -24,7 +24,7 @@ import typing
 import re
 
 from modin.config import Engine
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, get_current_execution
 from modin.core.io import BaseIO
 from pandas.util._decorators import doc
 
@@ -126,7 +126,7 @@ class NotRealFactory(Exception):
 
 @doc(_doc_abstract_factory_class, role="")
 class BaseFactory(object):
-    io_cls: BaseIO = None  # The module where the I/O functionality exists.
+    io_cls: typing.Type[BaseIO] = None  # The module where the I/O functionality exists.
 
     @classmethod
     def get_info(cls) -> FactoryInfo:
@@ -185,6 +185,16 @@ class BaseFactory(object):
     )
     def _from_non_pandas(cls, *args, **kwargs):
         return cls.io_cls.from_non_pandas(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a DataFrame object supporting exchange protocol `__dataframe__()`",
+        params=_doc_io_method_all_params,
+        method="utils.from_dataframe",
+    )
+    def _from_dataframe(cls, *args, **kwargs):
+        return cls.io_cls.from_dataframe(*args, **kwargs)
 
     @classmethod
     @doc(
@@ -464,44 +474,33 @@ class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
-        if Engine.get() != "Ray":
+        supported_engines = ("Ray", "Unidist")
+        if Engine.get() not in supported_engines:
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["partition_column"]
             if "lower_bound" in kwargs:
                 if kwargs["lower_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["lower_bound"]
             if "upper_bound" in kwargs:
                 if kwargs["upper_bound"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["upper_bound"]
             if "max_sessions" in kwargs:
                 if kwargs["max_sessions"] is not None:
                     warnings.warn(
-                        "Distributed read_sql() was only implemented for Ray engine."
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                     )
                 del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
-
-
-@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
-class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
-            ExperimentalPandasOnRayIO,
-        )
-
-        cls.io_cls = ExperimentalPandasOnRayIO
 
     @classmethod
     @doc(
@@ -510,6 +509,12 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_csv_glob()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_csv_glob(**kwargs)
 
     @classmethod
@@ -519,7 +524,28 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.read_pickle_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_custom_text()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
     def _to_pickle_distributed(cls, *args, **kwargs):
@@ -533,7 +559,25 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
         **kwargs : kwargs
             Arguments to the writer method.
         """
+        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
+            )
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
+
+
+@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
+class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
+            ExperimentalPandasOnRayIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnRayIO
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnDask")
@@ -617,20 +661,46 @@ class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
     wrapped_factory = PandasOnPythonFactory
 
 
-@doc(_doc_factory_class, execution_name="experimental OmnisciOnNative")
-class ExperimentalOmnisciOnNativeFactory(BaseFactory):
+@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
+class ExperimentalHdkOnNativeFactory(BaseFactory):
     @classmethod
-    @doc(
-        _doc_factory_prepare_method, io_module_name="experimental ``OmnisciOnNativeIO``"
-    )
+    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
     def prepare(cls):
-        from modin.experimental.core.execution.native.implementations.omnisci_on_native.io import (
-            OmnisciOnNativeIO,
+        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
+            HdkOnNativeIO,
         )
 
-        cls.io_cls = OmnisciOnNativeIO
+        cls.io_cls = HdkOnNativeIO
 
 
-@doc(_doc_factory_class, execution_name="experimental remote OmnisciOnNative")
-class ExperimentalOmnisciOnCloudnativeFactory(ExperimentalRemoteFactory):
-    wrapped_factory = ExperimentalOmnisciOnNativeFactory
+@doc(_doc_factory_class, execution_name="experimental remote HdkOnNative")
+class ExperimentalHdkOnCloudnativeFactory(ExperimentalRemoteFactory):
+    wrapped_factory = ExperimentalHdkOnNativeFactory
+
+
+@doc(_doc_factory_class, execution_name="PandasOnUnidist")
+class PandasOnUnidistFactory(BaseFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``PandasOnUnidistIO``")
+    def prepare(cls):
+        from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
+            PandasOnUnidistIO,
+        )
+
+        cls.io_cls = PandasOnUnidistIO
+
+
+@doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
+class ExperimentalPandasOnUnidistFactory(
+    ExperimentalBaseFactory, PandasOnUnidistFactory
+):
+    @classmethod
+    @doc(
+        _doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnUnidistIO``"
+    )
+    def prepare(cls):
+        from modin.experimental.core.execution.unidist.implementations.pandas_on_unidist.io import (
+            ExperimentalPandasOnUnidistIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnUnidistIO

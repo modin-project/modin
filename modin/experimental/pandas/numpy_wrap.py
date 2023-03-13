@@ -91,7 +91,7 @@ else:
 
                 warnings.warn(
                     "Was not able to intercept all numpy imports. "
-                    "To intercept all of these please do 'import modin.experimental.pandas' as early as possible"
+                    + "To intercept all of these please do 'import modin.experimental.pandas' as early as possible"
                 )
                 self.__has_to_warn = False
 

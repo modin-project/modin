@@ -26,17 +26,22 @@ from modin.core.storage_formats.pandas.parsers import (
     _split_result_for_readers,
     PandasCSVGlobParser,
     PandasPickleExperimentalParser,
+    CustomTextExperimentalParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
-from modin.core.io import CSVGlobDispatcher, PickleExperimentalDispatcher
-from modin.core.execution.ray.implementations.pandas_on_ray.dataframe.dataframe import (
+from modin.core.io import (
+    CSVGlobDispatcher,
+    PickleExperimentalDispatcher,
+    CustomTextExperimentalDispatcher,
+)
+from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray.common.task_wrapper import RayTask
+from modin.core.execution.ray.common import RayWrapper
 from modin.config import NPartitions
 
 import ray
@@ -56,11 +61,17 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         frame_cls=PandasOnRayDataframe,
     )
     read_csv_glob = type(
-        "", (RayTask, PandasCSVGlobParser, CSVGlobDispatcher), build_args
+        "", (RayWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args
     )._read
     read_pickle_distributed = type(
         "",
-        (RayTask, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        (RayWrapper, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
+        build_args,
+    )._read
+
+    read_custom_text = type(
+        "",
+        (RayWrapper, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
         build_args,
     )._read
 
@@ -135,7 +146,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         BaseQueryCompiler
             A new query compiler with imported data for further processing.
         """
-        from .sql import is_distributed, get_query_info
+        from modin.experimental.core.io.sql.utils import is_distributed, get_query_info
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
             warnings.warn("Defaulting to Modin core implementation")
@@ -187,7 +198,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
                 [PandasOnRayDataframePartition(obj) for obj in partition_id[:-1]]
             )
             index_ids.append(partition_id[-1])
-        new_index = pandas.RangeIndex(sum(ray.get(index_ids)))
+        new_index = pandas.RangeIndex(sum(RayWrapper.materialize(index_ids)))
         new_query_compiler = cls.query_compiler_cls(
             cls.frame_cls(np.array(partition_ids), new_index, cols_names)
         )
@@ -227,8 +238,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             df.to_pickle(**kwargs)
             return pandas.DataFrame()
 
-        result = qc._modin_frame.broadcast_apply_full_axis(
-            1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
+        result = qc._modin_frame.apply_full_axis(
+            1, func, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()
 
@@ -297,9 +308,9 @@ def _read_sql_with_offset_pandas_on_ray(
     Returns
     -------
     list
-        List with splitted read results and it's metadata (index, dtypes, etc.).
+        List with split read results and it's metadata (index, dtypes, etc.).
     """
-    from .sql import query_put_bounders
+    from modin.experimental.core.io.sql.utils import query_put_bounders
 
     query_with_bounders = query_put_bounders(sql, partition_column, start, end)
     pandas_df = pandas.read_sql(

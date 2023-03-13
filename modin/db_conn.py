@@ -23,11 +23,15 @@ make a db connection. It can make and provide a connection whenever the Modin
 driver or a worker wants one.
 """
 
+from typing import Any, Sequence, Dict, Optional
+
 _PSYCOPG_LIB_NAME = "psycopg2"
 _SQLALCHEMY_LIB_NAME = "sqlalchemy"
 
 
 class UnsupportedDatabaseException(Exception):
+    """Modin can't create a particular kind of database connection."""
+
     pass
 
 
@@ -45,15 +49,44 @@ class ModinDatabaseConnection:
         Keyword arguments to pass when creating the connection.
     """
 
-    def __init__(self, lib, *args, **kwargs):
+    lib: str
+    args: Sequence
+    kwargs: Dict
+    _dialect_is_microsoft_sql_cache: Optional[bool]
+
+    def __init__(self, lib: str, *args: Any, **kwargs: Any) -> None:
         lib = lib.lower()
         if lib not in (_PSYCOPG_LIB_NAME, _SQLALCHEMY_LIB_NAME):
             raise UnsupportedDatabaseException(f"Unsupported database library {lib}")
         self.lib = lib
         self.args = args
         self.kwargs = kwargs
+        self._dialect_is_microsoft_sql_cache = None
 
-    def get_connection(self):
+    def _dialect_is_microsoft_sql(self) -> bool:
+        """
+        Tell whether this connection requires Microsoft SQL dialect.
+
+        If this is a sqlalchemy connection, create an engine from args and
+        kwargs. If that engine's driver is pymssql or pyodbc, this
+        connection requires Microsoft SQL. Otherwise, it doesn't.
+
+        Returns
+        -------
+        bool
+        """
+        if self._dialect_is_microsoft_sql_cache is None:
+            self._dialect_is_microsoft_sql_cache = False
+            if self.lib == _SQLALCHEMY_LIB_NAME:
+                from sqlalchemy import create_engine
+
+                self._dialect_is_microsoft_sql_cache = create_engine(
+                    *self.args, **self.kwargs
+                ).driver in ("pymssql", "pyodbc")
+
+        return self._dialect_is_microsoft_sql_cache
+
+    def get_connection(self) -> Any:
         """
         Make the database connection and get it.
 
@@ -76,4 +109,73 @@ class ModinDatabaseConnection:
 
             return create_engine(*self.args, **self.kwargs).connect()
 
-        raise Exception("Unsupported database library")
+        raise UnsupportedDatabaseException("Unsupported database library")
+
+    def get_string(self) -> str:
+        """
+        Get input connection string.
+
+        Returns
+        -------
+        str
+        """
+        return self.args[0]
+
+    def column_names_query(self, query: str) -> str:
+        """
+        Get a query that gives the names of columns that `query` would produce.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to check.
+
+        Returns
+        -------
+        str
+        """
+        # This query looks odd, but it works in both PostgreSQL and Microsoft
+        # SQL, which doesn't let you use a "limit" clause to select 0 rows.
+        return f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY WHERE 1 = 0"
+
+    def row_count_query(self, query: str) -> str:
+        """
+        Get a query that gives the names of rows that `query` would produce.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to check.
+
+        Returns
+        -------
+        str
+        """
+        return f"SELECT COUNT(*) FROM ({query}) AS _MODIN_COUNT_QUERY"
+
+    def partition_query(self, query: str, limit: int, offset: int) -> str:
+        """
+        Get a query that partitions the original `query`.
+
+        Parameters
+        ----------
+        query : str
+            The SQL query to get a partition.
+        limit : int
+            The size of the partition.
+        offset : int
+            Where the partition begins.
+
+        Returns
+        -------
+        str
+        """
+        return (
+            (
+                f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY ORDER BY(SELECT NULL)"
+                + f" OFFSET {offset} ROWS FETCH NEXT {limit} ROWS ONLY"
+            )
+            if self._dialect_is_microsoft_sql()
+            else f"SELECT * FROM ({query}) AS _MODIN_COUNT_QUERY LIMIT "
+            + f"{limit} OFFSET {offset}"
+        )

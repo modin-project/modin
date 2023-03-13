@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pytest
+
 from modin.core.storage_formats import (
     BaseQueryCompiler,
     PandasQueryCompiler,
-    PyarrowQueryCompiler,
 )
+from modin.experimental.core.storage_formats.pyarrow import PyarrowQueryCompiler
 
-import pytest
 
 BASE_EXECUTION = BaseQueryCompiler
 EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]
@@ -32,6 +33,8 @@ def test_base_abstract_methods():
         "from_pandas",
         "from_arrow",
         "default_to_pandas",
+        "from_dataframe",
+        "to_dataframe",
     ]
 
     not_implemented_methods = BASE_EXECUTION.__abstractmethods__.difference(

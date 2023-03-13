@@ -15,10 +15,15 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
-import modin.pandas as pd
-from modin.utils import to_pandas
 from numpy.testing import assert_array_equal
 import io
+import warnings
+
+import modin.pandas as pd
+from modin.utils import (
+    to_pandas,
+    get_current_execution,
+)
 
 from modin.pandas.test.utils import (
     df_equals,
@@ -64,7 +69,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
         ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
@@ -188,7 +192,6 @@ def test_bfill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.bool()
@@ -207,7 +210,6 @@ def test_bool(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_boxplot(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
@@ -267,7 +269,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(np.arange(col_len + 10))
+        modin_df.dot(np.arange(col_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -283,7 +285,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+        modin_df.dot(pd.Series(np.arange(col_len)))
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
@@ -314,7 +316,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df @ np.arange(col_len + 10)
+        modin_df @ np.arange(col_len + 10)
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -330,7 +332,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df @ pd.Series(np.arange(col_len))
+        modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():
@@ -364,12 +366,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+def test_info(data, verbose, max_cols, memory_usage, null_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -655,7 +660,7 @@ def test_replace():
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -684,7 +689,7 @@ def test_resampler(rule, axis):
     ],
 )
 def test_resampler_functions(rule, axis, method):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -710,7 +715,7 @@ def test_resampler_functions(rule, axis, method):
     ],
 )
 def test_resampler_functions_with_arg(rule, axis, method_arg):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -732,7 +737,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
 @pytest.mark.parametrize("on", [None, "DateColumn"])
 @pytest.mark.parametrize("level", [None, 1])
 def test_resample_specific(rule, closed, label, on, level):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -1014,8 +1019,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1025,8 +1030,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1037,8 +1042,8 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1171,3 +1176,25 @@ def test_hasattr_sparse(is_sparse_data):
         else create_test_dfs(test_data["float_nan_data"])
     )
     eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))
+
+
+def test_setattr_axes():
+    # Test that setting .index or .columns does not warn
+    df = pd.DataFrame([[1, 2], [3, 4]])
+    with warnings.catch_warnings():
+        if get_current_execution() != "BaseOnPython":
+            # In BaseOnPython, setting columns raises a warning because get_axis
+            #  defaults to pandas.
+            warnings.simplefilter("error")
+        df.index = ["foo", "bar"]
+        df.columns = [9, 10]
+
+    # Check that ensure_index was called
+    pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+    pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

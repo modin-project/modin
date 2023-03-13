@@ -12,3 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Base Modin Dataframe class optimized for pandas on Ray execution."""
+
+from .dataframe import PandasOnRayDataframe
+
+__all__ = ["PandasOnRayDataframe"]

@@ -134,8 +134,8 @@ def test_feature_weights():
         dm.get_float_info("feature_weights"), md_dm.get_float_info("feature_weights")
     )
     # Handle empty
-    dm.set_info(feature_weights=np.empty((0, 0)))
-    md_dm.set_info(feature_weights=np.empty((0, 0)))
+    dm.set_info(feature_weights=np.empty((0,)))
+    md_dm.set_info(feature_weights=np.empty((0,)))
 
     assert (
         dm.get_float_info("feature_weights").shape[0]

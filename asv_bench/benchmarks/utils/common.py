@@ -20,7 +20,7 @@ the performance results, hence some utility functions are duplicated here.
 """
 
 import logging
-import modin.pandas as pd
+import modin.pandas
 import pandas
 import numpy as np
 import uuid
@@ -34,12 +34,11 @@ from .compatibility import (
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
 
-random_state = np.random.RandomState(seed=42)
-
-IMPL = {
-    "modin": pd,
+POSSIBLE_IMPL = {
+    "modin": modin.pandas,
     "pandas": pandas,
 }
+IMPL = POSSIBLE_IMPL[ASV_USE_IMPL]
 
 
 def translator_groupby_ngroups(groupby_ngroups: Union[str, int], shape: tuple) -> int:
@@ -73,7 +72,7 @@ data_cache = dict()
 dataframes_cache = dict()
 
 
-def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
+def gen_nan_data(nrows: int, ncols: int) -> dict:
     """
     Generate nan data with caching.
 
@@ -83,9 +82,6 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
 
     Parameters
     ----------
-    impl : str
-        Implementation used to create the DataFrame or Series;
-        supported implemetations: {"modin", "pandas"}.
     nrows : int
         Number of rows.
     ncols : int
@@ -96,7 +92,7 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
     modin.pandas.DataFrame or pandas.DataFrame or modin.pandas.Series or pandas.Series
         DataFrame or Series with shape (nrows, ncols) or (nrows,), respectively.
     """
-    cache_key = (impl, nrows, ncols)
+    cache_key = (ASV_USE_IMPL, nrows, ncols)
     if cache_key in data_cache:
         return data_cache[cache_key]
 
@@ -104,9 +100,9 @@ def gen_nan_data(impl: str, nrows: int, ncols: int) -> dict:
 
     if ncols > 1:
         columns = [f"col{x}" for x in range(ncols)]
-        data = IMPL[impl].DataFrame(np.nan, index=pd.RangeIndex(nrows), columns=columns)
+        data = IMPL.DataFrame(np.nan, index=IMPL.RangeIndex(nrows), columns=columns)
     elif ncols == 1:
-        data = IMPL[impl].Series(np.nan, index=pd.RangeIndex(nrows))
+        data = IMPL.Series(np.nan, index=IMPL.RangeIndex(nrows))
     else:
         assert False, "Number of columns (ncols) should be >= 1"
 
@@ -148,7 +144,7 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
         )
     )
     data = {
-        "col{}".format(i): random_state.randint(rand_low, rand_high, size=(nrows))
+        "col{}".format(i): np.random.randint(rand_low, rand_high, size=(nrows))
         for i in range(ncols)
     }
     data_cache[cache_key] = weakdict(data)
@@ -235,7 +231,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
 
     data_true_false = {
-        "tf_col{}".format(i): random_state.choice(
+        "tf_col{}".format(i): np.random.choice(
             ["Yes", "true", "No", "false"], size=(nrows - nrows // 2)
         )
         for i in range(ncols - ncols // 2)
@@ -300,7 +296,6 @@ def gen_data(
 
 
 def generate_dataframe(
-    impl: str,
     data_type: str,
     nrows: int,
     ncols: int,
@@ -310,7 +305,8 @@ def generate_dataframe(
     count_groups: Optional[int] = None,
     gen_unique_key: bool = False,
     cache_prefix: str = None,
-) -> Union[pd.DataFrame, pandas.DataFrame]:
+    impl: str = None,
+) -> Union[modin.pandas.DataFrame, pandas.DataFrame]:
     """
     Generate DataFrame with caching.
 
@@ -320,9 +316,6 @@ def generate_dataframe(
 
     Parameters
     ----------
-    impl : str
-        Implementation used to create the dataframe;
-        supported implemetations: {"modin", "pandas"}.
     data_type : str
         Type of data generation;
         supported types: {"int", "str_int"}.
@@ -344,6 +337,9 @@ def generate_dataframe(
         Generate `col1` column where all elements are unique.
     cache_prefix : str, optional
         Prefix to add to the cache key of the requested frame.
+    impl : str, optional
+        Implementation used to create the dataframe;
+        supported implemetations: {"modin", "pandas"}.
 
     Returns
     -------
@@ -359,6 +355,9 @@ def generate_dataframe(
 
     if groupby_ncols and count_groups:
         ncols -= groupby_ncols
+
+    if impl is None:
+        impl = ASV_USE_IMPL
 
     cache_key = (
         impl,
@@ -393,12 +392,7 @@ def generate_dataframe(
     if gen_unique_key:
         data["col1"] = np.arange(nrows)
 
-    if impl == "modin":
-        df = pd.DataFrame(data)
-    elif impl == "pandas":
-        df = pandas.DataFrame(data)
-    else:
-        assert False
+    df = POSSIBLE_IMPL[impl].DataFrame(data)
 
     if groupby_ncols and count_groups:
         dataframes_cache[cache_key] = df, groupby_columns
@@ -434,7 +428,7 @@ def random_columns(df_columns: list, columns_number: int) -> list:
     -------
     list
     """
-    return list(random_state.choice(df_columns, size=columns_number))
+    return list(np.random.choice(df_columns, size=columns_number))
 
 
 def random_booleans(number: int) -> list:
@@ -450,36 +444,37 @@ def random_booleans(number: int) -> list:
     -------
     list
     """
-    return list(random_state.choice([True, False], size=number))
+    return list(np.random.choice([True, False], size=number))
 
 
 def trigger_import(*dfs):
     """
-    Trigger import execution for DataFrames obtained by OmniSci engine.
+    Trigger import execution for DataFrames obtained by HDK engine.
 
     Parameters
     ----------
     *dfs : iterable
         DataFrames to trigger import.
     """
-    if ASV_USE_STORAGE_FORMAT != "omnisci" or ASV_USE_IMPL == "pandas":
+    if ASV_USE_STORAGE_FORMAT != "hdk" or ASV_USE_IMPL == "pandas":
         return
 
-    from modin.experimental.core.execution.native.implementations.omnisci_on_native.omnisci_worker import (
-        OmnisciServer,
+    from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
+        DbWorker,
     )
 
     for df in dfs:
         df.shape  # to trigger real execution
         df._query_compiler._modin_frame._partitions[0][
             0
-        ].frame_id = OmnisciServer().put_arrow_to_omnisci(
+        ].frame_id = DbWorker().import_arrow_table(
             df._query_compiler._modin_frame._partitions[0][0].get()
         )  # to trigger real execution
 
 
 def execute(
-    df: Union[pd.DataFrame, pandas.DataFrame], trigger_omnisci_import: bool = False
+    df: Union[modin.pandas.DataFrame, pandas.DataFrame],
+    trigger_hdk_import: bool = False,
 ):
     """
     Make sure the calculations are finished.
@@ -488,31 +483,37 @@ def execute(
     ----------
     df : modin.pandas.DataFrame or pandas.Datarame
         DataFrame to be executed.
-    trigger_omnisci_import : bool, default: False
-        Whether `df` are obtained by import with OmniSci engine.
+    trigger_hdk_import : bool, default: False
+        Whether `df` are obtained by import with HDK engine.
     """
-    if trigger_omnisci_import:
+    if trigger_hdk_import:
         trigger_import(df)
         return
     if ASV_USE_IMPL == "modin":
-        if ASV_USE_STORAGE_FORMAT == "omnisci":
+        if ASV_USE_STORAGE_FORMAT == "hdk":
             df._query_compiler._modin_frame._execute()
             return
-        partitions = df._query_compiler._modin_frame._partitions
+        partitions = df._query_compiler._modin_frame._partitions.flatten()
+        mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
+        if len(partitions) and hasattr(mgr_cls, "wait_partitions"):
+            mgr_cls.wait_partitions(partitions)
+            return
+
+        # compatibility with old Modin versions
         all(
             map(
                 lambda partition: partition.drain_call_queue() or True,
-                partitions.flatten(),
+                partitions,
             )
         )
         if ASV_USE_ENGINE == "ray":
             from ray import wait
 
-            all(map(lambda partition: wait([partition.oid]), partitions.flatten()))
+            all(map(lambda partition: wait([partition._data]), partitions))
         elif ASV_USE_ENGINE == "dask":
             from dask.distributed import wait
 
-            all(map(lambda partition: wait(partition.future), partitions.flatten()))
+            all(map(lambda partition: wait(partition._data), partitions))
         elif ASV_USE_ENGINE == "python":
             pass
 
@@ -558,8 +559,44 @@ def prepare_io_data(test_filename: str, data_type: str, shapes: list):
     test_filenames = {}
     for shape in shapes:
         shape_id = get_shape_id(shape)
-        test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
-        df = generate_dataframe("pandas", data_type, *shape, RAND_LOW, RAND_HIGH)
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.csv"
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, impl="pandas")
         df.to_csv(test_filenames[shape_id], index=False)
 
     return test_filenames
+
+
+def prepare_io_data_parquet(test_filename: str, data_type: str, shapes: list):
+    """
+    Prepare data for IO tests with caching.
+
+    Parameters
+    ----------
+    test_filename : str
+        Unique file identifier that is used to distinguish data
+        for different tests.
+    data_type : "str_int"
+        Type of data generation.
+    shapes : list
+        Data shapes to prepare.
+
+    Returns
+    -------
+    test_filenames : dict
+        Dictionary that maps dataset shape to the file on disk.
+    """
+    test_filenames = {}
+    for shape in shapes:
+        shape_id = get_shape_id(shape)
+        test_filenames[shape_id] = f"{test_filename}_{shape_id}_{data_type}.parquet"
+        df = generate_dataframe(data_type, *shape, RAND_LOW, RAND_HIGH, impl="pandas")
+        df.to_parquet(test_filenames[shape_id], index=False)
+
+    return test_filenames
+
+
+def setup(*args, **kwargs):  # noqa: GL08
+    # This function just needs to be imported into each benchmark file to
+    # set up the random seed before each function. ASV run it automatically.
+    # https://asv.readthedocs.io/en/latest/writing_benchmarks.html
+    np.random.seed(42)

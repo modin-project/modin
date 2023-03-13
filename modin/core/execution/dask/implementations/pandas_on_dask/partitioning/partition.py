@@ -13,16 +13,13 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
-
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-
-from distributed.client import default_client
 from distributed import Future
 from distributed.utils import get_ip
 from dask.distributed import wait
 
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
+from modin.core.execution.dask.common import DaskWrapper
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):
@@ -31,7 +28,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    future : distributed.Future
+    data : distributed.Future
         A reference to pandas DataFrame that need to be wrapped with this class.
     length : distributed.Future or int, optional
         Length or reference to it of wrapped pandas DataFrame.
@@ -43,15 +40,19 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped pandas DataFrame.
     """
 
-    def __init__(self, future, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(future, Future)
-        self.future = future
+    execution_wrapper = DaskWrapper
+
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, Future)
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+        # TODO: align with other engines
+        self._identity
 
     def get(self):
         """
@@ -63,10 +64,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             The object from the distributed memory.
         """
         self.drain_call_queue()
-        # blocking operation
-        if isinstance(self.future, pandas.DataFrame):
-            return self.future
-        return self.future.result()
+        return DaskWrapper.materialize(self._data)
 
     def apply(self, func, *args, **kwargs):
         """
@@ -74,7 +72,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
 
         Parameters
         ----------
-        func : callable
+        func : callable or distributed.Future
             A function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
@@ -90,74 +88,58 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         -----
         The keyword arguments are sent as a dictionary.
         """
-        client = default_client()
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            future = client.submit(
-                apply_list_of_funcs, call_queue, self.future, pure=False
+            futures = DaskWrapper.deploy(
+                func=apply_list_of_funcs,
+                f_args=(call_queue, self._data),
+                num_returns=2,
+                pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, kwargs = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **kwargs)
-        futures = [
-            client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
-        ]
-        return PandasOnDaskDataframePartition(futures[0], ip=futures[1])
-
-    def add_to_apply_calls(self, func, *args, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnDaskDataframePartition
-            A new ``PandasOnDaskDataframePartition`` object.
-
-        Notes
-        -----
-        The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnDaskDataframePartition(
-            self.future, call_queue=self.call_queue + [[func, args, kwargs]]
-        )
+            func, f_args, f_kwargs = call_queue[0]
+            futures = DaskWrapper.deploy(
+                func=apply_func,
+                f_args=(self._data, func, *f_args),
+                f_kwargs=f_kwargs,
+                num_returns=2,
+                pure=False,
+            )
+        return self.__constructor__(futures[0], ip=futures[1])
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
         if len(self.call_queue) == 0:
             return
         call_queue = self.call_queue
-        client = default_client()
         if len(call_queue) > 1:
-            future = client.submit(
-                apply_list_of_funcs, call_queue, self.future, pure=False
+            futures = DaskWrapper.deploy(
+                func=apply_list_of_funcs,
+                f_args=(call_queue, self._data),
+                num_returns=2,
+                pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
-            func, args, kwargs = call_queue[0]
-            future = client.submit(apply_func, self.future, func, *args, **kwargs)
-        futures = [
-            client.submit(lambda l, i: l[i], future, i, pure=False) for i in range(2)
-        ]
-        self.future = futures[0]
+            func, f_args, f_kwargs = call_queue[0]
+            futures = DaskWrapper.deploy(
+                func=apply_func,
+                f_args=(self._data, func, *f_args),
+                f_kwargs=f_kwargs,
+                num_returns=2,
+                pure=False,
+            )
+        self._data = futures[0]
         self._ip_cache = futures[1]
         self.call_queue = []
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self.future)
+        wait(self._data)
 
     def mask(self, row_labels, col_labels):
         """
@@ -176,15 +158,22 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A new ``PandasOnDaskDataframePartition`` object.
         """
         new_obj = super().mask(row_labels, col_labels)
-        client = default_client()
         if isinstance(row_labels, slice) and isinstance(self._length_cache, Future):
-            new_obj._length_cache = client.submit(
-                compute_sliced_len, row_labels, self._length_cache
-            )
+            if row_labels == slice(None):
+                # fast path - full axis take
+                new_obj._length_cache = self._length_cache
+            else:
+                new_obj._length_cache = DaskWrapper.deploy(
+                    func=compute_sliced_len, f_args=(row_labels, self._length_cache)
+                )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
-            new_obj._width_cache = client.submit(
-                compute_sliced_len, col_labels, self._width_cache
-            )
+            if col_labels == slice(None):
+                # fast path - full axis take
+                new_obj._width_cache = self._width_cache
+            else:
+                new_obj._width_cache = DaskWrapper.deploy(
+                    func=compute_sliced_len, f_args=(col_labels, self._width_cache)
+                )
         return new_obj
 
     def __copy__(self):
@@ -196,8 +185,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A copy of this partition.
         """
-        return PandasOnDaskDataframePartition(
-            self.future,
+        return self.__constructor__(
+            self._data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
@@ -219,8 +208,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        client = default_client()
-        return cls(client.scatter(obj, hash=False))
+        return cls(DaskWrapper.put(obj, hash=False), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -237,36 +225,50 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         callable
             An object that can be accepted by ``apply``.
         """
-        return default_client().scatter(func, hash=False, broadcast=True)
+        return DaskWrapper.put(func, hash=False, broadcast=True)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or distributed.Future
             The length of the object.
         """
         if self._length_cache is None:
-            self._length_cache = self.apply(lambda df: len(df)).future
-        if isinstance(self._length_cache, Future):
-            self._length_cache = self._length_cache.result()
+            self._length_cache = self.apply(len)._data
+        if isinstance(self._length_cache, Future) and materialize:
+            self._length_cache = DaskWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or distributed.Future
             The width of the object.
         """
         if self._width_cache is None:
-            self._width_cache = self.apply(lambda df: len(df.columns)).future
-        if isinstance(self._width_cache, Future):
-            self._width_cache = self._width_cache.result()
+            self._width_cache = self.apply(lambda df: len(df.columns))._data
+        if isinstance(self._width_cache, Future) and materialize:
+            self._width_cache = DaskWrapper.materialize(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -281,7 +283,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if self._ip_cache is None:
             self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, Future):
-            self._ip_cache = self._ip_cache.result()
+            self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 
@@ -294,11 +296,11 @@ def apply_func(partition, func, *args, **kwargs):
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
     func : callable
-        Function that needs to be executed on `partition`.
-    *args
-        Additional positional arguments to be passed in `func`.
-    **kwargs
-        Additional keyword arguments to be passed in `func`.
+        The function to perform.
+    *args : list
+        Positional arguments to pass to ``func``.
+    **kwargs : dict
+        Keyword arguments to pass to ``func``.
 
     Returns
     -------
@@ -306,19 +308,24 @@ def apply_func(partition, func, *args, **kwargs):
         The resulting pandas DataFrame.
     str
         The node IP address of the worker process.
+
+    Notes
+    -----
+    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
+    destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
     return result, get_ip()
 
 
-def apply_list_of_funcs(funcs, partition):
+def apply_list_of_funcs(call_queue, partition):
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    funcs : list
-        A call queue that needs to be executed on the partition.
+    call_queue : list
+        A call queue of ``[func, args, kwargs]`` triples that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
 
@@ -329,6 +336,6 @@ def apply_list_of_funcs(funcs, partition):
     str
         The node IP address of the worker process.
     """
-    for func, args, kwargs in funcs:
-        partition = func(partition, *args, **kwargs)
+    for func, f_args, f_kwargs in call_queue:
+        partition = func(partition, *f_args, **f_kwargs)
     return partition, get_ip()

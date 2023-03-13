@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+"""These benchmarks are supposed to be run only for modin, since they do not make sense for pandas."""
+
 import modin.pandas as pd
 from modin.pandas.utils import from_pandas
 
@@ -61,8 +63,11 @@ class TimeToPandas:
         from modin.config import NPartitions
 
         NPartitions.get = lambda: cpus
-        self.data = generate_dataframe("modin", "int", *shape, RAND_LOW, RAND_HIGH)
+        self.data = generate_dataframe("int", *shape, RAND_LOW, RAND_HIGH, impl="modin")
 
     def time_to_pandas(self, shape, cpus):
         # to_pandas is already synchronous
         to_pandas(self.data)
+
+
+from ..utils import setup  # noqa: E402, F401

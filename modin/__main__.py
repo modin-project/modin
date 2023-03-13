@@ -16,7 +16,7 @@
 import argparse
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         "python -m modin",
         description="Drop-in pandas replacement; refer to https://modin.readthedocs.io/ for details.",

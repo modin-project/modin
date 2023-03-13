@@ -48,15 +48,19 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"
         ):
-            warnings.warn(
-                "Modin only implements parallel `read_excel` with `openpyxl` engine, "
-                'please specify `engine=None` or `engine="openpyxl"` to '
-                "use Modin's parallel implementation."
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
+                + 'please specify `engine=None` or `engine="openpyxl"` to '
+                + "use Modin's parallel implementation.",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
         if sys.version_info < (3, 7):
-            warnings.warn("Python 3.7 or higher required for parallel `read_excel`.")
-            return cls.single_worker_read(io, **kwargs)
+            return cls.single_worker_read(
+                io,
+                reason="Python 3.7 or higher required for parallel `read_excel`.",
+                **kwargs
+            )
 
         from zipfile import ZipFile
         from openpyxl.worksheet.worksheet import Worksheet
@@ -66,15 +70,18 @@ class ExcelDispatcher(TextFileDispatcher):
 
         sheet_name = kwargs.get("sheet_name", 0)
         if sheet_name is None or isinstance(sheet_name, list):
-            warnings.warn(
-                "`read_excel` functionality is only implemented for a single sheet at a "
-                "time. Multiple sheet reading coming soon!"
+            return cls.single_worker_read(
+                io,
+                reason="`read_excel` functionality is only implemented for a single sheet at a "
+                + "time. Multiple sheet reading coming soon!",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
 
         warnings.warn(
-            "Parallel `read_excel` is a new feature! Please email "
-            "bug_reports@modin.org if you run into any problems."
+            "Parallel `read_excel` is a new feature! If you run into any "
+            + "problems, please visit https://github.com/modin-project/modin/issues. "
+            + "If you find a new issue and can't file it on GitHub, please "
+            + "email bug_reports@modin.org."
         )
 
         # NOTE: ExcelReader() in read-only mode does not close file handle by itself
@@ -146,7 +153,7 @@ class ExcelDispatcher(TextFileDispatcher):
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
 
-            if not all(column_names):
+            if not all(column_names) or kwargs.get("usecols"):
                 # some column names are empty, use pandas reader to take the names from it
                 pandas_kw["nrows"] = 1
                 df = pandas.read_excel(io, **pandas_kw)
@@ -191,7 +198,11 @@ class ExcelDispatcher(TextFileDispatcher):
                 # If there is no data, exit before triggering computation.
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
-                remote_results_list = cls.deploy(cls.parse, num_splits + 2, args)
+                remote_results_list = cls.deploy(
+                    func=cls.parse,
+                    f_kwargs=args,
+                    num_returns=num_splits + 2,
+                )
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])
                 dtypes_ids.append(remote_results_list[-1])
@@ -210,18 +221,14 @@ class ExcelDispatcher(TextFileDispatcher):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
 
+        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
+
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             data_ids,
             new_index,

@@ -13,12 +13,12 @@
 
 """The module defines interface for a partition with PyArrow storage format and Ray engine."""
 
-import ray
 import pyarrow
 
-from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
+from modin.core.execution.ray.common import RayWrapper
 
 
 class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
@@ -29,7 +29,7 @@ class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
 
     Parameters
     ----------
-    object_id : ray.ObjectRef
+    data : ray.ObjectRef
         A reference to ``pyarrow.Table`` that needs to be wrapped with this class.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped ``pyarrow.Table``.
@@ -56,7 +56,9 @@ class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):
         PyarrowOnRayDataframePartition
             A ``PyarrowOnRayDataframePartition`` object.
         """
-        return PyarrowOnRayDataframePartition(ray.put(pyarrow.Table.from_pandas(obj)))
+        return PyarrowOnRayDataframePartition(
+            RayWrapper.put(pyarrow.Table.from_pandas(obj))
+        )
 
     @classmethod
     def _length_extraction_fn(cls):

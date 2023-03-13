@@ -11,6 +11,8 @@ Advanced Usage
    modin_sql
    modin_xgboost
    modin_in_the_cloud
+   modin_logging
+   batch
 
 .. meta::
     :description lang=en:
@@ -73,9 +75,6 @@ SQL on Modin Dataframes
 
 Read about Modin Dataframe support for SQL queries in this recent `blog post`_. Check out the `Modin SQL documentation`_ as well!
 
-.. figure:: /img/modin_sql_example.png
-   :align: center
-
 Distributed XGBoost on Modin
 ----------------------------
 
@@ -83,6 +82,27 @@ Modin provides an implementation of `distributed XGBoost`_ machine learning algo
 :doc:`Distributed XGBoost on Modin documentation <modin_xgboost>` for details about installation and usage, as well as
 :doc:`Modin XGBoost architecture documentation </flow/modin/experimental/xgboost>` for information about implementation and
 internal execution flow.
+
+Logging with Modin
+------------------
+
+Modin logging offers users greater insight into their queries by logging internal Modin API calls, partition metadata,
+and system memory. Logging is disabled by default, but when it is enabled, log files are written to a local `.modin` directory
+at the same directory level as the notebook/script used to run Modin. See our :doc:`Logging with Modin documentation <modin_logging>`
+for usage information.
+
+Batch Pipeline API
+------------------
+Modin provides an experimental batched API that pipelines row parallel queries. See our :doc:`Batch Pipline API Usage Guide <batch>`
+for a walkthrough on how to use this feature, as well as :doc:`Batch Pipeline API documentation </flow/modin/experimental/batch>`
+for more information about the API.
+
+Fuzzydata Testing
+-----------------
+
+An experimental GitHub Action on pull request has been added to Modin, which automatically runs the Modin codebase against
+`fuzzydata`, a random dataframe workflow generator. The resulting workflow that was used to test Modin codebase can be
+downloaded as an artifact from the GitHub Actions tab for further inspection. See `fuzzydata`_ for more details.
 
 .. _`blog post`: https://medium.com/riselab/why-every-data-scientist-using-pandas-needs-modin-bringing-sql-to-dataframes-3b216b29a7c0
 .. _`Modin SQL documentation`: modin_sql.html
@@ -93,3 +113,4 @@ internal execution flow.
 .. _`Slack`: https://modin.org/slack.html
 .. _`tqdm`: https://github.com/tqdm/tqdm
 .. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720
+.. _`fuzzydata`: https://github.com/suhailrehman/fuzzydata

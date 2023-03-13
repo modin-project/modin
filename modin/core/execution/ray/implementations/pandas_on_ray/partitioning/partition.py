@@ -15,16 +15,12 @@
 
 import ray
 from ray.util import get_node_ip_address
-from packaging import version
 
+from modin.core.execution.ray.common.utils import deserialize, ObjectIDType, wait
+from modin.core.execution.ray.common import RayWrapper
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
-
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+from modin.logging import get_logger
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -35,7 +31,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    object_id : ray.ObjectRef
+    data : ray.ObjectRef
         A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
     length : ray.ObjectRef or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
@@ -47,15 +43,27 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
     """
 
-    def __init__(self, object_id, length=None, width=None, ip=None, call_queue=None):
-        assert isinstance(object_id, ObjectIDType)
-        self.oid = object_id
+    execution_wrapper = RayWrapper
+
+    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        assert isinstance(data, ObjectIDType)
+        self._data = data
         if call_queue is None:
             call_queue = []
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
+
+        log = get_logger()
+        self._is_debug(log) and log.debug(
+            "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
+                self._identity,
+                str(self._length_cache),
+                str(self._width_cache),
+                str(self._ip_cache),
+            )
+        )
 
     def get(self):
         """
@@ -66,9 +74,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         pandas.DataFrame
             The object from the Plasma store.
         """
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.get::{self._identity}")
         if len(self.call_queue):
             self.drain_call_queue()
-        return ray.get(self.oid)
+        result = RayWrapper.materialize(self._data)
+        self._is_debug(log) and log.debug(f"EXIT::Partition.get::{self._identity}")
+        return result
 
     def apply(self, func, *args, **kwargs):
         """
@@ -93,73 +105,73 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        oid = self.oid
-        call_queue = self.call_queue + [(func, args, kwargs)]
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
+        data = self._data
+        call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            result, length, width, ip = apply_list_of_funcs.remote(call_queue, oid)
+            self._is_debug(log) and log.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
+            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            func, args, kwargs = call_queue[0]
-            result, length, width, ip = apply_func.remote(oid, func, *args, **kwargs)
-        return PandasOnRayDataframePartition(result, length, width, ip)
-
-    def add_to_apply_calls(self, func, *args, **kwargs):
-        """
-        Add a function to the call queue.
-
-        Parameters
-        ----------
-        func : callable or ray.ObjectRef
-            Function to be added to the call queue.
-        *args : iterable
-            Additional positional arguments to be passed in `func`.
-        **kwargs : dict
-            Additional keyword arguments to be passed in `func`.
-
-        Returns
-        -------
-        PandasOnRayDataframePartition
-            A new ``PandasOnRayDataframePartition`` object.
-
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
-        """
-        return PandasOnRayDataframePartition(
-            self.oid, call_queue=self.call_queue + [(func, args, kwargs)]
-        )
+            func, f_args, f_kwargs = call_queue[0]
+            result, length, width, ip = _apply_func.remote(
+                data, func, *f_args, **f_kwargs
+            )
+            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
+        self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
+        return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
+        log = get_logger()
+        self._is_debug(log) and log.debug(
+            f"ENTER::Partition.drain_call_queue::{self._identity}"
+        )
         if len(self.call_queue) == 0:
             return
-        oid = self.oid
+        data = self._data
         call_queue = self.call_queue
         if len(call_queue) > 1:
+            self._is_debug(log) and log.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
             (
-                self.oid,
-                self._length_cache,
-                self._width_cache,
+                self._data,
+                new_length,
+                new_width,
                 self._ip_cache,
-            ) = apply_list_of_funcs.remote(call_queue, oid)
+            ) = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            func, args, kwargs = call_queue[0]
+            func, f_args, f_kwargs = call_queue[0]
+            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
-                self.oid,
-                self._length_cache,
-                self._width_cache,
+                self._data,
+                new_length,
+                new_width,
                 self._ip_cache,
-            ) = apply_func.remote(oid, func, *args, **kwargs)
+            ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
+        self._is_debug(log) and log.debug(
+            f"EXIT::Partition.drain_call_queue::{self._identity}"
+        )
         self.call_queue = []
+
+        # GH#4732 if we already have evaluated width/length cached as ints,
+        #  don't overwrite that cache with non-evaluated values.
+        if not isinstance(self._length_cache, int):
+            self._length_cache = new_length
+        if not isinstance(self._width_cache, int):
+            self._width_cache = new_width
 
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        ray.wait([self.oid])
+        wait([self._data])
 
     def __copy__(self):
         """
@@ -170,13 +182,17 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A copy of this partition.
         """
-        return PandasOnRayDataframePartition(
-            self.oid,
+        return self.__constructor__(
+            self._data,
             length=self._length_cache,
             width=self._width_cache,
             ip=self._ip_cache,
             call_queue=self.call_queue,
         )
+
+    # If Ray has not been initialized yet by Modin,
+    # it will be initialized when calling `RayWrapper.put`.
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -194,19 +210,30 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.mask::{self._identity}")
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
         ):
-            new_obj._length_cache = compute_sliced_len.remote(
-                row_labels, self._length_cache
-            )
+            if row_labels == slice(None):
+                # fast path - full axis take
+                new_obj._length_cache = self._length_cache
+            else:
+                new_obj._length_cache = compute_sliced_len.remote(
+                    row_labels, self._length_cache
+                )
         if isinstance(col_labels, slice) and isinstance(
             self._width_cache, ObjectIDType
         ):
-            new_obj._width_cache = compute_sliced_len.remote(
-                col_labels, self._width_cache
-            )
+            if col_labels == slice(None):
+                # fast path - full axis take
+                new_obj._width_cache = self._width_cache
+            else:
+                new_obj._width_cache = compute_sliced_len.remote(
+                    col_labels, self._width_cache
+                )
+        self._is_debug(log) and log.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
     @classmethod
@@ -224,9 +251,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        return PandasOnRayDataframePartition(
-            ray.put(obj), len(obj.index), len(obj.columns)
-        )
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -243,46 +268,60 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func`.
         """
-        return ray.put(func)
+        return cls.execution_wrapper.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The length of the object.
         """
         if self._length_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
+                    self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = ray.get(self._length_cache)
+        if isinstance(self._length_cache, ObjectIDType) and materialize:
+            self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The width of the object.
         """
         if self._width_cache is None:
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._length_cache, self._width_cache = get_index_and_columns.remote(
-                    self.oid
+                self._length_cache, self._width_cache = _get_index_and_columns.remote(
+                    self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = ray.get(self._width_cache)
+        if isinstance(self._width_cache, ObjectIDType) and materialize:
+            self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
     def ip(self):
@@ -300,12 +339,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             else:
                 self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
-            self._ip_cache = ray.get(self._ip_cache)
+            self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 
 @ray.remote(num_returns=2)
-def get_index_and_columns(df):
+def _get_index_and_columns(df):
     """
     Get the number of rows and columns of a pandas DataFrame.
 
@@ -325,7 +364,7 @@ def get_index_and_columns(df):
 
 
 @ray.remote(num_returns=4)
-def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
+def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     """
     Execute a function on the partition in a worker process.
 
@@ -334,11 +373,11 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     partition : pandas.DataFrame
         A pandas DataFrame the function needs to be executed on.
     func : callable
-        Function that needs to be executed on the partition.
-    *args : iterable
-        Additional positional arguments to be passed in `func`.
+        The function to perform on the partition.
+    *args : list
+        Positional arguments to pass to ``func``.
     **kwargs : dict
-        Additional keyword arguments to be passed in `func`.
+        Keyword arguments to pass to ``func``.
 
     Returns
     -------
@@ -350,6 +389,11 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
         The number of columns of the resulting pandas DataFrame.
     str
         The node IP address of the worker process.
+
+    Notes
+    -----
+    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
+    destructuring it causes a performance penalty.
     """
     try:
         result = func(partition, *args, **kwargs)
@@ -367,13 +411,13 @@ def apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def apply_list_of_funcs(funcs, partition):  # pragma: no cover
+def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    funcs : list
+    call_queue : list
         A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
@@ -389,25 +433,10 @@ def apply_list_of_funcs(funcs, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-
-    def deserialize(obj):
-        if isinstance(obj, ObjectIDType):
-            return ray.get(obj)
-        elif isinstance(obj, (tuple, list)) and any(
-            isinstance(o, ObjectIDType) for o in obj
-        ):
-            return ray.get(list(obj))
-        elif isinstance(obj, dict) and any(
-            isinstance(val, ObjectIDType) for val in obj.values()
-        ):
-            return dict(zip(obj.keys(), ray.get(list(obj.values()))))
-        else:
-            return obj
-
-    for func, args, kwargs in funcs:
+    for func, f_args, f_kwargs in call_queue:
         func = deserialize(func)
-        args = deserialize(args)
-        kwargs = deserialize(kwargs)
+        args = deserialize(f_args)
+        kwargs = deserialize(f_kwargs)
         try:
             partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We

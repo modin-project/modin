@@ -26,10 +26,15 @@ from .series import Series
 from modin.utils import to_pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
+from modin.logging import enable_logging
 
 
-@_inherit_docstrings(pandas.isna)
-def isna(obj):
+@_inherit_docstrings(pandas.isna, apilink="pandas.isna")
+@enable_logging
+def isna(obj):  # noqa: PR01, RT01, D200
+    """
+    Detect missing values for an array-like object.
+    """
     if isinstance(obj, BasePandasDataset):
         return obj.isna()
     else:
@@ -39,8 +44,12 @@ def isna(obj):
 isnull = isna
 
 
-@_inherit_docstrings(pandas.notna)
-def notna(obj):
+@_inherit_docstrings(pandas.notna, apilink="pandas.notna")
+@enable_logging
+def notna(obj):  # noqa: PR01, RT01, D200
+    """
+    Detect non-missing values for an array-like object.
+    """
     if isinstance(obj, BasePandasDataset):
         return obj.notna()
     else:
@@ -50,7 +59,8 @@ def notna(obj):
 notnull = notna
 
 
-@_inherit_docstrings(pandas.merge)
+@_inherit_docstrings(pandas.merge, apilink="pandas.merge")
+@enable_logging
 def merge(
     left,
     right,
@@ -65,7 +75,10 @@ def merge(
     copy: bool = True,
     indicator: bool = False,
     validate=None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Merge DataFrame or named Series objects with a database-style join.
+    """
     if isinstance(left, Series):
         if left.name is None:
             raise ValueError("Cannot merge a Series without a name")
@@ -93,7 +106,8 @@ def merge(
     )
 
 
-@_inherit_docstrings(pandas.merge_ordered)
+@_inherit_docstrings(pandas.merge_ordered, apilink="pandas.merge_ordered")
+@enable_logging
 def merge_ordered(
     left,
     right,
@@ -105,7 +119,10 @@ def merge_ordered(
     fill_method=None,
     suffixes=("_x", "_y"),
     how: str = "outer",
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Perform a merge for ordered data with optional filling/interpolation.
+    """
     if not isinstance(left, DataFrame):
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
@@ -129,7 +146,8 @@ def merge_ordered(
     )
 
 
-@_inherit_docstrings(pandas.merge_asof)
+@_inherit_docstrings(pandas.merge_asof, apilink="pandas.merge_asof")
+@enable_logging
 def merge_asof(
     left,
     right,
@@ -145,7 +163,10 @@ def merge_asof(
     tolerance=None,
     allow_exact_matches: bool = True,
     direction: str = "backward",
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Perform a merge by key distance.
+    """
     if not isinstance(left, DataFrame):
         raise ValueError(
             "can not merge DataFrame with instance of type {}".format(type(right))
@@ -161,138 +182,42 @@ def merge_asof(
     ):
         raise ValueError("Can't combine left/right_index with left/right_on or on.")
 
-    # Pandas fallbacks for tricky cases:
-    if (
-        # No idea how this works or why it does what it does; and in fact
-        # there's a Pandas bug suggesting it's wrong:
-        # https://github.com/pandas-dev/pandas/issues/33463
-        (left_index and right_on is not None)
-        # This is the case where by is a list of columns. If we're copying lots
-        # of columns out of Pandas, maybe not worth trying our path, it's not
-        # clear it's any better:
-        or not isinstance(by, (str, type(None)))
-        or not isinstance(left_by, (str, type(None)))
-        or not isinstance(right_by, (str, type(None)))
-    ):
-        if isinstance(right, DataFrame):
-            right = to_pandas(right)
-        return DataFrame(
-            pandas.merge_asof(
-                to_pandas(left),
-                right,
-                on=on,
-                left_on=left_on,
-                right_on=right_on,
-                left_index=left_index,
-                right_index=right_index,
-                by=by,
-                left_by=left_by,
-                right_by=right_by,
-                suffixes=suffixes,
-                tolerance=tolerance,
-                allow_exact_matches=allow_exact_matches,
-                direction=direction,
-            )
-        )
-
-    left_column = None
-    right_column = None
-
     if on is not None:
         if left_on is not None or right_on is not None:
             raise ValueError("If 'on' is set, 'left_on' and 'right_on' can't be set.")
         left_on = on
         right_on = on
 
-    if left_on is not None:
-        left_column = to_pandas(left[left_on])
-    elif left_index:
-        left_column = left.index
-    else:
-        raise ValueError("Need some sort of 'on' spec")
-
-    if right_on is not None:
-        right_column = to_pandas(right[right_on])
-    elif right_index:
-        right_column = right.index
-    else:
-        raise ValueError("Need some sort of 'on' spec")
-
-    # If we haven't set these by now, there's a bug in this function.
-    assert left_column is not None
-    assert right_column is not None
-
     if by is not None:
         if left_by is not None or right_by is not None:
             raise ValueError("Can't have both 'by' and 'left_by' or 'right_by'")
         left_by = right_by = by
 
-    # List of columns case should have been handled by direct Pandas fallback
-    # earlier:
-    assert isinstance(left_by, (str, type(None)))
-    assert isinstance(right_by, (str, type(None)))
+    if left_on is None and not left_index:
+        raise ValueError("Must pass on, left_on, or left_index=True")
 
-    left_pandas_limited = {"on": left_column}
-    right_pandas_limited = {"on": right_column, "right_labels": right.index}
-    extra_kwargs = {}  # extra arguments to Pandas merge_asof
+    if right_on is None and not right_index:
+        raise ValueError("Must pass on, right_on, or right_index=True")
 
-    if left_by is not None or right_by is not None:
-        extra_kwargs["by"] = "by"
-        left_pandas_limited["by"] = to_pandas(left[left_by])
-        right_pandas_limited["by"] = to_pandas(right[right_by])
-
-    # 1. Construct Pandas DataFrames with just the 'on' and optional 'by'
-    # columns, and the index as another column.
-    left_pandas_limited = pandas.DataFrame(left_pandas_limited, index=left.index)
-    right_pandas_limited = pandas.DataFrame(right_pandas_limited)
-
-    # 2. Use Pandas' merge_asof to figure out how to map labels on left to
-    # labels on the right.
-    merged = pandas.merge_asof(
-        left_pandas_limited,
-        right_pandas_limited,
-        on="on",
-        direction=direction,
-        allow_exact_matches=allow_exact_matches,
-        tolerance=tolerance,
-        **extra_kwargs,
-    )
-    # Now merged["right_labels"] shows which labels from right map to left's index.
-
-    # 3. Re-index right using the merged["right_labels"]; at this point right
-    # should be same length and (semantically) same order as left:
-    right_subset = right.reindex(index=pandas.Index(merged["right_labels"]))
-    if not right_index:
-        right_subset.drop(columns=[right_on], inplace=True)
-    if right_by is not None and left_by == right_by:
-        right_subset.drop(columns=[right_by], inplace=True)
-    right_subset.index = left.index
-
-    # 4. Merge left and the new shrunken right:
-    result = merge(
-        left,
-        right_subset,
-        left_index=True,
-        right_index=True,
-        suffixes=suffixes,
-        how="left",
-    )
-
-    # 5. Clean up to match Pandas output:
-    if left_on is not None and right_index:
-        result.insert(
-            # In theory this could use get_indexer_for(), but that causes an error:
-            list(result.columns).index(left_on + suffixes[0]),
+    return DataFrame(
+        query_compiler=left._query_compiler.merge_asof(
+            right._query_compiler,
             left_on,
-            result[left_on + suffixes[0]],
+            right_on,
+            left_index,
+            right_index,
+            left_by,
+            right_by,
+            suffixes,
+            tolerance,
+            allow_exact_matches,
+            direction,
         )
-    if not left_index and not right_index:
-        result.index = pandas.RangeIndex(start=0, stop=len(result))
-
-    return result
+    )
 
 
-@_inherit_docstrings(pandas.pivot_table)
+@_inherit_docstrings(pandas.pivot_table, apilink="pandas.pivot_table")
+@enable_logging
 def pivot_table(
     data,
     values=None,
@@ -324,29 +249,84 @@ def pivot_table(
     )
 
 
-@_inherit_docstrings(pandas.pivot)
-def pivot(data, index=None, columns=None, values=None):
+@_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
+@enable_logging
+def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
+    """
+    Return reshaped DataFrame organized by given index / column values.
+    """
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
 
 
-@_inherit_docstrings(pandas.to_numeric)
-def to_numeric(arg, errors="raise", downcast=None):
+@_inherit_docstrings(pandas.to_numeric, apilink="pandas.to_numeric")
+@enable_logging
+def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
+    """
+    Convert argument to a numeric type.
+    """
     if not isinstance(arg, Series):
         return pandas.to_numeric(arg, errors=errors, downcast=downcast)
     return arg._to_numeric(errors=errors, downcast=downcast)
 
 
-@_inherit_docstrings(pandas.unique)
-def unique(values):
+@_inherit_docstrings(pandas.qcut, apilink="pandas.qcut")
+@enable_logging
+def qcut(
+    x, q, labels=None, retbins=False, precision=3, duplicates="raise"
+):  # noqa: PR01, RT01, D200
+    """
+    Quantile-based discretization function.
+    """
+    kwargs = {
+        "labels": labels,
+        "retbins": retbins,
+        "precision": precision,
+        "duplicates": duplicates,
+    }
+    if not isinstance(x, Series):
+        return pandas.qcut(x, q, **kwargs)
+    return x._qcut(q, **kwargs)
+
+
+@_inherit_docstrings(pandas.unique, apilink="pandas.unique")
+@enable_logging
+def unique(values):  # noqa: PR01, RT01, D200
+    """
+    Return unique values based on a hash table.
+    """
     return Series(values).unique()
 
 
-@_inherit_docstrings(pandas.value_counts)
+# Adding docstring since pandas docs don't have web section for this function.
+@enable_logging
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
 ):
+    """
+    Compute a histogram of the counts of non-null values.
+
+    Parameters
+    ----------
+    values : ndarray (1-d)
+        Values to perform computation.
+    sort : bool, default: True
+        Sort by values.
+    ascending : bool, default: False
+        Sort in ascending order.
+    normalize : bool, default: False
+        If True then compute a relative histogram.
+    bins : integer, optional
+        Rather than count values, group them into half-open bins,
+        convenience for pd.cut, only works with numeric data.
+    dropna : bool, default: True
+        Don't include counts of NaN.
+
+    Returns
+    -------
+    Series
+    """
     return Series(values).value_counts(
         sort=sort,
         ascending=ascending,
@@ -356,7 +336,8 @@ def value_counts(
     )
 
 
-@_inherit_docstrings(pandas.concat)
+@_inherit_docstrings(pandas.concat, apilink="pandas.concat")
+@enable_logging
 def concat(
     objs: "Iterable[DataFrame | Series] | Mapping[Hashable, DataFrame | Series]",
     axis=0,
@@ -368,22 +349,25 @@ def concat(
     verify_integrity: bool = False,
     sort: bool = False,
     copy: bool = True,
-) -> "DataFrame | Series":
+) -> "DataFrame | Series":  # noqa: PR01, RT01, D200
+    """
+    Concatenate Modin objects along a particular axis.
+    """
     if isinstance(objs, (pandas.Series, Series, DataFrame, str, pandas.DataFrame)):
         raise TypeError(
             "first argument must be an iterable of pandas "
-            "objects, you passed an object of type "
-            '"{name}"'.format(name=type(objs).__name__)
+            + "objects, you passed an object of type "
+            + f'"{type(objs).__name__}"'
         )
     axis = pandas.DataFrame()._get_axis_number(axis)
     if isinstance(objs, dict):
-        list_of_objs = list(objs.values())
+        input_list_of_objs = list(objs.values())
     else:
-        list_of_objs = list(objs)
-    if len(list_of_objs) == 0:
+        input_list_of_objs = list(objs)
+    if len(input_list_of_objs) == 0:
         raise ValueError("No objects to concatenate")
 
-    list_of_objs = [obj for obj in list_of_objs if obj is not None]
+    list_of_objs = [obj for obj in input_list_of_objs if obj is not None]
 
     if len(list_of_objs) == 0:
         raise ValueError("All objects passed were None")
@@ -398,9 +382,9 @@ def concat(
     if type_check is not None:
         raise ValueError(
             'cannot concatenate object of type "{0}"; only '
-            "modin.pandas.Series "
-            "and modin.pandas.DataFrame objs are "
-            "valid",
+            + "modin.pandas.Series "
+            + "and modin.pandas.DataFrame objs are "
+            + "valid",
             type(type_check),
         )
     all_series = all(isinstance(obj, Series) for obj in list_of_objs)
@@ -420,7 +404,18 @@ def concat(
                 sort=sort,
             )
         )
-    if join not in ["inner", "outer"]:
+    if join == "outer":
+        # Filter out empties
+        list_of_objs = [
+            obj
+            for obj in list_of_objs
+            if (
+                isinstance(obj, (Series, pandas.Series))
+                or (isinstance(obj, DataFrame) and obj._query_compiler.lazy_execution)
+                or sum(obj.shape) > 0
+            )
+        ]
+    elif join != "inner":
         raise ValueError(
             "Only can inner (intersect) or outer (union) join the other axis"
         )
@@ -428,18 +423,12 @@ def concat(
     # dataframe to a series on axis=0, pandas ignores the name of the series,
     # and this check aims to mirror that (possibly buggy) functionality
     list_of_objs = [
-        obj
-        if isinstance(obj, DataFrame)
-        else DataFrame(obj.rename())
-        if isinstance(obj, (pandas.Series, Series)) and axis == 0
-        else DataFrame(obj)
-        for obj in list_of_objs
-    ]
-    list_of_objs = [
         obj._query_compiler
+        if isinstance(obj, DataFrame)
+        else DataFrame(obj.rename())._query_compiler
+        if isinstance(obj, (pandas.Series, Series)) and axis == 0
+        else DataFrame(obj)._query_compiler
         for obj in list_of_objs
-        if (not obj._query_compiler.lazy_execution and len(obj.index))
-        or len(obj.columns)
     ]
     if keys is not None:
         if all_series:
@@ -470,6 +459,14 @@ def concat(
         ).index
     else:
         new_idx = None
+
+    if len(list_of_objs) == 0:
+        return DataFrame(
+            index=input_list_of_objs[0].index.append(
+                [f.index for f in input_list_of_objs[1:]]
+            )
+        )
+
     new_query_compiler = list_of_objs[0].concat(
         axis,
         list_of_objs[1:],
@@ -492,7 +489,8 @@ def concat(
     return result_df
 
 
-@_inherit_docstrings(pandas.to_datetime)
+@_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_datetime")
+@enable_logging
 def to_datetime(
     arg,
     errors="raise",
@@ -505,7 +503,10 @@ def to_datetime(
     infer_datetime_format=False,
     origin="unix",
     cache=True,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Convert argument to datetime.
+    """
     if not isinstance(arg, (DataFrame, Series)):
         return pandas.to_datetime(
             arg,
@@ -534,7 +535,8 @@ def to_datetime(
     )
 
 
-@_inherit_docstrings(pandas.get_dummies)
+@_inherit_docstrings(pandas.get_dummies, apilink="pandas.get_dummies")
+@enable_logging
 def get_dummies(
     data,
     prefix=None,
@@ -544,12 +546,15 @@ def get_dummies(
     sparse=False,
     drop_first=False,
     dtype=None,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Convert categorical variable into dummy/indicator variables.
+    """
     if sparse:
         raise NotImplementedError(
             "SparseDataFrame is not implemented. "
-            "To contribute to Modin, please visit "
-            "github.com/modin-project/modin."
+            + "To contribute to Modin, please visit "
+            + "github.com/modin-project/modin."
         )
     if not isinstance(data, DataFrame):
         ErrorMessage.default_to_pandas("`get_dummies` on non-DataFrame")
@@ -579,7 +584,8 @@ def get_dummies(
         return DataFrame(query_compiler=new_manager)
 
 
-@_inherit_docstrings(pandas.melt)
+@_inherit_docstrings(pandas.melt, apilink="pandas.melt")
+@enable_logging
 def melt(
     frame,
     id_vars=None,
@@ -588,7 +594,10 @@ def melt(
     value_name="value",
     col_level=None,
     ignore_index: bool = True,
-):
+):  # noqa: PR01, RT01, D200
+    """
+    Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
+    """
     return frame.melt(
         id_vars=id_vars,
         value_vars=value_vars,
@@ -599,7 +608,8 @@ def melt(
     )
 
 
-@_inherit_docstrings(pandas.crosstab)
+@_inherit_docstrings(pandas.crosstab, apilink="pandas.crosstab")
+@enable_logging
 def crosstab(
     index,
     columns,
@@ -611,7 +621,10 @@ def crosstab(
     margins_name: str = "All",
     dropna: bool = True,
     normalize=False,
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Compute a simple cross tabulation of two (or more) factors.
+    """
     ErrorMessage.default_to_pandas("`crosstab`")
     pandas_crosstab = pandas.crosstab(
         index,
@@ -628,8 +641,32 @@ def crosstab(
     return DataFrame(pandas_crosstab)
 
 
-@_inherit_docstrings(pandas.lreshape)
+# Adding docstring since pandas docs don't have web section for this function.
+@enable_logging
 def lreshape(data: DataFrame, groups, dropna=True, label=None):
+    """
+    Reshape wide-format data to long. Generalized inverse of ``DataFrame.pivot``.
+
+    Accepts a dictionary, `groups`, in which each key is a new column name
+    and each value is a list of old column names that will be "melted" under
+    the new column name as part of the reshape.
+
+    Parameters
+    ----------
+    data : DataFrame
+        The wide-format DataFrame.
+    groups : dict
+        Dictionary in the form: `{new_name : list_of_columns}`.
+    dropna : bool, default: True
+        Whether include columns whose entries are all NaN or not.
+    label : optional
+        Deprecated parameter.
+
+    Returns
+    -------
+    DataFrame
+        Reshaped DataFrame.
+    """
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
     ErrorMessage.default_to_pandas("`lreshape`")
@@ -638,10 +675,14 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
     )
 
 
-@_inherit_docstrings(pandas.wide_to_long)
+@_inherit_docstrings(pandas.wide_to_long, apilink="pandas.wide_to_long")
+@enable_logging
 def wide_to_long(
     df: DataFrame, stubnames, i, j, sep: str = "", suffix: str = r"\d+"
-) -> DataFrame:
+) -> DataFrame:  # noqa: PR01, RT01, D200
+    """
+    Unpivot a DataFrame from wide to long format.
+    """
     if not isinstance(df, DataFrame):
         raise ValueError(
             "can not wide_to_long with instance of type {}".format(type(df))
@@ -681,3 +722,18 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
         return list(names[0]) if is_list_like(names[0]) else [names[0]]
     else:
         return None
+
+
+@_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
+@enable_logging
+def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
+    """
+    Convert argument to timedelta.
+
+    Accepts str, timedelta, list-like or Series for arg parameter.
+    Returns a Series if and only if arg is provided as a Series.
+    """
+    if isinstance(arg, Series):
+        query_compiler = arg._query_compiler.to_timedelta(unit=unit, errors=errors)
+        return Series(query_compiler=query_compiler)
+    return pandas.to_timedelta(arg, unit=unit, errors=errors)

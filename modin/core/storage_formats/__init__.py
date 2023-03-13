@@ -17,9 +17,3 @@ from .base import BaseQueryCompiler
 from .pandas import PandasQueryCompiler
 
 __all__ = ["BaseQueryCompiler", "PandasQueryCompiler"]
-try:
-    from .pyarrow import PyarrowQueryCompiler  # noqa: F401
-except ImportError:
-    pass
-else:
-    __all__.append("PyarrowQueryCompiler")

@@ -14,14 +14,12 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.4.0"
+__pandas_version__ = "1.5.3"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
-        "The pandas version installed {} does not match the supported pandas version in"
-        " Modin {}. This may cause undesired side effects!".format(
-            pandas.__version__, __pandas_version__
-        )
+        f"The pandas version installed ({pandas.__version__}) does not match the supported pandas version in"
+        + f" Modin ({__pandas_version__}). This may cause undesired side effects!"
     )
 
 with warnings.catch_warnings():
@@ -31,7 +29,6 @@ with warnings.catch_warnings():
         cut,
         factorize,
         test,
-        qcut,
         date_range,
         period_range,
         Index,
@@ -41,11 +38,13 @@ with warnings.catch_warnings():
         DatetimeIndex,
         Timedelta,
         Timestamp,
-        to_timedelta,
         set_eng_float_format,
         options,
-        Flags,
+        describe_option,
         set_option,
+        get_option,
+        reset_option,
+        option_context,
         NaT,
         PeriodIndex,
         Categorical,
@@ -59,8 +58,6 @@ with warnings.catch_warnings():
         Int16Dtype,
         Int32Dtype,
         Int64Dtype,
-        Float32Dtype,
-        Float64Dtype,
         StringDtype,
         BooleanDtype,
         CategoricalDtype,
@@ -86,60 +83,76 @@ with warnings.catch_warnings():
         NamedAgg,
         NA,
         api,
+        ArrowDtype,
+        Flags,
+        Float32Dtype,
+        Float64Dtype,
+        from_dummies,
     )
 import os
-import multiprocessing
 
-from modin.config import Engine, Parameter
-
-# Set this so that Pandas doesn't try to multithread by itself
-os.environ["OMP_NUM_THREADS"] = "1"
+from modin.config import Parameter
 
 _is_first_update = {}
-dask_client = None
-_NOINIT_ENGINES = {
-    "Python",
-}  # engines that don't require initialization, useful for unit tests
 
 
 def _update_engine(publisher: Parameter):
-    global dask_client
-    from modin.config import StorageFormat, CpuCount
+    from modin.config import Engine, StorageFormat, CpuCount
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
 
-    if (
-        StorageFormat.get() == "Omnisci"
-        and publisher.get_value_source() == ValueSource.DEFAULT
-    ):
+    # Set this so that Pandas doesn't try to multithread by itself
+    os.environ["OMP_NUM_THREADS"] = "1"
+
+    sfmt = StorageFormat.get()
+
+    if sfmt == "Hdk":
+        is_hdk = True
+    elif sfmt == "Omnisci":
+        is_hdk = True
+        StorageFormat.put("Hdk")
+        warnings.warn(
+            "The OmniSci storage format has been deprecated. Please use "
+            + '`StorageFormat.put("hdk")` or `MODIN_STORAGE_FORMAT="hdk"` instead.'
+        )
+    else:
+        is_hdk = False
+
+    if is_hdk and publisher.get_value_source() == ValueSource.DEFAULT:
         publisher.put("Native")
         IsExperimental.put(True)
     if (
         publisher.get() == "Native"
         and StorageFormat.get_value_source() == ValueSource.DEFAULT
     ):
-        StorageFormat.put("Omnisci")
+        is_hdk = True
+        StorageFormat.put("Hdk")
         IsExperimental.put(True)
 
     if publisher.get() == "Ray":
         if _is_first_update.get("Ray", True):
-            from modin.core.execution.ray.common.utils import initialize_ray
+            from modin.core.execution.ray.common import initialize_ray
 
             initialize_ray()
     elif publisher.get() == "Native":
-        # With OmniSci storage format there is only a single worker per node
+        # With HDK storage format there is only a single worker per node
         # and we allow it to work on all cores.
-        if StorageFormat.get() == "Omnisci":
+        if is_hdk:
             os.environ["OMP_NUM_THREADS"] = str(CpuCount.get())
         else:
             raise ValueError(
-                f"Storage format should be 'Omnisci' with 'Native' engine, but provided {StorageFormat.get()}."
+                f"Storage format should be 'Hdk' with 'Native' engine, but provided {sfmt}."
             )
     elif publisher.get() == "Dask":
         if _is_first_update.get("Dask", True):
-            from modin.core.execution.dask.common.utils import initialize_dask
+            from modin.core.execution.dask.common import initialize_dask
 
             initialize_dask()
+    elif publisher.get() == "Unidist":
+        if _is_first_update.get("Unidist", True):
+            from modin.core.execution.unidist.common import initialize_unidist
+
+            initialize_unidist()
     elif publisher.get() == "Cloudray":
         from modin.experimental.cloud import get_connection
 
@@ -150,7 +163,7 @@ def _update_engine(publisher: Parameter):
             def init_remote_ray(partition):
                 from ray import ray_constants
                 import modin
-                from modin.core.execution.ray.common.utils import initialize_ray
+                from modin.core.execution.ray.common import initialize_ray
 
                 modin.set_execution("Ray", partition)
                 initialize_ray(
@@ -173,11 +186,11 @@ def _update_engine(publisher: Parameter):
         from modin.experimental.cloud import get_connection
 
         assert (
-            StorageFormat.get() == "Omnisci"
-        ), f"Storage format should be 'Omnisci' with 'Cloudnative' engine, but provided {StorageFormat.get()}."
-        get_connection().modules["modin"].set_execution("Native", "OmniSci")
+            is_hdk
+        ), f"Storage format should be 'Hdk' with 'Cloudnative' engine, but provided {sfmt}."
+        get_connection().modules["modin"].set_execution("Native", "Hdk")
 
-    elif publisher.get() not in _NOINIT_ENGINES:
+    elif publisher.get() not in Engine.NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 
     _is_first_update[publisher.get()] = False
@@ -219,11 +232,11 @@ from .general import (
     merge,
     merge_asof,
     merge_ordered,
-    pivot_table,
     notnull,
     notna,
     pivot,
     to_numeric,
+    qcut,
     to_datetime,
     unique,
     value_counts,
@@ -232,11 +245,14 @@ from .general import (
     crosstab,
     lreshape,
     wide_to_long,
+    to_timedelta,
+    pivot_table,
 )
+
 from .plotting import Plotting as plotting
 from modin.utils import show_versions
 
-__all__ = [
+__all__ = [  # noqa: F405
     "DataFrame",
     "Series",
     "read_csv",
@@ -278,7 +294,11 @@ __all__ = [
     "to_timedelta",
     "set_eng_float_format",
     "options",
+    "describe_option",
     "set_option",
+    "get_option",
+    "reset_option",
+    "option_context",
     "CategoricalIndex",
     "Timedelta",
     "Timestamp",
@@ -341,6 +361,12 @@ __all__ = [
     "datetime",
     "NamedAgg",
     "api",
+    "read_xml",
+    "ArrowDtype",
+    "Flags",
+    "Float32Dtype",
+    "Float64Dtype",
+    "from_dummies",
 ]
 
-del pandas, Engine, Parameter
+del pandas, Parameter

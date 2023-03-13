@@ -12,3 +12,19 @@
 # governing permissions and limitations under the License.
 
 """Base Modin Dataframe classes related to its partitioning and optimized for pandas on Ray execution."""
+
+from .partition import PandasOnRayDataframePartition
+from .partition_manager import PandasOnRayDataframePartitionManager
+from .virtual_partition import (
+    PandasOnRayDataframeVirtualPartition,
+    PandasOnRayDataframeColumnPartition,
+    PandasOnRayDataframeRowPartition,
+)
+
+__all__ = [
+    "PandasOnRayDataframePartition",
+    "PandasOnRayDataframePartitionManager",
+    "PandasOnRayDataframeVirtualPartition",
+    "PandasOnRayDataframeColumnPartition",
+    "PandasOnRayDataframeRowPartition",
+]

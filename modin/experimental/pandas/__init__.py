@@ -43,6 +43,7 @@ from modin.pandas import *  # noqa F401, F403
 from .io import (  # noqa F401
     read_sql,
     read_csv_glob,
+    read_custom_text,
     read_pickle_distributed,
     to_pickle_distributed,
 )
@@ -52,6 +53,6 @@ setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
 
 warnings.warn(
     "Thank you for using the Modin Experimental pandas API."
-    "\nPlease note that some of these APIs deviate from pandas in order to "
-    "provide improved performance."
+    + "\nPlease note that some of these APIs deviate from pandas in order to "
+    + "provide improved performance."
 )

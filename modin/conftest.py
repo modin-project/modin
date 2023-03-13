@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+# We turn off mypy type checks in this file because it's not imported anywhere
+# type: ignore
+
 import os
 import sys
 import pytest
 import pandas
 from pandas.util._decorators import doc
 import numpy as np
-import pyarrow as pa
-import pyarrow.parquet as pq
 import shutil
+from typing import Optional
 
 assert (
     "modin.utils" not in sys.modules
@@ -43,7 +45,13 @@ modin.utils._make_api_url = _saving_make_api_url
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
-from modin.config import IsExperimental, TestRayClient  # noqa: E402
+from modin.config import (  # noqa: E402
+    NPartitions,
+    MinPartitionSize,
+    IsExperimental,
+    TestRayClient,
+)
+import uuid  # noqa: E402
 
 from modin.core.storage_formats import (  # noqa: E402
     PandasQueryCompiler,
@@ -60,12 +68,7 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
     NROWS,
-    IO_OPS_DATA_DIR,
 )
-
-# create test data dir if it is not exists yet
-if not os.path.exists(IO_OPS_DATA_DIR):
-    os.mkdir(IO_OPS_DATA_DIR)
 
 
 def pytest_addoption(parser):
@@ -85,6 +88,7 @@ def pytest_addoption(parser):
         "--extra-test-parameters",
         action="store_true",
         help="activate extra test parameter combinations",
+        default=False,
     )
 
 
@@ -128,6 +132,18 @@ def simulate_cloud(request):
     if mode == "off":
         yield
         return
+    if (
+        request.config.getoption("usepdb")
+        and request.config.getoption("capture") != "no"
+    ):
+        with request.config.pluginmanager.getplugin(
+            "capturemanager"
+        ).global_and_fixture_disabled():
+            sys.stderr.write(
+                "WARNING! You're running tests in simulate-cloud mode. "
+                + "To enable pdb in remote side please disable output capturing "
+                + "by passing '-s' or '--capture=no' to pytest command line\n"
+            )
 
     if mode not in ("normal", "experimental"):
         raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
@@ -233,6 +249,17 @@ class TestQC(BaseQueryCompiler):
     def free(self):
         pass
 
+    def to_dataframe(self, nan_as_null: bool = False, allow_copy: bool = True):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
+    @classmethod
+    def from_dataframe(cls, df, data_cls):
+        raise NotImplementedError(
+            "The selected execution does not implement the DataFrame exchange protocol."
+        )
+
     to_pandas = PandasQueryCompiler.to_pandas
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
@@ -252,11 +279,45 @@ def set_base_execution(name=BASE_EXECUTION_NAME):
     modin.set_execution(engine="python", storage_format=name.split("On")[0])
 
 
-def pytest_configure(config):
-    if config.option.extra_test_parameters is not None:
-        import modin.pandas.test.utils as utils
+@pytest.fixture(scope="function")
+def get_unique_base_execution():
+    """Setup unique execution for a single function and yield its QueryCompiler that's suitable for inplace modifications."""
+    # It's better to use decimal IDs rather than hex ones due to factory names formatting
+    execution_id = int(uuid.uuid4().hex, 16)
+    format_name = f"Base{execution_id}"
+    engine_name = "Python"
+    execution_name = f"{format_name}On{engine_name}"
 
-        utils.extra_test_parameters = config.option.extra_test_parameters
+    # Dynamically building all the required classes to form a new execution
+    base_qc = type(format_name, (TestQC,), {})
+    base_io = type(
+        f"{execution_name}IO", (BaseOnPythonIO,), {"query_compiler_cls": base_qc}
+    )
+    base_factory = type(
+        f"{execution_name}Factory",
+        (BaseOnPythonFactory,),
+        {"prepare": classmethod(lambda cls: setattr(cls, "io_cls", base_io))},
+    )
+
+    # Setting up the new execution
+    setattr(factories, f"{execution_name}Factory", base_factory)
+    old_engine, old_format = modin.set_execution(
+        engine=engine_name, storage_format=format_name
+    )
+    yield base_qc
+
+    # Teardown the new execution
+    modin.set_execution(engine=old_engine, storage_format=old_format)
+    try:
+        delattr(factories, f"{execution_name}Factory")
+    except AttributeError:
+        pass
+
+
+def pytest_configure(config):
+    import modin.pandas.test.utils as utils
+
+    utils.extra_test_parameters = config.getoption("--extra-test-parameters")
 
     execution = config.option.execution
 
@@ -368,7 +429,6 @@ def create_fixture(file_type):
 
 
 for file_type in ("json", "html", "excel", "feather", "stata", "hdf", "pickle", "fwf"):
-
     fixture = create_fixture(file_type)
     fixture.__name__ = f"make_{file_type}_file"
     globals()[fixture.__name__] = pytest.fixture(fixture)
@@ -388,8 +448,8 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
-        directory=False,
         partitioned_columns=[],
+        row_group_size: Optional[int] = None,
     ):
         """Helper function to generate parquet files/directories.
 
@@ -398,25 +458,21 @@ def make_parquet_file():
             nrows: Number of rows for the dataframe.
             ncols: Number of cols for the dataframe.
             force: Create a new file/directory even if one already exists.
-            directory: Create a partitioned directory using pyarrow.
             partitioned_columns: Create a partitioned directory using pandas.
-            Will be ignored if directory=True.
+            row_group_size: Maximum size of each row group.
         """
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
-            if directory:
-                if os.path.exists(filename):
-                    shutil.rmtree(filename)
-                else:
-                    os.makedirs(filename)
-                table = pa.Table.from_pandas(df)
-                pq.write_to_dataset(table, root_path=filename)
-            elif len(partitioned_columns) > 0:
-                df.to_parquet(filename, partition_cols=partitioned_columns)
+            if len(partitioned_columns) > 0:
+                df.to_parquet(
+                    filename,
+                    partition_cols=partitioned_columns,
+                    row_group_size=row_group_size,
+                )
             else:
-                df.to_parquet(filename)
+                df.to_parquet(filename, row_group_size=row_group_size)
             filenames.append(filename)
 
     # Return function that generates parquet files
@@ -462,9 +518,6 @@ def make_sql_connection():
 
     yield _sql_connection
 
-    # Teardown the fixture
-    teardown_test_files(filenames)
-
 
 @pytest.fixture(scope="class")
 def TestReadGlobCSVFixture():
@@ -485,6 +538,22 @@ def TestReadGlobCSVFixture():
 @pytest.fixture
 def get_generated_doc_urls():
     return lambda: _generated_doc_urls
+
+
+@pytest.fixture
+def set_num_partitions(request):
+    old_num_partitions = NPartitions.get()
+    NPartitions.put(request.param)
+    yield
+    NPartitions.put(old_num_partitions)
+
+
+@pytest.fixture
+def set_min_partition_size(request):
+    old_min_partition_size = MinPartitionSize.get()
+    MinPartitionSize.put(request.param)
+    yield
+    MinPartitionSize.put(old_min_partition_size)
 
 
 ray_client_server = None

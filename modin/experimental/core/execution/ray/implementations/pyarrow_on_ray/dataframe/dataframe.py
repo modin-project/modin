@@ -17,13 +17,8 @@ Module contains class ``PyarrowOnRayDataframe``.
 ``PyarrowOnRayDataframe`` is a dataframe class with PyArrow storage format and Ray engine.
 """
 
-import pandas
-from pandas.core.dtypes.cast import find_common_type
-
 from ..partitioning.partition_manager import PyarrowOnRayDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-
-import ray
 
 
 class PyarrowOnRayDataframe(PandasDataframe):
@@ -63,39 +58,6 @@ class PyarrowOnRayDataframe(PandasDataframe):
             Parameter is deprecated and affects nothing.
         """
         self._filter_empties()
-
-    @classmethod
-    def combine_dtypes(cls, list_of_dtypes, column_names):
-        """
-        Get common for all partitions dtype for each of the columns.
-
-        Parameters
-        ----------
-        list_of_dtypes : array-like
-            Array with references to the partitions dtypes objects.
-        column_names : array-like or pandas.Index
-            Columns names to use for resulting Series.
-
-        Returns
-        -------
-        pandas.Series
-            pandas.Series where index is columns names and values are
-            columns dtypes.
-
-        Notes
-        -----
-        The reported dtypes from differing rows can be different based
-        on the inference in the limited data seen by each worker. We
-        use pandas to compute the exact dtype over the whole column for
-        each column.
-        """
-        dtypes = (
-            pandas.concat(ray.get(list_of_dtypes), axis=1)
-            .apply(lambda row: find_common_type(row.values), axis=1)
-            .squeeze(axis=0)
-        )
-        dtypes.index = column_names
-        return dtypes
 
     def to_pandas(self):
         """
