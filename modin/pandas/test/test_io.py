@@ -1990,6 +1990,9 @@ class TestHdf:
 
             modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(modin_df, pandas_df)
 
     @pytest.mark.xfail(
