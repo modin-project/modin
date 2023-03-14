@@ -196,7 +196,7 @@ def test_describe_column_partition_has_different_index():
     [
         ([np.float64], None),
         (np.float64, None),
-        (None, [np.timedelta64, np.datetime64, np.object, np.bool_]),
+        (None, [np.timedelta64, np.datetime64, np.object_, np.bool_]),
         (None, "all"),
         (None, np.number),
     ],

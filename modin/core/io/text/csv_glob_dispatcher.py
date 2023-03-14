@@ -231,18 +231,14 @@ class CSVGlobDispatcher(CSVDispatcher):
             new_index = index_objs[0].append(index_objs[1:])
             new_index.name = pd_df_metadata.index.name
 
+        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids) if len(dtypes_ids) > 0 else None
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             partition_ids,
             new_index,

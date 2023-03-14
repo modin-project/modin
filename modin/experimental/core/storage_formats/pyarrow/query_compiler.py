@@ -55,6 +55,8 @@ class PyarrowQueryCompiler(PandasQueryCompiler):
     ----------
     modin_frame : PyarrowOnRayDataframe
         Modin Frame to query with the compiled queries.
+    shape_hint : {"row", "column", None}, default: None
+        Shape hint for frames known to be a column or a row, otherwise None.
     """
 
     def query(self, expr, **kwargs):

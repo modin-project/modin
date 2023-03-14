@@ -13,6 +13,8 @@
 
 """Implement GroupBy public API as pandas does."""
 
+import warnings
+
 import numpy as np
 import pandas
 from pandas.core.apply import reconstruct_func
@@ -41,8 +43,43 @@ from .series import Series
 from .utils import is_label
 
 
+_DEFAULT_BEHAVIOUR = {
+    "__class__",
+    "__getitem__",
+    "__init__",
+    "__iter__",
+    "_as_index",
+    "_axis",
+    "_by",
+    "_check_index",
+    "_check_index_name",
+    "_columns",
+    "_compute_index_grouped",
+    "_default_to_pandas",
+    "_df",
+    "_drop",
+    "_groups_cache",
+    "_idx_name",
+    "_index",
+    "_indices_cache",
+    "_internal_by",
+    "_internal_by_cache",
+    "_is_multi_by",
+    "_iter",
+    "_kwargs",
+    "_level",
+    "_pandas_class",
+    "_query_compiler",
+    "_sort",
+    "_squeeze",
+    "_wrap_aggregation",
+}
+
+
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(ClassLogger):
+    _pandas_class = pandas.core.groupby.DataFrameGroupBy
+
     def __init__(
         self,
         df,
@@ -115,16 +152,69 @@ class DataFrameGroupBy(ClassLogger):
                 return self.__getitem__(key)
             raise err
 
+    # TODO: `.__getattribute__` overriding is broken in experimental mode. We should
+    # remove this branching one it's fixed:
+    # https://github.com/modin-project/modin/issues/5536
+    if not IsExperimental.get():
+
+        def __getattribute__(self, item):
+            attr = super().__getattribute__(item)
+            if (
+                item not in _DEFAULT_BEHAVIOUR
+                and not self._query_compiler.lazy_execution
+            ):
+                # We default to pandas on empty DataFrames. This avoids a large amount of
+                # pain in underlying implementation and returns a result immediately rather
+                # than dealing with the edge cases that empty DataFrames have.
+                if (
+                    callable(attr)
+                    and self._df.empty
+                    and hasattr(self._pandas_class, item)
+                ):
+
+                    def default_handler(*args, **kwargs):
+                        return self._default_to_pandas(item, *args, **kwargs)
+
+                    return default_handler
+            return attr
+
     @property
     def ngroups(self):
         return len(self)
 
     def skew(self, *args, **kwargs):
-        return self._wrap_aggregation(
-            type(self._query_compiler).groupby_skew,
+        # The 'skew' aggregation is less tolerant to non-numeric columns than others
+        # (i.e. it doesn't allow numeric categoricals), thus dropping non-numeric
+        # columns here since `._wrap_aggregation(numeric_only=True, ...)` is not enough
+        if self.ndim == 2:
+            by_cols = self._internal_by
+            mask_cols = [
+                col
+                for col, dtype in self._df.dtypes.items()
+                if is_numeric_dtype(dtype) or col in by_cols
+            ]
+            if not self._df.columns.equals(mask_cols):
+                masked_df = self._df[mask_cols]
+                masked_obj = type(self)(
+                    df=masked_df,
+                    by=self._by,
+                    axis=self._axis,
+                    idx_name=self._idx_name,
+                    drop=self._drop,
+                    squeeze=self._squeeze,
+                    **self._kwargs,
+                )
+            else:
+                masked_obj = self
+        else:
+            masked_obj = self
+
+        return masked_obj._wrap_aggregation(
+            type(masked_obj._query_compiler).groupby_skew,
             agg_args=args,
             agg_kwargs=kwargs,
-            numeric_only=True,
+            # Don't want to try to drop non-numeric columns for the second time
+            numeric_only=False,
         )
 
     def ffill(self, limit=None):
@@ -132,6 +222,24 @@ class DataFrameGroupBy(ClassLogger):
 
     def sem(self, ddof=1):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+
+    def value_counts(
+        self,
+        subset=None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda df: df.value_counts(
+                subset=subset,
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                dropna=dropna,
+            )
+        )
 
     def mean(self, numeric_only=None):
         return self._check_index(
@@ -340,6 +448,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
 
     def backfill(self, limit=None):
+        warnings.warn(
+            (
+                "backfill is deprecated and will be removed in a future version. "
+                + "Use bfill instead."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self.bfill(limit)
 
     _internal_by_cache = no_default
@@ -597,6 +713,14 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.last(**kwargs))
 
     def mad(self, **kwargs):
+        warnings.warn(
+            (
+                "The 'mad' method is deprecated and will be removed in a future version. "
+                + "To compute the same result, you may do `(df - df.mean()).abs().mean()`."
+            ),
+            FutureWarning,
+            stacklevel=2,
+        )
         return self._default_to_pandas(lambda df: df.mad(**kwargs))
 
     def rank(self, **kwargs):
@@ -670,7 +794,6 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(result, Series):
             result = result.squeeze(axis=1)
         if not self._kwargs.get("as_index") and not isinstance(result, Series):
-            result = result.rename(columns={0: "size"})
             result = (
                 result.rename(columns={MODIN_UNNAMED_SERIES_LABEL: "index"})
                 if MODIN_UNNAMED_SERIES_LABEL in result.columns
@@ -848,8 +971,8 @@ class DataFrameGroupBy(ClassLogger):
     def diff(self):
         return self._default_to_pandas(lambda df: df.diff())
 
-    def take(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.take(**kwargs))
+    def take(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
 
     @property
     def _index(self):
@@ -1140,7 +1263,7 @@ class DataFrameGroupBy(ClassLogger):
 
         Parameters
         ----------
-        f : callable
+        f : callable or str
             The function to apply to each group.
         *args : list
             Extra positional arguments to pass to `f`.
@@ -1170,19 +1293,28 @@ class DataFrameGroupBy(ClassLogger):
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            return f(
-                df.groupby(
-                    by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
-                ),
-                *args,
-                **kwargs,
+            groupby_obj = df.groupby(
+                by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
             )
+
+            if callable(f):
+                return f(groupby_obj, *args, **kwargs)
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=not isinstance(f, str)
+                )
+                attribute = getattr(groupby_obj, f)
+                if callable(attribute):
+                    return attribute(*args, **kwargs)
+                return attribute
 
         return self._df._default_to_pandas(groupby_on_multiple_columns, *args, **kwargs)
 
 
 @_inherit_docstrings(pandas.core.groupby.SeriesGroupBy)
 class SeriesGroupBy(DataFrameGroupBy):
+    _pandas_class = pandas.core.groupby.SeriesGroupBy
+
     @property
     def ndim(self):
         """
@@ -1235,6 +1367,24 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def value_counts(
+        self,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        bins=None,
+        dropna: bool = True,
+    ):
+        return self._default_to_pandas(
+            lambda ser: ser.value_counts(
+                normalize=normalize,
+                sort=sort,
+                ascending=ascending,
+                bins=bins,
+                dropna=dropna,
+            )
+        )
 
 
 if IsExperimental.get():

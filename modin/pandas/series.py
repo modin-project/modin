@@ -23,6 +23,7 @@ from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
 )
+from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
@@ -92,6 +93,8 @@ class Series(BasePandasDataset):
         fastpath=False,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
@@ -105,6 +108,18 @@ class Series(BasePandasDataset):
                         + "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler
+        if isinstance(data, array):
+            if data._ndim == 2:
+                raise ValueError("Data must be 1-dimensional")
+            query_compiler = data._query_compiler.copy()
+            if index is not None:
+                query_compiler.index = index
+            if dtype is not None:
+                query_compiler = query_compiler.astype(
+                    {col_name: dtype for col_name in query_compiler.columns}
+                )
+            if name is None:
+                query_compiler.columns = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
         if query_compiler is None:
             # Defaulting to pandas
             warnings.warn(
@@ -271,16 +286,6 @@ class Series(BasePandasDataset):
     def __rdivmod__(self, left):
         return self.rdivmod(left)
 
-    def __float__(self):
-        """
-        Return float representation of Series.
-
-        Returns
-        -------
-        float
-        """
-        return float(self.squeeze())
-
     @_doc_binary_op(operation="integer division", bin_op="floordiv")
     def __floordiv__(self, right):
         return self.floordiv(right)
@@ -314,15 +319,8 @@ class Series(BasePandasDataset):
                 return self[key]
             raise err
 
-    def __int__(self):
-        """
-        Return integer representation of Series.
-
-        Returns
-        -------
-        int
-        """
-        return int(self.squeeze())
+    __float__ = _coerce_method(float)
+    __int__ = _coerce_method(int)
 
     def __iter__(self):
         """
@@ -420,7 +418,14 @@ class Series(BasePandasDataset):
         )
         if len(self) == 0:
             return "Series([], {}{}{}".format(freq_str, name_str, dtype_str)
-        return temp_str.rsplit("\n", 1)[0] + "\n{}{}{}{}".format(
+        maxsplit = 1
+        if (
+            isinstance(temp_df, pandas.Series)
+            and temp_df.name is not None
+            and temp_df.dtype == "category"
+        ):
+            maxsplit = 2
+        return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
             freq_str, name_str, len_str, dtype_str
         )
 
@@ -484,7 +489,21 @@ class Series(BasePandasDataset):
         """
         Return Series as ndarray or ndarray-like depending on the dtype.
         """
-        return self.to_numpy()
+        import modin.pandas as pd
+
+        if isinstance(
+            self.dtype, pandas.core.dtypes.dtypes.ExtensionDtype
+        ) and not isinstance(self.dtype, pd.CategoricalDtype):
+            return self._default_to_pandas("values")
+
+        data = self.to_numpy()
+        if isinstance(self.dtype, pd.CategoricalDtype):
+            from modin.config import ExperimentalNumPyAPI
+
+            if ExperimentalNumPyAPI.get():
+                data = data._to_numpy()
+            data = pd.Categorical(data, dtype=self.dtype)
+        return data
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -510,13 +529,17 @@ class Series(BasePandasDataset):
         """
         Prefix labels with string `prefix`.
         """
-        return Series(query_compiler=self._query_compiler.add_prefix(prefix, axis=0))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.add_prefix(prefix, axis=0)
+        )
 
     def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
-        return Series(query_compiler=self._query_compiler.add_suffix(suffix, axis=0))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.add_suffix(suffix, axis=0)
+        )
 
     def append(
         self, to_append, ignore_index=False, verify_integrity=False
@@ -592,7 +615,7 @@ class Series(BasePandasDataset):
         if len(query_compiler.columns) > 1:
             return DataFrame(query_compiler=query_compiler)
         else:
-            return Series(query_compiler=query_compiler)
+            return self.__constructor__(query_compiler=query_compiler)
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -687,7 +710,7 @@ class Series(BasePandasDataset):
 
             result = DataFrame(query_compiler=result)
         elif return_type == "Series":
-            result = Series(query_compiler=result)
+            result = self.__constructor__(query_compiler=result)
             if result.name == self.index[0]:
                 result.name = None
         elif isinstance(result, type(self._query_compiler)):
@@ -1187,6 +1210,12 @@ class Series(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).isin(values, shape_hint="column")
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
@@ -1251,6 +1280,14 @@ class Series(BasePandasDataset):
         """
         Map values of Series according to input correspondence.
         """
+        if isinstance(arg, type(self)):
+            # HACK: if we don't cast to pandas, then the execution engine will try to
+            # propagate the distributed Series to workers and most likely would have
+            # some performance problems.
+            # TODO: A better way of doing so could be passing this `arg` as a query compiler
+            # and broadcast accordingly.
+            arg = arg._to_pandas()
+
         if not callable(arg) and hasattr(arg, "get"):
             mapper = arg
 
@@ -1353,7 +1390,9 @@ class Series(BasePandasDataset):
         """
         Return the smallest `n` elements.
         """
-        return Series(query_compiler=self._query_compiler.nsmallest(n=n, keep=keep))
+        return self.__constructor__(
+            query_compiler=self._query_compiler.nsmallest(n=n, keep=keep)
+        )
 
     def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -1364,7 +1403,7 @@ class Series(BasePandasDataset):
 
         if axis == "index" or axis == 0:
             if abs(periods) >= len(self.index):
-                return Series(dtype=self.dtype)
+                return self.__constructor__(dtype=self.dtype)
             else:
                 new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
                 new_df.index = (
@@ -1925,15 +1964,22 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        return (
-            super(Series, self)
-            .to_numpy(
-                dtype=dtype,
-                copy=copy,
-                na_value=na_value,
+        from modin.config import ExperimentalNumPyAPI
+
+        if not ExperimentalNumPyAPI.get():
+            return (
+                super(Series, self)
+                .to_numpy(
+                    dtype=dtype,
+                    copy=copy,
+                    na_value=na_value,
+                )
+                .flatten()
             )
-            .flatten()
-        )
+        else:
+            from ..numpy.arr import array
+
+            return array(self, copy=copy)
 
     tolist = to_list
 
@@ -2026,7 +2072,7 @@ class Series(BasePandasDataset):
         Modify Series in place using values from passed Series.
         """
         if not isinstance(other, Series):
-            other = Series(other)
+            other = self.__constructor__(other)
         query_compiler = self._query_compiler.series_update(other._query_compiler)
         self._update_inplace(new_query_compiler=query_compiler)
 
@@ -2039,7 +2085,7 @@ class Series(BasePandasDataset):
         if bins is not None:
             # Potentially we could implement `cut` function from pandas API, which
             # bins values into intervals, and then we can just count them as regular values.
-            # TODO #1333: new_self = Series(pd.cut(self, bins, include_lowest=True), dtype="interval")
+            # TODO #1333: new_self = self.__constructor__(pd.cut(self, bins, include_lowest=True), dtype="interval")
             return self._default_to_pandas(
                 pandas.Series.value_counts,
                 normalize=normalize,
@@ -2092,14 +2138,6 @@ class Series(BasePandasDataset):
             errors=errors,
             try_cast=try_cast,
         )
-
-    def xs(
-        self, key, axis=0, level=None, drop_level=True
-    ):  # pragma: no cover # noqa: PR01, D200
-        """
-        Return cross-section from the Series/DataFrame.
-        """
-        raise NotImplementedError("Not Yet implemented.")
 
     @property
     def attrs(self):  # noqa: RT01, D200
@@ -2282,6 +2320,12 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.to_numeric(**kwargs)
         )
 
+    def _qcut(self, q, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Quantile-based discretization function.
+        """
+        return self._default_to_pandas(pandas.qcut, q, **kwargs)
+
     def _reduce_dimension(self, query_compiler):
         """
         Try to reduce the dimension of data from the `query_compiler`.
@@ -2421,7 +2465,7 @@ class Series(BasePandasDataset):
             or type(new_query_compiler) in self._query_compiler.__class__.__bases__
         ), "Invalid Query Compiler object: {}".format(type(new_query_compiler))
         if not inplace and new_query_compiler.is_series_like():
-            return Series(query_compiler=new_query_compiler)
+            return self.__constructor__(query_compiler=new_query_compiler)
         elif not inplace:
             # This can happen with things like `reset_index` where we can add columns.
             from .dataframe import DataFrame
@@ -2511,6 +2555,20 @@ class Series(BasePandasDataset):
         if reduce_dimension:
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
+
+    def _repartition(self):
+        """
+        Repartitioning Series to get ideal partitions inside.
+
+        Allows to improve performance where the query compiler can't improve
+        yet by doing implicit repartitioning.
+
+        Returns
+        -------
+        Series
+            The repartitioned Series.
+        """
+        return super()._repartition(axis=0)
 
     # Persistance support methods - BEGIN
     @classmethod

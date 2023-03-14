@@ -16,6 +16,27 @@
 from distributed.client import default_client
 
 
+def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
+    """
+    Wrap `func` to ease calling it remotely.
+
+    Parameters
+    ----------
+    func : callable
+        A local function that we want to call remotely.
+    *args : iterable
+        Positional arguments to pass to `func` when calling remotely.
+    **kwargs : dict
+        Keyword arguments to pass to `func` when calling remotely.
+
+    Returns
+    -------
+    distributed.Future or list
+        Dask identifier of the result being put into distributed memory.
+    """
+    return func(*args, **kwargs)
+
+
 class DaskWrapper:
     """The class responsible for execution of remote operations."""
 
@@ -33,7 +54,7 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or distributed.Future
             Function to be deployed in a worker process.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -52,10 +73,16 @@ class DaskWrapper:
         client = default_client()
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
-        remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        if callable(func):
+            remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        else:
+            # for the case where type(func) is distributed.Future
+            remote_task_future = client.submit(
+                _deploy_dask_func, func, *args, pure=pure, **kwargs
+            )
         if num_returns != 1:
             return [
-                client.submit(lambda l, i: l[i], remote_task_future, i)
+                client.submit(lambda tup, i: tup[i], remote_task_future, i)
                 for i in range(num_returns)
             ]
         return remote_task_future

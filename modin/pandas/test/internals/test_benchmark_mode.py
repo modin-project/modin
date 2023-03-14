@@ -23,20 +23,20 @@ engine = Engine.get()
 # We have to explicitly mock subclass implementations of wait_partitions.
 if engine == "Ray":
     wait_method = (
-        "modin.core.execution.ray.implementations.pandas_on_ray."
-        + "partitioning.partition_manager."
+        "modin.core.execution.ray.implementations."
+        + "pandas_on_ray.partitioning."
         + "PandasOnRayDataframePartitionManager.wait_partitions"
     )
 elif engine == "Dask":
     wait_method = (
         "modin.core.execution.dask.implementations."
-        + "pandas_on_dask.partitioning.partition_manager."
+        + "pandas_on_dask.partitioning."
         + "PandasOnDaskDataframePartitionManager.wait_partitions"
     )
 elif engine == "Unidist":
     wait_method = (
         "modin.core.execution.unidist.implementations."
-        + "pandas_on_unidist.partitioning.partition_manager."
+        + "pandas_on_unidist.partitioning."
         + "PandasOnUnidistDataframePartitionManager.wait_partitions"
     )
 else:

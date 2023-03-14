@@ -20,14 +20,16 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from modin.core.execution.unidist.common.utils import deserialize, wait
+from modin.core.execution.unidist.common import UnidistWrapper
 from .partition import PandasOnUnidistDataframePartition
 from modin.utils import _inherit_docstrings
 
 
 # If unidist has not been initialized yet by Modin,
-# unidist itself handles initialization when calling `unidist.put`.
-_DEPLOY_AXIS_FUNC = unidist.put(PandasDataframeAxisPartition.deploy_axis_func)
-_DRAIN = unidist.put(PandasDataframeAxisPartition.drain)
+# unidist itself handles initialization when calling `unidist.put`,
+# which is called inside of `UnidistWrapper.put`.
+_DEPLOY_AXIS_FUNC = UnidistWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
+_DRAIN = UnidistWrapper.put(PandasDataframeAxisPartition.drain)
 
 
 class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -193,7 +195,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return deploy_unidist_func.options(
+        return _deploy_unidist_func.options(
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
@@ -249,7 +251,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return deploy_unidist_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_unidist_func.options(num_returns=num_splits * 4).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -507,7 +509,7 @@ class PandasOnUnidistDataframeRowPartition(PandasOnUnidistDataframeVirtualPartit
 
 
 @unidist.remote
-def deploy_unidist_func(
+def _deploy_unidist_func(
     deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
 ):  # pragma: no cover
     """

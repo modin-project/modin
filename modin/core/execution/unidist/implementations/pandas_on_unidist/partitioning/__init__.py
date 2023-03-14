@@ -13,12 +13,18 @@
 
 """Base Modin Dataframe classes related to its partitioning and optimized for pandas on unidist execution."""
 
-from .partition_manager import PandasOnUnidistDataframePartitionManager
-from .virtual_partition import PandasOnUnidistDataframeVirtualPartition
 from .partition import PandasOnUnidistDataframePartition
+from .partition_manager import PandasOnUnidistDataframePartitionManager
+from .virtual_partition import (
+    PandasOnUnidistDataframeVirtualPartition,
+    PandasOnUnidistDataframeColumnPartition,
+    PandasOnUnidistDataframeRowPartition,
+)
 
 __all__ = [
     "PandasOnUnidistDataframePartitionManager",
-    "PandasOnUnidistDataframeVirtualPartition",
     "PandasOnUnidistDataframePartition",
+    "PandasOnUnidistDataframeVirtualPartition",
+    "PandasOnUnidistDataframeColumnPartition",
+    "PandasOnUnidistDataframeRowPartition",
 ]
