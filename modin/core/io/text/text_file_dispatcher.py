@@ -1116,7 +1116,6 @@ class TextFileDispatcher(FileDispatcher):
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
-            fname=filepath_or_buffer_md,
             header_size=0 if use_inferred_column_names else header_size,
             names=column_names if use_inferred_column_names else names,
             header="infer" if use_inferred_column_names else header,
@@ -1125,12 +1124,11 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
-        fname = partition_kwargs.pop("fname")
         # this is done mostly for performance; see PR#5678 for details
         kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits,
-            fname,
+            filepath_or_buffer_md,
             kwargs_ref,
             num_splits=num_splits,
         )
