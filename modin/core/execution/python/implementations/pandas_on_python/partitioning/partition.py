@@ -13,10 +13,7 @@
 
 """The module defines interface for a partition with pandas storage format and Python engine."""
 
-import uuid
-
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.core.execution.python.common import PythonWrapper
 
 
 class PandasOnPythonDataframePartition(PandasDataframePartition):
@@ -44,8 +41,6 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     subclasses. There is no logic for updating in-place.
     """
 
-    execution_wrapper = PythonWrapper
-
     def __init__(self, data, length=None, width=None, call_queue=None):
         if hasattr(data, "copy"):
             data = data.copy()
@@ -55,7 +50,22 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         self.call_queue = call_queue
         self._length_cache = length
         self._width_cache = width
-        self._identity = uuid.uuid4().hex
+
+    def get(self):
+        """
+        Flush the `call_queue` and return copy of the data.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Copy of DataFrame that was wrapped by this partition.
+
+        Notes
+        -----
+        Since this object is a simple wrapper, just return the copy of data.
+        """
+        self.drain_call_queue()
+        return self._data.copy() if hasattr(self._data, "copy") else self._data
 
     def apply(self, func, *args, **kwargs):
         """
