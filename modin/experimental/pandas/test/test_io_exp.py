@@ -63,6 +63,7 @@ def test_from_sql_distributed(make_sql_connection):  # noqa: F811
             )
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(modin_df_from_query, pandas_df)
             df_equals(modin_df_from_table, pandas_df)
 
