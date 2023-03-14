@@ -171,6 +171,7 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
         modin_df = pd.read_parquet(unique_filename_modin, engine=engine)
         # If read operations are asynchronous, then the dataframes
         # check should be inside `ensure_clean_dir` context
+        # because the file may be deleted before actual reading starts
         df_equals(pandas_df, modin_df)
 
 
@@ -1208,6 +1209,7 @@ class TestCsv:
                 df_modin = pd.read_csv(buffer)
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(df_modin, df_pandas)
 
     def test_unnamed_index(self):
@@ -1295,6 +1297,7 @@ class TestCsv:
             actual_pandas_df = modin_df._to_pandas()
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(expected_pandas_df, actual_pandas_df)
 
 
@@ -1324,6 +1327,7 @@ class TestTable:
             modin_df = wrapped_read_table(unique_filename, method="modin")
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
@@ -1382,6 +1386,7 @@ class TestParquet:
             parquet_df = pd.read_parquet(unique_filename, engine=engine)
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             for col in parquet_df.columns:
                 parquet_df[col]
 
@@ -2002,6 +2007,7 @@ class TestHdf:
                 pandas_df = pandas.read_hdf(h, "/key")
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(modin_df, pandas_df)
 
 
@@ -2067,6 +2073,7 @@ class TestSql:
             pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
+            # because the file may be deleted before actual reading starts
             df_equals(modin_df, pandas_df)
 
     @pytest.mark.skipif(

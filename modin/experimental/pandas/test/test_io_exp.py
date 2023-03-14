@@ -87,6 +87,7 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
         # If read operations are asynchronous, then the dataframes
         # check should be inside `ensure_clean_dir` context
+        # because the file may be deleted before actual reading starts
         df_equals(modin_df_from_query, pandas_df)
         df_equals(modin_df_from_table, pandas_df)
 
@@ -305,6 +306,7 @@ def test_read_custom_json_text():
         )
         # If read operations are asynchronous, then the dataframes
         # check should be inside `ensure_clean_dir` context
+        # because the file may be deleted before actual reading starts
         df_equals(df1, df2)
 
 
@@ -357,4 +359,5 @@ def test_read_evaluated_dict():
         )
         # If read operations are asynchronous, then the dataframes
         # check should be inside `ensure_clean_dir` context
+        # because the file may be deleted before actual reading starts
         df_equals(df1, df2)
