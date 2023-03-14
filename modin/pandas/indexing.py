@@ -646,7 +646,8 @@ class _LocIndexer(_LocationIndexerBase):
         """
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
-        key = self._validate_key_length(key)
+        if isinstance(key, tuple):
+            key = self._validate_key_length(key)
         if (
             isinstance(key, tuple)
             and len(key) == 2
@@ -1001,7 +1002,8 @@ class _iLocIndexer(_LocationIndexerBase):
         """
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.iloc[key])
-        key = self._validate_key_length(key)
+        if isinstance(key, tuple):
+            key = self._validate_key_length(key)
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         row_scalar = is_scalar(row_loc)
         col_scalar = is_scalar(col_loc)
