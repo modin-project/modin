@@ -572,6 +572,19 @@ def test_sort_values(
     )
 
 
+def test_sort_values_descending_with_only_two_bins():
+    # test case from https://github.com/modin-project/modin/issues/5781
+    part1 = pd.DataFrame({"a": [1, 2, 3, 4]})
+    part2 = pd.DataFrame({"a": [5, 6, 7, 8]})
+
+    modin_df = pd.concat([part1, part2])
+    pandas_df = modin_df._to_pandas()
+
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+
+    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by="a"))
+
+
 def test_sort_overpartitioned_df():
     # First we test when the final df will have only 1 row and column partition.
     data = [[4, 5, 6], [1, 2, 3]]

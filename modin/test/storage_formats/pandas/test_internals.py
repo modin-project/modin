@@ -757,3 +757,47 @@ def test_repartitioning(set_num_partitions):
     assert res.column_widths == [4]
     df_equals(res._partitions[0, 0].to_pandas(), pandas_df)
     df_equals(res.to_pandas(), pandas_df)
+
+
+@pytest.mark.parametrize("col_name", ["numeric_col", "non_numeric_col"])
+@pytest.mark.parametrize("ascending", [True, False])
+@pytest.mark.parametrize("num_pivots", [3, 2, 1])
+@pytest.mark.parametrize("all_pivots_are_unique", [True, False])
+def test_split_partitions_kernel(
+    col_name, ascending, num_pivots, all_pivots_are_unique
+):
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    random_state = np.random.RandomState(42)
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    min_val, max_val = df[col_name].iloc[0], df[col_name].iloc[-1]
+
+    pivots = random_state.choice(df[col_name], num_pivots, replace=False)
+    if not all_pivots_are_unique:
+        pivots = np.repeat(pivots[0], num_pivots)
+    pivots = np.sort(pivots)
+
+    df = df.reindex(random_state.permutation(df.index))
+    bins = split_partitions_using_pivots_for_sort(df, df, col_name, pivots, ascending)
+
+    bounds = np.concatenate([[min_val], pivots, [max_val]])
+    if not ascending:
+        bounds = bounds[::-1]
+
+    for idx, part in enumerate(bins):
+        if ascending:
+            assert (
+                (bounds[idx] <= part[col_name]) & (part[col_name] <= bounds[idx + 1])
+            ).all()
+        else:
+            assert (
+                (part[col_name] <= bounds[idx]) & (part[col_name] >= bounds[idx + 1])
+            ).all()

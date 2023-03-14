@@ -261,7 +261,7 @@ def split_partitions_using_pivots_for_sort(
         # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
         # are sorted in ascending order, and gives us results based off of that assumption - so if
         # we actually want to sort in descending order, we need to swap the new indices.
-        if not ascending and len(np.unique(pivots)) == 1 and len(pivots) != 1:
+        if not ascending and len(np.unique(pivots)) == 1:
             groupby_col = len(pivots) - groupby_col
     else:
         groupby_col = np.searchsorted(pivots, cols_to_digitize.squeeze(), side="right")
