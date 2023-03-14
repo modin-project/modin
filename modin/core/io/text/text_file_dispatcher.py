@@ -1125,10 +1125,11 @@ class TextFileDispatcher(FileDispatcher):
             compression=compression_infered,
         )
         # this is done mostly for performance; see PR#5678 for details
+        filepath_or_buffer_md_ref = cls.put(filepath_or_buffer_md)
         kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
             splits,
-            filepath_or_buffer_md,
+            filepath_or_buffer_md_ref,
             kwargs_ref,
             num_splits=num_splits,
         )
