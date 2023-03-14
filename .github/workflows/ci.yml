@@ -330,9 +330,7 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-no-engine:
     runs-on: ubuntu-latest
@@ -368,9 +366,7 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -432,9 +428,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-hdk:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -494,9 +488,7 @@ jobs:
           examples/data/plasticc_training_set_metadata_1k.csv \
           examples/data/plasticc_test_set_metadata_1k.csv \
           -no-ml
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
@@ -651,9 +643,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-all:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -752,9 +742,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -797,9 +785,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-cloud:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -845,9 +831,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
 
   test-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -924,9 +908,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
+      - uses: ./.github/workflows/coverage/upload-coverage
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.engine == 'ray'
@@ -1020,3 +1002,18 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+
+  upload-coverage:
+    needs: [test-internals, test-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-windows]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Download coverage data
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: coverage-data
+      - uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
