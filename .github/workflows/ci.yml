@@ -1014,6 +1014,9 @@ jobs:
         uses: actions/download-artifact@v3.0.2
         with:
           name: coverage-data
+      - name: Combine coverage
+        run: |
+          python -m coverage combine
       - uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
