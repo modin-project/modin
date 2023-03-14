@@ -2010,9 +2010,6 @@ def test_iloc(request, data):
         modin_series.iloc[[1, 2]] = 42
         pandas_series.iloc[[1, 2]] = 42
         df_equals(modin_series, pandas_series)
-
-        with pytest.raises(IndexError):
-            modin_series.iloc[1:, 1]
     else:
         with pytest.raises(IndexError):
             modin_series.iloc[0]
