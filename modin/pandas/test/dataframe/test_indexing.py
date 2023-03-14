@@ -832,6 +832,12 @@ def test_iloc_empty():
     df_equals(pandas_df, modin_df)
 
 
+def test_iloc_loc_key_length():
+    modin_ser, pandas_ser = pd.Series(0), pandas.Series(0)
+    eval_general(modin_ser, pandas_ser, lambda ser: ser.iloc[0, 0])
+    eval_general(modin_ser, pandas_ser, lambda ser: ser.loc[0, 0])
+
+
 def test_loc_series():
     md_df, pd_df = create_test_dfs({"a": [1, 2], "b": [3, 4]})
 
