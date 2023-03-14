@@ -330,7 +330,7 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-no-engine:
     runs-on: ubuntu-latest
@@ -366,7 +366,7 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -428,7 +428,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-hdk:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -488,7 +488,7 @@ jobs:
           examples/data/plasticc_training_set_metadata_1k.csv \
           examples/data/plasticc_test_set_metadata_1k.csv \
           -no-ml
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
@@ -643,7 +643,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-all:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -742,7 +742,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -785,7 +785,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-cloud:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -831,7 +831,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
 
   test-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -908,7 +908,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: ./.github/workflows/coverage/upload-coverage
+      - uses: ./.github/workflows/upload-coverage
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.engine == 'ray'
