@@ -1010,6 +1010,9 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
       - name: Download coverage data
         uses: actions/download-artifact@v3.0.2
         with:
@@ -1022,7 +1025,7 @@ jobs:
       - name: Combine coverage
         run: |
           python -m coverage combine
-          python -m coverage xml -i
+          python -m coverage xml
       - uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
