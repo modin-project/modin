@@ -279,8 +279,8 @@ class _LocationIndexerBase(ClassLogger):
         self.df = modin_df
         self.qc = modin_df._query_compiler
 
-    def _validate_key_length(self, key: tuple) -> tuple:
-        """Copied from pandas."""
+    def _validate_key_length(self, key: tuple) -> tuple:  # noqa: GL08
+        # Implementation copied from pandas.
         if len(key) > self.df.ndim:
             if key[0] is Ellipsis:
                 # e.g. Series.iloc[..., 3] reduces to just Series.iloc[3]
