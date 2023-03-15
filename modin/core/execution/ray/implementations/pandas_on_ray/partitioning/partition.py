@@ -65,23 +65,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         )
 
-    def get(self):
-        """
-        Get the object wrapped by this partition out of the Plasma store.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The object from the Plasma store.
-        """
-        log = get_logger()
-        self._is_debug(log) and log.debug(f"ENTER::Partition.get::{self._identity}")
-        if len(self.call_queue):
-            self.drain_call_queue()
-        result = RayWrapper.materialize(self._data)
-        self._is_debug(log) and log.debug(f"EXIT::Partition.get::{self._identity}")
-        return result
-
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.

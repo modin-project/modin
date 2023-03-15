@@ -54,18 +54,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         # TODO: align with other engines
         self._identity
 
-    def get(self):
-        """
-        Get the object wrapped by this partition out of the distributed memory.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The object from the distributed memory.
-        """
-        self.drain_call_queue()
-        return DaskWrapper.materialize(self._data)
-
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
