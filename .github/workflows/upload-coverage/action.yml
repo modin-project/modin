@@ -8,7 +8,7 @@ runs:
     - run: |
         COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
         if [ -f coverage.xml ]; then
-          mv coverage.xml coverage.${COVERAGE_UUID}.xml
+          mv .coverage .coverage.${COVERAGE_UUID}
         fi
       id: coverage-uuid
       shell: bash
