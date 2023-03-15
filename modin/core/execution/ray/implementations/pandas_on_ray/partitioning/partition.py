@@ -287,7 +287,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 (
                     self._length_cache,
                     self._width_cache,
-                ) = self._get_index_and_columns.remote(self._data)
+                ) = self._get_index_and_columns_size.remote(self._data)
         if isinstance(self._length_cache, ObjectIDType) and materialize:
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
@@ -315,7 +315,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 (
                     self._length_cache,
                     self._width_cache,
-                ) = self._get_index_and_columns.remote(self._data)
+                ) = self._get_index_and_columns_size.remote(self._data)
         if isinstance(self._width_cache, ObjectIDType) and materialize:
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
