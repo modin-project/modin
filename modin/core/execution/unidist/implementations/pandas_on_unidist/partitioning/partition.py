@@ -20,8 +20,11 @@ from modin.core.execution.unidist.common.utils import deserialize, wait
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
-
-compute_sliced_len = unidist.remote(compute_sliced_len)
+from modin.core.execution.utils import (
+    _get_index_and_columns_size,
+    get_apply_func,
+    get_apply_list_of_funcs,
+)
 
 
 class PandasOnUnidistDataframePartition(PandasDataframePartition):
@@ -43,6 +46,14 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     """
 
     execution_wrapper = UnidistWrapper
+    _compute_sliced_len = unidist.remote(compute_sliced_len)
+    _get_index_and_columns_size = unidist.remote(num_returns=2)(
+        _get_index_and_columns_size
+    )
+    _apply_func = unidist.remote(num_returns=4)(get_apply_func(unidist.get_ip))
+    _apply_list_of_funcs = unidist.remote(num_returns=4)(
+        get_apply_list_of_funcs(unidist.get_ip, deserialize)
+    )
 
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert unidist.is_object_ref(data)
@@ -93,11 +104,15 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
+            result, length, width, ip = self._apply_list_of_funcs.remote(
+                call_queue, data
+            )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
-            result, length, width, ip = _apply_func.remote(data, func, *args, **kwargs)
+            result, length, width, ip = self._apply_func.remote(
+                data, func, *args, **kwargs
+            )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
         return self.__constructor__(result, length, width, ip)
@@ -121,7 +136,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 new_length,
                 new_width,
                 self._ip_cache,
-            ) = _apply_list_of_funcs.remote(call_queue, data)
+            ) = self._apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -132,7 +147,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 new_length,
                 new_width,
                 self._ip_cache,
-            ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
+            ) = self._apply_func.remote(data, func, *f_args, **f_kwargs)
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
         )
@@ -179,7 +194,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._length_cache = self._length_cache
             else:
-                new_obj._length_cache = compute_sliced_len.remote(
+                new_obj._length_cache = self._compute_sliced_len.remote(
                     row_labels, self._length_cache
                 )
         if isinstance(col_labels, slice) and unidist.is_object_ref(self._width_cache):
@@ -187,7 +202,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._width_cache = self._width_cache
             else:
-                new_obj._width_cache = compute_sliced_len.remote(
+                new_obj._width_cache = self._compute_sliced_len.remote(
                     col_labels, self._width_cache
                 )
         self._is_debug(log) and log.debug(f"EXIT::Partition.mask::{self._identity}")
@@ -300,113 +315,3 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         if unidist.is_object_ref(self._ip_cache):
             self._ip_cache = UnidistWrapper.materialize(self._ip_cache)
         return self._ip_cache
-
-
-@unidist.remote(num_returns=2)
-def _get_index_and_columns_size(df):
-    """
-    Get the number of rows and columns of a pandas DataFrame.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A pandas DataFrame which dimensions are needed.
-
-    Returns
-    -------
-    int
-        The number of rows.
-    int
-        The number of columns.
-    """
-    return len(df.index), len(df.columns)
-
-
-@unidist.remote(num_returns=4)
-def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
-    """
-    Execute a function on the partition in a worker process.
-
-    Parameters
-    ----------
-    partition : pandas.DataFrame
-        A pandas DataFrame the function needs to be executed on.
-    func : callable
-        The function to perform on the partition.
-    *args : list
-        Positional arguments to pass to ``func``.
-    **kwargs : dict
-        Keyword arguments to pass to ``func``.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-
-    Notes
-    -----
-    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
-    destructuring it causes a performance penalty.
-    """
-    try:
-        result = func(partition, *args, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-    # don't want the error to propagate to the user, and we want to avoid copying unless
-    # we absolutely have to.
-    except ValueError:
-        result = func(partition.copy(), *args, **kwargs)
-    return (
-        result,
-        len(result) if hasattr(result, "__len__") else 0,
-        len(getattr(result, "columns", ())),
-        unidist.get_ip(),
-    )
-
-
-@unidist.remote(num_returns=4)
-def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
-    """
-    Execute all operations stored in the call queue on the partition in a worker process.
-
-    Parameters
-    ----------
-    call_queue : list
-        A call queue that needs to be executed on the partition.
-    partition : pandas.DataFrame
-        A pandas DataFrame the call queue needs to be executed on.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-    """
-    for func, f_args, f_kwargs in call_queue:
-        func = deserialize(func)
-        args = deserialize(f_args)
-        kwargs = deserialize(f_kwargs)
-        try:
-            partition = func(partition, *args, **kwargs)
-        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-        # don't want the error to propagate to the user, and we want to avoid copying unless
-        # we absolutely have to.
-        except ValueError:
-            partition = func(partition.copy(), *args, **kwargs)
-
-    return (
-        partition,
-        len(partition) if hasattr(partition, "__len__") else 0,
-        len(partition.columns) if hasattr(partition, "columns") else 0,
-        unidist.get_ip(),
-    )
