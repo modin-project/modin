@@ -15,4 +15,4 @@ runs:
     - uses: actions/upload-artifact@v3.1.2
       with:
         name: coverage-data
-        path: coverage.*
+        path: .coverage*
