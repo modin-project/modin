@@ -3420,12 +3420,12 @@ class PandasDataframe(ClassLogger):
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
-            for axis, have_external_index in enumerate(
+            for axis, has_external_index in enumerate(
                 [self.has_index_cache, self.has_columns_cache]
             ):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
-                if have_external_index():
+                if has_external_index():
                     # cache now cannot be used as replacing indexes
                     external_index = self.columns if axis else self.index
                     ErrorMessage.catch_bugs_and_request_email(
