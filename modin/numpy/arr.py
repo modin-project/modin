@@ -765,7 +765,12 @@ class array(object):
                 raise ValueError(
                     f"operands could not be broadcast together with shapes {self.shape} {other.shape}"
                 )
-            return (caller._query_compiler, callee._query_compiler, caller._ndim, {"broadcast": broadcast, "axis": 1})
+            return (
+                caller._query_compiler,
+                callee._query_compiler,
+                caller._ndim,
+                {"broadcast": broadcast, "axis": 1},
+            )
         else:
             if self.shape != other.shape:
                 # In this case, we either have two mismatched objects trying to do an operation
@@ -795,7 +800,12 @@ class array(object):
                         f"operands could not be broadcast together with shapes {self.shape} {other.shape}"
                     )
             else:
-                return (self._query_compiler, other._query_compiler, self._ndim, {"broadcast": False})
+                return (
+                    self._query_compiler,
+                    other._query_compiler,
+                    self._ndim,
+                    {"broadcast": False},
+                )
 
     def _greater(
         self,
@@ -812,7 +822,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.gt(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object > 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -840,7 +852,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.ge(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object >= 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -868,7 +882,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.lt(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object < 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -896,7 +912,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.le(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object <= 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -924,7 +942,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.eq(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         result = caller.eq(callee, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
@@ -946,7 +966,9 @@ class array(object):
         check_kwargs(where=where, casting=casting, order=order, subok=subok)
         if is_scalar(x2):
             return array(_query_compiler=self._query_compiler.ne(x2), _ndim=self._ndim)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         result = caller.ne(callee, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
@@ -1466,7 +1488,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         result = caller.add(callee, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
@@ -1493,7 +1517,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object/2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -1516,7 +1542,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             result = caller.truediv(callee, **kwargs)
         else:
@@ -1557,7 +1585,9 @@ class array(object):
             return fix_dtypes_and_determine_return(
                 result, self._ndim, dtype, out, where
             )
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
@@ -1566,9 +1596,7 @@ class array(object):
                 "Using floor_divide with broadcast is not currently available in Modin."
             )
         result = caller.floordiv(callee, **kwargs)
-        if callee.eq(0).any() and numpy.issubdtype(
-            out_dtype, numpy.integer
-        ):
+        if callee.eq(0).any() and numpy.issubdtype(out_dtype, numpy.integer):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = (
@@ -1591,7 +1619,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
@@ -1719,7 +1749,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         result = caller.mul(callee, **kwargs)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
 
@@ -1837,7 +1869,9 @@ class array(object):
             return fix_dtypes_and_determine_return(
                 result, self._ndim, dtype, out, where
             )
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # Modin does not correctly support broadcasting when the caller of the function is
             # a Series (1D), and the operand is a Dataframe (2D). We cannot workaround this using
@@ -1846,9 +1880,7 @@ class array(object):
                 "Using remainder with broadcast is not currently available in Modin."
             )
         result = caller.mod(callee, **kwargs)
-        if callee.eq(0).any() and numpy.issubdtype(
-            out_dtype, numpy.integer
-        ):
+        if callee.eq(0).any() and numpy.issubdtype(out_dtype, numpy.integer):
             # NumPy's floor_divide by 0 works differently from pandas', so we need to fix
             # the output.
             result = result.replace(numpy.NaN, 0)
@@ -1867,7 +1899,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object - 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -1890,7 +1924,9 @@ class array(object):
         subok=True,
     ):
         check_kwargs(order=order, subok=subok, casting=casting, where=where)
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, dtype=dtype, out=out
+        )
         if caller != self._query_compiler:
             # In this case, we are doing an operation that looks like this 1D_object - 2D_object.
             # For Modin to broadcast directly, we have to swap it so that the operation is actually
@@ -2366,7 +2402,9 @@ class array(object):
             raise ValueError(
                 "modin.numpy logic operators do not currently support broadcasting between arrays of different dimensions"
             )
-        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(x2, cast_input_types=False, dtype=dtype, out=out)
+        caller, callee, new_ndim, kwargs = self._preprocess_binary_op(
+            x2, cast_input_types=False, dtype=dtype, out=out
+        )
         # Deliberately do not pass **kwargs, since they're not used
         result = getattr(caller, qc_method_name)(callee)
         return fix_dtypes_and_determine_return(result, new_ndim, dtype, out, where)
