@@ -265,7 +265,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 (
                     self._length_cache,
                     self._width_cache,
-                ) = _get_index_and_columns_size.remote(self._data)
+                ) = self._get_index_and_columns_size.remote(self._data)
         if unidist.is_object_ref(self._length_cache) and materialize:
             self._length_cache = UnidistWrapper.materialize(self._length_cache)
         return self._length_cache
@@ -293,7 +293,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
                 (
                     self._length_cache,
                     self._width_cache,
-                ) = _get_index_and_columns_size.remote(self._data)
+                ) = self._get_index_and_columns_size.remote(self._data)
         if unidist.is_object_ref(self._width_cache) and materialize:
             self._width_cache = UnidistWrapper.materialize(self._width_cache)
         return self._width_cache
