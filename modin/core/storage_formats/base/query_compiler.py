@@ -1161,6 +1161,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.reset_index)(self)
 
+    def maybe_reset_columns_to_positional(self):  # noqa: PR02
+        """
+        Reset the columns to a positional index, if it is not already.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler with appropriate columns.
+        """
+        self.columns = range(len(self.columns))
+        return self
+
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
     ):

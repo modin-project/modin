@@ -179,13 +179,14 @@ class array(object):
 
             self._query_compiler = pd.DataFrame(arr)._query_compiler
             new_dtype = arr.dtype
-        # These two lines are necessary so that our query compiler does not keep track of indices
+        # These two calls are necessary so that our query compiler does not keep track of indices
         # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
         # to be dataframes, and the dataframes had the same column names but ordered differently
         # we want to do a simple broadcast where we only consider position, as numpy would, rather
         # than pair columns with the same name and multiply them.)
-        self._query_compiler = self._query_compiler.maybe_reset_index_to_positional()
-        self._query_compiler.columns = range(len(self._query_compiler.columns))
+        self._query_compiler = (
+            self._query_compiler.maybe_reset_index_to_positional().maybe_reset_columns_to_positional()
+        )
         new_dtype = new_dtype if dtype is None else dtype
         cols_with_wrong_dtype = self._query_compiler.dtypes != new_dtype
         if cols_with_wrong_dtype.any():
