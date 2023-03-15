@@ -737,6 +737,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         return new_self
 
+    def maybe_reset_index_to_positional(self):
+        if self.index.equals(pandas.RangeIndex(len(self.index))):
+            return self
+        return self.reset_index(drop=True)
+
     def set_index_from_columns(
         self, keys: List[Hashable], drop: bool = True, append: bool = False
     ):

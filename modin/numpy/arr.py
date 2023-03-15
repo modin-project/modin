@@ -27,7 +27,6 @@ from modin.core.dataframe.algebra import (
     Reduce,
     Binary,
 )
-from modin.config import StorageFormat
 
 from .utils import try_convert_from_interoperable_type
 
@@ -180,14 +179,13 @@ class array(object):
 
             self._query_compiler = pd.DataFrame(arr)._query_compiler
             new_dtype = arr.dtype
-        if StorageFormat.get() == "Pandas":
-            # These two lines are necessary so that our query compiler does not keep track of indices
-            # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
-            # to be dataframes, and the dataframes had the same column names but ordered differently
-            # we want to do a simple broadcast where we only consider position, as numpy would, rather
-            # than pair columns with the same name and multiply them.)
-            self._query_compiler = self._query_compiler.reset_index(drop=True)
-            self._query_compiler.columns = range(len(self._query_compiler.columns))
+        # These two lines are necessary so that our query compiler does not keep track of indices
+        # and try to map like indices to like indices. (e.g. if we multiply two arrays that used
+        # to be dataframes, and the dataframes had the same column names but ordered differently
+        # we want to do a simple broadcast where we only consider position, as numpy would, rather
+        # than pair columns with the same name and multiply them.)
+        self._query_compiler = self._query_compiler.maybe_reset_index_to_positional()
+        self._query_compiler.columns = range(len(self._query_compiler.columns))
         new_dtype = new_dtype if dtype is None else dtype
         cols_with_wrong_dtype = self._query_compiler.dtypes != new_dtype
         if cols_with_wrong_dtype.any():
