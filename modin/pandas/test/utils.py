@@ -669,7 +669,7 @@ def df_equals(df1, df2):
             np.testing.assert_almost_equal(df1, df2)
 
 
-def modin_df_almost_equals_pandas(modin_df, pandas_df):
+def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
     df_categories_equals(modin_df._to_pandas(), pandas_df)
 
     modin_df = to_pandas(modin_df)
@@ -685,7 +685,7 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
         diff_max = diff_max.max()
     assert (
         modin_df.equals(pandas_df)
-        or diff_max < 0.0001
+        or diff_max < max_diff
         or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
     )
 

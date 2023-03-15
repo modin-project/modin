@@ -1136,6 +1136,10 @@ class HdkOnNativeDataframe(PandasDataframe):
                     and (not pyarrow.types.is_null(field.type))
                     and (
                         pyarrow.types.is_string(field.type)
+                        or (
+                            (field.type.bit_width == cur_field.type.bit_width)
+                            and pyarrow.types.is_floating(field.type)
+                        )
                         or (field.type.bit_width > cur_field.type.bit_width)
                     )
                 )
@@ -1235,7 +1239,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                     idx = frames[0].index.append([f.index for f in frames[1:]])
                     idx_cols = self._mangle_index_names(idx.names)
                     idx_df = pd.DataFrame(index=idx).reset_index()
-                    idx_table = pyarrow.Table.from_pandas(idx_df)
+                    obj_cols = idx_df.select_dtypes(include=["object"]).columns.tolist()
+                    if len(obj_cols) != 0:
+                        # PyArrow fails to convert object fields. Converting to str.
+                        idx_df[obj_cols] = idx_df[obj_cols].astype(str)
+                    idx_table = pyarrow.Table.from_pandas(idx_df, preserve_index=False)
                     idx_table = idx_table.rename_columns(idx_cols)
 
             if sort:
