@@ -16,9 +16,11 @@ import numpy
 from .arr import array
 from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
+from modin.utils import _inherit_docstrings
 
 
 def _dispatch_logic(operator_name):
+    @_inherit_docstrings(getattr(numpy, operator_name))
     def call(x, *args, **kwargs):
         x = try_convert_from_interoperable_type(x)
         if not isinstance(x, array):
