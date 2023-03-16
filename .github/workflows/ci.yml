@@ -654,7 +654,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        engine: ["python"]
+        engine: ["python", "ray", "dask"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       # Only test reading from SQL server and postgres on ubuntu for now.
@@ -1023,9 +1023,9 @@ jobs:
           architecture: "x64"
       - run: pip install coverage
       - name: Combine coverage
-        run: |
-          python -m coverage combine
-          python -m coverage xml
+        run: python -m coverage combine
+      - name: Generate coverage report in xml format
+        run: python -m coverage xml
       - uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
