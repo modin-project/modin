@@ -176,6 +176,15 @@ def test_concat_series_only():
     )
 
 
+def test_concat_5776():
+    modin_data = {key: pd.Series(index=range(3)) for key in ["a", "b"]}
+    pandas_data = {key: pandas.Series(index=range(3)) for key in ["a", "b"]}
+    df_equals(
+        pd.concat(modin_data, axis="columns"),
+        pandas.concat(pandas_data, axis="columns"),
+    )
+
+
 def test_concat_with_empty_frame():
     modin_empty_df = pd.DataFrame()
     pandas_empty_df = pandas.DataFrame()

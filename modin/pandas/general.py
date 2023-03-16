@@ -430,6 +430,8 @@ def concat(
         else DataFrame(obj)._query_compiler
         for obj in list_of_objs
     ]
+    if keys is None and isinstance(objs, dict):
+        keys = list(objs.keys())
     if keys is not None:
         if all_series:
             new_idx = keys
