@@ -318,6 +318,8 @@ class ArrayIndexer(object):
                 _ndim = 2
             else:
                 _ndim = 1
+                if row_scalar:
+                    qc_view = qc_view.transpose()
 
         if _ndim == 0:
             return qc_view.to_numpy()[0, 0]
