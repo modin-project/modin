@@ -831,7 +831,7 @@ def test_split_partitions_kernel(
         else:
             # Check that each part is in the range of 'bound[i + 1] <= part <= bound[i]'
             # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
-            # Then each part satisfies: 10 <= part[0] <= 5; 5 <= part[1] <= 2; 2 <= part[2] <= 0
+            # Then each part satisfies: 5 <= part[0] <= 10; 2 <= part[1] <= 5; 0 <= part[2] <= 2
             assert (
                 (part[col_name] <= bounds[idx]) & (part[col_name] >= bounds[idx + 1])
             ).all()
