@@ -583,7 +583,9 @@ def test_sort_values_descending_with_only_two_bins():
     if StorageFormat.get() == "Pandas":
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
 
-    eval_general(modin_df, pandas_df, lambda df: df.sort_values(by="a"))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.sort_values(by="a", ascending=False)
+    )
 
 
 def test_sort_overpartitioned_df():
