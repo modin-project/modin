@@ -11,7 +11,7 @@ jobs:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -77,7 +77,7 @@ jobs:
         shell: bash -l {0}
     name: test docs
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -147,7 +147,7 @@ jobs:
       MODIN_TEST_RAY_CLIENT: "True"
     name: "test-ray-client"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
