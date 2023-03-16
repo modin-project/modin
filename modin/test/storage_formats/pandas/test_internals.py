@@ -766,6 +766,27 @@ def test_repartitioning(set_num_partitions):
 def test_split_partitions_kernel(
     col_name, ascending, num_pivots, all_pivots_are_unique
 ):
+    """
+    This test verifies proper work of the `split_partitions_using_pivots_for_sort` function
+    used in partitions reshuffling.
+
+    The function being tested splits the passed dataframe into parts according
+    to the 'pivots' indicating boundary values for the parts.
+
+    Parameters
+    ----------
+    col_name : {"numeric_col", "non_numeric_col"}
+        The tested function takes a key column name to which the pivot values belong.
+        The function may behave differently depending on the type of that column.
+    ascending : {True, False}
+        The split parts are returned either in ascending or descending order.
+        This parameter helps us to test both of the cases.
+    num_pivots : {3, 2, 1}
+        The function's behavior may depend on the number of boundary values being passed.
+    all_pivots_are_unique : {True, False}
+        Duplicate pivot values cause empty partitions to be produced. This parameter helps
+        to verify that the function still behaves correctly in such cases.
+    """
     from modin.core.dataframe.pandas.dataframe.utils import (
         split_partitions_using_pivots_for_sort,
     )
@@ -780,24 +801,37 @@ def test_split_partitions_kernel(
     )
     min_val, max_val = df[col_name].iloc[0], df[col_name].iloc[-1]
 
+    # Selecting random boundary values for the key column
     pivots = random_state.choice(df[col_name], num_pivots, replace=False)
     if not all_pivots_are_unique:
+        # Making the 'pivots' contain only duplicate values
         pivots = np.repeat(pivots[0], num_pivots)
+    # The tested function assumes that we pass pivots in the ascending order
     pivots = np.sort(pivots)
 
+    # Randomly reordering rows in the dataframe
     df = df.reindex(random_state.permutation(df.index))
     bins = split_partitions_using_pivots_for_sort(df, df, col_name, pivots, ascending)
 
+    # Building reference bounds to make the result verification simpler
     bounds = np.concatenate([[min_val], pivots, [max_val]])
     if not ascending:
+        # If the order is descending we want bounds to be in the descending order as well:
+        # Ex: bounds = [0, 2, 5, 10] for ascending and [10, 5, 2, 0] for descending.
         bounds = bounds[::-1]
 
     for idx, part in enumerate(bins):
         if ascending:
+            # Check that each part is in the range of 'bound[i] <= part <= bound[i + 1]'
+            # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
+            # Then each part satisfies: 0 <= part[0] <= 2; 2 <= part[1] <= 5; 5 <= part[2] <= 10
             assert (
                 (bounds[idx] <= part[col_name]) & (part[col_name] <= bounds[idx + 1])
             ).all()
         else:
+            # Check that each part is in the range of 'bound[i + 1] <= part <= bound[i]'
+            # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
+            # Then each part satisfies: 10 <= part[0] <= 5; 5 <= part[1] <= 2; 2 <= part[2] <= 0
             assert (
                 (part[col_name] <= bounds[idx]) & (part[col_name] >= bounds[idx + 1])
             ).all()
