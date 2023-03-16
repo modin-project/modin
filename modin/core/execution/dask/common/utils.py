@@ -38,9 +38,7 @@ def initialize_dask():
         num_cpus = CpuCount.get()
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
-        client = Client(
-            n_workers=num_cpus, memory_limit=worker_memory_limit, threads_per_worker=1
-        )
+        client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
 
     num_cpus = len(client.ncores())
     NPartitions._put(num_cpus)
