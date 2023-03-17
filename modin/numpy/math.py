@@ -22,7 +22,7 @@ from modin.utils import _inherit_docstrings
 def _dispatch_math(operator_name, arr_method_name=None):
     # `operator_name` is the name of the method on the numpy API
     # `arr_method_name` is the name of the method on the modin.numpy.array object,
-    # which is assumed to be `operator_name by default
+    # which is assumed to be `operator_name` by default
     @_inherit_docstrings(getattr(numpy, operator_name))
     def call(x, *args, **kwargs):
         x = try_convert_from_interoperable_type(x)

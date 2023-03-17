@@ -721,7 +721,7 @@ class array(object):
         Returns
         -------
         tuple
-            Returns a 5-tuple with the following elements:
+            Returns a 4-tuple with the following elements:
             - 0: QueryCompiler object that is the LHS of the binary operation, with types converted
                  as needed.
             - 1: QueryCompiler object OR scalar that is the RHS of the binary operation, with types
