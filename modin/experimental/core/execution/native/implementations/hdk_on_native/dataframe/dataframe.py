@@ -1458,6 +1458,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                 force_execution_mode=self._force_execution_mode,
             )
         elif isinstance(other, list):
+            if kwargs.get("axis", 1) == 0:
+                raise NotImplementedError(f"{op_name} on rows")
             if len(other) != len(self.columns):
                 raise ValueError(
                     f"length must be {len(self.columns)}: given {len(other)}"

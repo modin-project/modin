@@ -30,7 +30,7 @@ from modin.pandas.test.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import Engine, NPartitions
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -163,9 +163,20 @@ def test_math_alias(math_op, alias):
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other):
+    if other == "as_left" and StorageFormat.get() == "Hdk":
+        # In case of comparison with a DataFrame, HDK returns
+        # a DataFrame with sorted columns.
+        def operation(df):
+            return getattr(df, op)(df).sort_index(axis=1)
+
+    else:
+
+        def operation(df):
+            return getattr(df, op)(df if other == "as_left" else other)
+
     eval_general(
         *create_test_dfs(data),
-        lambda df: getattr(df, op)(df if other == "as_left" else other),
+        operation=operation,
     )
 
 
