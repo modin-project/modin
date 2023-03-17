@@ -22,7 +22,7 @@ jobs:
     name: lint (black)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -38,10 +38,10 @@ jobs:
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -53,7 +53,7 @@ jobs:
     name: build docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -70,7 +70,7 @@ jobs:
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -149,7 +149,7 @@ jobs:
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -171,7 +171,7 @@ jobs:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -211,7 +211,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -249,7 +249,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-ubuntu
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -270,7 +270,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -291,7 +291,7 @@ jobs:
         shell: bash -l {0}
     name: test-internals
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -338,7 +338,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -381,7 +381,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -442,7 +442,7 @@ jobs:
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -503,7 +503,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
@@ -577,7 +577,7 @@ jobs:
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -636,6 +636,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_logic.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_indexing.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -667,7 +668,7 @@ jobs:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -732,6 +733,7 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -755,7 +757,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test experimental
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -798,7 +800,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test cloud
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -867,11 +869,12 @@ jobs:
           - modin/numpy/test/test_array_arithmetic.py
           - modin/numpy/test/test_array_logic.py
           - modin/numpy/test/test_array_linalg.py
+          - modin/numpy/test/test_array_indexing.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
@@ -929,7 +932,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -974,7 +977,7 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
