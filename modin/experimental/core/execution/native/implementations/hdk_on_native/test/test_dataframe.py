@@ -2071,8 +2071,8 @@ class TestBadData:
             return getattr(df, operation)()
 
         for c in supported_codes:
-            run_and_compare(test, data={}, dtype_code=c, operation="sum")
-            run_and_compare(test, data={}, dtype_code=c, operation="mean")
+            for op in ("sum", "mean"):
+                run_and_compare(test, data={}, dtype_code=c, operation=op)
 
 
 class TestDropna:
