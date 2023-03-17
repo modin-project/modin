@@ -94,6 +94,12 @@ _doc_io_method_kwargs_params = """**kwargs : kwargs
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
+supported_execution = (
+    "ExperimentalPandasOnRay",
+    "ExperimentalPandasOnUnidist",
+    "ExperimentalPandasOnDask",
+)
+
 
 class FactoryInfo(typing.NamedTuple):
     """
@@ -509,11 +515,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
-        supported_execution = (
-            "ExperimentalPandasOnRay",
-            "ExperimentalPandasOnUnidist",
-            "ExperimentalPandasOnDask",
-        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -528,11 +529,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
-        supported_execution = (
-            "ExperimentalPandasOnRay",
-            "ExperimentalPandasOnUnidist",
-            "ExperimentalPandasOnDask",
-        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -547,11 +543,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_custom_text(cls, **kwargs):
-        supported_execution = (
-            "ExperimentalPandasOnRay",
-            "ExperimentalPandasOnUnidist",
-            "ExperimentalPandasOnDask",
-        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -571,11 +562,6 @@ class ExperimentalBaseFactory(BaseFactory):
         **kwargs : kwargs
             Arguments to the writer method.
         """
-        supported_execution = (
-            "ExperimentalPandasOnRay",
-            "ExperimentalPandasOnUnidist",
-            "ExperimentalPandasOnDask",
-        )
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(

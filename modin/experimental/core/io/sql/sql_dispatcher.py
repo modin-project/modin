@@ -33,8 +33,7 @@ class SQLExperimentalDispatcher(SQLDispatcher):
         if cls.__read_sql_with_offset is None:
             from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
-            # cls.__read_sql_with_offset = cls.put(read_sql_with_offset)
-            cls.__read_sql_with_offset = read_sql_with_offset
+            cls.__read_sql_with_offset = cls.put(read_sql_with_offset)
         return cls.__read_sql_with_offset
 
     @classmethod
