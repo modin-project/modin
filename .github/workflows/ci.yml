@@ -692,6 +692,8 @@ jobs:
           # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
           # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
           use-only-tar-bz2: false
+      - name: Install custom Distributed
+        run: pip install git+https://github.com/anmyachev/distributed.git@get-computation-code
       - name: Conda environment
         run: |
           conda info
