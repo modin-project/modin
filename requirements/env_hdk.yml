@@ -23,6 +23,8 @@ dependencies:
   - scikit-learn-intelex
   - matplotlib
   - xarray
+  - pytables
+  - fastparquet
   # code linters
   - black
   - flake8

@@ -1317,6 +1317,9 @@ class TestTable:
             pandas_df = wrapped_read_table(unique_filename, method="pandas")
             modin_df = wrapped_read_table(unique_filename, method="modin")
 
+        if StorageFormat.get() == "Hdk":
+            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
+
         df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
@@ -1446,6 +1449,10 @@ class TestParquet:
                 columns=columns,
             )
 
+    @pytest.mark.skipif(
+        StorageFormat.get() == "Hdk",
+        reason="https://github.com/intel-ai/hdk/issues/291",
+    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -1844,7 +1851,7 @@ class TestExcel:
             df_equals(modin_df.get(key), pandas_df.get(key))
 
     @pytest.mark.xfail(
-        Engine.get() != "Python",
+        Engine.get() != "Python" and StorageFormat.get() != "Hdk",
         reason="pandas throws the exception. See pandas issue #39250 for more info",
     )
     @check_file_leaks

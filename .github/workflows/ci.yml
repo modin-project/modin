@@ -479,7 +479,7 @@ jobs:
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_utils.py
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
       - run: python -m pytest modin/experimental/sql/test/test_sql.py
