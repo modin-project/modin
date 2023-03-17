@@ -1018,9 +1018,6 @@ jobs:
         with:
           name: coverage-data
       - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
       - run: pip install coverage
       - name: Combine coverage
         run: python -m coverage combine
