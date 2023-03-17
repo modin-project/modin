@@ -90,7 +90,7 @@ def test_from_sql_defaults(make_sql_connection):
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason=f"{Engine.get()} does not have experimental API",
+    reason=f"{Engine.get()} does not have experimental glob API",
 )
 class TestCsvGlob:
     def test_read_multiple_small_csv(self):
@@ -176,7 +176,7 @@ class TestCsvGlob:
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason=f"{Engine.get()} does not have experimental API",
+    reason=f"{Engine.get()} does not have experimental glob API",
 )
 @pytest.mark.parametrize(
     "path",

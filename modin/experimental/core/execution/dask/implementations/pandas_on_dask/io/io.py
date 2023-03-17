@@ -110,7 +110,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         def func(df, **kw):
             idx = str(kw["partition_idx"])
             # dask doesn't make a copy of kwargs on serialization;
-            # otherwise the error is:
+            # so take a copy ourselves, otherwise the error is:
             #  kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
             #  KeyError: 'filepath_or_buffer'
             dask_kwargs = dict(kwargs)
