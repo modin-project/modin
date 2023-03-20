@@ -272,7 +272,7 @@ def test_distributed_pickling(filename, compression):
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason=f"{Engine.get()} does not have experimental API",
+    reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 def test_read_custom_json_text():
     def _generate_json(file_name, nrows, ncols):
