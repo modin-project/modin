@@ -51,9 +51,6 @@ matplotlib.use("Agg")
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
-# Workaround for #5712
-pd.DataFrame()
-
 
 @pytest.mark.parametrize("method", ["all", "any"])
 @pytest.mark.parametrize("is_transposed", [False, True])
@@ -324,10 +321,6 @@ def test_prod(
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/286",
-)
 @pytest.mark.parametrize("is_transposed", [False, True])
 @pytest.mark.parametrize(
     "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
