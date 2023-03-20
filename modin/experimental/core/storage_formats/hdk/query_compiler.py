@@ -574,6 +574,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # not able to restore it, since we don't know the number of rows.
         # In this case, we copy the index from the current frame.
         if len(columns) == 0 and new_frame._index_cols is None:
+            assert index is None, "Can't copy old indexes as there was a row drop"
             new_frame._index_cache = self._modin_frame.index.copy()
 
         return self.__constructor__(new_frame)

@@ -2513,6 +2513,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             else:
                 df.set_index(idx_col_names, inplace=True)
                 df.index.rename(self._index_names(self._index_cols), inplace=True)
+            assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
