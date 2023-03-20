@@ -32,6 +32,8 @@ from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 from functools import wraps
 
+import numpy as np
+
 
 def is_inoperable(value):
     """
@@ -399,9 +401,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
             )
+        _check_int_or_float("sum", self.dtypes)
         return self._agg("sum", **kwargs)
 
     def mean(self, **kwargs):
+        _check_int_or_float("mean", self.dtypes)
         return self._agg("mean", **kwargs)
 
     def nunique(self, axis=0, dropna=True):
@@ -793,3 +797,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     @property
     def dtypes(self):
         return self._modin_frame.dtypes
+
+
+_SUPPORTED_NUM_TYPE_CODES = set(np.typecodes["AllInteger"] + np.typecodes["Float"]) - {
+    np.dtype(np.float16).char
+}
+
+
+def _check_int_or_float(op, dtypes):  # noqa: GL08
+    for t in dtypes:
+        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
+            raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")
