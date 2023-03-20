@@ -58,21 +58,21 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         base_io=PandasOnRayIO,
     )
 
-    def make_read(*classes, build_args=build_args):  # noqa: GL08
+    def __make_read(*classes, build_args=build_args):
         # used to reduce code duplication
         return type("", (RayWrapper, *classes), build_args)._read
 
-    read_csv_glob = make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
-    read_pickle_distributed = make_read(
+    read_pickle_distributed = __make_read(
         PandasPickleExperimentalParser, PickleExperimentalDispatcher
     )
 
-    read_custom_text = make_read(
+    read_custom_text = __make_read(
         CustomTextExperimentalParser, CustomTextExperimentalDispatcher
     )
 
-    read_sql = make_read(SQLExperimentalDispatcher)
+    read_sql = __make_read(SQLExperimentalDispatcher)
 
     @classmethod
     def to_pickle_distributed(cls, qc, **kwargs):
@@ -113,4 +113,4 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         # pending completion
         result.to_pandas()
 
-    del make_read  # to not pollute class namespace
+    del __make_read  # to not pollute class namespace
