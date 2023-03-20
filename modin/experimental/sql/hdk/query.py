@@ -74,7 +74,9 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     schema = mdf._partitions[0][0].get().schema
     # HDK returns strings as dictionary. For the proper conversion to
     # Pandas, we need to replace dtypes of the corresponding columns.
-    if replace := [i for i, f in enumerate(schema) if pa.types.is_dictionary(f.type)]:
+    if replace := [
+        i for i, col in enumerate(schema) if pa.types.is_dictionary(col.type)
+    ]:
         dtypes = mdf._dtypes
         obj_type = get_dtype(object)
         for i in replace:

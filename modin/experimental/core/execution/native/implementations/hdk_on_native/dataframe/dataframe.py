@@ -2302,13 +2302,16 @@ class HdkOnNativeDataframe(PandasDataframe):
             at = self._partitions[0][0].get()
             schema = at.schema
             cast = {
-                i: s[0].name
-                for i, s in enumerate(zip(schema, self._dtypes))
-                if is_dictionary(s[0].type) and not is_categorical_dtype(s[1])
+                idx: arrow_type.name
+                for idx, (arrow_type, pandas_type) in enumerate(
+                    zip(schema, self._dtypes)
+                )
+                if is_dictionary(arrow_type.type)
+                and not is_categorical_dtype(pandas_type)
             }
             if cast:
-                for i, n in cast.items():
-                    schema = schema.set(i, pyarrow.field(n, pyarrow.string()))
+                for idx, new_type in cast.items():
+                    schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
                 at = at.cast(schema)
             df = at.to_pandas()
         else:
