@@ -2295,7 +2295,7 @@ class array(object):
         result = self._query_compiler.idxmin(axis=axis)
         na_mask = self._query_compiler.isna().any(axis=axis)
         if na_mask.any(axis=axis ^ 1).to_numpy()[0, 0]:
-            na_idxs = self._query_compiler.isna().idxmin(axis=axis)
+            na_idxs = self._query_compiler.isna().idxmax(axis=axis)
             result = na_mask.where(na_idxs, result)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
