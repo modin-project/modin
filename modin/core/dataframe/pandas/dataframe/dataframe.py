@@ -144,6 +144,37 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
     return decorator
 
 
+class ModinIndexCache:
+    def __init__(self, value):
+        if callable(value):
+            self._value = value
+        else:
+            self._value = ensure_index(value)
+        self._lengths_cache = None
+
+    @property
+    def is_materialized(self) -> bool:
+        return isinstance(self._value, pandas.Index)
+
+    def get(self, return_lengths=False) -> pandas.Index:
+        if not self.is_materialized:
+            if callable(self._value):
+                index, self._lengths_cache = self._value()
+                self._value = ensure_index(index)
+            else:
+                raise NotImplementedError(type(self._value))
+        if return_lengths:
+            return self._value, self._lengths_cache
+        else:
+            return self._value
+
+    def copy(self) -> "ModinIndexCache":
+        idx_cache = self._value
+        if not callable(idx_cache):
+            idx_cache = idx_cache.copy()
+        return ModinIndexCache(idx_cache)
+
+
 class PandasDataframe(ClassLogger):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
@@ -199,11 +230,15 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
     ):
         self._partitions = partitions
-        if callable(index):
+        if isinstance(index, ModinIndexCache) or index is None:
             self._index_cache = index
         else:
-            self._index_cache = ensure_index(index) if index is not None else None
-        self._columns_cache = ensure_index(columns) if columns is not None else None
+            self._index_cache = ModinIndexCache(index)
+        if isinstance(columns, ModinIndexCache) or columns is None:
+            self._columns_cache = columns
+        else:
+            self._columns_cache = ModinIndexCache(columns)
+
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
@@ -353,8 +388,8 @@ class PandasDataframe(ClassLogger):
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
-        if idx_cache is not None and not callable(idx_cache):
-            idx_cache = idx_cache.copy()
+        if self._index_cache is not None:
+            idx_cache = self._index_cache.copy()
         return idx_cache
 
     def has_columns_cache(self):
@@ -416,14 +451,14 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
-        if callable(self._index_cache):
-            self._index_cache, self._row_lengths_cache = self._index_cache()
-            self._index_cache = ensure_index(self._index_cache)
-        elif self._index_cache is None:
-            self._index_cache, row_lengths = self._compute_axis_labels_and_lengths(0)
-            if self._row_lengths_cache is None:
-                self._row_lengths_cache = row_lengths
-        return self._index_cache
+        if self._index_cache is not None:
+            index, row_lengths = self._index_cache.get(return_lengths=True)
+        else:
+            index, row_lengths = self._compute_axis_labels_and_lengths(0)
+            self._index_cache = ModinIndexCache(index)
+        if self._row_lengths_cache is None:
+            self._row_lengths_cache = row_lengths
+        return index
 
     def _get_columns(self):
         """
@@ -434,13 +469,14 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the column labels.
         """
-        if self._columns_cache is None:
-            self._columns_cache, column_widths = self._compute_axis_labels_and_lengths(
-                1
-            )
-            if self._column_widths_cache is None:
-                self._column_widths_cache = column_widths
-        return self._columns_cache
+        if self._columns_cache is not None:
+            columns, column_widths = self._columns_cache.get(return_lengths=True)
+        else:
+            columns, column_widths = self._compute_axis_labels_and_lengths(1)
+            self._columns_cache = ModinIndexCache(columns)
+        if self._column_widths_cache is None:
+            self._column_widths_cache = column_widths
+        return columns
 
     def _set_index(self, new_index):
         """
@@ -452,13 +488,10 @@ class PandasDataframe(ClassLogger):
             The new row labels.
         """
         if self._index_cache is None:
-            self._index_cache = ensure_index(new_index)
+            new_index = ensure_index(new_index)
         else:
-            if callable(self._index_cache):
-                # trigger `._index_cache` computation from callable
-                _ = self.index
-            new_index = self._validate_set_axis(new_index, self._index_cache)
-            self._index_cache = new_index
+            new_index = self._validate_set_axis(new_index, self._index_cache.get())
+        self._index_cache = ModinIndexCache(new_index)
         self.synchronize_labels(axis=0)
 
     def _set_columns(self, new_columns):
@@ -471,12 +504,14 @@ class PandasDataframe(ClassLogger):
            The new column labels.
         """
         if self._columns_cache is None:
-            self._columns_cache = ensure_index(new_columns)
+            new_columns = ensure_index(new_columns)
         else:
-            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            self._columns_cache = new_columns
+            new_columns = self._validate_set_axis(
+                new_columns, self._columns_cache.get()
+            )
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
+        self._columns_cache = ModinIndexCache(new_columns)
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
@@ -1889,10 +1924,10 @@ class PandasDataframe(ClassLogger):
         """
         if new_columns is not None:
             if self._columns_cache is not None:
-                assert len(self._columns_cache) == len(
+                assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
-            self._columns_cache = new_columns
+            self._columns_cache = ModinIndexCache(new_columns)
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True

@@ -2295,8 +2295,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame._index_cache,
-            new_columns=self._modin_frame._columns_cache,
+            new_index=self._modin_frame._index_cache.get(),
+            new_columns=self._modin_frame._columns_cache.get(),
             keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame)
@@ -2518,7 +2518,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = hashed_modin_frame.apply_full_axis(
             axis=0,
             func=_compute_duplicated,
-            new_index=self._modin_frame.copy_index_cache(),
+            new_index=self._modin_frame.copy_index_cache().get(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
             keep_partitioning=False,

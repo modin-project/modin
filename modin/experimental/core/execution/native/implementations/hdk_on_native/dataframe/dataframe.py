@@ -13,7 +13,10 @@
 
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.pandas.dataframe.dataframe import (
+    PandasDataframe,
+    ModinIndexCache,
+)
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
@@ -167,15 +170,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
 
-        if callable(index):
-            index, row_lengths = index()
-        if index is not None:
-            index = ensure_index(index)
         columns = ensure_index(columns)
         self._op = op
         self._index_cols = index_cols
         self._partitions = partitions
-        self._index_cache = index
+        self._index_cache = ModinIndexCache(index) if index is not None else None
         self._columns_cache = columns
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
@@ -1867,17 +1866,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert isinstance(self._op, FrameNode)
 
         if self._partitions.size == 0:
-            self._index_cache = Index.__new__(Index)
+            self._index_cache = ModinIndexCache(Index.__new__(Index))
         else:
             assert self._partitions.size == 1
             obj = self._partitions[0][0].get()
             if isinstance(obj, (pd.DataFrame, pd.Series)):
-                self._index_cache = obj.index
+                self._index_cache = ModinIndexCache(obj.index)
             else:
                 assert isinstance(obj, pyarrow.Table)
                 if self._index_cols is None:
-                    self._index_cache = Index.__new__(
-                        RangeIndex, data=range(obj.num_rows)
+                    self._index_cache = ModinIndexCache(
+                        Index.__new__(RangeIndex, data=range(obj.num_rows))
                     )
                 else:
                     index_at = obj.drop([f"F_{col}" for col in self.columns])
@@ -1888,7 +1887,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     index_df.index.rename(
                         self._index_names(self._index_cols), inplace=True
                     )
-                    self._index_cache = index_df.index
+                    self._index_cache = ModinIndexCache(index_df.index)
 
     def _get_index(self):
         """
@@ -1903,7 +1902,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         self._execute()
         if not self.has_index_cache():
             self._build_index_cache()
-        return self._index_cache
+        return self._index_cache.get()
 
     def _set_index(self, new_index):
         """
