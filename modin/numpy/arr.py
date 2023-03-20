@@ -2179,9 +2179,9 @@ class array(object):
                 raise numpy.AxisError(1, 1)
             if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
                 na_row_map = self._query_compiler.isna().any(axis=1)
-                result = na_row_map.idxmax().to_numpy()[0, 0]
+                result = na_row_map.idxmax()
             else:
-                result = self._query_compiler.idxmax(axis=1)
+                result = self._query_compiler.idxmax(axis=0)
             if keepdims:
                 if out is not None and out.shape != (1,):
                     raise ValueError(
@@ -2248,7 +2248,9 @@ class array(object):
                 raise numpy.AxisError(1, 1)
             if self._query_compiler.isna().any(axis=1).any(axis=0).to_numpy()[0, 0]:
                 na_row_map = self._query_compiler.isna().any(axis=1)
-                result = na_row_map.idxmax().to_numpy()[0, 0]
+                # numpy apparently considers nan to be the minimum value in an array if present
+                # therefore, we use idxmax on the mask array to identify where nans are
+                result = na_row_map.idxmax()
             else:
                 result = self._query_compiler.idxmin(axis=0)
             if keepdims:
@@ -2293,7 +2295,7 @@ class array(object):
         result = self._query_compiler.idxmin(axis=axis)
         na_mask = self._query_compiler.isna().any(axis=axis)
         if na_mask.any(axis=axis ^ 1).to_numpy()[0, 0]:
-            na_idxs = self._query_compiler.isna().idxmax(axis=axis)
+            na_idxs = self._query_compiler.isna().idxmin(axis=axis)
             result = na_mask.where(na_idxs, result)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
