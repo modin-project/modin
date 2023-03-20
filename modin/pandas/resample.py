@@ -358,7 +358,9 @@ class Resampler(ClassLogger):
         )
 
     def size(self, _method="size"):
-        return self._dataframe.__constructor__(
+        from .series import Series
+
+        return Series(
             query_compiler=self._query_compiler.resample_size(
                 self.resample_kwargs, None, None
             )
