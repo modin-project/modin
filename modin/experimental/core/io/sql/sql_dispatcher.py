@@ -68,7 +68,9 @@ class SQLExperimentalDispatcher(SQLDispatcher):
         )
 
         if not is_distributed(partition_column, lower_bound, upper_bound):
-            warnings.warn("Defaulting to Modin core implementation")
+            message = "Defaulting to Modin core implementation; \
+                'partition_column', 'lower_bound', 'upper_bound' must be different from None"
+            warnings.warn(message)
             return cls.base_io.read_sql(
                 sql,
                 con,

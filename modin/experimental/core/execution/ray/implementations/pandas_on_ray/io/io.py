@@ -58,10 +58,9 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         base_io=PandasOnRayIO,
     )
 
-    @classmethod
-    def make_read(cls, *classes):  # noqa: GL08
+    def make_read(*classes, build_args=build_args):  # noqa: GL08
         # used to reduce code duplication
-        return type("", (RayWrapper, *classes), cls.build_args)._read
+        return type("", (RayWrapper, *classes), build_args)._read
 
     read_csv_glob = make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
