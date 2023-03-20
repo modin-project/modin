@@ -287,7 +287,7 @@ def read_sql_with_offset(
     chunksize=None,
 ):
     """
-    Read a chunk of SQL query or table into a pandas DataFrame using Ray task.
+    Read a chunk of SQL query or table into a pandas DataFrame.
 
     Parameters
     ----------

@@ -59,26 +59,23 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         frame_cls=PandasOnDaskDataframe,
         base_io=PandasOnDaskIO,
     )
-    read_csv_glob = type(
-        "", (DaskWrapper, PandasCSVGlobParser, CSVGlobDispatcher), build_args
-    )._read
-    read_pickle_distributed = type(
-        "",
-        (DaskWrapper, PandasPickleExperimentalParser, PickleExperimentalDispatcher),
-        build_args,
-    )._read
 
-    read_custom_text = type(
-        "",
-        (DaskWrapper, CustomTextExperimentalParser, CustomTextExperimentalDispatcher),
-        build_args,
-    )._read
+    @classmethod
+    def make_read(cls, *classes):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), cls.build_args)._read
 
-    read_sql = type(
-        "",
-        (DaskWrapper, SQLExperimentalDispatcher),
-        build_args,
-    )._read
+    read_csv_glob = make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+
+    read_pickle_distributed = make_read(
+        PandasPickleExperimentalParser, PickleExperimentalDispatcher
+    )
+
+    read_custom_text = make_read(
+        CustomTextExperimentalParser, CustomTextExperimentalDispatcher
+    )
+
+    read_sql = make_read(SQLExperimentalDispatcher)
 
     @classmethod
     def to_pickle_distributed(cls, qc, **kwargs):
@@ -123,4 +120,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         result = qc._modin_frame.broadcast_apply_full_axis(
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
+        # pending completion
         result.to_pandas()
+
+    del make_read  # to not pollute class namespace
