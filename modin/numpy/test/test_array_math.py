@@ -16,19 +16,21 @@ import pytest
 
 import modin.numpy as np
 
+
 @pytest.mark.parametrize(
     "data",
-    [[3, 2, 1, 1],
-    [-87.434,-90.908, -87.152, -84.903],
-    [-87.434,-90.908, np.nan, -87.152, -84.903],
+    [
+        [3, 2, 1, 1],
+        [-87.434, -90.908, -87.152, -84.903],
+        [-87.434, -90.908, np.nan, -87.152, -84.903],
     ],
-    ids=["ints", "floats", "floats with nan"]
+    ids=["ints", "floats", "floats with nan"],
 )
 def test_argmax_argmin(data):
     numpy_result = numpy.argmax(numpy.array(data))
     modin_result = np.argmax(np.array(data))
     numpy.testing.assert_array_equal(modin_result, numpy_result)
-    
+
     numpy_result = numpy.argmin(numpy.array(data))
     modin_result = np.argmin(np.array(data))
     numpy.testing.assert_array_equal(modin_result, numpy_result)
