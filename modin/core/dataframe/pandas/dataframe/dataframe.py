@@ -157,8 +157,8 @@ class PandasDataframe(ClassLogger):
     index : sequence or callable, optional
         The index for the dataframe. Converted to a ``pandas.Index``.
         Is computed from partitions on demand if not specified.
-        If ``callable() -> (pandas.Index, list or None)`` type, then the
-        calculation will be delayed until `self.index` is called.
+        If ``callable() -> (pandas.Index, list of row lengths or None)`` type,
+        then the calculation will be delayed until `self.index` is called.
     columns : sequence, optional
         The columns object for the dataframe. Converted to a ``pandas.Index``.
         Is computed from partitions on demand if not specified.

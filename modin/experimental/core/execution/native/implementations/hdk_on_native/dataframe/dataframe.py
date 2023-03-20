@@ -125,8 +125,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         columns are always in the head of the list.
     _index_cache : pandas.Index, callable or None
         Materialized index of the frame or None when index is not materialized.
-        If ``callable() -> (pandas.Index, list or None)`` type then the
-        calculation will be done in `__init__`.
+        If ``callable() -> (pandas.Index, list of row lengths or None)`` type,
+        then the calculation will be done in `__init__`.
     _has_unsupported_data : bool
         True for frames holding data not supported by Arrow or HDK storage format.
         Operations on such frames are not allowed and should be defaulted
