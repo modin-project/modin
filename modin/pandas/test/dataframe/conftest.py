@@ -16,7 +16,7 @@ import pytest
 from modin.config import StorageFormat
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(items):
     if StorageFormat.get() == "Hdk":
         for item in items:
             if item.name in (
