@@ -173,8 +173,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         self._op = op
         self._index_cols = index_cols
         self._partitions = partitions
-        self._index_cache = ModinIndexCache(index) if index is not None else None
-        self._columns_cache = ModinIndexCache(columns) if columns is not None else None
+        if isinstance(index, ModinIndexCache) or index is None:
+            self._index_cache = index
+        else:
+            self._index_cache = ModinIndexCache(index)
+        if isinstance(columns, ModinIndexCache) or columns is None:
+            self._columns_cache = columns
+        else:
+            self._columns_cache = ModinIndexCache(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._has_unsupported_data = has_unsupported_data
