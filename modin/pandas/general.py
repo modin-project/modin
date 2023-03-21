@@ -455,10 +455,6 @@ def concat(
                 old_name = _determine_name(list_of_objs, axis)
                 if old_name is not None:
                     new_idx.names = [None] + old_name
-    elif isinstance(objs, dict):
-        new_idx = pandas.concat(
-            {k: pandas.Series(index=obj.axes[axis]) for k, obj in objs.items()}
-        ).index
     else:
         new_idx = None
 
