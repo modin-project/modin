@@ -27,7 +27,7 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
 from .utils import LazyProxyCategoricalDtype
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
-from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
+from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
@@ -170,12 +170,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
 
-        columns = ensure_index(columns)
         self._op = op
         self._index_cols = index_cols
         self._partitions = partitions
         self._index_cache = ModinIndexCache(index) if index is not None else None
-        self._columns_cache = columns
+        self._columns_cache = ModinIndexCache(columns) if columns is not None else None
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._has_unsupported_data = has_unsupported_data
