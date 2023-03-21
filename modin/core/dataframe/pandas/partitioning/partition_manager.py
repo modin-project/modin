@@ -1598,10 +1598,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             ]
         ).T
         # We need to convert every partition that came from the splits into a full-axis column partition.
-        col_partitioning_func = np.vectorize(
-            lambda partition: cls._row_partition_class(partition)
-        )
-        split_row_partitions = col_partitioning_func(split_row_partitions)
         new_partitions = [
             [
                 cls._column_partitions_class(row_partition, full_axis=False).apply(

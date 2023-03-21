@@ -36,7 +36,7 @@ from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar
+from pandas.core.dtypes.common import is_scalar, is_number
 import pandas.core.resample
 import pandas
 from pandas._typing import IndexLabel, Suffixes
@@ -3391,14 +3391,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for axis, axis_loc in enumerate((row_loc, col_loc)):
             if is_scalar(axis_loc):
                 axis_loc = np.array([axis_loc])
-            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+            if isinstance(axis_loc, pandas.RangeIndex):
+                axis_lookup = axis_loc
+            elif isinstance(axis_loc, slice) or is_range_like(axis_loc):
                 if isinstance(axis_loc, slice) and axis_loc == slice(None):
                     axis_lookup = axis_loc
                 else:
                     axis_labels = self.get_axis(axis)
                     # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    # RangeIndex and range use a semi-open interval, while
+                    # slice_indexer uses a closed interval. Subtract 1 step from the
+                    # end of the interval to get the equivalent closed interval.
+                    if axis_loc.stop is None or not is_number(axis_loc.stop):
+                        slice_stop = axis_loc.stop
+                    else:
+                        slice_stop = axis_loc.stop - (
+                            0 if axis_loc.step is None else axis_loc.step
+                        )
                     axis_lookup = axis_labels.slice_indexer(
-                        axis_loc.start, axis_loc.stop, axis_loc.step
+                        axis_loc.start,
+                        slice_stop,
+                        axis_loc.step,
                     )
                     # Converting negative indices to their actual positions:
                     axis_lookup = pandas.RangeIndex(

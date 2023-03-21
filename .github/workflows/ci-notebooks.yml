@@ -18,7 +18,7 @@ jobs:
       matrix:
         execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4

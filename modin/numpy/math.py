@@ -16,321 +16,51 @@ import numpy
 from .arr import array
 from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
+from modin.utils import _inherit_docstrings
 
 
-def absolute(
-    x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x = try_convert_from_interoperable_type(x)
-    if not isinstance(x, array):
-        ErrorMessage.bad_type_for_numpy_op("absolute", type(x))
-        return numpy.absolute(
-            x,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x.absolute(
-        out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
-    )
+def _dispatch_math(operator_name, arr_method_name=None):
+    # `operator_name` is the name of the method on the numpy API
+    # `arr_method_name` is the name of the method on the modin.numpy.array object,
+    # which is assumed to be `operator_name` by default
+    @_inherit_docstrings(getattr(numpy, operator_name))
+    def call(x, *args, **kwargs):
+        x = try_convert_from_interoperable_type(x)
+        if not isinstance(x, array):
+            ErrorMessage.bad_type_for_numpy_op(operator_name, type(x))
+            return getattr(numpy, operator_name)(x, *args, **kwargs)
+
+        return getattr(x, arr_method_name or operator_name)(*args, **kwargs)
+
+    return call
 
 
+absolute = _dispatch_math("absolute")
 abs = absolute
-
-
-def add(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("add", type(x1))
-        return numpy.add(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.__add__(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("divide", type(x1))
-        return numpy.divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def float_power(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("float_power", type(x1))
-        return numpy.float_power(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.float_power(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def floor_divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("floor_divide", type(x1))
-        return numpy.floor_divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.floor_divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def power(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("power", type(x1))
-        return numpy.power(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.power(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def prod(a, axis=None, out=None, keepdims=None, where=True, dtype=None, initial=None):
-    a = try_convert_from_interoperable_type(a)
-    if not isinstance(a, array):
-        ErrorMessage.bad_type_for_numpy_op("prod", type(a))
-        return numpy.prod(
-            a,
-            axis=axis,
-            out=out,
-            keepdims=keepdims,
-            where=where,
-            dtype=dtype,
-            initial=initial,
-        )
-    return a.prod(
-        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
-    )
-
-
-def multiply(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("multiply", type(x1))
-        return numpy.multiply(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.multiply(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def remainder(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("remainder", type(x1))
-        return numpy.remainder(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.remainder(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
+add = _dispatch_math("add", "__add__")
+divide = _dispatch_math("divide")
+dot = _dispatch_math("dot")
+float_power = _dispatch_math("float_power")
+floor_divide = _dispatch_math("floor_divide")
+power = _dispatch_math("power")
+prod = _dispatch_math("prod")
+multiply = _dispatch_math("multiply")
+remainder = _dispatch_math("remainder")
 mod = remainder
+subtract = _dispatch_math("subtract")
+sum = _dispatch_math("sum")
+true_divide = _dispatch_math("true_divide", "divide")
+mean = _dispatch_math("mean")
 
 
-def subtract(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
+def var(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
     x1 = try_convert_from_interoperable_type(x1)
     if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("subtract", type(x1))
-        return numpy.subtract(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.subtract(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True):
-    arr = try_convert_from_interoperable_type(arr)
-    if not isinstance(arr, array):
-        ErrorMessage.bad_type_for_numpy_op("sum", type(arr))
-        return numpy.sum(
-            arr,
-            axis=axis,
-            out=out,
-            keepdims=keepdims,
-            where=where,
-            dtype=dtype,
-            initial=initial,
-        )
-    return arr.sum(
-        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
-    )
-
-
-def true_divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("true_divide", type(x1))
-        return numpy.true_divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("mean", type(x1))
-        return numpy.mean(
+        ErrorMessage.bad_type_for_numpy_op("var", type(x1))
+        return numpy.var(
             x1, axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype
         )
-    return x1.mean(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
+    return x1.var(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
 
 
 # Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
@@ -373,27 +103,59 @@ def minimum(
     )
 
 
-def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("amax", type(x1))
-        return numpy.amax(
-            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
-        )
-    return x1.max(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
-
-
+amax = _dispatch_math("amax", "max")
+amin = _dispatch_math("amin", "min")
 max = amax
-
-
-def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    x1 = try_convert_from_interoperable_type(x1)
-    if not isinstance(x1, array):
-        ErrorMessage.bad_type_for_numpy_op("amin", type(x1))
-        return numpy.amin(
-            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
-        )
-    return x1.min(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
-
-
 min = amin
+
+
+def sqrt(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("sqrt", type(x))
+        return numpy.sqrt(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    return x.sqrt(out, where, casting, order, dtype, subok)
+
+
+def exp(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("exp", type(x))
+        return numpy.exp(
+            x,
+            out=out,
+            where=where,
+            casting=casting,
+            order=order,
+            dtype=dtype,
+            subok=subok,
+        )
+    return x.exp(out, where, casting, order, dtype, subok)
+
+
+def argmax(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("argmax", type(a))
+        return numpy.argmax(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmax(axis=axis, out=out, keepdims=keepdims)
+
+
+def argmin(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("argmin", type(a))
+        return numpy.argmin(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmin(axis=axis, out=out, keepdims=keepdims)

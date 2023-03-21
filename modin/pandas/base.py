@@ -25,6 +25,7 @@ from pandas.core.dtypes.common import (
     is_dtype_equal,
     is_object_dtype,
     pandas_dtype,
+    is_integer,
 )
 from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
@@ -3255,7 +3256,7 @@ class BasePandasDataset(ClassLogger):
         if ExperimentalNumPyAPI.get():
             from ..numpy.arr import array
 
-            return array(_query_compiler=self._query_compiler, _ndim=2)
+            return array(self, copy=copy)
 
         return self._query_compiler.to_numpy(
             dtype=dtype,
@@ -3678,6 +3679,92 @@ class BasePandasDataset(ClassLogger):
             return self._getitem_slice(indexer)
         else:
             return self._getitem(key)
+
+    def xs(
+        self,
+        key,
+        axis=0,
+        level=None,
+        drop_level: bool = True,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return cross-section from the Series/DataFrame.
+        """
+        axis = self._get_axis_number(axis)
+        labels = self.columns if axis else self.index
+
+        if isinstance(key, list):
+            # deprecated in pandas, to be removed in 2.0
+            warnings.warn(
+                "Passing lists as key for xs is deprecated and will be removed in a "
+                + "future version. Pass key as a tuple instead.",
+                FutureWarning,
+            )
+
+        if level is not None:
+            if not isinstance(labels, pandas.MultiIndex):
+                raise TypeError("Index must be a MultiIndex")
+            loc, new_ax = labels.get_loc_level(key, level=level, drop_level=drop_level)
+
+            # create the tuple of the indexer
+            _indexer = [slice(None)] * self.ndim
+            _indexer[axis] = loc
+            indexer = tuple(_indexer)
+
+            result = self.iloc[indexer]
+            setattr(result, self._pandas_class._get_axis_name(axis), new_ax)
+            return result
+
+        if axis == 1:
+            if drop_level:
+                return self[key]
+            index = self.columns
+        else:
+            index = self.index
+
+        new_index = None
+        if isinstance(index, pandas.MultiIndex):
+            loc, new_index = index._get_loc_level(key, level=0)
+            if not drop_level:
+                if is_integer(loc):
+                    new_index = index[loc : loc + 1]
+                else:
+                    new_index = index[loc]
+        else:
+            loc = index.get_loc(key)
+
+            if isinstance(loc, np.ndarray):
+                if loc.dtype == np.bool_:
+                    (loc,) = loc.nonzero()
+                # Note: pandas uses self._take_with_is_copy here
+                return self.take(loc, axis=axis)
+
+            if not is_scalar(loc):
+                new_index = index[loc]
+
+        if is_scalar(loc) and axis == 0:
+            # In this case loc should be an integer
+            if self.ndim == 1:
+                # if we encounter an array-like and we only have 1 dim
+                # that means that their are list/ndarrays inside the Series!
+                # so just return them (pandas GH 6394)
+                return self.iloc[loc]
+
+            result = self.iloc[loc]
+        elif is_scalar(loc):
+            result = self.iloc[:, slice(loc, loc + 1)]
+        elif axis == 1:
+            result = self.iloc[:, loc]
+        else:
+            result = self.iloc[loc]
+            if new_index is None:
+                raise RuntimeError(
+                    "`new_index` variable shouldn't be equal to None here, something went wrong."
+                )
+            result.index = new_index
+
+        # Note: pandas does result._set_is_copy here
+        return result
 
     __hash__ = None
 

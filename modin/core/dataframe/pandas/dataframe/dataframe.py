@@ -2145,13 +2145,48 @@ class PandasDataframe(ClassLogger):
         # If this df is empty, we don't want to try and shuffle or sort.
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()
-        # If this df only has one row partition, we don't want to do a shuffle and sort - we can
-        # just do a full-axis sort.
-        if len(self._partitions) == 1:
-            return self.apply_full_axis(
-                1,
-                sort_function,
-            )
+
+        ideal_num_new_partitions = len(self._partitions)
+        m = len(self.index) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(
+            ideal_num_new_partitions * len(self.index)
+        )
+        # If this df is overpartitioned, we try to sample each partition with probability
+        # greater than 1, which leads to an error. In this case, we can do one of the following
+        # two things. If there is only enough rows for one partition, and we have only 1 column
+        # partition, we can just combine the overpartitioned df into one partition, and sort that
+        # partition. If there is enough data for more than one partition, we can tell the sorting
+        # algorithm how many partitions we want to end up with, so it samples and finds pivots
+        # according to that.
+        if sampling_probability >= 1:
+            from modin.config import MinPartitionSize
+
+            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
+            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                modin_frame = self
+                if self._partitions.shape[1] != 1:
+                    # In this case, we have more than one column partition, so we first need
+                    # to create row-wise partitions with all of the columns, so we don't have
+                    # a KeyError when sorting. This method can be slow if we have very very
+                    # many columns.
+                    new_partitions = self._partition_mgr_cls.row_partitions(
+                        self._partitions
+                    )
+                    new_partitions = np.array(
+                        [[partition] for partition in new_partitions]
+                    )
+                    modin_frame = self.__constructor__(
+                        new_partitions,
+                        *self.axes,
+                        self._row_lengths_cache,
+                        [len(self.columns)],
+                        self.dtypes,
+                    )
+                return modin_frame.apply_full_axis(
+                    0,
+                    sort_function,
+                )
+
         if self.dtypes[columns[0]] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
@@ -2164,8 +2199,33 @@ class PandasDataframe(ClassLogger):
             columns[0],
             method,
             ascending[0] if is_list_like(ascending) else ascending,
+            ideal_num_new_partitions,
             **kwargs,
         )
+        if ideal_num_new_partitions < len(self._partitions):
+            if len(self._partitions) % ideal_num_new_partitions == 0:
+                joining_partitions = np.split(
+                    self._partitions, ideal_num_new_partitions
+                )
+            else:
+                joining_partitions = np.split(
+                    self._partitions,
+                    range(
+                        0,
+                        len(self._partitions),
+                        round(len(self._partitions) / ideal_num_new_partitions),
+                    )[1:],
+                )
+
+            new_partitions = np.array(
+                [
+                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
+                    for ptn_grp in joining_partitions
+                ]
+            )
+        else:
+            new_partitions = self._partitions
+
         major_col_partition_index = self.columns.get_loc(columns[0])
         cols_seen = 0
         index = -1
@@ -2175,7 +2235,7 @@ class PandasDataframe(ClassLogger):
                 index = i
                 break
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
-            self._partitions,
+            new_partitions,
             index,
             shuffling_functions,
             sort_function,
