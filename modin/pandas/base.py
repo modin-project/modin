@@ -2811,7 +2811,7 @@ class BasePandasDataset(ClassLogger):
         filled_df = (
             self.__constructor__(index=fill_index, columns=fill_columns)
             if isinstance(self, DataFrame)
-            else self.__constructor__(index=fill_index)
+            else self.__constructor__(index=fill_index, name=self.name)
         )
         if fill_value is not None:
             filled_df.fillna(fill_value, inplace=True)
