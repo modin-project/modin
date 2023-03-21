@@ -173,6 +173,11 @@ class ModinIndex:
             self.get()
         return len(self._value)
 
+    def __reduce__(self):
+        if self._lengths_cache is not None:
+            return (self.__class__, (lambda: (self._value, self._lengths_vache),))
+        return (self.__class__, (self._value,))
+
     def __getattr__(self, name):
         if not self.is_materialized:
             self.get()
