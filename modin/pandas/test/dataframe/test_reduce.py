@@ -436,7 +436,7 @@ def test_value_counts_categorical():
     data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
     random_state = np.random.RandomState(seed=42)
     random_state.shuffle(data)
-    modin_series, pandas_series = create_test_dfs(
+    modin_df, pandas_df = create_test_dfs(
         {"col1": data, "col2": data}, dtype="category"
     )
 
@@ -450,8 +450,8 @@ def test_value_counts_categorical():
         comparator = df_equals
 
     eval_general(
-        modin_series,
-        pandas_series,
+        modin_df,
+        pandas_df,
         lambda df: df.value_counts(),
         comparator=comparator,
     )
