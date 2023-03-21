@@ -76,6 +76,8 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
 
     read_sql = __make_read(SQLExperimentalDispatcher)
 
+    del __make_read  # to not pollute class namespace
+
     @classmethod
     def to_pickle_distributed(cls, qc, **kwargs):
         """

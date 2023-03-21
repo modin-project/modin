@@ -74,6 +74,8 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
     read_sql = __make_read(SQLExperimentalDispatcher)
 
+    del __make_read  # to not pollute class namespace
+
     @classmethod
     def to_pickle_distributed(cls, qc, **kwargs):
         """
@@ -111,5 +113,3 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
         result.to_pandas()  # wait for completion of all tasks
-
-    del __make_read  # to not pollute class namespace
