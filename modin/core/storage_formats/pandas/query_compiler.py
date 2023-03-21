@@ -591,7 +591,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df
 
             if self._modin_frame.has_columns_cache() and kwargs["drop"]:
-                new_columns = self._modin_frame.copy_columns_cache()
+                new_columns = self._modin_frame.copy_columns_cache().get()
             else:
                 new_columns = None
 

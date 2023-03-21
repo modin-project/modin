@@ -181,6 +181,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             self._columns_cache = columns
         else:
             self._columns_cache = ModinIndexCache(columns)
+        columns = self._columns_cache.get()
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._has_unsupported_data = has_unsupported_data
