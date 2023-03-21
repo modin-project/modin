@@ -1392,9 +1392,14 @@ class Series(BasePandasDataset):
         """
         from .dataframe import DataFrame
 
-        result = DataFrame(
-            query_compiler=self._query_compiler.unstack(level, fill_value)
-        )
+        # This feels a little hacky, but I don't think it's possible to have a
+        # MultiIndex with just one column.
+        if len(self.index.names) > 1:
+            result = DataFrame(
+                query_compiler=self._query_compiler.unstack(level, fill_value)
+            )
+        else:
+            raise ValueError(f"index must be a MultiIndex to unstack")
 
         return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
 
