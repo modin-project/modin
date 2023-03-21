@@ -862,8 +862,10 @@ class HdkOnNativeDataframe(PandasDataframe):
         ), "'left_on' and 'right_on' lengths don't match"
 
         def validate(what, df, col_names):
-            # Check if the frame has the specified columns. The names referring to
-            # the index columns are replaced with the actual index column names.
+            """
+            Check if the frame (`df`) has the specified columns (`col_names`). The names referring to
+            the index columns are replaced with the actual index column names.
+            """
             cols = df.columns
             new_col_names = col_names
             for i, col in enumerate(col_names):
@@ -926,8 +928,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                     exprs[orig_name] = df.ref(mangled_name)
                     new_dtypes.append(df._dtypes[mangled_name])
 
-            left_col_names = {c for c in left.columns}
-            right_col_names = {c for c in right.columns}
+            left_col_names = set(left.columns)
+            right_col_names = set(right.columns)
             for col in merged.columns:
                 orig_name = col
                 if orig_name in left_col_names:

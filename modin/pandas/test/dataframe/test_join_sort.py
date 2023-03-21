@@ -338,7 +338,7 @@ def test_merge(test_data, test_data2):
 @pytest.mark.parametrize(
     "has_index_cache",
     [
-        pytest.param(True),
+        True,
         pytest.param(
             False,
             marks=pytest.mark.skipif(
@@ -549,14 +549,14 @@ def test_sort_values(
     # The order of NA rows, sorted by HDK, is different (but still valid)
     # from pandas. To make the index identical to pandas, we add the
     # index names to 'by'.
-    by_index_names = (
-        []
-        if StorageFormat.get() == "Hdk"
+    by_index_names = None
+    if (
+        StorageFormat.get() == "Hdk"
         and not ignore_index
         and key is None
         and (axis == 0 or axis == "rows")
-        else None
-    )
+    ):
+        by_index_names = []
     if "multiindex" in by:
         index = generate_multiindex(len(data[list(data.keys())[0]]), nlevels=2)
         columns = generate_multiindex(len(data.keys()), nlevels=2)
