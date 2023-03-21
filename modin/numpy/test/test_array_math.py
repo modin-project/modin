@@ -26,11 +26,8 @@ import modin.numpy as np
     ],
     ids=["ints", "floats", "floats with nan"],
 )
-def test_argmax_argmin(data):
-    numpy_result = numpy.argmax(numpy.array(data))
-    modin_result = np.argmax(np.array(data))
-    numpy.testing.assert_array_equal(modin_result, numpy_result)
-
-    numpy_result = numpy.argmin(numpy.array(data))
-    modin_result = np.argmin(np.array(data))
+@pytest.mark.parametrize("op", ["argmin", "argmax"])
+def test_argmax_argmin(data, op):
+    numpy_result = getattr(numpy, op)(numpy.array(data))
+    modin_result = getattr(np, op)(np.array(data))
     numpy.testing.assert_array_equal(modin_result, numpy_result)
