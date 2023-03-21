@@ -833,5 +833,5 @@ def test_split_partitions_kernel(
             # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
             # Then each part satisfies: 5 <= part[0] <= 10; 2 <= part[1] <= 5; 0 <= part[2] <= 2
             assert (
-                (part[col_name] <= bounds[idx]) & (part[col_name] >= bounds[idx + 1])
+                (bounds[idx + 1] <= part[col_name]) & (part[col_name] <= bounds[idx])
             ).all()
