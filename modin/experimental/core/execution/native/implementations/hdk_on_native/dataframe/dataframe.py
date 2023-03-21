@@ -2516,9 +2516,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         if len(df.columns) != len(self.columns):
             assert self._index_cols
             idx_col_names = [f"F_{col}" for col in self._index_cols]
-            if self._index_cache is not None:
+            if self.has_index_cache():
                 df.drop(columns=idx_col_names, inplace=True)
-                df.index = self._index_cache.copy().get()
+                df.index = self.copy_index_cache().get()
             else:
                 df.set_index(idx_col_names, inplace=True)
                 df.index.rename(self._index_names(self._index_cols), inplace=True)
@@ -2526,8 +2526,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
-            if self._index_cache is not None:
-                df.index = self._index_cache.copy().get()
+            if self.has_index_cache():
+                df.index = self.copy_index_cache().get()
 
         # Restore original column labels encoded in HDK to meet its
         # restrictions on column names.

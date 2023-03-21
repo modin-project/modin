@@ -22,6 +22,7 @@ from modin.core.storage_formats.base.query_compiler import (
     _set_axis as default_axis_setter,
     _get_axis as default_axis_getter,
 )
+from modin.core.dataframe.pandas.dataframe.dataframe import ModinIndexCache
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.utils import _inherit_docstrings, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
@@ -579,7 +580,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # In this case, we copy the index from the current frame.
         if len(columns) == 0 and new_frame._index_cols is None:
             assert index is None, "Can't copy old indexes as there was a row drop"
-            new_frame._index_cache = self._modin_frame.index.copy()
+            new_frame._index_cache = ModinIndexCache(self._modin_frame.index.copy())
 
         return self.__constructor__(new_frame)
 

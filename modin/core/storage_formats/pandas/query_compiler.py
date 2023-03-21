@@ -2350,8 +2350,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame._index_cache.get(),
-            new_columns=self._modin_frame._columns_cache.get(),
+            new_index=self._modin_frame.copy_index_cache().get(),
+            new_columns=self._modin_frame.copy_columns_cache().get(),
             keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame)
