@@ -110,7 +110,6 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         result = qc._modin_frame.broadcast_apply_full_axis(
             1, func, other=None, new_index=[], new_columns=[], enumerate_partitions=True
         )
-        # pending completion
-        result.to_pandas()
+        result.to_pandas()  # wait for completion of all tasks
 
     del __make_read  # to not pollute class namespace
