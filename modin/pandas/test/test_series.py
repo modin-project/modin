@@ -16,6 +16,7 @@ import numpy as np
 import json
 import pandas
 from pandas.errors import SpecificationError
+from pandas.core.indexing import IndexingError
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
@@ -2010,6 +2011,8 @@ def test_iloc(request, data):
         modin_series.iloc[[1, 2]] = 42
         pandas_series.iloc[[1, 2]] = 42
         df_equals(modin_series, pandas_series)
+        with pytest.raises(IndexingError):
+            modin_series.iloc[1:, 1]
     else:
         with pytest.raises(IndexError):
             modin_series.iloc[0]

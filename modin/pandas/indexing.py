@@ -288,7 +288,9 @@ class _LocationIndexerBase(ClassLogger):
                 if Ellipsis in key:
                     raise IndexingError(_one_ellipsis_message)
                 return self._validate_key_length(key)
-            raise IndexingError(f"Too many indexers: you're trying to pass {len(key)} indexers to the {type(self.df)} having only {self.df.ndim} dimensions.")
+            raise IndexingError(
+                f"Too many indexers: you're trying to pass {len(key)} indexers to the {type(self.df)} having only {self.df.ndim} dimensions."
+            )
         return key
 
     def __getitem__(self, key):  # pragma: no cover
