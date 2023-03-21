@@ -39,7 +39,7 @@ _BASE_LIST = tuple(ascii_uppercase + ascii_lowercase + digits) + _BASE_EXT
 _BASE_DICT = dict((c, i) for i, c in enumerate(_BASE_LIST))
 _NON_ALPHANUM_PATTERN = re.compile("[^a-zA-Z0-9]+")
 # Number of bytes in the tailing chunk
-_TAIL_LEN = {"_0": 0, "_1": 1, "_2": 2, "_3": 3}
+_TAIL_LEN = {"_0": 0, "_1": 1, "_2": 2}
 _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
 _COL_TYPES = Union[str, int, float, Timestamp, None]
 _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
@@ -163,58 +163,71 @@ def decode_col_name(name: str) -> _COL_NAME_TYPE:
 
 def _quote(src: str, dst: List[str]):  # noqa: GL08
     base = _BASE_LIST
-    chars = src.encode("UTF-8")
-    off = 0
-    end = len(chars)
-    nbytes = 0
+    raw = src.encode()
+    rem = len(raw) % 3
+    append = dst.append
+    append("_Q")
 
-    dst.append("_Q")
-    while off < end:
-        nbytes = min(end - off, 3)
-        n = 0
-
-        # Put 8-bit integers into 24-bit integer
-        for i in range(0, nbytes):
-            n |= chars[off + i] << (8 * (2 - i))
-        # For each 6-bit integer append the corresponding chars
-        for i in range(0, nbytes + 1):
-            dst.append(base[(n >> (6 * (3 - i))) & 0x3F])
-
-        off += nbytes
-    dst.extend(("_", str(nbytes)))
+    for bytes3 in zip(*[iter(raw)] * 3):
+        i24 = bytes3[0] << 16 | bytes3[1] << 8 | bytes3[2]
+        append(base[(i24 >> 18) & 0x3F])
+        append(base[(i24 >> 12) & 0x3F])
+        append(base[(i24 >> 6) & 0x3F])
+        append(base[i24 & 0x3F])
+    if rem == 1:
+        i24 = raw[-1] << 16
+        append(base[(i24 >> 18) & 0x3F])
+        append(base[(i24 >> 12) & 0x3F])
+        append("_1")
+    elif rem == 2:
+        i24 = raw[-2] << 16 | raw[-1] << 8
+        append(base[(i24 >> 18) & 0x3F])
+        append(base[(i24 >> 12) & 0x3F])
+        append(base[(i24 >> 6) & 0x3F])
+        append("_2")
+    else:
+        append("_0")
 
 
 def _unquote(src: str, dst: List[str], off, end) -> int:  # noqa: GL08
     assert src[off : off + 2] == "_Q"
     base = _BASE_DICT
-    off += 2
     raw = bytearray()
+    append = raw.append
+    off += 2
 
     while off < end:
-        nchars = min(end - off, 4)
-        nbytes = 3
-        n = 0
-
-        for i in range(0, nchars):
-            char = src[off]
-            off += 1
-
-            if char == "_":
+        chars = src[off : off + 4]
+        if "_" not in chars:
+            i24 = (
+                (base[chars[0]] << 18)
+                | (base[chars[1]] << 12)
+                | (base[chars[2]] << 6)
+                | base[chars[3]]
+            )
+            append((i24 >> 16) & 0xFF)
+            append((i24 >> 8) & 0xFF)
+            append(i24 & 0xFF)
+            off += 4
+        else:
+            i24 = 0
+            tail_len = 3
+            for i in range(0, len(chars)):
+                char = src[off]
                 off += 1
-                char = src[off - 2 : off]
-                tail = _TAIL_LEN.get(char, None)
-                if tail is not None:
-                    nbytes = 0 if tail == 3 else tail
-                    end = off
-                    break
+                if char == "_":
+                    off += 1
+                    char = src[off - 2 : off]
+                    if char in _TAIL_LEN:
+                        tail_len = _TAIL_LEN[char]
+                        end = off
+                        break
+                i24 |= base[char] << (6 * (3 - i))
 
-            n |= base[char] << (6 * (3 - i))
-
-        for i in range(0, nbytes):
-            raw.append((n >> (8 * (2 - i))) & 0xFF)
-
+            for i in range(0, tail_len):
+                append((i24 >> (8 * (2 - i))) & 0xFF)
+    dst.append(raw.decode())
     assert src[off - 2 : off] in _TAIL_LEN
-    dst.append(raw.decode("UTF-8"))
     return off
 
 

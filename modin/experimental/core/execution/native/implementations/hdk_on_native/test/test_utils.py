@@ -14,6 +14,7 @@
 import sys
 import pandas
 import pytz
+import timeit
 
 from random import randint, uniform, choice
 from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
@@ -77,3 +78,37 @@ class TestEncoders:
 
 def rnd_unicode(length):
     return "".join(choice(UNICODE_ALPHABET) for _ in range(length))
+
+
+def test_time():
+    ranges = [
+        (0x0041, 0x005A),  # Alpha chars
+        (0x0020, 0x007F),  # Basic Latin
+        (0x00A0, 0x00FF),  # Latin-1 Supplement
+    ]
+    repeat = 10
+    text_len = 100000
+
+    for r in ranges:
+        alphabet = "".join([chr(c) for c in range(r[0], r[1] + 1)])
+        text = (
+            alphabet * int(text_len / len(alphabet))
+            + alphabet[0 : divmod(text_len, len(alphabet))[1]]
+        )
+        encoded_text = encode_col_name(text)
+        assert text == decode_col_name(encoded_text)
+        print(f"Alphabet: {alphabet}")  # noqa: T201
+        print(f"Text len: {len(text)}")  # noqa: T201
+        print(f"Encoded text len: {len(encoded_text)}")  # noqa: T201
+
+        def test_encode():
+            encode_col_name(text)
+
+        def test_decode():
+            decode_col_name(encoded_text)
+
+        time = timeit.timeit(stmt=test_encode, number=repeat)
+        print(f"Encode time: {time/repeat} seconds")  # noqa: T201
+        time = timeit.timeit(stmt=test_decode, number=repeat)
+        print(f"Decode time: {time/repeat} seconds")  # noqa: T201
+        print("--------------------------------------")  # noqa: T201
