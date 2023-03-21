@@ -21,7 +21,12 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import LazyProxyCategoricalDtype, check_join_supported
+from .utils import (
+    LazyProxyCategoricalDtype,
+    check_join_supported,
+    check_cols_to_join,
+    join_by_index,
+)
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
@@ -861,104 +866,21 @@ class HdkOnNativeDataframe(PandasDataframe):
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
 
-        def validate(what, df, col_names):
-            """
-            Check if the frame (`df`) has the specified columns (`col_names`). The names referring to
-            the index columns are replaced with the actual index column names.
-            """
-            cols = df.columns
-            new_col_names = col_names
-            for i, col in enumerate(col_names):
-                if col not in cols:
-                    new_name = None
-                    if df._index_cols is not None:
-                        for c in df._index_cols:
-                            if col == df._index_name(c):
-                                new_name = c
-                                break
-                    elif df._index_cache is not None:
-                        new_name = f"__index__{0}_{col}"
-                        df = df._maybe_materialize_rowid()
-                    if new_name is None:
-                        raise ValueError(f"'{what}' references unknown column {col}")
-                    if new_col_names is col_names:
-                        # We must not modify the input list, thus, making a copy.
-                        new_col_names = col_names.copy()
-                    new_col_names[i] = new_name
-            return df, new_col_names
-
         orig_left_on = left_on
         orig_right_on = right_on
-        left, left_on = validate("left_on", self, left_on)
-        right, right_on = validate("right_on", other, right_on)
-        new_dtypes = []
-        exprs = OrderedDict()
+        left, left_on = check_cols_to_join("left_on", self, left_on)
+        right, right_on = check_cols_to_join("right_on", other, right_on)
 
         # Join by index
         if (left_on is not orig_left_on) or (right_on is not orig_right_on):
-
-            def to_empty_pandas_df(df):
-                idx = df._index_cache
-                if idx is not None:
-                    idx = idx[0:1]
-                elif df._index_cols is not None:
-                    if len(df._index_cols) > 1:
-                        arrays = [[i] for i in range(len(df._index_cols))]
-                        names = [df._index_name(n) for n in df._index_cols]
-                        idx = pd.MultiIndex.from_arrays(arrays, names=names)
-                    else:
-                        idx = pd.Index(name=df._index_name(df._index_cols[0]))
-                return pd.DataFrame(columns=df.columns, index=idx)
-
-            merged = to_empty_pandas_df(self).merge(
-                to_empty_pandas_df(other),
-                how=how,
-                left_on=orig_left_on,
-                right_on=orig_right_on,
-                sort=sort,
-                suffixes=suffixes,
+            index_cols, exprs, new_dtypes, new_columns = join_by_index(
+                self, other, how, orig_left_on, orig_right_on, sort, suffixes
             )
-
-            if len(merged.index.names) == 1 and (merged.index.names[0] is None):
-                index_cols = None
-            else:
-                index_cols = left._mangle_index_names(merged.index.names)
-                for orig_name, mangled_name in zip(merged.index.names, index_cols):
-                    df = left if mangled_name in left._dtypes else right
-                    exprs[orig_name] = df.ref(mangled_name)
-                    new_dtypes.append(df._dtypes[mangled_name])
-
-            left_col_names = set(left.columns)
-            right_col_names = set(right.columns)
-            for col in merged.columns:
-                orig_name = col
-                if orig_name in left_col_names:
-                    df = left
-                elif orig_name in right_col_names:
-                    df = right
-                elif suffixes is None:
-                    raise ValueError(f"Unknown column {col}")
-                elif (
-                    col.endswith(suffixes[0])
-                    and (orig_name := col[0 : -len(suffixes[0])]) in left_col_names
-                    and orig_name in right_col_names
-                ):
-                    df = left  # Overlapping column from the left frame
-                elif (
-                    col.endswith(suffixes[1])
-                    and (orig_name := col[0 : -len(suffixes[1])]) in right_col_names
-                    and orig_name in left_col_names
-                ):
-                    df = right  # Overlapping column from the right frame
-                else:
-                    raise ValueError(f"Unknown column {col}")
-                exprs[col] = df.ref(orig_name)
-                new_dtypes.append(df._dtypes[orig_name])
-
-            new_columns = merged.columns
             sort = False
         else:
             index_cols = None
+            exprs = OrderedDict()
+            new_dtypes = []
             new_columns = []
             left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
             right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
