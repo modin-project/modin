@@ -144,7 +144,7 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
     return decorator
 
 
-class ModinIndexCache:
+class ModinIndex:
     def __init__(self, value):
         if callable(value):
             self._value = value
@@ -168,11 +168,21 @@ class ModinIndexCache:
         else:
             return self._value
 
-    def copy(self) -> "ModinIndexCache":
+    def __len__(self):
+        if not self.is_materialized:
+            self.get()
+        return len(self._value)
+
+    def __getattr__(self, name):
+        if not self.is_materialized:
+            self.get()
+        return self._value.__getattribute__(name)
+
+    def copy(self) -> "ModinIndex":
         idx_cache = self._value
         if not callable(idx_cache):
             idx_cache = idx_cache.copy()
-        return ModinIndexCache(idx_cache)
+        return ModinIndex(idx_cache)
 
 
 class PandasDataframe(ClassLogger):
@@ -230,14 +240,14 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
     ):
         self._partitions = partitions
-        if isinstance(index, ModinIndexCache) or index is None:
+        if isinstance(index, ModinIndex) or index is None:
             self._index_cache = index
         else:
-            self._index_cache = ModinIndexCache(index)
-        if isinstance(columns, ModinIndexCache) or columns is None:
+            self._index_cache = ModinIndex(index)
+        if isinstance(columns, ModinIndex) or columns is None:
             self._columns_cache = columns
         else:
-            self._columns_cache = ModinIndexCache(columns)
+            self._columns_cache = ModinIndex(columns)
 
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
@@ -455,7 +465,7 @@ class PandasDataframe(ClassLogger):
             index, row_lengths = self._index_cache.get(return_lengths=True)
         else:
             index, row_lengths = self._compute_axis_labels_and_lengths(0)
-            self._index_cache = ModinIndexCache(index)
+            self._index_cache = ModinIndex(index)
         if self._row_lengths_cache is None:
             self._row_lengths_cache = row_lengths
         return index
@@ -473,7 +483,7 @@ class PandasDataframe(ClassLogger):
             columns, column_widths = self._columns_cache.get(return_lengths=True)
         else:
             columns, column_widths = self._compute_axis_labels_and_lengths(1)
-            self._columns_cache = ModinIndexCache(columns)
+            self._columns_cache = ModinIndex(columns)
         if self._column_widths_cache is None:
             self._column_widths_cache = column_widths
         return columns
@@ -491,7 +501,7 @@ class PandasDataframe(ClassLogger):
             new_index = ensure_index(new_index)
         else:
             new_index = self._validate_set_axis(new_index, self._index_cache.get())
-        self._index_cache = ModinIndexCache(new_index)
+        self._index_cache = ModinIndex(new_index)
         self.synchronize_labels(axis=0)
 
     def _set_columns(self, new_columns):
@@ -511,7 +521,7 @@ class PandasDataframe(ClassLogger):
             )
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
-        self._columns_cache = ModinIndexCache(new_columns)
+        self._columns_cache = ModinIndex(new_columns)
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
@@ -1927,7 +1937,7 @@ class PandasDataframe(ClassLogger):
                 assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
-            self._columns_cache = ModinIndexCache(new_columns)
+            self._columns_cache = ModinIndex(new_columns)
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True

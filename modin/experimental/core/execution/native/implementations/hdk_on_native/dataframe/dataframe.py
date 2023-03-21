@@ -15,7 +15,7 @@
 
 from modin.core.dataframe.pandas.dataframe.dataframe import (
     PandasDataframe,
-    ModinIndexCache,
+    ModinIndex,
 )
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -174,14 +174,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         self._op = op
         self._index_cols = index_cols
         self._partitions = partitions
-        if isinstance(index, ModinIndexCache) or index is None:
+        if isinstance(index, ModinIndex) or index is None:
             self._index_cache = index
         else:
-            self._index_cache = ModinIndexCache(index)
-        if isinstance(columns, ModinIndexCache) or columns is None:
+            self._index_cache = ModinIndex(index)
+        if isinstance(columns, ModinIndex) or columns is None:
             self._columns_cache = columns
         else:
-            self._columns_cache = ModinIndexCache(columns)
+            self._columns_cache = ModinIndex(columns)
         columns = self._columns_cache.get()
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
@@ -2084,16 +2084,16 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert isinstance(self._op, FrameNode)
 
         if self._partitions.size == 0:
-            self._index_cache = ModinIndexCache(Index.__new__(Index))
+            self._index_cache = ModinIndex(Index.__new__(Index))
         else:
             assert self._partitions.size == 1
             obj = self._partitions[0][0].get()
             if isinstance(obj, (pd.DataFrame, pd.Series)):
-                self._index_cache = ModinIndexCache(obj.index)
+                self._index_cache = ModinIndex(obj.index)
             else:
                 assert isinstance(obj, pyarrow.Table)
                 if self._index_cols is None:
-                    self._index_cache = ModinIndexCache(
+                    self._index_cache = ModinIndex(
                         Index.__new__(RangeIndex, data=range(obj.num_rows))
                     )
                 else:
@@ -2105,7 +2105,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     index_df.index.rename(
                         self._index_names(self._index_cols), inplace=True
                     )
-                    self._index_cache = ModinIndexCache(index_df.index)
+                    self._index_cache = ModinIndex(index_df.index)
 
     def _get_index(self):
         """
@@ -2518,7 +2518,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             idx_col_names = [f"F_{col}" for col in self._index_cols]
             if self.has_index_cache():
                 df.drop(columns=idx_col_names, inplace=True)
-                df.index = self.copy_index_cache().get()
+                df.index = self.index
             else:
                 df.set_index(idx_col_names, inplace=True)
                 df.index.rename(self._index_names(self._index_cols), inplace=True)
@@ -2527,7 +2527,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
             if self.has_index_cache():
-                df.index = self.copy_index_cache().get()
+                df.index = self.index
 
         # Restore original column labels encoded in HDK to meet its
         # restrictions on column names.
