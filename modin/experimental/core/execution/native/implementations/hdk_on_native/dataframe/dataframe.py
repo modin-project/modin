@@ -28,7 +28,12 @@ from .utils import LazyProxyCategoricalDtype
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
+from pandas.core.dtypes.common import (
+    get_dtype,
+    is_list_like,
+    is_bool_dtype,
+    is_categorical_dtype,
+)
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
@@ -64,6 +69,7 @@ import numpy as np
 import pyarrow
 import re
 from modin.pandas.utils import check_both_not_none
+from pyarrow.types import is_dictionary
 
 
 class HdkOnNativeDataframe(PandasDataframe):
@@ -2509,7 +2515,28 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
-        df = self._partition_mgr_cls.to_pandas(self._partitions)
+        if self._has_arrow_table():
+            # If the table is exported from HDK, the string columns are converted
+            # to dictionary. On conversion to pandas, these columns will be of type
+            # Categorical, that is not correct. To make the valid conversion, these
+            # fields are cast to string.
+            at = self._partitions[0][0].get()
+            schema = at.schema
+            cast = {
+                idx: arrow_type.name
+                for idx, (arrow_type, pandas_type) in enumerate(
+                    zip(schema, self._dtypes)
+                )
+                if is_dictionary(arrow_type.type)
+                and not is_categorical_dtype(pandas_type)
+            }
+            if cast:
+                for idx, new_type in cast.items():
+                    schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
+                at = at.cast(schema)
+            df = at.to_pandas()
+        else:
+            df = self._partition_mgr_cls.to_pandas(self._partitions)
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.
