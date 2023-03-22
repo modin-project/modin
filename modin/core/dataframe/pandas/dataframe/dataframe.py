@@ -408,7 +408,7 @@ class PandasDataframe(ClassLogger):
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
-        if self._index_cache is not None:
+        if self.has_index_cache():
             idx_cache = self._index_cache.copy()
         return idx_cache
 
@@ -452,7 +452,11 @@ class PandasDataframe(ClassLogger):
         list-like
             The validated labels.
         """
-        new_labels = ensure_index(new_labels)
+        new_labels = (
+            ModinIndex(new_labels)
+            if not isinstance(new_labels, ModinIndex)
+            else new_labels
+        )
         old_len = len(old_labels)
         new_len = len(new_labels)
         if old_len != new_len:
@@ -471,7 +475,7 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
-        if self._index_cache is not None:
+        if self.has_index_cache():
             index, row_lengths = self._index_cache.get(return_lengths=True)
         else:
             index, row_lengths = self._compute_axis_labels_and_lengths(0)
@@ -489,7 +493,7 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the column labels.
         """
-        if self._columns_cache is not None:
+        if self.has_columns_cache():
             columns, column_widths = self._columns_cache.get(return_lengths=True)
         else:
             columns, column_widths = self._compute_axis_labels_and_lengths(1)
@@ -507,10 +511,8 @@ class PandasDataframe(ClassLogger):
         new_index : list-like
             The new row labels.
         """
-        if self._index_cache is None:
-            new_index = ensure_index(new_index)
-        else:
-            new_index = self._validate_set_axis(new_index, self._index_cache.get())
+        if self.has_index_cache():
+            new_index = self._validate_set_axis(new_index, self._index_cache)
         self.set_index_cache(new_index)
         self.synchronize_labels(axis=0)
 
@@ -523,12 +525,8 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like
            The new column labels.
         """
-        if self._columns_cache is None:
-            new_columns = ensure_index(new_columns)
-        else:
-            new_columns = self._validate_set_axis(
-                new_columns, self._columns_cache.get()
-            )
+        if self.has_columns_cache():
+            new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
         self.set_columns_cache(new_columns)
@@ -1943,7 +1941,7 @@ class PandasDataframe(ClassLogger):
         The data shape is not changed (length and width of the table).
         """
         if new_columns is not None:
-            if self._columns_cache is not None:
+            if self.has_columns_cache():
                 assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
