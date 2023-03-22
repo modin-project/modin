@@ -64,7 +64,41 @@ def check_kwargs(order="C", subok=True, keepdims=None, casting="same_kind", wher
 def check_can_broadcast_to_output(arr_in: "array", arr_out: "array"):
     if not isinstance(arr_out, array):
         raise TypeError("return arrays must be of modin.numpy.array type.")
-    if arr_out._ndim == arr_in._ndim and arr_out.shape != arr_in.shape:
+    # Broadcast is ok if both arrays have matching ndim + shape, OR
+    # arr_in is 1xN or a 1D N-element array and arr_out is MxN.
+    # Note that 1xN arr_in cannot be broadcast into a 1D N-element arr_out.
+    #
+    # This is slightly different from the rules for checking if two inputs
+    # of a binary operation can be broadcasted together.
+    broadcast_ok = (
+        (
+            # Case 1: arrays have matching ndim + shape
+            # Case 2a: arr_in is 1D N-element, arr_out is 1D N-element (covered here)
+            arr_in._ndim == arr_out._ndim
+            and arr_in.shape == arr_out.shape
+        )
+        or (
+            # Case 2b: both arrays are 2D, arr_in is 1xN and arr_out is MxN
+            arr_in._ndim == 2 and arr_out._ndim == 2
+            and arr_in.shape[0] == 1 and arr_in.shape[1] == arr_out.shape[1]
+        )
+        or (
+            # Case 2c: arr_in is 1D N-element, arr_out is MxN
+            arr_in._ndim == 1 and arr_out._ndim == 2
+            and arr_in.shape[0] == arr_out.shape[1] and arr_out.shape[0] == 1
+        )
+    )
+    # Case 2b would require duplicating the 1xN result M times to match the shape of out,
+    # which we currently do not support. See GH#5831.
+    if (
+        arr_in._ndim == 2 and arr_out._ndim == 2
+        and arr_in.shape[0] == 1 and arr_in.shape[1] == arr_out.shape[1]
+        and arr_in.shape[0] != 1
+    ):
+        raise NotImplementedError(
+            f"Modin does not currently support broadcasting shape {arr_in.shape} to output operand with shape {arr_out.shape}"
+        )
+    if not broadcast_ok:
         raise ValueError(
             f"non-broadcastable output operand with shape {arr_out.shape} doesn't match the broadcast shape {arr_in.shape}"
         )
