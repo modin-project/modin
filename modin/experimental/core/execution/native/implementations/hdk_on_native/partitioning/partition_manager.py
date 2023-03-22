@@ -137,14 +137,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             data and optionally partitions' dimensions.
         """
         if encode_col_names:
-            encode_col_names = False
-            encoded_names = []
-            for n in at.column_names:
-                encoded_name = encode_col_name(n)
-                encoded_names.append(encoded_name)
-                if n != encoded_name:
-                    encode_col_names = True
-            encoded_at = at.rename_columns(encoded_names) if encode_col_names else at
+            encoded_names = [encode_col_name(n) for n in at.column_names]
+            encoded_at = at
+            if encoded_names != at.column_names:
+                encoded_at = at.rename_columns(encoded_names)
         else:
             encoded_at = at
 
