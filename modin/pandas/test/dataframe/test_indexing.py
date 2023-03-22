@@ -1385,7 +1385,7 @@ def test_reset_index(data, test_async_reset_index):
 @pytest.mark.parametrize(
     "data",
     [
-        pytest.param(test_data["int_data"]),
+        test_data["int_data"],
         pytest.param(
             test_data["float_nan_data"],
             marks=pytest.mark.xfail(
