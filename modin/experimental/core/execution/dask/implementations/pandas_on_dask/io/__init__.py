@@ -11,10 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental IO functions implementations."""
+"""Experimental Base IO classes optimized for pandas on Dask execution."""
 
-from .sql.sql_dispatcher import SQLExperimentalDispatcher
+from .io import ExperimentalPandasOnDaskIO
 
-__all__ = [
-    "SQLExperimentalDispatcher",
-]
+__all__ = ["ExperimentalPandasOnDaskIO"]

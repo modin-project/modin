@@ -44,6 +44,9 @@ def read_sql(
     General documentation is available in `modin.pandas.read_sql`.
 
     This experimental feature provides distributed reading from a sql file.
+    The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
+    such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
+    parameters, the user will be able to specify how to partition the imported data.
 
     Parameters
     ----------
@@ -273,11 +276,7 @@ def _read(**kwargs) -> DataFrame:
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    try:
-        pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
-    except AttributeError:
-        raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
-
+    pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read

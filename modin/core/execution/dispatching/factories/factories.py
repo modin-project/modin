@@ -94,6 +94,12 @@ _doc_io_method_kwargs_params = """**kwargs : kwargs
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
+supported_execution = (
+    "ExperimentalPandasOnRay",
+    "ExperimentalPandasOnUnidist",
+    "ExperimentalPandasOnDask",
+)
+
 
 class FactoryInfo(typing.NamedTuple):
     """
@@ -474,7 +480,7 @@ class ExperimentalBaseFactory(BaseFactory):
     @classmethod
     @_inherit_docstrings(BaseFactory._read_sql)
     def _read_sql(cls, **kwargs):
-        supported_engines = ("Ray", "Unidist")
+        supported_engines = ("Ray", "Unidist", "Dask")
         if Engine.get() not in supported_engines:
             if "partition_column" in kwargs:
                 if kwargs["partition_column"] is not None:
@@ -509,7 +515,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_csv_glob(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -524,7 +529,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_pickle_distributed(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -539,7 +543,6 @@ class ExperimentalBaseFactory(BaseFactory):
         params=_doc_io_method_kwargs_params,
     )
     def _read_custom_text(cls, **kwargs):
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -559,7 +562,6 @@ class ExperimentalBaseFactory(BaseFactory):
         **kwargs : kwargs
             Arguments to the writer method.
         """
-        supported_execution = ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist")
         current_execution = get_current_execution()
         if current_execution not in supported_execution:
             raise NotImplementedError(
@@ -582,7 +584,14 @@ class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnDask")
 class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFactory):
-    pass
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnDaskIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.dask.implementations.pandas_on_dask.io import (
+            ExperimentalPandasOnDaskIO,
+        )
+
+        cls.io_cls = ExperimentalPandasOnDaskIO
 
 
 @doc(_doc_factory_class, execution_name="experimental PandasOnPython")
