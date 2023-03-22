@@ -45,5 +45,5 @@ ASV_USE_STORAGE_FORMAT = ASV_USE_STORAGE_FORMAT.lower()
 
 assert ASV_USE_IMPL in ("modin", "pandas")
 assert ASV_DATASET_SIZE in ("big", "small")
-assert ASV_USE_ENGINE in ("ray", "dask", "python", "native")
+assert ASV_USE_ENGINE in ("ray", "dask", "python", "native", "unidist")
 assert ASV_USE_STORAGE_FORMAT in ("pandas", "hdk", "pyarrow")

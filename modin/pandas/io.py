@@ -65,8 +65,7 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from .dataframe import DataFrame
 from .series import Series
-from modin.utils import _inherit_docstrings, Engine
-from . import _update_engine
+from modin.utils import _inherit_docstrings
 
 
 def _read(**kwargs):
@@ -82,7 +81,6 @@ def _read(**kwargs):
     -------
     modin.pandas.DataFrame
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     squeeze = kwargs.pop("squeeze", False)
@@ -120,7 +118,6 @@ def read_xml(
     storage_options: StorageOptions = None,
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("read_xml")
-    Engine.subscribe(_update_engine)
     return DataFrame(
         pandas.read_xml(
             path_or_buffer,
@@ -306,7 +303,6 @@ def read_parquet(
     use_nullable_dtypes: bool = False,
     **kwargs,
 ) -> DataFrame:
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
@@ -344,7 +340,6 @@ def read_json(
 ) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
@@ -370,7 +365,6 @@ def read_gbq(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
@@ -399,7 +393,6 @@ def read_html(
     """
     Read HTML tables into a ``DataFrame`` object.
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
@@ -433,7 +426,6 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
@@ -480,7 +472,6 @@ def read_excel(
     # kwargs so pandas doesn't spuriously warn people not to use it.
     kwargs.pop("mangle_dupe_cols", None)
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     intermediate = FactoryDispatcher.read_excel(**kwargs)
@@ -514,7 +505,6 @@ def read_hdf(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
@@ -530,7 +520,6 @@ def read_feather(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
@@ -554,7 +543,6 @@ def read_stata(
 ) -> DataFrame | pandas.io.stata.StataReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
@@ -574,7 +562,6 @@ def read_sas(
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
@@ -599,7 +586,6 @@ def read_pickle(
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
@@ -622,7 +608,6 @@ def read_sql(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if kwargs.get("chunksize") is not None:
@@ -646,7 +631,6 @@ def read_fwf(
     """
     Read a table of fixed-width formatted lines into DataFrame.
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from pandas.io.parsers.base_parser import parser_defaults
 
@@ -682,7 +666,6 @@ def read_sql_table(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
@@ -702,7 +685,6 @@ def read_sql_query(
 ) -> DataFrame | Iterator[DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
@@ -717,7 +699,6 @@ def to_pickle(
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
 ) -> None:
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if isinstance(obj, DataFrame):
@@ -741,7 +722,6 @@ def read_spss(
     """
     Load an SPSS file from the file path, returning a DataFrame.
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
@@ -765,7 +745,6 @@ def json_normalize(
     Normalize semi-structured JSON data into a flat table.
     """
     ErrorMessage.default_to_pandas("json_normalize")
-    Engine.subscribe(_update_engine)
     return DataFrame(
         pandas.json_normalize(
             data, record_path, meta, meta_prefix, record_prefix, errors, sep, max_level
@@ -782,7 +761,6 @@ def read_orc(
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    Engine.subscribe(_update_engine)
     return DataFrame(pandas.read_orc(path, columns, **kwargs))
 
 

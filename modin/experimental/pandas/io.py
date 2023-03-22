@@ -23,8 +23,7 @@ import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
-from modin.config import IsExperimental, Engine
-from ...pandas import _update_engine
+from modin.config import IsExperimental
 
 
 def read_sql(
@@ -97,7 +96,6 @@ def read_sql(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -142,7 +140,6 @@ def read_custom_text(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -226,6 +223,9 @@ def _make_parser_func(sep: str) -> Callable:
         _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
         if f_locals.get("sep", sep) is False:
             f_locals["sep"] = "\t"
+        # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
+        # kwargs so pandas doesn't spuriously warn people not to use it.
+        f_locals.pop("mangle_dupe_cols", None)
 
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)
@@ -271,7 +271,6 @@ def _read(**kwargs) -> DataFrame:
 
     [4652013 rows x 18 columns]
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     try:
@@ -332,7 +331,6 @@ def read_pickle_distributed(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -380,7 +378,6 @@ def to_pickle_distributed(
         implementation docs for the set of allowed keys and values.
     """
     obj = self
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if isinstance(self, DataFrame):

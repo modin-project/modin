@@ -391,10 +391,20 @@ class TestMasks:
         run_and_compare(projection, data=self.data, cols=cols)
 
     def test_drop(self):
-        def drop(df, **kwargs):
-            return df.drop(columns="a")
+        def drop(df, column_names, **kwargs):
+            return df.drop(columns=column_names)
 
-        run_and_compare(drop, data=self.data)
+        run_and_compare(drop, data=self.data, column_names="a")
+        run_and_compare(drop, data=self.data, column_names=self.data.keys())
+
+    def test_drop_index(self):
+        def drop(df, **kwargs):
+            return df.drop(df.index[0])
+
+        idx = list(map(str, self.data["a"]))
+        run_and_compare(
+            drop, data=self.data, constructor_kwargs={"index": idx}, force_lazy=False
+        )
 
     def test_iloc(self):
         def mask(df, **kwargs):
@@ -436,6 +446,14 @@ class TestMasks:
             return df
 
         run_and_compare(filter, data=self.data)
+
+    def test_filter_str_categorical(self):
+        def filter(df, **kwargs):
+            return df[df["A"] != ""]
+
+        data = {"A": ["A", "B", "C"]}
+        run_and_compare(filter, data=data)
+        run_and_compare(filter, data=data, constructor_kwargs={"dtype": "category"})
 
 
 class TestMultiIndex:
@@ -2103,6 +2121,19 @@ class TestBadData:
         # for unsigned ints, that's why using 'int64.max' here
         df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
         assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
+
+    def test_mean_sum(self):
+        all_codes = np.typecodes["All"]
+        exclude_codes = np.typecodes["Datetime"] + np.typecodes["Complex"] + "gSUVO"
+        supported_codes = set(all_codes) - set(exclude_codes)
+
+        def test(df, dtype_code, operation, **kwargs):
+            df = type(df)({"A": [0, 1], "B": [1, 0]}, dtype=np.dtype(dtype_code))
+            return getattr(df, operation)()
+
+        for c in supported_codes:
+            for op in ("sum", "mean"):
+                run_and_compare(test, data={}, dtype_code=c, operation=op)
 
 
 class TestDropna:
