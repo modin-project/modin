@@ -1403,7 +1403,7 @@ class Series(BasePandasDataset):
 
         if axis == "index" or axis == 0:
             if abs(periods) >= len(self.index):
-                return self.__constructor__(dtype=self.dtype)
+                return self.__constructor__(dtype=self.dtype, name=self.name)
             else:
                 new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
                 new_df.index = (
