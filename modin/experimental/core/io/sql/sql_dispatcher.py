@@ -20,6 +20,7 @@ import numpy as np
 
 from modin.core.io import SQLDispatcher
 from modin.config import NPartitions
+from modin.experimental.core.io.sql.utils import read_sql_with_offset
 
 
 class SQLExperimentalDispatcher(SQLDispatcher):
@@ -31,8 +32,6 @@ class SQLExperimentalDispatcher(SQLDispatcher):
     def preprocess_func(cls):  # noqa: RT01
         """Prepare a function for transmission to remote workers."""
         if cls.__read_sql_with_offset is None:
-            from modin.experimental.core.io.sql.utils import read_sql_with_offset
-
             cls.__read_sql_with_offset = cls.put(read_sql_with_offset)
         return cls.__read_sql_with_offset
 
