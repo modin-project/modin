@@ -335,19 +335,7 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
-@pytest.mark.parametrize(
-    "has_index_cache",
-    [
-        True,
-        pytest.param(
-            False,
-            marks=pytest.mark.skipif(
-                StorageFormat.get() == "Hdk",
-                reason="_propagate_index_objs is not supported by HDK",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("has_index_cache", [True, False])
 def test_merge_on_index(has_index_cache):
     modin_df1, pandas_df1 = create_test_dfs(
         {
