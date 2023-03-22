@@ -3093,8 +3093,9 @@ def test_skew(data, skipna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_shift_slice_shift(data, index, periods):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("name", [None, "foo"])
+def test_shift_slice_shift(data, index, periods, name):
+    modin_series, pandas_series = create_test_series(data, name=name)
     if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
         modin_series.index = pandas_series.index = np.arange(2, data_column_length + 2)

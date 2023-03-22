@@ -13,6 +13,8 @@
 
 """Module houses class responsible for execution of remote operations."""
 
+from collections import UserDict
+
 from distributed.client import default_client
 
 
@@ -121,5 +123,13 @@ class DaskWrapper:
         -------
         List, dict, iterator, or queue of futures matching the type of input.
         """
+        if isinstance(data, dict):
+            # there is a bug that looks similar to https://github.com/dask/distributed/issues/3965;
+            # to avoid this we could change behaviour for serialization:
+            # <Future: finished, type: collections.UserDict, key: UserDict-b8a15c164319c1d32fd28481125de455>
+            # vs
+            # {'sep': <Future: finished, type: pandas._libs.lib._NoDefault, key: sep>, \
+            #  'delimiter': <Future: finished, type: NoneType, key: delimiter> ...
+            data = UserDict(data)
         client = default_client()
         return client.scatter(data, **kwargs)
