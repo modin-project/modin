@@ -121,7 +121,8 @@ def check_cols_to_join(what, df, col_names):
         The aligned data frame and column names.
     """
     cols = df.columns
-    new_col_names = col_names
+    # We must not modify the input list, thus, making a copy.
+    new_col_names = col_names.copy()
     for i, col in enumerate(col_names):
         if col in cols:
             continue
@@ -136,9 +137,6 @@ def check_cols_to_join(what, df, col_names):
             df = df._maybe_materialize_rowid()
         if new_name is None:
             raise ValueError(f"'{what}' references unknown column {col}")
-        if new_col_names is col_names:
-            # We must not modify the input list, thus, making a copy.
-            new_col_names = col_names.copy()
         new_col_names[i] = new_name
     return df, new_col_names
 
