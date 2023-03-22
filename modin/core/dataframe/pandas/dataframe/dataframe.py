@@ -299,6 +299,60 @@ class PandasDataframe(ClassLogger):
             self._dtypes = self._compute_dtypes()
         return self._dtypes
 
+    def _axis_len(self, axis: int = 0, materialize: bool = True) -> Optional[int]:
+        """
+        Get the number of rows/columns in the dataframe.
+
+        Parameters
+        ----------
+        axis : {0, 1}, default: 0
+        materialize : bool, default: True
+            Pass `True` to always get a valid length even if there's a computation that
+            has to be triggered to retrieve it. If `False` was passed returns a valid
+            length only if there are no additional computations/materializations
+            required to retrieve it, otherwise return `None`.
+
+        Returns
+        -------
+        int or None
+        """
+        if not materialize:
+            if (
+                axis == 0
+                and self._index_cache is None
+                and self._row_lengths_cache is None
+            ):
+                return None
+            if (
+                axis == 1
+                and self._columns_cache is None
+                and self._column_widths_cache is None
+            ):
+                return None
+
+        if axis == 0:
+            return len(self)
+
+        if self._columns_cache is not None:
+            return len(self.columns)
+
+        # columns_widths is cheaper to compute if it's not in the cache
+        return sum(self.column_widths)
+
+    def __len__(self) -> int:
+        """
+        Get the number of rows in the dataframe.
+
+        Returns
+        -------
+        int
+        """
+        if self._index_cache is not None:
+            return len(self.index)
+
+        # row_lengths is cheaper to compute if it's not in the cache
+        return sum(self.row_lengths)
+
     def _compute_dtypes(self):
         """
         Compute the data types via TreeReduce pattern.
@@ -434,6 +488,20 @@ class PandasDataframe(ClassLogger):
             List with two values: index and columns.
         """
         return [self.index, self.columns]
+
+    def get_axis(self, axis: int = 0) -> pandas.Index:
+        """
+        Get index object along the requested axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}, default: 0
+
+        Returns
+        -------
+        pandas.Index
+        """
+        return self.index if axis == 0 else self.columns
 
     def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
         """
@@ -2049,14 +2117,12 @@ class PandasDataframe(ClassLogger):
             )
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+        if self._axis_len(axis=1) == 0 or self._axis_len(axis=0) == 0:
             return self.copy()
 
         ideal_num_new_partitions = len(self._partitions)
-        m = len(self.index) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * len(self.index)
-        )
+        m = len(self) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(self))
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
@@ -2067,8 +2133,8 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
-            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(len(self) / MinPartitionSize.get())
+            if len(self) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
                 modin_frame = self
                 if self._partitions.shape[1] != 1:
                     # In this case, we have more than one column partition, so we first need
@@ -2081,12 +2147,14 @@ class PandasDataframe(ClassLogger):
                     new_partitions = np.array(
                         [[partition] for partition in new_partitions]
                     )
+                    num_cols = self._axis_len(axis=1, materialize=False)
                     modin_frame = self.__constructor__(
                         new_partitions,
-                        *self.axes,
+                        self._index_cache,
+                        self._columns_cache,
                         self._row_lengths_cache,
-                        [len(self.columns)],
-                        self.dtypes,
+                        column_widths=[num_cols] if num_cols is not None else None,
+                        dtypes=self._dtypes,
                     )
                 return modin_frame.apply_full_axis(
                     0,
@@ -2132,36 +2200,41 @@ class PandasDataframe(ClassLogger):
         else:
             new_partitions = self._partitions
 
-        major_col_partition_index = self.columns.get_loc(columns[0])
-        cols_seen = 0
-        index = -1
-        for i, length in enumerate(self.column_widths):
-            cols_seen += length
-            if major_col_partition_index < cols_seen:
-                index = i
-                break
+        if self._partitions.shape[1] == 1:
+            # In this case, we know for sure that the key column is inside the only partition,
+            # this assumption allows us to not materialize columns
+            index = 0
+        else:
+            major_col_partition_index = self.columns.get_loc(columns[0])
+            cols_seen = 0
+            index = -1
+            for i, length in enumerate(self.column_widths):
+                cols_seen += length
+                if major_col_partition_index < cols_seen:
+                    index = i
+                    break
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
             new_partitions,
             index,
             shuffling_functions,
             sort_function,
         )
-        new_axes = self.axes
+
+        new_axes = (
+            [None, self._columns_cache]
+            if axis == Axis.ROW_WISE
+            else [self._index_cache, None]
+        )
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
-            new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
-        else:
-            (
-                new_axes[axis.value],
-                new_lengths[axis.value],
-            ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
+            new_axes[axis.value] = RangeIndex(
+                self._axis_len(axis=axis.value)
+            ).set_names(self.get_axis(axis=axis.value).names)
 
-        new_axes[axis.value] = new_axes[axis.value].set_names(
-            self.axes[axis.value].names
-        )
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
-        new_lengths[axis.value ^ 1] = [len(self.columns)]
+        num_cols = self._axis_len(axis=1, materialize=False)
+        new_lengths[axis.value ^ 1] = [num_cols] if num_cols is not None else None
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
         # We should add a fix to check if there is skew in the partitions and rebalance
@@ -2169,8 +2242,9 @@ class PandasDataframe(ClassLogger):
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
         new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.dtypes
+            new_partitions, *new_axes, *new_lengths, self._dtypes
         )
+        # Only propagate index if we manually computed a new one
         if kwargs.get("ignore_index", False):
             new_modin_frame._propagate_index_objs(axis=0)
         return new_modin_frame
