@@ -44,6 +44,7 @@ from pandas.core.dtypes.common import (
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
 import typing
@@ -2522,7 +2523,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
                 at = at.cast(schema)
-            df = arrow_to_pandas(at)
+            df = concatenate([arrow_to_pandas(at)])
         else:
             df = self._partition_mgr_cls.to_pandas(self._partitions)
 
