@@ -29,6 +29,7 @@ from modin.utils import _inherit_docstrings
 # If Ray has not been initialized yet by Modin,
 # it will be initialized when calling `RayWrapper.put`.
 _DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
+_DEPLOY_SPLIT_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_splitting_func)
 _DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
 
 
@@ -54,6 +55,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
+    _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
     axis = None
@@ -149,6 +151,31 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             partition.drain_call_queue()
             result[idx] = partition._ip_cache
         return result
+
+    @classmethod
+    @_inherit_docstrings(PandasDataframeAxisPartition.deploy_splitting_func)
+    def deploy_splitting_func(
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        *partitions,
+        extract_metadata=False,
+    ):
+        return _deploy_ray_func.options(
+            num_returns=num_splits * 4 if extract_metadata else num_splits,
+        ).remote(
+            _DEPLOY_SPLIT_FUNC,
+            axis,
+            func,
+            f_args,
+            f_kwargs,
+            num_splits,
+            *partitions,
+            extract_metadata=extract_metadata,
+        )
 
     @classmethod
     def deploy_axis_func(
@@ -263,25 +290,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             other_shape,
             *partitions,
         )
-
-    def _wrap_partitions(self, partitions):
-        """
-        Wrap partitions passed as a list of ``ray.ObjectRef`` with ``PandasOnRayDataframePartition`` class.
-
-        Parameters
-        ----------
-        partitions : list
-            List of ``ray.ObjectRef``.
-
-        Returns
-        -------
-        list
-            List of ``PandasOnRayDataframePartition`` objects.
-        """
-        return [
-            self.partition_type(object_id, length, width, ip)
-            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
-        ]
 
     def apply(
         self,
@@ -522,7 +530,14 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 @ray.remote
 def _deploy_ray_func(
-    deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
+    deployer,
+    axis,
+    f_to_deploy,
+    f_args,
+    f_kwargs,
+    *args,
+    extract_metadata=True,
+    **kwargs,
 ):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
@@ -545,6 +560,11 @@ def _deploy_ray_func(
         Positional arguments to pass to ``f_to_deploy``.
     f_kwargs : dict
         Keyword arguments to pass to ``f_to_deploy``.
+    extract_metadata : bool, default: True
+        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+        the load on plasma storage as the remote function would return 4 times fewer futures.
+        Passing `False` makes sense for temporary results where you know for sure that the
+        metadata will never be requested.
     *args : list
         Positional arguments to pass to ``deployer``.
     **kwargs : dict
@@ -561,6 +581,8 @@ def _deploy_ray_func(
     """
     f_args = deserialize(f_args)
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    if not extract_metadata:
+        return result
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

@@ -134,6 +134,83 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             )
         )
 
+    def split(
+        self, split_func, num_splits, f_args=None, f_kwargs=None, extract_metadata=False
+    ):
+        """
+        Split axis partition into multiple partitions using the `split_func`.
+
+        Parameters
+        ----------
+        split_func : callable(pandas.DataFrame, *args, **kwargs) -> list[pandas.DataFrame]
+            A function that takes partition's content and split it into multiple chunks.
+        num_splits : int
+            The number of splits the `split_func` return.
+        f_args : iterable, optional
+            Positional arguments to pass to the `split_func`.
+        f_kwargs : dict, optional
+            Keyword arguments to pass to the `split_func`.
+        extract_metadata : bool, default: False
+            Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+            the load on object storage as the remote function would return X times fewer futures
+            (where X is the number of metadata values). Passing `False` makes sense for temporary
+            results where you know for sure that the metadata will never be requested.
+        """
+        f_args = tuple() if f_args is None else f_args
+        f_kwargs = {} if f_kwargs is None else f_kwargs
+        return self._wrap_partitions(
+            self.deploy_splitting_func(
+                self.axis,
+                split_func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                *self.list_of_blocks,
+                extract_metadata=extract_metadata,
+            ),
+            extract_metadata=extract_metadata,
+        )
+
+    @classmethod
+    def deploy_splitting_func(
+        cls,
+        axis,
+        split_func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        *partitions,
+        extract_metadata=False,
+    ):
+        """
+        Deploy a splitting function along a full axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            The axis to perform the function along.
+        split_func : callable(pandas.DataFrame, *args, **kwargs) -> list[pandas.DataFrame]
+            The function to perform.
+        f_args : list or tuple
+            Positional arguments to pass to ``split_func``.
+        f_kwargs : dict
+            Keyword arguments to pass to ``split_func``.
+        num_splits : int
+            The number of splits the `split_func` return.
+        *partitions : iterable
+            All partitions that make up the full axis (row or column).
+        extract_metadata : bool, default: False
+            Whether to return metadata (length, width, ip) of the result. Note that `True` value
+            is not supported in `PandasDataframeAxisPartition` class.
+
+        Returns
+        -------
+        list
+            A list of pandas DataFrames.
+        """
+        dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+        return split_func(dataframe, *f_args, **f_kwargs)
+
     @classmethod
     def deploy_axis_func(
         cls,

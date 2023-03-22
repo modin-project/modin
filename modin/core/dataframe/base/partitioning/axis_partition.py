@@ -22,6 +22,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     An abstract class that represents the parent class for any axis partition class.
 
     This class is intended to simplify the way that operations are performed.
+
+    Attributes
+    ----------
+    _PARTITIONS_METADATA_LEN : int
+        The number of metadata values that the object of `partition_type` consumes.
     """
 
     @property
@@ -87,8 +92,11 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
     # Child classes must have these in order to correctly subclass.
     instance_type = None
     partition_type = None
+    _PARTITIONS_METADATA_LEN = 0
 
-    def _wrap_partitions(self, partitions: list) -> list:
+    def _wrap_partitions(
+        self, partitions: list, extract_metadata: Optional[bool] = None
+    ) -> list:
         """
         Wrap remote partition objects with `BaseDataframePartition` class.
 
@@ -96,6 +104,9 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         ----------
         partitions : list
             List of remotes partition objects to be wrapped with `BaseDataframePartition` class.
+        extract_metadata : bool, optional
+            Whether the partitions list contains information about partition's metadata.
+            If `None` was passed will take the argument's value from the value of `cls._PARTITIONS_METADATA_LEN`.
 
         Returns
         -------
@@ -105,7 +116,23 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
         assert self.partition_type is not None
         assert self.instance_type is not None  # type: ignore
 
-        return [self.partition_type(obj) for obj in partitions]
+        if extract_metadata is None:
+            # If `_PARTITIONS_METADATA_LEN == 0` then the execution doesn't support metadata
+            # and thus we should never try extracting it, otherwise assuming that the common
+            # approach of always passing the metadata is used.
+            extract_metadata = bool(self._PARTITIONS_METADATA_LEN)
+
+        if extract_metadata:
+            return [
+                self.partition_type(*init_args)
+                for init_args in zip(
+                    # `partition_type` consumes `(object_id, *metadata)`, thus adding `+1`
+                    *[iter(partitions)]
+                    * (self._PARTITIONS_METADATA_LEN + 1)
+                )
+            ]
+        else:
+            return [self.partition_type(object_id) for object_id in partitions]
 
     def force_materialization(
         self, get_ip: bool = False

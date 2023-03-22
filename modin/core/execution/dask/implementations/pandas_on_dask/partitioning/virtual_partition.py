@@ -50,6 +50,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
 
     axis = None
+    _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnDaskDataframePartition
     instance_type = Future
 
@@ -144,6 +145,34 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             partition.drain_call_queue()
             result[idx] = partition._ip_cache
         return result
+
+    @classmethod
+    @_inherit_docstrings(PandasDataframeAxisPartition.deploy_splitting_func)
+    def deploy_splitting_func(
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        *partitions,
+        extract_metadata=False,
+    ):
+        return DaskWrapper.deploy(
+            func=_deploy_dask_func,
+            f_args=(
+                PandasDataframeAxisPartition.deploy_splitting_func,
+                axis,
+                func,
+                f_args,
+                f_kwargs,
+                num_splits,
+                *partitions,
+            ),
+            f_kwargs={"extract_metadata": extract_metadata},
+            num_returns=num_splits * 4 if extract_metadata else num_splits,
+            pure=False,
+        )
 
     @classmethod
     def deploy_axis_func(
@@ -265,25 +294,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_returns=num_splits * 4,
             pure=False,
         )
-
-    def _wrap_partitions(self, partitions):
-        """
-        Wrap partitions passed as a list of distributed.Future with ``PandasOnDaskDataframePartition`` class.
-
-        Parameters
-        ----------
-        partitions : list
-            List of distributed.Future.
-
-        Returns
-        -------
-        list
-            List of ``PandasOnDaskDataframePartition`` objects.
-        """
-        return [
-            self.partition_type(future, length, width, ip)
-            for (future, length, width, ip) in zip(*[iter(partitions)] * 4)
-        ]
 
     def apply(
         self,
@@ -505,7 +515,16 @@ class PandasOnDaskDataframeRowPartition(PandasOnDaskDataframeVirtualPartition):
     axis = 1
 
 
-def _deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs):
+def _deploy_dask_func(
+    deployer,
+    axis,
+    f_to_deploy,
+    f_args,
+    f_kwargs,
+    *args,
+    extract_metadata=True,
+    **kwargs,
+):
     """
     Execute a function on an axis partition in a worker process.
 
@@ -527,6 +546,11 @@ def _deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kw
         Keyword arguments to pass to ``f_to_deploy``.
     *args : list
         Positional arguments to pass to ``func``.
+    extract_metadata : bool, default: True
+        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+        the load on object storage as the remote function would return 4 times fewer futures.
+        Passing `False` makes sense for temporary results where you know for sure that the
+        metadata will never be requested.
     **kwargs : dict
         Keyword arguments to pass to ``func``.
 
@@ -536,6 +560,8 @@ def _deploy_dask_func(deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kw
         The result of the function ``func`` and metadata for it.
     """
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    if not extract_metadata:
+        return result
     ip = get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
