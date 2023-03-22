@@ -65,61 +65,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
     frame_cls = HdkOnNativeDataframe
     query_compiler_cls = DFAlgQueryCompiler
 
-    arg_keys = [
-        "filepath_or_buffer",
-        "sep",
-        "delimiter",
-        "header",
-        "names",
-        "index_col",
-        "usecols",
-        "squeeze",
-        "prefix",
-        "mangle_dupe_cols",
-        "dtype",
-        "engine",
-        "converters",
-        "true_values",
-        "false_values",
-        "skipinitialspace",
-        "skiprows",
-        "nrows",
-        "na_values",
-        "keep_default_na",
-        "na_filter",
-        "verbose",
-        "skip_blank_lines",
-        "parse_dates",
-        "infer_datetime_format",
-        "keep_date_col",
-        "date_parser",
-        "dayfirst",
-        "cache_dates",
-        "iterator",
-        "chunksize",
-        "compression",
-        "thousands",
-        "decimal",
-        "lineterminator",
-        "quotechar",
-        "quoting",
-        "escapechar",
-        "comment",
-        "encoding",
-        "encoding_errors",
-        "dialect",
-        "error_bad_lines",
-        "warn_bad_lines",
-        "on_bad_lines",
-        "skipfooter",
-        "doublequote",
-        "delim_whitespace",
-        "low_memory",
-        "memory_map",
-        "float_precision",
-        "storage_options",
-    ]
-
     unsupported_args = [
         "decimal",
         "thousands",
@@ -129,8 +74,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "skipfooter",
         "nrows",
         "skipinitialspace",
-        "squeeze",
-        "mangle_dupe_cols",
         "na_values",
         "keep_default_na",
         "na_filter",
@@ -158,65 +101,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
     ]
 
     @classmethod
-    def read_csv(
-        cls,
-        filepath_or_buffer,
-        sep=",",
-        delimiter=None,
-        header="infer",
-        names=lib.no_default,
-        index_col=None,
-        usecols=None,
-        squeeze=False,
-        prefix=lib.no_default,
-        mangle_dupe_cols=True,
-        dtype=None,
-        engine=None,
-        converters=None,
-        true_values=None,
-        false_values=None,
-        skipinitialspace=False,
-        skiprows=None,
-        nrows=None,
-        na_values=None,
-        keep_default_na=True,
-        na_filter=True,
-        verbose=False,
-        skip_blank_lines=True,
-        parse_dates=False,
-        infer_datetime_format=False,
-        keep_date_col=False,
-        date_parser=None,
-        dayfirst=False,
-        cache_dates=True,
-        iterator=False,
-        chunksize=None,
-        compression="infer",
-        thousands=None,
-        decimal=".",
-        lineterminator=None,
-        quotechar='"',
-        quoting=0,
-        escapechar=None,
-        comment=None,
-        encoding=None,
-        encoding_errors="strict",
-        dialect=None,
-        error_bad_lines=None,
-        warn_bad_lines=None,
-        on_bad_lines=None,
-        skipfooter=0,
-        doublequote=True,
-        delim_whitespace=False,
-        low_memory=True,
-        memory_map=False,
-        float_precision=None,
-        storage_options=None,
-    ):  # noqa: PR01
+    def read_csv(cls, **kwargs):  # noqa: PR01
         """
-        Read data from `filepath_or_buffer` according to the passed `kwargs` parameters.
-
-        For parameters description please refer to pandas API.
+        Read csv data according to the passed `kwargs` parameters.
 
         Returns
         -------
@@ -227,44 +114,51 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         -----
         Reading performed by using of `pyarrow.read_csv` function.
         """
-        items = locals().copy()
-        mykwargs = {k: items[k] for k in items if k in cls.arg_keys}
-        eng = str(engine).lower().strip()
+        eng = str(kwargs["engine"]).lower().strip()
         try:
-            if eng in ["pandas", "c"]:
-                return super().read_csv(**mykwargs)
+            if eng in ("pandas", "c"):
+                return super().read_csv(**kwargs)
 
-            cls._validate_read_csv_kwargs(mykwargs)
+            cls._validate_read_csv_kwargs(kwargs)
             use_modin_impl, error_message = cls._read_csv_check_support(
-                mykwargs,
+                kwargs,
             )
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
+
+            dtype = kwargs["dtype"]
             if isinstance(dtype, dict):
                 column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
             else:
                 column_types = cls._dtype_to_arrow(dtype)
 
+            parse_dates = kwargs["parse_dates"]
             if (type(parse_dates) is list) and type(column_types) is dict:
                 for c in parse_dates:
                     column_types[c] = pa.timestamp("s")
 
-            if names not in [lib.no_default, None] and header == 0:
+            names = kwargs["names"]
+            skiprows = kwargs["skiprows"]
+            if names not in (lib.no_default, None) and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
 
+            sep = kwargs["sep"]
+            delimiter = kwargs["delimiter"]
             if delimiter is None and sep is not lib.no_default:
                 delimiter = sep
 
-            usecols_md = cls._prepare_pyarrow_usecols(mykwargs)
+            usecols_md = cls._prepare_pyarrow_usecols(kwargs)
 
             po = ParseOptions(
-                delimiter="\\s+" if delim_whitespace else delimiter,
-                quote_char=quotechar,
-                double_quote=doublequote,
-                escape_char=escapechar,
+                delimiter="\\s+" if kwargs["delim_whitespace"] else delimiter,
+                quote_char=kwargs["quotechar"],
+                double_quote=kwargs["doublequote"],
+                escape_char=kwargs["escapechar"],
                 newlines_in_values=False,
-                ignore_empty_lines=skip_blank_lines,
+                ignore_empty_lines=kwargs["skip_blank_lines"],
             )
+            true_values = kwargs["true_values"]
+            false_values = kwargs["false_values"]
             co = ConvertOptions(
                 check_utf8=None,
                 column_types=column_types,
@@ -294,11 +188,31 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             )
 
             at = read_csv(
-                filepath_or_buffer,
+                kwargs["filepath_or_buffer"],
                 read_options=ro,
                 parse_options=po,
                 convert_options=co,
             )
+
+            col_names = at.column_names
+            col_counts = {}
+            for name in col_names:
+                col_counts[name] = 1 if name in col_counts else 0
+
+            if len(col_names) != len(col_counts):
+                for i, name in enumerate(col_names):
+                    count = col_counts[name]
+                    if count != 0:
+                        if count == 1:
+                            col_counts[name] = 2
+                        else:
+                            new_name = f"{name}.{count - 1}"
+                            while new_name in col_counts:
+                                new_name = f"{name}.{count}"
+                                count += 1
+                            col_counts[name] = count + 1
+                            col_names[i] = new_name
+                at = at.rename_columns(col_names)
 
             return cls.from_arrow(at)
         except (
@@ -311,7 +225,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 raise
 
             ErrorMessage.default_to_pandas("`read_csv`")
-            return super().read_csv(**mykwargs)
+            return super().read_csv(**kwargs)
 
     @classmethod
     def _dtype_to_arrow(cls, dtype):
@@ -353,8 +267,8 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         list
             Redefined `usecols` parameter.
         """
-        usecols = read_csv_kwargs.get("usecols", None)
-        engine = read_csv_kwargs.get("engine", None)
+        usecols = read_csv_kwargs["usecols"]
+        engine = read_csv_kwargs["engine"]
         usecols_md, usecols_names_dtypes = cls._validate_usecols_arg(usecols)
         if usecols_md:
             empty_pd_df = pandas.read_csv(
@@ -395,7 +309,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         return usecols_md
 
     read_csv_unsup_defaults = {}
-    for k, v in inspect.signature(read_csv.__func__).parameters.items():
+    for k, v in inspect.signature(pandas.read_csv).parameters.items():
         if v.default is not inspect.Parameter.empty and k in unsupported_args:
             read_csv_unsup_defaults[k] = v.default
 
@@ -419,15 +333,15 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         str
             Error message that should be raised if user explicitly set `engine="arrow"`.
         """
-        filepath_or_buffer = read_csv_kwargs.get("filepath_or_buffer", None)
-        header = read_csv_kwargs.get("header", "infer")
-        names = read_csv_kwargs.get("names", None)
-        engine = read_csv_kwargs.get("engine", None)
-        skiprows = read_csv_kwargs.get("skiprows", None)
-        delimiter = read_csv_kwargs.get("delimiter", None)
-        parse_dates = read_csv_kwargs.get("parse_dates", False)
+        filepath_or_buffer = read_csv_kwargs["filepath_or_buffer"]
+        header = read_csv_kwargs["header"]
+        names = read_csv_kwargs["names"]
+        engine = read_csv_kwargs["engine"]
+        skiprows = read_csv_kwargs["skiprows"]
+        delimiter = read_csv_kwargs["delimiter"]
+        parse_dates = read_csv_kwargs["parse_dates"]
 
-        if read_csv_kwargs.get("compression", "infer") != "infer":
+        if read_csv_kwargs["compression"] != "infer":
             return (
                 False,
                 "read_csv with 'arrow' engine doesn't support explicit compression parameter, compression"
@@ -463,7 +377,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
                 )
-        if delimiter is not None and read_csv_kwargs.get("delim_whitespace", False):
+        if delimiter is not None and read_csv_kwargs["delim_whitespace"]:
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
@@ -533,7 +447,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 if not set(parse_dates).issubset(empty_pandas_df.columns):
                     raise ValueError("Missing column provided to 'parse_dates'")
 
-        if not read_csv_kwargs.get("skip_blank_lines", True):
+        if not read_csv_kwargs["skip_blank_lines"]:
             # in some corner cases empty lines are handled as '',
             # while pandas handles it as NaNs - issue #3084
             return (
@@ -564,12 +478,12 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         read_csv_kwargs : dict
             Parameters of `read_csv` function.
         """
-        delimiter = read_csv_kwargs.get("delimiter", None)
-        sep = read_csv_kwargs.get("sep", lib.no_default)
-        on_bad_lines = read_csv_kwargs.get("on_bad_lines", "error")
-        error_bad_lines = read_csv_kwargs.get("error_bad_lines", None)
-        warn_bad_lines = read_csv_kwargs.get("warn_bad_lines", None)
-        delim_whitespace = read_csv_kwargs.get("delim_whitespace", False)
+        delimiter = read_csv_kwargs["delimiter"]
+        sep = read_csv_kwargs["sep"]
+        on_bad_lines = read_csv_kwargs["on_bad_lines"]
+        error_bad_lines = read_csv_kwargs["error_bad_lines"]
+        warn_bad_lines = read_csv_kwargs["warn_bad_lines"]
+        delim_whitespace = read_csv_kwargs["delim_whitespace"]
 
         if delimiter and (sep is not lib.no_default):
             raise ValueError(

@@ -15,10 +15,9 @@
 
 import ray
 from ray.util import get_node_ip_address
-import uuid
+
 from modin.core.execution.ray.common.utils import deserialize, ObjectIDType, wait
 from modin.core.execution.ray.common import RayWrapper
-
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
@@ -55,10 +54,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._length_cache = length
         self._width_cache = width
         self._ip_cache = ip
-        self._identity = uuid.uuid4().hex
 
-        logger = get_logger()
-        logger.debug(
+        log = get_logger()
+        self._is_debug(log) and log.debug(
             "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
                 self._identity,
                 str(self._length_cache),
@@ -66,23 +64,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 str(self._ip_cache),
             )
         )
-
-    def get(self):
-        """
-        Get the object wrapped by this partition out of the Plasma store.
-
-        Returns
-        -------
-        pandas.DataFrame
-            The object from the Plasma store.
-        """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.get::{self._identity}")
-        if len(self.call_queue):
-            self.drain_call_queue()
-        result = RayWrapper.materialize(self._data)
-        logger.debug(f"EXIT::Partition.get::{self._identity}")
-        return result
 
     def apply(self, func, *args, **kwargs):
         """
@@ -107,12 +88,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.apply::{self._identity}")
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
         data = self._data
         call_queue = self.call_queue + [[func, args, kwargs]]
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
+            self._is_debug(log) and log.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
             result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -121,20 +104,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             result, length, width, ip = _apply_func.remote(
                 data, func, *f_args, **f_kwargs
             )
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
-        logger.debug(f"EXIT::Partition.apply::{self._identity}")
+            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
+        self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
         return self.__constructor__(result, length, width, ip)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.drain_call_queue::{self._identity}")
+        log = get_logger()
+        self._is_debug(log) and log.debug(
+            f"ENTER::Partition.drain_call_queue::{self._identity}"
+        )
         if len(self.call_queue) == 0:
             return
         data = self._data
         call_queue = self.call_queue
         if len(call_queue) > 1:
-            logger.debug(f"SUBMIT::_apply_list_of_funcs::{self._identity}")
+            self._is_debug(log) and log.debug(
+                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
+            )
             (
                 self._data,
                 new_length,
@@ -145,14 +132,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
             func, f_args, f_kwargs = call_queue[0]
-            logger.debug(f"SUBMIT::_apply_func::{self._identity}")
+            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
             (
                 self._data,
                 new_length,
                 new_width,
                 self._ip_cache,
             ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
-        logger.debug(f"EXIT::Partition.drain_call_queue::{self._identity}")
+        self._is_debug(log) and log.debug(
+            f"EXIT::Partition.drain_call_queue::{self._identity}"
+        )
         self.call_queue = []
 
         # GH#4732 if we already have evaluated width/length cached as ints,
@@ -184,7 +173,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    _iloc = ray.put(PandasDataframePartition._iloc)
+    # If Ray has not been initialized yet by Modin,
+    # it will be initialized when calling `RayWrapper.put`.
+    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
@@ -202,8 +193,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.mask::{self._identity}")
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.mask::{self._identity}")
         new_obj = super().mask(row_labels, col_labels)
         if isinstance(row_labels, slice) and isinstance(
             self._length_cache, ObjectIDType
@@ -225,7 +216,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 new_obj._width_cache = compute_sliced_len.remote(
                     col_labels, self._width_cache
                 )
-        logger.debug(f"EXIT::Partition.mask::{self._identity}")
+        self._is_debug(log) and log.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
     @classmethod
@@ -243,7 +234,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A new ``PandasOnRayDataframePartition`` object.
         """
-        return cls(ray.put(obj), len(obj.index), len(obj.columns))
+        return cls(cls.execution_wrapper.put(obj), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):
@@ -260,15 +251,22 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         ray.ObjectRef
             A reference to `func`.
         """
-        return ray.put(func)
+        return cls.execution_wrapper.put(func)
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The length of the object.
         """
         if self._length_cache is None:
@@ -278,17 +276,24 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType):
+        if isinstance(self._length_cache, ObjectIDType) and materialize:
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or ray.ObjectRef
             The width of the object.
         """
         if self._width_cache is None:
@@ -298,7 +303,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType):
+        if isinstance(self._width_cache, ObjectIDType) and materialize:
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 

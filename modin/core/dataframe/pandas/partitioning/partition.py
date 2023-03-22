@@ -15,6 +15,8 @@
 
 from abc import ABC
 from copy import copy
+import logging
+import uuid
 
 import pandas
 from pandas.api.types import is_scalar
@@ -34,6 +36,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
 
     _length_cache = None
     _width_cache = None
+    _identity_cache = None
     _data = None
 
     @cache_readonly
@@ -63,7 +66,12 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         E.g. if you assign `x = PandasDataframePartition.put(1)`, `x.get()` should
         always return 1.
         """
-        pass
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.get::{self._identity}")
+        self.drain_call_queue()
+        result = self.execution_wrapper.materialize(self._data)
+        self._is_debug(log) and log.debug(f"EXIT::Partition.get::{self._identity}")
+        return result
 
     @property
     def list_of_blocks(self):
@@ -307,31 +315,58 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return width_fn_pandas
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The length of the object.
         """
         if self._length_cache is None:
             self._length_cache = self.apply(self._length_extraction_fn()).get()
         return self._length_cache
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of the object wrapped by the partition.
 
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
+
         Returns
         -------
-        int
+        int or its Future
             The width of the object.
         """
         if self._width_cache is None:
             self._width_cache = self.apply(self._width_extraction_fn()).get()
         return self._width_cache
+
+    @property
+    def _identity(self):
+        """
+        Calculate identifier on request for debug logging mode.
+
+        Returns
+        -------
+        str
+        """
+        if self._identity_cache is None:
+            self._identity_cache = uuid.uuid4().hex
+        return self._identity_cache
 
     def split(self, split_func, num_splits, *args):
         """
@@ -352,14 +387,14 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         list
             A list of partitions.
         """
-        logger = get_logger()
-        logger.debug(f"ENTER::Partition.split::{self._identity}")
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.split::{self._identity}")
 
-        logger.debug(f"SUBMIT::_split_df::{self._identity}")
+        self._is_debug(log) and log.debug(f"SUBMIT::_split_df::{self._identity}")
         outputs = self.execution_wrapper.deploy(
             split_func, [self._data] + list(args), num_returns=num_splits
         )
-        logger.debug(f"EXIT::Partition.split::{self._identity}")
+        self._is_debug(log) and log.debug(f"EXIT::Partition.split::{self._identity}")
         return [self.__constructor__(output) for output in outputs]
 
     @classmethod
@@ -373,3 +408,23 @@ class PandasDataframePartition(ABC):  # pragma: no cover
             New `PandasDataframePartition` object.
         """
         return cls.put(pandas.DataFrame(), 0, 0)
+
+    def _is_debug(self, logger=None):
+        """
+        Check that the logger is set to debug mode.
+
+        Parameters
+        ----------
+        logger : logging.logger, optional
+            Logger obtained from Modin's `get_logger` utility.
+            Explicit transmission of this parameter can be used in the case
+            when within the context of `_is_debug` call there was already
+            `get_logger` call. This is an optimization.
+
+        Returns
+        -------
+        bool
+        """
+        if logger is None:
+            logger = get_logger()
+        return logger.isEnabledFor(logging.DEBUG)

@@ -65,7 +65,7 @@ class JSONDispatcher(TextFileDispatcher):
         with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
             column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
-            splits = cls.partitioned_file(
+            splits, _ = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
             )
@@ -84,13 +84,13 @@ class JSONDispatcher(TextFileDispatcher):
         row_lengths = cls.materialize(index_ids)
         new_index = pandas.RangeIndex(sum(row_lengths))
 
-        dtypes = cls.get_dtypes(dtypes_ids)
         partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
 
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = columns
-        else:
-            dtypes = pandas.Series(dtypes, index=columns)
+        # Compute dtypes by getting collecting and combining all of the partitions. The
+        # reported dtypes from differing rows can be different based on the inference in
+        # the limited data seen by each worker. We use pandas to compute the exact dtype
+        # over the whole column for each column. The index is set below.
+        dtypes = cls.get_dtypes(dtypes_ids, columns)
 
         new_frame = cls.frame_cls(
             np.array(partition_ids),

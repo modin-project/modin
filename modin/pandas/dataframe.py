@@ -50,6 +50,7 @@ from modin.utils import (
     to_pandas,
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
+    try_cast_to_pandas,
 )
 from modin.config import Engine, IsExperimental, PersistentPickle
 from .utils import (
@@ -123,6 +124,8 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
@@ -159,7 +162,18 @@ class DataFrame(BasePandasDataset):
                 if columns is None:
                     columns = slice(None)
                 self._query_compiler = data.loc[index, columns]._query_compiler
-
+        elif isinstance(data, array):
+            self._query_compiler = data._query_compiler.copy()
+            if copy is not None and not copy:
+                data._add_sibling(self)
+            if columns is not None and not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if columns is not None:
+                self.set_axis(columns, axis=1, inplace=True)
+            if index is not None:
+                self.set_axis(index, axis=0, inplace=True)
+            if dtype is not None:
+                self.astype(dtype, copy=False)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -172,18 +186,19 @@ class DataFrame(BasePandasDataset):
             )
             if isinstance(data, pandas.Index):
                 pass
-            elif is_list_like(data) and not is_dict_like(data):
+            elif (
+                is_list_like(data)
+                and not is_dict_like(data)
+                and not isinstance(data, np.ndarray)
+            ):
                 old_dtype = getattr(data, "dtype", None)
                 values = [
                     obj._to_pandas() if isinstance(obj, Series) else obj for obj in data
                 ]
-                if isinstance(data, np.ndarray):
-                    data = np.array(values, dtype=old_dtype)
-                else:
-                    try:
-                        data = type(data)(values, dtype=old_dtype)
-                    except TypeError:
-                        data = values
+                try:
+                    data = type(data)(values, dtype=old_dtype)
+                except TypeError:
+                    data = values
             elif is_dict_like(data) and not isinstance(
                 data, (pandas.Series, Series, pandas.DataFrame, DataFrame)
             ):
@@ -226,29 +241,8 @@ class DataFrame(BasePandasDataset):
         -------
         str
         """
-        from pandas.io.formats import console
-
-        num_rows = pandas.get_option("display.max_rows") or 10
-        num_cols = pandas.get_option("display.max_columns") or 20
-        if pandas.get_option("display.max_columns") is None and pandas.get_option(
-            "display.expand_frame_repr"
-        ):
-            width, _ = console.get_console_size()
-            width = min(width, len(self.columns))
-            col_counter = 0
-            i = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i += 1
-
-            num_cols = i
-            i = len(self.columns) - 1
-            col_counter = 0
-            while col_counter < width:
-                col_counter += len(str(self.columns[i])) + 1
-                i -= 1
-
-            num_cols += len(self.columns) - i
+        num_rows = pandas.get_option("display.max_rows") or len(self.index)
+        num_cols = pandas.get_option("display.max_columns") or len(self.columns)
         result = repr(self._build_repr_df(num_rows, num_cols))
         if len(self.index) > num_rows or len(self.columns) > num_cols:
             # The split here is so that we don't repr pandas row lengths.
@@ -334,20 +328,9 @@ class DataFrame(BasePandasDataset):
         """
         Return boolean ``Series`` denoting duplicate rows.
         """
-        import hashlib
-
         df = self[subset] if subset is not None else self
-        # if the number of columns we are checking for duplicates is larger than 1, we must
-        # hash them to generate a single value that can be compared across rows.
-        if len(df.columns) > 1:
-            hashed = df.apply(
-                lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
-            ).to_frame()
-        else:
-            hashed = df
-        duplicates = hashed.apply(lambda s: s.duplicated(keep=keep)).squeeze(axis=1)
-        # remove Series name which was assigned automatically by .apply
-        duplicates.name = None
+        new_qc = df._query_compiler.duplicated(keep=keep)
+        duplicates = self._reduce_dimension(new_qc)
         return duplicates
 
     @property
@@ -1287,6 +1270,12 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
+    def isin(self, values):  # noqa: PR01, RT01, D200
+        """
+        Whether elements in `DataFrame` are contained in `values`.
+        """
+        return super(DataFrame, self).isin(values)
+
     def iterrows(self):  # noqa: D200
         """
         Iterate over ``DataFrame`` rows as (index, ``Series``) pairs.
@@ -2088,13 +2077,9 @@ class DataFrame(BasePandasDataset):
                 frame = self
             else:
                 frame = self.copy()
-            if not all(
-                isinstance(col, (pandas.Index, Series, np.ndarray, list, Iterator))
-                for col in keys
-            ):
-                if drop:
-                    keys = [frame.pop(k) if not is_list_like(k) else k for k in keys]
-                keys = [k._to_pandas() if isinstance(k, Series) else k for k in keys]
+            if drop:
+                keys = [k if is_list_like(k) else frame.pop(k) for k in keys]
+            keys = try_cast_to_pandas(keys)
             # These are single-threaded objects, so we might as well let pandas do the
             # calculation so that it matches.
             frame.index = (
@@ -2599,14 +2584,6 @@ class DataFrame(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(query_compiler, inplace)
 
-    def xs(self, key, axis=0, level=None, drop_level=True):  # noqa: PR01, RT01, D200
-        """
-        Return cross-section from the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
-        )
-
     def _getitem_column(self, key):
         """
         Get column specified by `key`.
@@ -2792,7 +2769,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical)):
+            if not isinstance(value, (Series, Categorical, np.ndarray)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:

@@ -18,6 +18,8 @@ import pyarrow
 import pytest
 import re
 
+from pandas._testing import ensure_clean
+
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
@@ -346,6 +348,32 @@ class TestCSV:
             usecols=usecols,
         )
 
+    @pytest.mark.parametrize(
+        "cols",
+        [
+            "c1,c2,c3",
+            "c1,c1,c2",
+            "c1,c1,c1.1,c1.2,c1",
+            "c1,c1,c1,c1.1,c1.2,c1.3",
+            "c1.1,c1.2,c1.3,c1,c1,c1",
+            "c1.1,c1,c1.2,c1,c1.3,c1",
+            "c1,c1.1,c1,c1.2,c1,c1.3",
+            "c1,c1,c1.1,c1.1,c1.2,c2",
+            "c1,c1,c1.1,c1.1,c1.2,c1.2,c2",
+            "c1.1,c1.1,c1,c1,c1.2,c1.2,c2",
+            "c1.1,c1,c1.1,c1,c1.1,c1.2,c1.2,c2",
+        ],
+    )
+    def test_read_csv_duplicate_cols(self, cols):
+        def test(df, lib, **kwargs):
+            data = f"{cols}\n"
+            with ensure_clean(".csv") as fname:
+                with open(fname, "w") as f:
+                    f.write(data)
+                return lib.read_csv(fname)
+
+        run_and_compare(test, data={})
+
 
 class TestMasks:
     data = {
@@ -363,10 +391,20 @@ class TestMasks:
         run_and_compare(projection, data=self.data, cols=cols)
 
     def test_drop(self):
-        def drop(df, **kwargs):
-            return df.drop(columns="a")
+        def drop(df, column_names, **kwargs):
+            return df.drop(columns=column_names)
 
-        run_and_compare(drop, data=self.data)
+        run_and_compare(drop, data=self.data, column_names="a")
+        run_and_compare(drop, data=self.data, column_names=self.data.keys())
+
+    def test_drop_index(self):
+        def drop(df, **kwargs):
+            return df.drop(df.index[0])
+
+        idx = list(map(str, self.data["a"]))
+        run_and_compare(
+            drop, data=self.data, constructor_kwargs={"index": idx}, force_lazy=False
+        )
 
     def test_iloc(self):
         def mask(df, **kwargs):
@@ -408,6 +446,14 @@ class TestMasks:
             return df
 
         run_and_compare(filter, data=self.data)
+
+    def test_filter_str_categorical(self):
+        def filter(df, **kwargs):
+            return df[df["A"] != ""]
+
+        data = {"A": ["A", "B", "C"]}
+        run_and_compare(filter, data=data)
+        run_and_compare(filter, data=data, constructor_kwargs={"dtype": "category"})
 
 
 class TestMultiIndex:
@@ -1737,6 +1783,21 @@ class TestBinaryOp:
         run_and_compare(filter_and, data=self.cmp_data)
         run_and_compare(filter_or, data=self.cmp_data)
 
+    def test_string_bin_op(self):
+        def test_bin_op(df, op_name, op_arg, **kwargs):
+            return getattr(df, op_name)(op_arg)
+
+        bin_ops = {
+            "__add__": "_sfx",
+            "__radd__": "pref_",
+            "__mul__": 10,
+        }
+
+        for op, arg in bin_ops.items():
+            run_and_compare(
+                test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
+            )
+
 
 class TestDateTime:
     datetime_data = {
@@ -2061,6 +2122,19 @@ class TestBadData:
         df = pd.DataFrame({"A": [np.iinfo(np.int64).max - 1, 1]})
         assert df.astype(np.uint64).sum()[0] == np.iinfo(np.int64).max
 
+    def test_mean_sum(self):
+        all_codes = np.typecodes["All"]
+        exclude_codes = np.typecodes["Datetime"] + np.typecodes["Complex"] + "gSUVO"
+        supported_codes = set(all_codes) - set(exclude_codes)
+
+        def test(df, dtype_code, operation, **kwargs):
+            df = type(df)({"A": [0, 1], "B": [1, 0]}, dtype=np.dtype(dtype_code))
+            return getattr(df, operation)()
+
+        for c in supported_codes:
+            for op in ("sum", "mean"):
+                run_and_compare(test, data={}, dtype_code=c, operation=op)
+
 
 class TestDropna:
     data = {
@@ -2224,6 +2298,7 @@ class TestArrowExecution:
             drop_rename_concat,
             data=self.data1,
             data2=self.data2,
+            force_lazy=False,
             force_arrow_execute=True,
         )
 

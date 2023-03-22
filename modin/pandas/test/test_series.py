@@ -2070,6 +2070,26 @@ def test_isin(data):
     df_equals(modin_result, pandas_result)
 
 
+def test_isin_with_series():
+    modin_series1, pandas_series1 = create_test_series([1, 2, 3])
+    modin_series2, pandas_series2 = create_test_series([1, 2, 3, 4, 5])
+
+    eval_general(
+        (modin_series1, modin_series2),
+        (pandas_series1, pandas_series2),
+        lambda srs: srs[0].isin(srs[1]),
+    )
+
+    # Verify that Series actualy behaves like Series and ignores unmatched indices on '.isin'
+    modin_series1, pandas_series1 = create_test_series([1, 2, 3], index=[10, 11, 12])
+
+    eval_general(
+        (modin_series1, modin_series2),
+        (pandas_series1, pandas_series2),
+        lambda srs: srs[0].isin(srs[1]),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_isnull(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3073,8 +3093,9 @@ def test_skew(data, skipna):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_shift_slice_shift(data, index, periods):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.mark.parametrize("name", [None, "foo"])
+def test_shift_slice_shift(data, index, periods, name):
+    modin_series, pandas_series = create_test_series(data, name=name)
     if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
         modin_series.index = pandas_series.index = np.arange(2, data_column_length + 2)
@@ -4331,6 +4352,21 @@ def test_cat_codes(data):
     pandas_result = pandas_series.cat.codes
     modin_result = modin_series.cat.codes
     df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "set_min_partition_size",
+    [1, 2],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_cat_codes_issue5650(set_min_partition_size):
+    data = {"name": ["abc", "def", "ghi", "jkl"]}
+    pandas_df = pandas.DataFrame(data)
+    pandas_df = pandas_df.astype("category")
+    modin_df = pd.DataFrame(data)
+    modin_df = modin_df.astype("category")
+    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
 
 
 @pytest.mark.parametrize(

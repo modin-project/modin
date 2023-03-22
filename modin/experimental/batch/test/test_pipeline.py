@@ -14,13 +14,13 @@
 import pytest
 import numpy as np
 import pandas
-import ray
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions
 from modin.distributed.dataframe.pandas.partitions import from_partitions
 from modin.experimental.batch.pipeline import PandasQueryPipeline
 from modin.pandas.test.utils import df_equals
+from modin.core.execution.ray.common import RayWrapper
 
 
 @pytest.mark.skipif(
@@ -399,8 +399,8 @@ class TestPipelineRayEngine:
         assert len(new_dfs[0]["new_col"].unique()) == NPartitions.get()
         # Test that `repartition_after=True` raises an error when the result has more than
         # one partition.
-        partition1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
-        partition2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+        partition1 = RayWrapper.put(pandas.DataFrame([[0, 1, 2]]))
+        partition2 = RayWrapper.put(pandas.DataFrame([[3, 4, 5]]))
         df = from_partitions([partition1, partition2], 0)
         pipeline = PandasQueryPipeline(df, 0)
         pipeline.add_query(lambda df: df, repartition_after=True, is_output=True)
@@ -439,8 +439,8 @@ class TestPipelineRayEngine:
         df_equals(correct_df, new_df)
         # Test that `fan_out=True` raises an error when the input has more than
         # one partition.
-        partition1 = ray.put(pandas.DataFrame([[0, 1, 2]]))
-        partition2 = ray.put(pandas.DataFrame([[3, 4, 5]]))
+        partition1 = RayWrapper.put(pandas.DataFrame([[0, 1, 2]]))
+        partition2 = RayWrapper.put(pandas.DataFrame([[3, 4, 5]]))
         df = from_partitions([partition1, partition2], 0)
         pipeline = PandasQueryPipeline(df)
         pipeline.add_query(

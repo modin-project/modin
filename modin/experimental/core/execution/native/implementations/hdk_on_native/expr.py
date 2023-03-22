@@ -56,7 +56,9 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return get_dtype(float)
     if is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype):
         return get_dtype(int)
-    raise TypeError(f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}")
+    raise NotImplementedError(
+        f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
+    )
 
 
 _aggs_preserving_numeric_type = {"sum", "min", "max"}
@@ -87,7 +89,7 @@ def _agg_dtype(agg, dtype):
     elif agg in _aggs_with_float_result:
         return get_dtype(float)
     else:
-        raise NotImplementedError(f"unsupported aggreagte {agg}")
+        raise NotImplementedError(f"unsupported aggregate {agg}")
 
 
 _cmp_ops = {"eq", "ge", "gt", "le", "lt", "ne"}

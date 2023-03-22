@@ -11,6 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pyarrow as pa
+from pandas.core.dtypes.common import get_dtype
+
 import modin.pandas as pd
 from modin.pandas.utils import from_arrow
 from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
@@ -66,7 +69,19 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     worker = HdkWorker()
     if len(kwargs) > 0:
         query = _build_query(query, kwargs, worker.import_arrow_table)
-    return from_arrow(worker.executeDML(query))
+    df = from_arrow(worker.executeDML(query))
+    mdf = df._query_compiler._modin_frame
+    schema = mdf._partitions[0][0].get().schema
+    # HDK returns strings as dictionary. For the proper conversion to
+    # Pandas, we need to replace dtypes of the corresponding columns.
+    if replace := [
+        i for i, col in enumerate(schema) if pa.types.is_dictionary(col.type)
+    ]:
+        dtypes = mdf._dtypes
+        obj_type = get_dtype(object)
+        for i in replace:
+            dtypes[i] = obj_type
+    return df
 
 
 def _build_query(query: str, frames: dict, import_table: callable) -> str:
