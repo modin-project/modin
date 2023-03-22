@@ -63,6 +63,7 @@ class SQLExperimentalDispatcher(SQLDispatcher):
         BaseQueryCompiler
             A new query compiler with imported data for further processing.
         """
+        # sql deps are optional, so import only when needed
         from modin.experimental.core.io.sql.utils import (
             is_distributed,
             get_query_info,
