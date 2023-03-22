@@ -1660,19 +1660,7 @@ def test_reset_index_with_multi_index_drop(
     )
 
 
-@pytest.mark.parametrize(
-    "test_async_reset_index",
-    [
-        pytest.param(False),
-        pytest.param(
-            True,
-            marks=pytest.mark.skipif(
-                StorageFormat.get() == "Hdk",
-                reason="_propagate_index_objs is not supported by HDK",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("test_async_reset_index", [False, True])
 @pytest.mark.parametrize("index_levels_names_max_levels", [0, 1, 2])
 def test_reset_index_with_named_index(
     index_levels_names_max_levels, test_async_reset_index
@@ -1717,19 +1705,7 @@ def test_reset_index_with_named_index(
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 
-@pytest.mark.parametrize(
-    "test_async_reset_index",
-    [
-        pytest.param(False),
-        pytest.param(
-            True,
-            marks=pytest.mark.skipif(
-                StorageFormat.get() == "Hdk",
-                reason="_propagate_index_objs is not supported by HDK",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("test_async_reset_index", [False, True])
 @pytest.mark.parametrize(
     "index",
     [
