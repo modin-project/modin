@@ -245,15 +245,8 @@ class PandasDataframe(ClassLogger):
         dtypes=None,
     ):
         self._partitions = partitions
-        if isinstance(index, ModinIndex) or index is None:
-            self._index_cache = index
-        else:
-            self._index_cache = ModinIndex(index)
-        if isinstance(columns, ModinIndex) or columns is None:
-            self._columns_cache = columns
-        else:
-            self._columns_cache = ModinIndex(columns)
-
+        self.set_index_cache(index)
+        self.set_columns_cache(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._dtypes = dtypes
@@ -383,6 +376,18 @@ class PandasDataframe(ClassLogger):
     _index_cache = None
     _columns_cache = None
 
+    def set_index_cache(self, index):
+        if isinstance(index, ModinIndex) or index is None:
+            self._index_cache = index
+        else:
+            self._index_cache = ModinIndex(index)
+
+    def set_columns_cache(self, columns):
+        if isinstance(columns, ModinIndex) or columns is None:
+            self._columns_cache = columns
+        else:
+            self._columns_cache = ModinIndex(columns)
+
     def has_index_cache(self):
         """
         Check if the index cache exists.
@@ -470,7 +475,7 @@ class PandasDataframe(ClassLogger):
             index, row_lengths = self._index_cache.get(return_lengths=True)
         else:
             index, row_lengths = self._compute_axis_labels_and_lengths(0)
-            self._index_cache = ModinIndex(index)
+            self.set_index_cache(index)
         if self._row_lengths_cache is None:
             self._row_lengths_cache = row_lengths
         return index
@@ -488,7 +493,7 @@ class PandasDataframe(ClassLogger):
             columns, column_widths = self._columns_cache.get(return_lengths=True)
         else:
             columns, column_widths = self._compute_axis_labels_and_lengths(1)
-            self._columns_cache = ModinIndex(columns)
+            self.set_columns_cache(columns)
         if self._column_widths_cache is None:
             self._column_widths_cache = column_widths
         return columns
@@ -506,7 +511,7 @@ class PandasDataframe(ClassLogger):
             new_index = ensure_index(new_index)
         else:
             new_index = self._validate_set_axis(new_index, self._index_cache.get())
-        self._index_cache = ModinIndex(new_index)
+        self.set_index_cache(new_index)
         self.synchronize_labels(axis=0)
 
     def _set_columns(self, new_columns):
@@ -526,7 +531,7 @@ class PandasDataframe(ClassLogger):
             )
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
-        self._columns_cache = ModinIndex(new_columns)
+        self.set_columns_cache(new_columns)
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
@@ -1942,7 +1947,7 @@ class PandasDataframe(ClassLogger):
                 assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
-            self._columns_cache = ModinIndex(new_columns)
+            self.set_columns_cache(new_columns)
 
         new_partitions = self._partition_mgr_cls.map_axis_partitions(
             axis, self._partitions, func, keep_partitioning=True
