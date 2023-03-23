@@ -1663,7 +1663,7 @@ def test_reset_index_with_multi_index_drop(
 @pytest.mark.parametrize(
     "test_async_reset_index",
     [
-        pytest.param(False),
+        False,
         pytest.param(
             True,
             marks=pytest.mark.skipif(

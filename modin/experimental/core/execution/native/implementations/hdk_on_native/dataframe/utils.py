@@ -14,7 +14,6 @@
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
 import re
-import pyarrow
 from collections import OrderedDict
 
 import pandas as pd
@@ -23,12 +22,15 @@ from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 import pyarrow as pa
 from pyarrow.types import is_dictionary
 
-import pandas
-from pandas import Timestamp
-from modin.error_message import ErrorMessage
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from string import ascii_uppercase, ascii_lowercase, digits
 from typing import List, Tuple, Union
+
+import pandas
+from pandas import Timestamp
+import pyarrow
+
+from modin.error_message import ErrorMessage
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 IDX_COL_NAME = "__index__"
 ROWID_COL_NAME = "__rowid__"
