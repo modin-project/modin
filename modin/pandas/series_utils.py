@@ -288,6 +288,15 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_findall(pat, flags=flags, **kwargs)
         )
 
+    def fullmatch(self, pat, case=True, flags=0, na=None):
+        if not isinstance(pat, (str, _pattern_type)):
+            raise TypeError("first argument must be string or compiled pattern")
+        return Series(
+            query_compiler=self._query_compiler.str_fullmatch(
+                pat, case=case, flags=flags, na=na
+            )
+        )
+
     def match(self, pat, case=True, flags=0, na=np.NaN):
         if not isinstance(pat, (str, _pattern_type)):
             raise TypeError("first argument must be string or compiled pattern")
@@ -337,6 +346,12 @@ class StringMethods(ClassLogger):
                     sep=sep, expand=expand
                 )
             )
+
+    def removeprefix(self, prefix):
+        return Series(query_compiler=self._query_compiler.str_removeprefix(prefix))
+
+    def removesuffix(self, suffix):
+        return Series(query_compiler=self._query_compiler.str_removesuffix(suffix))
 
     def repeat(self, repeats):
         return Series(query_compiler=self._query_compiler.str_repeat(repeats))
