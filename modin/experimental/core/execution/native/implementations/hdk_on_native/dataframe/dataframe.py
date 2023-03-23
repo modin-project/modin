@@ -871,7 +871,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         left, left_on = check_cols_to_join("left_on", self, left_on)
         right, right_on = check_cols_to_join("right_on", other, right_on)
 
-        # Join by index
+        # If either left_on or right_on has been changed, it means that there
+        # are index columns in the list. Joining by index in this case.
         if (left_on is not orig_left_on) or (right_on is not orig_right_on):
             index_cols, exprs, new_dtypes, new_columns = join_by_index(
                 self, other, how, orig_left_on, orig_right_on, sort, suffixes

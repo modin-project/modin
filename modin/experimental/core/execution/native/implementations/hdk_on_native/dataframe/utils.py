@@ -137,7 +137,8 @@ def check_cols_to_join(what, df, col_names):
         if new_name is None:
             raise ValueError(f"'{what}' references unknown column {col}")
         if new_col_names is col_names:
-            # We must not modify the input list, thus, making a copy.
+            # We are replacing the index names in the original list,
+            # but creating a copy.
             new_col_names = col_names.copy()
         new_col_names[i] = new_name
     return df, new_col_names
