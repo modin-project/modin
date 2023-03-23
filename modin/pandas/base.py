@@ -2082,8 +2082,19 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        return self._query_compiler.pct_change(
-            periods, fill_method, limit, freq, **kwargs
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for /: got {dtype}")
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pct_change(
+                periods, fill_method, limit, freq, **kwargs
+            )
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
