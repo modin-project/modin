@@ -326,6 +326,13 @@ class Expanding(ClassLogger):
             )
         )
 
+    def median(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_median(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
     def var(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_var(
@@ -336,6 +343,20 @@ class Expanding(ClassLogger):
     def std(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_std(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def corr(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_corr(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def cov(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_cov(
                 self.axis, self.expanding_args, *args, **kwargs
             )
         )
@@ -353,3 +374,18 @@ class Expanding(ClassLogger):
                 self.axis, self.expanding_args, *args, **kwargs
             )
         )
+
+    def skew(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_skew(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
+    def kurt(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_kurt(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+

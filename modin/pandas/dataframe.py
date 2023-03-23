@@ -764,46 +764,9 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
-        if not numeric_only:
-            return self._default_to_pandas(
-                pandas.DataFrame.cov,
-                min_periods=min_periods,
-                ddof=ddof,
-                numeric_only=numeric_only,
-            )
-        numeric_df = self.drop(
-            columns=[
-                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-            ]
+        return self.__constructor__(
+            query_compiler=self._query_compiler.cov(min_periods=min_periods)
         )
-
-        is_notna = True
-
-        if all(numeric_df.notna().all()):
-            if min_periods is not None and min_periods > len(numeric_df):
-                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
-                result.fill(np.nan)
-                return numeric_df.__constructor__(result)
-            else:
-                cols = numeric_df.columns
-                idx = cols.copy()
-                numeric_df = numeric_df.astype(dtype="float64")
-                denom = 1.0 / (len(numeric_df) - ddof)
-                means = numeric_df.mean(axis=0)
-                result = numeric_df - means
-                result = result.T._query_compiler.conj().dot(result._query_compiler)
-        else:
-            result = numeric_df._query_compiler.cov(min_periods=min_periods)
-            is_notna = False
-
-        if is_notna:
-            result = numeric_df.__constructor__(
-                query_compiler=result, index=idx, columns=cols
-            )
-            result *= denom
-        else:
-            result = numeric_df.__constructor__(query_compiler=result)
-        return result
 
     def dot(self, other):  # noqa: PR01, RT01, D200
         """
