@@ -1677,8 +1677,11 @@ def test_dt(timezone):
     df_equals(modin_series.dt.week, pandas_series.dt.week)
     df_equals(modin_series.dt.weekofyear, pandas_series.dt.weekofyear)
     df_equals(modin_series.dt.dayofweek, pandas_series.dt.dayofweek)
+    df_equals(modin_series.dt.day_of_week, pandas_series.dt.day_of_week)
     df_equals(modin_series.dt.weekday, pandas_series.dt.weekday)
     df_equals(modin_series.dt.dayofyear, pandas_series.dt.dayofyear)
+    df_equals(modin_series.dt.day_of_year, pandas_series.dt.day_of_year)
+    df_equals(modin_series.dt.isocalendar(), pandas_series.dt.isocalendar())
     df_equals(modin_series.dt.quarter, pandas_series.dt.quarter)
     df_equals(modin_series.dt.is_month_start, pandas_series.dt.is_month_start)
     df_equals(modin_series.dt.is_month_end, pandas_series.dt.is_month_end)
@@ -1753,6 +1756,12 @@ def test_dt(timezone):
         return eval_result.dt.days
 
     eval_general(pd, pandas, dt_with_empty_partition)
+
+    if timezone is None:
+        data = pd.period_range("2016-12-31", periods=128, freq="D")
+        modin_series = pd.Series(data)
+        pandas_series = pandas.Series(data)
+        df_equals(modin_series.dt.asfreq("T"), pandas_series.dt.asfreq("T"))
 
 
 @pytest.mark.parametrize(

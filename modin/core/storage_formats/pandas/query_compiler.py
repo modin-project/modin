@@ -1635,8 +1635,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_week = Map.register(_dt_prop_map("week"), dtypes=np.int64)
     dt_weekofyear = Map.register(_dt_prop_map("weekofyear"), dtypes=np.int64)
     dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
+    dt_day_of_week = Map.register(_dt_prop_map("day_of_week"), dtypes=np.int64)
     dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
     dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
+    dt_day_of_year = Map.register(_dt_prop_map("day_of_year"), dtypes=np.int64)
     dt_quarter = Map.register(_dt_prop_map("quarter"), dtypes=np.int64)
     dt_is_month_start = Map.register(_dt_prop_map("is_month_start"), dtypes=np.bool_)
     dt_is_month_end = Map.register(_dt_prop_map("is_month_end"), dtypes=np.bool_)
@@ -1662,6 +1664,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(datetime_freq)
 
+    def dt_isocalendar(self):
+        def datetime_isocalendar(df):
+            return df.squeeze(axis=1).dt.isocalendar()
+
+        return self.default_to_pandas(datetime_isocalendar)
+
+    dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
     dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
     dt_tz_localize = Map.register(_dt_func_map("tz_localize"))

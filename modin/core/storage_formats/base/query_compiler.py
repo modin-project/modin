@@ -3753,9 +3753,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def dt_dayofweek(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
 
+    @doc_utils.doc_dt_timestamp(prop="integer day of week", refer_to="day_of_week")
+    def dt_day_of_week(self):
+        return DateTimeDefault.register(pandas.Series.dt.day_of_week)(self)
+
     @doc_utils.doc_dt_timestamp(prop="day of year", refer_to="dayofyear")
     def dt_dayofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofyear)(self)
+
+    @doc_utils.doc_dt_timestamp(prop="day of year", refer_to="day_of_year")
+    def dt_day_of_year(self):
+        return DateTimeDefault.register(pandas.Series.dt.day_of_year)(self)
 
     @doc_utils.doc_dt_interval(prop="days", refer_to="days")
     def dt_days(self):
@@ -3795,6 +3803,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             QueryCompiler containing a single value, the frequency of the data.
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
+
+    @doc_utils.doc_dt_timestamp(
+        prop="Calculate year, week, and day according to the ISO 8601 standard.",
+        refer_to="isocalendar",
+    )
+    def dt_isocalendar(self):
+        return DateTimeDefault.register(pandas.Series.dt.isocalendar)(self)
 
     @doc_utils.doc_dt_timestamp(prop="hour", refer_to="hour")
     def dt_hour(self):
@@ -3943,6 +3958,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
+
+    @doc_utils.add_refer_to("Series.dt.asfreq")
+    def asfreq(self, freq=None, how: str = "E"):
+        """
+        Convert the PeriodArray to the specified frequency `freq`.
+
+        Equivalent to applying pandas.Period.asfreq() with the given arguments to each Period in this PeriodArray.
+
+        Parameters
+        ----------
+        freq : str
+            A frequency.
+        how : str {'E', 'S'}, default: 'E'
+            Whether the elements should be aligned to the end or start within pa period.
+            * 'E', "END", or "FINISH" for end,
+            * 'S', "START", or "BEGIN" for start.
+            January 31st ("END") vs. January 1st ("START") for example.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing period data.
+        """
+        return DateTimeDefault.register(pandas.Series.dt.asfreq)(self, freq, how)
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.dt.to_period")
