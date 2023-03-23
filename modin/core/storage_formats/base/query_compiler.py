@@ -790,7 +790,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.add_refer_to("DataFrame.clip")
-    def clip(self, lower, upper, **kwargs):  # noqa: PR02
+    def clip(self, lower, upper, axis, inplace, **kwargs):  # noqa: PR02
         """
         Trim values at input threshold.
 
@@ -814,7 +814,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         if isinstance(upper, BaseQueryCompiler):
             upper = upper.to_pandas().squeeze(1)
         return DataFrameDefault.register(pandas.DataFrame.clip)(
-            self, lower=lower, upper=upper, **kwargs
+            self, lower=lower, upper=upper, axis=inplace, inplace=inplace, **kwargs
         )
 
     @doc_utils.add_refer_to("DataFrame.where")
