@@ -3960,7 +3960,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
 
     @doc_utils.add_refer_to("Series.dt.asfreq")
-    def asfreq(self, freq=None, how: str = "E"):
+    def dt_asfreq(self, freq=None, how: str = "E"):
         """
         Convert the PeriodArray to the specified frequency `freq`.
 
@@ -3968,7 +3968,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         Parameters
         ----------
-        freq : str
+        freq : str, optional
             A frequency.
         how : str {'E', 'S'}, default: 'E'
             Whether the elements should be aligned to the end or start within pa period.
