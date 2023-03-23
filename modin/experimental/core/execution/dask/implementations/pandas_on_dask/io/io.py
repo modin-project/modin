@@ -18,8 +18,9 @@ Any function or class can be considered experimental API if it is not strictly r
 Query Compiler API, even if it is only extending the API.
 """
 
-import pandas
 import warnings
+
+import pandas
 
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVGlobParser,
@@ -27,42 +28,41 @@ from modin.core.storage_formats.pandas.parsers import (
     CustomTextExperimentalParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
-    PandasOnUnidistIO,
-)
+from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
 from modin.core.io import (
     CSVGlobDispatcher,
     PickleExperimentalDispatcher,
     CustomTextExperimentalDispatcher,
 )
 from modin.experimental.core.io import SQLExperimentalDispatcher
-from modin.core.execution.unidist.implementations.pandas_on_unidist.dataframe import (
-    PandasOnUnidistDataframe,
+
+from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
+    PandasOnDaskDataframe,
 )
-from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
-    PandasOnUnidistDataframePartition,
+from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
+    PandasOnDaskDataframePartition,
 )
-from modin.core.execution.unidist.common import UnidistWrapper
+from modin.core.execution.dask.common import DaskWrapper
 
 
-class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
+class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
     """
-    Class for handling experimental IO functionality with pandas storage format and unidist engine.
+    Class for handling experimental IO functionality with pandas storage format and Dask engine.
 
-    ``ExperimentalPandasOnUnidistIO`` inherits some util functions and unmodified IO functions
-    from ``PandasOnUnidistIO`` class.
+    ``ExperimentalPandasOnDaskIO`` inherits some util functions and unmodified IO functions
+    from ``PandasOnDaskIO`` class.
     """
 
     build_args = dict(
-        frame_partition_cls=PandasOnUnidistDataframePartition,
+        frame_partition_cls=PandasOnDaskDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
-        frame_cls=PandasOnUnidistDataframe,
-        base_io=PandasOnUnidistIO,
+        frame_cls=PandasOnDaskDataframe,
+        base_io=PandasOnDaskIO,
     )
 
     def __make_read(*classes, build_args=build_args):  # noqa: GL08
         # used to reduce code duplication
-        return type("", (UnidistWrapper, *classes), build_args)._read
+        return type("", (DaskWrapper, *classes), build_args)._read
 
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
@@ -103,12 +103,19 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
             and "*" in kwargs["filepath_or_buffer"]
         ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnUnidistIO.to_pickle(qc, **kwargs)
+            return PandasOnDaskIO.to_pickle(qc, **kwargs)
 
         def func(df, **kw):
             idx = str(kw["partition_idx"])
-            kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
-            df.to_pickle(**kwargs)
+            # dask doesn't make a copy of kwargs on serialization;
+            # so take a copy ourselves, otherwise the error is:
+            #  kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
+            #  KeyError: 'filepath_or_buffer'
+            dask_kwargs = dict(kwargs)
+            dask_kwargs["path"] = dask_kwargs.pop("filepath_or_buffer").replace(
+                "*", idx
+            )
+            df.to_pickle(**dask_kwargs)
             return pandas.DataFrame()
 
         result = qc._modin_frame.apply_full_axis(

@@ -11,10 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental IO functions implementations."""
+import pytest
 
-from .sql.sql_dispatcher import SQLExperimentalDispatcher
+from modin.config import StorageFormat
 
-__all__ = [
-    "SQLExperimentalDispatcher",
-]
+
+def pytest_collection_modifyitems(items):
+    if StorageFormat.get() == "Hdk":
+        for item in items:
+            if item.name in (
+                "test_sum[data0-over_rows_int-skipna_True-True]",
+                "test_sum[data0-over_rows_str-skipna_True-True]",
+            ):
+                item.add_marker(
+                    pytest.mark.xfail(
+                        reason="https://github.com/intel-ai/hdk/issues/286"
+                    )
+                )
