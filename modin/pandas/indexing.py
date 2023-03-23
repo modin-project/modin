@@ -838,22 +838,23 @@ class _LocIndexer(_LocationIndexerBase):
                         "Must have equal len keys and value when setting with an iterable"
                     )
             else:
-                if item.shape != (len(self.qc.index, len(col_loc))):
+                if item.shape != (len(row_loc), len(col_loc)):
                     raise ValueError(
                         "Must have equal len keys and value when setting with an iterable"
                     )
-            exist_items = (
-                item[:, common_label_loc]
-                if len(item.shape) > 1
-                else item[common_label_loc]
-            )
+            if not isinstance(item, np.ndarray):
+                exist_items = (
+                    item[:, common_label_loc]
+                    if len(item.shape) > 1
+                    else item[common_label_loc]
+                )
         if not all(common_label_loc):
             # In this case we have some new cols and some old ones
             columns = self.qc.columns
             for i in range(len(common_label_loc)):
                 if not common_label_loc[i]:
                     columns = columns.insert(len(columns), col_loc[i])
-            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=0)
+            self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=np.NaN)
             self.df._update_inplace(new_query_compiler=self.qc)
         self._set_item_existing_loc(row_loc, np.array(col_loc), exist_items)
 

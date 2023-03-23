@@ -515,6 +515,18 @@ def test_loc_4456(
     eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
 
 
+def test_loc_5829():
+    data = {"a": [1, 2, 3, 4, 5], "b": [11, 12, 13, 14, 15]}
+    modin_df = pd.DataFrame(data, dtype=object)
+    pandas_df = pandas.DataFrame(data, dtype=object)
+    eval_loc(
+        modin_df,
+        pandas_df,
+        value=np.array([[24, 34, 44], [25, 35, 45]]),
+        key=([3, 4], ["c", "d", "e"]),
+    )
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_single_categorical_column():
     modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
