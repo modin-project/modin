@@ -24,9 +24,11 @@ from pyarrow.types import is_dictionary
 
 from string import ascii_uppercase, ascii_lowercase, digits
 from typing import List, Tuple, Union
+from functools import lru_cache
 
 import pandas
 from pandas import Timestamp
+
 import pyarrow
 
 from modin.error_message import ErrorMessage
@@ -47,6 +49,7 @@ _COL_TYPES = Union[str, int, float, Timestamp, None]
 _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
 
 
+@lru_cache(1024)
 def encode_col_name(
     name: _COL_NAME_TYPE,
     ignore_reserved: bool = True,
@@ -115,6 +118,7 @@ def encode_col_name(
     return "".join(dst)
 
 
+@lru_cache(1024)
 def decode_col_name(name: str) -> _COL_NAME_TYPE:
     """
     Decode column name, previously encoded with encode_col_name().
