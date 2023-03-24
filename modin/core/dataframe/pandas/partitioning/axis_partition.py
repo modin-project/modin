@@ -142,7 +142,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         Parameters
         ----------
-        split_func : callable(pandas.DataFrame, *args, **kwargs) -> list[pandas.DataFrame]
+        split_func : callable(pandas.DataFrame) -> list[pandas.DataFrame]
             A function that takes partition's content and split it into multiple chunks.
         num_splits : int
             The number of splits the `split_func` return.
@@ -194,12 +194,12 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         ----------
         axis : {0, 1}
             The axis to perform the function along.
-        split_func : callable(pandas.DataFrame, *args, **kwargs) -> list[pandas.DataFrame]
+        split_func : callable(pandas.DataFrame) -> list[pandas.DataFrame]
             The function to perform.
         f_args : list or tuple
-            Positional arguments to pass to ``split_func``.
+            Positional arguments to pass to `split_func`.
         f_kwargs : dict
-            Keyword arguments to pass to ``split_func``.
+            Keyword arguments to pass to `split_func`.
         num_splits : int
             The number of splits the `split_func` return.
         *partitions : iterable
