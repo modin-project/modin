@@ -112,7 +112,7 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install \"modin[ray]\"` to install compatible Ray "
+                    'Please `pip install "modin[ray]"` to install compatible Ray '
                     + "version "
                     + f"(>={MIN_RAY_VERSION})."
                 )
@@ -129,7 +129,7 @@ class Engine(EnvironmentVariable, type=str):
                 or version.parse(distributed.__version__) < MIN_DASK_VERSION
             ):
                 raise ImportError(
-                    f"Please `pip install \"modin[dask]\"` to install compatible Dask version (>={MIN_DASK_VERSION})."
+                    f'Please `pip install "modin[dask]"` to install compatible Dask version (>={MIN_DASK_VERSION}).'
                 )
             return "Dask"
         try:
@@ -150,7 +150,7 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(unidist.__version__) < MIN_UNIDIST_VERSION:
                 raise ImportError(
-                    "Please `pip install \"unidist[mpi]\"` to install compatible unidist on MPI "
+                    'Please `pip install "unidist[mpi]"` to install compatible unidist on MPI '
                     + "version "
                     + f"(>={MIN_UNIDIST_VERSION})."
                 )
