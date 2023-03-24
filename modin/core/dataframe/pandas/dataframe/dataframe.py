@@ -2167,10 +2167,7 @@ class PandasDataframe(ClassLogger):
         )
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
-            old_axis_value = self.get_axis(axis.value)
-            new_axes[axis.value] = RangeIndex(len(old_axis_value)).set_names(
-                old_axis_value.names
-            )
+            new_axes[axis.value] = RangeIndex(len(self.get_axis(axis.value)))
 
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.

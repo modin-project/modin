@@ -271,7 +271,8 @@ def split_partitions_using_pivots_for_sort(
             groupby_col = len(pivots) - groupby_col
     if len(non_na_rows) == 1:
         groups = [
-            pandas.DataFrame(columns=df.columns).astype(df.dtypes)
+            # taking an empty slice for an index's metadata
+            pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(df.dtypes)
             if i != groupby_col
             else non_na_rows
             for i in range(len(pivots) + 1)
@@ -279,9 +280,11 @@ def split_partitions_using_pivots_for_sort(
     else:
         grouped = non_na_rows.groupby(groupby_col)
         groups = [
-            grouped.get_group(i)
-            if i in grouped.keys
-            else pandas.DataFrame(columns=df.columns).astype(df.dtypes)
+            grouped.get_group(i) if i in grouped.keys
+            # taking an empty slice for an index's metadata
+            else pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
+                df.dtypes
+            )
             for i in range(len(pivots) + 1)
         ]
     index_to_insert_na_vals = -1 if kwargs.get("na_position", "last") == "last" else 0
