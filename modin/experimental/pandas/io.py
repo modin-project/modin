@@ -114,7 +114,7 @@ def read_custom_text(
     nrows: Optional[int] = None,
     is_quoting=True,
 ):
-    """
+    r"""
     Load custom text data from file.
 
     Parameters
