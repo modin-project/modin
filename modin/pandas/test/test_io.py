@@ -2419,7 +2419,7 @@ class TestSas:
     def test_read_sas(self):
         eval_io(
             fn_name="read_sas",
-            # read_stata kwargs
+            # read_sas kwargs
             filepath_or_buffer="modin/pandas/test/data/airline.sas7bdat",
         )
 
