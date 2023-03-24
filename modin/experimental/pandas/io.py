@@ -114,17 +114,17 @@ def read_custom_text(
     nrows: Optional[int] = None,
     is_quoting=True,
 ):
-    """
+    r"""
     Load custom text data from file.
 
     Parameters
     ----------
     filepath_or_buffer : str
         File path where the custom text data will be loaded from.
-    columns : list or callable(file-like object, **kwargs) -> list
+    columns : list or callable(file-like object, \*\*kwargs) -> list
         Column names of list type or callable that create column names from opened file
         and passed `kwargs`.
-    custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
+    custom_parser : callable(file-like object, \*\*kwargs) -> pandas.DataFrame
         Function that takes as input a part of the `filepath_or_buffer` file loaded into
         memory in file-like object form.
     compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}, default: 'infer'
