@@ -15,7 +15,7 @@ try:
     import modin_spreadsheet
 except ImportError:
     raise ImportError(
-        "Please `pip install modin[spreadsheet]` to install the spreadsheet extension"
+        "Please `pip install \"modin[spreadsheet]\"` to install the spreadsheet extension"
     )
 
 from .general import from_dataframe, to_dataframe
