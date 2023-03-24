@@ -1662,12 +1662,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(datetime_freq)
 
-    def dt_isocalendar(self):
-        def datetime_isocalendar(df):
-            return df.squeeze(axis=1).dt.isocalendar()
-
-        return self.default_to_pandas(datetime_isocalendar)
-
     dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
     dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
