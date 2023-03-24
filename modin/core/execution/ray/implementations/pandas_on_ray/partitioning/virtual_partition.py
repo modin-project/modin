@@ -560,13 +560,13 @@ def _deploy_ray_func(
         Positional arguments to pass to ``f_to_deploy``.
     f_kwargs : dict
         Keyword arguments to pass to ``f_to_deploy``.
-    extract_metadata : bool, default: True
-        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
-        the load on plasma storage as the remote function would return 4 times fewer futures.
-        Passing `False` makes sense for temporary results where you know for sure that the
-        metadata will never be requested.
     *args : list
         Positional arguments to pass to ``deployer``.
+    extract_metadata : bool, default: True
+        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+        the load on object storage as the remote function would return 4 times fewer futures.
+        Passing `False` makes sense for temporary results where you know for sure that the
+        metadata will never be requested.
     **kwargs : dict
         Keyword arguments to pass to ``deployer``.
 

@@ -155,6 +155,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             the load on object storage as the remote function would return X times fewer futures
             (where X is the number of metadata values). Passing `False` makes sense for temporary
             results where you know for sure that the metadata will never be requested.
+
+        Returns
+        -------
+        list
+            List of wrapped remote partition objects.
         """
         f_args = tuple() if f_args is None else f_args
         f_kwargs = {} if f_kwargs is None else f_kwargs
