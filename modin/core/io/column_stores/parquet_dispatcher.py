@@ -16,6 +16,7 @@
 import os
 import re
 import json
+import pathlib
 
 import fsspec
 from fsspec.core import url_to_fs
@@ -612,6 +613,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
+        if isinstance(path, pathlib.Path):
+            path = str(path)
         if isinstance(path, list):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
             # files in parallel.
