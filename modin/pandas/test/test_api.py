@@ -235,6 +235,20 @@ def test_dataframe_api_equality():
     assert not len(difference), "Extra params found in API: {}".format(difference)
 
 
+def test_series_str_api_equality():
+    modin_dir = [obj for obj in dir(pd.Series().str) if obj[0] != "_"]
+    pandas_dir = [obj for obj in dir(pandas.Series.str) if obj[0] != "_"]
+
+    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        missing_from_modin
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
+
+
 def test_series_api_equality():
     modin_dir = [obj for obj in dir(pd.Series) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.Series) if obj[0] != "_"]

@@ -16,6 +16,7 @@ import numpy as np
 import json
 import pandas
 from pandas.errors import SpecificationError
+from pandas.core.indexing import IndexingError
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
@@ -2010,8 +2011,7 @@ def test_iloc(request, data):
         modin_series.iloc[[1, 2]] = 42
         pandas_series.iloc[[1, 2]] = 42
         df_equals(modin_series, pandas_series)
-
-        with pytest.raises(IndexError):
+        with pytest.raises(IndexingError):
             modin_series.iloc[1:, 1]
     else:
         with pytest.raises(IndexError):
@@ -3874,6 +3874,28 @@ def test_str_repeat(data, repeats):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_removeprefix(data):
+    modin_series, pandas_series = create_test_series(data)
+    prefix = "test_prefix"
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: (prefix + series).str.removeprefix(prefix),
+    )
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_removesuffix(data):
+    modin_series, pandas_series = create_test_series(data)
+    suffix = "test_suffix"
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: (series + suffix).str.removesuffix(suffix),
+    )
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize(
     "side", ["left", "right", "both"], ids=["left", "right", "both"]
@@ -3996,6 +4018,13 @@ def test_str_endswith(data, pat, na):
 def test_str_findall(data, pat):
     modin_series, pandas_series = create_test_series(data)
     eval_general(modin_series, pandas_series, lambda series: series.str.findall(pat))
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+def test_str_fullmatch(data, pat):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(modin_series, pandas_series, lambda series: series.str.fullmatch(pat))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
