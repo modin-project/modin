@@ -3753,17 +3753,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def dt_dayofweek(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofweek)(self)
 
-    @doc_utils.doc_dt_timestamp(prop="integer day of week", refer_to="day_of_week")
-    def dt_day_of_week(self):
-        return DateTimeDefault.register(pandas.Series.dt.day_of_week)(self)
-
     @doc_utils.doc_dt_timestamp(prop="day of year", refer_to="dayofyear")
     def dt_dayofyear(self):
         return DateTimeDefault.register(pandas.Series.dt.dayofyear)(self)
-
-    @doc_utils.doc_dt_timestamp(prop="day of year", refer_to="day_of_year")
-    def dt_day_of_year(self):
-        return DateTimeDefault.register(pandas.Series.dt.day_of_year)(self)
 
     @doc_utils.doc_dt_interval(prop="days", refer_to="days")
     def dt_days(self):

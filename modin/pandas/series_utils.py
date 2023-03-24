@@ -543,9 +543,7 @@ class DatetimeProperties(ClassLogger):
     def dayofweek(self):
         return Series(query_compiler=self._query_compiler.dt_dayofweek())
 
-    @property
-    def day_of_week(self):
-        return Series(query_compiler=self._query_compiler.dt_day_of_week())
+    day_of_week = dayofweek
 
     @property
     def weekday(self):
@@ -555,9 +553,7 @@ class DatetimeProperties(ClassLogger):
     def dayofyear(self):
         return Series(query_compiler=self._query_compiler.dt_dayofyear())
 
-    @property
-    def day_of_year(self):
-        return Series(query_compiler=self._query_compiler.dt_day_of_year())
+    day_of_year = dayofyear
 
     @property
     def quarter(self):
