@@ -388,4 +388,3 @@ class Expanding(ClassLogger):
                 self.axis, self.expanding_args, **kwargs
             )
         )
-

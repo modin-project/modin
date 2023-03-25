@@ -458,8 +458,24 @@ class DataFrameGroupBy(ClassLogger):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
+    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_pct_change,
+                agg_kwargs=dict(
+                    periods=periods,
+                    fill_method=fill_method,
+                    limit=limit,
+                    freq=freq,
+                    **kwargs,
+                ),
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -605,8 +621,11 @@ class DataFrameGroupBy(ClassLogger):
                         + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = internal_by.union(key)
-            key = [col for col in self._df.columns if col in cols_to_grab]
+            # We need to maintain order of the columns in key, using a set doesn't
+            # maintain order.
+            cols_to_grab = list(self._internal_by)
+            cols_to_grab.extend(x for x in key if x not in cols_to_grab)
+            key = [col for col in cols_to_grab if col in self._df.columns]
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
