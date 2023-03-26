@@ -112,7 +112,7 @@ _DEFAULT_BEHAVIOUR = {
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
 
-@_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
+# @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
@@ -561,12 +561,13 @@ class BasePandasDataset(ClassLogger):
         """
         return type(self)
 
-    def abs(self):  # noqa: RT01, D200
-        """
-        Return a `BasePandasDataset` with absolute numeric value of each element.
-        """
-        self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(query_compiler=self._query_compiler.abs())
+    @staticmethod
+    def _get_abs():
+        def abs(self):
+            self._validate_dtypes(numeric_only=True)
+            return self.__constructor__(query_compiler=self._query_compiler.abs())
+
+        return abs
 
     def _set_index(self, new_index):
         """
@@ -701,159 +702,178 @@ class BasePandasDataset(ClassLogger):
         else:
             return list(self.dtypes)
 
-    def align(
-        self,
-        other,
-        join="outer",
-        axis=None,
-        level=None,
-        copy=True,
-        fill_value=None,
-        method=None,
-        limit=None,
-        fill_axis=0,
-        broadcast_axis=None,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Align two objects on their axes with the specified join method.
-        """
-        return self._default_to_pandas(
-            "align",
+    @staticmethod
+    def _get_align():
+        def align(
+            self,
             other,
-            join=join,
-            axis=axis,
-            level=level,
-            copy=copy,
-            fill_value=fill_value,
-            method=method,
-            limit=limit,
-            fill_axis=fill_axis,
-            broadcast_axis=broadcast_axis,
-        )
-
-    def all(
-        self, axis=0, bool_only=None, skipna=True, level=None, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return whether all elements are True, potentially over an axis.
-        """
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if axis is not None:
-            axis = self._get_axis_number(axis)
-            if bool_only and axis == 0:
-                if hasattr(self, "dtype"):
-                    raise NotImplementedError(
-                        "{}.{} does not implement numeric_only.".format(
-                            type(self).__name__, "all"
-                        )
-                    )
-                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
-                return data_for_compute.all(
-                    axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
-                )
-            if level is not None:
-                if bool_only is not None:
-                    raise NotImplementedError(
-                        "Option bool_only is not implemented with option level."
-                    )
-                if (
-                    not self._query_compiler.has_multiindex(axis=axis)
-                    and (level > 0 or level < -1)
-                    and level != self.index.name
-                ):
-                    raise ValueError(
-                        "level > 0 or level < -1 only valid with MultiIndex"
-                    )
-                return self.groupby(level=level, axis=axis, sort=False).all(**kwargs)
-            return self._reduce_dimension(
-                self._query_compiler.all(
-                    axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
-                )
+            join="outer",
+            axis=None,
+            level=None,
+            copy=True,
+            fill_value=None,
+            method=None,
+            limit=None,
+            fill_axis=0,
+            broadcast_axis=None,
+        ):
+            return self._default_to_pandas(
+                "align",
+                other,
+                join=join,
+                axis=axis,
+                level=level,
+                copy=copy,
+                fill_value=fill_value,
+                method=method,
+                limit=limit,
+                fill_axis=fill_axis,
+                broadcast_axis=broadcast_axis,
             )
-        else:
-            if bool_only:
-                raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
-            # Reduce to a scalar if axis is None.
-            if level is not None:
-                raise ValueError("Must specify 'axis' when aggregating by level")
-            else:
-                result = self._reduce_dimension(
-                    # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
-                    # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+
+        return align
+
+    @staticmethod
+    def _get_all():
+        def all(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+            validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+            if axis is not None:
+                axis = self._get_axis_number(axis)
+                if bool_only and axis == 0:
+                    if hasattr(self, "dtype"):
+                        raise NotImplementedError(
+                            "{}.{} does not implement numeric_only.".format(
+                                type(self).__name__, "all"
+                            )
+                        )
+                    data_for_compute = self[self.columns[self.dtypes == np.bool_]]
+                    return data_for_compute.all(
+                        axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
+                    )
+                if level is not None:
+                    if bool_only is not None:
+                        raise NotImplementedError(
+                            "Option bool_only is not implemented with option level."
+                        )
+                    if (
+                        not self._query_compiler.has_multiindex(axis=axis)
+                        and (level > 0 or level < -1)
+                        and level != self.index.name
+                    ):
+                        raise ValueError(
+                            "level > 0 or level < -1 only valid with MultiIndex"
+                        )
+                    return self.groupby(level=level, axis=axis, sort=False).all(
+                        **kwargs
+                    )
+                return self._reduce_dimension(
                     self._query_compiler.all(
-                        axis=0,
+                        axis=axis,
                         bool_only=bool_only,
                         skipna=skipna,
                         level=level,
                         **kwargs,
                     )
                 )
-            if isinstance(result, BasePandasDataset):
-                return result.all(
-                    axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
-                )
-            return result
-
-    def any(
-        self, axis=0, bool_only=None, skipna=True, level=None, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return whether any element is True, potentially over an axis.
-        """
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if axis is not None:
-            axis = self._get_axis_number(axis)
-            if bool_only and axis == 0:
-                if hasattr(self, "dtype"):
-                    raise NotImplementedError(
-                        "{}.{} does not implement numeric_only.".format(
-                            type(self).__name__, "all"
+            else:
+                if bool_only:
+                    raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
+                # Reduce to a scalar if axis is None.
+                if level is not None:
+                    raise ValueError("Must specify 'axis' when aggregating by level")
+                else:
+                    result = self._reduce_dimension(
+                        # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
+                        # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                        self._query_compiler.all(
+                            axis=0,
+                            bool_only=bool_only,
+                            skipna=skipna,
+                            level=level,
+                            **kwargs,
                         )
                     )
-                data_for_compute = self[self.columns[self.dtypes == np.bool_]]
-                return data_for_compute.any(
-                    axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
-                )
-            if level is not None:
-                if bool_only is not None:
-                    raise NotImplementedError(
-                        "Option bool_only is not implemented with option level."
+                if isinstance(result, BasePandasDataset):
+                    return result.all(
+                        axis=axis,
+                        bool_only=bool_only,
+                        skipna=skipna,
+                        level=level,
+                        **kwargs,
                     )
-                if (
-                    not self._query_compiler.has_multiindex(axis=axis)
-                    and (level > 0 or level < -1)
-                    and level != self.index.name
-                ):
-                    raise ValueError(
-                        "level > 0 or level < -1 only valid with MultiIndex"
+                return result
+
+        return all
+
+    @staticmethod
+    def _get_any():
+        def any(self, axis=0, bool_only=None, skipna=True, level=None, **kwargs):
+            validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+            if axis is not None:
+                axis = self._get_axis_number(axis)
+                if bool_only and axis == 0:
+                    if hasattr(self, "dtype"):
+                        raise NotImplementedError(
+                            "{}.{} does not implement numeric_only.".format(
+                                type(self).__name__, "all"
+                            )
+                        )
+                    data_for_compute = self[self.columns[self.dtypes == np.bool_]]
+                    return data_for_compute.any(
+                        axis=axis, bool_only=False, skipna=skipna, level=level, **kwargs
                     )
-                return self.groupby(level=level, axis=axis, sort=False).any(**kwargs)
-            return self._reduce_dimension(
-                self._query_compiler.any(
-                    axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
-                )
-            )
-        else:
-            if bool_only:
-                raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
-            # Reduce to a scalar if axis is None.
-            if level is not None:
-                raise ValueError("Must specify 'axis' when aggregating by level")
-            else:
-                result = self._reduce_dimension(
+                if level is not None:
+                    if bool_only is not None:
+                        raise NotImplementedError(
+                            "Option bool_only is not implemented with option level."
+                        )
+                    if (
+                        not self._query_compiler.has_multiindex(axis=axis)
+                        and (level > 0 or level < -1)
+                        and level != self.index.name
+                    ):
+                        raise ValueError(
+                            "level > 0 or level < -1 only valid with MultiIndex"
+                        )
+                    return self.groupby(level=level, axis=axis, sort=False).any(
+                        **kwargs
+                    )
+                return self._reduce_dimension(
                     self._query_compiler.any(
-                        axis=0,
+                        axis=axis,
                         bool_only=bool_only,
                         skipna=skipna,
                         level=level,
                         **kwargs,
                     )
                 )
-            if isinstance(result, BasePandasDataset):
-                return result.any(
-                    axis=axis, bool_only=bool_only, skipna=skipna, level=level, **kwargs
-                )
-            return result
+            else:
+                if bool_only:
+                    raise ValueError("Axis must be 0 or 1 (got {})".format(axis))
+                # Reduce to a scalar if axis is None.
+                if level is not None:
+                    raise ValueError("Must specify 'axis' when aggregating by level")
+                else:
+                    result = self._reduce_dimension(
+                        self._query_compiler.any(
+                            axis=0,
+                            bool_only=bool_only,
+                            skipna=skipna,
+                            level=level,
+                            **kwargs,
+                        )
+                    )
+                if isinstance(result, BasePandasDataset):
+                    return result.any(
+                        axis=axis,
+                        bool_only=bool_only,
+                        skipna=skipna,
+                        level=level,
+                        **kwargs,
+                    )
+                return result
+
+        return any
 
     def apply(
         self,
@@ -906,820 +926,828 @@ class BasePandasDataset(ClassLogger):
         )
         return query_compiler
 
-    def asfreq(
-        self, freq, method=None, how=None, normalize=False, fill_value=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Convert time series to specified frequency.
-        """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
-        )
-
-    def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
-        """
-        Return the last row(s) without any NaNs before `where`.
-        """
-        scalar = not is_list_like(where)
-        if isinstance(where, pandas.Index):
-            # Prevent accidental mutation of original:
-            where = where.copy()
-        else:
-            if scalar:
-                where = [where]
-            where = pandas.Index(where)
-
-        if subset is None:
-            data = self
-        else:
-            # Only relevant for DataFrames:
-            data = self[subset]
-        no_na_index = data.dropna().index
-        new_index = pandas.Index([no_na_index.asof(i) for i in where])
-        result = self.reindex(new_index)
-        result.index = where
-
-        if scalar:
-            # Need to return a Series:
-            result = result.squeeze()
-        return result
-
-    def astype(self, dtype, copy=True, errors="raise"):  # noqa: PR01, RT01, D200
-        """
-        Cast a Modin object to a specified dtype `dtype`.
-        """
-        # dtype can be a series, a dict, or a scalar. If it's series or scalar,
-        # convert it to a dict before passing it to the query compiler.
-        if isinstance(dtype, (pd.Series, pandas.Series)):
-            if not dtype.index.is_unique:
-                raise ValueError(
-                    "The new Series of types must have a unique index, i.e. "
-                    + "it must be one-to-one mapping from column names to "
-                    + " their new dtypes."
-                )
-            dtype = {column: dtype for column, dtype in dtype.items()}
-        # If we got a series or dict originally, dtype is a dict now. Its keys
-        # must be column names.
-        if isinstance(dtype, dict):
-            # avoid materializing columns in lazy mode. the query compiler
-            # will handle errors where dtype dict includes keys that are not
-            # in columns.
-            if (
-                not self._query_compiler.lazy_execution
-                and not set(dtype.keys()).issubset(set(self._query_compiler.columns))
-                and errors == "raise"
-            ):
-                raise KeyError(
-                    "Only a column name can be used for the key in "
-                    + "a dtype mappings argument."
-                )
-            col_dtypes = dtype
-        else:
-            # Assume that the dtype is a scalar.
-            col_dtypes = {column: dtype for column in self._query_compiler.columns}
-
-        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
-        return self._create_or_update_from_compiler(new_query_compiler, not copy)
-
-    @property
-    def at(self, axis=None):  # noqa: PR01, RT01, D200
-        """
-        Get a single value for a row/column label pair.
-        """
-        from .indexing import _LocIndexer
-
-        return _LocIndexer(self)
-
-    def at_time(self, time, asof=False, axis=None):  # noqa: PR01, RT01, D200
-        """
-        Select values at particular time of day (e.g., 9:30AM).
-        """
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
-
-    @_inherit_docstrings(
-        pandas.DataFrame.between_time, apilink="pandas.DataFrame.between_time"
-    )
-    def between_time(
-        self: "BasePandasDataset",
-        start_time,
-        end_time,
-        include_start: "bool | NoDefault" = no_default,
-        include_end: "bool | NoDefault" = no_default,
-        inclusive: "str | None" = None,
-        axis=None,
-    ):  # noqa: PR01, RT01, D200
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = (
-            pandas.Series(index=idx)
-            .between_time(
-                start_time,
-                end_time,
-                include_start=include_start,
-                include_end=include_end,
-                inclusive=inclusive,
-            )
-            .index
-        )
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
-
-    def bfill(
-        self, axis=None, inplace=False, limit=None, downcast=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Synonym for `DataFrame.fillna` with ``method='bfill'``.
-        """
-        return self.fillna(
-            method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
-
-    backfill = bfill
-
-    def bool(self):  # noqa: RT01, D200
-        """
-        Return the bool of a single element `BasePandasDataset`.
-        """
-        shape = self.shape
-        if shape != (1,) and shape != (1, 1):
-            raise ValueError(
-                """The PandasObject does not have exactly
-                                1 element. Return the bool of a single
-                                element PandasObject. The truth value is
-                                ambiguous. Use a.empty, a.item(), a.any()
-                                or a.all()."""
-            )
-        else:
-            return self._to_pandas().bool()
-
-    def clip(
-        self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Trim values at input threshold(s).
-        """
-        # validate inputs
-        if axis is not None:
-            axis = self._get_axis_number(axis)
-        self._validate_dtypes(numeric_only=True)
-        inplace = validate_bool_kwarg(inplace, "inplace")
-        axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
-        # any np.nan bounds are treated as None
-        if lower is not None and np.any(np.isnan(lower)):
-            lower = None
-        if upper is not None and np.any(np.isnan(upper)):
-            upper = None
-        if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis = 0 or 1")
-            lower = self._validate_other(lower, axis)
-            upper = self._validate_other(upper, axis)
-        # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-        # purpose and does not affect the result, we shouldn't pass them to the query compiler.
-        new_query_compiler = self._query_compiler.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
-        )
-        return self._create_or_update_from_compiler(new_query_compiler, inplace)
-
-    def combine(self, other, func, fill_value=None, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Perform combination of `BasePandasDataset`-s according to `func`.
-        """
-        return self._binary_op(
-            "combine", other, _axis=0, func=func, fill_value=fill_value, **kwargs
-        )
-
-    def combine_first(self, other):  # noqa: PR01, RT01, D200
-        """
-        Update null elements with value in the same location in `other`.
-        """
-        return self._binary_op("combine_first", other, _axis=0)
-
-    def copy(self, deep=True):  # noqa: PR01, RT01, D200
-        """
-        Make a copy of the object's metadata.
-        """
-        if deep:
-            return self.__constructor__(query_compiler=self._query_compiler.copy())
-        new_obj = self.__constructor__(query_compiler=self._query_compiler)
-        self._add_sibling(new_obj)
-        return new_obj
-
-    def count(self, axis=0, level=None, numeric_only=False):  # noqa: PR01, RT01, D200
-        """
-        Count non-NA cells for `BasePandasDataset`.
-        """
-        axis = self._get_axis_number(axis)
-        frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
-
-        if level is not None:
-            if not frame._query_compiler.has_multiindex(axis=axis):
-                raise TypeError("Can only count levels on hierarchical columns.")
-            return frame.groupby(level=level, axis=axis, sort=True).count()
-        return frame._reduce_dimension(
-            frame._query_compiler.count(
-                axis=axis, level=level, numeric_only=numeric_only
-            )
-        )
-
-    def cummax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Return cumulative maximum over a `BasePandasDataset` axis.
-        """
-        axis = self._get_axis_number(axis)
-        if axis == 1:
-            self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(
-            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
-            query_compiler=self._query_compiler.cummax(
-                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
-            )
-        )
-
-    def cummin(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Return cumulative minimum over a `BasePandasDataset` axis.
-        """
-        axis = self._get_axis_number(axis)
-        if axis == 1:
-            self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(
-            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
-            query_compiler=self._query_compiler.cummin(
-                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
-            )
-        )
-
-    def cumprod(
-        self, axis=None, skipna=True, *args, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return cumulative product over a `BasePandasDataset` axis.
-        """
-        axis = self._get_axis_number(axis)
-        self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(
-            # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
-            query_compiler=self._query_compiler.cumprod(
-                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
-            )
-        )
-
-    def cumsum(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
-        """
-        Return cumulative sum over a `BasePandasDataset` axis.
-        """
-        axis = self._get_axis_number(axis)
-        self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(
-            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
-            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
-            query_compiler=self._query_compiler.cumsum(
-                fold_axis=axis, axis=axis, skipna=skipna, **kwargs
-            )
-        )
-
-    def describe(
-        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Generate descriptive statistics.
-        """
-        if include is not None and (isinstance(include, np.dtype) or include != "all"):
-            if not is_list_like(include):
-                include = [include]
-            include = [pandas_dtype(i) if i != np.number else i for i in include]
-            if not any(
-                (isinstance(inc, np.dtype) and inc == d)
-                or (
-                    not isinstance(inc, np.dtype)
-                    and inc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for inc in include
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if exclude is not None:
-            if not is_list_like(exclude):
-                exclude = [exclude]
-            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
-            if all(
-                (isinstance(exc, np.dtype) and exc == d)
-                or (
-                    not isinstance(exc, np.dtype)
-                    and exc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for exc in exclude
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if percentiles is not None:
-            # explicit conversion of `percentiles` to list
-            percentiles = list(percentiles)
-
-            # get them all to be in [0, 1]
-            validate_percentile(percentiles)
-
-            # median should always be included
-            if 0.5 not in percentiles:
-                percentiles.append(0.5)
-            percentiles = np.asarray(percentiles)
-        else:
-            percentiles = np.array([0.25, 0.5, 0.75])
-        return self.__constructor__(
-            query_compiler=self._query_compiler.describe(
-                percentiles=percentiles,
-                include=include,
-                exclude=exclude,
-                datetime_is_numeric=datetime_is_numeric,
-            )
-        )
-
-    def diff(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
-        """
-        First discrete difference of element.
-        """
-        axis = self._get_axis_number(axis)
-        return self.__constructor__(
-            query_compiler=self._query_compiler.diff(
-                fold_axis=axis, axis=axis, periods=periods
-            )
-        )
-
-    def drop(
-        self,
-        labels=None,
-        axis=0,
-        index=None,
-        columns=None,
-        level=None,
-        inplace=False,
-        errors="raise",
-    ):  # noqa: PR01, RT01, D200
-        """
-        Drop specified labels from `BasePandasDataset`.
-        """
-        # TODO implement level
-        if level is not None:
+    @staticmethod
+    def _get_asfreq():
+        def asfreq(self, freq, method=None, how=None, normalize=False, fill_value=None):
             return self._default_to_pandas(
-                "drop",
-                labels=labels,
-                axis=axis,
-                index=index,
-                columns=columns,
-                level=level,
-                inplace=inplace,
-                errors=errors,
+                "asfreq",
+                freq,
+                method=method,
+                how=how,
+                normalize=normalize,
+                fill_value=fill_value,
             )
 
-        inplace = validate_bool_kwarg(inplace, "inplace")
-        if labels is not None:
-            if index is not None or columns is not None:
-                raise ValueError("Cannot specify both 'labels' and 'index'/'columns'")
-            axis = pandas.DataFrame()._get_axis_name(axis)
-            axes = {axis: labels}
-        elif index is not None or columns is not None:
-            axes, _ = pandas.DataFrame()._construct_axes_from_arguments(
-                (index, columns), {}
-            )
-        else:
-            raise ValueError(
-                "Need to specify at least one of 'labels', 'index' or 'columns'"
-            )
+        return asfreq
 
-        for axis in ["index", "columns"]:
-            if axis not in axes:
-                axes[axis] = None
-            elif axes[axis] is not None:
-                if not is_list_like(axes[axis]):
-                    axes[axis] = [axes[axis]]
-                # In case of lazy execution we should bypass these error checking components
-                # because they can force the materialization of the row or column labels.
-                if self._query_compiler.lazy_execution:
-                    continue
-                if errors == "raise":
-                    non_existent = pandas.Index(axes[axis]).difference(
-                        getattr(self, axis)
-                    )
-                    if len(non_existent):
-                        raise ValueError(f"labels {non_existent} not contained in axis")
-                else:
-                    axes[axis] = [
-                        obj for obj in axes[axis] if obj in getattr(self, axis)
-                    ]
-                    # If the length is zero, we will just do nothing
-                    if not len(axes[axis]):
-                        axes[axis] = None
-
-        new_query_compiler = self._query_compiler.drop(
-            index=axes["index"], columns=axes["columns"], errors=errors
-        )
-        return self._create_or_update_from_compiler(new_query_compiler, inplace)
-
-    def dropna(
-        self,
-        axis: Axis = 0,
-        how: str | NoDefault = no_default,
-        thresh: int | NoDefault = no_default,
-        subset: IndexLabel = None,
-        inplace: bool = False,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Remove missing values.
-        """
-        inplace = validate_bool_kwarg(inplace, "inplace")
-
-        if is_list_like(axis):
-            raise TypeError("supplying multiple axes to axis is no longer supported.")
-
-        axis = self._get_axis_number(axis)
-        if how is not None and how not in ["any", "all", no_default]:
-            raise ValueError("invalid how option: %s" % how)
-        if how is None and thresh is None:
-            raise TypeError("must specify how or thresh")
-        if subset is not None:
-            if axis == 1:
-                indices = self.index.get_indexer_for(subset)
-                check = indices == -1
-                if check.any():
-                    raise KeyError(list(np.compress(check, subset)))
+    @staticmethod
+    def _get_asof():
+        def asof(self, where, subset=None):
+            scalar = not is_list_like(where)
+            if isinstance(where, pandas.Index):
+                # Prevent accidental mutation of original:
+                where = where.copy()
             else:
-                indices = self.columns.get_indexer_for(subset)
-                check = indices == -1
-                if check.any():
-                    raise KeyError(list(np.compress(check, subset)))
-        new_query_compiler = self._query_compiler.dropna(
-            axis=axis, how=how, thresh=thresh, subset=subset
-        )
-        return self._create_or_update_from_compiler(new_query_compiler, inplace)
+                if scalar:
+                    where = [where]
+                where = pandas.Index(where)
 
-    def droplevel(self, level, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Return `BasePandasDataset` with requested index / column level(s) removed.
-        """
-        axis = self._get_axis_number(axis)
-        new_axis = self.axes[axis].droplevel(level)
-        result = self.copy()
-        if axis == 0:
-            result.index = new_axis
-        else:
-            result.columns = new_axis
-        return result
-
-    def drop_duplicates(
-        self, keep="first", inplace=False, **kwargs
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return `BasePandasDataset` with duplicate rows removed.
-        """
-        inplace = validate_bool_kwarg(inplace, "inplace")
-        ignore_index = kwargs.get("ignore_index", False)
-        subset = kwargs.get("subset", None)
-        if subset is not None:
-            if is_list_like(subset):
-                if not isinstance(subset, list):
-                    subset = list(subset)
+            if subset is None:
+                data = self
             else:
-                subset = [subset]
-            df = self[subset]
-        else:
-            df = self
-        duplicated = df.duplicated(keep=keep)
-        result = self[~duplicated]
-        if ignore_index:
-            result.index = pandas.RangeIndex(stop=len(result))
-        if inplace:
-            self._update_inplace(result._query_compiler)
-        else:
+                # Only relevant for DataFrames:
+                data = self[subset]
+            no_na_index = data.dropna().index
+            new_index = pandas.Index([no_na_index.asof(i) for i in where])
+            result = self.reindex(new_index)
+            result.index = where
+
+            if scalar:
+                # Need to return a Series:
+                result = result.squeeze()
             return result
 
-    def eq(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
-        """
-        Get equality of `BasePandasDataset` and `other`, element-wise (binary operator `eq`).
-        """
-        return self._binary_op("eq", other, axis=axis, level=level, dtypes=np.bool_)
+        return asof
 
-    def explode(self, column, ignore_index: bool = False):  # noqa: PR01, RT01, D200
-        """
-        Transform each element of a list-like to a row.
-        """
-        exploded = self.__constructor__(
-            query_compiler=self._query_compiler.explode(column)
-        )
-        if ignore_index:
-            exploded = exploded.reset_index(drop=True)
-        return exploded
+    @staticmethod
+    def _get_astype():
+        def astype(self, dtype, copy=True, errors="raise"):
+            # dtype can be a series, a dict, or a scalar. If it's series or scalar,
+            # convert it to a dict before passing it to the query compiler.
+            if isinstance(dtype, (pd.Series, pandas.Series)):
+                if not dtype.index.is_unique:
+                    raise ValueError(
+                        "The new Series of types must have a unique index, i.e. "
+                        + "it must be one-to-one mapping from column names to "
+                        + " their new dtypes."
+                    )
+                dtype = {column: dtype for column, dtype in dtype.items()}
+            # If we got a series or dict originally, dtype is a dict now. Its keys
+            # must be column names.
+            if isinstance(dtype, dict):
+                # avoid materializing columns in lazy mode. the query compiler
+                # will handle errors where dtype dict includes keys that are not
+                # in columns.
+                if (
+                    not self._query_compiler.lazy_execution
+                    and not set(dtype.keys()).issubset(
+                        set(self._query_compiler.columns)
+                    )
+                    and errors == "raise"
+                ):
+                    raise KeyError(
+                        "Only a column name can be used for the key in "
+                        + "a dtype mappings argument."
+                    )
+                col_dtypes = dtype
+            else:
+                # Assume that the dtype is a scalar.
+                col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-    def ewm(
-        self,
-        com: "float | None" = None,
-        span: "float | None" = None,
-        halflife: "float | TimedeltaConvertibleTypes | None" = None,
-        alpha: "float | None" = None,
-        min_periods: "int | None" = 0,
-        adjust: bool = True,
-        ignore_na: bool = False,
-        axis: "Axis" = 0,
-        times: "str | np.ndarray | BasePandasDataset | None" = None,
-        method: "str" = "single",
-    ) -> pandas.core.window.ewm.ExponentialMovingWindow:  # noqa: PR01, RT01, D200
-        """
-        Provide exponentially weighted (EW) calculations.
-        """
-        return self._default_to_pandas(
-            "ewm",
-            com=com,
-            span=span,
-            halflife=halflife,
-            alpha=alpha,
-            min_periods=min_periods,
-            adjust=adjust,
-            ignore_na=ignore_na,
-            axis=axis,
-            times=times,
-            method=method,
-        )
+            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            return self._create_or_update_from_compiler(new_query_compiler, not copy)
 
-    def expanding(
-        self, min_periods=1, center=None, axis=0, method="single"
-    ):  # noqa: PR01, RT01, D200
-        """
-        Provide expanding window calculations.
-        """
-        return self._default_to_pandas(
-            "expanding",
-            min_periods=min_periods,
-            center=center,
-            axis=axis,
-            method=method,
-        )
+        return astype
 
-    def ffill(
-        self, axis=None, inplace=False, limit=None, downcast=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Synonym for `DataFrame.fillna` with ``method='ffill'``.
-        """
-        return self.fillna(
-            method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+    @staticmethod
+    def _get_at():
+        @property
+        def at(self):
+            from .indexing import _LocIndexer
 
-    pad = ffill
+            return _LocIndexer(self)
 
-    def fillna(
-        self,
-        squeeze_self,
-        squeeze_value,
-        value=None,
-        method=None,
-        axis=None,
-        inplace=False,
-        limit=None,
-        downcast=None,
-    ):
-        """
-        Fill NA/NaN values using the specified method.
+        return at
 
-        Parameters
-        ----------
-        squeeze_self : bool
-            If True then self contains a Series object, if False then self contains
-            a DataFrame object.
-        squeeze_value : bool
-            If True then value contains a Series object, if False then value contains
-            a DataFrame object.
-        value : scalar, dict, Series, or DataFrame, default: None
-            Value to use to fill holes (e.g. 0), alternately a
-            dict/Series/DataFrame of values specifying which value to use for
-            each index (for a Series) or column (for a DataFrame).  Values not
-            in the dict/Series/DataFrame will not be filled. This value cannot
-            be a list.
-        method : {'backfill', 'bfill', 'pad', 'ffill', None}, default: None
-            Method to use for filling holes in reindexed Series
-            pad / ffill: propagate last valid observation forward to next valid
-            backfill / bfill: use next valid observation to fill gap.
-        axis : {None, 0, 1}, default: None
-            Axis along which to fill missing values.
-        inplace : bool, default: False
-            If True, fill in-place. Note: this will modify any
-            other views on this object (e.g., a no-copy slice for a column in a
-            DataFrame).
-        limit : int, default: None
-            If method is specified, this is the maximum number of consecutive
-            NaN values to forward/backward fill. In other words, if there is
-            a gap with more than this number of consecutive NaNs, it will only
-            be partially filled. If method is not specified, this is the
-            maximum number of entries along the entire axis where NaNs will be
-            filled. Must be greater than 0 if not None.
-        downcast : dict, default: None
-            A dict of item->dtype of what to downcast if possible,
-            or the string 'infer' which will try to downcast to an appropriate
-            equal type (e.g. float64 to int64 if possible).
+    @staticmethod
+    def _get_at_time():
+        def at_time(self, time, asof=False, axis=None):
+            axis = self._get_axis_number(axis)
+            idx = self.index if axis == 0 else self.columns
+            indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
+            return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
-        Returns
-        -------
-        Series, DataFrame or None
-            Object with missing values filled or None if ``inplace=True``.
-        """
-        inplace = validate_bool_kwarg(inplace, "inplace")
-        axis = self._get_axis_number(axis)
-        if isinstance(value, (list, tuple)):
-            raise TypeError(
-                '"value" parameter must be a scalar or dict, but '
-                + f'you passed a "{type(value).__name__}"'
+        return at_time
+
+    @staticmethod
+    def _get_between_time():
+        def between_time(
+            self: "BasePandasDataset",
+            start_time,
+            end_time,
+            include_start: "bool | NoDefault" = no_default,
+            include_end: "bool | NoDefault" = no_default,
+            inclusive: "str | None" = None,
+            axis=None,
+        ):
+            axis = self._get_axis_number(axis)
+            idx = self.index if axis == 0 else self.columns
+            indexer = (
+                pandas.Series(index=idx)
+                .between_time(
+                    start_time,
+                    end_time,
+                    include_start=include_start,
+                    include_end=include_end,
+                    inclusive=inclusive,
+                )
+                .index
             )
-        if value is None and method is None:
-            raise ValueError("must specify a fill method or value")
-        if value is not None and method is not None:
-            raise ValueError("cannot specify both a fill method and value")
-        if method is not None and method not in ["backfill", "bfill", "pad", "ffill"]:
-            expecting = "pad (ffill) or backfill (bfill)"
-            msg = "Invalid fill method. Expecting {expecting}. Got {method}".format(
-                expecting=expecting, method=method
+            return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
+
+        return between_time
+
+    @staticmethod
+    def _get_bfill():
+        def bfill(self, axis=None, inplace=False, limit=None, downcast=None):
+            return self.fillna(
+                method="bfill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
             )
-            raise ValueError(msg)
-        if limit is not None:
-            if not isinstance(limit, int):
-                raise ValueError("Limit must be an integer")
-            elif limit <= 0:
-                raise ValueError("Limit must be greater than 0")
 
-        if isinstance(value, BasePandasDataset):
-            value = value._query_compiler
+        return bfill
 
-        new_query_compiler = self._query_compiler.fillna(
-            squeeze_self=squeeze_self,
-            squeeze_value=squeeze_value,
-            value=value,
-            method=method,
-            axis=axis,
+    @staticmethod
+    def _get_bool():
+        def bool(self):
+            shape = self.shape
+            if shape != (1,) and shape != (1, 1):
+                raise ValueError(
+                    """The PandasObject does not have exactly
+                                    1 element. Return the bool of a single
+                                    element PandasObject. The truth value is
+                                    ambiguous. Use a.empty, a.item(), a.any()
+                                    or a.all()."""
+                )
+            else:
+                return self._to_pandas().bool()
+
+        return bool
+
+    @staticmethod
+    def _get_clip():
+        def clip(
+            self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs
+        ):
+            # validate inputs
+            if axis is not None:
+                axis = self._get_axis_number(axis)
+            self._validate_dtypes(numeric_only=True)
+            inplace = validate_bool_kwarg(inplace, "inplace")
+            axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
+            # any np.nan bounds are treated as None
+            if lower is not None and np.any(np.isnan(lower)):
+                lower = None
+            if upper is not None and np.any(np.isnan(upper)):
+                upper = None
+            if is_list_like(lower) or is_list_like(upper):
+                if axis is None:
+                    raise ValueError("Must specify axis = 0 or 1")
+                lower = self._validate_other(lower, axis)
+                upper = self._validate_other(upper, axis)
+            # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+            # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+            new_query_compiler = self._query_compiler.clip(
+                lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+            )
+            return self._create_or_update_from_compiler(new_query_compiler, inplace)
+
+        return clip
+
+    @staticmethod
+    def _get_combine():
+        def combine(self, other, func, fill_value=None, **kwargs):
+            return self._binary_op(
+                "combine", other, _axis=0, func=func, fill_value=fill_value, **kwargs
+            )
+
+        return combine
+
+    @staticmethod
+    def _get_combine_first():
+        def combine_first(self, other):
+            return self._binary_op("combine_first", other, _axis=0)
+
+        return combine_first
+
+    @staticmethod
+    def _get_copy():
+        def copy(self, deep=True):
+            if deep:
+                return self.__constructor__(query_compiler=self._query_compiler.copy())
+            new_obj = self.__constructor__(query_compiler=self._query_compiler)
+            self._add_sibling(new_obj)
+            return new_obj
+
+        return copy
+
+    @staticmethod
+    def _get_count():
+        def count(self, axis=0, level=None, numeric_only=False):
+            axis = self._get_axis_number(axis)
+            frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
+
+            if level is not None:
+                if not frame._query_compiler.has_multiindex(axis=axis):
+                    raise TypeError("Can only count levels on hierarchical columns.")
+                return frame.groupby(level=level, axis=axis, sort=True).count()
+            return frame._reduce_dimension(
+                frame._query_compiler.count(
+                    axis=axis, level=level, numeric_only=numeric_only
+                )
+            )
+
+        return count
+
+    @staticmethod
+    def _get_cummax():
+        def cummax(self, axis=None, skipna=True, *args, **kwargs):
+            axis = self._get_axis_number(axis)
+            if axis == 1:
+                self._validate_dtypes(numeric_only=True)
+            return self.__constructor__(
+                # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+                # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                query_compiler=self._query_compiler.cummax(
+                    fold_axis=axis, axis=axis, skipna=skipna, **kwargs
+                )
+            )
+
+        return cummax
+
+    @staticmethod
+    def _get_cummin():
+        def cummin(self, axis=None, skipna=True, *args, **kwargs):
+            axis = self._get_axis_number(axis)
+            if axis == 1:
+                self._validate_dtypes(numeric_only=True)
+            return self.__constructor__(
+                # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+                # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                query_compiler=self._query_compiler.cummin(
+                    fold_axis=axis, axis=axis, skipna=skipna, **kwargs
+                )
+            )
+
+        return cummin
+
+    @staticmethod
+    def _get_cumprod():
+        def cumprod(self, axis=None, skipna=True, *args, **kwargs):
+            axis = self._get_axis_number(axis)
+            self._validate_dtypes(numeric_only=True)
+            return self.__constructor__(
+                # FIXME: Judging by pandas docs `**kwargs` serves only compatibility
+                # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                query_compiler=self._query_compiler.cumprod(
+                    fold_axis=axis, axis=axis, skipna=skipna, **kwargs
+                )
+            )
+
+        return cumprod
+
+    @staticmethod
+    def _get_cumsum():
+        def cumsum(self, axis=None, skipna=True, *args, **kwargs):
+            axis = self._get_axis_number(axis)
+            self._validate_dtypes(numeric_only=True)
+            return self.__constructor__(
+                # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
+                # purpose and does not affect the result, we shouldn't pass them to the query compiler.
+                query_compiler=self._query_compiler.cumsum(
+                    fold_axis=axis, axis=axis, skipna=skipna, **kwargs
+                )
+            )
+
+        return cumsum
+
+    @staticmethod
+    def _get_describe():
+        def describe(
+            self,
+            percentiles=None,
+            include=None,
+            exclude=None,
+            datetime_is_numeric=False,
+        ):
+            if include is not None and (
+                isinstance(include, np.dtype) or include != "all"
+            ):
+                if not is_list_like(include):
+                    include = [include]
+                include = [pandas_dtype(i) if i != np.number else i for i in include]
+                if not any(
+                    (isinstance(inc, np.dtype) and inc == d)
+                    or (
+                        not isinstance(inc, np.dtype)
+                        and inc.__subclasscheck__(getattr(np, d.__str__()))
+                    )
+                    for d in self._get_dtypes()
+                    for inc in include
+                ):
+                    # This is the error that pandas throws.
+                    raise ValueError("No objects to concatenate")
+            if exclude is not None:
+                if not is_list_like(exclude):
+                    exclude = [exclude]
+                exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
+                if all(
+                    (isinstance(exc, np.dtype) and exc == d)
+                    or (
+                        not isinstance(exc, np.dtype)
+                        and exc.__subclasscheck__(getattr(np, d.__str__()))
+                    )
+                    for d in self._get_dtypes()
+                    for exc in exclude
+                ):
+                    # This is the error that pandas throws.
+                    raise ValueError("No objects to concatenate")
+            if percentiles is not None:
+                # explicit conversion of `percentiles` to list
+                percentiles = list(percentiles)
+
+                # get them all to be in [0, 1]
+                validate_percentile(percentiles)
+
+                # median should always be included
+                if 0.5 not in percentiles:
+                    percentiles.append(0.5)
+                percentiles = np.asarray(percentiles)
+            else:
+                percentiles = np.array([0.25, 0.5, 0.75])
+            return self.__constructor__(
+                query_compiler=self._query_compiler.describe(
+                    percentiles=percentiles,
+                    include=include,
+                    exclude=exclude,
+                    datetime_is_numeric=datetime_is_numeric,
+                )
+            )
+
+        return describe
+
+    @staticmethod
+    def _get_diff():
+        def diff(self, periods=1, axis=0):
+            axis = self._get_axis_number(axis)
+            return self.__constructor__(
+                query_compiler=self._query_compiler.diff(
+                    fold_axis=axis, axis=axis, periods=periods
+                )
+            )
+
+        return diff
+
+    @staticmethod
+    def _get_drop():
+        def drop(
+            self,
+            labels=None,
+            axis=0,
+            index=None,
+            columns=None,
+            level=None,
             inplace=False,
-            limit=limit,
-            downcast=downcast,
-        )
-        return self._create_or_update_from_compiler(new_query_compiler, inplace)
+            errors="raise",
+        ):
+            # TODO implement level
+            if level is not None:
+                return self._default_to_pandas(
+                    "drop",
+                    labels=labels,
+                    axis=axis,
+                    index=index,
+                    columns=columns,
+                    level=level,
+                    inplace=inplace,
+                    errors=errors,
+                )
 
-    def filter(
-        self, items=None, like=None, regex=None, axis=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Subset the `BasePandasDataset` rows or columns according to the specified index labels.
-        """
-        nkw = count_not_none(items, like, regex)
-        if nkw > 1:
-            raise TypeError(
-                "Keyword arguments `items`, `like`, or `regex` are mutually exclusive"
+            inplace = validate_bool_kwarg(inplace, "inplace")
+            if labels is not None:
+                if index is not None or columns is not None:
+                    raise ValueError(
+                        "Cannot specify both 'labels' and 'index'/'columns'"
+                    )
+                axis = pandas.DataFrame()._get_axis_name(axis)
+                axes = {axis: labels}
+            elif index is not None or columns is not None:
+                axes, _ = pandas.DataFrame()._construct_axes_from_arguments(
+                    (index, columns), {}
+                )
+            else:
+                raise ValueError(
+                    "Need to specify at least one of 'labels', 'index' or 'columns'"
+                )
+
+            for axis in ["index", "columns"]:
+                if axis not in axes:
+                    axes[axis] = None
+                elif axes[axis] is not None:
+                    if not is_list_like(axes[axis]):
+                        axes[axis] = [axes[axis]]
+                    # In case of lazy execution we should bypass these error checking components
+                    # because they can force the materialization of the row or column labels.
+                    if self._query_compiler.lazy_execution:
+                        continue
+                    if errors == "raise":
+                        non_existent = pandas.Index(axes[axis]).difference(
+                            getattr(self, axis)
+                        )
+                        if len(non_existent):
+                            raise ValueError(
+                                f"labels {non_existent} not contained in axis"
+                            )
+                    else:
+                        axes[axis] = [
+                            obj for obj in axes[axis] if obj in getattr(self, axis)
+                        ]
+                        # If the length is zero, we will just do nothing
+                        if not len(axes[axis]):
+                            axes[axis] = None
+
+            new_query_compiler = self._query_compiler.drop(
+                index=axes["index"], columns=axes["columns"], errors=errors
             )
-        if nkw == 0:
-            raise TypeError("Must pass either `items`, `like`, or `regex`")
-        if axis is None:
-            axis = "columns"  # This is the default info axis for dataframes
+            return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-        axis = self._get_axis_number(axis)
-        labels = self.columns if axis else self.index
+        return drop
 
-        if items is not None:
-            bool_arr = labels.isin(items)
-        elif like is not None:
+    @staticmethod
+    def _get_dropna():
+        def dropna(
+            self,
+            axis: Axis = 0,
+            how: str | NoDefault = no_default,
+            thresh: int | NoDefault = no_default,
+            subset: IndexLabel = None,
+            inplace: bool = False,
+        ):
+            inplace = validate_bool_kwarg(inplace, "inplace")
 
-            def f(x):
-                return like in str(x)
+            if is_list_like(axis):
+                raise TypeError(
+                    "supplying multiple axes to axis is no longer supported."
+                )
 
-            bool_arr = labels.map(f).tolist()
-        else:
-
-            def f(x):
-                return matcher.search(str(x)) is not None
-
-            matcher = re.compile(regex)
-            bool_arr = labels.map(f).tolist()
-        if not axis:
-            return self[bool_arr]
-        return self[self.columns[bool_arr]]
-
-    def first(self, offset):  # noqa: PR01, RT01, D200
-        """
-        Select initial periods of time series data based on a date offset.
-        """
-        return self.loc[pandas.Series(index=self.index).first(offset).index]
-
-    def first_valid_index(self):  # noqa: RT01, D200
-        """
-        Return index for first non-NA value or None, if no non-NA value is found.
-        """
-        return self._query_compiler.first_valid_index()
-
-    def floordiv(
-        self, other, axis="columns", level=None, fill_value=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Get integer division of `BasePandasDataset` and `other`, element-wise (binary operator `floordiv`).
-        """
-        return self._binary_op(
-            "floordiv", other, axis=axis, level=level, fill_value=fill_value
-        )
-
-    def ge(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
-        """
-        Get greater than or equal comparison of `BasePandasDataset` and `other`, element-wise (binary operator `ge`).
-        """
-        return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
-
-    def get(self, key, default=None):  # noqa: PR01, RT01, D200
-        """
-        Get item from object for given key.
-        """
-        # Match pandas behavior here
-        try:
-            return self.__getitem__(key)
-        except (KeyError, ValueError, IndexError):
-            return default
-
-    def gt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
-        """
-        Get greater than comparison of `BasePandasDataset` and `other`, element-wise (binary operator `gt`).
-        """
-        return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
-
-    def head(self, n=5):  # noqa: PR01, RT01, D200
-        """
-        Return the first `n` rows.
-        """
-        return self.iloc[:n]
-
-    @property
-    def iat(self, axis=None):  # noqa: PR01, RT01, D200
-        """
-        Get a single value for a row/column pair by integer position.
-        """
-        from .indexing import _iLocIndexer
-
-        return _iLocIndexer(self)
-
-    def idxmax(self, axis=0, skipna=True, numeric_only=False):  # noqa: PR01, RT01, D200
-        """
-        Return index of first occurrence of maximum over requested axis.
-        """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduce operation 'argmax' not allowed for this dtype")
-        axis = self._get_axis_number(axis)
-        return self._reduce_dimension(
-            self._query_compiler.idxmax(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
+            axis = self._get_axis_number(axis)
+            if how is not None and how not in ["any", "all", no_default]:
+                raise ValueError("invalid how option: %s" % how)
+            if how is None and thresh is None:
+                raise TypeError("must specify how or thresh")
+            if subset is not None:
+                if axis == 1:
+                    indices = self.index.get_indexer_for(subset)
+                    check = indices == -1
+                    if check.any():
+                        raise KeyError(list(np.compress(check, subset)))
+                else:
+                    indices = self.columns.get_indexer_for(subset)
+                    check = indices == -1
+                    if check.any():
+                        raise KeyError(list(np.compress(check, subset)))
+            new_query_compiler = self._query_compiler.dropna(
+                axis=axis, how=how, thresh=thresh, subset=subset
             )
-        )
+            return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def idxmin(self, axis=0, skipna=True, numeric_only=False):  # noqa: PR01, RT01, D200
-        """
-        Return index of first occurrence of minimum over requested axis.
-        """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
-            raise TypeError("reduce operation 'argmin' not allowed for this dtype")
-        axis = self._get_axis_number(axis)
-        return self._reduce_dimension(
-            self._query_compiler.idxmin(
-                axis=axis, skipna=skipna, numeric_only=numeric_only
+        return dropna
+
+    @staticmethod
+    def _get_droplevel():
+        def droplevel(self, level, axis=0):
+            axis = self._get_axis_number(axis)
+            new_axis = self.axes[axis].droplevel(level)
+            result = self.copy()
+            if axis == 0:
+                result.index = new_axis
+            else:
+                result.columns = new_axis
+            return result
+
+        return droplevel
+
+    @staticmethod
+    def _get_drop_duplicates():
+        def drop_duplicates(self, keep="first", inplace=False, **kwargs):
+            inplace = validate_bool_kwarg(inplace, "inplace")
+            ignore_index = kwargs.get("ignore_index", False)
+            subset = kwargs.get("subset", None)
+            if subset is not None:
+                if is_list_like(subset):
+                    if not isinstance(subset, list):
+                        subset = list(subset)
+                else:
+                    subset = [subset]
+                df = self[subset]
+            else:
+                df = self
+            duplicated = df.duplicated(keep=keep)
+            result = self[~duplicated]
+            if ignore_index:
+                result.index = pandas.RangeIndex(stop=len(result))
+            if inplace:
+                self._update_inplace(result._query_compiler)
+            else:
+                return result
+
+        return drop_duplicates
+
+    @staticmethod
+    def _get_eq():
+        def eq(self, other, axis="columns", level=None):
+            return self._binary_op("eq", other, axis=axis, level=level, dtypes=np.bool_)
+
+        return eq
+
+    @staticmethod
+    def _get_explode():
+        def explode(self, column, ignore_index: bool = False):
+            exploded = self.__constructor__(
+                query_compiler=self._query_compiler.explode(column)
             )
-        )
+            if ignore_index:
+                exploded = exploded.reset_index(drop=True)
+            return exploded
 
-    def infer_objects(self):  # noqa: RT01, D200
-        """
-        Attempt to infer better dtypes for object columns.
-        """
-        return self._query_compiler.infer_objects()
+        return explode
 
-    def convert_dtypes(
-        self,
-        infer_objects: bool = True,
-        convert_string: bool = True,
-        convert_integer: bool = True,
-        convert_boolean: bool = True,
-        convert_floating: bool = True,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
-        """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.convert_dtypes(
-                infer_objects=infer_objects,
-                convert_string=convert_string,
-                convert_integer=convert_integer,
-                convert_boolean=convert_boolean,
-                convert_floating=convert_floating,
+    @staticmethod
+    def _get_ewm():
+        def ewm(
+            self,
+            com: "float | None" = None,
+            span: "float | None" = None,
+            halflife: "float | TimedeltaConvertibleTypes | None" = None,
+            alpha: "float | None" = None,
+            min_periods: "int | None" = 0,
+            adjust: bool = True,
+            ignore_na: bool = False,
+            axis: "Axis" = 0,
+            times: "str | np.ndarray | BasePandasDataset | None" = None,
+            method: "str" = "single",
+        ) -> pandas.core.window.ewm.ExponentialMovingWindow:
+            return self._default_to_pandas(
+                "ewm",
+                com=com,
+                span=span,
+                halflife=halflife,
+                alpha=alpha,
+                min_periods=min_periods,
+                adjust=adjust,
+                ignore_na=ignore_na,
+                axis=axis,
+                times=times,
+                method=method,
             )
-        )
+
+        return ewm
+
+    @staticmethod
+    def _get_expanding():
+        def expanding(self, min_periods=1, center=None, axis=0, method="single"):
+            return self._default_to_pandas(
+                "expanding",
+                min_periods=min_periods,
+                center=center,
+                axis=axis,
+                method=method,
+            )
+
+        return expanding
+
+    @staticmethod
+    def _get_ffill():
+        def ffill(self, axis=None, inplace=False, limit=None, downcast=None):
+            return self.fillna(
+                method="ffill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
+
+        return ffill
+
+    @staticmethod
+    def _get_fillna():
+        def fillna(
+            self,
+            squeeze_self,
+            squeeze_value,
+            value=None,
+            method=None,
+            axis=None,
+            inplace=False,
+            limit=None,
+            downcast=None,
+        ):
+            inplace = validate_bool_kwarg(inplace, "inplace")
+            axis = self._get_axis_number(axis)
+            if isinstance(value, (list, tuple)):
+                raise TypeError(
+                    '"value" parameter must be a scalar or dict, but '
+                    + f'you passed a "{type(value).__name__}"'
+                )
+            if value is None and method is None:
+                raise ValueError("must specify a fill method or value")
+            if value is not None and method is not None:
+                raise ValueError("cannot specify both a fill method and value")
+            if method is not None and method not in [
+                "backfill",
+                "bfill",
+                "pad",
+                "ffill",
+            ]:
+                expecting = "pad (ffill) or backfill (bfill)"
+                msg = "Invalid fill method. Expecting {expecting}. Got {method}".format(
+                    expecting=expecting, method=method
+                )
+                raise ValueError(msg)
+            if limit is not None:
+                if not isinstance(limit, int):
+                    raise ValueError("Limit must be an integer")
+                elif limit <= 0:
+                    raise ValueError("Limit must be greater than 0")
+
+            if isinstance(value, BasePandasDataset):
+                value = value._query_compiler
+
+            new_query_compiler = self._query_compiler.fillna(
+                squeeze_self=squeeze_self,
+                squeeze_value=squeeze_value,
+                value=value,
+                method=method,
+                axis=axis,
+                inplace=False,
+                limit=limit,
+                downcast=downcast,
+            )
+            return self._create_or_update_from_compiler(new_query_compiler, inplace)
+
+        return fillna
+
+    @staticmethod
+    def _get_filter():
+        def filter(self, items=None, like=None, regex=None, axis=None):
+            nkw = count_not_none(items, like, regex)
+            if nkw > 1:
+                raise TypeError(
+                    "Keyword arguments `items`, `like`, or `regex` are mutually exclusive"
+                )
+            if nkw == 0:
+                raise TypeError("Must pass either `items`, `like`, or `regex`")
+            if axis is None:
+                axis = "columns"  # This is the default info axis for dataframes
+
+            axis = self._get_axis_number(axis)
+            labels = self.columns if axis else self.index
+
+            if items is not None:
+                bool_arr = labels.isin(items)
+            elif like is not None:
+
+                def f(x):
+                    return like in str(x)
+
+                bool_arr = labels.map(f).tolist()
+            else:
+
+                def f(x):
+                    return matcher.search(str(x)) is not None
+
+                matcher = re.compile(regex)
+                bool_arr = labels.map(f).tolist()
+            if not axis:
+                return self[bool_arr]
+            return self[self.columns[bool_arr]]
+
+        return filter
+
+    @staticmethod
+    def _get_first():
+        def first(self, offset):
+            return self.loc[pandas.Series(index=self.index).first(offset).index]
+
+        return first
+
+    @staticmethod
+    def _get_first_valid_index():
+        def first_valid_index(self):
+            return self._query_compiler.first_valid_index()
+
+        return first_valid_index
+
+    @staticmethod
+    def _get_floordiv():
+        def floordiv(self, other, axis="columns", level=None, fill_value=None):
+            return self._binary_op(
+                "floordiv", other, axis=axis, level=level, fill_value=fill_value
+            )
+
+        return floordiv
+
+    @staticmethod
+    def _get_ge():
+        def ge(self, other, axis="columns", level=None):
+            return self._binary_op("ge", other, axis=axis, level=level, dtypes=np.bool_)
+
+        return ge
+
+    @staticmethod
+    def _get_get():
+        def get(self, key, default=None):
+            # Match pandas behavior here
+            try:
+                return self.__getitem__(key)
+            except (KeyError, ValueError, IndexError):
+                return default
+
+        return get
+
+    @staticmethod
+    def _get_gt():
+        def gt(self, other, axis="columns", level=None):
+            return self._binary_op("gt", other, axis=axis, level=level, dtypes=np.bool_)
+
+        return gt
+
+    @staticmethod
+    def _get_head():
+        def head(self, n=5):
+            return self.iloc[:n]
+
+        return head
+
+    @staticmethod
+    def _get_iat():
+        @property
+        def iat(self, axis=None):
+            from .indexing import _iLocIndexer
+
+            return _iLocIndexer(self)
+
+        return iat
+
+    @staticmethod
+    def _get_idxmax():
+        def idxmax(self, axis=0, skipna=True, numeric_only=False):
+            if not all(d != np.dtype("O") for d in self._get_dtypes()):
+                raise TypeError("reduce operation 'argmax' not allowed for this dtype")
+            axis = self._get_axis_number(axis)
+            return self._reduce_dimension(
+                self._query_compiler.idxmax(
+                    axis=axis, skipna=skipna, numeric_only=numeric_only
+                )
+            )
+
+        return idxmax
+
+    @staticmethod
+    def _get_idxmin():
+        def idxmin(self, axis=0, skipna=True, numeric_only=False):
+            if not all(d != np.dtype("O") for d in self._get_dtypes()):
+                raise TypeError("reduce operation 'argmin' not allowed for this dtype")
+            axis = self._get_axis_number(axis)
+            return self._reduce_dimension(
+                self._query_compiler.idxmin(
+                    axis=axis, skipna=skipna, numeric_only=numeric_only
+                )
+            )
+
+        return idxmin
+
+    @staticmethod
+    def _get_infer_objects():
+        def infer_objects(self):
+            return self._query_compiler.infer_objects()
+
+        return infer_objects
+
+    @staticmethod
+    def _get_convert_dtypes():
+        def convert_dtypes(
+            self,
+            infer_objects: bool = True,
+            convert_string: bool = True,
+            convert_integer: bool = True,
+            convert_boolean: bool = True,
+            convert_floating: bool = True,
+        ):
+            return self.__constructor__(
+                query_compiler=self._query_compiler.convert_dtypes(
+                    infer_objects=infer_objects,
+                    convert_string=convert_string,
+                    convert_integer=convert_integer,
+                    convert_boolean=convert_boolean,
+                    convert_floating=convert_floating,
+                )
+            )
+
+        return convert_dtypes
 
     def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
         """

@@ -352,12 +352,12 @@ def _replace_doc(
         setattr(
             parent_cls,
             attr_name,
-            property(target_obj.fget, target_obj.fset, target_obj.fdel, doc),
+            property(target_obj.fget, target_obj.fset, target_obj.fdel, doc or None),
         )
     else:
         if overwrite:
             target_obj.__doc_inherited__ = True  # type: ignore[attr-defined]
-        target_obj.__doc__ = doc
+        target_obj.__doc__ = doc or None
 
 
 def _inherit_docstrings(

@@ -13,6 +13,7 @@
 
 import pandas
 import inspect
+import pytest
 import numpy as np
 
 import modin.pandas as pd
@@ -328,3 +329,15 @@ def test_series_api_equality():
             except IndexError:
                 pass
     assert not len(difference), "Extra params found in API: {}".format(difference)
+
+
+@pytest.mark.xfail(reason="New changes have not yet been made for all methods.")
+def test_series_public_api__doc__():
+    extra_methods = ["__array__"]
+    modin_dir = [obj for obj in dir(pd.Series) if obj[0] != "_"]
+    modin_dir.extend(extra_methods)
+    modin_dir.sort()
+    for method in modin_dir:
+        assert (
+            getattr(pd.Series, method).__doc__ == getattr(pandas.Series, method).__doc__
+        ), f"problem method: {method}"

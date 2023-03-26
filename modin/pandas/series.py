@@ -47,9 +47,7 @@ if TYPE_CHECKING:
     from .dataframe import DataFrame
 
 
-@_inherit_docstrings(
-    pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
-)
+@_inherit_docstrings(pandas.Series, excluded=[pandas.Series.__init__])
 class Series(BasePandasDataset):
     """
     Modin distributed representation of `pandas.Series`.
@@ -508,6 +506,55 @@ class Series(BasePandasDataset):
         return super(Series, new_self).radd(
             new_other, level=level, fill_value=fill_value, axis=axis
         )
+
+    abs = BasePandasDataset._get_abs()
+    align = BasePandasDataset._get_align()
+    all = BasePandasDataset._get_all()
+    any = BasePandasDataset._get_any()
+    asfreq = BasePandasDataset._get_asfreq()
+    asof = BasePandasDataset._get_asof()
+    astype = BasePandasDataset._get_astype()
+    at = BasePandasDataset._get_at()
+    at_time = BasePandasDataset._get_at_time()
+    between_time = BasePandasDataset._get_between_time()
+    bfill = BasePandasDataset._get_bfill()
+    backfill = BasePandasDataset._get_bfill()
+    bool = BasePandasDataset._get_bool()
+    clip = BasePandasDataset._get_clip()
+    combine = BasePandasDataset._get_combine()
+    combine_first = BasePandasDataset._get_combine_first()
+    copy = BasePandasDataset._get_copy()
+    count = BasePandasDataset._get_count()
+    cummax = BasePandasDataset._get_cummax()
+    cummin = BasePandasDataset._get_cummin()
+    cumprod = BasePandasDataset._get_cumprod()
+    cumsum = BasePandasDataset._get_cumsum()
+    describe = BasePandasDataset._get_describe()
+    diff = BasePandasDataset._get_diff()
+    drop = BasePandasDataset._get_drop()
+    dropna = BasePandasDataset._get_dropna()
+    droplevel = BasePandasDataset._get_droplevel()
+    drop_duplicates = BasePandasDataset._get_drop_duplicates()
+    eq = BasePandasDataset._get_eq()
+    explode = BasePandasDataset._get_explode()
+    ewm = BasePandasDataset._get_ewm()
+    expanding = BasePandasDataset._get_expanding()
+    ffill = BasePandasDataset._get_ffill()
+    pad = BasePandasDataset._get_ffill()
+    fillna = BasePandasDataset._get_fillna()
+    filter = BasePandasDataset._get_filter()
+    first = BasePandasDataset._get_first()
+    first_valid_index = BasePandasDataset._get_first_valid_index()
+    floordiv = BasePandasDataset._get_floordiv()
+    convert_dtypes = BasePandasDataset._get_convert_dtypes()
+    ge = BasePandasDataset._get_ge()
+    get = BasePandasDataset._get_get()
+    gt = BasePandasDataset._get_gt()
+    head = BasePandasDataset._get_head()
+    iat = BasePandasDataset._get_iat()
+    idxmax = BasePandasDataset._get_idxmax()
+    idxmin = BasePandasDataset._get_idxmin()
+    infer_objects = BasePandasDataset._get_infer_objects()
 
     def add_prefix(self, prefix):
         return self.__constructor__(
