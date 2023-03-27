@@ -278,7 +278,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                             # Tables without columns are not supported.
                             # Creating an empty table with index columns only.
                             idx_names = (
-                                frame.index.names if frame.has_index_cache() else [None]
+                                frame.index.names if frame.has_materialized_index() else [None]
                             )
                             idx_names = frame._mangle_index_names(idx_names)
                             obj = pyarrow.table(
