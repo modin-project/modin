@@ -13,23 +13,16 @@
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
-import re
+from typing import Tuple, Union
+from functools import lru_cache
 from collections import OrderedDict
 
 import pandas as pd
+from pandas import Timestamp
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 
 import pyarrow as pa
 from pyarrow.types import is_dictionary
-
-from string import ascii_uppercase, ascii_lowercase, digits
-from typing import List, Tuple, Union
-from functools import lru_cache
-
-import pandas
-from pandas import Timestamp
-
-import pyarrow
 
 from modin.error_message import ErrorMessage
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
@@ -37,16 +30,53 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 IDX_COL_NAME = "__index__"
 ROWID_COL_NAME = "__rowid__"
 
-# Bytes 62 and 63 are encoded with 2 characters
-_BASE_EXT = ("_A", "_B")
-_BASE_LIST = tuple(ascii_uppercase + ascii_lowercase + digits) + _BASE_EXT
-_BASE_DICT = dict((c, i) for i, c in enumerate(_BASE_LIST))
-_NON_ALPHANUM_PATTERN = re.compile("[^a-zA-Z0-9]+")
-# Number of bytes in the tailing chunk
-_TAIL_LEN = {"_0": 0, "_1": 1, "_2": 2}
 _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
 _COL_TYPES = Union[str, int, float, Timestamp, None]
 _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
+
+
+def _encode_tuple(values: Tuple[_COL_TYPES, ...]) -> str:  # noqa: GL08
+    dst = ["_T"]
+    count = len(values)
+    for value in values:
+        if isinstance(value, str):
+            dst.append(value.replace("_", "_Q"))
+        else:
+            dst.append(_ENCODERS[type(value)](value))
+        count -= 1
+        if count != 0:
+            dst.append("_T")
+    return "".join(dst)
+
+
+def _decode_tuple(encoded: str) -> Tuple[_COL_TYPES, ...]:  # noqa: GL08
+    items = []
+    for item in encoded[2:].split("_T"):
+        dec = None if len(item) < 2 or item[0] != "_" else _DECODERS.get(item[1], None)
+        items.append(item.replace("_Q", "_") if dec is None else dec(item))
+    return tuple(items)
+
+
+_ENCODERS = {
+    tuple: _encode_tuple,
+    type(None): lambda v: "_N",
+    str: lambda v: "_E" if len(v) == 0 else "_S" + v[1:] if v[0] == "_" else v,
+    int: lambda v: f"_I{v}",
+    float: lambda v: f"_F{v}",
+    Timestamp: lambda v: f"_D{v.timestamp()}_{v.tz}",
+}
+
+_DECODERS = {
+    "T": _decode_tuple,
+    "N": lambda v: None,
+    "E": lambda v: "",
+    "S": lambda v: "_" + v[2:],
+    "I": lambda v: int(v[2:]),
+    "F": lambda v: float(v[2:]),
+    "D": lambda v: Timestamp.fromtimestamp(
+        float(v[2 : (idx := v.index("_", 2))]), tz=v[idx + 1 :]
+    ),
+}
 
 
 @lru_cache(1024)
@@ -55,16 +85,10 @@ def encode_col_name(
     ignore_reserved: bool = True,
 ) -> str:
     """
-    Encode column name, using the alphanumeric and underscore characters only.
+    Encode column name.
 
     The supported name types are specified in the type hints. Non-string names
-    are converted to string and prefixed with a corresponding tag. The strings
-    are encoded in the following way:
-      - All alphanum characters are left as is. I.e., if the column name
-        consists from the alphanum characters only, the original name is
-        returned.
-      - Non-alphanum parts of the name are encoded, using a customized
-        version of the base64 algorithm, that allows alphanum characters only.
+    are converted to string and prefixed with a corresponding tag.
 
     Parameters
     ----------
@@ -78,44 +102,17 @@ def encode_col_name(
     str
         Encoded name.
     """
-    if name is None:
-        return "_N"
-    if isinstance(name, int):
-        return f"_I{str(name)}"
-    if isinstance(name, float):
-        return f"_F{str(name)}"
-    if isinstance(name, Timestamp):
-        return f"_D{encode_col_name((name.timestamp(), str(name.tz)))}"
-    if isinstance(name, tuple):
-        dst = ["_T"]
-        count = len(name)
-        for n in name:
-            dst.append(encode_col_name(n))
-            count -= 1
-            if count != 0:
-                dst.append("_S")  # Separator
-        return "".join(dst)
-    if len(name) == 0:
-        return "_E"
-    if ignore_reserved and (name.startswith(IDX_COL_NAME) or name in _RESERVED_NAMES):
+    if (
+        ignore_reserved
+        and isinstance(name, str)
+        and (name.startswith(IDX_COL_NAME) or name in _RESERVED_NAMES)
+    ):
         return name
 
-    non_alpha = _NON_ALPHANUM_PATTERN.search(name)
-    if not non_alpha:
-        # If the name consists only from alphanum characters, return it as is.
-        return name
-
-    dst = []
-    off = 0
-    while non_alpha:
-        start = non_alpha.start()
-        end = non_alpha.end()
-        dst.append(name[off:start])
-        _quote(name[start:end], dst)
-        off = end
-        non_alpha = _NON_ALPHANUM_PATTERN.search(name, off)
-    dst.append(name[off:])
-    return "".join(dst)
+    try:
+        return _ENCODERS[type(name)](name)
+    except KeyError:
+        raise TypeError(f"Unsupported column name: {name}")
 
 
 @lru_cache(1024)
@@ -133,108 +130,18 @@ def decode_col_name(name: str) -> _COL_NAME_TYPE:
     str, int, float, Timestamp, None, tuple
         Decoded name.
     """
-    if name.startswith("_"):
-        if name.startswith(IDX_COL_NAME) or name in _RESERVED_NAMES:
-            return name
-        char = name[1]
-        if char == "N":
-            return None
-        if char == "I":
-            return int(name[2:])
-        if char == "F":
-            return float(name[2:])
-        if char == "D":
-            stamp = decode_col_name(name[2:])
-            return Timestamp.fromtimestamp(stamp[0], tz=stamp[1])
-        if char == "T":
-            dst = [decode_col_name(n) for n in name[2:].split("_S")]
-            return tuple(dst)
-        if char == "E":
-            return ""
-
-    idx = name.find("_Q")
-    if idx == -1:
+    if (
+        len(name) < 2
+        or name[0] != "_"
+        or name.startswith(IDX_COL_NAME)
+        or name in _RESERVED_NAMES
+    ):
         return name
 
-    dst = []
-    off = 0
-    end = len(name)
-    while idx != -1:
-        dst.append(name[off:idx])
-        off = _unquote(name, dst, idx, end)
-        idx = name.find("_Q", off)
-    dst.append(name[off:])
-    return "".join(dst)
-
-
-def _quote(src: str, dst: List[str]):  # noqa: GL08
-    base = _BASE_LIST
-    raw = src.encode()
-    rem = len(raw) % 3
-    append = dst.append
-    append("_Q")
-
-    for bytes3 in zip(*[iter(raw)] * 3):
-        i24 = bytes3[0] << 16 | bytes3[1] << 8 | bytes3[2]
-        append(base[(i24 >> 18) & 0x3F])
-        append(base[(i24 >> 12) & 0x3F])
-        append(base[(i24 >> 6) & 0x3F])
-        append(base[i24 & 0x3F])
-    if rem == 1:
-        i24 = raw[-1] << 16
-        append(base[(i24 >> 18) & 0x3F])
-        append(base[(i24 >> 12) & 0x3F])
-        append("_1")
-    elif rem == 2:
-        i24 = raw[-2] << 16 | raw[-1] << 8
-        append(base[(i24 >> 18) & 0x3F])
-        append(base[(i24 >> 12) & 0x3F])
-        append(base[(i24 >> 6) & 0x3F])
-        append("_2")
-    else:
-        append("_0")
-
-
-def _unquote(src: str, dst: List[str], off, end) -> int:  # noqa: GL08
-    assert src[off : off + 2] == "_Q"
-    base = _BASE_DICT
-    raw = bytearray()
-    append = raw.append
-    off += 2
-
-    while off < end:
-        chars = src[off : off + 4]
-        if "_" not in chars:
-            i24 = (
-                (base[chars[0]] << 18)
-                | (base[chars[1]] << 12)
-                | (base[chars[2]] << 6)
-                | base[chars[3]]
-            )
-            append((i24 >> 16) & 0xFF)
-            append((i24 >> 8) & 0xFF)
-            append(i24 & 0xFF)
-            off += 4
-        else:
-            i24 = 0
-            tail_len = 3
-            for i in range(0, len(chars)):
-                char = src[off]
-                off += 1
-                if char == "_":
-                    off += 1
-                    char = src[off - 2 : off]
-                    if char in _TAIL_LEN:
-                        tail_len = _TAIL_LEN[char]
-                        end = off
-                        break
-                i24 |= base[char] << (6 * (3 - i))
-
-            for i in range(0, tail_len):
-                append((i24 >> (8 * (2 - i))) & 0xFF)
-    dst.append(raw.decode())
-    assert src[off - 2 : off] in _TAIL_LEN
-    return off
+    try:
+        return _DECODERS[name[1]](name)
+    except KeyError:
+        raise ValueError(f"Invalid encoded column name: {name}")
 
 
 class LazyProxyCategoricalDtype(pd.CategoricalDtype):

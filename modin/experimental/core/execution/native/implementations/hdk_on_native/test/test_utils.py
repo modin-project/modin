@@ -18,8 +18,6 @@ import timeit
 
 from random import randint, uniform, choice
 from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
-    _quote,
-    _unquote,
     encode_col_name,
     decode_col_name,
 )
@@ -39,41 +37,26 @@ UNICODE_RANGES = [
 UNICODE_ALPHABET = [chr(c) for r in UNICODE_RANGES for c in range(r[0], r[1] + 1)]
 
 
-class TestEncoders:
-    def test_quote(self):
-        def test(src):
-            dst = []
-            _quote(src, dst)
-            quoted = "".join(dst)
-            dst.clear()
-            off = _unquote(quoted, dst, 0, len(quoted))
-            unquoted = "".join(dst)
-            assert unquoted == src
-            assert len(quoted) == off
+def test_encode_col_name():
+    def test(name):
+        encoded = encode_col_name(name)
+        assert decode_col_name(encoded) == name
 
-        for i in range(0, 100):
-            test(rnd_unicode(i))
+    test("")
+    test(None)
+    test(("", ""))
 
-    def test_encode_col_name(self):
-        def test(name):
-            encoded = encode_col_name(name)
-            assert decode_col_name(encoded) == name
-
-        test("")
-        test(None)
-        test(("", ""))
-
-        for i in range(0, 1000):
-            test(randint(-sys.maxsize, sys.maxsize))
-        for i in range(0, 1000):
-            test(uniform(-sys.maxsize, sys.maxsize))
-        for i in range(0, 1000):
-            test(rnd_unicode(randint(0, 100)))
-        for i in range(0, 1000):
-            test((rnd_unicode(randint(0, 100)), rnd_unicode(randint(0, 100))))
-        for i in range(0, 1000):
-            tz = choice(pytz.all_timezones)
-            test(pandas.Timestamp(randint(0, 0xFFFFFFFF), unit="s", tz=tz))
+    for i in range(0, 1000):
+        test(randint(-sys.maxsize, sys.maxsize))
+    for i in range(0, 1000):
+        test(uniform(-sys.maxsize, sys.maxsize))
+    for i in range(0, 1000):
+        test(rnd_unicode(randint(0, 100)))
+    for i in range(0, 1000):
+        test((rnd_unicode(randint(0, 100)), rnd_unicode(randint(0, 100))))
+    for i in range(0, 1000):
+        tz = choice(pytz.all_timezones)
+        test(pandas.Timestamp(randint(0, 0xFFFFFFFF), unit="s", tz=tz))
 
 
 def rnd_unicode(length):
