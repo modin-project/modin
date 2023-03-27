@@ -2382,7 +2382,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if self.has_index_cache():
+        if self.has_materialized_index():
             return isinstance(self.index, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
 
@@ -2534,7 +2534,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if len(df.columns) != len(self.columns):
             assert self._index_cols
             idx_col_names = [f"F_{col}" for col in self._index_cols]
-            if self.has_index_cache():
+            if self.has_materialized_index():
                 df.drop(columns=idx_col_names, inplace=True)
                 df.index = self.index
             else:
@@ -2544,7 +2544,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
-            if self.has_index_cache():
+            if self.has_materialized_index():
                 df.index = self.index
 
         # Restore original column labels encoded in HDK to meet its
