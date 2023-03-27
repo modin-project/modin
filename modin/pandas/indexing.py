@@ -828,7 +828,6 @@ class _LocIndexer(_LocationIndexerBase):
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
         """
-        exist_items = item
         if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
             item = np.array(item)
             if len(item.shape) == 1:
@@ -850,7 +849,7 @@ class _LocIndexer(_LocationIndexerBase):
                     columns = columns.insert(len(columns), col_loc[i])
             self.qc = self.qc.reindex(labels=columns, axis=1, fill_value=np.NaN)
             self.df._update_inplace(new_query_compiler=self.qc)
-        self._set_item_existing_loc(row_loc, np.array(col_loc), exist_items)
+        self._set_item_existing_loc(row_loc, np.array(col_loc), item)
 
     def _set_item_existing_loc(self, row_loc, col_loc, item):
         """
