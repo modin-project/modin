@@ -2048,6 +2048,10 @@ class PandasDataframe(ClassLogger):
                 f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
             )
 
+        # If there's only one row partition can simply apply sorting row-wise without the need to reshuffle
+        if self._partitions.shape[0] == 1:
+            return self.apply_full_axis(axis=1, func=sort_function)
+
         # If this df is empty, we don't want to try and shuffle or sort.
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()

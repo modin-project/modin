@@ -200,10 +200,10 @@ def pick_pivots_from_samples_for_sort(
     num_quantiles = ideal_num_new_partitions
     quantiles = [i / num_quantiles for i in range(1, num_quantiles)]
     # If we only desire 1 partition, we need to ensure that we're not trying to find quantiles
-    # from an empty list of pivots. We use `np.nan` as a dummy value.
+    # from an empty list of pivots.
     if len(quantiles) > 0:
         return _find_quantiles(all_pivots, quantiles, method)
-    return np.array([np.nan])
+    return np.array([])
 
 
 def split_partitions_using_pivots_for_sort(
@@ -242,6 +242,9 @@ def split_partitions_using_pivots_for_sort(
     tuple[pandas.DataFrame]
         A tuple of the splits from this partition.
     """
+    if len(pivots) == 0:
+        # We can return the dataframe with zero changes if there were no pivots passed
+        return (df,)
     # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
     # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
     # which breaks when we reverse the pivots.
