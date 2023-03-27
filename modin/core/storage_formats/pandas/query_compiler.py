@@ -263,7 +263,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return not frame.has_materialized_index() or not frame.has_materialized_columns()
+        return (
+            not frame.has_materialized_index() or not frame.has_materialized_columns()
+        )
 
     def finalize(self):
         self._modin_frame.finalize()

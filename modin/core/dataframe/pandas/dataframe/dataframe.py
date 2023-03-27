@@ -436,6 +436,12 @@ class PandasDataframe(ClassLogger):
             columns_cache = columns_cache.copy()
         return columns_cache
 
+    def has_materialized_index(self):
+        return self.has_index_cache() and self._index_cache.is_materialized
+
+    def has_materialized_columns(self):
+        return self.has_columns_cache() and self._columns_cache.is_materialized
+
     def _validate_set_axis(self, new_labels, old_labels):
         """
         Validate the possibility of replacement of old labels with the new labels.
