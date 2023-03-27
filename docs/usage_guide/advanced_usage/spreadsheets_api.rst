@@ -7,7 +7,7 @@ Install Modin-spreadsheet using pip:
 
 .. code-block:: bash
 
-    pip install modin[spreadsheet]
+    pip install "modin[spreadsheet]"
 
 
 The following code snippet creates a spreadsheet using the FiveThirtyEight dataset on labor force information by college majors (licensed under CC BY 4.0):

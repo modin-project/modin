@@ -1662,6 +1662,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return self.default_to_pandas(datetime_freq)
 
+    dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
     dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
     dt_tz_localize = Map.register(_dt_func_map("tz_localize"))

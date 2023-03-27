@@ -56,15 +56,15 @@ The charts below show the speedup you get by replacing pandas with Modin based o
 Modin can be installed with `pip` on Linux, Windows and MacOS:
 
 ```bash
-pip install modin[all] # (Recommended) Install Modin with all of Modin's currently supported engines.
+pip install "modin[all]" # (Recommended) Install Modin with all of Modin's currently supported engines.
 ```
 
 If you want to install Modin with a specific engine, we recommend:
 
 ```bash
-pip install modin[ray] # Install Modin dependencies and Ray.
-pip install modin[dask] # Install Modin dependencies and Dask.
-pip install modin[unidist] # Install Modin dependencies and Unidist to run on Unidist
+pip install "modin[ray]" # Install Modin dependencies and Ray.
+pip install "modin[dask]" # Install Modin dependencies and Dask.
+pip install "modin[unidist]" # Install Modin dependencies and Unidist.
 ```
 
 Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.
