@@ -22,7 +22,7 @@ import numpy as np
 import pandas
 import datetime
 from pandas.api.types import is_object_dtype
-from pandas.core.indexes.api import ensure_index, Index, RangeIndex
+from pandas.core.indexes.api import Index, RangeIndex
 from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
@@ -39,6 +39,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     JoinType,
 )
 from modin.core.dataframe.pandas.dataframe.utils import build_sort_functions
+from modin.core.dataframe.pandas.metadata import ModinIndex
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -142,52 +143,6 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
         return run_f_on_minimally_updated_metadata
 
     return decorator
-
-
-class ModinIndex:
-    def __init__(self, value):
-        if callable(value):
-            self._value = value
-        else:
-            self._value = ensure_index(value)
-        self._lengths_cache = None
-
-    @property
-    def is_materialized(self) -> bool:
-        return isinstance(self._value, pandas.Index)
-
-    def get(self, return_lengths=False) -> pandas.Index:
-        if not self.is_materialized:
-            if callable(self._value):
-                index, self._lengths_cache = self._value()
-                self._value = ensure_index(index)
-            else:
-                raise NotImplementedError(type(self._value))
-        if return_lengths:
-            return self._value, self._lengths_cache
-        else:
-            return self._value
-
-    def __len__(self):
-        if not self.is_materialized:
-            self.get()
-        return len(self._value)
-
-    def __reduce__(self):
-        if self._lengths_cache is not None:
-            return (self.__class__, (lambda: (self._value, self._lengths_vache),))
-        return (self.__class__, (self._value,))
-
-    def __getattr__(self, name):
-        if not self.is_materialized:
-            self.get()
-        return self._value.__getattribute__(name)
-
-    def copy(self) -> "ModinIndex":
-        idx_cache = self._value
-        if not callable(idx_cache):
-            idx_cache = idx_cache.copy()
-        return ModinIndex(idx_cache)
 
 
 class PandasDataframe(ClassLogger):
@@ -377,12 +332,26 @@ class PandasDataframe(ClassLogger):
     _columns_cache = None
 
     def set_index_cache(self, index):
+        """
+        Set index cache.
+
+        Parameters
+        ----------
+        index : sequence, callable or None
+        """
         if isinstance(index, ModinIndex) or index is None:
             self._index_cache = index
         else:
             self._index_cache = ModinIndex(index)
 
     def set_columns_cache(self, columns):
+        """
+        Set columns cache.
+
+        Parameters
+        ----------
+        columns : sequence, callable or None
+        """
         if isinstance(columns, ModinIndex) or columns is None:
             self._columns_cache = columns
         else:
@@ -437,9 +406,23 @@ class PandasDataframe(ClassLogger):
         return columns_cache
 
     def has_materialized_index(self):
+        """
+        Check if dataframe has materialized index cache.
+
+        Returns
+        -------
+        bool
+        """
         return self.has_index_cache() and self._index_cache.is_materialized
 
     def has_materialized_columns(self):
+        """
+        Check if dataframe has materialized columns cache.
+
+        Returns
+        -------
+        bool
+        """
         return self.has_columns_cache() and self._columns_cache.is_materialized
 
     def _validate_set_axis(self, new_labels, old_labels):
