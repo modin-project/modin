@@ -1065,27 +1065,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, *args, **kwargs
         )
 
-    def columnarize(self):
-        """
-        Transpose this QueryCompiler if it has a single row but multiple columns.
-
-        This method should be called for QueryCompilers representing a Series object,
-        i.e. ``self.is_series_like()`` should be True.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            Transposed new QueryCompiler or self.
-        """
-        if self._shape_hint == "column":
-            return self
-
-        if len(self.columns) != 1 or (
-            len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
-        ):
-            return self.transpose()
-        return self
-
     def is_series_like(self):
         """
         Check whether this QueryCompiler can represent ``modin.pandas.Series`` object.
