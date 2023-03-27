@@ -41,7 +41,7 @@ import warnings
 import hashlib
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import Engine
+from modin.config import Engine, ExperimentalGroupbyImpl
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -2816,6 +2816,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="mean",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError:
+                pass
+
         _, internal_by = self._groupby_internal_columns(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
@@ -2870,6 +2884,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="size",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError:
+                pass
+
         result = self._groupby_dict_reduce(
             by=by,
             axis=axis,
@@ -3008,6 +3036,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
             drop=drop,
         )
 
+    def _groupby_shuffle(
+        self, by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        if isinstance(by, type(self)) and drop:
+            by = by.columns.tolist()
+
+        if not isinstance(by, list):
+            by = [by]
+
+        if any(not isinstance(col, (str, tuple)) for col in by):
+            raise NotImplementedError(
+                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame"
+            )
+
+        if isinstance(agg_func, dict):
+            subset = np.unique(by.columns.tolist() + list(agg_func.keys())).tolist()
+            obj = self.getitem_column_array(subset)
+        else:
+            obj = self
+
+        def func(grp):
+            return grp.agg(agg_func, *agg_args, **agg_kwargs)
+
+        result = obj._modin_frame.groupby(
+            axis=axis, by=by, operator=func, **groupby_kwargs
+        )
+        return self.__constructor__(result)
+
     def groupby_agg(
         self,
         by,
@@ -3027,6 +3083,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
+
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func=agg_func,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError:
+                pass
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(

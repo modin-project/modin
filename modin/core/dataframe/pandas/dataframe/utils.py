@@ -59,10 +59,12 @@ def build_sort_functions(
         A named tuple containing the functions to pick quantiles, choose pivot points, and split
         partitions for sorting.
     """
+    frame_len = len(modin_frame.index)
+    is_column_numeric = pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column])
 
     def sample_fn(partition):
         return pick_samples_for_quantiles(
-            partition[column], ideal_num_new_partitions, len(modin_frame.index)
+            partition[column], ideal_num_new_partitions, frame_len
         )
 
     def pivot_fn(samples):
@@ -73,7 +75,7 @@ def build_sort_functions(
 
     def split_fn(partition, pivots):
         return split_partitions_using_pivots_for_sort(
-            modin_frame, partition, column, pivots, ascending, **kwargs
+            partition, column, is_column_numeric, pivots, ascending, **kwargs
         )
 
     return ShuffleFunctions(
@@ -207,9 +209,9 @@ def pick_pivots_from_samples_for_sort(
 
 
 def split_partitions_using_pivots_for_sort(
-    modin_frame: "PandasDataframe",
     df: pandas.DataFrame,
     column: str,
+    is_numeric_column: bool,
     pivots: np.ndarray,
     ascending: bool,
     **kwargs: dict,
@@ -224,12 +226,12 @@ def split_partitions_using_pivots_for_sort(
 
     Parameters
     ----------
-    modin_frame : PandasDataframe
-        The Modin Dataframe calling this function.
     df : pandas.Dataframe
         The partition to split.
     column : str
         The major column to sort by.
+    is_numeric_column : bool
+        Whether the passed `column` has numeric type (int, float).
     pivots : np.ndarray
         The quantiles to use to split the data.
     ascending : bool
@@ -245,7 +247,7 @@ def split_partitions_using_pivots_for_sort(
     # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
     # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
     # which breaks when we reverse the pivots.
-    if not ascending and pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if not ascending and is_numeric_column:
         # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
         pivots = pivots[::-1]
     key = kwargs.pop("key", None)
@@ -255,7 +257,7 @@ def split_partitions_using_pivots_for_sort(
     cols_to_digitize = non_na_rows[column]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
-    if pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if is_numeric_column:
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
         # `np.digitize` returns results based off of the sort order of the pivots it is passed.
         # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots

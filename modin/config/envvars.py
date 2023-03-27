@@ -635,6 +635,13 @@ class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     default = False
 
 
+class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
+    """Set to true to use Modin's experimental group by implementation."""
+
+    varname = "MODIN_EXPERIMENTAL_GROUPBY"
+    default = False
+
+
 class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
 

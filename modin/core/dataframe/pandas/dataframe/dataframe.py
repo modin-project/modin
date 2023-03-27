@@ -1998,6 +1998,126 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
+    def _apply_func_to_range_partitioning(
+        self, key_column, func, ascending=True, **kwargs
+    ):
+        """
+        Reshuffle data so it would be range partitioned and then apply the passed function row-wise.
+
+        Parameters
+        ----------
+        key_column : hashable
+            Column name to build the range partitioning for.
+        func : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function to apply against partitions.
+        ascending : bool, default: True
+            Whether the range should be built in ascending or descending order.
+        **kwargs : dict
+            Additional arguments to forward to the range builder function.
+
+        Returns
+        -------
+        np.ndarray
+            2D array of partitions storing result of the applied `func`.
+        """
+        ideal_num_new_partitions = len(self._partitions)
+        m = len(self.index) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(
+            ideal_num_new_partitions * len(self.index)
+        )
+        # If this df is overpartitioned, we try to sample each partition with probability
+        # greater than 1, which leads to an error. In this case, we can do one of the following
+        # two things. If there is only enough rows for one partition, and we have only 1 column
+        # partition, we can just combine the overpartitioned df into one partition, and sort that
+        # partition. If there is enough data for more than one partition, we can tell the sorting
+        # algorithm how many partitions we want to end up with, so it samples and finds pivots
+        # according to that.
+        if sampling_probability >= 1:
+            from modin.config import MinPartitionSize
+
+            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
+            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                modin_frame = self
+                if self._partitions.shape[1] != 1:
+                    # In this case, we have more than one column partition, so we first need
+                    # to create row-wise partitions with all of the columns, so we don't have
+                    # a KeyError when sorting. This method can be slow if we have very very
+                    # many columns.
+                    new_partitions = self._partition_mgr_cls.row_partitions(
+                        self._partitions
+                    )
+                    new_partitions = np.array(
+                        [[partition] for partition in new_partitions]
+                    )
+                    modin_frame = self.__constructor__(
+                        new_partitions,
+                        *self.axes,
+                        self._row_lengths_cache,
+                        [len(self.columns)],
+                        self.dtypes,
+                    )
+                return modin_frame.apply_full_axis(
+                    0,
+                    func,
+                )
+
+        if self.dtypes[key_column] == object:
+            # This means we are not sorting numbers, so we need our quantiles to not try
+            # arithmetic on the values.
+            method = "inverted_cdf"
+        else:
+            method = "linear"
+
+        shuffling_functions = build_sort_functions(
+            self,
+            key_column,
+            method,
+            ascending[0] if is_list_like(ascending) else ascending,
+            ideal_num_new_partitions,
+            **kwargs,
+        )
+        if ideal_num_new_partitions < len(self._partitions):
+            if len(self._partitions) % ideal_num_new_partitions == 0:
+                joining_partitions = np.split(
+                    self._partitions, ideal_num_new_partitions
+                )
+            else:
+                joining_partitions = np.split(
+                    self._partitions,
+                    range(
+                        0,
+                        len(self._partitions),
+                        round(len(self._partitions) / ideal_num_new_partitions),
+                    )[1:],
+                )
+
+            new_partitions = np.array(
+                [
+                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
+                    for ptn_grp in joining_partitions
+                ]
+            )
+        else:
+            new_partitions = self._partitions
+
+        major_col_partition_index = self.columns.get_loc(key_column)
+        cols_seen = 0
+        index = -1
+        for i, length in enumerate(self.column_widths):
+            cols_seen += length
+            if major_col_partition_index < cols_seen:
+                index = i
+                break
+
+        new_partitions = self._partition_mgr_cls.shuffle_partitions(
+            new_partitions,
+            index,
+            shuffling_functions,
+            func,
+        )
+
+        return new_partitions
+
     @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
         self,
@@ -2052,100 +2172,10 @@ class PandasDataframe(ClassLogger):
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
             return self.copy()
 
-        ideal_num_new_partitions = len(self._partitions)
-        m = len(self.index) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * len(self.index)
+        new_partitions = self._apply_func_to_range_partitioning(
+            key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
         )
-        # If this df is overpartitioned, we try to sample each partition with probability
-        # greater than 1, which leads to an error. In this case, we can do one of the following
-        # two things. If there is only enough rows for one partition, and we have only 1 column
-        # partition, we can just combine the overpartitioned df into one partition, and sort that
-        # partition. If there is enough data for more than one partition, we can tell the sorting
-        # algorithm how many partitions we want to end up with, so it samples and finds pivots
-        # according to that.
-        if sampling_probability >= 1:
-            from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
-            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
-                modin_frame = self
-                if self._partitions.shape[1] != 1:
-                    # In this case, we have more than one column partition, so we first need
-                    # to create row-wise partitions with all of the columns, so we don't have
-                    # a KeyError when sorting. This method can be slow if we have very very
-                    # many columns.
-                    new_partitions = self._partition_mgr_cls.row_partitions(
-                        self._partitions
-                    )
-                    new_partitions = np.array(
-                        [[partition] for partition in new_partitions]
-                    )
-                    modin_frame = self.__constructor__(
-                        new_partitions,
-                        *self.axes,
-                        self._row_lengths_cache,
-                        [len(self.columns)],
-                        self.dtypes,
-                    )
-                return modin_frame.apply_full_axis(
-                    0,
-                    sort_function,
-                )
-
-        if self.dtypes[columns[0]] == object:
-            # This means we are not sorting numbers, so we need our quantiles to not try
-            # arithmetic on the values.
-            method = "inverted_cdf"
-        else:
-            method = "linear"
-
-        shuffling_functions = build_sort_functions(
-            self,
-            columns[0],
-            method,
-            ascending[0] if is_list_like(ascending) else ascending,
-            ideal_num_new_partitions,
-            **kwargs,
-        )
-        if ideal_num_new_partitions < len(self._partitions):
-            if len(self._partitions) % ideal_num_new_partitions == 0:
-                joining_partitions = np.split(
-                    self._partitions, ideal_num_new_partitions
-                )
-            else:
-                joining_partitions = np.split(
-                    self._partitions,
-                    range(
-                        0,
-                        len(self._partitions),
-                        round(len(self._partitions) / ideal_num_new_partitions),
-                    )[1:],
-                )
-
-            new_partitions = np.array(
-                [
-                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
-                    for ptn_grp in joining_partitions
-                ]
-            )
-        else:
-            new_partitions = self._partitions
-
-        major_col_partition_index = self.columns.get_loc(columns[0])
-        cols_seen = 0
-        index = -1
-        for i, length in enumerate(self.column_widths):
-            cols_seen += length
-            if major_col_partition_index < cols_seen:
-                index = i
-                break
-        new_partitions = self._partition_mgr_cls.shuffle_partitions(
-            new_partitions,
-            index,
-            shuffling_functions,
-            sort_function,
-        )
         new_axes = self.axes
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
@@ -3224,6 +3254,7 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
+        **kwargs: dict,
     ) -> "PandasDataframe":
         """
         Generate groups based on values in the input column(s) and perform the specified operation on each.
@@ -3234,7 +3265,7 @@ class PandasDataframe(ClassLogger):
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.
-        operator : callable
+        operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
             on the output desired by the user.
@@ -3258,7 +3289,30 @@ class PandasDataframe(ClassLogger):
         Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
         algebra implementation.
         """
-        pass
+        axis = Axis(axis)
+        if axis != Axis.ROW_WISE:
+            raise NotImplementedError(
+                f"Algebra groupby only implemented row-wise. {axis.name} sort not implemented yet!"
+            )
+
+        if not isinstance(by, list):
+            by = [by]
+
+        def apply_func(df):
+            return operator(df.groupby(by, **kwargs))
+
+        new_partitions = self._apply_func_to_range_partitioning(
+            key_column=by[0],
+            func=apply_func,
+        )
+
+        kw = {}
+        if result_schema is not None:
+            kw["dtypes"] = pandas.Series(result_schema)
+            kw["columns"] = kw["dtypes"].index
+            kw["row_lengths"] = [len(kw["columns"])]
+
+        return self.__constructor__(new_partitions, **kw)
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(
