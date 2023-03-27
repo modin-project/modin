@@ -263,7 +263,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return not frame.has_index_cache() or not frame.has_columns_cache()
+        return not frame.has_materialized_index() or not frame.has_materialized_columns()
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -507,7 +507,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if self._modin_frame.has_index_cache():
+            if self._modin_frame.has_materialized_index():
                 if left_on is not None and right_on is not None:
                     keep_index = any(
                         o in self.index.names

@@ -511,7 +511,7 @@ class PandasDataframe(ClassLogger):
         new_index : list-like
             The new row labels.
         """
-        if self.has_index_cache():
+        if self.has_materialized_index():
             new_index = self._validate_set_axis(new_index, self._index_cache)
         self.set_index_cache(new_index)
         self.synchronize_labels(axis=0)
@@ -525,7 +525,7 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like
            The new column labels.
         """
-        if self.has_columns_cache():
+        if self.has_materialized_columns():
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
@@ -581,8 +581,8 @@ class PandasDataframe(ClassLogger):
             Trigger the computations for partition sizes and labels if they're not done already.
         """
         if not compute_metadata and (
-            not self.has_index_cache()
-            or not self.has_columns_cache()
+            not self.has_materialized_index()
+            or not self.has_materialized_columns()
             or self._row_lengths_cache is None
             or self._column_widths_cache is None
         ):
@@ -1941,7 +1941,7 @@ class PandasDataframe(ClassLogger):
         The data shape is not changed (length and width of the table).
         """
         if new_columns is not None:
-            if self.has_columns_cache():
+            if self.has_materialized_columns():
                 assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
@@ -3534,7 +3534,7 @@ class PandasDataframe(ClassLogger):
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
             for axis, has_external_index in enumerate(
-                [self.has_index_cache, self.has_columns_cache]
+                [self.has_materialized_index, self.has_materialized_columns]
             ):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
