@@ -12,3 +12,9 @@
 # governing permissions and limitations under the License.
 
 """Experimental IO functions implementations."""
+
+from .sql.sql_dispatcher import ExperimentalSQLDispatcher
+
+__all__ = [
+    "ExperimentalSQLDispatcher",
+]

@@ -16,6 +16,7 @@ import numpy as np
 import json
 import pandas
 from pandas.errors import SpecificationError
+from pandas.core.indexing import IndexingError
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
@@ -1676,8 +1677,11 @@ def test_dt(timezone):
     df_equals(modin_series.dt.week, pandas_series.dt.week)
     df_equals(modin_series.dt.weekofyear, pandas_series.dt.weekofyear)
     df_equals(modin_series.dt.dayofweek, pandas_series.dt.dayofweek)
+    df_equals(modin_series.dt.day_of_week, pandas_series.dt.day_of_week)
     df_equals(modin_series.dt.weekday, pandas_series.dt.weekday)
     df_equals(modin_series.dt.dayofyear, pandas_series.dt.dayofyear)
+    df_equals(modin_series.dt.day_of_year, pandas_series.dt.day_of_year)
+    df_equals(modin_series.dt.isocalendar(), pandas_series.dt.isocalendar())
     df_equals(modin_series.dt.quarter, pandas_series.dt.quarter)
     df_equals(modin_series.dt.is_month_start, pandas_series.dt.is_month_start)
     df_equals(modin_series.dt.is_month_end, pandas_series.dt.is_month_end)
@@ -1752,6 +1756,12 @@ def test_dt(timezone):
         return eval_result.dt.days
 
     eval_general(pd, pandas, dt_with_empty_partition)
+
+    if timezone is None:
+        data = pd.period_range("2016-12-31", periods=128, freq="D")
+        modin_series = pd.Series(data)
+        pandas_series = pandas.Series(data)
+        df_equals(modin_series.dt.asfreq("T"), pandas_series.dt.asfreq("T"))
 
 
 @pytest.mark.parametrize(
@@ -2010,8 +2020,7 @@ def test_iloc(request, data):
         modin_series.iloc[[1, 2]] = 42
         pandas_series.iloc[[1, 2]] = 42
         df_equals(modin_series, pandas_series)
-
-        with pytest.raises(IndexError):
+        with pytest.raises(IndexingError):
             modin_series.iloc[1:, 1]
     else:
         with pytest.raises(IndexError):
@@ -3874,6 +3883,28 @@ def test_str_repeat(data, repeats):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_removeprefix(data):
+    modin_series, pandas_series = create_test_series(data)
+    prefix = "test_prefix"
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: (prefix + series).str.removeprefix(prefix),
+    )
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+def test_str_removesuffix(data):
+    modin_series, pandas_series = create_test_series(data)
+    suffix = "test_suffix"
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: (series + suffix).str.removesuffix(suffix),
+    )
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize(
     "side", ["left", "right", "both"], ids=["left", "right", "both"]
@@ -3996,6 +4027,13 @@ def test_str_endswith(data, pat, na):
 def test_str_findall(data, pat):
     modin_series, pandas_series = create_test_series(data)
     eval_general(modin_series, pandas_series, lambda series: series.str.findall(pat))
+
+
+@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
+@pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
+def test_str_fullmatch(data, pat):
+    modin_series, pandas_series = create_test_series(data)
+    eval_general(modin_series, pandas_series, lambda series: series.str.fullmatch(pat))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

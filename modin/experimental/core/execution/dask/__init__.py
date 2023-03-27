@@ -11,15 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-try:
-    import modin_spreadsheet
-except ImportError:
-    raise ImportError(
-        'Please `pip install "modin[spreadsheet]"` to install the spreadsheet extension'
-    )
-
-from .general import from_dataframe, to_dataframe
-
-__all__ = ["from_dataframe", "to_dataframe"]
-
-del modin_spreadsheet
+"""Experimental Modin's functionality related to Dask execution engine."""

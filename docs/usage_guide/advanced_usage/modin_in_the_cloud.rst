@@ -15,7 +15,7 @@ Setup environment
 
 .. code-block:: shell
 
-  pip install modin[remote]
+  pip install "modin[remote]"
 
 This command install the following dependencies:
 

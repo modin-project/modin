@@ -3796,6 +3796,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
+    @doc_utils.doc_dt_timestamp(
+        prop="Calculate year, week, and day according to the ISO 8601 standard.",
+        refer_to="isocalendar",
+    )
+    def dt_isocalendar(self):
+        return DateTimeDefault.register(pandas.Series.dt.isocalendar)(self)
+
     @doc_utils.doc_dt_timestamp(prop="hour", refer_to="hour")
     def dt_hour(self):
         return DateTimeDefault.register(pandas.Series.dt.hour)(self)
@@ -3943,6 +3950,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
+
+    @doc_utils.add_refer_to("Series.dt.asfreq")
+    def dt_asfreq(self, freq=None, how: str = "E"):
+        """
+        Convert the PeriodArray to the specified frequency `freq`.
+
+        Equivalent to applying pandas.Period.asfreq() with the given arguments to each Period in this PeriodArray.
+
+        Parameters
+        ----------
+        freq : str, optional
+            A frequency.
+        how : str {'E', 'S'}, default: 'E'
+            Whether the elements should be aligned to the end or start within pa period.
+            * 'E', "END", or "FINISH" for end,
+            * 'S', "START", or "BEGIN" for start.
+            January 31st ("END") vs. January 1st ("START") for example.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing period data.
+        """
+        return DateTimeDefault.register(pandas.Series.dt.asfreq)(self, freq, how)
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.dt.to_period")
@@ -4519,6 +4550,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, pat, flags, **kwargs
         )
 
+    @doc_utils.doc_str_method(
+        refer_to="fullmatch",
+        params="""
+        pat : str
+        case : bool, default: True
+        flags : int, default: 0
+        na : object, default: None""",
+    )
+    def str_fullmatch(self, pat, case=True, flags=0, na=None):
+        return StrDefault.register(pandas.Series.str.fullmatch)(
+            self, pat, case, flags, na
+        )
+
     @doc_utils.doc_str_method(refer_to="get", params="i : int")
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
@@ -4639,6 +4683,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_partition(self, sep=" ", expand=True):
         return StrDefault.register(pandas.Series.str.partition)(self, sep, expand)
+
+    @doc_utils.doc_str_method(refer_to="removeprefix", params="prefix : str")
+    def str_removeprefix(self, prefix):
+        return StrDefault.register(pandas.Series.str.removeprefix)(self, prefix)
+
+    @doc_utils.doc_str_method(refer_to="removesuffix", params="suffix : str")
+    def str_removesuffix(self, suffix):
+        return StrDefault.register(pandas.Series.str.removesuffix)(self, suffix)
 
     @doc_utils.doc_str_method(refer_to="repeat", params="repeats : int")
     def str_repeat(self, repeats):
