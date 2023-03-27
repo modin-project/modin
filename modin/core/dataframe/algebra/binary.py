@@ -210,8 +210,8 @@ class Binary(Operator):
                         other = other.transpose()
 
                     if (
-                        query_compiler._modin_frame.has_columns_cache()
-                        and other._modin_frame.has_columns_cache()
+                        query_compiler._modin_frame.has_materialized_columns()
+                        and other._modin_frame.has_materialized_columns()
                     ):
                         if (
                             len(query_compiler.columns) == 1
@@ -245,8 +245,8 @@ class Binary(Operator):
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                             dtypes = dtypes.apply(coerce_int_to_float64)
                     if (
-                        query_compiler._modin_frame.has_columns_cache()
-                        and other._modin_frame.has_columns_cache()
+                        query_compiler._modin_frame.has_materialized_columns()
+                        and other._modin_frame.has_materialized_columns()
                     ):
                         if (
                             len(query_compiler.columns) == 1
@@ -276,7 +276,7 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        query_compiler._modin_frame.has_columns_cache()
+                        query_compiler._modin_frame.has_materialized_columns()
                         and len(query_compiler._modin_frame.columns) == 1
                         and is_scalar(other)
                     ):
