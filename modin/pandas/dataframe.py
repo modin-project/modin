@@ -2055,21 +2055,25 @@ class DataFrame(BasePandasDataset):
             return self.groupby(level=level, axis=axis, sort=False).sum(
                 numeric_only=numeric_only, min_count=min_count
             )
-        sum_result = (data._query_compiler.sum_min_count(
+        sum_result = (
+            data._query_compiler.sum_min_count(
                 axis=axis,
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
-            ) if min_count > 1 else data._query_compiler.sum(
+            )
+            if min_count > 1
+            else data._query_compiler.sum(
                 axis=axis,
                 skipna=skipna,
                 level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
-            ))
+            )
+        )
         if axis == 0:
             sum_result = sum_result.transpose()
         return data._reduce_dimension(sum_result)
