@@ -280,8 +280,8 @@ def test_series_cat_api_equality():
 
 @pytest.mark.parametrize("obj", ["DataFrame", "Series"])
 def test_sparse_accessor_api_equality(obj):
-    modin_dir = [obj for obj in dir(getattr(pd, obj).sparse) if obj[0] != "_"]
-    pandas_dir = [obj for obj in dir(getattr(pandas, obj).sparse) if obj[0] != "_"]
+    modin_dir = [x for x in dir(getattr(pd, obj).sparse) if x[0] != "_"]
+    pandas_dir = [x for x in dir(getattr(pandas, obj).sparse) if x[0] != "_"]
 
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
