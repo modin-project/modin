@@ -1512,6 +1512,31 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
         )
 
+    def aggregate(self, func=None, *args, **kwargs):
+        if isinstance(func, dict):
+            raise SpecificationError("nested renamer is not supported")
+        elif is_list_like(func):
+            from .dataframe import DataFrame            
+            result = DataFrame(
+                query_compiler=self._query_compiler.groupby_agg(
+                    by=self._by,
+                    agg_func=func,
+                    axis=self._axis,
+                    groupby_kwargs=self._kwargs,
+                    agg_args=args,
+                    agg_kwargs=kwargs,
+                ))
+            # query compiler always gives result a multiindex on the axis with the
+            # function names, but series always gets a regular index on the columns
+            # because there is no need to identify which original column's aggregation
+            # the new column represents. alternatively we could give the query compiler
+            # a hint that it's for a series, not a dataframe.
+            maybe_squeezed = result.squeeze() if self._squeeze else result
+            return maybe_squeezed.set_axis(labels=func, axis=1)
+        else:
+            return super().aggregate(func, *args, **kwargs)
+
+    agg = aggregate
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
