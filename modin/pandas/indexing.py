@@ -829,7 +829,6 @@ class _LocIndexer(_LocationIndexerBase):
             Value that should be assigned to located dataset.
         """
         exist_items = item
-        common_label_loc = np.isin(col_loc, self.qc.columns.values)
         if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
             item = np.array(item)
             if len(item.shape) == 1:
@@ -842,12 +841,7 @@ class _LocIndexer(_LocationIndexerBase):
                     raise ValueError(
                         "Must have equal len keys and value when setting with an iterable"
                     )
-            if not isinstance(item, np.ndarray):
-                exist_items = (
-                    item[:, common_label_loc]
-                    if len(item.shape) > 1
-                    else item[common_label_loc]
-                )
+        common_label_loc = np.isin(col_loc, self.qc.columns.values)
         if not all(common_label_loc):
             # In this case we have some new cols and some old ones
             columns = self.qc.columns
