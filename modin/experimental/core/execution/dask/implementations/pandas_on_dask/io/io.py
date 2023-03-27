@@ -24,17 +24,17 @@ import pandas
 
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVGlobParser,
-    PandasPickleExperimentalParser,
-    CustomTextExperimentalParser,
+    ExperimentalPandasPickleParser,
+    ExperimentalCustomTextParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
 from modin.core.io import (
     CSVGlobDispatcher,
-    PickleExperimentalDispatcher,
-    CustomTextExperimentalDispatcher,
+    ExperimentalPickleDispatcher,
+    ExperimentalCustomTextDispatcher,
 )
-from modin.experimental.core.io import SQLExperimentalDispatcher
+from modin.experimental.core.io import ExperimentalSQLDispatcher
 
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
     PandasOnDaskDataframe,
@@ -67,14 +67,14 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
     read_pickle_distributed = __make_read(
-        PandasPickleExperimentalParser, PickleExperimentalDispatcher
+        ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )
 
     read_custom_text = __make_read(
-        CustomTextExperimentalParser, CustomTextExperimentalDispatcher
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )
 
-    read_sql = __make_read(SQLExperimentalDispatcher)
+    read_sql = __make_read(ExperimentalSQLDispatcher)
 
     del __make_read  # to not pollute class namespace
 

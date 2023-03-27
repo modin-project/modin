@@ -412,7 +412,7 @@ class PandasCSVGlobParser(PandasCSVParser):
 
 
 @doc(_doc_pandas_parser_class, data_type="pickled pandas objects")
-class PandasPickleExperimentalParser(PandasParser):
+class ExperimentalPandasPickleParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
@@ -433,7 +433,7 @@ class PandasPickleExperimentalParser(PandasParser):
 
 
 @doc(_doc_pandas_parser_class, data_type="custom text")
-class CustomTextExperimentalParser(PandasParser):
+class ExperimentalCustomTextParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
