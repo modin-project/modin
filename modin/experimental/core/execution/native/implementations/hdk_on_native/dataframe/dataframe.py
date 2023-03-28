@@ -180,7 +180,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.set_index_cache(index)
         self.set_columns_cache(columns)
         # The following code assumes that the type of `columns` is pandas.Index.
-        # The initial type of `columns` - list-like.
+        # The initial type of `columns` might be callable.
         columns = self._columns_cache.get()
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
