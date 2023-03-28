@@ -155,6 +155,7 @@ def join_by_index(
     suffixes,
 ):  # noqa: GL08
     def to_empty_pandas_df(df):
+        # Create an empty pandas frame with the same columns and index.
         idx = df._index_cache
         if idx is not None:
             idx = idx[:1]
@@ -183,6 +184,8 @@ def join_by_index(
     else:
         index_cols = left._mangle_index_names(merged.index.names)
         for orig_name, mangled_name in zip(merged.index.names, index_cols):
+            # Using _dtypes here since it contains all column names,
+            # including the index.
             df = left if mangled_name in left._dtypes else right
             exprs[orig_name] = df.ref(mangled_name)
             new_dtypes.append(df._dtypes[mangled_name])
