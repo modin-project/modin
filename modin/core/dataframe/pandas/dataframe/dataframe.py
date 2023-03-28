@@ -382,6 +382,7 @@ class PandasDataframe(ClassLogger):
             idx_cache = self._index_cache.copy()
         return idx_cache
 
+    @property
     def has_columns_cache(self):
         """
         Check if the columns cache exists.
