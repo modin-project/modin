@@ -123,7 +123,7 @@ class ModinIndex:
             Attribute.
 
         Notes
-        ------
+        -----
         Executing this function materializes the data.
         """
         if not self.is_materialized:
