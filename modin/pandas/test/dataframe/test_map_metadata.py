@@ -638,6 +638,10 @@ def test_convert_dtypes_multiple_row_partitions():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython cannot not have multiple partitions.",
+)
 def test_convert_dtypes_5653():
     modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
     modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
