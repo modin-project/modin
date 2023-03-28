@@ -285,8 +285,9 @@ class _CategoricalDtypeMapper:  # noqa: GL08
         for chunk in chunks:
             assert isinstance(chunk, pa.DictionaryArray)
             cat = chunk.dictionary.to_pandas()
-            values.extend([cat[v.index.as_py()] if v.is_valid else None for v in chunk])
+            values.append(chunk.indices.to_pandas().map(cat))
             categories.update((c, None) for c in cat)
         return pd.Categorical(
-            values, dtype=pd.CategoricalDtype(categories, ordered=True)
+            pd.concat(values, ignore_index=True),
+            dtype=pd.CategoricalDtype(categories, ordered=True),
         )
