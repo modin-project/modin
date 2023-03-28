@@ -266,14 +266,14 @@ def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
     -------
     pandas.DataFrame
     """
-    return at.to_pandas(types_mapper=_arrow_to_pandas_mapper)
 
+    def mapper(at):
+        if is_dictionary(at) and isinstance(at.value_type, ArrowIntervalType):
+            # The default mapper fails with TypeError: unhashable type: 'dict'
+            return _CategoricalDtypeMapper
+        return None
 
-def _arrow_to_pandas_mapper(at):  # noqa: GL08
-    if is_dictionary(at) and isinstance(at.value_type, ArrowIntervalType):
-        # The default mapper fails with TypeError: unhashable type: 'dict'
-        return _CategoricalDtypeMapper
-    return None
+    return at.to_pandas(types_mapper=mapper)
 
 
 class _CategoricalDtypeMapper:  # noqa: GL08
