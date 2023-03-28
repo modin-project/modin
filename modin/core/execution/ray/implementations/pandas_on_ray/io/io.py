@@ -112,8 +112,7 @@ class PandasOnRayIO(RayIO):
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        # FIXME: we should be waiting for completion less expensievely, maybe use _modin_frame.materialize()?
-        result.to_pandas()  # blocking operation
+        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
 
     @staticmethod
     def _to_csv_check_support(kwargs):
