@@ -357,6 +357,7 @@ class PandasDataframe(ClassLogger):
         else:
             self._columns_cache = ModinIndex(columns)
 
+    @property
     def has_index_cache(self):
         """
         Check if the index cache exists.
@@ -377,7 +378,7 @@ class PandasDataframe(ClassLogger):
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
-        if self.has_index_cache():
+        if self.has_index_cache:
             idx_cache = self._index_cache.copy()
         return idx_cache
 
@@ -405,6 +406,7 @@ class PandasDataframe(ClassLogger):
             columns_cache = columns_cache.copy()
         return columns_cache
 
+    @property
     def has_materialized_index(self):
         """
         Check if dataframe has materialized index cache.
@@ -413,8 +415,9 @@ class PandasDataframe(ClassLogger):
         -------
         bool
         """
-        return self.has_index_cache() and self._index_cache.is_materialized
+        return self.has_index_cache and self._index_cache.is_materialized
 
+    @property
     def has_materialized_columns(self):
         """
         Check if dataframe has materialized columns cache.
@@ -423,7 +426,7 @@ class PandasDataframe(ClassLogger):
         -------
         bool
         """
-        return self.has_columns_cache() and self._columns_cache.is_materialized
+        return self.has_columns_cache and self._columns_cache.is_materialized
 
     def _validate_set_axis(self, new_labels, old_labels):
         """
@@ -464,7 +467,7 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the row labels.
         """
-        if self.has_index_cache():
+        if self.has_index_cache:
             index, row_lengths = self._index_cache.get(return_lengths=True)
         else:
             index, row_lengths = self._compute_axis_labels_and_lengths(0)
@@ -482,7 +485,7 @@ class PandasDataframe(ClassLogger):
         pandas.Index
             An index object containing the column labels.
         """
-        if self.has_columns_cache():
+        if self.has_columns_cache:
             columns, column_widths = self._columns_cache.get(return_lengths=True)
         else:
             columns, column_widths = self._compute_axis_labels_and_lengths(1)
@@ -500,7 +503,7 @@ class PandasDataframe(ClassLogger):
         new_index : list-like
             The new row labels.
         """
-        if self.has_materialized_index():
+        if self.has_materialized_index:
             new_index = self._validate_set_axis(new_index, self._index_cache)
         self.set_index_cache(new_index)
         self.synchronize_labels(axis=0)
@@ -514,7 +517,7 @@ class PandasDataframe(ClassLogger):
         new_columns : list-like
            The new column labels.
         """
-        if self.has_materialized_columns():
+        if self.has_materialized_columns:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self._dtypes is not None:
                 self._dtypes.index = new_columns
@@ -570,8 +573,8 @@ class PandasDataframe(ClassLogger):
             Trigger the computations for partition sizes and labels if they're not done already.
         """
         if not compute_metadata and (
-            not self.has_materialized_index()
-            or not self.has_materialized_columns()
+            not self.has_materialized_index
+            or not self.has_materialized_columns
             or self._row_lengths_cache is None
             or self._column_widths_cache is None
         ):
@@ -1930,7 +1933,7 @@ class PandasDataframe(ClassLogger):
         The data shape is not changed (length and width of the table).
         """
         if new_columns is not None:
-            if self.has_materialized_columns():
+            if self.has_materialized_columns:
                 assert len(self.columns) == len(
                     new_columns
                 ), "The length of `new_columns` doesn't match the columns' length of `self`"
@@ -3523,11 +3526,11 @@ class PandasDataframe(ClassLogger):
             df = pandas.DataFrame(columns=self.columns, index=self.index)
         else:
             for axis, has_external_index in enumerate(
-                [self.has_materialized_index, self.has_materialized_columns]
+                ["has_materialized_index", "has_materialized_columns"]
             ):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
-                if has_external_index():
+                if getattr(self, has_external_index):
                     external_index = self.columns if axis else self.index
                     ErrorMessage.catch_bugs_and_request_email(
                         not df.axes[axis].equals(external_index),

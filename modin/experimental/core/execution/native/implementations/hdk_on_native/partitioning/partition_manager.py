@@ -279,7 +279,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                             # Creating an empty table with index columns only.
                             idx_names = (
                                 frame.index.names
-                                if frame.has_materialized_index()
+                                if frame.has_materialized_index
                                 else [None]
                             )
                             idx_names = frame._mangle_index_names(idx_names)
