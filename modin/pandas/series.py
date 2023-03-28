@@ -2011,9 +2011,7 @@ class Series(BasePandasDataset):
         """
         Truncate a Series before and after some index value.
         """
-        return self.__constructor__(
-            self.__query_compiler__.truncate(before, after, axis, copy)
-        )
+        return super(Series, self).truncate(before, after, axis, copy)
 
     def unique(self):  # noqa: RT01, D200
         """
