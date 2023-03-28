@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
+
 from collections import OrderedDict
 
 import pandas
@@ -156,7 +157,7 @@ def join_by_index(
     def to_empty_pandas_df(df):
         idx = df._index_cache
         if idx is not None:
-            idx = idx[0:1]
+            idx = idx[:1]
         elif df._index_cols is not None:
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
