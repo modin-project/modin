@@ -3528,7 +3528,6 @@ class PandasDataframe(ClassLogger):
                 # no need to check external and internal axes since in that case
                 # external axes will be computed from internal partitions
                 if has_external_index():
-                    # cache now cannot be used as replacing indexes
                     external_index = self.columns if axis else self.index
                     ErrorMessage.catch_bugs_and_request_email(
                         not df.axes[axis].equals(external_index),

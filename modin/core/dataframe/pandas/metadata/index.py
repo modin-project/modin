@@ -74,11 +74,13 @@ class ModinIndex:
         """
         Redirect the 'len' request to the internal representation.
 
-        Notes: executing this function materializes the data.
-
         Returns
         -------
         int
+        
+        Notes
+        -----
+        Executing this function materializes the data.
         """
         if not self.is_materialized:
             self.get()
@@ -88,13 +90,15 @@ class ModinIndex:
         """
         Serialize an object of this class.
 
-        Notes: the default implementation generates a recursion error. In a short:
-        during the construction of the object, `__getattr__` function is called, which
-        is not intended to be used in situations where the object is not initialized.
-
         Returns
         -------
         tuple
+        
+        Notes
+        -----
+        The default implementation generates a recursion error. In a short:
+        during the construction of the object, `__getattr__` function is called, which
+        is not intended to be used in situations where the object is not initialized.
         """
         if self._lengths_cache is not None:
             return (self.__class__, (lambda: (self._value, self._lengths_vache),))
@@ -107,7 +111,6 @@ class ModinIndex:
         This is necessary so that objects of this class in most cases mimic the behavior
         of the ``pandas.Index``. The main limitations of the current approach are type
         checking and the use of this object where pandas indexes are supposed to be used.
-        Notes: executing this function materializes the data.
 
         Parameters
         ----------
@@ -118,6 +121,10 @@ class ModinIndex:
         -------
         object
             Attribute.
+        
+        Notes
+        ------
+        Executing this function materializes the data.
         """
         if not self.is_materialized:
             self.get()
