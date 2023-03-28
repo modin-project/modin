@@ -1588,22 +1588,28 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             partition.force_materialization().list_of_block_partitions[0]
             for partition in cls.row_partitions(partitions)
         ]
-        # Gather together all of the sub-partitions
-        split_row_partitions = np.array(
-            [
-                partition.split(
-                    shuffle_functions.split_function, len(pivots) + 1, pivots
-                )
-                for partition in row_partitions
+        if len(pivots):
+            # Gather together all of the sub-partitions
+            split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_function, len(pivots) + 1, pivots
+                    )
+                    for partition in row_partitions
+                ]
+            ).T
+            # We need to convert every partition that came from the splits into a full-axis column partition.
+            new_partitions = [
+                [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func
+                    )
+                ]
+                for row_partition in split_row_partitions
             ]
-        ).T
-        # We need to convert every partition that came from the splits into a full-axis column partition.
-        new_partitions = [
-            [
-                cls._column_partitions_class(row_partition, full_axis=False).apply(
-                    final_shuffle_func
-                )
-            ]
-            for row_partition in split_row_partitions
-        ]
-        return np.array(new_partitions)
+            return np.array(new_partitions)
+        else:
+            # If there are not pivots we can simply apply the function row-wise
+            return np.array(
+                [[row_part.apply(final_shuffle_func)] for row_part in row_partitions]
+            )

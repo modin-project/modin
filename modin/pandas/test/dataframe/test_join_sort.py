@@ -591,6 +591,21 @@ def test_sort_values_descending_with_only_two_bins():
     )
 
 
+@pytest.mark.parametrize("ascending", [True, False])
+def test_sort_values_with_one_partition(ascending):
+    # Test case from https://github.com/modin-project/modin/issues/5859
+    modin_df, pandas_df = create_test_dfs(
+        np.array([["hello", "goodbye"], ["hello", "Hello"]])
+    )
+
+    if StorageFormat.get() == "Pandas":
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (1, 1)
+
+    eval_general(
+        modin_df, pandas_df, lambda df: df.sort_values(by=1, ascending=ascending)
+    )
+
+
 def test_sort_overpartitioned_df():
     # First we test when the final df will have only 1 row and column partition.
     data = [[4, 5, 6], [1, 2, 3]]
