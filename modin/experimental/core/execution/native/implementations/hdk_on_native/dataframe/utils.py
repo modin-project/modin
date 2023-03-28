@@ -281,7 +281,9 @@ class _CategoricalDtypeMapper:  # noqa: GL08
     def __from_arrow__(arr):  # noqa: GL08
         values = []
         categories = OrderedDict()
-        for chunk in arr.chunks:
+        chunks = arr.chunks if isinstance(arr, pa.ChunkedArray) else (arr,)
+        for chunk in chunks:
+            assert isinstance(chunk, pa.DictionaryArray)
             cat = chunk.dictionary.to_pandas()
             values.extend([cat[v.index.as_py()] if v.is_valid else None for v in chunk])
             categories.update((c, None) for c in cat)
