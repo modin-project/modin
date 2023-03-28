@@ -2509,7 +2509,7 @@ class DataFrame(BasePandasDataset):
         Replace values where the condition is False.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if isinstance(other, pandas.Series) and axis is None:
+        if isinstance(other, Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             if isinstance(other, DataFrame):
@@ -2572,7 +2572,8 @@ class DataFrame(BasePandasDataset):
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
             axis = self._get_axis_number(axis)
-            if isinstance(other, pandas.Series):
+            if isinstance(other, Series):
+                other = other._to_pandas()
                 other = other.reindex(self.index if axis == 0 else self.columns)
             elif is_list_like(other):
                 index = self.index if axis == 0 else self.columns

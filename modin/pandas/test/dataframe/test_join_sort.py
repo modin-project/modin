@@ -726,6 +726,13 @@ def test_where():
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
 
+    # test case when other is Series
+    other_data = random_state.randn(len(pandas_df))
+    modin_other, pandas_other = pd.Series(other_data), pandas.Series(other_data)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other, axis=0)
+    modin_result = modin_df.where(modin_cond_df, modin_other, axis=0)
+    df_equals(modin_result, pandas_result)
+
     # Test that we choose the right values to replace when `other` == `True`
     # everywhere.
     other_data = np.full(shape=pandas_df.shape, fill_value=True)

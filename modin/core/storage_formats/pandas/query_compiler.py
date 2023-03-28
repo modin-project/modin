@@ -442,6 +442,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
+        # it's doesn't work if `other` is Series._query_compiler because
+        # `n_ary_op` performs columns copartition both for `cond` and `other`.
         if isinstance(other, type(self)):
             # Make sure to set join_type=None so the `where` result always has
             # the same row and column labels as `self`.
