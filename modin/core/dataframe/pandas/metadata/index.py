@@ -77,7 +77,7 @@ class ModinIndex:
         Returns
         -------
         int
-        
+
         Notes
         -----
         Executing this function materializes the data.
@@ -93,7 +93,7 @@ class ModinIndex:
         Returns
         -------
         tuple
-        
+
         Notes
         -----
         The default implementation generates a recursion error. In a short:
@@ -121,7 +121,7 @@ class ModinIndex:
         -------
         object
             Attribute.
-        
+
         Notes
         ------
         Executing this function materializes the data.
