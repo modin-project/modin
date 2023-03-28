@@ -877,8 +877,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols, exprs, new_dtypes, new_columns = join_by_index(
                 self, other, how, orig_left_on, orig_right_on, sort, suffixes
             )
-            sort = False
+            ignore_index = False
         else:
+            ignore_index = True
             index_cols = None
             exprs = OrderedDict()
             new_dtypes = []
@@ -919,7 +920,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if sort:
             res = res.sort_rows(
-                left_on, ascending=True, ignore_index=True, na_position="last"
+                left_on, ascending=True, ignore_index=ignore_index, na_position="last"
             )
 
         return res
