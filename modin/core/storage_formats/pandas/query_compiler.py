@@ -1446,7 +1446,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
+
+    def convert_dtypes(self, *args, **kwargs):
+        new_modin_frame = self._modin_frame.apply_full_axis(
+            0,
+            lambda df: df.convert_dtypes(*args, **kwargs),
+            new_index=self._modin_frame._index_cache,
+            new_columns=self._modin_frame._columns_cache,
+        )
+        return self.__constructor__(new_modin_frame)
+
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(

@@ -638,6 +638,16 @@ def test_convert_dtypes_multiple_row_partitions():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+def test_convert_dtypes_5653():
+    modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
+    modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
+    modin_df = pd.concat([modin_part1, modin_part2])
+    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    modin_df = modin_df.convert_dtypes()
+    assert len(modin_df.dtypes) == 1
+    assert modin_df.dtypes[0] == "string"
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
