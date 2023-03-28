@@ -3343,6 +3343,10 @@ class BasePandasDataset(ClassLogger):
             and not self.axes[axis].is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
+
+        if before is not None and after is not None and before > after:
+           raise ValueError(f"Truncate: {after} must be after {before}")
+
         s = slice(*self.axes[axis].slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
