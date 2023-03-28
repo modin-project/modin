@@ -48,6 +48,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     "other",
     [
         lambda df: 4,
+        lambda df: 4.4,
+        lambda df: "4",
         lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
         lambda df, axis: {
             label: idx + 1
