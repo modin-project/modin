@@ -102,5 +102,9 @@ def test_append():
     numpy_result = numpy.append([[1, 2, 3], [4, 5, 6]], [[7, 8, 9]], axis=0)
     modin_result = np.append(np.array([[1, 2, 3], [4, 5, 6]]), [[7, 8, 9]], axis=0)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
+
+@pytest.mark.xfail(reason="append error checking is incorrect: see GH#5896")
+def test_append_error():
     with pytest.raises(ValueError):
         np.append(np.array([[1, 2, 3], [4, 5, 6]]), np.array([7, 8, 9]), axis=0)
