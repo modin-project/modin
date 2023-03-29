@@ -15,7 +15,7 @@
 
 import abc
 
-from .dataframe.utils import ROWID_COL_NAME
+from .dataframe.utils import ColNameCodec
 from .expr import InputRefExpr
 from collections import OrderedDict
 
@@ -56,7 +56,7 @@ class TransformMapper:
         BaseExpr
             Translated expression.
         """
-        if col == ROWID_COL_NAME:
+        if col == ColNameCodec.ROWID_COL_NAME:
             return self._op.input[0].ref(col)
         return self._op.exprs[col]
 

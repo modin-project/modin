@@ -23,11 +23,8 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
 )
 from .utils import (
     LazyProxyCategoricalDtype,
+    ColNameCodec,
     arrow_to_pandas,
-    encode_col_name,
-    decode_col_name,
-    IDX_COL_NAME,
-    ROWID_COL_NAME,
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
@@ -79,6 +76,12 @@ import pyarrow
 import re
 from modin.pandas.utils import check_both_not_none
 from pyarrow.types import is_dictionary
+
+
+IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
+ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME
+encode_col_name = ColNameCodec.encode
+decode_col_name = ColNameCodec.decode
 
 
 class HdkOnNativeDataframe(PandasDataframe):
@@ -1784,7 +1787,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        name = None if self.has_index_cache is None else self._index_cache.name
+        name = self._index_cache.get().name if self.has_index_cache else None
         name = IDX_COL_NAME if name is None else self._mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref(ROWID_COL_NAME)
@@ -2092,7 +2095,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     idx.rename(self._index_names(self._index_cols), inplace=True)
                     if (
                         isinstance(idx, (pd.DatetimeIndex, pd.TimedeltaIndex))
-                        and len(idx) > 3
+                        and len(idx) >= 3  # infer_freq() requires at least 3 values
                     ):
                         idx.freq = pd.infer_freq(idx)
                     self.set_index_cache(idx)
@@ -2388,7 +2391,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         str or None
         """
         if self.has_index_cache:
-            return self._index_cache.name
+            return self._index_cache.get().name
         if self._index_cols is None:
             return None
         if len(self._index_cols) > 1:
@@ -2446,7 +2449,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         list of str
         """
         if self.has_index_cache:
-            return self._index_cache.names
+            return self._index_cache.get().names
         if self.has_multiindex():
             return self._index_cols.copy()
         return [self.get_index_name()]
@@ -2523,6 +2526,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
                 at = at.cast(schema)
+            # concatenate() is called by _partition_mgr_cls.to_pandas
+            # to preserve the categorical dtypes
             df = concatenate([arrow_to_pandas(at)])
         else:
             df = self._partition_mgr_cls.to_pandas(self._partitions)
@@ -2533,7 +2538,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             assert self._index_cols
             if self.has_materialized_index:
                 df.drop(columns=self._index_cols, inplace=True)
-                df.index = self._index_cache.copy()
+                df.index = self._index_cache.get().copy()
             else:
                 df.set_index(self._index_cols, inplace=True)
                 df.index.rename(self._index_names(self._index_cols), inplace=True)
@@ -2544,7 +2549,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 self._partitions[0][0].get(), pd.DataFrame
             ), f"index name '{df.index.name}' is not None"
             if self.has_materialized_index:
-                df.index = self._index_cache.copy()
+                df.index = self._index_cache.get().copy()
 
         # Restore original column labels encoded in HDK to meet its
         # restrictions on column names.
@@ -2667,7 +2672,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         new_dtypes = df.dtypes
 
         def encoder(n):
-            return n if n == MODIN_UNNAMED_SERIES_LABEL else encode_col_name(n, ignore_reserved=False)
+            return (
+                n
+                if n == MODIN_UNNAMED_SERIES_LABEL
+                else encode_col_name(n, ignore_reserved=False)
+            )
 
         if index_cols is not None:
             cols = index_cols.copy()
@@ -2681,7 +2690,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             new_lengths,
             new_widths,
             unsupported_cols,
-        ) = cls._partition_mgr_cls.from_pandas(df, return_dims=True, encode_col_names=False)
+        ) = cls._partition_mgr_cls.from_pandas(
+            df, return_dims=True, encode_col_names=False
+        )
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(

@@ -20,7 +20,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from ..dataframe.utils import encode_col_name, IDX_COL_NAME
+from ..dataframe.utils import ColNameCodec
 from ..partitioning.partition import HdkOnNativeDataframePartition
 from ..db_worker import DbWorker
 from ..calcite_builder import CalciteBuilder
@@ -137,7 +137,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             data and optionally partitions' dimensions.
         """
         if encode_col_names:
-            encoded_names = [encode_col_name(n) for n in at.column_names]
+            encoded_names = [ColNameCodec.encode(n) for n in at.column_names]
             encoded_at = at
             if encoded_names != at.column_names:
                 encoded_at = at.rename_columns(encoded_names)
@@ -314,7 +314,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
         if DoUseCalcite.get():
-            at = at.rename_columns([encode_col_name(c) for c in columns])
+            at = at.rename_columns([ColNameCodec.encode(c) for c in columns])
         res[0][0] = cls._partition_class.put_arrow(at)
 
         return res
@@ -355,7 +355,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         -------
         str
         """
-        if col.startswith(IDX_COL_NAME):
+        if col.startswith(ColNameCodec.IDX_COL_NAME):
             return None
         return col
 

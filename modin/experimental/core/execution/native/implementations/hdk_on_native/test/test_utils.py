@@ -17,10 +17,7 @@ import pytz
 import timeit
 
 from random import randint, uniform, choice
-from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
-    encode_col_name,
-    decode_col_name,
-)
+from ..dataframe.utils import ColNameCodec
 
 UNICODE_RANGES = [
     (0x0020, 0x007F),  # Basic Latin
@@ -39,8 +36,8 @@ UNICODE_ALPHABET = [chr(c) for r in UNICODE_RANGES for c in range(r[0], r[1] + 1
 
 def test_encode_col_name():
     def test(name):
-        encoded = encode_col_name(name)
-        assert decode_col_name(encoded) == name
+        encoded = ColNameCodec.encode(name)
+        assert ColNameCodec.decode(encoded) == name
 
     test("")
     test(None)
@@ -78,17 +75,17 @@ def test_time():
             alphabet * int(text_len / len(alphabet))
             + alphabet[0 : divmod(text_len, len(alphabet))[1]]
         )
-        encoded_text = encode_col_name(text)
-        assert text == decode_col_name(encoded_text)
+        encoded_text = ColNameCodec.encode(text)
+        assert text == ColNameCodec.decode(encoded_text)
         print(f"Alphabet: {alphabet}")  # noqa: T201
         print(f"Text len: {len(text)}")  # noqa: T201
         print(f"Encoded text len: {len(encoded_text)}")  # noqa: T201
 
         def test_encode():
-            encode_col_name(text)
+            ColNameCodec.encode(text)
 
         def test_decode():
-            decode_col_name(encoded_text)
+            ColNameCodec.decode(encoded_text)
 
         time = timeit.timeit(stmt=test_encode, number=repeat)
         print(f"Encode time: {time/repeat} seconds")  # noqa: T201

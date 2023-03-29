@@ -16,7 +16,7 @@ from pandas.core.dtypes.common import get_dtype
 
 import modin.pandas as pd
 from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
-    decode_col_name,
+    ColNameCodec,
 )
 from modin.pandas.utils import from_arrow
 from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
@@ -126,7 +126,7 @@ def _build_query(query: str, frames: dict, import_table: callable) -> str:
 
         for i, col in enumerate(at.column_names):
             alias.append("    " if i == 0 else ",\n    ")
-            alias.extend(('"', col, '"', " AS ", '"', decode_col_name(col), '"'))
+            alias.extend(('"', col, '"', " AS ", '"', ColNameCodec.decode(col), '"'))
         alias.extend(("\n  FROM\n    ", part.frame_id))
 
     alias.extend(("\n)\n", query))
