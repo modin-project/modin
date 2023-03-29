@@ -242,7 +242,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+                axis, map_func, left=partitions, right=by
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
+    def broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,9 +346,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "right"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
 
         Returns
         -------
@@ -365,7 +362,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
-            return apply_func(df, **{other_name: other})
+            return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
@@ -1588,22 +1585,28 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             partition.force_materialization().list_of_block_partitions[0]
             for partition in cls.row_partitions(partitions)
         ]
-        # Gather together all of the sub-partitions
-        split_row_partitions = np.array(
-            [
-                partition.split(
-                    shuffle_functions.split_function, len(pivots) + 1, pivots
-                )
-                for partition in row_partitions
+        if len(pivots):
+            # Gather together all of the sub-partitions
+            split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_function, len(pivots) + 1, pivots
+                    )
+                    for partition in row_partitions
+                ]
+            ).T
+            # We need to convert every partition that came from the splits into a full-axis column partition.
+            new_partitions = [
+                [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func
+                    )
+                ]
+                for row_partition in split_row_partitions
             ]
-        ).T
-        # We need to convert every partition that came from the splits into a full-axis column partition.
-        new_partitions = [
-            [
-                cls._column_partitions_class(row_partition, full_axis=False).apply(
-                    final_shuffle_func
-                )
-            ]
-            for row_partition in split_row_partitions
-        ]
-        return np.array(new_partitions)
+            return np.array(new_partitions)
+        else:
+            # If there are not pivots we can simply apply the function row-wise
+            return np.array(
+                [[row_part.apply(final_shuffle_func)] for row_part in row_partitions]
+            )

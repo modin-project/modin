@@ -13,6 +13,10 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
+import os
+
+import pandas
+
 from modin.core.io import BaseIO
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
@@ -67,3 +71,80 @@ class PandasOnDaskIO(BaseIO):
     read_excel = type(
         "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
     ).read
+
+    @staticmethod
+    def _to_parquet_check_support(kwargs):
+        """
+        Check if parallel version of `to_parquet` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to `.to_parquet()`.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of `to_parquet` is applicable.
+        """
+        path = kwargs["path"]
+        compression = kwargs["compression"]
+        if not isinstance(path, str):
+            return False
+        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+        if compression is None or not compression == "snappy":
+            return False
+        return True
+
+    @classmethod
+    def to_parquet(cls, qc, **kwargs):
+        """
+        Write a ``DataFrame`` to the binary parquet format.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
+        **kwargs : dict
+            Parameters for `pandas.to_parquet(**kwargs)`.
+        """
+        if not cls._to_parquet_check_support(kwargs):
+            return BaseIO.to_parquet(qc, **kwargs)
+
+        output_path = kwargs["path"]
+        os.makedirs(output_path, exist_ok=True)
+
+        def func(df, **kw):
+            """
+            Dump a chunk of rows as parquet, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a parquet file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
+            compression = kwargs["compression"]
+            partition_idx = kw["partition_idx"]
+            kwargs[
+                "path"
+            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            df.to_parquet(**kwargs)
+            return pandas.DataFrame()
+
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+            axis=1,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
+            enumerate_partitions=True,
+        )
+        DaskWrapper.materialize(
+            [part.list_of_blocks[0] for row in result for part in row]
+        )

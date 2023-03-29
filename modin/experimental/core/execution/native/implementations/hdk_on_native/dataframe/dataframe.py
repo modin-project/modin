@@ -21,7 +21,13 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import LazyProxyCategoricalDtype
+from .utils import (
+    LazyProxyCategoricalDtype,
+    arrow_to_pandas,
+    check_join_supported,
+    check_cols_to_join,
+    get_data_for_join_by_index,
+)
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
@@ -855,7 +861,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        how = JoinType(how)
+        check_join_supported(how)
         assert (
             left_on is not None and right_on is not None
         ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
@@ -863,51 +869,61 @@ class HdkOnNativeDataframe(PandasDataframe):
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
 
-        for col in left_on:
-            assert col in self.columns, f"'left_on' references unknown column {col}"
-        for col in right_on:
-            assert col in other.columns, f"'right_on' references unknown column {col}"
+        orig_left_on = left_on
+        orig_right_on = right_on
+        left, left_on = check_cols_to_join("left_on", self, left_on)
+        right, right_on = check_cols_to_join("right_on", other, right_on)
 
-        new_columns = []
-        new_dtypes = []
-        exprs = OrderedDict()
-
-        left_conflicts = set(self.columns) & (set(other.columns) - set(right_on))
-        right_conflicts = set(other.columns) & (set(self.columns) - set(left_on))
-        conflicting_cols = left_conflicts | right_conflicts
-        for c in self.columns:
-            new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
-            new_columns.append(new_name)
-            new_dtypes.append(self._dtypes[c])
-            exprs[new_name] = self.ref(c)
-        for c in other.columns:
-            if c not in left_on or c not in right_on:
-                new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
+        # If either left_on or right_on has been changed, it means that there
+        # are index columns in the list. Joining by index in this case.
+        if (left_on is not orig_left_on) or (right_on is not orig_right_on):
+            index_cols, exprs, new_dtypes, new_columns = get_data_for_join_by_index(
+                self, other, how, orig_left_on, orig_right_on, sort, suffixes
+            )
+            ignore_index = False
+        else:
+            ignore_index = True
+            index_cols = None
+            exprs = OrderedDict()
+            new_dtypes = []
+            new_columns = []
+            left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
+            right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
+            conflicting_cols = left_conflicts | right_conflicts
+            for c in left.columns:
+                new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
                 new_columns.append(new_name)
-                new_dtypes.append(other._dtypes[c])
-                exprs[new_name] = other.ref(c)
+                new_dtypes.append(left._dtypes[c])
+                exprs[new_name] = left.ref(c)
+            for c in right.columns:
+                if c not in left_on or c not in right_on:
+                    new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
+                    new_columns.append(new_name)
+                    new_dtypes.append(right._dtypes[c])
+                    exprs[new_name] = right.ref(c)
+            new_columns = Index.__new__(Index, data=new_columns)
 
-        condition = self._build_equi_join_condition(other, left_on, right_on)
+        condition = left._build_equi_join_condition(right, left_on, right_on)
 
         op = JoinNode(
-            self,
-            other,
-            how=how.value,
+            left,
+            right,
+            how=how,
             exprs=exprs,
             condition=condition,
         )
 
-        new_columns = Index.__new__(Index, data=new_columns)
-        res = self.__constructor__(
+        res = left.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
+            index_cols=index_cols,
             op=op,
             force_execution_mode=self._force_execution_mode,
         )
 
         if sort:
             res = res.sort_rows(
-                left_on, ascending=True, ignore_index=True, na_position="last"
+                left_on, ascending=True, ignore_index=ignore_index, na_position="last"
             )
 
         return res
@@ -1292,9 +1308,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        if how == "outer":
-            raise NotImplementedError("outer join is not supported in HDK engine")
-
+        check_join_supported(how)
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         for rhs in other_modin_frames:
@@ -1620,9 +1634,16 @@ class HdkOnNativeDataframe(PandasDataframe):
         if na_position != "first" and na_position != "last":
             raise ValueError(f"Unsupported na_position value '{na_position}'")
 
+        base = self
+
+        # If index is preserved and we have no index columns then we
+        # need to create one using __rowid__ virtual column.
+        if not ignore_index and base._index_cols is None:
+            base = base._materialize_rowid()
+
         if not isinstance(columns, list):
             columns = [columns]
-        columns = [self._find_index_or_col(col) for col in columns]
+        columns = [base._find_index_or_col(col) for col in columns]
 
         if isinstance(ascending, list):
             if len(ascending) != len(columns):
@@ -1636,14 +1657,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             # If index is ignored then we might need to drop some columns.
             # At the same time some of dropped index columns can be used
             # for sorting and should be droped after sorting is done.
-            if self._index_cols is not None:
-                base = self
-
+            if base._index_cols is not None:
                 drop_index_cols_before = [
-                    col for col in self._index_cols if col not in columns
+                    col for col in base._index_cols if col not in columns
                 ]
                 drop_index_cols_after = [
-                    col for col in self._index_cols if col in columns
+                    col for col in base._index_cols if col in columns
                 ]
                 if not drop_index_cols_after:
                     drop_index_cols_after = None
@@ -1657,57 +1676,50 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = base.ref(col)
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=index_cols,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
-                base = self.__constructor__(
+                base = base.__constructor__(
                     columns=base.columns,
                     dtypes=base._dtypes,
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=base._index_cols,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
 
                 if drop_index_cols_after:
                     exprs = OrderedDict()
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=None,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
                 return base
             else:
-                return self.__constructor__(
-                    columns=self.columns,
-                    dtypes=self._dtypes,
-                    op=SortNode(self, columns, ascending, na_position),
+                return base.__constructor__(
+                    columns=base.columns,
+                    dtypes=base._dtypes,
+                    op=SortNode(base, columns, ascending, na_position),
                     index_cols=None,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
         else:
-            base = self
-
-            # If index is preserved and we have no index columns then we
-            # need to create one using __rowid__ virtual column.
-            if self._index_cols is None:
-                base = base._materialize_rowid()
-
-            return self.__constructor__(
+            return base.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
                 op=SortNode(base, columns, ascending, na_position),
                 index_cols=base._index_cols,
-                force_execution_mode=self._force_execution_mode,
+                force_execution_mode=base._force_execution_mode,
             )
 
     def filter(self, key):
@@ -1804,15 +1816,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        name = None if not self.has_index_cache else self._index_cache.name
+        name = "__index__" if name is None else self._mangle_index_names([name])[0]
         exprs = OrderedDict()
-        exprs["__index__"] = self.ref("__rowid__")
+        exprs[name] = self.ref("__rowid__")
         for col in self._table_cols:
             exprs[col] = self.ref(col)
         return self.__constructor__(
             columns=self.columns,
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(self, exprs),
-            index_cols=["__index__"],
+            index_cols=[name],
             uses_rowid=True,
             force_execution_mode=self._force_execution_mode,
         )
@@ -2398,6 +2412,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
+        if self.has_index_cache:
+            return self._index_cache.name
         if self._index_cols is None:
             return None
         if len(self._index_cols) > 1:
@@ -2454,6 +2470,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
+        if self.has_index_cache:
+            return self._index_cache.names
         if self.has_multiindex():
             return self._index_cols.copy()
         return [self.get_index_name()]
@@ -2527,7 +2545,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
                 at = at.cast(schema)
-            df = at.to_pandas()
+            df = arrow_to_pandas(at)
         else:
             df = self._partition_mgr_cls.to_pandas(self._partitions)
 

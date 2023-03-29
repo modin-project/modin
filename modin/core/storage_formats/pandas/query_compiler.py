@@ -792,21 +792,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Transpose
 
     # TreeReduce operations
-
-    def is_monotonic_decreasing(self):
-        def is_monotonic_decreasing(df):
-            """Check whether data in the passed frame is monotonic decreasing."""
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_decreasing])
-
-        return self.default_to_pandas(is_monotonic_decreasing)
-
-    def is_monotonic_increasing(self):
-        def is_monotonic_increasing(df):
-            """Check whether data in the passed frame is monotonic increasing."""
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_increasing])
-
-        return self.default_to_pandas(is_monotonic_increasing)
-
     count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     sum = TreeReduce.register(pandas.DataFrame.sum)
     prod = TreeReduce.register(pandas.DataFrame.prod)
@@ -1461,7 +1446,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
+    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -1649,19 +1634,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"), dtypes=np.bool_)
     dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"), dtypes=np.int64)
     dt_days_in_month = Map.register(_dt_prop_map("days_in_month"), dtypes=np.int64)
-
-    def dt_tz(self):
-        def datetime_tz(df):
-            return pandas.DataFrame([df.squeeze(axis=1).dt.tz])
-
-        return self.default_to_pandas(datetime_tz)
-
-    def dt_freq(self):
-        def datetime_freq(df):
-            return pandas.DataFrame([df.squeeze(axis=1).dt.freq])
-
-        return self.default_to_pandas(datetime_freq)
-
     dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
     dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)

@@ -19,7 +19,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from modin.utils import get_current_execution, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import Engine
+from modin.config import Engine, StorageFormat
 from pandas.testing import assert_frame_equal
 
 from .utils import (
@@ -31,7 +31,12 @@ from .utils import (
     eval_general,
     bool_arg_values,
     bool_arg_keys,
+    default_to_pandas_ignore_string,
 )
+
+
+if StorageFormat.get() == "Hdk":
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @contextlib.contextmanager
@@ -635,6 +640,10 @@ def test_unique():
     assert modin_result.shape == pandas_result.shape
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/2896",
+)
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
@@ -770,7 +779,9 @@ def test_to_pandas_indices(data):
         assert md_df.axes[axis].equals(
             pd_df.axes[axis]
         ), f"Indices at axis {axis} are different!"
-        assert md_df.axes[axis].equal_levels(
+        assert not hasattr(md_df.axes[axis], "equal_levels") or md_df.axes[
+            axis
+        ].equal_levels(
             pd_df.axes[axis]
         ), f"Levels of indices at axis {axis} are different!"
 
@@ -829,7 +840,7 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else _nullcontext():
         df[(df.a == 1) & (df.b == 2)]
 
 
