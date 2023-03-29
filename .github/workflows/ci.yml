@@ -671,7 +671,7 @@ jobs:
       # the servers differently.
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
-    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     steps:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
@@ -890,7 +890,7 @@ jobs:
           - group_3
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-    name: test-windows
+    test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     steps:
       - uses: actions/checkout@v3
         with:
