@@ -25,7 +25,7 @@ from .utils import (
     LazyProxyCategoricalDtype,
     check_join_supported,
     check_cols_to_join,
-    join_by_index,
+    get_data_for_join_by_index,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
@@ -874,7 +874,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         # If either left_on or right_on has been changed, it means that there
         # are index columns in the list. Joining by index in this case.
         if (left_on is not orig_left_on) or (right_on is not orig_right_on):
-            index_cols, exprs, new_dtypes, new_columns = join_by_index(
+            index_cols, exprs, new_dtypes, new_columns = get_data_for_join_by_index(
                 self, other, how, orig_left_on, orig_right_on, sort, suffixes
             )
             ignore_index = False

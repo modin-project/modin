@@ -145,7 +145,7 @@ def check_cols_to_join(what, df, col_names):
     return df, new_col_names
 
 
-def join_by_index(
+def get_data_for_join_by_index(
     left,
     right,
     how,
@@ -153,7 +153,37 @@ def join_by_index(
     right_on,
     sort,
     suffixes,
-):  # noqa: GL08
+):
+    """
+    Return the column names, dtypes and expres, required for join by index.
+
+    This is a helper function, used by `HdkOnNativeDataframe.join()`, when joining by index.
+
+    Parameters
+    ----------
+    left : HdkOnNativeDataframe
+        A frame to join.
+    right : HdkOnNativeDataframe
+        A frame to join with.
+    how : str
+        A type of join.
+    left_on : list of str
+        A list of columns for the left frame to join on.
+    right_on : list of str
+        A list of columns for the right frame to join on.
+    sort : bool
+        Sort the result by join keys.
+    suffixes : list-like of str
+        A length-2 sequence of suffixes to add to overlapping column names
+        of left and right operands respectively.
+
+    Returns
+    -------
+    tuple
+
+    The index columns, exprs, dtypes and columns.
+    """
+
     def to_empty_pandas_df(df):
         # Create an empty pandas frame with the same columns and index.
         idx = df._index_cache
