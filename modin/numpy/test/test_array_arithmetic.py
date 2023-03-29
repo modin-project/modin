@@ -21,10 +21,7 @@ import modin.numpy as np
     "operand1_shape",
     [
         100,
-        pytest.param(
-            (1, 100),
-            marks=pytest.mark.xfail(reason="broadcasting is broken: see GH#5894"),
-        ),
+        (1, 100),
         (3, 100),
     ],
 )
@@ -32,10 +29,7 @@ import modin.numpy as np
     "operand2_shape",
     [
         100,
-        pytest.param(
-            (1, 100),
-            marks=pytest.mark.xfail(reason="broadcasting is broken: see GH#5894"),
-        ),
+        (1, 100),
         (3, 100),
         1,
     ],
@@ -61,6 +55,9 @@ import modin.numpy as np
 )
 def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operator):
     """Test of operators that support broadcasting."""
+    if operand1_shape == (1, 100) or operand2_shape == (1, 100):
+        # For some reason, marking the param with xfail leads to [XPASS(strict)] and a reported failure
+        pytest.xfail(reason="broadcasting is broken: see GH#5894")
     operand1 = numpy.random.randint(-100, 100, size=operand1_shape)
     operand2 = numpy.random.randint(-100, 100, size=operand2_shape)
     numpy_result = getattr(operand1, operator)(operand2)
@@ -105,13 +102,13 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
         "__le__",
         pytest.param(
             "__eq__",
-            pytest.mark.xfail(
+            marks=pytest.mark.xfail(
                 reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
             ),
         ),
         pytest.param(
             "__ne__",
-            pytest.mark.xfail(
+            marks=pytest.mark.xfail(
                 reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
             ),
         ),
