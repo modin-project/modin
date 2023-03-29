@@ -646,7 +646,8 @@ def test_convert_dtypes_5653():
     modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
     modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
     modin_df = pd.concat([modin_part1, modin_part2])
-    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    if StorageFormat.get() == "Pandas"
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
     assert modin_df.dtypes[0] == "string"
