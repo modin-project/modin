@@ -196,10 +196,10 @@ def get_data_for_join_by_index(
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
                 names = [df._index_name(n) for n in df._index_cols]
-                idx = pandas.MultiIndex.from_arrays(arrays, names=names)
+                idx = pd.MultiIndex.from_arrays(arrays, names=names)
             else:
-                idx = pandas.Index(name=df._index_name(df._index_cols[0]))
-        return pandas.DataFrame(columns=df.columns, index=idx)
+                idx = pd.Index(name=df._index_name(df._index_cols[0]))
+        return pd.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
     exprs = OrderedDict()
@@ -280,6 +280,7 @@ class _CategoricalDtypeMapper:  # noqa: GL08
     @staticmethod
     def __from_arrow__(arr):  # noqa: GL08
         values = []
+        # Using OrderedDict as an ordered set to preserve the categories order
         categories = OrderedDict()
         chunks = arr.chunks if isinstance(arr, pa.ChunkedArray) else (arr,)
         for chunk in chunks:
