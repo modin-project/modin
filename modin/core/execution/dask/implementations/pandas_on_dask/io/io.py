@@ -153,6 +153,7 @@ class PandasOnDaskIO(BaseIO):
     def to_sql(cls, qc, **kwargs):
         """
         Write records stored in the `qc` to a SQL database.
+
         Parameters
         ----------
         qc : BaseQueryCompiler
@@ -175,6 +176,7 @@ class PandasOnDaskIO(BaseIO):
         def func(df):
             """
             Override column names in the wrapped dataframe and convert it to SQL.
+
             Notes
             -----
             This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
