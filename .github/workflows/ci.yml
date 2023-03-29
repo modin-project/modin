@@ -890,7 +890,7 @@ jobs:
           - group_3
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-    test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
+    name: test-windows (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     steps:
       - uses: actions/checkout@v3
         with:
