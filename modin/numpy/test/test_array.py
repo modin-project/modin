@@ -145,10 +145,13 @@ def test_update_inplace():
     numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
 
 
-@pytest.mark.parametrize("data_out", [
-    numpy.zeros((1, 3)),
-    numpy.zeros((2, 3)),
-])
+@pytest.mark.parametrize(
+    "data_out",
+    [
+        numpy.zeros((1, 3)),
+        numpy.zeros((2, 3)),
+    ],
+)
 def test_out_broadcast(data_out):
     if data_out.shape == (2, 3):
         pytest.xfail("broadcasting would require duplicating row: see GH#5819")
@@ -314,3 +317,15 @@ def test_astype():
     numpy_result = numpy_arr.astype(numpy.float64, copy=False)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+
+
+def test_set_shape():
+    numpy_arr = numpy.array([[1, 2, 3], [4, 5, 6]])
+    numpy_arr.shape = (6,)
+    modin_arr = np.array([[1, 2, 3], [4, 5, 6]])
+    modin_arr.shape = (6,)
+    numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+    modin_arr.shape = 6  # Same as using (6,)
+    numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+    with pytest.raises(ValueError, match="cannot reshape"):
+        modin_arr.shape = (4,)

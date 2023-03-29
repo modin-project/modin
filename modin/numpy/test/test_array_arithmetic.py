@@ -17,8 +17,29 @@ import pytest
 import modin.numpy as np
 
 
-@pytest.mark.parametrize("operand1_shape", [100, (3, 100)])
-@pytest.mark.parametrize("operand2_shape", [100, (3, 100)])
+@pytest.mark.parametrize(
+    "operand1_shape",
+    [
+        100,
+        pytest.param(
+            (1, 100),
+            marks=pytest.mark.xfail(reason="broadcasting is broken: see GH#5894"),
+        ),
+        (3, 100),
+    ],
+)
+@pytest.mark.parametrize(
+    "operand2_shape",
+    [
+        100,
+        pytest.param(
+            (1, 100),
+            marks=pytest.mark.xfail(reason="broadcasting is broken: see GH#5894"),
+        ),
+        (3, 100),
+        1,
+    ],
+)
 @pytest.mark.parametrize(
     "operator",
     [
@@ -42,8 +63,12 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
     """Test of operators that support broadcasting."""
     operand1 = numpy.random.randint(-100, 100, size=operand1_shape)
     operand2 = numpy.random.randint(-100, 100, size=operand2_shape)
-    modin_result = getattr(np.array(operand1), operator)(np.array(operand2))
     numpy_result = getattr(operand1, operator)(operand2)
+    if operand2_shape == 1:
+        # Tests binary ops with a scalar
+        modin_result = getattr(np.array(operand1), operator)(operand2[0])
+    else:
+        modin_result = getattr(np.array(operand1), operator)(np.array(operand2))
     if operator not in ["__truediv__", "__rtruediv__"]:
         numpy.testing.assert_array_equal(
             modin_result._to_numpy(),
@@ -60,6 +85,50 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
             decimal=12,
             err_msg="Binary Op __truediv__ failed.",
         )
+
+
+@pytest.mark.parametrize("matched_axis", [0, 1])
+@pytest.mark.parametrize(
+    "operator",
+    [
+        "__add__",
+        "__sub__",
+        "__truediv__",
+        "__mul__",
+        "__rtruediv__",
+        "__rmul__",
+        "__radd__",
+        "__rsub__",
+        "__ge__",
+        "__gt__",
+        "__lt__",
+        "__le__",
+        pytest.param(
+            "__eq__",
+            pytest.mark.xfail(
+                reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
+            ),
+        ),
+        pytest.param(
+            "__ne__",
+            pytest.mark.xfail(
+                reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
+            ),
+        ),
+    ],
+)
+def test_binary_bad_broadcast(matched_axis, operator):
+    """Tests broadcasts between 2d arrays that should fail."""
+    if matched_axis == 0:
+        operand1 = numpy.random.randint(-100, 100, size=(3, 100))
+        operand2 = numpy.random.randint(-100, 100, size=(3, 200))
+    else:
+        operand1 = numpy.random.randint(-100, 100, size=(100, 3))
+        operand2 = numpy.random.randint(-100, 100, size=(200, 3))
+    with pytest.raises(ValueError):
+        getattr(operand1, operator)(operand2)
+    with pytest.raises(ValueError):
+        getattr(np.array(operand1), operator)(np.array(operand2))
 
 
 @pytest.mark.parametrize("operator", ["__pow__", "__floordiv__", "__mod__"])
