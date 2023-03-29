@@ -2649,7 +2649,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         # the number of rows and, thus, unable to restore the index.
         # That's what we usually have for arrow tables and execution
         # result. Unnamed index is renamed to {IDX_COL_PREF}. Also all
-        # columns get 'F_' prefix to handle names unsupported in HDK.
+        # columns get encoded to handle names unsupported in HDK.
         elif (
             len(new_index) == 0
             and not isinstance(new_index, MultiIndex)
@@ -2667,7 +2667,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         new_dtypes = df.dtypes
 
         def encoder(n):
-            return n if n == MODIN_UNNAMED_SERIES_LABEL else encode_col_name(n, False)
+            return n if n == MODIN_UNNAMED_SERIES_LABEL else encode_col_name(n, ignore_reserved=False)
 
         if index_cols is not None:
             cols = index_cols.copy()
@@ -2681,7 +2681,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             new_lengths,
             new_widths,
             unsupported_cols,
-        ) = cls._partition_mgr_cls.from_pandas(df, True, False)
+        ) = cls._partition_mgr_cls.from_pandas(df, return_dims=True, encode_col_names=False)
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
