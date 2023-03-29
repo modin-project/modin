@@ -15,13 +15,16 @@
 
 from collections import OrderedDict
 
-import pandas
-import pyarrow
+import pandas as pd
+from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
+
+import pyarrow as pa
+from pyarrow.types import is_dictionary
 
 from modin.error_message import ErrorMessage
 
 
-class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
+class LazyProxyCategoricalDtype(pd.CategoricalDtype):
     """
     Proxy class for lazily retrieving categorical dtypes from arrow tables.
 
@@ -33,7 +36,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         Column name.
     """
 
-    def __init__(self, table: pyarrow.Table, column_name: str):
+    def __init__(self, table: pa.Table, column_name: str):
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=table is None,
             extra_log="attempted to bind 'None' pyarrow table to a lazy category",
@@ -43,7 +46,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         self._ordered = False
         self._lazy_categories = None
 
-    def _new(self, table: pyarrow.Table, column_name: str) -> pandas.CategoricalDtype:
+    def _new(self, table: pa.Table, column_name: str) -> pd.CategoricalDtype:
         """
         Create a new proxy, if either table or column name are different.
 
@@ -60,7 +63,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         """
         if self._table is None:
             # The table has been materialized, we don't need a proxy anymore.
-            return pandas.CategoricalDtype(self.categories)
+            return pd.CategoricalDtype(self.categories)
         elif table is self._table and column_name == self._column_name:
             return self
         else:
@@ -70,7 +73,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     def _categories(self):  # noqa: GL08
         if self._table is not None:
             chunks = self._table.column(self._column_name).chunks
-            cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+            cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
             self._lazy_categories = self.validate_categories(cat.unique())
             self._table = None  # The table is not required any more
         return self._lazy_categories
@@ -193,10 +196,10 @@ def get_data_for_join_by_index(
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
                 names = [df._index_name(n) for n in df._index_cols]
-                idx = pandas.MultiIndex.from_arrays(arrays, names=names)
+                idx = pd.MultiIndex.from_arrays(arrays, names=names)
             else:
-                idx = pandas.Index(name=df._index_name(df._index_cols[0]))
-        return pandas.DataFrame(columns=df.columns, index=idx)
+                idx = pd.Index(name=df._index_name(df._index_cols[0]))
+        return pd.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
     exprs = OrderedDict()
@@ -248,3 +251,44 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
+
+
+def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
+    """
+    Convert the specified arrow table to pandas.
+
+    Parameters
+    ----------
+    at : pyarrow.Table
+        The table to convert.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+
+    def mapper(at):
+        if is_dictionary(at) and isinstance(at.value_type, ArrowIntervalType):
+            # The default mapper fails with TypeError: unhashable type: 'dict'
+            return _CategoricalDtypeMapper
+        return None
+
+    return at.to_pandas(types_mapper=mapper)
+
+
+class _CategoricalDtypeMapper:  # noqa: GL08
+    @staticmethod
+    def __from_arrow__(arr):  # noqa: GL08
+        values = []
+        # Using OrderedDict as an ordered set to preserve the categories order
+        categories = OrderedDict()
+        chunks = arr.chunks if isinstance(arr, pa.ChunkedArray) else (arr,)
+        for chunk in chunks:
+            assert isinstance(chunk, pa.DictionaryArray)
+            cat = chunk.dictionary.to_pandas()
+            values.append(chunk.indices.to_pandas().map(cat))
+            categories.update((c, None) for c in cat)
+        return pd.Categorical(
+            pd.concat(values, ignore_index=True),
+            dtype=pd.CategoricalDtype(categories, ordered=True),
+        )

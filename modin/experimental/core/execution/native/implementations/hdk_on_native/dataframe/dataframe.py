@@ -23,6 +23,7 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
 )
 from .utils import (
     LazyProxyCategoricalDtype,
+    arrow_to_pandas,
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
@@ -2542,7 +2543,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
                 at = at.cast(schema)
-            df = at.to_pandas()
+            df = arrow_to_pandas(at)
         else:
             df = self._partition_mgr_cls.to_pandas(self._partitions)
 
