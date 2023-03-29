@@ -1538,179 +1538,179 @@ class TestBinaryOp:
         run_and_compare(applier, data=self.data, data2=self.data, force_lazy=False)
 
     def test_add_cst(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             return df + 1
 
         run_and_compare(add, data=self.data)
 
     def test_add_list(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             return df + [1, 2, 3, 4]
 
         run_and_compare(add, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_add_method_columns(self, fill_value):
-        def add1(lib, df, fill_value):
+        def add1(df, fill_value, **kwargs):
             return df["a"].add(df["b"], fill_value=fill_value)
 
-        def add2(lib, df, fill_value):
+        def add2(df, fill_value, **kwargs):
             return df[["a", "c"]].add(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(add1, data=self.data, fill_value=fill_value)
         run_and_compare(add2, data=self.data, fill_value=fill_value)
 
     def test_add_columns(self):
-        def add1(lib, df):
+        def add1(df, **kwargs):
             return df["a"] + df["b"]
 
-        def add2(lib, df):
+        def add2(df, **kwargs):
             return df[["a", "c"]] + df[["b", "a"]]
 
         run_and_compare(add1, data=self.data)
         run_and_compare(add2, data=self.data)
 
     def test_add_columns_and_assign(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             df["sum"] = df["a"] + df["b"]
             return df
 
         run_and_compare(add, data=self.data)
 
     def test_add_columns_and_assign_to_existing(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             df["a"] = df["a"] + df["b"]
             return df
 
         run_and_compare(add, data=self.data)
 
     def test_mul_cst(self):
-        def mul(lib, df):
+        def mul(df, **kwargs):
             return df * 2
 
         run_and_compare(mul, data=self.data)
 
     def test_mul_list(self):
-        def mul(lib, df):
+        def mul(df, **kwargs):
             return df * [2, 3, 4, 5]
 
         run_and_compare(mul, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_mul_method_columns(self, fill_value):
-        def mul1(lib, df, fill_value):
+        def mul1(df, fill_value, **kwargs):
             return df["a"].mul(df["b"], fill_value=fill_value)
 
-        def mul2(lib, df, fill_value):
+        def mul2(df, fill_value, **kwargs):
             return df[["a", "c"]].mul(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(mul1, data=self.data, fill_value=fill_value)
         run_and_compare(mul2, data=self.data, fill_value=fill_value)
 
     def test_mul_columns(self):
-        def mul1(lib, df):
+        def mul1(df, **kwargs):
             return df["a"] * df["b"]
 
-        def mul2(lib, df):
+        def mul2(df, **kwargs):
             return df[["a", "c"]] * df[["b", "a"]]
 
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
 
     def test_mod_cst(self):
-        def mod(lib, df):
+        def mod(df, **kwargs):
             return df % 2
 
         run_and_compare(mod, data=self.data)
 
     def test_mod_list(self):
-        def mod(lib, df):
+        def mod(df, **kwargs):
             return df % [2, 3, 4, 5]
 
         run_and_compare(mod, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_mod_method_columns(self, fill_value):
-        def mod1(lib, df, fill_value):
+        def mod1(df, fill_value, **kwargs):
             return df["a"].mod(df["b"], fill_value=fill_value)
 
-        def mod2(lib, df, fill_value):
+        def mod2(df, fill_value, **kwargs):
             return df[["a", "c"]].mod(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(mod1, data=self.data, fill_value=fill_value)
         run_and_compare(mod2, data=self.data, fill_value=fill_value)
 
     def test_mod_columns(self):
-        def mod1(lib, df):
+        def mod1(df, **kwargs):
             return df["a"] % df["b"]
 
-        def mod2(lib, df):
+        def mod2(df, **kwargs):
             return df[["a", "c"]] % df[["b", "a"]]
 
         run_and_compare(mod1, data=self.data)
         run_and_compare(mod2, data=self.data)
 
     def test_truediv_cst(self):
-        def truediv(lib, df):
+        def truediv(df, **kwargs):
             return df / 2
 
         run_and_compare(truediv, data=self.data)
 
     def test_truediv_list(self):
-        def truediv(lib, df):
+        def truediv(df, **kwargs):
             return df / [1, 0.5, 0.2, 2.0]
 
         run_and_compare(truediv, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_truediv_method_columns(self, fill_value):
-        def truediv1(lib, df, fill_value):
+        def truediv1(df, fill_value, **kwargs):
             return df["a"].truediv(df["b"], fill_value=fill_value)
 
-        def truediv2(lib, df, fill_value):
+        def truediv2(df, fill_value, **kwargs):
             return df[["a", "c"]].truediv(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(truediv1, data=self.data, fill_value=fill_value)
         run_and_compare(truediv2, data=self.data, fill_value=fill_value)
 
     def test_truediv_columns(self):
-        def truediv1(lib, df):
+        def truediv1(df, **kwargs):
             return df["a"] / df["b"]
 
-        def truediv2(lib, df):
+        def truediv2(df, **kwargs):
             return df[["a", "c"]] / df[["b", "a"]]
 
         run_and_compare(truediv1, data=self.data)
         run_and_compare(truediv2, data=self.data)
 
     def test_floordiv_cst(self):
-        def floordiv(lib, df):
+        def floordiv(df, **kwargs):
             return df // 2
 
         run_and_compare(floordiv, data=self.data)
 
     def test_floordiv_list(self):
-        def floordiv(lib, df):
+        def floordiv(df, **kwargs):
             return df // [1, 0.54, 0.24, 2.01]
 
         run_and_compare(floordiv, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_floordiv_method_columns(self, fill_value):
-        def floordiv1(lib, df, fill_value):
+        def floordiv1(df, fill_value, **kwargs):
             return df["a"].floordiv(df["b"], fill_value=fill_value)
 
-        def floordiv2(lib, df, fill_value):
+        def floordiv2(df, fill_value, **kwargs):
             return df[["a", "c"]].floordiv(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(floordiv1, data=self.data, fill_value=fill_value)
         run_and_compare(floordiv2, data=self.data, fill_value=fill_value)
 
     def test_floordiv_columns(self):
-        def floordiv1(lib, df):
+        def floordiv1(df, **kwargs):
             return df["a"] // df["b"]
 
-        def floordiv2(lib, df):
+        def floordiv2(df, **kwargs):
             return df[["a", "c"]] // df[["b", "a"]]
 
         run_and_compare(floordiv1, data=self.data)

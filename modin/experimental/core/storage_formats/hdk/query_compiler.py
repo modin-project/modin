@@ -661,7 +661,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "mul", **kwargs)
 
     def mod(self, other, **kwargs):
-        return self._bin_op(other, "mod", **kwargs)
+        int_codes = np.typecodes["AllInteger"]
+        if all(t.char in int_codes for t in self._modin_frame.dtypes):
+            return self._bin_op(other, "mod", **kwargs)
+        else:
+            raise NotImplementedError("Non-integer operands in modulo operation")
 
     def floordiv(self, other, **kwargs):
         return self._bin_op(other, "floordiv", **kwargs)
@@ -738,6 +742,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        if kwargs.get("key", None) is not None:
+            raise NotImplementedError("Sort with key function")
+
         ignore_index = kwargs.get("ignore_index", False)
         na_position = kwargs.get("na_position", "last")
         return self.__constructor__(
