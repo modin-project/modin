@@ -27,6 +27,7 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
 )
 from modin.core.io import (
     CSVDispatcher,
+    FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
     FeatherDispatcher,
@@ -35,6 +36,7 @@ from modin.core.io import (
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
     PandasFeatherParser,
@@ -56,6 +58,7 @@ class PandasOnDaskIO(BaseIO):
     )
 
     read_csv = type("", (DaskWrapper, PandasCSVParser, CSVDispatcher), build_args).read
+    read_fwf = type("", (DaskWrapper, PandasFWFParser, FWFDispatcher), build_args).read
     read_json = type(
         "", (DaskWrapper, PandasJSONParser, JSONDispatcher), build_args
     ).read
