@@ -401,6 +401,16 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         return self.force_materialization().list_of_block_partitions[0].to_pandas()
 
+    def to_numpy(self):
+        """
+        Convert the data in this partition to a ``numpy.array``.
+
+        Returns
+        -------
+        numpy array.
+        """
+        return self.force_materialization().list_of_block_partitions[0].to_numpy()
+
     _length_cache = None
 
     def length(self):
