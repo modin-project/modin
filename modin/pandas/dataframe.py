@@ -2573,7 +2573,9 @@ class DataFrame(BasePandasDataset):
                 )
             axis = self._get_axis_number(axis)
             if isinstance(other, Series):
-                other = other.reindex(self.index if axis == 0 else self.columns)._query_compiler
+                other = other.reindex(
+                    self.index if axis == 0 else self.columns
+                )._query_compiler
                 if other._shape_hint is None:
                     # To make the query compiler recognizable as a Series at lower levels
                     other._shape_hint = "column"
