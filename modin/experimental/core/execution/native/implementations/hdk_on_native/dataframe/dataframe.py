@@ -867,6 +867,20 @@ class HdkOnNativeDataframe(PandasDataframe):
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
 
+        if other is self:
+            # To avoid the self-join failure - #5891
+            if isinstance(self._op, FrameNode):
+                other = self.copy()
+            else:
+                exprs = OrderedDict((c, self.ref(c)) for c in self._table_cols)
+                other = self.__constructor__(
+                    columns=self.columns,
+                    dtypes=self._dtypes_for_exprs(exprs),
+                    op=TransformNode(self, exprs),
+                    index_cols=self._index_cols,
+                    force_execution_mode=self._force_execution_mode,
+                )
+
         orig_left_on = left_on
         orig_right_on = right_on
         left, left_on = check_cols_to_join("left_on", self, left_on)

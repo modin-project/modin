@@ -1512,6 +1512,15 @@ class TestMerge:
             right_on=left_on,
         )
 
+    def test_self_merge(self):
+        def merge(df, lib, **kwargs):
+            return lib.merge(df, df)
+
+        run_and_compare(
+            merge,
+            data={"a": [1]},
+        )
+
 
 class TestBinaryOp:
     data = {
