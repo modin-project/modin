@@ -19,7 +19,7 @@ on:
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
-  group: ${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   lint-black:
