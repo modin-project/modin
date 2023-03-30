@@ -148,3 +148,45 @@ class PandasOnDaskIO(BaseIO):
         DaskWrapper.materialize(
             [part.list_of_blocks[0] for row in result for part in row]
         )
+
+    @classmethod
+    def to_sql(cls, qc, **kwargs):
+        """
+        Write records stored in the `qc` to a SQL database.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run ``to_sql`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_sql(**kwargs)``.
+        """
+        # we first insert an empty DF in order to create the full table in the database
+        # This also helps to validate the input against pandas
+        # we would like to_sql() to complete only when all rows have been inserted into the database
+        # since the mapping operation is non-blocking, each partition will return an empty DF
+        # so at the end, the blocking operation will be this empty DF to_pandas
+
+        empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
+        empty_df.to_sql(**kwargs)
+        # so each partition will append its respective DF
+        kwargs["if_exists"] = "append"
+        columns = qc.columns
+
+        def func(df):
+            """
+            Override column names in the wrapped dataframe and convert it to SQL.
+
+            Notes
+            -----
+            This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
+            expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
+            """
+            df.columns = columns
+            df.to_sql(**kwargs)
+            return pandas.DataFrame()
+
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
+        result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
+        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())

@@ -369,17 +369,17 @@ def test_merge_on_index(has_index_cache):
         if has_index_cache:
             modin_df1.index  # triggering index materialization
             modin_df2.index
-            assert modin_df1._query_compiler._modin_frame._index_cache is not None
-            assert modin_df2._query_compiler._modin_frame._index_cache is not None
+            assert modin_df1._query_compiler._modin_frame.has_index_cache
+            assert modin_df2._query_compiler._modin_frame.has_index_cache
         else:
             # Propagate deferred indices to partitions
             # The change in index is not automatically handled by Modin. See #3941.
             modin_df1.index = modin_df1.index
             modin_df1._to_pandas()
-            modin_df1._query_compiler._modin_frame._index_cache = None
+            modin_df1._query_compiler._modin_frame.set_index_cache(None)
             modin_df2.index = modin_df2.index
             modin_df2._to_pandas()
-            modin_df2._query_compiler._modin_frame._index_cache = None
+            modin_df2._query_compiler._modin_frame.set_index_cache(None)
 
     for on in (
         ["col_key1", "idx_key1"],
@@ -768,6 +768,13 @@ def test_where():
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # test case when other is Series
+    other_data = random_state.randn(len(pandas_df))
+    modin_other, pandas_other = pd.Series(other_data), pandas.Series(other_data)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other, axis=0)
+    modin_result = modin_df.where(modin_cond_df, modin_other, axis=0)
+    df_equals(modin_result, pandas_result)
 
     # Test that we choose the right values to replace when `other` == `True`
     # everywhere.
