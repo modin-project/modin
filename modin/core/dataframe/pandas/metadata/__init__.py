@@ -13,6 +13,7 @@
 
 """Utilities and classes to handle work with metadata."""
 
-from .index import ModinDtypes, ModinIndex
+from .index import ModinIndex
+from .dtypes import ModinDtypes
 
 __all__ = ["ModinDtypes", "ModinIndex"]
