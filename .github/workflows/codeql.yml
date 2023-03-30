@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ "master" ]
 
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze:
     name: Analyze
