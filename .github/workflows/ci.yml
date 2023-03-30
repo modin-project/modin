@@ -750,6 +750,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: python -m pytest modin/pandas/test/interoperability
       - uses: ./.github/workflows/upload-coverage
 
   test-experimental:

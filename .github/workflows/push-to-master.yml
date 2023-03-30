@@ -69,6 +69,7 @@ jobs:
           python -m pytest modin/pandas/test/test_general.py
           python -m pytest modin/pandas/test/test_io.py
           python -m pytest modin/experimental/pandas/test/test_io_exp.py
+          python -m pytest modin/pandas/test/interoperability
 
   test-docs:
     runs-on: ubuntu-latest
