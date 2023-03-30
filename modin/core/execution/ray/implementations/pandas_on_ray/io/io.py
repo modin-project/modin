@@ -236,7 +236,7 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        qc._modin_frame._partition_mgr_cls.get_objects_from_partitions(result.flatten())
+        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -311,4 +311,5 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        qc._modin_frame._partition_mgr_cls.get_objects_from_partitions(result.flatten())
+        # pending completion
+        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
