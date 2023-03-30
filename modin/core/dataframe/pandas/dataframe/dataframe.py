@@ -39,6 +39,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     JoinType,
 )
 from modin.core.dataframe.pandas.dataframe.utils import build_sort_functions
+from modin.core.dataframe.pandas.metadata import ModinDtypes
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -201,7 +202,7 @@ class PandasDataframe(ClassLogger):
         self._columns_cache = ensure_index(columns) if columns is not None else None
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
-        self._dtypes = dtypes
+        self.set_dtypes_cache(dtypes)
 
         self._validate_axes_lengths()
         self._filter_empties(compute_metadata=False)
@@ -285,6 +286,7 @@ class PandasDataframe(ClassLogger):
         """
         return [self.row_lengths, self.column_widths]
 
+    @property
     def has_dtypes_cache(self):
         """
         Check if the dtypes cache exists.
@@ -295,6 +297,17 @@ class PandasDataframe(ClassLogger):
         """
         return self._dtypes is not None
 
+    @property
+    def has_materialized_dtypes(self):
+        """
+        Check if dataframe has materialized index cache.
+
+        Returns
+        -------
+        bool
+        """
+        return self.has_dtypes_cache and self._dtypes.is_materialized
+
     def copy_dtypes_cache(self):
         """
         Copy the dtypes cache.
@@ -304,10 +317,16 @@ class PandasDataframe(ClassLogger):
         pandas.Series, callable or None
             If there is an pandas.Series in the cache, then copying occurs.
         """
-        dtypes_cache = self._dtypes
-        if dtypes_cache is not None and not callable(dtypes_cache):
+        dtypes_cache = None
+        if self.has_dtypes_cache:
             dtypes_cache = dtypes_cache.copy()
         return dtypes_cache
+
+    def set_dtypes_cache(self, dtypes):
+        if isinstance(dtypes, ModinDtypes) or dtypes is None:
+            self._dtypes = dtypes
+        else:
+            self._dtypes = ModinDtypes(dtypes)
 
     @property
     def dtypes(self):
@@ -319,8 +338,8 @@ class PandasDataframe(ClassLogger):
         pandas.Series
             A pandas Series containing the data types for this dataframe.
         """
-        if callable(self._dtypes):
-            self._dtypes = self._dtypes()
+        if self.has_dtypes_cache:
+            self._dtypes = self._dtypes.get()
         elif self._dtypes is None:
             self._dtypes = self._compute_dtypes()
         return self._dtypes
@@ -442,7 +461,7 @@ class PandasDataframe(ClassLogger):
         else:
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             self._columns_cache = new_columns
-            if self.has_dtypes_cache():
+            if self.has_materialized_dtypes:
                 self.dtypes.index = new_columns
         self.synchronize_labels(axis=1)
 
@@ -871,7 +890,7 @@ class PandasDataframe(ClassLogger):
                 + f"{col_positions}\n{self.column_widths}\n{col_partitions_dict}",
             )
 
-            if self.has_dtypes_cache():
+            if self.has_materialized_dtypes:
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
             else:
                 new_dtypes = None
@@ -1009,7 +1028,7 @@ class PandasDataframe(ClassLogger):
                 else "level_{}".format(0)
             ]
         new_dtypes = None
-        if self.has_dtypes_cache():
+        if self.has_materialized_dtypes:
             names = tuple(level_names) if len(level_names) > 1 else level_names[0]
             new_dtypes = self.index.to_frame(name=names).dtypes
             new_dtypes = pandas.concat([new_dtypes, self.dtypes])
@@ -1128,7 +1147,7 @@ class PandasDataframe(ClassLogger):
             A new PandasDataframe with reordered columns and/or rows.
         """
         new_dtypes = None
-        if self.has_dtypes_cache():
+        if self.has_dtypes_cache:
             new_dtypes = self.copy_dtypes_cache()
         if row_positions is not None:
             # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
@@ -1170,7 +1189,7 @@ class PandasDataframe(ClassLogger):
                 keep_partitioning=True,
             )
             col_idx = self.columns[col_positions]
-            if self.has_dtypes_cache():
+            if self.has_materialized_dtypes:
                 new_dtypes = self.dtypes.iloc[col_positions]
 
             if len(col_idx) != len(self.columns):
@@ -2007,7 +2026,7 @@ class PandasDataframe(ClassLogger):
 
         new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
         new_dtypes = None
-        if self.has_dtypes_cache():
+        if self.has_materialized_dtypes:
             new_dtypes = self.dtypes.set_axis(new_cols)
         return self.__constructor__(
             new_parts,
@@ -3141,8 +3160,8 @@ class PandasDataframe(ClassLogger):
         else:
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
-            if self.has_dtypes_cache() and all(
-                o.has_dtypes_cache() is not None for o in others
+            if self.has_materialized_dtypes and all(
+                o.has_materialized_dtypes is not None for o in others
             ):
                 new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
             # If we have already cached the width of each column in at least one
@@ -3414,7 +3433,7 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.lazy_map_partitions(
             self._partitions, lambda df: df.T
         ).T
-        if self.has_dtypes_cache():
+        if self.has_materialized_dtypes:
             new_dtypes = pandas.Series(
                 np.full(len(self.index), find_common_type(self.dtypes.values)),
                 index=self.index,

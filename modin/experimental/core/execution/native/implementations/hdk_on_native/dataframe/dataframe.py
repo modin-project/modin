@@ -160,8 +160,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         force_execution_mode=None,
         has_unsupported_data=False,
     ):
-        if callable(dtypes):
-            dtypes = dtypes()
         assert dtypes is not None
 
         self.id = str(type(self)._next_id[0])
@@ -199,13 +197,13 @@ class HdkOnNativeDataframe(PandasDataframe):
                     tail = [""] * (columns.nlevels - 1)
                     index_tuples = [(col, *tail) for col in self._index_cols]
                     dtype_index = MultiIndex.from_tuples(index_tuples).append(columns)
-                    self._dtypes = pd.Series(dtypes, index=dtype_index)
+                    self.set_dtypes_cache(pd.Series(dtypes, index=dtype_index))
                 else:
-                    self._dtypes = pd.Series(dtypes, index=self._table_cols)
+                    self.set_dtypes_cache(pd.Series(dtypes, index=self._table_cols))
             else:
-                self._dtypes = pd.Series(dtypes, index=columns)
+                self.set_dtypes_cache(pd.Series(dtypes, index=columns))
         else:
-            self._dtypes = dtypes
+            self.set_dtypes_cache(dtypes)
 
         if partitions is not None:
             self._filter_empties()
