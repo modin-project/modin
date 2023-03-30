@@ -543,6 +543,8 @@ class DatetimeProperties(ClassLogger):
     def dayofweek(self):
         return Series(query_compiler=self._query_compiler.dt_dayofweek())
 
+    day_of_week = dayofweek
+
     @property
     def weekday(self):
         return Series(query_compiler=self._query_compiler.dt_weekday())
@@ -550,6 +552,8 @@ class DatetimeProperties(ClassLogger):
     @property
     def dayofyear(self):
         return Series(query_compiler=self._query_compiler.dt_dayofyear())
+
+    day_of_year = dayofyear
 
     @property
     def quarter(self):
@@ -604,6 +608,9 @@ class DatetimeProperties(ClassLogger):
 
     def to_period(self, *args, **kwargs):
         return Series(query_compiler=self._query_compiler.dt_to_period(*args, **kwargs))
+
+    def asfreq(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_asfreq(*args, **kwargs))
 
     def to_pydatetime(self):
         return Series(query_compiler=self._query_compiler.dt_to_pydatetime()).to_numpy()
@@ -671,6 +678,11 @@ class DatetimeProperties(ClassLogger):
         from .dataframe import DataFrame
 
         return DataFrame(query_compiler=self._query_compiler.dt_components())
+
+    def isocalendar(self):
+        from .dataframe import DataFrame
+
+        return DataFrame(query_compiler=self._query_compiler.dt_isocalendar())
 
     @property
     def qyear(self):

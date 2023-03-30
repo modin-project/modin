@@ -110,7 +110,7 @@ When asked for account, provide `__token__` (exactly as stated), when asked for 
 
 ### Check with `pip install`:
 
-Run `pip install -U modin[all]` on Linux, Mac, and Windows systems in a new environment
+Run `pip install -U "modin[all]"` on Linux, Mac, and Windows systems in a new environment
 to test that the wheels were uploaded correctly.
 
 ## Make Github and conda-forge release
