@@ -321,7 +321,7 @@ class PandasDataframe(ClassLogger):
         """
         dtypes_cache = None
         if self.has_dtypes_cache:
-            dtypes_cache = dtypes_cache.copy()
+            dtypes_cache = self._dtypes.copy()
         return dtypes_cache
 
     def set_dtypes_cache(self, dtypes):
