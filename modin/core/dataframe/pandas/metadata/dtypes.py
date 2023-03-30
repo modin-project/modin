@@ -123,3 +123,18 @@ class ModinDtypes:
         if not callable(idx_cache):
             idx_cache = idx_cache.copy()
         return ModinDtypes(idx_cache)
+
+    def __getitem__(self, key):
+        if not self.is_materialized:
+            self.get()
+        return self._value.__getitem__(key)
+
+    def __setitem__(self, key, item):
+        if not self.is_materialized:
+            self.get()
+        self._value.__setitem__(key, item)
+
+    def __iter__(self):
+        if not self.is_materialized:
+            self.get()
+        return iter(self._value)
