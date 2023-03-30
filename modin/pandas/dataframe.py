@@ -52,14 +52,13 @@ from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     try_cast_to_pandas,
 )
-from modin.config import Engine, IsExperimental, PersistentPickle
+from modin.config import IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
-from . import _update_engine
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
@@ -124,10 +123,11 @@ class DataFrame(BasePandasDataset):
         copy=None,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
-        Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
@@ -160,7 +160,18 @@ class DataFrame(BasePandasDataset):
                 if columns is None:
                     columns = slice(None)
                 self._query_compiler = data.loc[index, columns]._query_compiler
-
+        elif isinstance(data, array):
+            self._query_compiler = data._query_compiler.copy()
+            if copy is not None and not copy:
+                data._add_sibling(self)
+            if columns is not None and not isinstance(columns, pandas.Index):
+                columns = pandas.Index(columns)
+            if columns is not None:
+                self.set_axis(columns, axis=1, inplace=True)
+            if index is not None:
+                self.set_axis(index, axis=0, inplace=True)
+            if dtype is not None:
+                self.astype(dtype, copy=False)
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -318,8 +329,6 @@ class DataFrame(BasePandasDataset):
         df = self[subset] if subset is not None else self
         new_qc = df._query_compiler.duplicated(keep=keep)
         duplicates = self._reduce_dimension(new_qc)
-        # remove Series name which was assigned automatically by .apply in QC
-        duplicates.name = None
         return duplicates
 
     @property
@@ -2500,7 +2509,7 @@ class DataFrame(BasePandasDataset):
         Replace values where the condition is False.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if isinstance(other, pandas.Series) and axis is None:
+        if isinstance(other, Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             if isinstance(other, DataFrame):
@@ -2563,8 +2572,13 @@ class DataFrame(BasePandasDataset):
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
             axis = self._get_axis_number(axis)
-            if isinstance(other, pandas.Series):
-                other = other.reindex(self.index if axis == 0 else self.columns)
+            if isinstance(other, Series):
+                other = other.reindex(
+                    self.index if axis == 0 else self.columns
+                )._query_compiler
+                if other._shape_hint is None:
+                    # To make the query compiler recognizable as a Series at lower levels
+                    other._shape_hint = "column"
             elif is_list_like(other):
                 index = self.index if axis == 0 else self.columns
                 other = pandas.Series(other, index=index)
@@ -2572,14 +2586,6 @@ class DataFrame(BasePandasDataset):
             cond._query_compiler, other, axis=axis, level=level
         )
         return self._create_or_update_from_compiler(query_compiler, inplace)
-
-    def xs(self, key, axis=0, level=None, drop_level=True):  # noqa: PR01, RT01, D200
-        """
-        Return cross-section from the ``DataFrame``.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.xs, key, axis=axis, level=level, drop_level=drop_level
-        )
 
     def _getitem_column(self, key):
         """

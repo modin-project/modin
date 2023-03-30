@@ -14,17 +14,108 @@
 import numpy
 
 from .arr import array
+from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
+from modin.utils import _inherit_docstrings
 
 
-def absolute(
-    x, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for absolute, not {type(x)}. Defaulting to NumPy."
+def _dispatch_math(operator_name, arr_method_name=None):
+    # `operator_name` is the name of the method on the numpy API
+    # `arr_method_name` is the name of the method on the modin.numpy.array object,
+    # which is assumed to be `operator_name` by default
+    @_inherit_docstrings(getattr(numpy, operator_name))
+    def call(x, *args, **kwargs):
+        x = try_convert_from_interoperable_type(x)
+        if not isinstance(x, array):
+            ErrorMessage.bad_type_for_numpy_op(operator_name, type(x))
+            return getattr(numpy, operator_name)(x, *args, **kwargs)
+
+        return getattr(x, arr_method_name or operator_name)(*args, **kwargs)
+
+    return call
+
+
+absolute = _dispatch_math("absolute")
+abs = absolute
+add = _dispatch_math("add", "__add__")
+divide = _dispatch_math("divide")
+dot = _dispatch_math("dot")
+float_power = _dispatch_math("float_power")
+floor_divide = _dispatch_math("floor_divide")
+power = _dispatch_math("power")
+prod = _dispatch_math("prod")
+multiply = _dispatch_math("multiply")
+remainder = _dispatch_math("remainder")
+mod = remainder
+subtract = _dispatch_math("subtract")
+sum = _dispatch_math("sum")
+true_divide = _dispatch_math("true_divide", "divide")
+mean = _dispatch_math("mean")
+
+
+def var(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.bad_type_for_numpy_op("var", type(x1))
+        return numpy.var(
+            x1, axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype
         )
-        return numpy.absolute(
+    return x1.var(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
+
+
+# Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
+# implementation will automatically handle this. We still need the function though, so that
+# if the operands are modin.pandas objects, we can convert them to arrays, but after that
+# we can just use NumPy's maximum/minimum since that will route to our array's ufunc.
+def maximum(
+    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.bad_type_for_numpy_op("maximum", type(x1))
+    return numpy.maximum(
+        x1,
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
+
+
+def minimum(
+    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x1 = try_convert_from_interoperable_type(x1)
+    if not isinstance(x1, array):
+        ErrorMessage.bad_type_for_numpy_op("minimum", type(x1))
+    return numpy.minimum(
+        x1,
+        x2,
+        out=out,
+        where=where,
+        casting=casting,
+        order=order,
+        dtype=dtype,
+        subok=subok,
+    )
+
+
+amax = _dispatch_math("amax", "max")
+amin = _dispatch_math("amin", "min")
+max = amax
+min = amin
+
+
+def sqrt(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
+):
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("sqrt", type(x))
+        return numpy.sqrt(
             x,
             out=out,
             where=where,
@@ -33,24 +124,17 @@ def absolute(
             dtype=dtype,
             subok=subok,
         )
-    return x.absolute(
-        out=out, where=where, casting=casting, order=order, dtype=dtype, subok=subok
-    )
+    return x.sqrt(out, where, casting, order, dtype, subok)
 
 
-abs = absolute
-
-
-def add(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
+def exp(
+    x, out=None, *, where=True, casting="same_kind", order="K", dtype=None, subok=True
 ):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for add, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.add(
-            x1,
-            x2,
+    x = try_convert_from_interoperable_type(x)
+    if not isinstance(x, array):
+        ErrorMessage.bad_type_for_numpy_op("exp", type(x))
+        return numpy.exp(
+            x,
             out=out,
             where=where,
             casting=casting,
@@ -58,324 +142,20 @@ def add(
             dtype=dtype,
             subok=subok,
         )
-    return x1.__add__(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
+    return x.exp(out, where, casting, order, dtype, subok)
 
 
-def divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for divide, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def float_power(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for float_power, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.float_power(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.float_power(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def floor_divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for floor_divide, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.floor_divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.floor_divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def power(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for power, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.power(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.power(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def prod(a, axis=None, out=None, keepdims=None, where=True, dtype=None, initial=None):
+def argmax(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
     if not isinstance(a, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for prod, not {type(a)}. Defaulting to NumPy."
-        )
-        return numpy.prod(
-            a,
-            axis=axis,
-            out=out,
-            keepdims=keepdims,
-            where=where,
-            dtype=dtype,
-            initial=initial,
-        )
-    return a.prod(
-        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
-    )
+        ErrorMessage.bad_type_for_numpy_op("argmax", type(a))
+        return numpy.argmax(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmax(axis=axis, out=out, keepdims=keepdims)
 
 
-def multiply(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for multiply, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.multiply(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.multiply(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def remainder(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for remainder, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.remainder(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.remainder(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-mod = remainder
-
-
-def subtract(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for power, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.subtract(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.subtract(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def sum(arr, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=True):
-    if not isinstance(arr, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for sum, not {type(arr)}. Defaulting to NumPy."
-        )
-        return numpy.sum(
-            arr,
-            axis=axis,
-            out=out,
-            keepdims=keepdims,
-            where=where,
-            dtype=dtype,
-            initial=initial,
-        )
-    return arr.sum(
-        axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype, initial=initial
-    )
-
-
-def true_divide(
-    x1, x2, out=None, where=True, casting="same_kind", order="K", dtype=None, subok=True
-):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for true_divide, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.true_divide(
-            x1,
-            x2,
-            out=out,
-            where=where,
-            casting=casting,
-            order=order,
-            dtype=dtype,
-            subok=subok,
-        )
-    return x1.divide(
-        x2,
-        out=out,
-        where=where,
-        casting=casting,
-        order=order,
-        dtype=dtype,
-        subok=subok,
-    )
-
-
-def mean(x1, axis=None, dtype=None, out=None, keepdims=None, *, where=True):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for mean, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.mean(
-            x1, axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype
-        )
-    return x1.mean(axis=axis, out=out, keepdims=keepdims, where=where, dtype=dtype)
-
-
-# Maximum and minimum are ufunc's in NumPy, which means that our array's __array_ufunc__
-# implementation will automatically handle this, so we can just use NumPy's maximum/minimum
-# since that will route to our array's ufunc.
-maximum = numpy.maximum
-
-minimum = numpy.minimum
-
-
-def amax(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for amax, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.amax(
-            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
-        )
-    return x1.max(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
-
-
-max = amax
-
-
-def amin(x1, axis=None, out=None, keepdims=None, initial=None, where=True):
-    if not isinstance(x1, array):
-        ErrorMessage.single_warning(
-            f"Modin NumPy only supports objects of modin.numpy.array types for amin, not {type(x1)}. Defaulting to NumPy."
-        )
-        return numpy.amin(
-            x1, axis=axis, out=out, keepdims=keepdims, initial=initial, where=where
-        )
-    return x1.min(axis=axis, out=out, keepdims=keepdims, initial=initial, where=where)
-
-
-min = amin
+def argmin(a, axis=None, out=None, *, keepdims=None):
+    a = try_convert_from_interoperable_type(a)
+    if not isinstance(a, array):
+        ErrorMessage.bad_type_for_numpy_op("argmin", type(a))
+        return numpy.argmin(a, axis=axis, out=out, keepdims=keepdims)
+    return a.argmin(axis=axis, out=out, keepdims=keepdims)

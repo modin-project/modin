@@ -59,7 +59,7 @@ from modin.core.dataframe.algebra import (
     GroupByReduce,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
-from .utils import get_group_names
+from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
 
@@ -263,7 +263,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return frame._index_cache is None or frame._columns_cache is None
+        return not frame.has_materialized_index or not frame.has_materialized_columns
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -418,10 +418,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
         join_type="left",
     )
 
+    # Needed for numpy API
+    _logical_and = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_and(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+    _logical_or = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_or(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+    _logical_xor = Binary.register(
+        lambda df, other, *args, **kwargs: pandas.DataFrame(
+            np.logical_xor(df, other, *args, **kwargs)
+        ),
+        infer_dtypes="bool",
+    )
+
     def where(self, cond, other, **kwargs):
         assert isinstance(
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
+        # it's doesn't work if `other` is Series._query_compiler because
+        # `n_ary_op` performs columns copartition both for `cond` and `other`.
+        if isinstance(other, type(self)) and other._shape_hint is not None:
+            other = other.to_pandas()
         if isinstance(other, type(self)):
             # Make sure to set join_type=None so the `where` result always has
             # the same row and column labels as `self`.
@@ -455,9 +479,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
             kwargs["sort"] = False
+
+            def map_func(left, right=right_pandas, kwargs=kwargs):
+                return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -466,9 +493,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             elif on is not None:
                 on = list(on) if is_list_like(on) else [on]
 
-            def map_func(left, right=right, kwargs=kwargs):
-                return pandas.merge(left, right, **kwargs)
-
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
                     axis=1,
@@ -476,6 +500,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
 
@@ -484,30 +511,32 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if self._modin_frame._index_cache is not None:
+            if self._modin_frame.has_materialized_index:
                 if left_on is not None and right_on is not None:
                     keep_index = any(
                         o in self.index.names
                         and o in right_on
-                        and o in right.index.names
+                        and o in right_pandas.index.names
                         for o in left_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o in self.index.names and o in right.index.names for o in on
+                        o in self.index.names and o in right_pandas.index.names
+                        for o in on
                     )
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
                     keep_index = any(
-                        o not in right.columns
+                        o not in right_pandas.columns
                         and o in left_on
                         and o not in self.columns
                         for o in right_on
                     )
                 elif on is not None:
                     keep_index = any(
-                        o not in right.columns and o not in self.columns for o in on
+                        o not in right_pandas.columns and o not in self.columns
+                        for o in on
                     )
 
             if sort:
@@ -534,9 +563,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right = right.to_pandas()
+            right_pandas = right.to_pandas()
 
-            def map_func(left, right=right, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -546,6 +575,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
+                    num_splits=merge_partitioning(
+                        self._modin_frame, right._modin_frame, axis=1
+                    ),
                 )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
@@ -582,8 +614,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
-                new_columns = self._modin_frame._columns_cache
+            if self._modin_frame.has_columns_cache and kwargs["drop"]:
+                new_columns = self._modin_frame.copy_columns_cache()
             else:
                 new_columns = None
 
@@ -764,21 +796,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Transpose
 
     # TreeReduce operations
-
-    def is_monotonic_decreasing(self):
-        def is_monotonic_decreasing(df):
-            """Check whether data in the passed frame is monotonic decreasing."""
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_decreasing])
-
-        return self.default_to_pandas(is_monotonic_decreasing)
-
-    def is_monotonic_increasing(self):
-        def is_monotonic_increasing(df):
-            """Check whether data in the passed frame is monotonic increasing."""
-            return pandas.DataFrame([df.squeeze(axis=1).is_monotonic_increasing])
-
-        return self.default_to_pandas(is_monotonic_increasing)
-
     count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
     sum = TreeReduce.register(pandas.DataFrame.sum)
     prod = TreeReduce.register(pandas.DataFrame.prod)
@@ -1433,12 +1450,47 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
+    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
-        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df))
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
+        dtypes=np.bool_,
     )
+    _isinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isnat = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isnat(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isneginf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isneginf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isposinf = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isposinf(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _iscomplex = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.iscomplex(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _isreal = Map.register(  # Needed for numpy API
+        lambda df, *args, **kwargs: pandas.DataFrame(np.isreal(df, *args, **kwargs)),
+        dtypes=np.bool_,
+    )
+    _logical_not = Map.register(np.logical_not, dtypes=np.bool_)  # Needed for numpy API
+    _tanh = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.tanh(df, *args, **kwargs))
+    )  # Needed for numpy API
+    _sqrt = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.sqrt(df, *args, **kwargs))
+    )  # Needed for numpy API
+    _exp = Map.register(
+        lambda df, *args, **kwargs: pandas.DataFrame(np.exp(df, *args, **kwargs))
+    )  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
     notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
     round = Map.register(pandas.DataFrame.round)
@@ -1586,19 +1638,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"), dtypes=np.bool_)
     dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"), dtypes=np.int64)
     dt_days_in_month = Map.register(_dt_prop_map("days_in_month"), dtypes=np.int64)
-
-    def dt_tz(self):
-        def datetime_tz(df):
-            return pandas.DataFrame([df.squeeze(axis=1).dt.tz])
-
-        return self.default_to_pandas(datetime_tz)
-
-    def dt_freq(self):
-        def datetime_freq(df):
-            return pandas.DataFrame([df.squeeze(axis=1).dt.freq])
-
-        return self.default_to_pandas(datetime_freq)
-
+    dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
     dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
     dt_tz_localize = Map.register(_dt_func_map("tz_localize"))
@@ -1628,7 +1668,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes))
+        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())
@@ -2287,8 +2327,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame._index_cache,
-            new_columns=self._modin_frame._columns_cache,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame)
@@ -2476,35 +2516,44 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def duplicated(self, **kwargs):
         def _compute_hash(df):
-            return df.apply(
+            result = df.apply(
                 lambda s: hashlib.new("md5", str(tuple(s)).encode()).hexdigest(), axis=1
-            ).to_frame()
+            )
+            if isinstance(result, pandas.Series):
+                result = result.to_frame(
+                    result.name
+                    if result.name is not None
+                    else MODIN_UNNAMED_SERIES_LABEL
+                )
+            return result
 
         def _compute_duplicated(df):
-            return df.duplicated(**kwargs).to_frame()
+            result = df.duplicated(**kwargs)
+            if isinstance(result, pandas.Series):
+                result = result.to_frame(
+                    result.name
+                    if result.name is not None
+                    else MODIN_UNNAMED_SERIES_LABEL
+                )
+            return result
 
-        new_index = self._modin_frame._index_cache
-        new_columns = [MODIN_UNNAMED_SERIES_LABEL]
-        if len(self.columns) > 1:
-            # if the number of columns we are checking for duplicates is larger than 1,
-            # we must hash them to generate a single value that can be compared across rows.
-            hashed_modin_frame = self._modin_frame.apply_full_axis(
-                1,
-                _compute_hash,
-                new_index=new_index,
-                new_columns=new_columns,
-                keep_partitioning=False,
+        if self._modin_frame._partitions.shape[1] > 1:
+            # if the number of columns (or column partitions) we are checking for duplicates is larger than 1,
+            # we must first hash them to generate a single value that can be compared across rows.
+            hashed_modin_frame = self._modin_frame.reduce(
+                axis=1,
+                function=_compute_hash,
                 dtypes=np.dtype("O"),
             )
         else:
             hashed_modin_frame = self._modin_frame
         new_modin_frame = hashed_modin_frame.apply_full_axis(
-            0,
-            _compute_duplicated,
-            new_index=new_index,
-            new_columns=new_columns,
-            keep_partitioning=False,
+            axis=0,
+            func=_compute_duplicated,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
+            keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 

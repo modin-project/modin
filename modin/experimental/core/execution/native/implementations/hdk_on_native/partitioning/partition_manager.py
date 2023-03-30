@@ -274,6 +274,21 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                         p.frame_id = omniSession.import_pandas_dataframe(obj)
                     else:
                         assert isinstance(obj, pyarrow.Table)
+                        if obj.num_columns == 0:
+                            # Tables without columns are not supported.
+                            # Creating an empty table with index columns only.
+                            idx_names = (
+                                frame.index.names
+                                if frame.has_materialized_index
+                                else [None]
+                            )
+                            idx_names = frame._mangle_index_names(idx_names)
+                            obj = pyarrow.table(
+                                {n: [] for n in idx_names},
+                                schema=pyarrow.schema(
+                                    {n: pyarrow.int64() for n in idx_names}
+                                ),
+                            )
                         p.frame_id = omniSession.import_arrow_table(obj)
 
         calcite_plan = CalciteBuilder().build(plan)

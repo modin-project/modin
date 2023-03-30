@@ -32,7 +32,6 @@ import warnings
 from modin.utils import (
     _inherit_docstrings,
     to_pandas,
-    Engine,
     MODIN_UNNAMED_SERIES_LABEL,
 )
 from modin.config import IsExperimental, PersistentPickle
@@ -40,7 +39,6 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op
 from .accessor import CachedAccessor, SparseAccessor
-from . import _update_engine
 
 
 if TYPE_CHECKING:
@@ -93,10 +91,11 @@ class Series(BasePandasDataset):
         fastpath=False,
         query_compiler=None,
     ):
+        from modin.numpy import array
+
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
-        Engine.subscribe(_update_engine)
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:
@@ -106,6 +105,18 @@ class Series(BasePandasDataset):
                         + "not yet implemented."
                     )
                 query_compiler = data.loc[index]._query_compiler
+        if isinstance(data, array):
+            if data._ndim == 2:
+                raise ValueError("Data must be 1-dimensional")
+            query_compiler = data._query_compiler.copy()
+            if index is not None:
+                query_compiler.index = index
+            if dtype is not None:
+                query_compiler = query_compiler.astype(
+                    {col_name: dtype for col_name in query_compiler.columns}
+                )
+            if name is None:
+                query_compiler.columns = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
         if query_compiler is None:
             # Defaulting to pandas
             warnings.warn(
@@ -1389,7 +1400,7 @@ class Series(BasePandasDataset):
 
         if axis == "index" or axis == 0:
             if abs(periods) >= len(self.index):
-                return self.__constructor__(dtype=self.dtype)
+                return self.__constructor__(dtype=self.dtype, name=self.name)
             else:
                 new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
                 new_df.index = (
@@ -1965,7 +1976,7 @@ class Series(BasePandasDataset):
         else:
             from ..numpy.arr import array
 
-            return array(_query_compiler=self._query_compiler, _ndim=1)
+            return array(self, copy=copy)
 
     tolist = to_list
 
@@ -2124,14 +2135,6 @@ class Series(BasePandasDataset):
             errors=errors,
             try_cast=try_cast,
         )
-
-    def xs(
-        self, key, axis=0, level=None, drop_level=True
-    ):  # pragma: no cover # noqa: PR01, D200
-        """
-        Return cross-section from the Series/DataFrame.
-        """
-        raise NotImplementedError("Not Yet implemented.")
 
     @property
     def attrs(self):  # noqa: RT01, D200

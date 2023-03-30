@@ -23,8 +23,7 @@ import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
-from modin.config import IsExperimental, Engine
-from ...pandas import _update_engine
+from modin.config import IsExperimental
 
 
 def read_sql(
@@ -45,6 +44,9 @@ def read_sql(
     General documentation is available in `modin.pandas.read_sql`.
 
     This experimental feature provides distributed reading from a sql file.
+    The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
+    such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
+    parameters, the user will be able to specify how to partition the imported data.
 
     Parameters
     ----------
@@ -97,7 +99,6 @@ def read_sql(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -113,17 +114,17 @@ def read_custom_text(
     nrows: Optional[int] = None,
     is_quoting=True,
 ):
-    """
+    r"""
     Load custom text data from file.
 
     Parameters
     ----------
     filepath_or_buffer : str
         File path where the custom text data will be loaded from.
-    columns : list or callable(file-like object, **kwargs) -> list
+    columns : list or callable(file-like object, \*\*kwargs) -> list
         Column names of list type or callable that create column names from opened file
         and passed `kwargs`.
-    custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
+    custom_parser : callable(file-like object, \*\*kwargs) -> pandas.DataFrame
         Function that takes as input a part of the `filepath_or_buffer` file loaded into
         memory in file-like object form.
     compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}, default: 'infer'
@@ -142,7 +143,6 @@ def read_custom_text(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -226,6 +226,9 @@ def _make_parser_func(sep: str) -> Callable:
         _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
         if f_locals.get("sep", sep) is False:
             f_locals["sep"] = "\t"
+        # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
+        # kwargs so pandas doesn't spuriously warn people not to use it.
+        f_locals.pop("mangle_dupe_cols", None)
 
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)
@@ -271,14 +274,9 @@ def _read(**kwargs) -> DataFrame:
 
     [4652013 rows x 18 columns]
     """
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    try:
-        pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
-    except AttributeError:
-        raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
-
+    pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read
@@ -332,7 +330,6 @@ def read_pickle_distributed(
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     assert IsExperimental.get(), "This only works in experimental mode"
@@ -380,7 +377,6 @@ def to_pickle_distributed(
         implementation docs for the set of allowed keys and values.
     """
     obj = self
-    Engine.subscribe(_update_engine)
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if isinstance(self, DataFrame):

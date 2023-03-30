@@ -36,7 +36,7 @@ from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar
+from pandas.core.dtypes.common import is_scalar, is_number
 import pandas.core.resample
 import pandas
 from pandas._typing import IndexLabel, Suffixes
@@ -3391,14 +3391,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for axis, axis_loc in enumerate((row_loc, col_loc)):
             if is_scalar(axis_loc):
                 axis_loc = np.array([axis_loc])
-            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+            if isinstance(axis_loc, pandas.RangeIndex):
+                axis_lookup = axis_loc
+            elif isinstance(axis_loc, slice) or is_range_like(axis_loc):
                 if isinstance(axis_loc, slice) and axis_loc == slice(None):
                     axis_lookup = axis_loc
                 else:
                     axis_labels = self.get_axis(axis)
                     # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    # RangeIndex and range use a semi-open interval, while
+                    # slice_indexer uses a closed interval. Subtract 1 step from the
+                    # end of the interval to get the equivalent closed interval.
+                    if axis_loc.stop is None or not is_number(axis_loc.stop):
+                        slice_stop = axis_loc.stop
+                    else:
+                        slice_stop = axis_loc.stop - (
+                            0 if axis_loc.step is None else axis_loc.step
+                        )
                     axis_lookup = axis_labels.slice_indexer(
-                        axis_loc.start, axis_loc.stop, axis_loc.step
+                        axis_loc.start,
+                        slice_stop,
+                        axis_loc.step,
                     )
                     # Converting negative indices to their actual positions:
                     axis_lookup = pandas.RangeIndex(
@@ -3783,6 +3796,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
+    @doc_utils.doc_dt_timestamp(
+        prop="Calculate year, week, and day according to the ISO 8601 standard.",
+        refer_to="isocalendar",
+    )
+    def dt_isocalendar(self):
+        return DateTimeDefault.register(pandas.Series.dt.isocalendar)(self)
+
     @doc_utils.doc_dt_timestamp(prop="hour", refer_to="hour")
     def dt_hour(self):
         return DateTimeDefault.register(pandas.Series.dt.hour)(self)
@@ -3930,6 +3950,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
+
+    @doc_utils.add_refer_to("Series.dt.asfreq")
+    def dt_asfreq(self, freq=None, how: str = "E"):
+        """
+        Convert the PeriodArray to the specified frequency `freq`.
+
+        Equivalent to applying pandas.Period.asfreq() with the given arguments to each Period in this PeriodArray.
+
+        Parameters
+        ----------
+        freq : str, optional
+            A frequency.
+        how : str {'E', 'S'}, default: 'E'
+            Whether the elements should be aligned to the end or start within pa period.
+            * 'E', "END", or "FINISH" for end,
+            * 'S', "START", or "BEGIN" for start.
+            January 31st ("END") vs. January 1st ("START") for example.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing period data.
+        """
+        return DateTimeDefault.register(pandas.Series.dt.asfreq)(self, freq, how)
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.dt.to_period")
@@ -4506,6 +4550,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, pat, flags, **kwargs
         )
 
+    @doc_utils.doc_str_method(
+        refer_to="fullmatch",
+        params="""
+        pat : str
+        case : bool, default: True
+        flags : int, default: 0
+        na : object, default: None""",
+    )
+    def str_fullmatch(self, pat, case=True, flags=0, na=None):
+        return StrDefault.register(pandas.Series.str.fullmatch)(
+            self, pat, case, flags, na
+        )
+
     @doc_utils.doc_str_method(refer_to="get", params="i : int")
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
@@ -4626,6 +4683,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_partition(self, sep=" ", expand=True):
         return StrDefault.register(pandas.Series.str.partition)(self, sep, expand)
+
+    @doc_utils.doc_str_method(refer_to="removeprefix", params="prefix : str")
+    def str_removeprefix(self, prefix):
+        return StrDefault.register(pandas.Series.str.removeprefix)(self, prefix)
+
+    @doc_utils.doc_str_method(refer_to="removesuffix", params="suffix : str")
+    def str_removesuffix(self, suffix):
+        return StrDefault.register(pandas.Series.str.removesuffix)(self, suffix)
 
     @doc_utils.doc_str_method(refer_to="repeat", params="repeats : int")
     def str_repeat(self, repeats):
@@ -5160,8 +5225,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax,
                     lambda df: df,
-                    new_index=self._modin_frame._index_cache,
-                    new_columns=self._modin_frame._columns_cache,
+                    new_index=self._modin_frame.copy_index_cache(),
+                    new_columns=self._modin_frame.copy_columns_cache(),
                     keep_partitioning=False,
                     sync_labels=False,
                 )

@@ -25,11 +25,14 @@ from .utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
+# Initialize env for storage format detection in @pytest.mark.*
+pd.DataFrame()
 
 
 def test_df_concat():
@@ -173,6 +176,15 @@ def test_concat_series_only():
     )
 
 
+def test_concat_5776():
+    modin_data = {key: pd.Series(index=range(3)) for key in ["a", "b"]}
+    pandas_data = {key: pandas.Series(index=range(3)) for key in ["a", "b"]}
+    df_equals(
+        pd.concat(modin_data, axis="columns"),
+        pandas.concat(pandas_data, axis="columns"),
+    )
+
+
 def test_concat_with_empty_frame():
     modin_empty_df = pd.DataFrame()
     pandas_empty_df = pandas.DataFrame()
@@ -271,4 +283,57 @@ def test_concat_empty_df_series():
     df_equals(pdf, mdf)
     pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
     mdf = pd.concat((pd.DataFrame(), pd.Series([1, 2, 3])))
+    df_equals(pdf, mdf)
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() not in ("Hdk", "Base"),
+    reason="https://github.com/modin-project/modin/issues/5696",
+)
+@pytest.mark.parametrize("col_type", [None, "str"])
+@pytest.mark.parametrize("df1_cols", [0, 90, 100])
+@pytest.mark.parametrize("df2_cols", [0, 90, 100])
+@pytest.mark.parametrize("df1_rows", [0, 100])
+@pytest.mark.parametrize("df2_rows", [0, 100])
+@pytest.mark.parametrize("idx_type", [None, "str"])
+@pytest.mark.parametrize("ignore_index", [True, False])
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.parametrize("join", ["inner", "outer"])
+def test_concat_different_num_cols(
+    col_type,
+    df1_cols,
+    df2_cols,
+    df1_rows,
+    df2_rows,
+    idx_type,
+    ignore_index,
+    sort,
+    join,
+):
+    def create_frame(frame_type, ncols, nrows):
+        def to_str(val):
+            return f"str_{val}"
+
+        off = 0
+        data = {}
+        for n in range(1, ncols + 1):
+            row = range(off + 1, off + nrows + 1)
+            if col_type == "str":
+                row = map(to_str, row)
+            data[f"Col_{n}"] = list(row)
+            off += nrows
+
+        idx = None
+        if idx_type == "str":
+            idx = pandas.Index(map(to_str, range(1, nrows + 1)), name=f"Index_{nrows}")
+        df = frame_type(data=data, index=idx)
+        return df
+
+    def concat(frame_type, lib):
+        df1 = create_frame(frame_type, df1_cols, df1_rows)
+        df2 = create_frame(frame_type, df2_cols, df2_rows)
+        return lib.concat([df1, df2], ignore_index=ignore_index, sort=sort, join=join)
+
+    mdf = concat(pd.DataFrame, pd)
+    pdf = concat(pandas.DataFrame, pandas)
     df_equals(pdf, mdf)

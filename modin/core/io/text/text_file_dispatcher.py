@@ -591,8 +591,19 @@ class TextFileDispatcher(FileDispatcher):
 
         return column_widths, num_splits
 
+    _parse_func = None
+
     @classmethod
-    def _launch_tasks(cls, splits: list, **partition_kwargs) -> Tuple[list, list, list]:
+    def preprocess_func(cls):  # noqa: RT01
+        """Prepare a function for transmission to remote workers."""
+        if cls._parse_func is None:
+            cls._parse_func = cls.put(cls.parse)
+        return cls._parse_func
+
+    @classmethod
+    def _launch_tasks(
+        cls, splits: list, *partition_args, **partition_kwargs
+    ) -> Tuple[list, list, list]:
         """
         Launch tasks to read partitions.
 
@@ -601,6 +612,8 @@ class TextFileDispatcher(FileDispatcher):
         splits : list
             List of tuples with partitions data, which defines
             parser task (start/end read bytes and etc.).
+        *partition_args : tuple
+            Positional arguments to be passed to the parser function.
         **partition_kwargs : dict
             `kwargs` that should be passed to the parser function.
 
@@ -616,10 +629,13 @@ class TextFileDispatcher(FileDispatcher):
         partition_ids = [None] * len(splits)
         index_ids = [None] * len(splits)
         dtypes_ids = [None] * len(splits)
+        # this is done mostly for performance; see PR#5678 for details
+        func = cls.preprocess_func()
         for idx, (start, end) in enumerate(splits):
             partition_kwargs.update({"start": start, "end": end})
             *partition_ids[idx], index_ids[idx], dtypes_ids[idx] = cls.deploy(
-                func=cls.parse,
+                func=func,
+                f_args=partition_args,
                 f_kwargs=partition_kwargs,
                 num_returns=partition_kwargs.get("num_splits") + 2,
             )
@@ -908,15 +924,15 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             New query compiler, created from `new_frame`.
         """
-        new_index, row_lengths = cls._define_index(index_ids, index_name)
-        # Compose modin partitions from `partition_ids`
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
+        partition_ids = cls.build_partition(
+            partition_ids, [None] * len(index_ids), column_widths
+        )
 
         new_frame = cls.frame_cls(
             partition_ids,
-            new_index,
+            lambda: cls._define_index(index_ids, index_name),
             column_names,
-            row_lengths,
+            None,
             column_widths,
             dtypes=lambda: cls.get_dtypes(dtypes_ids, column_names),
         )
@@ -1018,8 +1034,8 @@ class TextFileDispatcher(FileDispatcher):
         if not use_modin_impl:
             return cls.single_worker_read(
                 filepath_or_buffer,
+                kwargs,
                 reason=fallback_reason,
-                **kwargs,
             )
 
         is_quoting = kwargs["quoting"] != QUOTE_NONE
@@ -1094,8 +1110,6 @@ class TextFileDispatcher(FileDispatcher):
         # kwargs that will be passed to the workers
         partition_kwargs = dict(
             kwargs,
-            fname=filepath_or_buffer_md,
-            num_splits=num_splits,
             header_size=0 if use_inferred_column_names else header_size,
             names=column_names if use_inferred_column_names else names,
             header="infer" if use_inferred_column_names else header,
@@ -1104,8 +1118,14 @@ class TextFileDispatcher(FileDispatcher):
             nrows=None,
             compression=compression_infered,
         )
+        # this is done mostly for performance; see PR#5678 for details
+        filepath_or_buffer_md_ref = cls.put(filepath_or_buffer_md)
+        kwargs_ref = cls.put(partition_kwargs)
         partition_ids, index_ids, dtypes_ids = cls._launch_tasks(
-            splits, **partition_kwargs
+            splits,
+            filepath_or_buffer_md_ref,
+            kwargs_ref,
+            num_splits=num_splits,
         )
 
         new_query_compiler = cls._get_new_qc(

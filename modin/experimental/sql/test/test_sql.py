@@ -11,9 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import pandas
 import modin.pandas as pd
 import modin.config as cfg
-from modin.pandas.test.utils import default_to_pandas_ignore_string
+from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
 
 import io
 import pytest
@@ -71,3 +72,12 @@ def test_sql_extension():
     values_right = query_result.values
     assert values_left.shape == values_right.shape
     assert (values_left == values_right).all()
+
+
+def test_string_cast():
+    from modin.experimental.sql import query
+
+    data = {"A": ["A", "B", "C"], "B": ["A", "B", "C"]}
+    mdf = pd.DataFrame(data)
+    pdf = pandas.DataFrame(data)
+    df_equals(pdf, query("SELECT * FROM df", df=mdf))

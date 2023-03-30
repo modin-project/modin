@@ -242,7 +242,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+                axis, map_func, left=partitions, right=by
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
+    def broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,9 +346,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "right"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
 
         Returns
         -------
@@ -365,7 +362,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
-            return apply_func(df, **{other_name: other})
+            return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
@@ -395,6 +392,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         left,
         right,
         keep_partitioning=False,
+        num_splits=None,
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
@@ -415,15 +413,23 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         right : NumPy 2D array
             Right partitions.
         keep_partitioning : boolean, default: False
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
-            The list of lengths to shuffle the object.
+            The list of lengths to shuffle the object. Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         apply_func_args : list-like, optional
             Positional arguments to pass to the `func`.
         **kwargs : dict
@@ -434,15 +440,25 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         NumPy array
             An array of partition objects.
         """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=keep_partitioning and lengths is not None,
+            extra_log=f"`keep_partitioning` must be set to `False` when passing `lengths`. Got: {keep_partitioning=} | {lengths=}",
+        )
+
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        if keep_partitioning:
+        if keep_partitioning and num_splits is None:
             num_splits = len(left) if axis == 0 else len(left.T)
         elif lengths:
             num_splits = len(lengths)
-        else:
+        elif num_splits is None:
             num_splits = NPartitions.get()
+        else:
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=not isinstance(num_splits, int),
+                extra_log=f"Expected `num_splits` to be an integer, got: {type(num_splits)} | {num_splits=}",
+            )
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
@@ -538,6 +554,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         partitions,
         map_func,
         keep_partitioning=False,
+        num_splits=None,
         lengths=None,
         enumerate_partitions=False,
         **kwargs,
@@ -553,11 +570,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
-        keep_partitioning : bool, default: False
-            Whether to keep partitioning for Modin Frame.
-            Setting it to True stops data shuffling between partitions.
+        keep_partitioning : boolean, default: False
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         lengths : list of ints, default: None
-            List of lengths to shuffle the object.
+            The list of lengths to shuffle the object. Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
@@ -579,6 +604,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             left=partitions,
             apply_func=map_func,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
@@ -1551,7 +1577,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         samples = [partition.apply(sample_func) for partition in masked_partitions]
         # Get each sample to pass in to the pivot function
         samples = cls.get_objects_from_partitions(samples)
-        pivots = shuffle_functions.pivot_function(samples)
+        pivots = np.unique(shuffle_functions.pivot_function(samples))
         # Convert our list of block partitions to row partitions. We need to create full-axis
         # row partitions since we need to send the whole partition to the split step as otherwise
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
@@ -1559,26 +1585,28 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             partition.force_materialization().list_of_block_partitions[0]
             for partition in cls.row_partitions(partitions)
         ]
-        # Gather together all of the sub-partitions
-        split_row_partitions = np.array(
-            [
-                partition.split(
-                    shuffle_functions.split_function, len(pivots) + 1, pivots
-                )
-                for partition in row_partitions
+        if len(pivots):
+            # Gather together all of the sub-partitions
+            split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_function, len(pivots) + 1, pivots
+                    )
+                    for partition in row_partitions
+                ]
+            ).T
+            # We need to convert every partition that came from the splits into a full-axis column partition.
+            new_partitions = [
+                [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func
+                    )
+                ]
+                for row_partition in split_row_partitions
             ]
-        ).T
-        # We need to convert every partition that came from the splits into a full-axis column partition.
-        col_partitioning_func = np.vectorize(
-            lambda partition: cls._row_partition_class(partition)
-        )
-        split_row_partitions = col_partitioning_func(split_row_partitions)
-        new_partitions = [
-            [
-                cls._column_partitions_class(row_partition, full_axis=False).apply(
-                    final_shuffle_func
-                )
-            ]
-            for row_partition in split_row_partitions
-        ]
-        return np.array(new_partitions)
+            return np.array(new_partitions)
+        else:
+            # If there are not pivots we can simply apply the function row-wise
+            return np.array(
+                [[row_part.apply(final_shuffle_func)] for row_part in row_partitions]
+            )

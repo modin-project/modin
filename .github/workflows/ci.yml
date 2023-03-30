@@ -6,7 +6,6 @@ on:
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/workflows/**
       - '!.github/workflows/push-to-master.yml'
-      - '!.github/workflows/push.yml'
       - asv_bench/**
       - modin/**
       - requirements/**
@@ -16,12 +15,14 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
+  push:
+
 jobs:
   lint-black:
     name: lint (black)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -37,10 +38,10 @@ jobs:
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
@@ -48,10 +49,11 @@ jobs:
       - run: mypy --config-file mypy.ini
 
   build-docs:
+    if: github.event_name == 'pull_request'
     name: build docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -64,10 +66,11 @@ jobs:
       - run: cd docs && sphinx-build -T -E -W -b html . build
 
   lint-pydocstyle:
+    if: github.event_name == 'pull_request'
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -77,7 +80,7 @@ jobs:
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: python -m pytest scripts/test
-      - run: pip install -e .[all]
+      - run: pip install -e ".[all]"
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
@@ -146,7 +149,7 @@ jobs:
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -168,7 +171,7 @@ jobs:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -208,7 +211,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -246,7 +249,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-ubuntu
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -255,7 +258,7 @@ jobs:
           architecture: "x64"
       - name: Clean install and run
         run: |
-          python -m pip install -e .[all]
+          python -m pip install -e ".[all]"
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
@@ -267,7 +270,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -276,7 +279,7 @@ jobs:
           architecture: "x64"
       - name: Clean install and run
         run: |
-          python -m pip install -e .[all]
+          python -m pip install -e ".[all]"
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
@@ -288,7 +291,7 @@ jobs:
         shell: bash -l {0}
     name: test-internals
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -327,7 +330,7 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-no-engine:
     runs-on: ubuntu-latest
@@ -335,7 +338,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -363,7 +366,7 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -378,7 +381,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -425,7 +428,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-hdk:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -439,7 +442,7 @@ jobs:
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -475,6 +478,11 @@ jobs:
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
       - run: python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest modin/pandas/test/test_general.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -484,9 +492,10 @@ jobs:
           examples/data/plasticc_training_set_metadata_1k.csv \
           examples/data/plasticc_test_set_metadata_1k.csv \
           -no-ml
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-asv-benchmarks:
+    if: github.event_name == 'pull_request'
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
@@ -498,7 +507,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
@@ -572,7 +581,7 @@ jobs:
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -629,6 +638,10 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_logic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_indexing.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_math.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -636,7 +649,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-all:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -660,7 +673,7 @@ jobs:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -723,6 +736,10 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
@@ -733,7 +750,7 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -746,7 +763,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test experimental
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -776,7 +793,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-cloud:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -789,7 +806,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test cloud
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -822,7 +839,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -856,11 +873,15 @@ jobs:
           - modin/numpy/test/test_array_creation.py
           - modin/numpy/test/test_array_axis_functions.py
           - modin/numpy/test/test_array_arithmetic.py
+          - modin/numpy/test/test_array_logic.py
+          - modin/numpy/test/test_array_linalg.py
+          - modin/numpy/test/test_array_indexing.py
+          - modin/numpy/test/test_array_math.py
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - uses: conda-incubator/setup-miniconda@v2
@@ -897,7 +918,7 @@ jobs:
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.engine == 'ray'
@@ -918,7 +939,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -956,14 +977,14 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8" ]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -991,3 +1012,27 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+
+  upload-coverage:
+    needs: [test-internals, test-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-windows]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Download coverage data
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: coverage-data
+      - uses: actions/setup-python@v4
+      - run: pip install coverage
+      - name: Combine coverage
+        run: python -m coverage combine
+      - name: Generate coverage report in xml format
+        run: python -m coverage xml
+      - uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true

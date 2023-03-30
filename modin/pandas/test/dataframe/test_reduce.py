@@ -15,6 +15,8 @@ import pytest
 import numpy as np
 import pandas
 import matplotlib
+from pandas._testing import assert_series_equal
+
 import modin.pandas as pd
 
 from modin.pandas.test.utils import (
@@ -37,7 +39,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
@@ -434,8 +436,22 @@ def test_value_counts_categorical():
     data = np.array(["a"] * 50000 + ["b"] * 10000 + ["c"] * 1000)
     random_state = np.random.RandomState(seed=42)
     random_state.shuffle(data)
+    modin_df, pandas_df = create_test_dfs(
+        {"col1": data, "col2": data}, dtype="category"
+    )
+
+    if StorageFormat.get() == "Hdk":
+        # The order of HDK categories is different from Pandas
+        # and, thus, index comparison fails.
+        def comparator(df1, df2):
+            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+
+    else:
+        comparator = df_equals
 
     eval_general(
-        *create_test_dfs({"col1": data, "col2": data}, dtype="category"),
+        modin_df,
+        pandas_df,
         lambda df: df.value_counts(),
+        comparator=comparator,
     )

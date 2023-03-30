@@ -18,7 +18,7 @@ jobs:
       matrix:
         execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -65,7 +65,7 @@ jobs:
           pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
         if: matrix.execution != 'hdk_on_native'
       # Build Modin from sources for `hdk_on_native`
-      - run: pip install .
+      - run: pip install -e .
         if: matrix.execution == 'hdk_on_native'
       # install test dependencies
       # NOTE: If you are changing the set of packages installed here, make sure that

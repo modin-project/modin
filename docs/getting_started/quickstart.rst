@@ -28,7 +28,7 @@ To install the most recent stable release for Modin run the following:
 
 .. code-block:: bash
 
-  pip install modin[all] 
+  pip install "modin[all]" 
 
 For further instructions on how to install Modin with conda or for specific platforms 
 or engines, see our detailed `installation guide <../getting_started/installation.html>`_.

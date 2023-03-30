@@ -1367,6 +1367,16 @@ class TestParquet:
                 columns=columns,
             )
 
+    def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
+        if engine == "fastparquet" and os.name == "nt":
+            pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
+        with ensure_clean(".parquet") as f1, ensure_clean(
+            ".parquet"
+        ) as f2, ensure_clean(".parquet") as f3:
+            for f in [f1, f2, f3]:
+                make_parquet_file(filename=f)
+            eval_io(fn_name="read_parquet", path=[f1, f2, f3], engine=engine)
+
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -2432,7 +2442,7 @@ class TestSas:
     def test_read_sas(self):
         eval_io(
             fn_name="read_sas",
-            # read_stata kwargs
+            # read_sas kwargs
             filepath_or_buffer="modin/pandas/test/data/airline.sas7bdat",
         )
 

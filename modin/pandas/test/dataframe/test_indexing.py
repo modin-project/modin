@@ -608,6 +608,30 @@ def test_loc_multi_index_with_tuples():
     eval_general(modin_df, pandas_df, lambda df: df.loc[:, ("bar", "two")])
 
 
+def test_loc_multi_index_rows_with_tuples_5721():
+    arrays = [
+        ["bar", "bar", "baz", "baz"],
+        ["one", "two", "one", "two"],
+    ]
+    ncols = 5
+    index = pd.MultiIndex.from_tuples(zip(*arrays), names=["a", "b"])
+    data = np.arange(0, ncols * len(index)).reshape(len(index), ncols)
+    modin_df, pandas_df = create_test_dfs(data, index=index)
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar",)])
+    eval_general(modin_df, pandas_df, lambda df: df.loc[("bar", "two")])
+
+
+def test_loc_multi_index_level_two_has_same_name_as_column():
+    eval_general(
+        *create_test_dfs(
+            pandas.DataFrame(
+                [[0]], index=[pd.Index(["foo"]), pd.Index(["bar"])], columns=["bar"]
+            )
+        ),
+        lambda df: df.loc[("foo", "bar")],
+    )
+
+
 def test_loc_multi_index_duplicate_keys():
     modin_df, pandas_df = create_test_dfs([1, 2], index=[["a", "a"], ["b", "b"]])
     eval_general(modin_df, pandas_df, lambda df: df.loc[("a", "b"), 0])
@@ -808,6 +832,12 @@ def test_iloc_empty():
     df_equals(pandas_df, modin_df)
 
 
+def test_iloc_loc_key_length():
+    modin_ser, pandas_ser = pd.Series(0), pandas.Series(0)
+    eval_general(modin_ser, pandas_ser, lambda ser: ser.iloc[0, 0])
+    eval_general(modin_ser, pandas_ser, lambda ser: ser.loc[0, 0])
+
+
 def test_loc_series():
     md_df, pd_df = create_test_dfs({"a": [1, 2], "b": [3, 4]})
 
@@ -838,6 +868,48 @@ def test_loc_iloc_slice_indexer(locator_name, slice_indexer):
     pd_df.index = shifted_index
 
     eval_general(md_df, pd_df, lambda df: getattr(df, locator_name)[slice_indexer])
+
+
+@pytest.mark.parametrize(
+    "indexer_size",
+    [
+        1,
+        2,
+        NROWS,
+        pytest.param(
+            NROWS + 1,
+            marks=pytest.mark.xfail(
+                reason="https://github.com/modin-project/modin/issues/5739", strict=True
+            ),
+        ),
+    ],
+)
+class TestLocRangeLikeIndexer:
+    """Test cases related to https://github.com/modin-project/modin/issues/5702"""
+
+    def test_range_index_getitem_single_value(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[pd.RangeIndex(indexer_size)],
+        )
+
+    def test_range_index_getitem_two_values(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[pd.RangeIndex(indexer_size), :],
+        )
+
+    def test_range_getitem_single_value(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[range(indexer_size)],
+        )
+
+    def test_range_getitem_two_values_5702(self, indexer_size):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.loc[range(indexer_size), :],
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1296,7 +1368,7 @@ def test_reindex_multiindex():
 def test_reset_index(data, test_async_reset_index):
     modin_df, pandas_df = create_test_dfs(data)
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_result = modin_df.reset_index(inplace=False)
     pandas_result = pandas_df.reset_index(inplace=False)
     df_equals(modin_result, pandas_result)
@@ -1304,7 +1376,7 @@ def test_reset_index(data, test_async_reset_index):
     modin_df_cp = modin_df.copy()
     pd_df_cp = pandas_df.copy()
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df_cp.reset_index(inplace=True)
     pd_df_cp.reset_index(inplace=True)
     df_equals(modin_df_cp, pd_df_cp)
@@ -1475,7 +1547,7 @@ def test_reset_index_with_multi_index_no_drop(
     if col_fill != "no_col_fill":
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     eval_general(modin_df, pandas_df, lambda df: df.reset_index(**kwargs))
 
 
@@ -1593,14 +1665,18 @@ def test_reset_index_with_named_index(
     df_equals(modin_df, pandas_df)
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
-        modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df.index = modin_df.index
+        modin_df._to_pandas()
+
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
-        modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df.index = modin_df.index
+        modin_df._to_pandas()
+
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df.reset_index(drop=True, inplace=True)
     pandas_df.reset_index(drop=True, inplace=True)
     df_equals(modin_df, pandas_df)
@@ -1610,8 +1686,10 @@ def test_reset_index_with_named_index(
     modin_df.index.name = pandas_df.index.name = index_name
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
-        modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df.index = modin_df.index
+        modin_df._to_pandas()
+
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 
@@ -1631,8 +1709,10 @@ def test_reset_index_metadata_update(index, test_async_reset_index):
     modin_df.columns = pandas_df.columns = ["col1"]
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
-        modin_df._query_compiler._modin_frame._propagate_index_objs(axis=0)
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df.index = modin_df.index
+        modin_df._to_pandas()
+
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     eval_general(modin_df, pandas_df, lambda df: df.reset_index())
 
 
@@ -1772,17 +1852,36 @@ def test_tail(data, n):
 
 
 def test_xs():
-    d = {
+    # example is based on the doctest in the upstream pandas docstring
+    data = {
         "num_legs": [4, 4, 2, 2],
         "num_wings": [0, 0, 2, 2],
         "class": ["mammal", "mammal", "mammal", "bird"],
         "animal": ["cat", "dog", "bat", "penguin"],
         "locomotion": ["walks", "walks", "flies", "walks"],
     }
-    df = pd.DataFrame(data=d)
-    df = df.set_index(["class", "animal", "locomotion"])
-    with warns_that_defaulting_to_pandas():
-        df.xs("mammal")
+    modin_df, pandas_df = create_test_dfs(data)
+
+    def prepare_dataframes(df):
+        # to make several partitions (only for Modin dataframe)
+        df = (pd if isinstance(df, pd.DataFrame) else pandas).concat([df, df], axis=0)
+        # looks like pandas is sorting the index whereas modin is not, performing a join operation.
+        df = df.reset_index(drop=True)
+        df = df.join(df, rsuffix="_y")
+        return df.set_index(["class", "animal", "locomotion"])
+
+    modin_df = prepare_dataframes(modin_df)
+    pandas_df = prepare_dataframes(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.xs("mammal"))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("cat", level=1))
+    eval_general(modin_df, pandas_df, lambda df: df.xs("num_legs", axis=1))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.xs("cat", level=1, drop_level=False)
+    )
+    eval_general(modin_df, pandas_df, lambda df: df.xs(("mammal", "cat")))
+    eval_general(
+        modin_df, pandas_df, lambda df: df.xs(("mammal", "cat"), drop_level=False)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

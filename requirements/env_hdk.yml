@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - pandas==1.5.3
-  - pyarrow=8
+  - pyarrow
   - numpy>=1.18.5
   - fsspec
   - pip
@@ -12,7 +12,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage
   - pygithub
-  - pyhdk==0.3.1
+  - pyhdk==0.4
   - s3fs>=2021.8
   - psutil
   - openpyxl<3.1.0
@@ -21,6 +21,7 @@ dependencies:
   - scipy
   - xgboost>=1.7.1,<2.0.0
   - scikit-learn-intelex
+  - matplotlib
   # code linters
   - black
   - flake8
