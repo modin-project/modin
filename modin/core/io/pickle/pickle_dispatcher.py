@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses ``PickleExperimentalDispatcher`` class that is used for reading `.pkl` files."""
+"""Module houses ``ExperimentalPickleDispatcher`` class that is used for reading `.pkl` files."""
 
 import glob
 import warnings
@@ -20,7 +20,7 @@ from modin.core.io.file_dispatcher import FileDispatcher
 from modin.config import NPartitions
 
 
-class PickleExperimentalDispatcher(FileDispatcher):
+class ExperimentalPickleDispatcher(FileDispatcher):
     """Class handles utils for reading pickle files."""
 
     @classmethod

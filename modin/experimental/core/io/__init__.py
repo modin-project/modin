@@ -13,8 +13,8 @@
 
 """Experimental IO functions implementations."""
 
-from .sql.sql_dispatcher import SQLExperimentalDispatcher
+from .sql.sql_dispatcher import ExperimentalSQLDispatcher
 
 __all__ = [
-    "SQLExperimentalDispatcher",
+    "ExperimentalSQLDispatcher",
 ]

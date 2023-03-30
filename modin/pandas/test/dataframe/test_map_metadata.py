@@ -47,7 +47,7 @@ from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -498,6 +498,13 @@ def test_astype():
     )
 
 
+@pytest.mark.parametrize("errors", ["raise", "ignore"])
+def test_astype_errors(errors):
+    data = {"a": ["a", 2, -1]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
+
+
 @pytest.mark.parametrize("dtypes_are_dict", [True, False])
 def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
     # Test astype with a dtypes dict that is complex in that:
@@ -615,17 +622,14 @@ def test_convert_dtypes_single_partition(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
-@pytest.mark.skipif(
-    get_current_execution() == "BaseOnPython",
-    reason="BaseOnPython cannot not have multiple partitions.",
-)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
     # Column 0 should have an int dtype
     modin_part2 = pd.DataFrame([1]).convert_dtypes()
     modin_df = pd.concat([modin_part1, modin_part2])
-    assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    if StorageFormat.get() == "Pandas":
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     pandas_df = pandas.DataFrame(["a", 1], index=[0, 0])
     # The initial dataframes should be the same
     df_equals(modin_df, pandas_df)
@@ -636,6 +640,17 @@ def test_convert_dtypes_multiple_row_partitions():
     pandas_result = pandas_df.convert_dtypes()
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+def test_convert_dtypes_5653():
+    modin_part1 = pd.DataFrame({"col1": ["a", "b", "c", "d"]})
+    modin_part2 = pd.DataFrame({"col1": [None, None, None, None]})
+    modin_df = pd.concat([modin_part1, modin_part2])
+    if StorageFormat.get() == "Pandas":
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+    modin_df = modin_df.convert_dtypes()
+    assert len(modin_df.dtypes) == 1
+    assert modin_df.dtypes[0] == "string"
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

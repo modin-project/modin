@@ -52,14 +52,13 @@ from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     try_cast_to_pandas,
 )
-from modin.config import Engine, IsExperimental, PersistentPickle
+from modin.config import IsExperimental, PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
-from . import _update_engine
 from .iterator import PartitionIterator
 from .series import Series
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
@@ -129,7 +128,6 @@ class DataFrame(BasePandasDataset):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
-        Engine.subscribe(_update_engine)
         if isinstance(data, (DataFrame, Series)):
             self._query_compiler = data._query_compiler.copy()
             if index is not None and any(i not in data.index for i in index):
