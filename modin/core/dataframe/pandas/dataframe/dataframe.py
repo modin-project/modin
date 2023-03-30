@@ -1184,7 +1184,7 @@ class PandasDataframe(ClassLogger):
         )
 
     @lazy_metadata_decorator(apply_axis="both")
-    def astype(self, col_dtypes):
+    def astype(self, col_dtypes, errors: str = "raise"):
         """
         Convert the columns dtypes to given dtypes.
 
@@ -1192,6 +1192,8 @@ class PandasDataframe(ClassLogger):
         ----------
         col_dtypes : dictionary of {col: dtype,...}
             Where col is the column name and dtype is a NumPy dtype.
+        errors : {'raise', 'ignore'}, default: 'raise'
+            Control raising of exceptions on invalid data for provided dtype.
 
         Returns
         -------
@@ -1226,7 +1228,9 @@ class PandasDataframe(ClassLogger):
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            return df.astype({k: v for k, v in col_dtypes.items() if k in df})
+            return df.astype(
+                {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
+            )
 
         new_frame = self._partition_mgr_cls.map_partitions(
             self._partitions, astype_builder

@@ -498,6 +498,13 @@ def test_astype():
     )
 
 
+@pytest.mark.parametrize("errors", ["raise", "ignore"])
+def test_astype_errors(errors):
+    data = {"a": ["a", 2, -1]}
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
+
+
 @pytest.mark.parametrize("dtypes_are_dict", [True, False])
 def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
     # Test astype with a dtypes dict that is complex in that:
