@@ -1663,13 +1663,14 @@ class TestParquet:
             path = f"{directory}/data"
             os.makedirs(path)
             test_df.to_parquet(path + "/5509.parquet")
-            eval_io(
-                fn_name="read_parquet",
-                path=path + "/5509.parquet",
-                columns=["col_b"],
-                engine=engine,
-                filters=[[("col_a", "==", 1)]],
-            )
+            with warns_that_defaulting_to_pandas():
+                eval_io(
+                    fn_name="read_parquet",
+                    path=path + "/5509.parquet",
+                    columns=["col_b"],
+                    engine=engine,
+                    filters=[[("col_a", "==", 1)]],
+                )
 
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
