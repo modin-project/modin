@@ -3719,9 +3719,10 @@ def test_where():
     modin_result = modin_series.where(modin_cond_series, -modin_series)
     assert all((to_pandas(modin_result) == pandas_result))
 
-    other = pandas.Series(random_state.randn(100))
-    pandas_result = pandas_series.where(pandas_cond_series, other, axis=0)
-    modin_result = modin_series.where(modin_cond_series, other, axis=0)
+    other_data = random_state.randn(100)
+    modin_other, pandas_other = pd.Series(other_data), pandas.Series(other_data)
+    pandas_result = pandas_series.where(pandas_cond_series, pandas_other, axis=0)
+    modin_result = modin_series.where(modin_cond_series, modin_other, axis=0)
     assert all(to_pandas(modin_result) == pandas_result)
 
     pandas_result = pandas_series.where(pandas_series < 2, True)
