@@ -71,14 +71,10 @@ def test_dataframe(data, window, min_periods, win_type, axis):
     )
     # Testing of Window class
     if win_type is not None:
-        # TODO(https://github.com/modin-project/modin/issues/4261): Once pandas
-        # allows rolling with (axis=1, win_type=, center=True), test that, as
-        # well.
-        if axis == 0:
-            df_equals(pandas_rolled.mean(), modin_rolled.mean())
-            df_equals(modin_rolled.sum(), pandas_rolled.sum())
-            df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-            df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
+        df_equals(pandas_rolled.mean(), modin_rolled.mean())
+        df_equals(modin_rolled.sum(), pandas_rolled.sum())
+        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
+        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
     # Testing of Rolling class
     else:
         df_equals(modin_rolled.count(), pandas_rolled.count())

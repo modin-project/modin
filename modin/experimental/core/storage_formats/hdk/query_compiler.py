@@ -32,6 +32,8 @@ from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_list_like
 from functools import wraps
 
+import numpy as np
+
 
 def is_inoperable(value):
     """
@@ -399,9 +401,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
             )
+        _check_int_or_float("sum", self.dtypes)
         return self._agg("sum", **kwargs)
 
     def mean(self, **kwargs):
+        _check_int_or_float("mean", self.dtypes)
         return self._agg("mean", **kwargs)
 
     def nunique(self, axis=0, dropna=True):
@@ -557,17 +561,27 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def drop(self, index=None, columns=None, errors: str = "raise"):
         if index is not None:
+            # Only column drop is supported by the HDK engine
             raise NotImplementedError("Row drop")
         if errors != "raise":
             raise NotImplementedError(
                 "This lazy query compiler will always "
                 + "raise an error on invalid columns."
             )
-        return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(
-                row_labels=index, col_labels=self.columns.drop(columns)
-            )
+
+        columns = self.columns.drop(columns)
+        new_frame = self._modin_frame.take_2d_labels_or_positional(
+            row_labels=index, col_labels=columns
         )
+
+        # If all columns are dropped and the index is trivial, we are
+        # not able to restore it, since we don't know the number of rows.
+        # In this case, we copy the index from the current frame.
+        if len(columns) == 0 and new_frame._index_cols is None:
+            assert index is None, "Can't copy old indexes as there was a row drop"
+            new_frame._index_cache = self._modin_frame.index.copy()
+
+        return self.__constructor__(new_frame)
 
     def dropna(self, axis=0, how=no_default, thresh=no_default, subset=None):
         if thresh is not no_default or axis != 0:
@@ -647,7 +661,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "mul", **kwargs)
 
     def mod(self, other, **kwargs):
-        return self._bin_op(other, "mod", **kwargs)
+        int_codes = np.typecodes["AllInteger"]
+        if all(t.char in int_codes for t in self._modin_frame.dtypes):
+            return self._bin_op(other, "mod", **kwargs)
+        else:
+            raise NotImplementedError("Non-integer operands in modulo operation")
 
     def floordiv(self, other, **kwargs):
         return self._bin_op(other, "floordiv", **kwargs)
@@ -724,6 +742,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        if kwargs.get("key", None) is not None:
+            raise NotImplementedError("Sort with key function")
+
         ignore_index = kwargs.get("ignore_index", False)
         na_position = kwargs.get("na_position", "last")
         return self.__constructor__(
@@ -793,3 +814,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     @property
     def dtypes(self):
         return self._modin_frame.dtypes
+
+
+_SUPPORTED_NUM_TYPE_CODES = set(np.typecodes["AllInteger"] + np.typecodes["Float"]) - {
+    np.dtype(np.float16).char
+}
+
+
+def _check_int_or_float(op, dtypes):  # noqa: GL08
+    for t in dtypes:
+        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
+            raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")

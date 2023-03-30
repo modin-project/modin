@@ -14,6 +14,7 @@
 import pandas
 import inspect
 import numpy as np
+import pytest
 
 import modin.pandas as pd
 
@@ -39,10 +40,6 @@ def test_top_level_api_equality():
         "tseries",
         "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished
-        "describe_option",
-        "get_option",
-        "option_context",
-        "reset_option",
         "Panel",  # This is deprecated and throws a warning every time.
         "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
         "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
@@ -237,6 +234,63 @@ def test_dataframe_api_equality():
                 pass
 
     assert not len(difference), "Extra params found in API: {}".format(difference)
+
+
+def test_series_str_api_equality():
+    modin_dir = [obj for obj in dir(pd.Series().str) if obj[0] != "_"]
+    pandas_dir = [obj for obj in dir(pandas.Series.str) if obj[0] != "_"]
+
+    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        missing_from_modin
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
+
+
+def test_series_dt_api_equality():
+    modin_dir = [obj for obj in dir(pd.Series().dt) if obj[0] != "_"]
+    pandas_dir = [obj for obj in dir(pandas.Series.dt) if obj[0] != "_"]
+
+    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        missing_from_modin
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
+
+
+def test_series_cat_api_equality():
+    modin_dir = [obj for obj in dir(pd.Series().cat) if obj[0] != "_"]
+    pandas_dir = [obj for obj in dir(pandas.Series.cat) if obj[0] != "_"]
+
+    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        len(missing_from_modin)
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
+
+
+@pytest.mark.parametrize("obj", ["DataFrame", "Series"])
+def test_sparse_accessor_api_equality(obj):
+    modin_dir = [x for x in dir(getattr(pd, obj).sparse) if x[0] != "_"]
+    pandas_dir = [x for x in dir(getattr(pandas, obj).sparse) if x[0] != "_"]
+
+    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        len(missing_from_modin)
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
 
 
 def test_series_api_equality():

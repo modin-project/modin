@@ -21,16 +21,28 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import LazyProxyCategoricalDtype
+from .utils import (
+    LazyProxyCategoricalDtype,
+    arrow_to_pandas,
+    check_join_supported,
+    check_cols_to_join,
+    get_data_for_join_by_index,
+)
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
 from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import get_dtype, is_list_like, is_bool_dtype
+from pandas.core.dtypes.common import (
+    get_dtype,
+    is_list_like,
+    is_bool_dtype,
+    is_categorical_dtype,
+)
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
+import typing
 from typing import List, Hashable, Optional, Tuple, Union
 
 from ..df_algebra import (
@@ -61,6 +73,7 @@ import numpy as np
 import pyarrow
 import re
 from modin.pandas.utils import check_both_not_none
+from pyarrow.types import is_dictionary
 
 
 class HdkOnNativeDataframe(PandasDataframe):
@@ -847,7 +860,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        how = JoinType(how)
+        check_join_supported(how)
         assert (
             left_on is not None and right_on is not None
         ), "Merge with unspecified 'left_on' or 'right_on' parameter is not supported in the engine"
@@ -855,45 +868,56 @@ class HdkOnNativeDataframe(PandasDataframe):
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
 
-        for col in left_on:
-            assert col in self.columns, f"'left_on' references unknown column {col}"
-        for col in right_on:
-            assert col in other.columns, f"'right_on' references unknown column {col}"
+        orig_left_on = left_on
+        orig_right_on = right_on
+        left, left_on = check_cols_to_join("left_on", self, left_on)
+        right, right_on = check_cols_to_join("right_on", other, right_on)
 
-        new_dtypes = []
-        exprs = OrderedDict()
+        # If either left_on or right_on has been changed, it means that there
+        # are index columns in the list. Joining by index in this case.
+        if (left_on is not orig_left_on) or (right_on is not orig_right_on):
+            index_cols, exprs, new_dtypes, new_columns = get_data_for_join_by_index(
+                self, other, how, orig_left_on, orig_right_on, sort, suffixes
+            )
+            ignore_index = False
+        else:
+            ignore_index = True
+            index_cols = None
+            exprs = OrderedDict()
+            new_dtypes = []
 
-        new_columns, left_renamer, right_renamer = join_columns(
-            self.columns, other.columns, left_on, right_on, suffixes
-        )
-        for old_c, new_c in left_renamer.items():
-            new_dtypes.append(self._dtypes[old_c])
-            exprs[new_c] = self.ref(old_c)
+            new_columns, left_renamer, right_renamer = join_columns(
+                left.columns, right.columns, left_on, right_on, suffixes
+            )
+            for old_c, new_c in left_renamer.items():
+                new_dtypes.append(left._dtypes[old_c])
+                exprs[new_c] = left.ref(old_c)
 
-        for old_c, new_c in right_renamer.items():
-            new_dtypes.append(other._dtypes[old_c])
-            exprs[new_c] = other.ref(old_c)
+            for old_c, new_c in right_renamer.items():
+                new_dtypes.append(right._dtypes[old_c])
+                exprs[new_c] = right.ref(old_c)
 
-        condition = self._build_equi_join_condition(other, left_on, right_on)
+        condition = left._build_equi_join_condition(right, left_on, right_on)
 
         op = JoinNode(
-            self,
-            other,
-            how=how.value,
+            left,
+            right,
+            how=how,
             exprs=exprs,
             condition=condition,
         )
 
-        res = self.__constructor__(
+        res = left.__constructor__(
             dtypes=new_dtypes,
             columns=new_columns,
+            index_cols=index_cols,
             op=op,
             force_execution_mode=self._force_execution_mode,
         )
 
         if sort:
             res = res.sort_rows(
-                left_on, ascending=True, ignore_index=True, na_position="last"
+                left_on, ascending=True, ignore_index=ignore_index, na_position="last"
             )
 
         return res
@@ -964,6 +988,19 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        # In case of different number of columns, HDK performs
+        # slowly and supports only numeric column types.
+        # See https://github.com/intel-ai/hdk/issues/182
+        # To work around this issue, perform concatenation
+        # with arrow.
+        if (
+            len(other_modin_frames) == 0
+            or len(self.columns) == 0
+            or any((len(f.columns) != len(self.columns) for f in other_modin_frames))
+            or any((set(f._dtypes) != set(self._dtypes) for f in other_modin_frames))
+        ):
+            return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
+
         # determine output columns
         new_cols_map = OrderedDict()
         for col in self.columns:
@@ -1011,8 +1048,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = frame.ref(col)
                 else:
                     assert index_width == 1, "unexpected index width"
-                    aligned_index = ["__index__"]
-                    exprs["__index__"] = frame.ref("__rowid__")
+                    aligned_index = self._mangle_index_names([None])
+                    exprs[aligned_index[0]] = frame.ref("__rowid__")
                     aligned_index_dtypes = [get_dtype(int)]
                     uses_rowid = True
                 aligned_dtypes = aligned_index_dtypes + new_dtypes
@@ -1049,6 +1086,202 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return new_frame
 
+    def _union_all_arrow(self, other_modin_frames, join, sort, ignore_index):
+        """
+        Concatenate frames' rows, using the PyArrow API.
+
+        Parameters
+        ----------
+        other_modin_frames : list of HdkOnNativeDataframe
+            Frames to concat.
+        join : {"outer", "inner"}
+            How to handle columns with mismatched names.
+            "inner" - drop such columns. "outer" - fill
+            with NULLs.
+        sort : bool
+            Sort unaligned columns for 'outer' join.
+        ignore_index : bool
+            Ignore index columns.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            The new frame.
+        """
+
+        class FrameData:
+            def __init__(self, frame):
+                if not frame._has_arrow_table():
+                    frame._execute()
+                if not frame._has_arrow_table():
+                    raise NotImplementedError("PyArrow tables concatenation")
+                self.index = frame.index
+                self.columns = frame.columns
+                self.index_cols = frame._index_cols
+                self.table: pyarrow.Table = frame._partitions[0][0].arrow_table
+                # To be removed after #5567 merge
+                if self.index_cols is not None:
+                    self.index_cols = [f"F_{n}" for n in self.index_cols]
+
+        # This function to be removed after #5567 merge
+        def mangle_index_names(names):
+            return [
+                f"F___index__{i}_{'__None__' if n is None else n}"
+                for i, n in enumerate(names)
+            ]
+
+        frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
+        col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
+
+        def add_col_field(table, col_name, table_col_name):
+            key = (col_name, table_col_name)
+            field = table.field(table_col_name)
+            cur_field = col_fields.get(key, None)
+            if (
+                (cur_field is None)
+                or pyarrow.types.is_null(cur_field.type)
+                or (
+                    (not pyarrow.types.is_string(cur_field.type))
+                    and (not pyarrow.types.is_null(field.type))
+                    and (
+                        pyarrow.types.is_string(field.type)
+                        or (field.type.bit_width > cur_field.type.bit_width)
+                    )
+                )
+            ):
+                col_fields[key] = field
+
+        if join == "outer":
+            frames = [f for f in frames if len(f.columns) != 0 or len(f.index) != 0]
+            for frame in frames:
+                table = frame.table
+                idx_width = 0 if frame.index_cols is None else len(frame.index_cols)
+                table_cols = table.column_names[idx_width:]
+                for col_name, table_col_name in zip(frame.columns, table_cols):
+                    add_col_field(table, col_name, table_col_name)
+        else:
+            col_names = {c for c in frames[0].columns} if len(frames) > 1 else []
+            if len(col_names) != 0:
+                for frame in frames[1:]:
+                    for name in list(col_names):
+                        if name not in frame.columns:
+                            col_names.remove(name)
+                if len(col_names) != 0:
+                    for frame in frames:
+                        table = frame.table
+                        idx_width = (
+                            0 if frame.index_cols is None else len(frame.index_cols)
+                        )
+                        table_cols = table.column_names[idx_width:]
+                        for col_name, table_col_name in zip(frame.columns, table_cols):
+                            if col_name in col_names:
+                                add_col_field(table, col_name, table_col_name)
+
+        if len(col_fields) == 0:
+            if ignore_index or len(frames) == 0:
+                idx = RangeIndex(0, sum(len(f.table) for f in frames))
+            else:
+                idx = frames[0].index.append([f.index for f in frames[1:]])
+            idx_cols = mangle_index_names(idx.names)
+            idx_df = pd.DataFrame(index=idx).reset_index()
+            union = pyarrow.Table.from_pandas(idx_df).rename_columns(idx_cols)
+        else:
+            # Process empty frames with non-empty index
+            for frame in frames:
+                if len(frame.table) == 0 and len(frame.index) != 0:
+                    if ignore_index:
+                        frame.index = pd.RangeIndex(0, len(frame.index))
+                    idx = frame.index
+                    frame.index_cols = mangle_index_names(idx.names)
+                    idx_df = pd.DataFrame(index=idx).reset_index()
+                    frame.table = pyarrow.Table.from_pandas(idx_df)
+                    frame.table = frame.table.rename_columns(frame.index_cols)
+
+            idx_cols = None
+            idx_table = None
+            idx_fields: typing.OrderedDict[str, pyarrow.Field] = OrderedDict()
+
+            if not ignore_index:
+                idx_cols = frames[0].index_cols
+                idx_equal = idx_cols is not None
+
+                if idx_equal:
+                    idx_width = len(idx_cols)
+                    idx_types = [frames[0].table.field(c).type for c in idx_cols]
+                    for frame in frames[1:]:
+                        table = frame.table
+                        frame_idx_cols = frame.index_cols
+                        if (
+                            (frame_idx_cols is None)
+                            or (len(frame_idx_cols) != idx_width)
+                            or any(
+                                idx_types[i] != table.field(frame_idx_cols[i]).type
+                                for i in range(idx_width)
+                            )
+                        ):
+                            idx_equal = False
+                            break
+
+                if idx_equal:
+                    idx = frames[0].index
+                    if isinstance(idx, MultiIndex):
+                        idx_cols = mangle_index_names(idx.names)
+                    else:
+                        idx_names = {f.index.name for f in frames}
+                        idx_names = [None] if len(idx_names) > 1 else [idx.name]
+                        idx_cols = mangle_index_names(idx_names)
+
+                    # Rename index columns
+                    for frame in frames:
+                        table = frame.table
+                        new_names = idx_cols + table.column_names[len(idx_cols) :]
+                        frame.table = table.rename_columns(new_names)
+
+                    for name in idx_cols:
+                        idx_fields[name] = frames[0].table.field(name)
+                else:
+                    # Align index columns
+                    idx = frames[0].index.append([f.index for f in frames[1:]])
+                    idx_cols = mangle_index_names(idx.names)
+                    idx_df = pd.DataFrame(index=idx).reset_index()
+                    idx_table = pyarrow.Table.from_pandas(idx_df)
+                    idx_table = idx_table.rename_columns(idx_cols)
+
+            if sort:
+                col_fields = OrderedDict(sorted(col_fields.items(), key=lambda i: i[0]))
+
+            schema = pyarrow.schema(
+                list(idx_fields.values()) + list(col_fields.values())
+            )
+
+            tables = []
+            for frame in frames:
+                data = []
+                table = frame.table
+                col_names = table.column_names
+                for field in schema:
+                    if field.name in col_names:
+                        data.append(table.column(field.name))
+                    else:
+                        data.append(pyarrow.nulls(len(table), field.type))
+                tables.append(pyarrow.table(data, schema=schema))
+
+            union = pyarrow.concat_tables(tables)
+
+            if idx_table is not None:
+                for i, name in enumerate(idx_table.column_names):
+                    union = union.add_column(i, idx_table.field(i), idx_table.column(i))
+
+        # To be removed after #5567 merge
+        if idx_cols is not None:
+            idx_cols = [n[2:] for n in idx_cols]
+
+        return self.from_arrow(
+            union,
+            index_cols=idx_cols,
+            columns=[k[0] for k in col_fields.keys()],
+        )
+
     def _join_by_index(self, other_modin_frames, how, sort, ignore_index):
         """
         Perform equi-join operation for multiple frames by index columns.
@@ -1069,9 +1302,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        if how == "outer":
-            raise NotImplementedError("outer join is not supported in HDK engine")
-
+        check_join_supported(how)
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         for rhs in other_modin_frames:
@@ -1169,13 +1400,13 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         axis = Axis(axis)
-        if not other_modin_frames:
-            return self
-
         if axis == Axis.ROW_WISE:
             return self._union_all(
                 axis.value, other_modin_frames, join, sort, ignore_index
             )
+
+        if not other_modin_frames:
+            return self
 
         base = self
         for frame in other_modin_frames:
@@ -1243,6 +1474,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                 force_execution_mode=self._force_execution_mode,
             )
         elif isinstance(other, list):
+            if kwargs.get("axis", 1) == 0:
+                raise NotImplementedError(f"{op_name} on rows")
             if len(other) != len(self.columns):
                 raise ValueError(
                     f"length must be {len(self.columns)}: given {len(other)}"
@@ -1395,9 +1628,16 @@ class HdkOnNativeDataframe(PandasDataframe):
         if na_position != "first" and na_position != "last":
             raise ValueError(f"Unsupported na_position value '{na_position}'")
 
+        base = self
+
+        # If index is preserved and we have no index columns then we
+        # need to create one using __rowid__ virtual column.
+        if not ignore_index and base._index_cols is None:
+            base = base._materialize_rowid()
+
         if not isinstance(columns, list):
             columns = [columns]
-        columns = [self._find_index_or_col(col) for col in columns]
+        columns = [base._find_index_or_col(col) for col in columns]
 
         if isinstance(ascending, list):
             if len(ascending) != len(columns):
@@ -1411,14 +1651,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             # If index is ignored then we might need to drop some columns.
             # At the same time some of dropped index columns can be used
             # for sorting and should be droped after sorting is done.
-            if self._index_cols is not None:
-                base = self
-
+            if base._index_cols is not None:
                 drop_index_cols_before = [
-                    col for col in self._index_cols if col not in columns
+                    col for col in base._index_cols if col not in columns
                 ]
                 drop_index_cols_after = [
-                    col for col in self._index_cols if col in columns
+                    col for col in base._index_cols if col in columns
                 ]
                 if not drop_index_cols_after:
                     drop_index_cols_after = None
@@ -1432,57 +1670,50 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = base.ref(col)
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=index_cols,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
-                base = self.__constructor__(
+                base = base.__constructor__(
                     columns=base.columns,
                     dtypes=base._dtypes,
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=base._index_cols,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
 
                 if drop_index_cols_after:
                     exprs = OrderedDict()
                     for col in base.columns:
                         exprs[col] = base.ref(col)
-                    base = self.__constructor__(
+                    base = base.__constructor__(
                         columns=base.columns,
-                        dtypes=self._dtypes_for_exprs(exprs),
+                        dtypes=base._dtypes_for_exprs(exprs),
                         op=TransformNode(base, exprs),
                         index_cols=None,
-                        force_execution_mode=self._force_execution_mode,
+                        force_execution_mode=base._force_execution_mode,
                     )
 
                 return base
             else:
-                return self.__constructor__(
-                    columns=self.columns,
-                    dtypes=self._dtypes,
-                    op=SortNode(self, columns, ascending, na_position),
+                return base.__constructor__(
+                    columns=base.columns,
+                    dtypes=base._dtypes,
+                    op=SortNode(base, columns, ascending, na_position),
                     index_cols=None,
-                    force_execution_mode=self._force_execution_mode,
+                    force_execution_mode=base._force_execution_mode,
                 )
         else:
-            base = self
-
-            # If index is preserved and we have no index columns then we
-            # need to create one using __rowid__ virtual column.
-            if self._index_cols is None:
-                base = base._materialize_rowid()
-
-            return self.__constructor__(
+            return base.__constructor__(
                 columns=base.columns,
                 dtypes=base._dtypes,
                 op=SortNode(base, columns, ascending, na_position),
                 index_cols=base._index_cols,
-                force_execution_mode=self._force_execution_mode,
+                force_execution_mode=base._force_execution_mode,
             )
 
     def filter(self, key):
@@ -1579,15 +1810,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        name = None if self._index_cache is None else self._index_cache.name
+        name = "__index__" if name is None else self._mangle_index_names([name])[0]
         exprs = OrderedDict()
-        exprs["__index__"] = self.ref("__rowid__")
+        exprs[name] = self.ref("__rowid__")
         for col in self._table_cols:
             exprs[col] = self.ref(col)
         return self.__constructor__(
             columns=self.columns,
             dtypes=self._dtypes_for_exprs(exprs),
             op=TransformNode(self, exprs),
-            index_cols=["__index__"],
+            index_cols=[name],
             uses_rowid=True,
             force_execution_mode=self._force_execution_mode,
         )
@@ -2173,6 +2406,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
+        if self._index_cache is not None:
+            return self._index_cache.name
         if self._index_cols is None:
             return None
         if len(self._index_cols) > 1:
@@ -2229,6 +2464,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
+        if self._index_cache is not None:
+            return self._index_cache.names
         if self.has_multiindex():
             return self._index_cols.copy()
         return [self.get_index_name()]
@@ -2283,21 +2520,49 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
-        df = self._partition_mgr_cls.to_pandas(self._partitions)
+        if self._has_arrow_table():
+            # If the table is exported from HDK, the string columns are converted
+            # to dictionary. On conversion to pandas, these columns will be of type
+            # Categorical, that is not correct. To make the valid conversion, these
+            # fields are cast to string.
+            at = self._partitions[0][0].get()
+            schema = at.schema
+            cast = {
+                idx: arrow_type.name
+                for idx, (arrow_type, pandas_type) in enumerate(
+                    zip(schema, self._dtypes)
+                )
+                if is_dictionary(arrow_type.type)
+                and not is_categorical_dtype(pandas_type)
+            }
+            if cast:
+                for idx, new_type in cast.items():
+                    schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
+                at = at.cast(schema)
+            df = arrow_to_pandas(at)
+        else:
+            df = self._partition_mgr_cls.to_pandas(self._partitions)
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.
         if len(df.columns) != len(self.columns):
             assert self._index_cols
-            df.set_index([f"F_{col}" for col in self._index_cols], inplace=True)
-            df.index.rename(self._index_names(self._index_cols), inplace=True)
+            idx_col_names = [f"F_{col}" for col in self._index_cols]
+            if self._index_cache is not None:
+                df.drop(columns=idx_col_names, inplace=True)
+                df.index = self._index_cache.copy()
+            else:
+                df.set_index(idx_col_names, inplace=True)
+                df.index.rename(self._index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
+            if self._index_cache is not None:
+                df.index = self._index_cache.copy()
 
         # Restore original column labels encoded in HDK to meet its
-        # restirctions on column names.
+        # restrictions on column names.
         df.columns = self.columns
 
         return df
@@ -2500,7 +2765,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if columns is not None:
             new_columns = columns
-            new_index = pd.RangeIndex(at.num_rows) if index is None else index
+            new_index = index
         elif index_cols:
             data_cols = [col for col in at.column_names if col not in index_cols]
             new_columns = pd.Index(data=data_cols, dtype="O")
@@ -2508,8 +2773,10 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             assert index is None
             new_columns = pd.Index(data=at.column_names, dtype="O")
-            new_index = pd.RangeIndex(at.num_rows)
+            new_index = None
 
+        dtype_index = [] if index_cols is None else list(index_cols)
+        dtype_index.extend(new_columns)
         new_dtypes = []
 
         for col in at.columns:
@@ -2530,7 +2797,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=new_columns,
             row_lengths=new_lengths,
             column_widths=new_widths,
-            dtypes=pd.Series(data=new_dtypes, index=at.column_names),
+            dtypes=pd.Series(data=new_dtypes, index=dtype_index),
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )

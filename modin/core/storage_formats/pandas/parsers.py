@@ -86,6 +86,13 @@ list
 _doc_parse_parameters_common = """fname : str or path object
     Name of the file or path to read."""
 
+_doc_common_read_kwargs = """common_read_kwargs : dict
+    Common keyword parameters for read functions.
+"""
+_doc_parse_parameters_common2 = "\n".join(
+    (_doc_parse_parameters_common, _doc_common_read_kwargs)
+)
+
 
 def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     """
@@ -211,7 +218,7 @@ class PandasParser(ClassLogger):
         ]
 
     @classmethod
-    def get_dtypes(cls, dtypes_ids):
+    def get_dtypes(cls, dtypes_ids, columns):
         """
         Get common for all partitions dtype for each of the columns.
 
@@ -219,14 +226,19 @@ class PandasParser(ClassLogger):
         ----------
         dtypes_ids : list
             Array with references to the partitions dtypes objects.
+        columns : array-like or Index (1d)
+            The names of the columns in this variable will be used
+            for dtypes creation.
 
         Returns
         -------
-        frame_dtypes : pandas.Series or dtype
+        frame_dtypes : pandas.Series, dtype or None
             Resulting dtype or pandas.Series where column names are used as
             index and types of columns are used as values for full resulting
             frame.
         """
+        if len(dtypes_ids) == 0:
+            return None
         # each element in `partitions_dtypes` is a Series, where column names are
         # used as index and types of columns for different partitions are used as values
         partitions_dtypes = cls.materialize(dtypes_ids)
@@ -251,10 +263,16 @@ class PandasParser(ClassLogger):
                 axis=1,
             ).squeeze(axis=0)
 
+        # Set the index for the dtypes to the column names
+        if isinstance(frame_dtypes, pandas.Series):
+            frame_dtypes.index = columns
+        else:
+            frame_dtypes = pandas.Series(frame_dtypes, index=columns)
+
         return frame_dtypes
 
     @classmethod
-    def single_worker_read(cls, fname, *, reason: str, **kwargs):
+    def single_worker_read(cls, fname, *args, reason: str, **kwargs):
         """
         Perform reading by single worker (default-to-pandas implementation).
 
@@ -262,6 +280,8 @@ class PandasParser(ClassLogger):
         ----------
         fname : str, path object or file-like object
             Name of the file or file-like object to read.
+        *args : tuple
+            Positional arguments to be passed into `read_*` function.
         reason : str
             Message describing the reason for falling back to pandas.
         **kwargs : dict
@@ -278,7 +298,7 @@ class PandasParser(ClassLogger):
         """
         ErrorMessage.default_to_pandas(reason=reason)
         # Use default args for everything
-        pandas_frame = cls.parse(fname, **kwargs)
+        pandas_frame = cls.parse(fname, *args, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):
             pd_read = pandas_frame.read
             pandas_frame.read = (
@@ -300,9 +320,33 @@ class PandasParser(ClassLogger):
 @doc(_doc_pandas_parser_class, data_type="CSV files")
 class PandasCSVParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
-        return PandasParser.generic_parse(fname, **kwargs)
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common2)
+    def parse(fname, common_read_kwargs, **kwargs):
+        return PandasParser.generic_parse(
+            fname,
+            callback=PandasCSVParser.read_callback,
+            **common_read_kwargs,
+            **kwargs,
+        )
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextParser
+            Function call result.
+        """
+        return pandas.read_csv(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
@@ -368,7 +412,7 @@ class PandasCSVGlobParser(PandasCSVParser):
 
 
 @doc(_doc_pandas_parser_class, data_type="pickled pandas objects")
-class PandasPickleExperimentalParser(PandasParser):
+class ExperimentalPandasPickleParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
@@ -389,7 +433,7 @@ class PandasPickleExperimentalParser(PandasParser):
 
 
 @doc(_doc_pandas_parser_class, data_type="custom text")
-class CustomTextExperimentalParser(PandasParser):
+class ExperimentalCustomTextParser(PandasParser):
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
@@ -399,9 +443,33 @@ class CustomTextExperimentalParser(PandasParser):
 @doc(_doc_pandas_parser_class, data_type="tables with fixed-width formatted lines")
 class PandasFWFParser(PandasParser):
     @staticmethod
-    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
-    def parse(fname, **kwargs):
-        return PandasParser.generic_parse(fname, **kwargs)
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common2)
+    def parse(fname, common_read_kwargs, **kwargs):
+        return PandasParser.generic_parse(
+            fname,
+            callback=PandasFWFParser.read_callback,
+            **common_read_kwargs,
+            **kwargs,
+        )
+
+    @staticmethod
+    def read_callback(*args, **kwargs):
+        """
+        Parse data on each partition.
+
+        Parameters
+        ----------
+        *args : list
+            Positional arguments to be passed to the callback function.
+        **kwargs : dict
+            Keyword arguments to be passed to the callback function.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.io.parsers.TextFileReader
+            Function call result.
+        """
+        return pandas.read_fwf(*args, **kwargs)
 
 
 @doc(_doc_pandas_parser_class, data_type="excel files")

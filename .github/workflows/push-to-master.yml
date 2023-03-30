@@ -11,7 +11,7 @@ jobs:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -55,6 +55,13 @@ jobs:
           python -m pytest modin/pandas/test/dataframe/test_udf.py
           python -m pytest modin/pandas/test/dataframe/test_window.py
           python -m pytest modin/pandas/test/test_series.py
+          python -m pytest modin/numpy/test/test_array.py
+          python -m pytest modin/numpy/test/test_array_creation.py
+          python -m pytest modin/numpy/test/test_array_arithmetic.py
+          python -m pytest modin/numpy/test/test_array_axis_functions.py
+          python -m pytest modin/numpy/test/test_array_logic.py
+          python -m pytest modin/numpy/test/test_array_linalg.py
+          python -m pytest modin/numpy/test/test_array_indexing.py
           python -m pytest modin/pandas/test/test_rolling.py
           python -m pytest modin/pandas/test/test_concat.py
           python -m pytest modin/pandas/test/test_groupby.py
@@ -70,7 +77,7 @@ jobs:
         shell: bash -l {0}
     name: test docs
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -121,6 +128,13 @@ jobs:
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
           - modin/pandas/test/test_series.py
+          - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_arithmetic.py
+          - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_logic.py
+          - modin/numpy/test/test_array_linalg.py
+          - modin/numpy/test/test_array_indexing.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py
@@ -133,7 +147,7 @@ jobs:
       MODIN_TEST_RAY_CLIENT: "True"
     name: "test-ray-client"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2

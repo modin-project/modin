@@ -349,7 +349,10 @@ class CalciteSerializer:
             Serialized data type.
         """
         _warn_if_unsigned(dtype)
-        return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
+        try:
+            return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
+        except KeyError:
+            raise TypeError(f"Unsupported dtype: {dtype}")
 
     def serialize_input_idx(self, expr):
         """

@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `CustomTextExperimentalDispatcher` class, that is used for reading custom text files."""
+"""Module houses `ExperimentalCustomTextDispatcher` class, that is used for reading custom text files."""
 
 import pandas
 
@@ -20,10 +20,8 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions
 
 
-class CustomTextExperimentalDispatcher(TextFileDispatcher):
+class ExperimentalCustomTextDispatcher(TextFileDispatcher):
     """Class handles utils for reading custom text files."""
-
-    read_callback = None
 
     @classmethod
     def _read(cls, filepath_or_buffer, columns, custom_parser, **kwargs):
@@ -58,7 +56,7 @@ class CustomTextExperimentalDispatcher(TextFileDispatcher):
         )
 
         with OpenFile(filepath_or_buffer_md, "rb", compression_infered) as f:
-            splits = cls.partitioned_file(
+            splits, _ = cls.partitioned_file(
                 f,
                 num_partitions=NPartitions.get(),
                 is_quoting=kwargs.pop("is_quoting"),

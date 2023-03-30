@@ -233,6 +233,8 @@ Location based indexing can only have [integer, integer slice (START point is
 INCLUDED, END point is EXCLUDED), listlike of integers, boolean array] types.
 """
 
+_one_ellipsis_message = "indexer may only contain one '...' entry"
+
 
 def _compute_ndim(row_loc, col_loc):
     """
@@ -276,6 +278,20 @@ class _LocationIndexerBase(ClassLogger):
     def __init__(self, modin_df):
         self.df = modin_df
         self.qc = modin_df._query_compiler
+
+    def _validate_key_length(self, key: tuple) -> tuple:  # noqa: GL08
+        # Implementation copied from pandas.
+        if len(key) > self.df.ndim:
+            if key[0] is Ellipsis:
+                # e.g. Series.iloc[..., 3] reduces to just Series.iloc[3]
+                key = key[1:]
+                if Ellipsis in key:
+                    raise IndexingError(_one_ellipsis_message)
+                return self._validate_key_length(key)
+            raise IndexingError(
+                f"Too many indexers: you're trying to pass {len(key)} indexers to the {type(self.df)} having only {self.df.ndim} dimensions."
+            )
+        return key
 
     def __getitem__(self, key):  # pragma: no cover
         """
@@ -632,7 +648,48 @@ class _LocIndexer(_LocationIndexerBase):
         """
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.loc[key])
-        row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
+        if isinstance(key, tuple):
+            key = self._validate_key_length(key)
+        if (
+            isinstance(key, tuple)
+            and len(key) == 2
+            and all((is_scalar(k) for k in key))
+            and self.qc.has_multiindex(axis=0)
+        ):
+            # __getitem__ has no way to distinguish between
+            # loc[('level_one_key', level_two_key')] and
+            # loc['level_one_key', 'column_name']. It's possible for both to be valid
+            # when we have a multiindex on axis=0, and it seems pandas uses
+            # interpretation 1 if that's possible. Do the same.
+            locators = self._parse_row_and_column_locators((key, slice(None)))
+            try:
+                return self._helper_for__getitem__(key, *locators)
+            except KeyError:
+                pass
+        return self._helper_for__getitem__(
+            key, *self._parse_row_and_column_locators(key)
+        )
+
+    def _helper_for__getitem__(self, key, row_loc, col_loc, ndim):
+        """
+        Retrieve dataset according to `key`, row_loc, and col_loc.
+
+        Parameters
+        ----------
+        key : callable, scalar, or tuple
+            The global row index to retrieve data from.
+        row_loc : callable, scalar, or slice
+            Row locator(s) as a scalar or List.
+        col_loc : callable, scalar, or slice
+            Row locator(s) as a scalar or List.
+        ndim : int
+            The number of dimensions of the returned object.
+
+        Returns
+        -------
+        modin.pandas.DataFrame or modin.pandas.Series
+            Located dataset.
+        """
         row_scalar = is_scalar(row_loc)
         col_scalar = is_scalar(col_loc)
 
@@ -813,6 +870,17 @@ class _LocIndexer(_LocationIndexerBase):
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
         """
+        if (
+            isinstance(row_loc, Series)
+            and is_boolean_array(row_loc)
+            and is_scalar(item)
+        ):
+            new_qc = self.df._query_compiler.setitem_bool(
+                row_loc._query_compiler, col_loc, item
+            )
+            self.df._update_inplace(new_qc)
+            return
+
         row_lookup, col_lookup = self.qc.get_positions_from_labels(row_loc, col_loc)
         self._setitem_positional(
             row_lookup,
@@ -936,6 +1004,8 @@ class _iLocIndexer(_LocationIndexerBase):
         """
         if self.df.empty:
             return self.df._default_to_pandas(lambda df: df.iloc[key])
+        if isinstance(key, tuple):
+            key = self._validate_key_length(key)
         row_loc, col_loc, ndim = self._parse_row_and_column_locators(key)
         row_scalar = is_scalar(row_loc)
         col_scalar = is_scalar(col_loc)

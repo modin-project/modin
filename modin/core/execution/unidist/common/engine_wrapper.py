@@ -53,7 +53,7 @@ class UnidistWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or unidist.ObjectRef
             The function to perform.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -89,6 +89,25 @@ class UnidistWrapper:
             Whatever was identified by `obj_id`.
         """
         return unidist.get(obj_id)
+
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Put data into the object store.
+
+        Parameters
+        ----------
+        data : object
+            Data to be put.
+        **kwargs : dict
+            Additional keyword arguments (mostly for compatibility).
+
+        Returns
+        -------
+        unidist.ObjectRef
+            A reference to `data`.
+        """
+        return unidist.put(data)
 
 
 @unidist.remote

@@ -36,7 +36,7 @@ from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar
+from pandas.core.dtypes.common import is_scalar, is_number
 import pandas.core.resample
 import pandas
 from pandas._typing import IndexLabel, Suffixes
@@ -1329,7 +1329,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     #      we should avoid leaking of the high-level objects to the query compiler level.
     #      (Modin issue #3106)
     #   2. Spread **kwargs into actual arguments (Modin issue #3108).
-    def isin(self, **kwargs):  # noqa: PR02
+    def isin(self, values, ignore_indices=False, **kwargs):  # noqa: PR02
         """
         Check for each element of `self` whether it's contained in passed `values`.
 
@@ -1337,6 +1337,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         values : list-like, modin.pandas.Series, modin.pandas.DataFrame or dict
             Values to check elements of self in.
+        ignore_indices : bool, default: False
+            Whether to execute ``isin()`` only on an intersection of indices.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -1346,7 +1348,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Boolean mask for self of whether an element at the corresponding
             position is contained in `values`.
         """
-        return DataFrameDefault.register(pandas.DataFrame.isin)(self, **kwargs)
+        shape_hint = kwargs.pop("shape_hint", None)
+        if isinstance(values, type(self)) and ignore_indices:
+            # Pandas logic is that it ignores indexing if 'values' is a 1D object
+            values = values.to_pandas().squeeze(axis=1)
+        if shape_hint == "column":
+            return SeriesDefault.register(pandas.Series.isin)(self, values, **kwargs)
+        else:
+            return DataFrameDefault.register(pandas.DataFrame.isin)(
+                self, values, **kwargs
+            )
 
     def isna(self):
         """
@@ -2384,6 +2395,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract insert
 
+    # __setitem__ methods
+    def setitem_bool(self, row_loc, col_loc, item):
+        """
+        Set an item to the given location based on `row_loc` and `col_loc`.
+
+        Parameters
+        ----------
+        row_loc : BaseQueryCompiler
+            Query Compiler holding a Series of booleans.
+        col_loc : label
+            Column label in `self`.
+        item : scalar
+            An item to be set.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with the inserted item.
+
+        Notes
+        -----
+        Currently, this method is only used to set a scalar to the given location.
+        """
+
+        def _set_item(df, row_loc, col_loc, item):
+            df.loc[row_loc.squeeze(axis=1), col_loc] = item
+            return df
+
+        return DataFrameDefault.register(_set_item)(
+            self, row_loc=row_loc, col_loc=col_loc, item=item
+        )
+
+    # END __setitem__ methods
+
     # Abstract drop
     def drop(self, index=None, columns=None, errors: str = "raise"):
         """
@@ -3346,14 +3391,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         for axis, axis_loc in enumerate((row_loc, col_loc)):
             if is_scalar(axis_loc):
                 axis_loc = np.array([axis_loc])
-            if isinstance(axis_loc, slice) or is_range_like(axis_loc):
+            if isinstance(axis_loc, pandas.RangeIndex):
+                axis_lookup = axis_loc
+            elif isinstance(axis_loc, slice) or is_range_like(axis_loc):
                 if isinstance(axis_loc, slice) and axis_loc == slice(None):
                     axis_lookup = axis_loc
                 else:
                     axis_labels = self.get_axis(axis)
                     # `slice_indexer` returns a fully-defined numeric slice for a non-fully-defined labels-based slice
+                    # RangeIndex and range use a semi-open interval, while
+                    # slice_indexer uses a closed interval. Subtract 1 step from the
+                    # end of the interval to get the equivalent closed interval.
+                    if axis_loc.stop is None or not is_number(axis_loc.stop):
+                        slice_stop = axis_loc.stop
+                    else:
+                        slice_stop = axis_loc.stop - (
+                            0 if axis_loc.step is None else axis_loc.step
+                        )
                     axis_lookup = axis_labels.slice_indexer(
-                        axis_loc.start, axis_loc.stop, axis_loc.step
+                        axis_loc.start,
+                        slice_stop,
+                        axis_loc.step,
                     )
                     # Converting negative indices to their actual positions:
                     axis_lookup = pandas.RangeIndex(
@@ -3738,6 +3796,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
+    @doc_utils.doc_dt_timestamp(
+        prop="Calculate year, week, and day according to the ISO 8601 standard.",
+        refer_to="isocalendar",
+    )
+    def dt_isocalendar(self):
+        return DateTimeDefault.register(pandas.Series.dt.isocalendar)(self)
+
     @doc_utils.doc_dt_timestamp(prop="hour", refer_to="hour")
     def dt_hour(self):
         return DateTimeDefault.register(pandas.Series.dt.hour)(self)
@@ -3885,6 +3950,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def dt_timetz(self):
         return DateTimeDefault.register(pandas.Series.dt.timetz)(self)
+
+    @doc_utils.add_refer_to("Series.dt.asfreq")
+    def dt_asfreq(self, freq=None, how: str = "E"):
+        """
+        Convert the PeriodArray to the specified frequency `freq`.
+
+        Equivalent to applying pandas.Period.asfreq() with the given arguments to each Period in this PeriodArray.
+
+        Parameters
+        ----------
+        freq : str, optional
+            A frequency.
+        how : str {'E', 'S'}, default: 'E'
+            Whether the elements should be aligned to the end or start within pa period.
+            * 'E', "END", or "FINISH" for end,
+            * 'S', "START", or "BEGIN" for start.
+            January 31st ("END") vs. January 1st ("START") for example.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing period data.
+        """
+        return DateTimeDefault.register(pandas.Series.dt.asfreq)(self, freq, how)
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.dt.to_period")
@@ -4461,6 +4550,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, pat, flags, **kwargs
         )
 
+    @doc_utils.doc_str_method(
+        refer_to="fullmatch",
+        params="""
+        pat : str
+        case : bool, default: True
+        flags : int, default: 0
+        na : object, default: None""",
+    )
+    def str_fullmatch(self, pat, case=True, flags=0, na=None):
+        return StrDefault.register(pandas.Series.str.fullmatch)(
+            self, pat, case, flags, na
+        )
+
     @doc_utils.doc_str_method(refer_to="get", params="i : int")
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
@@ -4581,6 +4683,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_partition(self, sep=" ", expand=True):
         return StrDefault.register(pandas.Series.str.partition)(self, sep, expand)
+
+    @doc_utils.doc_str_method(refer_to="removeprefix", params="prefix : str")
+    def str_removeprefix(self, prefix):
+        return StrDefault.register(pandas.Series.str.removeprefix)(self, prefix)
+
+    @doc_utils.doc_str_method(refer_to="removesuffix", params="suffix : str")
+    def str_removesuffix(self, suffix):
+        return StrDefault.register(pandas.Series.str.removesuffix)(self, suffix)
 
     @doc_utils.doc_str_method(refer_to="repeat", params="repeats : int")
     def str_repeat(self, repeats):
