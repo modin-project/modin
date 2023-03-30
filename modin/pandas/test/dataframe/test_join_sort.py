@@ -396,6 +396,7 @@ def test_merge_on_index(has_index_cache):
             assert modin_df1._query_compiler._modin_frame._index_cache is not None
             assert modin_df2._query_compiler._modin_frame._index_cache is not None
         else:
+            # Propagate deferred indices to partitions
             # The change in index is not automatically handled by Modin. See #3941.
             modin_df1.index = modin_df1.index
             modin_df1._to_pandas()
