@@ -3256,6 +3256,7 @@ class PandasDataframe(ClassLogger):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby(
         self,
         axis: Union[int, Axis],
@@ -3300,15 +3301,21 @@ class PandasDataframe(ClassLogger):
         axis = Axis(axis)
         if axis != Axis.ROW_WISE:
             raise NotImplementedError(
-                f"Algebra groupby only implemented row-wise. {axis.name} sort not implemented yet!"
+                f"Algebra groupby only implemented row-wise. {axis.name} groupby not implemented yet!"
             )
 
         if not isinstance(by, list):
             by = [by]
 
         def apply_func(df):
-            return operator(df.groupby(by, **kwargs))
-
+            # breakpoint()
+            kwargs.pop("observed")
+            return operator(df.groupby(by, observed=True, **kwargs))
+        # breakpoint()
+        # If there's only one row partition can simply apply groupby row-wise without the need to reshuffle
+        if self._partitions.shape[0] == 1:
+            return self.apply_full_axis(axis=1, func=apply_func)
+        # breakpoint()
         new_partitions = self._apply_func_to_range_partitioning(
             key_column=by[0],
             func=apply_func,

@@ -3013,32 +3013,55 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def _groupby_shuffle(
-        self, by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+        self, by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False, how=None
     ):
+        # breakpoint()
         if isinstance(by, type(self)) and drop:
             by = by.columns.tolist()
 
         if not isinstance(by, list):
             by = [by]
 
-        if any(not isinstance(col, (str, tuple)) for col in by):
-            raise NotImplementedError(
-                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame"
-            )
+        is_all_labels = all(isinstance(col, (str, tuple)) for col in by)
+        is_all_column_names = all(col in self.columns for col in by) if is_all_labels else False
 
+        if not is_all_column_names:
+            raise NotImplementedError(
+                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame."
+            )
+        
+        if any(dtype == "category" for dtype in self.dtypes[by].values):
+            raise NotImplementedError(
+                "Reshuffling groupby is not yet supported when grouping on a categorical column."
+            )
+        # breakpoint()
         if isinstance(agg_func, dict):
-            subset = np.unique(by.columns.tolist() + list(agg_func.keys())).tolist()
+            subset = by + list(agg_func.keys())
+            # extracting unique values; no we can't use np.unique here as it would
+            # convert a list of tuples to a 2D matrix and so mess up the result
+            subset = list(dict.fromkeys(subset))
             obj = self.getitem_column_array(subset)
         else:
             obj = self
-
-        def func(grp):
-            return grp.agg(agg_func, *agg_args, **agg_kwargs)
+        # breakpoint()
+        if how is None or isinstance(agg_func, dict):
+            def func(grp):
+                return grp.agg(agg_func, *agg_args, **agg_kwargs)
+        elif how == "direct":
+            def func(grp):
+                return agg_func(grp, *agg_args, **agg_kwargs)
+        else:
+            raise RuntimeError("wtf?")
 
         result = obj._modin_frame.groupby(
             axis=axis, by=by, operator=func, **groupby_kwargs
         )
-        return self.__constructor__(result)
+        result_qc = self.__constructor__(result)
+
+        if not groupby_kwargs.get("as_index", True):
+            return result_qc.reset_index(drop=True)
+        return result_qc
+
 
     def groupby_agg(
         self,
@@ -3059,7 +3082,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
-
+        # breakpoint()
+        if not isinstance(agg_func, dict):
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
+            )
+        
         if ExperimentalGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
@@ -3070,22 +3098,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     agg_args=agg_args,
                     agg_kwargs=agg_kwargs,
                     drop=drop,
+                    how="direct",
                 )
             except NotImplementedError:
                 pass
-
+        
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
-            )
-
-        if isinstance(agg_func, dict):
-            assert (
-                how == "axis_wise"
-            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
-        else:
-            agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
