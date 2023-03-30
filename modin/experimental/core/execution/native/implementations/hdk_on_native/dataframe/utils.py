@@ -135,7 +135,7 @@ def check_cols_to_join(what, df, col_names):
                 if col == df._index_name(c):
                     new_name = c
                     break
-        elif df._index_cache is not None:
+        elif df.has_index_cache:
             new_name = f"__index__{0}_{col}"
             df = df._maybe_materialize_rowid()
         if new_name is None:
@@ -189,7 +189,7 @@ def get_data_for_join_by_index(
 
     def to_empty_pandas_df(df):
         # Create an empty pandas frame with the same columns and index.
-        idx = df._index_cache
+        idx = df._index_cache.get() if df.has_index_cache else None
         if idx is not None:
             idx = idx[:1]
         elif df._index_cols is not None:

@@ -263,7 +263,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return frame._index_cache is None or frame._columns_cache is None
+        return not frame.has_materialized_index or not frame.has_materialized_columns
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -511,7 +511,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if self._modin_frame._index_cache is not None:
+            if self._modin_frame.has_materialized_index:
                 if left_on is not None and right_on is not None:
                     keep_index = any(
                         o in self.index.names
@@ -614,8 +614,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
-                new_columns = self._modin_frame._columns_cache
+            if self._modin_frame.has_columns_cache and kwargs["drop"]:
+                new_columns = self._modin_frame.copy_columns_cache()
             else:
                 new_columns = None
 
@@ -2327,8 +2327,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame._index_cache,
-            new_columns=self._modin_frame._columns_cache,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
         )
         return self.__constructor__(new_modin_frame)
@@ -2550,7 +2550,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = hashed_modin_frame.apply_full_axis(
             axis=0,
             func=_compute_duplicated,
-            new_index=self._modin_frame._index_cache,
+            new_index=self._modin_frame.copy_index_cache(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
             keep_partitioning=False,
