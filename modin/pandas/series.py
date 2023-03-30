@@ -637,6 +637,11 @@ class Series(BasePandasDataset):
         """
         Invoke function on values of Series.
         """
+        if callable(func):
+            if func.__module__ == "modin.pandas.series":
+                func = getattr(pandas.Series, func.__name__)
+            elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
+                func = getattr(pandas.DataFrame, func.__name__)
         self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
         # each one separately to determine the correct return type. In the case of

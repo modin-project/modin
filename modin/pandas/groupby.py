@@ -433,6 +433,11 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, **kwargs):
+        if callable(func):
+            if func.__module__ == "modin.pandas.series":
+                func = getattr(pandas.Series, func.__name__)
+            elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
+                func = getattr(pandas.DataFrame, func.__name__)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
