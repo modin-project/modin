@@ -198,8 +198,6 @@ class ForceHdkImport:
             # as it has a chance of running via pyarrow bypassing HDK
             new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
                 modin_frame._op,
-                modin_frame._index_cols,
-                modin_frame.copy_dtypes_cache(),
                 modin_frame._table_cols,
             )
             modin_frame._partitions = new_partitions
