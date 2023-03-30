@@ -387,38 +387,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             return False
         return all(p.arrow_table is not None for p in self._partitions.flatten())
 
-    def _dtypes_for_cols(self, new_index, new_columns):
-        """
-        Return dtypes index for a specified set of index and data columns.
-
-        Parameters
-        ----------
-        new_index : pandas.Index or list
-            Index columns.
-        new_columns : pandas.Index or list
-            Data Columns.
-
-        Returns
-        -------
-        pandas.Index
-        """
-        if new_index is not None:
-            if isinstance(self._dtypes, MultiIndex):
-                new_index = [
-                    (col, *([""] * (self._dtypes.nlevels - 1))) for col in new_index
-                ]
-            res = self._dtypes[
-                new_index
-                + (
-                    new_columns
-                    if isinstance(new_columns, list)
-                    else new_columns.to_list()
-                )
-            ]
-        else:
-            res = self._dtypes[new_columns]
-        return res
-
     def _dtypes_for_exprs(self, exprs):
         """
         Return dtypes for expressions.
