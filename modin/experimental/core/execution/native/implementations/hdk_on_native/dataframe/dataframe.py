@@ -2400,7 +2400,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             A pandas Series containing the data types for this dataframe.
         """
         if self._index_cols is not None:
-            return self._dtypes.get()[len(self._index_cols) :]
+            # [] operator will return pandas.Series
+            return self._dtypes[len(self._index_cols) :]
         return self._dtypes.get()
 
     def has_multiindex(self):

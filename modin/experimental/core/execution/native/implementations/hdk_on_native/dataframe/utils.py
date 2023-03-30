@@ -221,7 +221,7 @@ def get_data_for_join_by_index(
             # including the index.
             df = left if mangled_name in left._dtypes else right
             exprs[orig_name] = df.ref(mangled_name)
-            new_dtypes.append(df.dtypes[mangled_name])
+            new_dtypes.append(df._dtypes[mangled_name])
 
     left_col_names = set(left.columns)
     right_col_names = set(right.columns)
