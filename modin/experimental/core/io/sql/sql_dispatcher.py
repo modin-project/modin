@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `SQLExperimentalDispatcher` class."""
+"""Module houses `ExperimentalSQLDispatcher` class."""
 
 import warnings
 
@@ -22,7 +22,7 @@ from modin.core.io import SQLDispatcher
 from modin.config import NPartitions
 
 
-class SQLExperimentalDispatcher(SQLDispatcher):
+class ExperimentalSQLDispatcher(SQLDispatcher):
     """Class handles experimental utils for reading SQL queries or database tables."""
 
     __read_sql_with_offset = None

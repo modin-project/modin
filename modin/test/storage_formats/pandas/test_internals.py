@@ -835,3 +835,69 @@ def test_split_partitions_kernel(
             assert (
                 (bounds[idx + 1] <= part[col_name]) & (part[col_name] <= bounds[idx])
             ).all()
+
+
+@pytest.mark.parametrize("col_name", ["numeric_col", "non_numeric_col"])
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partitions_with_empty_pivots(col_name, ascending):
+    """
+    This test verifies that the splitting function performs correctly when an empty pivots list is passed.
+    The expected behavior is to return a single split consisting of the exact copy of the input dataframe.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+
+    result = split_partitions_using_pivots_for_sort(
+        df, df, col_name, pivots=[], ascending=ascending
+    )
+    # We're expecting to recieve a single split here
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert result[0].equals(df)
+
+
+@pytest.mark.parametrize("ascending", [True, False])
+def test_shuffle_partitions_with_empty_pivots(ascending):
+    """
+    This test verifies that the `PartitionMgr.shuffle_partitions` method can handle empty pivots list.
+    """
+    modin_frame = pd.DataFrame(
+        np.array([["hello", "goodbye"], ["hello", "Hello"]])
+    )._query_compiler._modin_frame
+
+    assert modin_frame._partitions.shape == (1, 1)
+
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        build_sort_functions,
+    )
+
+    column_name = modin_frame.columns[1]
+
+    shuffle_functions = build_sort_functions(
+        # These are the parameters we pass in the `.sort_by()` implementation
+        modin_frame,
+        column=column_name,
+        method="inverted_cdf",
+        ascending=ascending,
+        ideal_num_new_partitions=1,
+    )
+
+    new_partitions = modin_frame._partition_mgr_cls.shuffle_partitions(
+        modin_frame._partitions,
+        index=0,
+        shuffle_functions=shuffle_functions,
+        final_shuffle_func=lambda df: df.sort_values(column_name),
+    )
+    ref = modin_frame.to_pandas().sort_values(column_name)
+    res = new_partitions[0, 0].get()
+
+    assert new_partitions.shape == (1, 1)
+    assert ref.equals(res)
