@@ -2702,7 +2702,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             df = df.reset_index()
 
             orig_df.index.names = orig_index_names
-        new_dtypes = df._dtypes
+        new_dtypes = df.dtypes
         df = df.add_prefix("F_")
 
         (
