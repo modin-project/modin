@@ -3311,6 +3311,7 @@ class PandasDataframe(ClassLogger):
             # breakpoint()
             kwargs.pop("observed")
             return operator(df.groupby(by, observed=True, **kwargs))
+
         # breakpoint()
         # If there's only one row partition can simply apply groupby row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:

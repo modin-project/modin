@@ -111,9 +111,9 @@ def test_mixed_dtypes_groupby(as_index):
 
     by_values = [
         ("col1",),
-        # (lambda x: x % 2,),
-        # (modin_df["col0"].copy(), pandas_df["col0"].copy()),
-        # ("col3",),
+        (lambda x: x % 2,),
+        (modin_df["col0"].copy(), pandas_df["col0"].copy()),
+        ("col3",),
     ]
 
     for by in by_values:
@@ -137,13 +137,13 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
-        # eval_shift(modin_groupby, pandas_groupby)
-        # eval_mean(modin_groupby, pandas_groupby)
-        # eval_any(modin_groupby, pandas_groupby)
-        # eval_min(modin_groupby, pandas_groupby)
-        # eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
-        # eval_ndim(modin_groupby, pandas_groupby)
-        breakpoint()
+        eval_shift(modin_groupby, pandas_groupby)
+        eval_mean(modin_groupby, pandas_groupby)
+        eval_any(modin_groupby, pandas_groupby)
+        eval_min(modin_groupby, pandas_groupby)
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
+        eval_ndim(modin_groupby, pandas_groupby)
+        # breakpoint()
         eval_cumsum(modin_groupby, pandas_groupby)
         eval_general(
             modin_groupby,
@@ -1484,7 +1484,9 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         pytest.param(
             False,
             marks=pytest.mark.skipif(
-                get_current_execution() == "BaseOnPython" or ExperimentalGroupbyImpl.get(), reason="See Pandas issue #39103"
+                get_current_execution() == "BaseOnPython"
+                or ExperimentalGroupbyImpl.get(),
+                reason="See Pandas issue #39103",
             ),
         ),
     ],
