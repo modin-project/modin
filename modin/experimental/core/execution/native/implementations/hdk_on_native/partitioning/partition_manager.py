@@ -238,7 +238,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         )
 
     @classmethod
-    def run_exec_plan(cls, plan, index_cols, dtypes, columns):
+    def run_exec_plan(cls, plan, columns):
         """
         Run execution plan in HDK storage format to materialize frame.
 
@@ -246,10 +246,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         ----------
         plan : DFAlgNode
             A root of an execution plan tree.
-        index_cols : list of str
-            A list of index columns.
-        dtypes : pandas.Index
-            Column data types.
         columns : list of str
             A frame column names.
 

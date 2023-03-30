@@ -1931,7 +1931,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 raise RuntimeError("forced arrow execution failed")
 
             new_partitions = self._partition_mgr_cls.run_exec_plan(
-                self._op, self._index_cols, self._dtypes, self._table_cols
+                self._op, self._table_cols
             )
         self._partitions = new_partitions
         self._op = FrameNode(self)
