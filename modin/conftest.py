@@ -14,7 +14,15 @@
 # We turn off mypy type checks in this file because it's not imported anywhere
 # type: ignore
 
+import boto3
+import s3fs
 import os
+import platform
+import subprocess
+import time
+
+import shlex
+import requests
 import sys
 import pytest
 import pandas
@@ -50,6 +58,7 @@ from modin.config import (  # noqa: E402
     MinPartitionSize,
     IsExperimental,
     TestRayClient,
+    ModinGithubCI,
 )
 import uuid  # noqa: E402
 
@@ -577,3 +586,149 @@ def pytest_sessionfinish(session, exitstatus):
         ray.util.disconnect()
         if ray_client_server:
             ray_client_server.stop(0)
+
+
+@pytest.fixture
+def s3_storage_options(worker_id):
+    # # copied from pandas conftest.py:
+    # https://github.com/pandas-dev/pandas/blob/32f789fbc5d5a72d9d1ac14935635289eeac9009/pandas/tests/io/conftest.py#L45
+    # worker_id is a pytest fixture
+    if ModinGithubCI.get():
+        url = "http://localhost:5000/"
+    else:
+        worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
+        url = f"http://127.0.0.1:555{worker_id}/"
+    return {"client_kwargs": {"endpoint_url": url}}
+
+
+@pytest.fixture(scope="session")
+def s3_base(worker_id):
+    """
+    Fixture for mocking S3 interaction.
+    Sets up moto server in separate process locally
+    Return url for motoserver/moto CI service
+    """
+    # copied from pandas conftest.py
+    with pandas._testing.ensure_safe_environment_variables():
+        # still need access keys for https://github.com/getmoto/moto/issues/1924
+        os.environ.setdefault("AWS_ACCESS_KEY_ID", "foobar_key")
+        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "foobar_secret")
+        os.environ["AWS_REGION"] = "us-west-2"
+        if ModinGithubCI.get():
+            if (
+                sys.platform == "darwin"
+                or (sys.platform == "win32" or sys.platform == "cygwin")
+                or (
+                    platform.machine() in ("arm64", "aarch64")
+                    or platform.machine().startswith("armv")
+                )
+            ):
+                # pandas comments say:
+                # NOT RUN on Windows/macOS/ARM, only Ubuntu
+                # - subprocess in CI can cause timeouts
+                # - GitHub Actions do not support
+                #   container services for the above OSs
+                pytest.skip(
+                    (
+                        "S3 tests do not have a corresponding service in Windows, macOS "
+                        + "or ARM platforms"
+                    )
+                )
+            else:
+                # assume CI has started moto in docker container:
+                # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
+                # It would be nice to start moto on another thread as in the
+                # instructions here:
+                # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
+                # but that gives 403 forbidden error when we try to create the bucket
+                yield "http://localhost:5000"
+        else:
+            # Launching moto in server mode, i.e., as a separate process
+            # with an S3 endpoint on localhost
+
+            worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
+            endpoint_port = f"555{worker_id}"
+            endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
+
+            # pipe to null to avoid logging in terminal
+            # TODO any way to throw the error from here? e.g. i had an annoying problem
+            # where I didn't have flask-cors and moto just failed .if there's an error
+            # in the popen command and we throw an error within the body of the context
+            # manager, the test just hangs forever.
+            with subprocess.Popen(
+                # try this https://stackoverflow.com/a/72084867/17554722 ?
+                shlex.split(f"moto_server s3 -p {endpoint_port}"),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            ) as proc:
+                retries_left = 50
+                made_connection = False
+                while retries_left > 0:
+                    try:
+                        # OK to go once server is accepting connections
+                        r = requests.get(endpoint_uri)
+                        made_connection = r.ok
+                    except Exception:
+                        pass
+                    finally:
+                        retries_left -= 1
+                        time.sleep(0.1)
+                    if made_connection:
+                        break
+                if not made_connection:
+                    raise RuntimeError("Could not connect to moto server")
+                yield endpoint_uri
+
+                proc.terminate()
+
+
+@pytest.fixture
+def s3_resource(s3_base):
+    """
+    Sets up S3 bucket with contents
+    The primary bucket name is "modin-test."
+
+    When running locally, this function should be safe even if there are multiple pytest
+    workers running in parallel because each worker gets its own endpoint. When running
+    in CI, we use a single endpoint for all workers, so we can't have multiple pytest
+    workers running in parallel.
+    """
+    bucket = "modin-test"
+    conn = boto3.resource("s3", endpoint_url=s3_base)
+    cli = boto3.client("s3", endpoint_url=s3_base)
+
+    # https://github.com/getmoto/moto/issues/3292
+    # without location, I get
+    # botocore.exceptions.ClientError: An error occurred
+    # (IllegalLocationConstraintException) when calling the CreateBucket operation:
+    # The unspecified location constraint is incompatible for the region specific
+    # endpoint this request was sent to.
+    # even if I delete os.environ['AWS_REGION'] but somehow pandas can get away with
+    # this.
+    try:
+        cli.create_bucket(
+            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "us-west-2"}
+        )
+    except Exception:
+        # OK if bucket already exists.
+        pass
+    timeout = 2
+    while not cli.list_buckets()["Buckets"] and timeout > 0:
+        time.sleep(0.1)
+        timeout -= 0.1
+    if not cli.list_buckets()["Buckets"]:
+        raise RuntimeError("Could not create bucket")
+
+    s3fs.S3FileSystem.clear_instance_cache()
+    yield conn
+
+    s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
+
+    try:
+        s3.rm(bucket, recursive=True)
+    except Exception:
+        pass
+    timeout = 2
+    while cli.list_buckets()["Buckets"] and timeout > 0:
+        time.sleep(0.1)
+        timeout -= 0.1

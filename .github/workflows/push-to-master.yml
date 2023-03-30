@@ -8,6 +8,8 @@ concurrency:
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
@@ -15,6 +17,11 @@ jobs:
       run:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000        
     steps:
       - uses: actions/checkout@v3
         with:
@@ -118,6 +125,11 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000         
     strategy:
       matrix:
         python-version: ["3.8"]

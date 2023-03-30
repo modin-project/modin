@@ -628,6 +628,13 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
+class ModinGithubCI(EnvironmentVariable, type=bool):
+    """Set to true when running Modin in GitHub CI."""
+
+    varname = "MODIN_GITHUB_CI"
+    default = False
+
+
 class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     """Set to true to use Modin's experimental NumPy API."""
 

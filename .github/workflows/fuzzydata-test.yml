@@ -20,6 +20,8 @@ concurrency:
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-fuzzydata:
     runs-on: ubuntu-latest

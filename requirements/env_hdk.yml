@@ -27,6 +27,7 @@ dependencies:
   - flake8
   - flake8-no-implicit-concat
   - flake8-print
+  - boto3
   - pip:
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
