@@ -219,9 +219,9 @@ def get_data_for_join_by_index(
         for orig_name, mangled_name in zip(merged.index.names, index_cols):
             # Using _dtypes here since it contains all column names,
             # including the index.
-            df = left if mangled_name in left._dtypes else right
+            df = left if mangled_name in left.dtypes else right
             exprs[orig_name] = df.ref(mangled_name)
-            new_dtypes.append(df._dtypes[mangled_name])
+            new_dtypes.append(df.dtypes[mangled_name])
 
     left_col_names = set(left.columns)
     right_col_names = set(right.columns)
@@ -248,7 +248,7 @@ def get_data_for_join_by_index(
         else:
             raise ValueError(f"Unknown column {col}")
         exprs[col] = df.ref(orig_name)
-        new_dtypes.append(df._dtypes[orig_name])
+        new_dtypes.append(df.dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
 

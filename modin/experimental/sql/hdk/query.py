@@ -77,7 +77,7 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     if replace := [
         i for i, col in enumerate(schema) if pa.types.is_dictionary(col.type)
     ]:
-        dtypes = mdf._dtypes
+        dtypes = mdf.dtypes
         obj_type = get_dtype(object)
         for i in replace:
             dtypes[i] = obj_type

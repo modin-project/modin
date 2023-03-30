@@ -68,8 +68,8 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     -----
     The dtypes of the operands are supposed to be known.
     """
-    dtypes_first = first._modin_frame._dtypes.to_dict()
-    dtypes_second = second._modin_frame._dtypes.to_dict()
+    dtypes_first = first._modin_frame.dtypes.to_dict()
+    dtypes_second = second._modin_frame.dtypes.to_dict()
     columns_first = set(first.columns)
     columns_second = set(second.columns)
     common_columns = columns_first.intersection(columns_second)

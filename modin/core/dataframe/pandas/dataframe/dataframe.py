@@ -341,10 +341,11 @@ class PandasDataframe(ClassLogger):
             A pandas Series containing the data types for this dataframe.
         """
         if self.has_dtypes_cache:
-            self._dtypes = self._dtypes.get()
-        elif self._dtypes is None:
-            self._dtypes = self._compute_dtypes()
-        return self._dtypes
+            dtypes = self._dtypes.get()
+        else:
+            dtypes = self._compute_dtypes()
+            self._dtypes = self.set_dtypes_cache(dtypes)
+        return dtypes
 
     def _compute_dtypes(self):
         """
@@ -1793,7 +1794,7 @@ class PandasDataframe(ClassLogger):
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
 
         if dtypes == "copy":
-            dtypes = self._dtypes
+            dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]

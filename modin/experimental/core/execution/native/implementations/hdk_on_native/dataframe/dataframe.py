@@ -273,9 +273,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         # If we search for an index column type in a MultiIndex then we need to
         # extend index column names to tuples.
-        if isinstance(self._dtypes.index, MultiIndex) and not isinstance(col, tuple):
-            return self._dtypes[(col, *([""] * (self._dtypes.index.nlevels - 1)))]
-        return self._dtypes[col]
+        if isinstance(self.dtypes.index, MultiIndex) and not isinstance(col, tuple):
+            return self.dtypes[(col, *([""] * (self.dtypes.index.nlevels - 1)))]
+        return self.dtypes[col]
 
     def ref(self, col):
         """
@@ -403,11 +403,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         pandas.Index
         """
         if new_index is not None:
-            if isinstance(self._dtypes, MultiIndex):
+            if isinstance(self.dtypes, MultiIndex):
                 new_index = [
-                    (col, *([""] * (self._dtypes.nlevels - 1))) for col in new_index
+                    (col, *([""] * (self.dtypes.nlevels - 1))) for col in new_index
                 ]
-            res = self._dtypes[
+            res = self.dtypes[
                 new_index
                 + (
                     new_columns
@@ -416,7 +416,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 )
             ]
         else:
-            res = self._dtypes[new_columns]
+            res = self.dtypes[new_columns]
         return res
 
     def _dtypes_for_exprs(self, exprs):
@@ -559,7 +559,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             new_columns = groupby_cols.copy()
 
-        new_dtypes = base._dtypes[groupby_cols].tolist()
+        new_dtypes = base.dtypes[groupby_cols].tolist()
 
         agg_exprs = OrderedDict()
         if isinstance(agg, str):
@@ -793,8 +793,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         for column in columns:
             dtype = col_dtypes[column]
             if (
-                not isinstance(dtype, type(self._dtypes[column]))
-                or dtype != self._dtypes[column]
+                not isinstance(dtype, type(self.dtypes[column]))
+                or dtype != self.dtypes[column]
             ):
                 # Update the new dtype series to the proper pandas dtype
                 try:
@@ -907,13 +907,13 @@ class HdkOnNativeDataframe(PandasDataframe):
             for c in left.columns:
                 new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
                 new_columns.append(new_name)
-                new_dtypes.append(left._dtypes[c])
+                new_dtypes.append(left.dtypes[c])
                 exprs[new_name] = left.ref(c)
             for c in right.columns:
                 if c not in left_on or c not in right_on:
                     new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
                     new_columns.append(new_name)
-                    new_dtypes.append(right._dtypes[c])
+                    new_dtypes.append(right.dtypes[c])
                     exprs[new_name] = right.ref(c)
             new_columns = Index.__new__(Index, data=new_columns)
 
@@ -1017,14 +1017,14 @@ class HdkOnNativeDataframe(PandasDataframe):
             len(other_modin_frames) == 0
             or len(self.columns) == 0
             or any((len(f.columns) != len(self.columns) for f in other_modin_frames))
-            or any((set(f._dtypes) != set(self._dtypes) for f in other_modin_frames))
+            or any((set(f.dtypes) != set(self.dtypes) for f in other_modin_frames))
         ):
             return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
 
         # determine output columns
         new_cols_map = OrderedDict()
         for col in self.columns:
-            new_cols_map[col] = self._dtypes[col]
+            new_cols_map[col] = self.dtypes[col]
         for frame in other_modin_frames:
             if join == "inner":
                 for col in list(new_cols_map):
@@ -1033,7 +1033,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             else:
                 for col in frame.columns:
                     if col not in new_cols_map:
-                        new_cols_map[col] = frame._dtypes[col]
+                        new_cols_map[col] = frame.dtypes[col]
         new_columns = list(new_cols_map.keys())
 
         if sort:
@@ -1062,7 +1062,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             if not ignore_index:
                 if frame._index_cols:
                     aligned_index = frame._index_cols[0 : index_width + 1]
-                    aligned_index_dtypes = frame._dtypes[aligned_index].tolist()
+                    aligned_index_dtypes = frame.dtypes[aligned_index].tolist()
                     for i in range(0, index_width):
                         col = frame._index_cols[i]
                         exprs[col] = frame.ref(col)
@@ -1606,7 +1606,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         assert len(self.columns) == 1
-        assert self._dtypes[-1] == "category"
+        assert self.dtypes[-1] == "category"
 
         col = self.columns[-1]
         exprs = self._index_exprs()
@@ -1757,7 +1757,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             raise NotImplementedError("Unsupported key in filter")
 
         key_col = key.columns[0]
-        if not is_bool_dtype(key._dtypes[key_col]):
+        if not is_bool_dtype(key.dtypes[key_col]):
             raise NotImplementedError("Unsupported key in filter")
 
         base = self._find_common_projections_base(key)
@@ -2294,7 +2294,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 raise NotImplementedError("duplicate column names are not supported")
         return self.__constructor__(
             columns=new_columns,
-            dtypes=self._dtypes.tolist(),
+            dtypes=self.dtypes.tolist(),
             op=TransformNode(self, exprs),
             index_cols=self._index_cols,
             force_execution_mode=self._force_execution_mode,
@@ -2550,7 +2550,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             cast = {
                 idx: arrow_type.name
                 for idx, (arrow_type, pandas_type) in enumerate(
-                    zip(schema, self._dtypes)
+                    zip(schema, self.dtypes)
                 )
                 if is_dictionary(arrow_type.type)
                 and not is_categorical_dtype(pandas_type)
