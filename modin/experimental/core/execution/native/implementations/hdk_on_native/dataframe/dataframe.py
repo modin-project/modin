@@ -40,6 +40,7 @@ from pandas.core.dtypes.common import (
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
 import typing
 from typing import List, Hashable, Optional, Tuple, Union
@@ -868,22 +869,17 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols = None
             exprs = OrderedDict()
             new_dtypes = []
-            new_columns = []
-            left_conflicts = set(left.columns) & (set(right.columns) - set(right_on))
-            right_conflicts = set(right.columns) & (set(left.columns) - set(left_on))
-            conflicting_cols = left_conflicts | right_conflicts
-            for c in left.columns:
-                new_name = f"{c}{suffixes[0]}" if c in conflicting_cols else c
-                new_columns.append(new_name)
-                new_dtypes.append(left._dtypes[c])
-                exprs[new_name] = left.ref(c)
-            for c in right.columns:
-                if c not in left_on or c not in right_on:
-                    new_name = f"{c}{suffixes[1]}" if c in conflicting_cols else c
-                    new_columns.append(new_name)
-                    new_dtypes.append(right._dtypes[c])
-                    exprs[new_name] = right.ref(c)
-            new_columns = Index.__new__(Index, data=new_columns)
+
+            new_columns, left_renamer, right_renamer = join_columns(
+                left.columns, right.columns, left_on, right_on, suffixes
+            )
+            for old_c, new_c in left_renamer.items():
+                new_dtypes.append(left._dtypes[old_c])
+                exprs[new_c] = left.ref(old_c)
+
+            for old_c, new_c in right_renamer.items():
+                new_dtypes.append(right._dtypes[old_c])
+                exprs[new_c] = right.ref(old_c)
 
         condition = left._build_equi_join_condition(right, left_on, right_on)
 
