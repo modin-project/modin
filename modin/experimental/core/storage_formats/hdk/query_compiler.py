@@ -483,12 +483,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         index : pandas.Index
             A new index.
         """
-        if self._modin_frame._has_unsupported_data:
-            default_axis_setter(0)(self, index)
-        else:
-            default_axis_setter(0)(self, index)
-            # NotImplementedError: HdkOnNativeDataframe._set_index is not yet suported
-            # self._modin_frame.index = index
+        # NotImplementedError: HdkOnNativeDataframe._set_index is not yet suported
+        default_axis_setter(0)(self, index)
 
     def _get_columns(self):
         """
