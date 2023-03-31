@@ -2509,7 +2509,7 @@ class DataFrame(BasePandasDataset):
         Replace values where the condition is False.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if isinstance(other, pandas.Series) and axis is None:
+        if isinstance(other, Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             if isinstance(other, DataFrame):
@@ -2572,8 +2572,13 @@ class DataFrame(BasePandasDataset):
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
             axis = self._get_axis_number(axis)
-            if isinstance(other, pandas.Series):
-                other = other.reindex(self.index if axis == 0 else self.columns)
+            if isinstance(other, Series):
+                other = other.reindex(
+                    self.index if axis == 0 else self.columns
+                )._query_compiler
+                if other._shape_hint is None:
+                    # To make the query compiler recognizable as a Series at lower levels
+                    other._shape_hint = "column"
             elif is_list_like(other):
                 index = self.index if axis == 0 else self.columns
                 other = pandas.Series(other, index=index)
