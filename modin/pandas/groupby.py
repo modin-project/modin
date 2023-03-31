@@ -36,6 +36,7 @@ from modin.utils import (
     wrap_into_list,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.pandas.utils import cast_function_modin2pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
@@ -433,6 +434,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, **kwargs):
+        func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 

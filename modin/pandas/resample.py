@@ -21,6 +21,7 @@ from pandas._libs.lib import no_default
 from typing import Optional
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
+from modin.pandas.utils import cast_function_modin2pandas
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
@@ -142,6 +143,7 @@ class Resampler(ClassLogger):
         return group if self.axis == 0 else group.T
 
     def apply(self, func, *args, **kwargs):
+        func = cast_function_modin2pandas(func)
         from .dataframe import DataFrame
 
         if isinstance(self._dataframe, DataFrame):
