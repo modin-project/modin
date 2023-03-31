@@ -1656,6 +1656,17 @@ class TestParquet:
 
             df_equals(test_df, read_df)
 
+    def test_read_parquet_5767(self, engine):
+        test_df = pandas.DataFrame({"a": [1, 2, 3, 4], "b": [1, 1, 2, 2]})
+        file_name = "modin_issue#0000.parquet"
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + file_name, engine=engine, partition_cols=["b"])
+            read_df = pd.read_parquet(Path(path + file_name))
+        # both Modin and pandas read column "b" as a category
+        df_equals(test_df, read_df.astype("int64"))
+
     def test_read_parquet_5509(self, engine):
         test_df = pandas.DataFrame({"col_a": [1, 2, 3], "col_b": ["a", "b", "c"]})
 
