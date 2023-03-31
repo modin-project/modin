@@ -15,6 +15,11 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   test-fuzzydata:
     runs-on: ubuntu-latest
