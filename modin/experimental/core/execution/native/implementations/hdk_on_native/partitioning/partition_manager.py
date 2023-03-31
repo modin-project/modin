@@ -238,7 +238,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         )
 
     @classmethod
-    def run_exec_plan(cls, plan, index_cols, dtypes, columns):
+    def run_exec_plan(cls, plan, columns):
         """
         Run execution plan in HDK storage format to materialize frame.
 
@@ -246,10 +246,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         ----------
         plan : DFAlgNode
             A root of an execution plan tree.
-        index_cols : list of str
-            A list of index columns.
-        dtypes : pandas.Index
-            Column data types.
         columns : list of str
             A frame column names.
 
@@ -278,8 +274,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                             # Tables without columns are not supported.
                             # Creating an empty table with index columns only.
                             idx_names = (
-                                frame._index_cache.names
-                                if frame._index_cache is not None
+                                frame.index.names
+                                if frame.has_materialized_index
                                 else [None]
                             )
                             idx_names = frame._mangle_index_names(idx_names)

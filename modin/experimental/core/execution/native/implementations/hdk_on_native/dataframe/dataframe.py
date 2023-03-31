@@ -30,7 +30,7 @@ from .utils import (
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
-from pandas.core.indexes.api import ensure_index, Index, MultiIndex, RangeIndex
+from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
     get_dtype,
     is_list_like,
@@ -136,8 +136,10 @@ class HdkOnNativeDataframe(PandasDataframe):
     _table_cols : list of str
         A list of all frame's columns. It includes index columns if any. Index
         columns are always in the head of the list.
-    _index_cache : pandas.Index or None
+    _index_cache : pandas.Index, callable or None
         Materialized index of the frame or None when index is not materialized.
+        If ``callable() -> (pandas.Index, list of row lengths or None)`` type,
+        then the calculation will be done in `__init__`.
     _has_unsupported_data : bool
         True for frames holding data not supported by Arrow or HDK storage format.
         Operations on such frames are not allowed and should be defaulted
@@ -178,14 +180,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
 
-        if index is not None:
-            index = ensure_index(index)
-        columns = ensure_index(columns)
         self._op = op
         self._index_cols = index_cols
         self._partitions = partitions
-        self._index_cache = index
-        self._columns_cache = columns
+        self.set_index_cache(index)
+        self.set_columns_cache(columns)
+        # The following code assumes that the type of `columns` is pandas.Index.
+        # The initial type of `columns` might be callable.
+        columns = self._columns_cache.get()
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self._has_unsupported_data = has_unsupported_data
@@ -384,38 +386,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         if not isinstance(self._op, FrameNode):
             return False
         return all(p.arrow_table is not None for p in self._partitions.flatten())
-
-    def _dtypes_for_cols(self, new_index, new_columns):
-        """
-        Return dtypes index for a specified set of index and data columns.
-
-        Parameters
-        ----------
-        new_index : pandas.Index or list
-            Index columns.
-        new_columns : pandas.Index or list
-            Data Columns.
-
-        Returns
-        -------
-        pandas.Index
-        """
-        if new_index is not None:
-            if isinstance(self._dtypes, MultiIndex):
-                new_index = [
-                    (col, *([""] * (self._dtypes.nlevels - 1))) for col in new_index
-                ]
-            res = self._dtypes[
-                new_index
-                + (
-                    new_columns
-                    if isinstance(new_columns, list)
-                    else new_columns.to_list()
-                )
-            ]
-        else:
-            res = self._dtypes[new_columns]
-        return res
 
     def _dtypes_for_exprs(self, exprs):
         """
@@ -866,6 +836,20 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert len(left_on) == len(
             right_on
         ), "'left_on' and 'right_on' lengths don't match"
+
+        if other is self:
+            # To avoid the self-join failure - #5891
+            if isinstance(self._op, FrameNode):
+                other = self.copy()
+            else:
+                exprs = OrderedDict((c, self.ref(c)) for c in self._table_cols)
+                other = self.__constructor__(
+                    columns=self.columns,
+                    dtypes=self._dtypes_for_exprs(exprs),
+                    op=TransformNode(self, exprs),
+                    index_cols=self._index_cols,
+                    force_execution_mode=self._force_execution_mode,
+                )
 
         orig_left_on = left_on
         orig_right_on = right_on
@@ -1814,7 +1798,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        name = None if self._index_cache is None else self._index_cache.name
+        name = None if not self.has_index_cache else self._index_cache.name
         name = "__index__" if name is None else self._mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref("__rowid__")
@@ -1915,7 +1899,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 raise RuntimeError("forced arrow execution failed")
 
             new_partitions = self._partition_mgr_cls.run_exec_plan(
-                self._op, self._index_cols, self._dtypes, self._table_cols
+                self._op, self._table_cols
             )
         self._partitions = new_partitions
         self._op = FrameNode(self)
@@ -2095,17 +2079,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert isinstance(self._op, FrameNode)
 
         if self._partitions.size == 0:
-            self._index_cache = Index.__new__(Index)
+            self.set_index_cache(Index.__new__(Index))
         else:
             assert self._partitions.size == 1
             obj = self._partitions[0][0].get()
             if isinstance(obj, (pd.DataFrame, pd.Series)):
-                self._index_cache = obj.index
+                self.set_index_cache(obj.index)
             else:
                 assert isinstance(obj, pyarrow.Table)
                 if self._index_cols is None:
-                    self._index_cache = Index.__new__(
-                        RangeIndex, data=range(obj.num_rows)
+                    self.set_index_cache(
+                        Index.__new__(RangeIndex, data=range(obj.num_rows))
                     )
                 else:
                     index_at = obj.drop([f"F_{col}" for col in self.columns])
@@ -2116,7 +2100,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     index_df.index.rename(
                         self._index_names(self._index_cols), inplace=True
                     )
-                    self._index_cache = index_df.index
+                    self.set_index_cache(index_df.index)
 
     def _get_index(self):
         """
@@ -2129,9 +2113,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         pandas.Index
         """
         self._execute()
-        if self._index_cache is None:
+        if not self.has_index_cache:
             self._build_index_cache()
-        return self._index_cache
+        return self._index_cache.get()
 
     def _set_index(self, new_index):
         """
@@ -2396,8 +2380,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if self._index_cache is not None:
-            return isinstance(self._index_cache, MultiIndex)
+        if self.has_materialized_index:
+            return isinstance(self.index, MultiIndex)
         return self._index_cols is not None and len(self._index_cols) > 1
 
     def get_index_name(self):
@@ -2410,7 +2394,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
-        if self._index_cache is not None:
+        if self.has_index_cache:
             return self._index_cache.name
         if self._index_cols is None:
             return None
@@ -2468,7 +2452,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
-        if self._index_cache is not None:
+        if self.has_index_cache:
             return self._index_cache.names
         if self.has_multiindex():
             return self._index_cols.copy()
@@ -2552,9 +2536,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         if len(df.columns) != len(self.columns):
             assert self._index_cols
             idx_col_names = [f"F_{col}" for col in self._index_cols]
-            if self._index_cache is not None:
+            if self.has_materialized_index:
                 df.drop(columns=idx_col_names, inplace=True)
-                df.index = self._index_cache.copy()
+                df.index = self.index
             else:
                 df.set_index(idx_col_names, inplace=True)
                 df.index.rename(self._index_names(self._index_cols), inplace=True)
@@ -2562,8 +2546,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             assert self._index_cols is None
             assert df.index.name is None, f"index name '{df.index.name}' is not None"
-            if self._index_cache is not None:
-                df.index = self._index_cache.copy()
+            if self.has_materialized_index:
+                df.index = self.index
 
         # Restore original column labels encoded in HDK to meet its
         # restrictions on column names.
