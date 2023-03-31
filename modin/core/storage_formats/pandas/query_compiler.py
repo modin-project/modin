@@ -664,6 +664,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     enumerate_partitions=True,
                     new_columns=new_columns,
+                    dtypes=(
+                        self._modin_frame._dtypes if kwargs.get("drop", False) else None
+                    ),
                     sync_labels=False,
                     pass_axis_lengths_to_partitions=True,
                 )
