@@ -36,6 +36,7 @@ from modin.utils import (
     wrap_into_list,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.pandas.utils import cast_function_modin2pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
@@ -433,11 +434,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, **kwargs):
-        if callable(func):
-            if func.__module__ == "modin.pandas.series":
-                func = getattr(pandas.Series, func.__name__)
-            elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
-                func = getattr(pandas.DataFrame, func.__name__)
+        func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
