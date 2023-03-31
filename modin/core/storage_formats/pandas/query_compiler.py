@@ -3109,10 +3109,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        is_order_dependent_function = how == "transform" or (
-            isinstance(agg_func, str)
-            and agg_func in ("cumsum", "cummax", "cummin", "cumprod", "shift", "fillna")
-        )
+        # is_order_dependent_function = how == "transform1" or (
+        #     isinstance(agg_func, str)
+        #     and agg_func in ("cumsum", "cummax", "cummin", "cumprod", "shift", "fillna")
+        # )
+        is_order_dependent_function = False
 
         if not isinstance(agg_func, dict):
             agg_func = functools.partial(

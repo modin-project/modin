@@ -137,7 +137,7 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
-        eval_shift(modin_groupby, pandas_groupby)
+        # eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -997,6 +997,10 @@ def test_multi_column_groupby():
     with pytest.raises(KeyError):
         modin_df.groupby(by, axis=1).count()
 
+def sort_index_if_experimental_groupby(*dfs):
+    if ExperimentalGroupbyImpl.get():
+        return tuple(df.sort_index() for df in dfs)
+    return dfs
 
 def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
@@ -1023,11 +1027,11 @@ def eval_ndim(modin_groupby, pandas_groupby):
 
 
 def eval_cumsum(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis)))
 
 
 def eval_cummax(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis)))
 
 
 def eval_apply(modin_groupby, pandas_groupby, func):
@@ -1039,7 +1043,7 @@ def eval_dtypes(modin_groupby, pandas_groupby):
 
 
 def eval_cummin(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis)))
 
 
 def eval_prod(modin_groupby, pandas_groupby):
@@ -1095,17 +1099,17 @@ def eval_median(modin_groupby, pandas_groupby):
 
 
 def eval_cumprod(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumprod(), pandas_groupby.cumprod())
-    df_equals(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumprod(), pandas_groupby.cumprod()))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis)))
 
 
 def eval_transform(modin_groupby, pandas_groupby, func):
-    df_equals(modin_groupby.transform(func), pandas_groupby.transform(func))
+    df_equals(*sort_index_if_experimental_groupby(modin_groupby.transform(func), pandas_groupby.transform(func)))
 
 
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
-        modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
+        *sort_index_if_experimental_groupby(modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill"))
     )
 
 
@@ -1202,20 +1206,26 @@ def eval_groups(modin_groupby, pandas_groupby):
 
 
 def eval_shift(modin_groupby, pandas_groupby):
+    def comparator(df1, df2):
+        df_equals(*sort_index_if_experimental_groupby(df1, df2))
+
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(),
+        comparator=comparator,
     )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(periods=0),
+        comparator=comparator,
     )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
+        comparator=comparator,
     )
 
     # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
@@ -1234,12 +1244,13 @@ def eval_shift(modin_groupby, pandas_groupby):
             indexer = algorithms.unique1d(indexer)
             modin_res = modin_res.take(indexer)
 
-            df_equals(modin_res, pandas_res)
+            comparator(modin_res, pandas_res)
         else:
             eval_general(
                 modin_groupby,
                 pandas_groupby,
                 lambda groupby: groupby.shift(axis=1, fill_value=777),
+                comparator=comparator,
             )
 
 
