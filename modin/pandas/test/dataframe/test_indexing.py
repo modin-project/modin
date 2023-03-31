@@ -1666,7 +1666,7 @@ def test_reset_index_with_multi_index_drop(
         False,
         pytest.param(
             True,
-            marks=pytest.mark.skipif(
+            marks=pytest.mark.xfail(
                 StorageFormat.get() == "Hdk",
                 reason="HDK does not store trivial indexes.",
             ),

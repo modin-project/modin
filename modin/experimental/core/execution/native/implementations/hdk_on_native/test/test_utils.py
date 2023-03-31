@@ -15,8 +15,8 @@ import sys
 import pandas
 import pytz
 import timeit
-
 from random import randint, uniform, choice
+
 from ..dataframe.utils import ColNameCodec
 
 UNICODE_RANGES = [
