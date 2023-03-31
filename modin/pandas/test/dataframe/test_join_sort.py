@@ -619,6 +619,10 @@ def test_sort_values_descending_with_only_two_bins():
     )
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/3941",
+)
 @pytest.mark.parametrize("ignore_index", [True, False])
 def test_sort_values_preserve_index_names(ignore_index):
     modin_df, pandas_df = create_test_dfs(

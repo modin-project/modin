@@ -2274,9 +2274,9 @@ class PandasDataframe(ClassLogger):
             sort_function,
         )
         new_axes = (
-            [None, self._columns_cache]
+            [None, self.copy_columns_cache()]
             if axis == Axis.ROW_WISE
-            else [self._index_cache, None]
+            else [self.copy_index_cache(), None]
         )
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
@@ -2285,7 +2285,7 @@ class PandasDataframe(ClassLogger):
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
         new_lengths[axis.value ^ 1] = (
-            [len(self.columns)] if self._columns_cache is not None else None
+            [len(self.columns)] if self.has_materialized_columns is not None else None
         )
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
