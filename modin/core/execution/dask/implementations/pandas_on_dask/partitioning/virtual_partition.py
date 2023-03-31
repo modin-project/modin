@@ -402,7 +402,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
 
         Returns
         -------
-        numpy array.
+        NumPy array.
         """
         return self.force_materialization().list_of_block_partitions[0].to_numpy()
 
