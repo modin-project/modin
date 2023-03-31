@@ -102,8 +102,8 @@ def join_columns(
             "Cases, where one of the keys to join is an index level, are not yet supported."
         )
 
-    left_conflicts = set(left) & (set(right) - set(right_on))  # type: ignore # set() doesn't understand IndexLabel
-    right_conflicts = set(right) & (set(left) - set(left_on))  # type: ignore # set() doesn't understand IndexLabel
+    left_conflicts = set(left) & (set(right) - set(right_on))
+    right_conflicts = set(right) & (set(left) - set(left_on))
     conflicting_cols = left_conflicts | right_conflicts
 
     def _get_new_name(col: IndexLabel, suffix: str) -> IndexLabel:

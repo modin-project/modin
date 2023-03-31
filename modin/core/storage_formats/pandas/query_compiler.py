@@ -492,7 +492,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             new_columns = None
             new_dtypes = None
-            if self._modin_frame._columns_cache is not None:
+            if self._modin_frame.has_materialized_columns:
                 if left_on is None and right_on is None:
                     if on is None:
                         on = [c for c in self.columns if c in right_pandas.columns]
