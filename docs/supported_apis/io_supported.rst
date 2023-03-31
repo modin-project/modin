@@ -31,6 +31,8 @@ default to pandas.
 |                    |                                 | ``escapechar``, ``doublequote``,                   |
 |                    |                                 | ``delim_whitespace``                               |
 +--------------------+---------------------------------+----------------------------------------------------+
+| `read_fwf`_        | Y                               |                                                    |
++--------------------+---------------------------------+----------------------------------------------------+
 | `read_table`_      | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_parquet`_    | Y                               |                                                    |
@@ -60,6 +62,7 @@ default to pandas.
 +--------------------+---------------------------------+----------------------------------------------------+
 
 .. _`read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html#pandas.read_csv
+.. _`read_fwf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_fwf.html#pandas.read_fwf
 .. _`read_table`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_table.html#pandas.read_table
 .. _`read_parquet`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_parquet.html#pandas.read_parquet
 .. _`read_json`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_json.html#pandas.read_json

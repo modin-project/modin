@@ -223,6 +223,20 @@ class DataFrameGroupBy(ClassLogger):
     def sem(self, ddof=1):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
 
+    def sample(self, n=None, frac=None, replace=False, weights=None, random_state=None):
+        return self._default_to_pandas(
+            lambda df: df.sample(
+                n=n,
+                frac=frac,
+                replace=replace,
+                weights=weights,
+                random_state=random_state,
+            )
+        )
+
+    def ewm(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.ewm(*args, **kwargs))
+
     def value_counts(
         self,
         subset=None,
@@ -1385,6 +1399,27 @@ class SeriesGroupBy(DataFrameGroupBy):
                 dropna=dropna,
             )
         )
+
+    @property
+    def is_monotonic_decreasing(self):
+        return self._default_to_pandas(lambda ser: ser.is_monotonic_decreasing)
+
+    @property
+    def is_monotonic_increasing(self):
+        return self._default_to_pandas(lambda ser: ser.is_monotonic_increasing)
+
+    def nlargest(self, n: int = 5, keep: str = "first") -> Series:
+        return self._default_to_pandas(lambda ser: ser.nlargest(n=n, keep=keep))
+
+    def nsmallest(self, n: int = 5, keep: str = "first") -> Series:
+        return self._default_to_pandas(lambda ser: ser.nsmallest(n=n, keep=keep))
+
+    def unique(self):
+        return self._default_to_pandas(lambda ser: ser.unique())
+
+    @property
+    def dtype(self):
+        return self._default_to_pandas(lambda ser: ser.dtype)
 
 
 if IsExperimental.get():

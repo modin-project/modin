@@ -932,3 +932,42 @@ def test_split_partition_preserve_names(ascending):
     for part in splits:
         assert part.index.name == index_name
         assert part.columns.name == index_name
+
+
+@pytest.mark.parametrize("has_cols_metadata", [True, False])
+@pytest.mark.parametrize("has_dtypes_metadata", [True, False])
+def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
+    df1 = pd.DataFrame({"a": [1, 1, 2, 2], "b": list("abcd")})
+    df2 = pd.DataFrame({"a": [4, 2, 1, 3], "b": list("bcaf"), "c": [3, 2, 1, 0]})
+
+    modin_frame = df1._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_materialized_columns
+    else:
+        modin_frame._columns_cache = None
+
+    if has_dtypes_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame._dtypes is not None
+    else:
+        modin_frame._dtypes = None
+
+    res = df1.merge(df2, on="b")._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        assert res.has_materialized_columns
+        if has_dtypes_metadata:
+            assert res._dtypes is not None
+        else:
+            # Verify that no materialization was triggered
+            assert res._dtypes is None
+            assert modin_frame._dtypes is None
+    else:
+        # Verify that no materialization was triggered
+        assert not res.has_materialized_columns
+        assert res._dtypes is None
+        assert not modin_frame.has_materialized_columns
+        if not has_dtypes_metadata:
+            assert modin_frame._dtypes is None

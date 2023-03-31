@@ -33,7 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
-from pandas.errors import DataError
+from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
 from typing import List, Hashable
@@ -50,6 +50,7 @@ from modin.utils import (
     _inherit_docstrings,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.algebra import (
     Fold,
     Map,
@@ -493,6 +494,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
             elif on is not None:
                 on = list(on) if is_list_like(on) else [on]
 
+            new_columns = None
+            new_dtypes = None
+            if self._modin_frame.has_materialized_columns:
+                if left_on is None and right_on is None:
+                    if on is None:
+                        on = [c for c in self.columns if c in right_pandas.columns]
+                    _left_on, _right_on = on, on
+                else:
+                    if left_on is None or right_on is None:
+                        raise MergeError(
+                            "Must either pass only 'on' or 'left_on' and 'right_on', not combination of them."
+                        )
+                    _left_on, _right_on = left_on, right_on
+
+                try:
+                    new_columns, left_renamer, right_renamer = join_columns(
+                        self.columns,
+                        right_pandas.columns,
+                        _left_on,
+                        _right_on,
+                        kwargs.get("suffixes", ("_x", "_y")),
+                    )
+                except NotImplementedError:
+                    # This happens when one of the keys to join is an index level. Pandas behaviour
+                    # is really complicated in this case, so we're not computing resulted columns for now.
+                    pass
+                else:
+                    if self._modin_frame._dtypes is not None:
+                        new_dtypes = []
+                        for old_col in left_renamer.keys():
+                            new_dtypes.append(self.dtypes[old_col])
+                        for old_col in right_renamer.keys():
+                            new_dtypes.append(right_pandas.dtypes[old_col])
+                        new_dtypes = pandas.Series(new_dtypes, index=new_columns)
+
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
                     axis=1,
@@ -503,6 +539,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
+                    new_columns=new_columns,
+                    dtypes=new_dtypes,
+                    sync_labels=False,
                 )
             )
 
@@ -625,6 +664,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     enumerate_partitions=True,
                     new_columns=new_columns,
+                    dtypes=(
+                        self._modin_frame._dtypes if kwargs.get("drop", False) else None
+                    ),
                     sync_labels=False,
                     pass_axis_lengths_to_partitions=True,
                 )
