@@ -250,7 +250,7 @@ def test_apply_modin_func_4635():
     modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df.apply(pd.Series.sum), pandas_df.apply(pandas.Series.sum))
 
-    data = data = {"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]}
+    data = {"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]}
     modin_df, pandas_df = create_test_dfs(data)
     modin_df = modin_df.set_index(["a"])
     pandas_df = pandas_df.set_index(["a"])
