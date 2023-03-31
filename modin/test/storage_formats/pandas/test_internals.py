@@ -903,6 +903,37 @@ def test_shuffle_partitions_with_empty_pivots(ascending):
     assert ref.equals(res)
 
 
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partition_preserve_names(ascending):
+    """
+    This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
+    preserve their index/column names.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    index_name = "custom_name"
+    df.index.name = index_name
+    df.columns.name = index_name
+
+    # Pivots that contain empty bins
+    pivots = [2, 2, 5, 7]
+    splits = split_partitions_using_pivots_for_sort(
+        df, df, column="numeric_col", pivots=pivots, ascending=ascending
+    )
+
+    for part in splits:
+        assert part.index.name == index_name
+        assert part.columns.name == index_name
+
+
 @pytest.mark.parametrize("has_cols_metadata", [True, False])
 @pytest.mark.parametrize("has_dtypes_metadata", [True, False])
 def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):

@@ -451,6 +451,20 @@ class PandasDataframe(ClassLogger):
         """
         return [self.index, self.columns]
 
+    def get_axis(self, axis: int = 0) -> pandas.Index:
+        """
+        Get index object for the requested axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}, default: 0
+
+        Returns
+        -------
+        pandas.Index
+        """
+        return self.index if axis == 0 else self.columns
+
     def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
         """
         Compute the labels for specific `axis`.
@@ -2170,22 +2184,20 @@ class PandasDataframe(ClassLogger):
             shuffling_functions,
             sort_function,
         )
-        new_axes = self.axes
+        new_axes = (
+            [None, self.copy_columns_cache()]
+            if axis == Axis.ROW_WISE
+            else [self.copy_index_cache(), None]
+        )
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
-            new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
-        else:
-            (
-                new_axes[axis.value],
-                new_lengths[axis.value],
-            ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
+            new_axes[axis.value] = RangeIndex(len(self.get_axis(axis.value)))
 
-        new_axes[axis.value] = new_axes[axis.value].set_names(
-            self.axes[axis.value].names
-        )
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
-        new_lengths[axis.value ^ 1] = [len(self.columns)]
+        new_lengths[axis.value ^ 1] = (
+            [len(self.columns)] if self.has_materialized_columns else None
+        )
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
         # We should add a fix to check if there is skew in the partitions and rebalance
@@ -2193,7 +2205,7 @@ class PandasDataframe(ClassLogger):
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
         new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.dtypes
+            new_partitions, *new_axes, *new_lengths, self._dtypes
         )
         if kwargs.get("ignore_index", False):
             new_modin_frame._propagate_index_objs(axis=0)
