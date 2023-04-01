@@ -669,6 +669,7 @@ def s3_base(worker_id):
                         r = requests.get(endpoint_uri)
                         made_connection = r.ok
                     except Exception:
+                        # try again if we have retries.
                         pass
                     finally:
                         retries_left -= 1
@@ -727,6 +728,7 @@ def s3_resource(s3_base):
     try:
         s3.rm(bucket, recursive=True)
     except Exception:
+        # OK if bucket already deleted.
         pass
     timeout = 2
     while cli.list_buckets()["Buckets"] and timeout > 0:
