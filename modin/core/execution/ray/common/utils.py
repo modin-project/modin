@@ -32,6 +32,7 @@ from modin.config import (
     Memory,
     NPartitions,
     ValueSource,
+    ModinGithubCI,
 )
 from modin.error_message import ErrorMessage
 from .engine_wrapper import RayWrapper
@@ -74,7 +75,16 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
-    extra_init_kw = {"runtime_env": {"env_vars": {"__MODIN_AUTOIMPORT_PANDAS__": "1"}}}
+    env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
+    if ModinGithubCI.get():
+        # need these to write parquet to the moto service mocking s3.
+        env_vars.update(
+            {
+                "AWS_ACCESS_KEY_ID": "foobar_key",
+                "AWS_SECRET_ACCESS_KEY": "foobar_secret",
+            }
+        )
+    extra_init_kw = {"runtime_env": {"env_vars": env_vars}}
     if not ray.is_initialized() or override_is_cluster:
         cluster = override_is_cluster or IsRayCluster.get()
         redis_address = override_redis_address or RayRedisAddress.get()
