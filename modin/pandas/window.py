@@ -273,6 +273,26 @@ class Rolling(ClassLogger):
             )
         )
 
+    def rank(
+        self,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        **kwargs
+    ):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.rolling_rank(
+                self.axis,
+                self.rolling_args,
+                method,
+                ascending,
+                pct,
+                numeric_only,
+                **kwargs
+            )
+        )
+
 
 @_inherit_docstrings(
     pandas.core.window.expanding.Expanding,
@@ -351,3 +371,44 @@ class Expanding(ClassLogger):
             )
         )
 
+    def skew(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_skew(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
+    def kurt(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_kurt(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
+    def quantile(self, quantile, interpolation="linear", **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_quantile(
+                self.axis, self.expanding_args, quantile, interpolation, **kwargs
+            )
+        )
+
+    def rank(
+        self,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        **kwargs
+    ):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_rank(
+                self.axis,
+                self.expanding_args,
+                method,
+                ascending,
+                pct,
+                numeric_only,
+                **kwargs
+            )
+        )
+>>>>>>> 3c10b00d (FEAT: Add support for rolling/expanding.quantile/rank, rename_axis, droplevel (#31))
