@@ -411,4 +411,3 @@ class Expanding(ClassLogger):
                 **kwargs
             )
         )
->>>>>>> 3c10b00d (FEAT: Add support for rolling/expanding.quantile/rank, rename_axis, droplevel (#31))
