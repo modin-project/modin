@@ -983,8 +983,19 @@ class BasePandasDataset(ClassLogger):
             # Assume that the dtype is a scalar.
             col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
-        return self._create_or_update_from_compiler(new_query_compiler, not copy)
+        if not copy:
+            # If the new types match the old ones, then copying can be avoided
+            frame_dtypes = self._query_compiler._modin_frame._dtypes
+            if frame_dtypes is not None:
+                for col in col_dtypes:
+                    if col_dtypes[col] != frame_dtypes[col]:
+                        copy = True
+                        break
+
+        if copy:
+            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            return self._create_or_update_from_compiler(new_query_compiler)
+        return self
 
     @property
     def at(self, axis=None):  # noqa: PR01, RT01, D200
