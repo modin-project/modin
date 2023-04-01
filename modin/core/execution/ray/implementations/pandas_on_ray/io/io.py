@@ -281,7 +281,11 @@ class PandasOnRayIO(RayIO):
             return RayIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        if "storage_options" in kwargs and "client_kwargs" in kwargs["storage_options"]:
+        if (
+            "storage_options" in kwargs
+            and kwargs["storage_options"] is not None
+            and "client_kwargs" in kwargs["storage_options"]
+        ):
             client_kwargs = kwargs["storage_options"]["client_kwargs"]
         else:
             client_kwargs = {}

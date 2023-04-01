@@ -286,7 +286,11 @@ class PandasOnUnidistIO(UnidistIO):
             return UnidistIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        if "storage_options" in kwargs and "client_kwargs" in kwargs["storage_options"]:
+        if (
+            "storage_options" in kwargs
+            and kwargs["storage_options"] is not None
+            and "client_kwargs" in kwargs["storage_options"]
+        ):
             client_kwargs = kwargs["storage_options"]["client_kwargs"]
         else:
             client_kwargs = {}
@@ -305,16 +309,12 @@ class PandasOnUnidistIO(UnidistIO):
                 Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
                 `partition_idx` serving as chunk index to maintain rows order.
             """
-            import os
-            print(
-                f"trying to_parquet with {os.environ.get('AWS_ACCESS_KEY_ID', None)} and {os.environ.get('AWS_SECRET_ACCESS_KEY', None)} and {os.environ.get('AWS_REGION', None)}"
-            )            
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
             kwargs[
                 "path"
             ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
-            df.to_parquet(**kwargs)            
+            df.to_parquet(**kwargs)
             return pandas.DataFrame()
 
         # Ensure that the metadata is synchronized
