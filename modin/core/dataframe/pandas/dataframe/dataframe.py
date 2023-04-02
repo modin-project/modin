@@ -2921,7 +2921,7 @@ class PandasDataframe(ClassLogger):
         if isinstance(dtypes, str) and dtypes == "copy":
             kw["dtypes"] = self.copy_dtypes_cache()
         elif dtypes is not None:
-            if isinstance(dtypes, pandas.Series):
+            if isinstance(dtypes, (pandas.Series, ModinDtypes)):
                 kw["dtypes"] = dtypes.copy()
             else:
                 if new_columns is None:

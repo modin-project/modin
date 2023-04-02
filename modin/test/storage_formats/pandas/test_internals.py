@@ -950,24 +950,24 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
 
     if has_dtypes_metadata:
         # Verify that there were initially materialized metadata
-        assert modin_frame._dtypes is not None
+        assert modin_frame.has_dtypes_cache
     else:
-        modin_frame._dtypes = None
+        modin_frame.set_dtypes_cache(None)
 
     res = df1.merge(df2, on="b")._query_compiler._modin_frame
 
     if has_cols_metadata:
         assert res.has_materialized_columns
         if has_dtypes_metadata:
-            assert res._dtypes is not None
+            assert res.has_dtypes_cache
         else:
             # Verify that no materialization was triggered
-            assert res._dtypes is None
-            assert modin_frame._dtypes is None
+            assert not res.has_dtypes_cache
+            assert not modin_frame.has_dtypes_cache
     else:
         # Verify that no materialization was triggered
         assert not res.has_materialized_columns
-        assert res._dtypes is None
+        assert not res.has_dtypes_cache
         assert not modin_frame.has_materialized_columns
         if not has_dtypes_metadata:
-            assert modin_frame._dtypes is None
+            assert not modin_frame.has_dtypes_cache
