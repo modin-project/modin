@@ -38,7 +38,10 @@ from modin.core.dataframe.base.dataframe.utils import (
     Axis,
     JoinType,
 )
-from modin.core.dataframe.pandas.dataframe.utils import build_sort_functions
+from modin.core.dataframe.pandas.dataframe.utils import (
+    build_sort_functions,
+    lazy_metadata_decorator,
+)
 from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex
 
 if TYPE_CHECKING:
@@ -51,98 +54,6 @@ from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
-
-
-def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
-    """
-    Lazily propagate metadata for the ``PandasDataframe``.
-
-    This decorator first adds the minimum required reindexing operations
-    to each partition's queue of functions to be lazily applied for
-    each PandasDataframe in the arguments by applying the function
-    run_f_on_minimally_updated_metadata. The decorator also sets the
-    flags for deferred metadata synchronization on the function result
-    if necessary.
-
-    Parameters
-    ----------
-    apply_axis : str, default: None
-        The axes on which to apply the reindexing operations to the `self._partitions` lazily.
-        Case None: No lazy metadata propagation.
-        Case "both": Add reindexing operations on both axes to partition queue.
-        Case "opposite": Add reindexing operations complementary to given axis.
-        Case "rows": Add reindexing operations on row axis to partition queue.
-    axis_arg : int, default: -1
-        The index or column axis.
-    transpose : bool, default: False
-        Boolean for if a transpose operation is being used.
-
-    Returns
-    -------
-    Wrapped Function.
-    """
-
-    def decorator(f):
-        from functools import wraps
-
-        @wraps(f)
-        def run_f_on_minimally_updated_metadata(self, *args, **kwargs):
-            for obj in (
-                [self]
-                + [o for o in args if isinstance(o, PandasDataframe)]
-                + [v for v in kwargs.values() if isinstance(v, PandasDataframe)]
-                + [
-                    d
-                    for o in args
-                    if isinstance(o, list)
-                    for d in o
-                    if isinstance(d, PandasDataframe)
-                ]
-                + [
-                    d
-                    for _, o in kwargs.items()
-                    if isinstance(o, list)
-                    for d in o
-                    if isinstance(d, PandasDataframe)
-                ]
-            ):
-                if apply_axis == "both":
-                    if obj._deferred_index and obj._deferred_column:
-                        obj._propagate_index_objs(axis=None)
-                    elif obj._deferred_index:
-                        obj._propagate_index_objs(axis=0)
-                    elif obj._deferred_column:
-                        obj._propagate_index_objs(axis=1)
-                elif apply_axis == "opposite":
-                    if "axis" not in kwargs:
-                        axis = args[axis_arg]
-                    else:
-                        axis = kwargs["axis"]
-                    if axis == 0 and obj._deferred_column:
-                        obj._propagate_index_objs(axis=1)
-                    elif axis == 1 and obj._deferred_index:
-                        obj._propagate_index_objs(axis=0)
-                elif apply_axis == "rows":
-                    obj._propagate_index_objs(axis=0)
-            result = f(self, *args, **kwargs)
-            if apply_axis is None and not transpose:
-                result._deferred_index = self._deferred_index
-                result._deferred_column = self._deferred_column
-            elif apply_axis is None and transpose:
-                result._deferred_index = self._deferred_column
-                result._deferred_column = self._deferred_index
-            elif apply_axis == "opposite":
-                if axis == 0:
-                    result._deferred_index = self._deferred_index
-                else:
-                    result._deferred_column = self._deferred_column
-            elif apply_axis == "rows":
-                result._deferred_column = self._deferred_column
-            return result
-
-        return run_f_on_minimally_updated_metadata
-
-    return decorator
 
 
 class PandasDataframe(ClassLogger):
@@ -584,6 +495,20 @@ class PandasDataframe(ClassLogger):
             List with two values: index and columns.
         """
         return [self.index, self.columns]
+
+    def get_axis(self, axis: int = 0) -> pandas.Index:
+        """
+        Get index object for the requested axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}, default: 0
+
+        Returns
+        -------
+        pandas.Index
+        """
+        return self.index if axis == 0 else self.columns
 
     def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
         """
@@ -2308,22 +2233,20 @@ class PandasDataframe(ClassLogger):
             shuffling_functions,
             sort_function,
         )
-        new_axes = self.axes
+        new_axes = (
+            [None, self.copy_columns_cache()]
+            if axis == Axis.ROW_WISE
+            else [self.copy_index_cache(), None]
+        )
         new_lengths = [None, None]
         if kwargs.get("ignore_index", False):
-            new_axes[axis.value] = RangeIndex(len(new_axes[axis.value]))
-        else:
-            (
-                new_axes[axis.value],
-                new_lengths[axis.value],
-            ) = self._compute_axis_labels_and_lengths(axis.value, new_partitions)
+            new_axes[axis.value] = RangeIndex(len(self.get_axis(axis.value)))
 
-        new_axes[axis.value] = new_axes[axis.value].set_names(
-            self.axes[axis.value].names
-        )
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
-        new_lengths[axis.value ^ 1] = [len(self.columns)]
+        new_lengths[axis.value ^ 1] = (
+            [len(self.columns)] if self.has_materialized_columns else None
+        )
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
         # We should add a fix to check if there is skew in the partitions and rebalance
@@ -2331,7 +2254,7 @@ class PandasDataframe(ClassLogger):
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
         new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.dtypes
+            new_partitions, *new_axes, *new_lengths, self._dtypes
         )
         if kwargs.get("ignore_index", False):
             new_modin_frame._propagate_index_objs(axis=0)
@@ -2995,17 +2918,24 @@ class PandasDataframe(ClassLogger):
             apply_func_args=apply_func_args,
         )
         kw = {"row_lengths": None, "column_widths": None}
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             kw["dtypes"] = self.copy_dtypes_cache()
         elif dtypes is not None:
-            if new_columns is None:
-                (
-                    new_columns,
-                    kw["column_widths"],
-                ) = self._compute_axis_labels_and_lengths(1, new_partitions)
-            kw["dtypes"] = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
-            )
+            if isinstance(dtypes, pandas.Series):
+                kw["dtypes"] = dtypes.copy()
+            else:
+                if new_columns is None:
+                    (
+                        new_columns,
+                        kw["column_widths"],
+                    ) = self._compute_axis_labels_and_lengths(1, new_partitions)
+                kw["dtypes"] = (
+                    pandas.Series(dtypes, index=new_columns)
+                    if is_list_like(dtypes)
+                    else pandas.Series(
+                        [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                    )
+                )
 
         if not keep_partitioning:
             if kw["row_lengths"] is None and new_index is not None:

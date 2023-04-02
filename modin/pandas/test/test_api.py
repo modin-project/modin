@@ -13,8 +13,8 @@
 
 import pandas
 import inspect
-import numpy as np
 import pytest
+import numpy as np
 
 import modin.pandas as pd
 
@@ -288,6 +288,24 @@ def test_sparse_accessor_api_equality(obj):
         len(missing_from_modin)
     )
     extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
+
+
+@pytest.mark.parametrize("obj", ["SeriesGroupBy", "DataFrameGroupBy"])
+def test_series_groupby_api_equality(obj):
+    modin_dir = [x for x in dir(getattr(pd.groupby, obj)) if x[0] != "_"]
+    pandas_dir = [x for x in dir(getattr(pandas.core.groupby, obj)) if x[0] != "_"]
+    # This attribute is hidden from the DataFrameGroupBy object
+    ignore = ["keys"]
+    missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        len(missing_from_modin)
+    )
+    # FIXME: wrong inheritance
+    ignore = ["boxplot", "corrwith", "dtypes"]
+    extra_in_modin = set(modin_dir) - set(pandas_dir) - set(ignore)
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )

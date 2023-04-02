@@ -19,6 +19,7 @@ from pandas.core.dtypes.common import is_list_like
 
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
+from modin.pandas.utils import cast_function_modin2pandas
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
@@ -224,6 +225,7 @@ class Rolling(ClassLogger):
         args=None,
         kwargs=None,
     ):
+        func = cast_function_modin2pandas(func)
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_apply(
                 self.axis,

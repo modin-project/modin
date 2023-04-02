@@ -335,6 +335,30 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
+def test_merge_with_mi_columns():
+    modin_df1, pandas_df1 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "b"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "c"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on=[("col0", "a")]),
+    )
+
+
 @pytest.mark.parametrize("has_index_cache", [True, False])
 def test_merge_on_index(has_index_cache):
     modin_df1, pandas_df1 = create_test_dfs(
@@ -616,6 +640,35 @@ def test_sort_values_descending_with_only_two_bins():
 
     eval_general(
         modin_df, pandas_df, lambda df: df.sort_values(by="a", ascending=False)
+    )
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/3941",
+)
+@pytest.mark.parametrize("ignore_index", [True, False])
+def test_sort_values_preserve_index_names(ignore_index):
+    modin_df, pandas_df = create_test_dfs(
+        np.random.choice(128, 128, replace=False).reshape((128, 1))
+    )
+
+    pandas_df.index.names, pandas_df.columns.names = ["custom_name"], ["custom_name"]
+    modin_df.index.names, modin_df.columns.names = ["custom_name"], ["custom_name"]
+    # workaround for #1618 to actually propagate index change
+    modin_df.index = modin_df.index
+    modin_df.columns = modin_df.columns
+
+    def comparator(df1, df2):
+        assert df1.index.names == df2.index.names
+        assert df1.columns.names == df2.columns.names
+        df_equals(df1, df2)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(df.columns[0], ignore_index=ignore_index),
+        comparator=comparator,
     )
 
 

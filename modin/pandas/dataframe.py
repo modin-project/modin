@@ -57,6 +57,7 @@ from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
+    cast_function_modin2pandas,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
 from .iterator import PartitionIterator
@@ -383,6 +384,7 @@ class DataFrame(BasePandasDataset):
         """
         Apply a function along an axis of the ``DataFrame``.
         """
+        func = cast_function_modin2pandas(func)
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
             func,
