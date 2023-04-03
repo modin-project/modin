@@ -2054,6 +2054,11 @@ class PandasDataframe(ClassLogger):
         np.ndarray
             2D array of partitions storing result of the applied `func`.
         """
+        # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
+        if self._partitions.shape[0] == 1:
+            # The method's API forces us to return raw partitions
+            return self.apply_full_axis(axis=1, func=func)._partitions
+
         ideal_num_new_partitions = len(self._partitions)
         m = len(self.index) / ideal_num_new_partitions
         sampling_probability = (1 / m) * np.log(
@@ -2090,10 +2095,11 @@ class PandasDataframe(ClassLogger):
                         [len(self.columns)],
                         self.dtypes,
                     )
+                # The method's API forces us to return raw partitions
                 return modin_frame.apply_full_axis(
-                    0,
-                    func,
-                )
+                    axis=0,
+                    func=func,
+                )._partitions
 
         if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
@@ -2142,7 +2148,6 @@ class PandasDataframe(ClassLogger):
             if major_col_partition_index < cols_seen:
                 index = i
                 break
-
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
             new_partitions,
             index,
@@ -2201,10 +2206,6 @@ class PandasDataframe(ClassLogger):
             raise NotImplementedError(
                 f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
             )
-
-        # If there's only one row partition can simply apply sorting row-wise without the need to reshuffle
-        if self._partitions.shape[0] == 1:
-            return self.apply_full_axis(axis=1, func=sort_function)
 
         # If this df is empty, we don't want to try and shuffle or sort.
         if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
@@ -3344,13 +3345,10 @@ class PandasDataframe(ClassLogger):
         def apply_func(df):
             if any(dtype == "category" for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
-                    "Reshuffling groupby is not yet supported when grouping on a categorical column."
+                    "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                    + "https://github.com/modin-project/modin/issues/5925"
                 )
             return operator(df.groupby(by, **kwargs))
-
-        # If there's only one row partition can simply apply groupby row-wise without the need to reshuffle
-        if self._partitions.shape[0] == 1:
-            return self.apply_full_axis(axis=1, func=apply_func)
 
         new_partitions = self._apply_func_to_range_partitioning(
             key_column=by[0],

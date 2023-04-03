@@ -2847,8 +2847,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
-                    + "Falling back to a TreeReduce implementation."
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
                 )
 
         _, internal_by = self._groupby_internal_columns(by, drop)
@@ -2918,8 +2918,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
-                    + "Falling back to a TreeReduce implementation."
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
                 )
 
         result = self._groupby_dict_reduce(
@@ -3060,6 +3060,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             drop=drop,
         )
 
+    @_inherit_docstrings(BaseQueryCompiler.groupby_agg)
     def _groupby_shuffle(
         self,
         by,
@@ -3073,7 +3074,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     ):
         if Engine.get() == "Python":
             raise NotImplementedError(
-                "Reshuffling groupby is not implemented for python engine (see gh-#)"
+                "Reshuffling groupby is not implemented for python engine, see: "
+                + "https://github.com/modin-project/modin/issues/5916"
             )
 
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
@@ -3098,7 +3100,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if not is_all_column_names:
             raise NotImplementedError(
-                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame."
+                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame. "
+                + "https://github.com/modin-project/modin/issues/5926"
             )
 
         # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
@@ -3107,12 +3110,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             dtype == "category" for dtype in self.dtypes[by].values
         ):
             raise NotImplementedError(
-                "Reshuffling groupby is not yet supported when grouping on a categorical column."
+                "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                + "https://github.com/modin-project/modin/issues/5925"
             )
 
         is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
 
         if is_transform:
+            # https://github.com/modin-project/modin/issues/5924
             ErrorMessage.missmatch_with_pandas(
                 operation="reshuffling groupby",
                 message="the order of rows may be shuffled for the result",
@@ -3182,8 +3187,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
-                    + "Falling back to a full-axis implementation."
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a full-axis implementation."
                 )
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):

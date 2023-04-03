@@ -1016,6 +1016,11 @@ def test_multi_column_groupby():
 
 
 def sort_index_if_experimental_groupby(*dfs):
+    """
+    This method should be applied before comparing results of ``groupby.transform`` as
+    the experimental implementation changes the order of rows for that:
+    https://github.com/modin-project/modin/issues/5924
+    """
     if ExperimentalGroupbyImpl.get():
         return tuple(df.sort_index() for df in dfs)
     return dfs
