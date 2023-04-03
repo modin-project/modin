@@ -72,6 +72,7 @@ def build_sort_functions(
         )
 
     dtypes = modin_frame.dtypes
+
     def split_fn(partition, pivots):
         return split_partitions_using_pivots_for_sort(
             dtypes, partition, column, pivots, ascending, **kwargs
