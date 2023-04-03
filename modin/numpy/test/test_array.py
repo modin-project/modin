@@ -157,9 +157,8 @@ def test_out_broadcast(data_out):
         pytest.xfail("broadcasting would require duplicating row: see GH#5819")
     data1 = [[1, 2, 3]]
     data2 = [7, 8, 9]
-    numpy_out = numpy.array(data_out)
+    modin_out, numpy_out = np.array(data_out), numpy.array(data_out)
     numpy.add(numpy.array(data1), numpy.array(data2), out=numpy_out)
-    modin_out = np.array(data_out)
     np.add(np.array(data1), np.array(data2), out=modin_out)
     numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
 

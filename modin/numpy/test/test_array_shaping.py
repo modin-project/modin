@@ -99,6 +99,7 @@ def test_append():
     numpy_result = numpy.append(*xs)
     modin_result = np.append(*[np.array(x) for x in xs])
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
     numpy_result = numpy.append([[1, 2, 3], [4, 5, 6]], [[7, 8, 9]], axis=0)
     modin_result = np.append(np.array([[1, 2, 3], [4, 5, 6]]), [[7, 8, 9]], axis=0)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)

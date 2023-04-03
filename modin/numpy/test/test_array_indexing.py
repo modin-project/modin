@@ -109,9 +109,8 @@ def test_getitem_nested():
 )
 def test_setitem_1d(index, value):
     data = [1, 2, 3, 4, 5]
-    numpy_arr = numpy.array(data)
+    modin_arr, numpy_arr = np.array(data), numpy.array(data)
     numpy_arr[index] = value
-    modin_arr = np.array(data)
     modin_arr[index] = value
     numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
 
@@ -144,8 +143,7 @@ def test_setitem_2d(index, value):
     if index == [2, 0]:
         pytest.xfail("indexing with unsorted list would fail: see GH#5886")
     data = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]
-    numpy_arr = numpy.array(data)
+    modin_arr, numpy_arr = np.array(data), numpy.array(data)
     numpy_arr[index] = value
-    modin_arr = np.array(data)
     modin_arr[index] = value
     numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)

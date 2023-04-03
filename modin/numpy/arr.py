@@ -64,9 +64,9 @@ def check_kwargs(order="C", subok=True, keepdims=None, casting="same_kind", wher
 def check_can_broadcast_to_output(arr_in: "array", arr_out: "array"):
     if not isinstance(arr_out, array):
         raise TypeError("return arrays must be of modin.numpy.array type.")
-    # Broadcast is ok if both arrays have matching ndim + shape, OR
+    # Broadcasting is ok if both arrays have matching ndim + shape, OR
     # arr_in is 1xN or a 1D N-element array and arr_out is MxN.
-    # Note that 1xN arr_in cannot be broadcast into a 1D N-element arr_out.
+    # Note that 1xN arr_in cannot be broadcasted into a 1D N-element arr_out.
     #
     # This is slightly different from the rules for checking if two inputs
     # of a binary operation can be broadcasted together.
@@ -293,8 +293,6 @@ class array(object):
         """
         Check that the provided axis argument is valid on this array.
 
-        Raises numpy.AxisError if the axis is invalid.
-
         Parameters
         ----------
         axis : int, optional
@@ -304,6 +302,11 @@ class array(object):
         -------
         int, optional
             Axis to apply the function over (None, 0, or 1).
+        
+        Raises
+        -------
+        numpy.AxisError
+            if the axis is invalid.
         """
         if axis is not None and axis < 0:
             new_axis = axis + self._ndim

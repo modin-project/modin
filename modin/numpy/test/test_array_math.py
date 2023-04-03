@@ -40,6 +40,7 @@ def test_rem_mod():
     numpy_result = numpy.remainder(a, b)
     modin_result = np.remainder(np.array(a), np.array(b))
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
     numpy_result = numpy.mod(a, b)
     modin_result = np.mod(np.array(a), np.array(b))
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
