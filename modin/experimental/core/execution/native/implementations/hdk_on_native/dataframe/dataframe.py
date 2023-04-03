@@ -998,7 +998,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         # slowly and supports only numeric column types.
         # See https://github.com/intel-ai/hdk/issues/182
         # To work around this issue, perform concatenation
-        # with arrow.
+        # with arrow. The arrow-based concatenation is also
+        # performed if all the frames have an arrow table.
         if (
             len(other_modin_frames) == 0
             or len(self.columns) == 0

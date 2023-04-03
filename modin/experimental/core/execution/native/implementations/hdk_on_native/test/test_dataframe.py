@@ -800,6 +800,19 @@ class TestConcat:
             force_lazy=False,
         )
 
+    # RecursionError in case of concatenation of big number of frames
+    def test_issue_5889(self):
+        with ensure_clean(".csv") as file:
+            pandas.DataFrame({"a": [1, 2, 3, 4]}).to_csv(file, index=False)
+
+            def test_concat(lib, n_concats, **kwargs):
+                df = lib.read_csv(file)
+                for _ in range(n_concats):
+                    df = lib.concat([df, lib.read_csv(file)])
+                return df
+
+            run_and_compare(test_concat, data={}, n_concats=500)
+
 
 class TestGroupby:
     data = {
