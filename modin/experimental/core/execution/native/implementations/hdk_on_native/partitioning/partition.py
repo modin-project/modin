@@ -85,6 +85,9 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         assert isinstance(obj, pyarrow.Table)
         return arrow_to_pandas(obj)
 
+    def to_numpy(self, **kwargs):
+        return self.to_pandas().to_numpy(**kwargs)
+
     def get(self):
         """
         Get partition data.

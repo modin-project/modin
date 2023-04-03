@@ -1124,6 +1124,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
         col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
 
+        # Add field to the col_fields dictionary. If the field is already exists, chose
+        # the most appropriate field, according to the fields type and bit_width.
         def add_col_field(table, col_name, table_col_name):
             key = (col_name, table_col_name)
             field = table.field(table_col_name)

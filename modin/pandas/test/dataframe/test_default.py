@@ -116,7 +116,6 @@ def test_to_numpy(data):
     assert_array_equal(modin_df.values, pandas_df.values)
 
 
-@pytest.mark.skipif(StorageFormat.get() == "Hdk", reason="Not supported by HDK")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
