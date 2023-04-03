@@ -2066,7 +2066,7 @@ class PandasDataframe(ClassLogger):
         # index and the column share the same name, when in actuality, the index's name should be
         # None. This fixes the indexes name beforehand in that case, so that the sort works.
 
-        def sort_function(df):
+        def sort_function(df):  # pragma: no cover
             index_renaming = None
             if any(name in df.columns for name in df.index.names):
                 index_renaming = df.index.names
