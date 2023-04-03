@@ -3315,6 +3315,8 @@ class PandasDataframe(ClassLogger):
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+        **kwargs : dict
+            Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
         Returns
         -------
