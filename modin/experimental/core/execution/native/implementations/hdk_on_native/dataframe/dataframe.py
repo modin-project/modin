@@ -515,7 +515,10 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         # TODO: check performance changes after enabling 'dropna' and decide
         # is it worth it or not.
-        # if groupby_args["dropna"]:
+        if groupby_args["dropna"]:
+            ErrorMessage.single_warning(
+                "'dropna' is temporary disabled due to https://github.com/modin-project/modin/issues/2896"
+            )
         #     base = base.dropna(subset=groupby_cols, how="any")
 
         if as_index:
@@ -1564,18 +1567,18 @@ class HdkOnNativeDataframe(PandasDataframe):
         assert len(self.columns) == 1
         assert self._dtypes[-1] == "category"
 
-        col = self.columns[-1]
         exprs = self._index_exprs()
-        col_expr = self.ref(col)
+        col_expr = self.ref(self.columns[-1])
         code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
-        exprs[col] = build_if_then_else(
+        col_name = MODIN_UNNAMED_SERIES_LABEL
+        exprs[col_name] = build_if_then_else(
             col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
 
         return self.__constructor__(
-            columns=self.columns,
-            dtypes=self._dtypes,
+            columns=Index([col_name]),
+            dtypes=pd.Series(self._dtypes[0], index=Index([col_name])),
             op=TransformNode(self, exprs),
             index=self._index_cache,
             index_cols=self._index_cols,
