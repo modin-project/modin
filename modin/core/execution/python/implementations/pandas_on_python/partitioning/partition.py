@@ -16,71 +16,6 @@
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
 
-class PythonWrapper:
-    """Mixin that provides means of running functions remotely and getting local results."""
-
-    @classmethod
-    def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
-        """
-        Run local `func` remotely.
-
-        Parameters
-        ----------
-        func : callable or ray.ObjectID
-            The function to perform.
-        f_args : list or tuple, optional
-            Positional arguments to pass to ``func``.
-        f_kwargs : dict, optional
-            Keyword arguments to pass to ``func``.
-        num_returns : int, default: 1
-            Amount of return values expected from `func`.
-
-        Returns
-        -------
-        ray.ObjectRef or list
-            Ray identifier of the result being put to Plasma store.
-        """
-        args = [] if f_args is None else f_args
-        kwargs = {} if f_kwargs is None else f_kwargs
-        return func(*args, **kwargs)
-
-    @classmethod
-    def materialize(cls, obj_id):
-        """
-        Get the value of object from the Plasma store.
-
-        Parameters
-        ----------
-        obj_id : ray.ObjectID
-            Ray object identifier to get the value by.
-
-        Returns
-        -------
-        object
-            Whatever was identified by `obj_id`.
-        """
-        return obj_id
-
-    @classmethod
-    def put(cls, data, **kwargs):
-        """
-        Store an object in the object store.
-
-        Parameters
-        ----------
-        data : object
-            The Python object to be stored.
-        **kwargs : dict
-            Additional keyword arguments.
-
-        Returns
-        -------
-        ray.ObjectID
-            Ray object identifier to get the value by.
-        """
-        return data
-
-
 class PandasOnPythonDataframePartition(PandasDataframePartition):
     """
     Partition class with interface for pandas storage format and Python engine.
@@ -105,8 +40,6 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     Objects of this class are treated as immutable by partition manager
     subclasses. There is no logic for updating in-place.
     """
-
-    execution_wrapper = PythonWrapper
 
     def __init__(self, data, length=None, width=None, call_queue=None):
         if hasattr(data, "copy"):

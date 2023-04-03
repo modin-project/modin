@@ -3314,11 +3314,10 @@ class PandasDataframe(ClassLogger):
                 )
             return operator(df.groupby(by, **kwargs))
 
-        # breakpoint()
         # If there's only one row partition can simply apply groupby row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:
             return self.apply_full_axis(axis=1, func=apply_func)
-        # breakpoint()
+
         new_partitions = self._apply_func_to_range_partitioning(
             key_column=by[0],
             func=apply_func,

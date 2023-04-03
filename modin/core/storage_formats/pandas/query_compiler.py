@@ -2803,8 +2803,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     agg_kwargs=agg_kwargs,
                     drop=drop,
                 )
-            except NotImplementedError:
-                pass
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
+                    + "Falling back to a TreeReduce implementation."
+                )
 
         _, internal_by = self._groupby_internal_columns(by, drop)
 
@@ -2871,8 +2874,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     agg_kwargs=agg_kwargs,
                     drop=drop,
                 )
-            except NotImplementedError:
-                pass
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
+                    + "Falling back to a TreeReduce implementation."
+                )
 
         result = self._groupby_dict_reduce(
             by=by,
@@ -3024,7 +3030,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         how="axis_wise",
     ):
         if Engine.get() == "Python":
-            raise NotImplementedError("Reshuffling groupby is not implemented for python engine (see gh-#)")
+            raise NotImplementedError(
+                "Reshuffling groupby is not implemented for python engine (see gh-#)"
+            )
 
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3053,7 +3061,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
         # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
-        if self._modin_frame._dtypes is not None and any(dtype == "category" for dtype in self.dtypes[by].values):
+        if self._modin_frame._dtypes is not None and any(
+            dtype == "category" for dtype in self.dtypes[by].values
+        ):
             raise NotImplementedError(
                 "Reshuffling groupby is not yet supported when grouping on a categorical column."
             )
@@ -3063,7 +3073,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if is_transform:
             ErrorMessage.missmatch_with_pandas(
                 operation="reshuffling groupby",
-                message="the order of rows may be shuffled for the result"
+                message="the order of rows may be shuffled for the result",
             )
 
         if isinstance(agg_func, dict):
@@ -3084,7 +3094,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
         result = obj._modin_frame.groupby(
-            axis=axis, by=by, operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs), **groupby_kwargs
+            axis=axis,
+            by=by,
+            operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)
 
@@ -3127,8 +3140,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}. " +
-                    "Falling back to a full-axis implementation."
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}. "
+                    + "Falling back to a full-axis implementation."
                 )
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):

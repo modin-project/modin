@@ -253,7 +253,6 @@ def split_partitions_using_pivots_for_sort(
     if not ascending and is_numeric_column:
         # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
         pivots = pivots[::-1]
-    # breakpoint()
     key = kwargs.pop("key", None)
     na_index = df[column].isna()
     na_rows = df[na_index]

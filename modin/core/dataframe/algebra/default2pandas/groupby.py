@@ -17,7 +17,8 @@ from .default import DefaultMethod
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
-# Defines a set of string names of functions that are executed in a transform-way in groupby 
+
+# Defines a set of string names of functions that are executed in a transform-way in groupby
 from pandas.core.groupby.base import transformation_kernels
 from typing import Any
 
@@ -37,7 +38,7 @@ class GroupBy:
     ]
 
     @staticmethod
-    def is_transformation_kernel(agg_func : Any) -> bool:
+    def is_transformation_kernel(agg_func: Any) -> bool:
         """
         Check whether a passed aggregation function is a transformation.
 

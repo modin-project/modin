@@ -143,7 +143,6 @@ def test_mixed_dtypes_groupby(as_index):
         eval_min(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
         eval_ndim(modin_groupby, pandas_groupby)
-        # breakpoint()
         eval_cumsum(modin_groupby, pandas_groupby)
         eval_general(
             modin_groupby,
@@ -997,10 +996,12 @@ def test_multi_column_groupby():
     with pytest.raises(KeyError):
         modin_df.groupby(by, axis=1).count()
 
+
 def sort_index_if_experimental_groupby(*dfs):
     if ExperimentalGroupbyImpl.get():
         return tuple(df.sort_index() for df in dfs)
     return dfs
+
 
 def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
@@ -1027,11 +1028,19 @@ def eval_ndim(modin_groupby, pandas_groupby):
 
 
 def eval_cumsum(modin_groupby, pandas_groupby, axis=0):
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis)))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis)
+        )
+    )
 
 
 def eval_cummax(modin_groupby, pandas_groupby, axis=0):
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis)))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis)
+        )
+    )
 
 
 def eval_apply(modin_groupby, pandas_groupby, func):
@@ -1043,7 +1052,11 @@ def eval_dtypes(modin_groupby, pandas_groupby):
 
 
 def eval_cummin(modin_groupby, pandas_groupby, axis=0):
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis)))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis)
+        )
+    )
 
 
 def eval_prod(modin_groupby, pandas_groupby):
@@ -1099,17 +1112,31 @@ def eval_median(modin_groupby, pandas_groupby):
 
 
 def eval_cumprod(modin_groupby, pandas_groupby, axis=0):
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumprod(), pandas_groupby.cumprod()))
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis)))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumprod(), pandas_groupby.cumprod()
+        )
+    )
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis)
+        )
+    )
 
 
 def eval_transform(modin_groupby, pandas_groupby, func):
-    df_equals(*sort_index_if_experimental_groupby(modin_groupby.transform(func), pandas_groupby.transform(func)))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.transform(func), pandas_groupby.transform(func)
+        )
+    )
 
 
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
-        *sort_index_if_experimental_groupby(modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill"))
+        *sort_index_if_experimental_groupby(
+            modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
+        )
     )
 
 
@@ -1618,7 +1645,7 @@ def test_agg_exceptions(operation):
 
         if GroupBy.is_transformation_kernel(operation):
             df1, df2 = sort_index_if_experimental_groupby(df1, df2)
-        
+
         df_equals(df1, df2)
 
     eval_aggregation(*create_test_dfs(data), operation=operation, comparator=comparator)
@@ -1786,7 +1813,7 @@ def test_unknown_groupby(columns):
         lambda df: df.size(),
         lambda df: df.quantile(),
         lambda df: df.dtypes,
-        pytest.param(lambda df: df.apply(lambda df: df.sum()), id="apply_sum"),
+        lambda df: df.apply(lambda df: df.sum()),
         pytest.param(
             lambda df: df.apply(lambda df: pandas.Series([1, 2, 3, 4])),
             marks=pytest.mark.skip("See modin issue #2511"),
@@ -1912,7 +1939,6 @@ def test_multi_column_groupby_different_partitions(
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
-    # breakpoint()
     eval_general(
         md_grp,
         pd_grp,
@@ -2043,7 +2069,7 @@ def test_handle_as_index(
 
     pd_by = internal_by + external_by
     md_by = internal_by + [pd.Series(ser) for ser in external_by]
-    # breakpoint()
+
     grp_result = pd.DataFrame(df).groupby(md_by, as_index=True)
     grp_reference = df.groupby(pd_by, as_index=False)
 
@@ -2077,7 +2103,7 @@ def test_handle_as_index(
             drop=len(internal_by) != 0,
             inplace=True,
         )
-    # breakpoint()
+
     df_equals(agg_result, agg_reference)
 
 

@@ -35,7 +35,7 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
         Whether or not the virtual partition encompasses the whole axis.
     """
 
-    def __init__(self, list_of_blocks, full_axis: bool = True, get_ip: bool = False):
+    def __init__(self, list_of_blocks, full_axis: bool = True):
         if not full_axis:
             raise NotImplementedError(
                 "Pandas on Python execution requires full-axis partitions."

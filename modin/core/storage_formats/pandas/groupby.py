@@ -98,8 +98,8 @@ class GroupbyReduceImpl:
                     )
                 except NotImplementedError as e:
                     ErrorMessage.warn(
-                        f"Can't use experimental reshuffling groupby implementation because of: {e}. " +
-                        "Falling back to a TreeReduce implementation."
+                        f"Can't use experimental reshuffling groupby implementation because of: {e}. "
+                        + "Falling back to a TreeReduce implementation."
                     )
             return map_reduce_method(query_compiler, *args, **kwargs)
 
