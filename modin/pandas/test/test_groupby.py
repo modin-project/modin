@@ -137,6 +137,10 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.sample(random_state=1)
+        )
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.ewm(com=0.5).std())
         eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
@@ -902,6 +906,20 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.sample(random_state=1)
+        )
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.ewm(com=0.5).std())
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.is_monotonic_decreasing
+        )
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.is_monotonic_increasing
+        )
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.nlargest())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.nsmallest())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.unique())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.dtype)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -2270,7 +2288,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
             df = pd.DataFrame(**self._df_kwargs)
             try:
                 # The frame would stop being lazy once index computation is triggered
-                df._query_compiler._modin_frame._index_cache = None
+                df._query_compiler._modin_frame.set_index_cache(None)
             except AttributeError:
                 pytest.skip(
                     reason="Selected execution doesn't support deferred indices."

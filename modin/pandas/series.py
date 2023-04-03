@@ -37,7 +37,7 @@ from modin.utils import (
 from modin.config import IsExperimental, PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
-from .utils import from_pandas, is_scalar, _doc_binary_op
+from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
 from .accessor import CachedAccessor, SparseAccessor
 
 
@@ -637,6 +637,7 @@ class Series(BasePandasDataset):
         """
         Invoke function on values of Series.
         """
+        func = cast_function_modin2pandas(func)
         self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
         # each one separately to determine the correct return type. In the case of

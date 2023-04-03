@@ -105,7 +105,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnUnidistIO.to_pickle(qc, **kwargs)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
             kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
             df.to_pickle(**kwargs)
