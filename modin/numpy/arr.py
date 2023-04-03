@@ -1135,9 +1135,7 @@ class array(object):
             raise ValueError(
                 f"all the input arrays must have same number of dimensions, but the array at index 0 has 1 dimension(s) and the array at index 1 has {values._ndim} dimension(s)"
             )
-        if (axis ^ 1 < len(values.shape)) and self.shape[axis ^ 1] != values.shape[
-            axis ^ 1
-        ]:
+        if (axis ^ 1 < values._ndim) and self.shape[axis ^ 1] != values.shape[axis ^ 1]:
             raise ValueError(
                 f"all the input array dimensions except for the concatenation axis must match exactly, but along dimension {axis ^ 1}, the array at index 0 has size {self.shape[axis^1]} and the array at index 1 has size {values.shape[axis^1]}"
             )
