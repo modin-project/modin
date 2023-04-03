@@ -172,7 +172,8 @@ class DataFrame(BasePandasDataset):
             if index is not None:
                 self.set_axis(index, axis=0, inplace=True)
             if dtype is not None:
-                self.astype(dtype, copy=False)
+                casted_obj = self.astype(dtype, copy=False)
+                self._query_compiler = casted_obj._query_compiler
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
