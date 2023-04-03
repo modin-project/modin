@@ -226,8 +226,8 @@ def split_partitions_using_pivots_for_sort(
 
     Parameters
     ----------
-    modin_frame : PandasDataframe
-        The Modin Dataframe calling this function.
+    dtypes : pandas.Series
+        The Modin Dataframe' dtypes.
     df : pandas.Dataframe
         The partition to split.
     column : str

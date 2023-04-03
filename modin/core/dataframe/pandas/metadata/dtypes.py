@@ -89,6 +89,7 @@ class ModinDtypes:
     def __getattr__(self, name):
         """
         Redirect access to non-existent attributes to the internal representation.
+
         This is necessary so that objects of this class in most cases mimic the behavior
         of the ``pandas.Series``. The main limitations of the current approach are type
         checking and the use of this object where pandas dtypes are supposed to be used.
@@ -124,22 +125,22 @@ class ModinDtypes:
             idx_cache = idx_cache.copy()
         return ModinDtypes(idx_cache)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # noqa: GL08
         if not self.is_materialized:
             self.get()
         return self._value.__getitem__(key)
 
-    def __setitem__(self, key, item):
+    def __setitem__(self, key, item):  # noqa: GL08
         if not self.is_materialized:
             self.get()
         self._value.__setitem__(key, item)
 
-    def __iter__(self):
+    def __iter__(self):  # noqa: GL08
         if not self.is_materialized:
             self.get()
         return iter(self._value)
 
-    def __contains__(self, key):
+    def __contains__(self, key):  # noqa: GL08
         if not self.is_materialized:
             self.get()
         return key in self._value
