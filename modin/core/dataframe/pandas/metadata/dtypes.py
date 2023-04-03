@@ -138,3 +138,8 @@ class ModinDtypes:
         if not self.is_materialized:
             self.get()
         return iter(self._value)
+
+    def __contains__(self, key):
+        if not self.is_materialized:
+            self.get()
+        return key in self._value
