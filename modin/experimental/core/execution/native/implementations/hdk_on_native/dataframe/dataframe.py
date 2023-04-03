@@ -242,6 +242,29 @@ class HdkOnNativeDataframe(PandasDataframe):
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
 
+    def copy(self):
+        """
+        Copy this DataFrame.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            A copy of this DataFrame.
+        """
+        return self.__constructor__(
+            partitions=self._partitions,
+            index=self.copy_index_cache(),
+            columns=self.copy_columns_cache(),
+            row_lengths=self._row_lengths_cache,
+            column_widths=self._column_widths_cache,
+            dtypes=self._dtypes.copy() if self._dtypes is not None else None,
+            op=self._op,
+            index_cols=self._index_cols,
+            uses_rowid=self._uses_rowid,
+            force_execution_mode=self._force_execution_mode,
+            has_unsupported_data=self._has_unsupported_data,
+        )
+
     def id_str(self):
         """
         Return string identifier of the frame.
@@ -379,7 +402,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if not isinstance(self._op, FrameNode):
+        if self._partitions is None or not isinstance(self._op, FrameNode):
             return False
         return all(p.arrow_table is not None for p in self._partitions.flatten())
 
@@ -760,26 +783,18 @@ class HdkOnNativeDataframe(PandasDataframe):
         columns = col_dtypes.keys()
         new_dtypes = self._dtypes.copy()
         for column in columns:
-            dtype = col_dtypes[column]
-            if (
-                not isinstance(dtype, type(self._dtypes[column]))
-                or dtype != self._dtypes[column]
-            ):
-                # Update the new dtype series to the proper pandas dtype
-                try:
-                    new_dtype = np.dtype(dtype)
-                except TypeError:
-                    new_dtype = dtype
+            try:
+                old_dtype = np.dtype(self._dtypes[column])
+                new_dtype = np.dtype(col_dtypes[column])
+            except TypeError:
+                raise NotImplementedError(
+                    f"Type conversion {self._dtypes[column]} -> {col_dtypes[column]}"
+                )
+            if old_dtype != new_dtype:
+                # NotImplementedError is raised if the type cast is not supported.
+                _get_common_dtype(new_dtype, self._dtypes[column])
+                new_dtypes[column] = new_dtype
 
-                if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtypes[column] = np.dtype("int64")
-                elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtypes[column] = np.dtype("float64")
-                # We cannot infer without computing the dtype if
-                elif isinstance(new_dtype, str) and new_dtype == "category":
-                    raise NotImplementedError("unsupported type conversion")
-                else:
-                    new_dtypes[column] = new_dtype
         exprs = self._index_exprs()
         for col in self.columns:
             col_expr = self.ref(col)
@@ -981,8 +996,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         if (
             len(other_modin_frames) == 0
             or len(self.columns) == 0
-            or any((len(f.columns) != len(self.columns) for f in other_modin_frames))
-            or any((set(f._dtypes) != set(self._dtypes) for f in other_modin_frames))
+            or all(f._has_arrow_table() for f in ([self] + other_modin_frames))
+            or any(len(f.columns) != len(self.columns) for f in other_modin_frames)
+            or any(set(f._dtypes) != set(self._dtypes) for f in other_modin_frames)
         ):
             return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
 

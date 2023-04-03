@@ -1054,10 +1054,19 @@ def test_asof_large(where):
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.xfail(
-    StorageFormat.get() == "Hdk",
-    reason="https://github.com/intel-ai/hdk/issues/186",
+@pytest.mark.parametrize(
+    "data",
+    [
+        test_data["int_data"],
+        pytest.param(
+            test_data["float_nan_data"],
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not raise IntCastingNaNError",
+            ),
+        ),
+    ],
+    ids=test_data_keys,
 )
 def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
