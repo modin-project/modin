@@ -2254,7 +2254,7 @@ class PandasDataframe(ClassLogger):
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
         new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self._dtypes
+            new_partitions, *new_axes, *new_lengths, self.copy_dtypes_cache()
         )
         if kwargs.get("ignore_index", False):
             new_modin_frame._propagate_index_objs(axis=0)
