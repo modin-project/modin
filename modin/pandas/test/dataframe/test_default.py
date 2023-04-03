@@ -1219,7 +1219,7 @@ def test_setattr_axes():
             # In BaseOnPython, setting columns raises a warning because get_axis
             #  defaults to pandas.
             warnings.simplefilter("error")
-        if StorageFormat.get() != "Hdk":  # Not yet supported
+        if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
             df.index = ["foo", "bar"]
             # Check that ensure_index was called
             pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
