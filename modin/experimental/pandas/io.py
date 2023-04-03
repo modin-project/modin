@@ -24,7 +24,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental
-from ...core.storage_formats import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 
 
 def read_sql(
