@@ -3021,8 +3021,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_args,
         agg_kwargs,
         drop=False,
-        how=None,
-        _how="axis_wise",
+        how="axis_wise",
     ):
         if Engine.get() == "Python":
             raise NotImplementedError("Reshuffling groupby is not implemented for python engine (see gh-#)")
@@ -3033,7 +3032,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # because of the inability to process empty groupby natively.
         if len(self.columns) == 0 or len(self.index) == 0:
             return super().groupby_agg(
-                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, _how, drop
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
         if isinstance(by, type(self)) and drop:
@@ -3052,12 +3051,26 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 "Reshuffling groupby is only supported when grouping on a column(s) of the same frame."
             )
 
-        if any(dtype == "category" for dtype in self.dtypes[by].values):
+        # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
+        # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
+        if self._modin_frame._dtypes is not None and any(dtype == "category" for dtype in self.dtypes[by].values):
             raise NotImplementedError(
                 "Reshuffling groupby is not yet supported when grouping on a categorical column."
             )
-        # breakpoint()
+
+        is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
+
+        if is_transform:
+            ErrorMessage.missmatch_with_pandas(
+                operation="reshuffling groupby",
+                message="the order of rows may be shuffled for the result"
+            )
+
         if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+
             subset = by + list(agg_func.keys())
             # extracting unique values; no we can't use np.unique here as it would
             # convert a list of tuples to a 2D matrix and so mess up the result
@@ -3065,26 +3078,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             obj = self.getitem_column_array(subset)
         else:
             obj = self
-        # breakpoint()
-        if how is None or isinstance(agg_func, dict):
 
-            def func(grp):
-                return grp.agg(agg_func, *agg_args, **agg_kwargs)
-
-        elif how == "direct":
-
-            def func(grp):
-                return agg_func(grp, *agg_args, **agg_kwargs)
-
-        else:
-            raise RuntimeError("wtf?")
+        agg_func = functools.partial(
+            GroupByDefault.get_aggregation_method(how), func=agg_func
+        )
 
         result = obj._modin_frame.groupby(
-            axis=axis, by=by, operator=func, **groupby_kwargs
+            axis=axis, by=by, operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs), **groupby_kwargs
         )
         result_qc = self.__constructor__(result)
 
-        if not groupby_kwargs.get("as_index", True):
+        if not is_transform and not groupby_kwargs.get("as_index", True):
             return result_qc.reset_index(drop=True)
 
         return result_qc
@@ -3109,39 +3113,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        # is_order_dependent_function = how == "transform1" or (
-        #     isinstance(agg_func, str)
-        #     and agg_func in ("cumsum", "cummax", "cummin", "cumprod", "shift", "fillna")
-        # )
-        is_order_dependent_function = False
-
-        if not isinstance(agg_func, dict):
-            agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
-            )
-
         if ExperimentalGroupbyImpl.get():
-            if not is_order_dependent_function:
-                try:
-                    return self._groupby_shuffle(
-                        by=by,
-                        agg_func=agg_func,
-                        axis=axis,
-                        groupby_kwargs=groupby_kwargs,
-                        agg_args=agg_args,
-                        agg_kwargs=agg_kwargs,
-                        drop=drop,
-                        how="direct",
-                        _how=how,
-                    )
-                except NotImplementedError:
-                    pass
-            else:
-                print("order dependent func")
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func=agg_func,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                    how=how,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}. " +
+                    "Falling back to a full-axis implementation."
+                )
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+            )
+
+        if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+        else:
+            agg_func = functools.partial(
+                GroupByDefault.get_aggregation_method(how), func=agg_func
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,

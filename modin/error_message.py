@@ -107,6 +107,10 @@ class ErrorMessage(object):
         cls.single_warning(
             f"`{operation}` implementation has mismatches with pandas:\n{message}."
         )
+    
+    @classmethod
+    def warn(cls, message : str) -> None:
+        warnings.warn(message)
 
     @classmethod
     def not_initialized(cls, engine: str, code: str) -> None:

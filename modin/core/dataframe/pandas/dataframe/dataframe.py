@@ -3308,9 +3308,11 @@ class PandasDataframe(ClassLogger):
             by = [by]
 
         def apply_func(df):
-            # breakpoint()
-            kwargs.pop("observed")
-            return operator(df.groupby(by, observed=True, **kwargs))
+            if any(dtype == "category" for dtype in df.dtypes[by].values):
+                raise NotImplementedError(
+                    "Reshuffling groupby is not yet supported when grouping on a categorical column."
+                )
+            return operator(df.groupby(by, **kwargs))
 
         # breakpoint()
         # If there's only one row partition can simply apply groupby row-wise without the need to reshuffle

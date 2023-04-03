@@ -137,7 +137,7 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
         )
-        # eval_shift(modin_groupby, pandas_groupby)
+        eval_shift(modin_groupby, pandas_groupby)
         eval_mean(modin_groupby, pandas_groupby)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -1612,7 +1612,16 @@ def test_agg_exceptions(operation):
     }
 
     data = {**data1, **data2}
-    eval_aggregation(*create_test_dfs(data), operation=operation)
+
+    def comparator(df1, df2):
+        from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+
+        if GroupBy.is_transformation_kernel(operation):
+            df1, df2 = sort_index_if_experimental_groupby(df1, df2)
+        
+        df_equals(df1, df2)
+
+    eval_aggregation(*create_test_dfs(data), operation=operation, comparator=comparator)
 
 
 @pytest.mark.skip(
