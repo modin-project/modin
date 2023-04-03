@@ -430,6 +430,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: ./.github/workflows/upload-coverage
@@ -639,6 +640,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
@@ -748,6 +750,7 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
       - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
@@ -922,6 +925,8 @@ jobs:
         if: matrix.engine == 'ray'
       - run: python -m pytest ${{matrix.test-task}}
         if: matrix.test-task != 'modin/pandas/test/test_io.py'
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest modin/pandas/test/test_groupby.py
+        if: matrix.test-task == 'modin/pandas/test/test_groupby.py'
       - timeout-minutes: 30
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test-task == 'modin/pandas/test/test_io.py'
