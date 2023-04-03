@@ -991,6 +991,8 @@ class BasePandasDataset(ClassLogger):
                     if col_dtypes[col] != frame_dtypes[col]:
                         copy = True
                         break
+            else:
+                copy = True
 
         if copy:
             new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
