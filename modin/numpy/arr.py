@@ -302,7 +302,7 @@ class array(object):
         -------
         int, optional
             Axis to apply the function over (None, 0, or 1).
-        
+
         Raises
         -------
         numpy.AxisError
