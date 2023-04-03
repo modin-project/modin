@@ -505,6 +505,23 @@ def test_astype_errors(errors):
     eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
 
 
+@pytest.mark.parametrize("has_dtypes", [False, True])
+def test_astype_copy(has_dtypes):
+    data = [1]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    if not has_dtypes:
+        modin_df._query_compiler._modin_frame._dtypes = None
+    eval_general(modin_df, pandas_df, lambda df: df.astype(str, copy=False))
+
+    # trivial case where copying can be avoided, behavior should match pandas
+    s1 = pd.Series([1, 2])
+    if not has_dtypes:
+        modin_df._query_compiler._modin_frame._dtypes = None
+    s2 = s1.astype("int64", copy=False)
+    s2[0] = 10
+    df_equals(s1, s2)
+
+
 @pytest.mark.parametrize("dtypes_are_dict", [True, False])
 def test_astype_dict_or_series_multiple_column_partitions(dtypes_are_dict):
     # Test astype with a dtypes dict that is complex in that:
