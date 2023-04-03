@@ -47,9 +47,8 @@ def test_split_2d(axis):
     # Integer argument: split into N equal arrays along axis
     numpy_result = numpy.split(x, 2, axis=axis)
     modin_result = np.split(np.array(x), 2, axis=axis)
-    # Cannot zip because modin array does not implement __iter__
-    for i in range(len(numpy_result)):
-        numpy.testing.assert_array_equal(modin_result[i]._to_numpy(), numpy_result[i])
+    for modin_entry, numpy_entry in zip(modin_result, numpy_result):
+        numpy.testing.assert_array_equal(modin_entry._to_numpy(), numpy_entry)
     # List argument: split at specified indices
     idxs = [2, 3]
     numpy_result = numpy.split(x, idxs, axis=axis)
