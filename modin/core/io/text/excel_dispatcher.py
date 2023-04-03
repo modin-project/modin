@@ -127,7 +127,7 @@ class ExcelDispatcher(TextFileDispatcher):
             idx_of_header_end = sheet_block.index(end_of_row_tag) + len(end_of_row_tag)
             sheet_header_with_first_row = sheet_block[:idx_of_header_end]
 
-            if not kwargs["header"] is None:
+            if kwargs["header"] is not None:
                 # Reset the file pointer to begin at the end of the header information.
                 f.seek(idx_of_header_end)
                 sheet_header = sheet_header_with_first_row
