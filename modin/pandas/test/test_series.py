@@ -4464,7 +4464,13 @@ def test_cat_codes(data):
     df_equals(modin_result, pandas_result)
 
 
-def test_cat_codes_issue5650():
+@pytest.mark.parametrize(
+    "set_min_partition_size",
+    [1, 2],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_cat_codes_issue5650(set_min_partition_size):
     data = {"name": ["abc", "def", "ghi", "jkl"]}
     pandas_df = pandas.DataFrame(data)
     pandas_df = pandas_df.astype("category")

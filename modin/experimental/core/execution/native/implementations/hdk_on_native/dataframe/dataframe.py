@@ -1571,13 +1571,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         col_expr = self.ref(self.columns[-1])
         code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
-        exprs[None] = build_if_then_else(
+        col_name = MODIN_UNNAMED_SERIES_LABEL
+        exprs[col_name] = build_if_then_else(
             col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
 
         return self.__constructor__(
-            columns=Index([None]),
-            dtypes=pd.Series(self._dtypes[0], index=Index([None])),
+            columns=Index([col_name]),
+            dtypes=pd.Series(self._dtypes[0], index=Index([col_name])),
             op=TransformNode(self, exprs),
             index=self._index_cache,
             index_cols=self._index_cols,

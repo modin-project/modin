@@ -29,7 +29,7 @@ from modin.error_message import ErrorMessage
 import pandas
 from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_bool_dtype, is_integer_dtype
 from functools import wraps
 
 import numpy as np
@@ -667,8 +667,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def mod(self, other, **kwargs):
         def check_int(obj):
             if isinstance(obj, DFAlgQueryCompiler):
-                int_codes = np.typecodes["AllInteger"]
-                cond = all(t.char in int_codes for t in obj._modin_frame.dtypes)
+                cond = all(is_integer_dtype(t) for t in obj._modin_frame.dtypes)
             elif isinstance(obj, list):
                 cond = all(isinstance(i, int) for i in obj)
             else:
@@ -705,15 +704,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "ne", **kwargs)
 
     def __and__(self, other, **kwargs):
-        return self._logic(other, "and", **kwargs)
+        return self._bool_op(other, "and", **kwargs)
 
     def __or__(self, other, **kwargs):
-        return self._logic(other, "or", **kwargs)
+        return self._bool_op(other, "or", **kwargs)
 
-    def _logic(self, other, op, **kwargs):  # noqa: GL08
+    def _bool_op(self, other, op, **kwargs):  # noqa: GL08
         def check_bool(obj):
             if isinstance(obj, DFAlgQueryCompiler):
-                cond = all(t.char == "?" for t in obj._modin_frame.dtypes)
+                cond = all(is_bool_dtype(t) for t in obj._modin_frame.dtypes)
             elif isinstance(obj, list):
                 cond = all(isinstance(i, bool) for i in obj)
             else:
