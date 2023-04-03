@@ -7,9 +7,7 @@ runs:
   steps:
     - run: |
         COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
-        if [ -f .coverage ]; then
-          mv .coverage .coverage.${COVERAGE_UUID}
-        fi
+        mv .coverage .coverage.${COVERAGE_UUID}
       id: coverage-uuid
       shell: bash
     - uses: actions/upload-artifact@v3.1.2

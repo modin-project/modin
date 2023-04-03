@@ -29,7 +29,7 @@ from modin.error_message import ErrorMessage
 import pandas
 from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_bool_dtype, is_integer_dtype
 from functools import wraps
 
 import numpy as np
@@ -528,6 +528,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         downcast=None,
     ):
         assert not inplace, "inplace=True should be handled on upper level"
+
+        if (
+            isinstance(value, dict)
+            and len(self._modin_frame.columns) == 1
+            and self._modin_frame.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
+            raise NotImplementedError("Series fillna with dict value")
+
         new_frame = self._modin_frame.fillna(
             value=value,
             method=method,
@@ -657,11 +665,19 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "mul", **kwargs)
 
     def mod(self, other, **kwargs):
-        int_codes = np.typecodes["AllInteger"]
-        if all(t.char in int_codes for t in self._modin_frame.dtypes):
-            return self._bin_op(other, "mod", **kwargs)
-        else:
-            raise NotImplementedError("Non-integer operands in modulo operation")
+        def check_int(obj):
+            if isinstance(obj, DFAlgQueryCompiler):
+                cond = all(is_integer_dtype(t) for t in obj._modin_frame.dtypes)
+            elif isinstance(obj, list):
+                cond = all(isinstance(i, int) for i in obj)
+            else:
+                cond = isinstance(obj, int)
+            if not cond:
+                raise NotImplementedError("Non-integer operands in modulo operation")
+
+        check_int(self)
+        check_int(other)
+        return self._bin_op(other, "mod", **kwargs)
 
     def floordiv(self, other, **kwargs):
         return self._bin_op(other, "floordiv", **kwargs)
@@ -688,10 +704,25 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "ne", **kwargs)
 
     def __and__(self, other, **kwargs):
-        return self._bin_op(other, "and", **kwargs)
+        return self._bool_op(other, "and", **kwargs)
 
     def __or__(self, other, **kwargs):
-        return self._bin_op(other, "or", **kwargs)
+        return self._bool_op(other, "or", **kwargs)
+
+    def _bool_op(self, other, op, **kwargs):  # noqa: GL08
+        def check_bool(obj):
+            if isinstance(obj, DFAlgQueryCompiler):
+                cond = all(is_bool_dtype(t) for t in obj._modin_frame.dtypes)
+            elif isinstance(obj, list):
+                cond = all(isinstance(i, bool) for i in obj)
+            else:
+                cond = isinstance(obj, bool)
+            if not cond:
+                raise NotImplementedError("Non-boolean operands in logic operation")
+
+        check_bool(self)
+        check_bool(other)
+        return self._bin_op(other, op, **kwargs)
 
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)

@@ -105,7 +105,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnDaskIO.to_pickle(qc, **kwargs)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
             # dask doesn't make a copy of kwargs on serialization;
             # so take a copy ourselves, otherwise the error is:
