@@ -25,6 +25,7 @@ import numpy as np
 from pandas.io.common import is_url, is_fsspec_url
 
 from modin.logging import ClassLogger
+from modin.config import ExperimentalAsyncReadMode
 
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -154,6 +155,9 @@ class FileDispatcher(ClassLogger):
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
+        if not ExperimentalAsyncReadMode.get():
+            frame = query_compiler._modin_frame
+            frame._partition_mgr_cls.wait_partitions(frame._partitions.flatten())
         return query_compiler
 
     @classmethod
