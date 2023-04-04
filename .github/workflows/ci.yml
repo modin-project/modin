@@ -668,16 +668,7 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["python"]
-        commands: [
-          [
-              "python -c 'print(0)'",
-              "python -c 'print(1)'"
-          ],
-          [
-             "python -c 'print(2)'",
-             "python -c 'print(3)'"
-          ]
-        ]
+        commands: ["python -c 'print(0)'", "python -c 'print(1)'"], ["python -c 'print(2)'", "python -c 'print(3)'"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       # Only test reading from SQL server and postgres on ubuntu for now.
@@ -728,7 +719,7 @@ jobs:
       - name: Run tests
         run: |
           echo "${{ matrix.commands }}"
-          for command in "${{ matrix.commands[\@] }}"; do
+          for command in "${{ matrix.commands }}"; do
             eval "$command"
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
