@@ -1327,7 +1327,7 @@ class BasePandasDataset(ClassLogger):
                         getattr(self, axis)
                     )
                     if len(non_existent):
-                        raise ValueError(f"labels {non_existent} not contained in axis")
+                        raise KeyError(f"labels {non_existent} not contained in axis")
                 else:
                     axes[axis] = [
                         obj for obj in axes[axis] if obj in getattr(self, axis)

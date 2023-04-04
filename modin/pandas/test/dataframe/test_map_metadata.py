@@ -639,6 +639,10 @@ def test_convert_dtypes_single_partition(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="HDK does not support columns with different types",
+)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -731,10 +735,10 @@ def test_drop():
     df_equals(modin_simple.drop([0, 1, 3], axis=0), simple.loc[[2], :])
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
-    pytest.raises(ValueError, modin_simple.drop, 5)
-    pytest.raises(ValueError, modin_simple.drop, "C", 1)
-    pytest.raises(ValueError, modin_simple.drop, [1, 5])
-    pytest.raises(ValueError, modin_simple.drop, ["A", "C"], 1)
+    pytest.raises(KeyError, modin_simple.drop, 5)
+    pytest.raises(KeyError, modin_simple.drop, "C", 1)
+    pytest.raises(KeyError, modin_simple.drop, [1, 5])
+    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], 1)
 
     # errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)
