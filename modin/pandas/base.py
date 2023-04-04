@@ -986,7 +986,7 @@ class BasePandasDataset(ClassLogger):
         if not copy:
             # If the new types match the old ones, then copying can be avoided
             if self._query_compiler._modin_frame.has_materialized_dtypes:
-                frame_dtypes = self._query_compiler._modin_frame._dtypes
+                frame_dtypes = self._query_compiler._modin_frame.dtypes
                 for col in col_dtypes:
                     if col_dtypes[col] != frame_dtypes[col]:
                         copy = True

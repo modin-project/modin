@@ -1183,9 +1183,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new PandasDataframe with reordered columns and/or rows.
         """
-        new_dtypes = None
-        if self.has_dtypes_cache:
-            new_dtypes = self.copy_dtypes_cache()
+        new_dtypes = self.copy_dtypes_cache()
         if row_positions is not None:
             # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
             # in order to use the cached `row_lengths` values for the new frame.
@@ -3298,7 +3296,7 @@ class PandasDataframe(ClassLogger):
             new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
             if self.has_materialized_dtypes and all(
-                o.has_materialized_dtypes is not None for o in others
+                o.has_materialized_dtypes for o in others
             ):
                 new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
             # If we have already cached the width of each column in at least one
