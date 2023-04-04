@@ -15,7 +15,6 @@
 
 import pandas
 import re
-import sys
 import warnings
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -53,12 +52,6 @@ class ExcelDispatcher(TextFileDispatcher):
                 reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
                 + "use Modin's parallel implementation.",
-                **kwargs
-            )
-        if sys.version_info < (3, 7):
-            return cls.single_worker_read(
-                io,
-                reason="Python 3.7 or higher required for parallel `read_excel`.",
                 **kwargs
             )
 
@@ -132,14 +125,27 @@ class ExcelDispatcher(TextFileDispatcher):
             while end_of_row_tag not in sheet_block:
                 sheet_block += f.read(EXCEL_READ_BLOCK_SIZE)
             idx_of_header_end = sheet_block.index(end_of_row_tag) + len(end_of_row_tag)
-            sheet_header = sheet_block[:idx_of_header_end]
-            # Reset the file pointer to begin at the end of the header information.
-            f.seek(idx_of_header_end)
+            sheet_header_with_first_row = sheet_block[:idx_of_header_end]
+
+            if kwargs["header"] is not None:
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_end)
+                sheet_header = sheet_header_with_first_row
+            else:
+                start_of_row_tag = b"<row"
+                idx_of_header_start = sheet_block.index(start_of_row_tag)
+                sheet_header = sheet_block[:idx_of_header_start]
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_start)
+
             kwargs["_header"] = sheet_header
             footer = b"</sheetData></worksheet>"
             # Use openpyxml to parse the data
             reader = WorksheetReader(
-                ws, BytesIO(sheet_header + footer), ex.shared_strings, False
+                ws,
+                BytesIO(sheet_header_with_first_row + footer),
+                ex.shared_strings,
+                False,
             )
             # Attach cells to the worksheet
             reader.bind_cells()
@@ -147,7 +153,10 @@ class ExcelDispatcher(TextFileDispatcher):
                 ws, kwargs.get("convert_float", True)
             )
             # Extract column names from parsed data.
-            column_names = pandas.Index(data[0])
+            if kwargs["header"] is None:
+                column_names = pandas.RangeIndex(len(data[0]))
+            else:
+                column_names = pandas.Index(data[0])
             index_col = kwargs.get("index_col", None)
             # Remove column names that are specified as `index_col`
             if index_col is not None:

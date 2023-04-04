@@ -1885,6 +1885,14 @@ class TestExcel:
             io="modin/pandas/test/data/every_other_row_nan.xlsx",
         )
 
+    @check_file_leaks
+    def test_read_excel_header_none(self):
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+            header=None,
+        )
+
     @pytest.mark.parametrize(
         "sheet_name",
         [
