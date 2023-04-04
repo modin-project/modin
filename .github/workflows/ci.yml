@@ -668,22 +668,14 @@ jobs:
         python-version: ["3.8"]
         engine: ["python"]
         command:
-          - Array=("echo 'Command 1: Step 1'" "echo 'Command 1: Step 2'")
-          - Array=("echo 'Command 2: Step 1'" "echo 'Command 2: Step 2'")
-          - Array=("echo 'Command 3: Step 1'" "echo 'Command 3: Step 2'")
+          - "python -c 'print(0)'; python -c 'print(1)'"
+          - "python -c 'print(2)'; python -c 'print(3)'"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Run commands
-        run: |
-          for cmd in "${{ matrix.command[*] }}"; do
-            echo "Running command: $cmd"
-            for subcmd in "${!cmd[@]}"; do
-              echo "Running subcommand: ${cmd[$subcmd]}"
-              ${cmd[$subcmd]}
-            done
-          done
+        run: eval "${{ matrix.command }}"
 
   # test-experimental:
   #   needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
