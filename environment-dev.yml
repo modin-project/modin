@@ -11,20 +11,20 @@ dependencies:
 #  - grpcio!=1.46.*
 #  - dask>=2.22.0
 #  - distributed>=2.22.0
-#  - fsspec
-#  - xarray
+  - fsspec
+  - xarray
 #  - Jinja2
 #  - scipy
 #  - pip
 #  - s3fs>=2021.8
-#  - feather-format
-#  - lxml
-#  - openpyxl<3.1.0
-#  - xlrd
+  - feather-format
+  - lxml
+  - openpyxl<3.1.0
+  - xlrd
   - matplotlib
-#  - sqlalchemy>=1.4.0,<1.4.46
+  - sqlalchemy>=1.4.0,<1.4.46
 #  - pandas-gbq
-#  - pytables
+  - pytables
   - msgpack-python
   - psutil
   - pytest>=6.0.1
@@ -43,7 +43,7 @@ dependencies:
   # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206  
 #  - mypy!=0.990
 #  - pandas-stubs
-#  - fastparquet<2023.1.0
+  - fastparquet<2023.1.0
   # for release script
 #  - pygit2
   # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
