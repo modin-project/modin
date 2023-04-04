@@ -667,15 +667,13 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["python"]
-        command:
-          - "ci/run_tests1.sh"
-          - "ci/run_tests2.sh"
+        command: ["ci/run_tests1.sh", "ci/run_tests2.sh"]
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Test
-        run: ${{matrix.command}}
+        run: eval ${{matrix.command}}
 
 
   # test-experimental:
