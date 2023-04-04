@@ -35,7 +35,6 @@ from .calcite_algebra import (
 from modin.error_message import ErrorMessage
 import json
 import numpy as np
-import pandas
 
 
 def _warn_if_unsigned(dtype):  # noqa: GL08
@@ -258,7 +257,7 @@ class CalciteSerializer:
             Serialized literal.
         """
         val = literal.val
-        if pandas.isna(val):
+        if val is None:
             return {
                 "literal": None,
                 "type": "BIGINT",
@@ -290,6 +289,17 @@ class CalciteSerializer:
                 "type_precision": precision,
             }
         if type(val) in (float, np.float64):
+            if np.isnan(val):
+                return {
+                    "literal": None,
+                    "type": "DOUBLE",
+                    "target_type": "DOUBLE",
+                    "scale": 0,
+                    "precision": 19,
+                    "type_scale": 0,
+                    "type_precision": 19,
+                }
+
             str_val = f"{val:f}"
             precision = len(str_val) - 1
             scale = precision - str_val.index(".")
