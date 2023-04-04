@@ -728,7 +728,7 @@ jobs:
       - name: Run tests
         run: |
           echo "${{ matrix.commands }}"
-          for command in ${{ matrix.commands[matrix.index] }}; do
+          for command in "${{ matrix.commands[\@] }}"; do
             eval "$command"
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
