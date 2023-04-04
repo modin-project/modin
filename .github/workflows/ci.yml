@@ -659,7 +659,6 @@ jobs:
   #     - uses: ./.github/workflows/upload-coverage
 
   test-all:
-    # needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -669,62 +668,19 @@ jobs:
         python-version: ["3.8"]
         engine: ["python"]
         command:
-          - command1
-            - echo "Command 1: Step 1"
-            - echo "Command 1: Step 2"
-          - command2
-            - echo "Command 2: Step 1"
-            - echo "Command 2: Step 2"
-          - command3
-            - echo "Command 3: Step 1"
-            - echo "Command 3: Step 2"
+          - command1:
+            - "echo 'Command 1: Step 1'"
+            - "echo 'Command 1: Step 2'"
+          - command2:
+            - "echo 'Command 2: Step 1'"
+            - "echo 'Command 2: Step 2'"
+          - command3:
+            - "echo 'Command 3: Step 1'"
+            - "echo 'Command 3: Step 2'"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-      # Only test reading from SQL server and postgres on ubuntu for now.
-      # Eventually, we should test on Windows, too, but we will have to set up
-      # the servers differently.
-      MODIN_TEST_READ_FROM_SQL_SERVER: true
-      MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      # - name: Limit ray memory
-      #   run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-      #   if: matrix.engine == 'ray'
-      # - uses: actions/checkout@v3
-      #   with:
-      #     fetch-depth: 2
-      # - name: Cache conda
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: |
-      #       ~/conda_pkgs_dir
-      #       ~/.cache/pip
-      #     key:
-      #       ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      # - uses: conda-incubator/setup-miniconda@v2
-      #   with:
-      #     miniforge-variant: Mambaforge
-      #     miniforge-version: latest
-      #     use-mamba: true
-      #     activate-environment: modin
-      #     environment-file: environment-dev.yml
-      #     python-version: ${{matrix.python-version}}
-      #     channel-priority: strict
-      #     # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-      #     # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-      #     use-only-tar-bz2: false
-      # - name: Conda environment
-      #   run: |
-      #     conda info
-      #     conda list
-      # - name: Install HDF5
-      #   run: sudo apt update && sudo apt install -y libhdf5-dev
-      # - name: Set up postgres
-      #   # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
-      #   # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
-      #   run: |
-      #     sudo docker pull postgres
-      #     sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run commands
         run: |
           for cmd in "${{ matrix.command[*] }}"; do
@@ -734,14 +690,6 @@ jobs:
               ${cmd[$subcmd]}
             done
           done
-      # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-      # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      # - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      # - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      # - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
-      # - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
-      # - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      # - uses: ./.github/workflows/upload-coverage
 
   # test-experimental:
   #   needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
