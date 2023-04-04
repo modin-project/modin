@@ -727,11 +727,11 @@ jobs:
       #     sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run commands
         run: |
-          for cmd in ${{ matrix.command }}; do
+          for cmd in "${{ matrix.command[*] }}"; do
             echo "Running command: $cmd"
-            for subcmd in "${cmd[@]}"; do
-              echo "Running subcommand: $subcmd"
-              $subcmd
+            for subcmd in "${!cmd[@]}"; do
+              echo "Running subcommand: ${cmd[$subcmd]}"
+              ${cmd[$subcmd]}
             done
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
