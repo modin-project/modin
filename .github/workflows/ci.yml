@@ -669,13 +669,13 @@ jobs:
         python-version: ["3.8"]
         engine: ["python"]
         command:
-          - command1:
+          - command1
             - echo "Command 1: Step 1"
             - echo "Command 1: Step 2"
-          - command2:
+          - command2
             - echo "Command 2: Step 1"
             - echo "Command 2: Step 2"
-          - command3:
+          - command3
             - echo "Command 3: Step 1"
             - echo "Command 3: Step 2"
     env:
@@ -727,9 +727,12 @@ jobs:
       #     sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run commands
         run: |
-          for cmd in "${{ matrix.command[@] }}"; do
+          for cmd in "${{ matrix.command[*] }}"; do
             echo "Running command: $cmd"
-            ${cmd}
+            for subcmd in "${!cmd[@]}"; do
+              echo "Running subcommand: ${cmd[$subcmd]}"
+              ${cmd[$subcmd]}
+            done
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
