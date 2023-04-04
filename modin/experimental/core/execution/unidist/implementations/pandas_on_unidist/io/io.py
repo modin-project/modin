@@ -62,7 +62,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
 
     def __make_read(*classes, build_args=build_args):  # noqa: GL08
         # used to reduce code duplication
-        return type("", (UnidistWrapper, *classes), build_args)._read
+        return type("", (UnidistWrapper, *classes), build_args).read
 
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 

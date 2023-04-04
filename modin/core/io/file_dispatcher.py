@@ -157,10 +157,15 @@ class FileDispatcher(ClassLogger):
         query_compiler = cls._read(*args, **kwargs)
         # TextFileReader can also be returned from `_read`.
         if not ExperimentalAsyncReadMode.get() and hasattr(
-            query_compiler, "_modin_frame"
+            query_compiler, "dtypes"
         ):
-            frame = query_compiler._modin_frame
-            frame._partition_mgr_cls.wait_partitions(frame._partitions.flatten())
+            # at the moment it is not possible to use `wait_partitions` function;
+            # in a situation where the reading function is called in a row with the
+            # same parameters, `wait_partitions` considers that we have waited for
+            # the end of remote calculations, however, when trying to materialize the
+            # received data, it is clear that the calculations have not yet ended.
+            # for example, `test_io_exp.py::test_read_evaluated_dict` is failed because of that
+            _ = query_compiler.dtypes
         return query_compiler
 
     @classmethod
