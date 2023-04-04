@@ -156,9 +156,7 @@ class FileDispatcher(ClassLogger):
         """
         query_compiler = cls._read(*args, **kwargs)
         # TextFileReader can also be returned from `_read`.
-        if not ExperimentalAsyncReadMode.get() and hasattr(
-            query_compiler, "dtypes"
-        ):
+        if not ExperimentalAsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
             # at the moment it is not possible to use `wait_partitions` function;
             # in a situation where the reading function is called in a row with the
             # same parameters, `wait_partitions` considers that we have waited for
