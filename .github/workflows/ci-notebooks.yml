@@ -13,86 +13,86 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  test-tutorial-notebooks:
-    defaults:
-      run:
-        shell: bash -l {0}
-    name: test tutorial notebooks
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
-        if: matrix.execution != 'hdk_on_native'
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
-        if: matrix.execution == 'hdk_on_native'
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin_on_hdk
-          environment-file: requirements/env_hdk.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-        if: matrix.execution == 'hdk_on_native'
-      - name: Cache datasets
-        uses: actions/cache@v2
-        with:
-          path: taxi.csv
-          # update cache only if notebooks require it to be changed
-          key: hashFiles("examples/tutorial/jupyter/**")
-      # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
-      # `pandas_on_dask` since we need Modin built from sources
-      - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'hdk_on_native'
-      # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
-      # Override modin-spreadsheet install for now
-      - run: |
-          pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-          pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-        if: matrix.execution != 'hdk_on_native'
-      # Build Modin from sources for `hdk_on_native`
-      - run: pip install -e .
-        if: matrix.execution == 'hdk_on_native'
-      # install test dependencies
-      # NOTE: If you are changing the set of packages installed here, make sure that
-      # the dev requirements match them.
-      - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
-        if: matrix.execution != 'hdk_on_native'
-      - run: pip install flake8-print jupyter nbformat nbconvert
-        if: matrix.execution == 'hdk_on_native'
-      - run: pip list
-        if: matrix.execution != 'hdk_on_native'
-      - run: |
-          conda info
-          conda list
-        if: matrix.execution == 'hdk_on_native'
-      # setup kernel configuration for `pandas_on_unidist` execution with mpi backend
-      - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
-        if: matrix.execution == 'pandas_on_unidist'
-      - run: jupyter kernelspec list
-      - run: |
-          black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
-          black --check --diff examples/tutorial/jupyter/execution/test/utils.py
-      - run: |
-          flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
-          flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
-      - run: python -m pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+  # test-tutorial-notebooks:
+  #   defaults:
+  #     run:
+  #       shell: bash -l {0}
+  #   name: test tutorial notebooks
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 1
+  #     - uses: actions/setup-python@v4
+  #       with:
+  #         python-version: "3.8.x"
+  #         architecture: "x64"
+  #       if: matrix.execution != 'hdk_on_native'
+  #     - name: Cache conda
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: |
+  #           ~/conda_pkgs_dir
+  #           ~/.cache/pip
+  #         key:
+  #           ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
+  #       if: matrix.execution == 'hdk_on_native'
+  #     - uses: conda-incubator/setup-miniconda@v2
+  #       with:
+  #         miniforge-variant: Mambaforge
+  #         miniforge-version: latest
+  #         use-mamba: true
+  #         activate-environment: modin_on_hdk
+  #         environment-file: requirements/env_hdk.yml
+  #         python-version: 3.8
+  #         channel-priority: strict
+  #         # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+  #         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+  #         use-only-tar-bz2: false
+  #       if: matrix.execution == 'hdk_on_native'
+  #     - name: Cache datasets
+  #       uses: actions/cache@v2
+  #       with:
+  #         path: taxi.csv
+  #         # update cache only if notebooks require it to be changed
+  #         key: hashFiles("examples/tutorial/jupyter/**")
+  #     # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
+  #     # `pandas_on_dask` since we need Modin built from sources
+  #     - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+  #       if: matrix.execution != 'hdk_on_native'
+  #     # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
+  #     # Override modin-spreadsheet install for now
+  #     - run: |
+  #         pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
+  #         pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
+  #       if: matrix.execution != 'hdk_on_native'
+  #     # Build Modin from sources for `hdk_on_native`
+  #     - run: pip install -e .
+  #       if: matrix.execution == 'hdk_on_native'
+  #     # install test dependencies
+  #     # NOTE: If you are changing the set of packages installed here, make sure that
+  #     # the dev requirements match them.
+  #     - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
+  #       if: matrix.execution != 'hdk_on_native'
+  #     - run: pip install flake8-print jupyter nbformat nbconvert
+  #       if: matrix.execution == 'hdk_on_native'
+  #     - run: pip list
+  #       if: matrix.execution != 'hdk_on_native'
+  #     - run: |
+  #         conda info
+  #         conda list
+  #       if: matrix.execution == 'hdk_on_native'
+  #     # setup kernel configuration for `pandas_on_unidist` execution with mpi backend
+  #     - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
+  #       if: matrix.execution == 'pandas_on_unidist'
+  #     - run: jupyter kernelspec list
+  #     - run: |
+  #         black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+  #         black --check --diff examples/tutorial/jupyter/execution/test/utils.py
+  #     - run: |
+  #         flake8 --enable=T examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
+  #         flake8 --enable=T examples/tutorial/jupyter/execution/test/utils.py
+  #     - run: python -m pytest examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py

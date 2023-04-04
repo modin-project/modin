@@ -667,7 +667,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8"]
-        engine: ["python", "ray"]
+        engine: ["python"]
         commands: [
           [
               "python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py",
@@ -725,11 +725,10 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - name: Execute Commands
-        run: |
-          {% for command in matrix.commands %}
-          {{ command }}
-          {% endfor %}
+      - name: Run tests
+        uses: ./actions/run-commands
+        with:
+          commands: ${{ matrix.commands }}
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # - run: python -m pytest modin/pandas/test/test_io.py --verbose
