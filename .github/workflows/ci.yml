@@ -729,10 +729,8 @@ jobs:
         run: |
           echo "${{ matrix.commands[@] }}"
           echo "${{ matrix.commands }}"
-          for commands in "${{ matrix.commands[@] }}"; do
-            for command in "${commands[@]}"; do
-              eval $command
-            done
+          for command in ${{ matrix.commands[matrix.index] }}; do
+            eval $command
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
