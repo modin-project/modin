@@ -668,18 +668,14 @@ jobs:
         python-version: ["3.8"]
         engine: ["python"]
         command:
-          - "python -c 'print(0)'; python -c 'print(1)'"
-          - "python -c 'print(2)'; python -c 'print(3)'"
+          - "ci/run_tests1.sh"
+          - "ci/run_tests2.sh"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - name: Run commands
-        run: |
-          readarray -d ';' commands_arr <<< "${{ matrix.command }}"
-          for i in "${commands_arr[@]}"; do
-            eval "$i"
-          done
+      - name: Test
+        run: ${{matrix.command}}
 
 
   # test-experimental:
