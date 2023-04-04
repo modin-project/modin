@@ -26,6 +26,8 @@ class ModinDtypes:
     """
 
     def __init__(self, value):
+        if value is None:
+            raise ValueError(f"ModinDtypes doesn't work with '{value}'")
         self._value = value
 
     @property
@@ -50,6 +52,8 @@ class ModinDtypes:
         if not self.is_materialized:
             if callable(self._value):
                 self._value = self._value()
+                if self._value is None:
+                    self._value = pandas.Series([])
             else:
                 raise NotImplementedError(type(self._value))
         return self._value
