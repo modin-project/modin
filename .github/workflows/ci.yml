@@ -672,8 +672,11 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
       - name: Test
-        run: eval ${{matrix.command}}
+        run: ${{matrix.command}}
 
 
   # test-experimental:
