@@ -145,6 +145,56 @@ def test_update_inplace():
     numpy.testing.assert_array_equal(out._to_numpy(), arr2._to_numpy())
 
 
+@pytest.mark.parametrize(
+    "data_out",
+    [
+        numpy.zeros((1, 3)),
+        numpy.zeros((2, 3)),
+    ],
+)
+def test_out_broadcast(data_out):
+    if data_out.shape == (2, 3):
+        pytest.xfail("broadcasting would require duplicating row: see GH#5819")
+    data1 = [[1, 2, 3]]
+    data2 = [7, 8, 9]
+    modin_out, numpy_out = np.array(data_out), numpy.array(data_out)
+    numpy.add(numpy.array(data1), numpy.array(data2), out=numpy_out)
+    np.add(np.array(data1), np.array(data2), out=modin_out)
+    numpy.testing.assert_array_equal(modin_out._to_numpy(), numpy_out)
+
+
+def test_out_broadcast_error():
+    with pytest.raises(ValueError):
+        # Incompatible dimensions between inputs
+        np.add(np.array([1, 2, 3]), np.array([[1, 2], [3, 4]]))
+
+    with pytest.raises(ValueError):
+        # Compatible input broadcast dimensions, but output array dimensions are wrong
+        out = np.array([0])
+        np.add(np.array([[1, 2], [3, 4]]), np.array([1, 2]), out=out)
+
+    with pytest.raises(ValueError):
+        # Compatible input broadcast dimensions, but output array dimensions are wrong
+        # (cannot broadcast a 2x2 result into a 1x2 array)
+        out = np.array([0, 0])
+        np.add(np.array([[1, 2], [3, 4]]), np.array([1, 2]), out=out)
+
+    with pytest.raises(ValueError):
+        # Compatible input broadcast dimensions, but output array dimensions are wrong
+        # (cannot broadcast 1x2 into 1D 2-element array)
+        out = np.array([0, 0])
+        np.add(np.array([[1, 2]]), np.array([1, 2]), out=out)
+
+    with pytest.raises(ValueError):
+        # Compatible input broadcast dimensions, but output array dimensions are wrong
+        # (cannot broadcast a 2x2 result into a 3x2 array)
+        # Technically, our error message here does not match numpy's exactly, as the
+        # numpy message will specify both input shapes, whereas we only specify the
+        # shape of the default broadcast between the two inputs
+        out = np.array([[0, 0], [0, 0], [0, 0]])
+        np.add(np.array([[1, 2], [3, 4]]), np.array([1, 2]), out=out)
+
+
 @pytest.mark.parametrize("size", [100, (2, 100), (100, 2), (1, 100), (100, 1)])
 def test_array_ufunc(size):
     # Test ufunc.__call__
@@ -266,3 +316,15 @@ def test_astype():
     numpy_result = numpy_arr.astype(numpy.float64, copy=False)
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
     numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+
+
+def test_set_shape():
+    numpy_arr = numpy.array([[1, 2, 3], [4, 5, 6]])
+    numpy_arr.shape = (6,)
+    modin_arr = np.array([[1, 2, 3], [4, 5, 6]])
+    modin_arr.shape = (6,)
+    numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+    modin_arr.shape = 6  # Same as using (6,)
+    numpy.testing.assert_array_equal(modin_arr._to_numpy(), numpy_arr)
+    with pytest.raises(ValueError, match="cannot reshape"):
+        modin_arr.shape = (4,)

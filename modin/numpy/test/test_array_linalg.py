@@ -50,6 +50,26 @@ def test_dot_2d():
     numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
 
 
+def test_dot_scalar():
+    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x2 = numpy.random.randint(-100, 100)
+    numpy_result = numpy.dot(x1, x2)
+    x1 = np.array(x1)
+    modin_result = np.dot(x1, x2)
+    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+
+
+def test_matmul_scalar():
+    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x2 = numpy.random.randint(-100, 100)
+    x1 = np.array(x1)
+    # Modin error message differs from numpy for readability; the original numpy error is:
+    # ValueError: matmul: Input operand 1 does not have enough dimensions (has 0, gufunc
+    # core with signature (n?,k),(k,m?)->(n?,m?) requires 1)
+    with pytest.raises(ValueError):
+        x1 @ x2
+
+
 def test_dot_broadcast():
     # 2D @ 1D
     x1 = numpy.random.randint(-100, 100, size=(100, 3))
