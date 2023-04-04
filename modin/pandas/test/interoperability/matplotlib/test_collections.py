@@ -16,7 +16,6 @@ from matplotlib.collections import Collection
 
 
 def test_pandas_indexing():
-
     # Should not fail break when faced with a
     # non-zero indexed series
     index = [11, 12, 13]
