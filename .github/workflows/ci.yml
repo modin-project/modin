@@ -668,13 +668,16 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["python"]
-        commands:
+        command:
           - command1:
-              - python -c 'print(0)'
-              - python -c 'print(1)'
+            - echo "Command 1: Step 1"
+            - echo "Command 1: Step 2"
           - command2:
-              - python -c 'print(2)'
-              - python -c 'print(3)'
+            - echo "Command 2: Step 1"
+            - echo "Command 2: Step 2"
+          - command3:
+            - echo "Command 3: Step 1"
+            - echo "Command 3: Step 2"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       # Only test reading from SQL server and postgres on ubuntu for now.
@@ -724,7 +727,7 @@ jobs:
       #     sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run commands
         run: |
-          for cmd in ${{ matrix.commands }}; do
+          for cmd in ${{ matrix.command }}; do
             echo "Running command: $cmd"
             for subcmd in "${cmd[@]}"; do
               echo "Running subcommand: $subcmd"
