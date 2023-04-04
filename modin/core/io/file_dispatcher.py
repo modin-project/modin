@@ -155,7 +155,10 @@ class FileDispatcher(ClassLogger):
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
-        if not ExperimentalAsyncReadMode.get():
+        # TextFileReader can also be returned from `_read`.
+        if not ExperimentalAsyncReadMode.get() and hasattr(
+            query_compiler, "_modin_frame"
+        ):
             frame = query_compiler._modin_frame
             frame._partition_mgr_cls.wait_partitions(frame._partitions.flatten())
         return query_compiler
