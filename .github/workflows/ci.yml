@@ -675,7 +675,12 @@ jobs:
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - name: Run commands
-        run: eval "${{ matrix.command }}"
+        run: |
+          readarray -d ';' commands_arr <<< "${{ matrix.command }}"
+          for i in "${commands_arr[@]}"; do
+            eval "$i"
+          done
+
 
   # test-experimental:
   #   needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
