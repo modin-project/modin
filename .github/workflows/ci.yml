@@ -727,8 +727,10 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run tests
         run: |
-          for command in ${{ matrix.commands }}; do
-            eval $command
+          for commands in "${{ matrix.commands[@] }}"; do
+            for command in "${commands[@]}"; do
+              eval $command
+            done
           done
       # - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       # - run: ./.github/workflows/sql_server/set_up_sql_server.sh
