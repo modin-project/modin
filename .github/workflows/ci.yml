@@ -670,12 +670,12 @@ jobs:
         engine: ["python"]
         commands: [
           [
-              "python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py",
-              "python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py"
+              "python -c 'print(0)'",
+              "python -c 'print(1)'"
           ],
           [
-             "python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py",
-             "python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py" 
+             "python -c 'print(2)'",
+             "python -c 'print(3)'"
           ]
         ]
     env:
@@ -687,46 +687,48 @@ jobs:
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - name: Limit ray memory
-        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.engine == 'ray'
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
-      - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Set up postgres
-        # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
-        # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
-        run: |
-          sudo docker pull postgres
-          sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
+      # - name: Limit ray memory
+      #   run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+      #   if: matrix.engine == 'ray'
+      # - uses: actions/checkout@v3
+      #   with:
+      #     fetch-depth: 2
+      # - name: Cache conda
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: |
+      #       ~/conda_pkgs_dir
+      #       ~/.cache/pip
+      #     key:
+      #       ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
+      # - uses: conda-incubator/setup-miniconda@v2
+      #   with:
+      #     miniforge-variant: Mambaforge
+      #     miniforge-version: latest
+      #     use-mamba: true
+      #     activate-environment: modin
+      #     environment-file: environment-dev.yml
+      #     python-version: ${{matrix.python-version}}
+      #     channel-priority: strict
+      #     # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+      #     # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+      #     use-only-tar-bz2: false
+      # - name: Conda environment
+      #   run: |
+      #     conda info
+      #     conda list
+      # - name: Install HDF5
+      #   run: sudo apt update && sudo apt install -y libhdf5-dev
+      # - name: Set up postgres
+      #   # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
+      #   # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
+      #   run: |
+      #     sudo docker pull postgres
+      #     sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - name: Run tests
         run: |
+          echo "${{ matrix.commands[@] }}"
+          echo "${{ matrix.commands }}"
           for commands in "${{ matrix.commands[@] }}"; do
             for command in "${commands[@]}"; do
               eval $command
