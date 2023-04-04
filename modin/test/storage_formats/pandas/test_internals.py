@@ -242,7 +242,7 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
@@ -358,7 +358,7 @@ def test_rebalance_partitions(test_type, set_num_partitions):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Only Dask and Ray engines have virtual partitions.",
 )
 @pytest.mark.parametrize(
@@ -476,7 +476,7 @@ class TestDrainVirtualPartitionCallQueue:
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Only Dask and Ray engines have virtual partitions.",
 )
 @pytest.mark.parametrize(

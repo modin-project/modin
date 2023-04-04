@@ -33,7 +33,7 @@ from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 from modin.core.io.text.utils import CustomNewlineIterator
-from modin.config import NPartitions
+from modin.config import NPartitions, ExperimentalAsyncReadMode
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -936,6 +936,10 @@ class TextFileDispatcher(FileDispatcher):
             column_widths,
             dtypes=lambda: cls.get_dtypes(dtypes_ids, column_names),
         )
+        if not ExperimentalAsyncReadMode.get():
+            new_frame._partition_mgr_cls.wait_partitions(
+                new_frame._partitions.flatten()
+            )
         new_query_compiler = cls.query_compiler_cls(new_frame)
         skipfooter = kwargs.get("skipfooter", None)
         if skipfooter:
