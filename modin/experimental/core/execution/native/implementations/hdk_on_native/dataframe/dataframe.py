@@ -257,7 +257,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=self.copy_columns_cache(),
             row_lengths=self._row_lengths_cache,
             column_widths=self._column_widths_cache,
-            dtypes=self._dtypes.copy() if self._dtypes is not None else None,
+            dtypes=self.copy_dtypes_cache(),
             op=self._op,
             index_cols=self._index_cols,
             uses_rowid=self._uses_rowid,
