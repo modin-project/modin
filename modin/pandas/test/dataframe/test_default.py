@@ -247,7 +247,7 @@ def test_cov(min_periods, ddof):
     if StorageFormat.get() == "Hdk":
 
         def comparator1(df1, df2):
-            modin_df_almost_equals_pandas(df1, df2, max_diff=0.11)
+            modin_df_almost_equals_pandas(df1, df2, max_diff=0.0002)
 
         comparator2 = comparator1
     else:
