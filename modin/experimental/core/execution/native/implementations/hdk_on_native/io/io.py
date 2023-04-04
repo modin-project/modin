@@ -516,4 +516,10 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
     def read_sql(cls, **kwargs):
         impl = super(HdkOnNativeIO, cls)
         varnames = impl.read_sql.__code__.co_varnames
-        return impl.read_sql(**{k: v for k, v in kwargs.items() if k in varnames})
+        filtered = {k: v for k, v in kwargs.items() if k in varnames}
+        if len(filtered) != len(kwargs):
+            if unsupported := {
+                k: v for k, v in kwargs.items() if k not in filtered and v is not None
+            }:
+                raise NotImplementedError(f"Unsupported arguments: {unsupported}")
+        return impl.read_sql(**filtered)
