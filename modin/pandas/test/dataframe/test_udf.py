@@ -40,7 +40,7 @@ from modin.pandas.test.utils import (
     arg_keys,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -116,13 +116,6 @@ def test_aggregate_error_checking():
         modin_df.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Pandas",
-    reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    + "implementation for pandas storage format, this prevents us from catching the desired"
-    + "exception. You can track this bug at:"
-    + "https://github.com/modin-project/modin/issues/3221",
-)
 @pytest.mark.parametrize(
     "func",
     agg_func_values + agg_func_except_values,
