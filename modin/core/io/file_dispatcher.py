@@ -162,7 +162,8 @@ class FileDispatcher(ClassLogger):
             # same parameters, `wait_partitions` considers that we have waited for
             # the end of remote calculations, however, when trying to materialize the
             # received data, it is clear that the calculations have not yet ended.
-            # for example, `test_io_exp.py::test_read_evaluated_dict` is failed because of that
+            # for example, `test_io_exp.py::test_read_evaluated_dict` is failed because of that.
+            # see #5944 for details
             _ = query_compiler.dtypes
         return query_compiler
 
