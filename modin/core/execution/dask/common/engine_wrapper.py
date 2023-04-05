@@ -49,7 +49,7 @@ class DaskWrapper:
         f_args=None,
         f_kwargs=None,
         num_returns=1,
-        pure=True,
+        pure=False,
     ):
         """
         Deploy a function in a worker process.

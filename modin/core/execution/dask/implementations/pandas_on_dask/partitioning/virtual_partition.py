@@ -206,7 +206,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 "manual_partition": manual_partition,
             },
             num_returns=result_num_splits * 4,
-            pure=False,
         )
 
     @classmethod
@@ -263,7 +262,6 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 *partitions,
             ),
             num_returns=num_splits * 4,
-            pure=False,
         )
 
     def _wrap_partitions(self, partitions):

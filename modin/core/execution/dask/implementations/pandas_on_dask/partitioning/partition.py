@@ -96,7 +96,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
                 num_returns=2,
-                pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -107,7 +106,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
                 num_returns=2,
-                pure=False,
             )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
@@ -130,7 +128,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
                 num_returns=2,
-                pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
@@ -142,7 +139,6 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
                 num_returns=2,
-                pure=False,
             )
         self._data = futures[0]
         self._ip_cache = futures[1]
