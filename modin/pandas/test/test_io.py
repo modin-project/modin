@@ -1892,6 +1892,10 @@ class TestExcel:
             io="modin/pandas/test/data/every_other_row_nan.xlsx",
         )
 
+    @pytest.mark.skipif(
+        StorageFormat.get() == "Hdk",
+        reason="The frame contains different dtypes in the same column and could not be converted to arrow",
+    )
     @check_file_leaks
     def test_read_excel_header_none(self):
         eval_io(
