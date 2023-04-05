@@ -505,7 +505,19 @@ def test_astype_errors(errors):
     eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
 
 
-@pytest.mark.parametrize("has_dtypes", [False, True])
+@pytest.mark.parametrize(
+    "has_dtypes",
+    [
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not support cases when `.dtypes` is None",
+            ),
+        ),
+        True,
+    ],
+)
 def test_astype_copy(has_dtypes):
     data = [1]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
