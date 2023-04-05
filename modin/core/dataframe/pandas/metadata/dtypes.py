@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module contains class ModinIndex."""
+"""Module contains class ``ModinDtypes``."""
 
 import pandas
 
@@ -22,7 +22,7 @@ class ModinDtypes:
 
     Parameters
     ----------
-    value : sequence or callable
+    value : pandas.Series or callable
     """
 
     def __init__(self, value):

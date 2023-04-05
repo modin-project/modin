@@ -25,7 +25,7 @@ import numpy as np
 from pandas.io.common import is_url, is_fsspec_url
 
 from modin.logging import ClassLogger
-from modin.config import ExperimentalAsyncReadMode
+from modin.config import AsyncReadMode
 
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -156,7 +156,7 @@ class FileDispatcher(ClassLogger):
         """
         query_compiler = cls._read(*args, **kwargs)
         # TextFileReader can also be returned from `_read`.
-        if not ExperimentalAsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
+        if not AsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
             # at the moment it is not possible to use `wait_partitions` function;
             # in a situation where the reading function is called in a row with the
             # same parameters, `wait_partitions` considers that we have waited for

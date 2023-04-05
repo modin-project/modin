@@ -35,7 +35,7 @@ from modin.config import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     ReadSqlEngine,
-    ExperimentalAsyncReadMode,
+    AsyncReadMode,
 )
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1208,12 +1208,12 @@ class TestCsv:
                 pandas_df = pandas.read_csv(buffer)
                 buffer.seek(buffer_start_pos)
                 modin_df = pd.read_csv(buffer)
-            if ExperimentalAsyncReadMode.get():
+            if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
                 # check should be inside `ensure_clean_dir` context
                 # because the file may be deleted before actual reading starts
                 df_equals(modin_df, pandas_df)
-        if not ExperimentalAsyncReadMode.get():
+        if not AsyncReadMode.get():
             df_equals(modin_df, pandas_df)
 
     def test_unnamed_index(self):
@@ -1300,12 +1300,12 @@ class TestCsv:
             expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
             modin_df = pd.read_csv(unique_filename, index_col=False)
             actual_pandas_df = modin_df._to_pandas()
-            if ExperimentalAsyncReadMode.get():
+            if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
                 # check should be inside `ensure_clean_dir` context
                 # because the file may be deleted before actual reading starts
                 df_equals(expected_pandas_df, actual_pandas_df)
-        if not ExperimentalAsyncReadMode.get():
+        if not AsyncReadMode.get():
             df_equals(expected_pandas_df, actual_pandas_df)
 
 
@@ -1334,12 +1334,12 @@ class TestTable:
 
             pandas_df = wrapped_read_table(unique_filename, method="pandas")
             modin_df = wrapped_read_table(unique_filename, method="modin")
-            if ExperimentalAsyncReadMode.get():
+            if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
                 # check should be inside `ensure_clean_dir` context
                 # because the file may be deleted before actual reading starts
                 df_equals(modin_df, pandas_df)
-        if not ExperimentalAsyncReadMode.get():
+        if not AsyncReadMode.get():
             df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):

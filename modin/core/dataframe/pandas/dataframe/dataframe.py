@@ -262,7 +262,7 @@ class PandasDataframe(ClassLogger):
             dtypes = self._dtypes.get()
         else:
             dtypes = self._compute_dtypes()
-            self._dtypes = self.set_dtypes_cache(dtypes)
+            self.set_dtypes_cache(dtypes)
         return dtypes
 
     def _compute_dtypes(self):

@@ -22,7 +22,7 @@ from pandas._testing import ensure_clean, ensure_clean_dir
 import pytest
 
 import modin.experimental.pandas as pd
-from modin.config import Engine, ExperimentalAsyncReadMode
+from modin.config import Engine, AsyncReadMode
 from modin.pandas.test.utils import (
     df_equals,
     teardown_test_files,
@@ -306,12 +306,12 @@ def test_read_custom_json_text(set_async_read_mode):
         df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
             columns={"col0": "testID"}
         )
-        if ExperimentalAsyncReadMode.get():
+        if AsyncReadMode.get():
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
             # because the file may be deleted before actual reading starts
             df_equals(df1, df2)
-    if not ExperimentalAsyncReadMode.get():
+    if not AsyncReadMode.get():
         df_equals(df1, df2)
 
 
@@ -363,10 +363,10 @@ def test_read_evaluated_dict(set_async_read_mode):
         df2 = pd.read_custom_text(
             filename, columns=columns_callback, custom_parser=_custom_parser
         )
-        if ExperimentalAsyncReadMode.get():
+        if AsyncReadMode.get():
             # If read operations are asynchronous, then the dataframes
             # check should be inside `ensure_clean_dir` context
             # because the file may be deleted before actual reading starts
             df_equals(df1, df2)
-    if not ExperimentalAsyncReadMode.get():
+    if not AsyncReadMode.get():
         df_equals(df1, df2)

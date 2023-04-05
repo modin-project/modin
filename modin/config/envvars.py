@@ -635,7 +635,7 @@ class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     default = False
 
 
-class ExperimentalAsyncReadMode(EnvironmentVariable, type=bool):
+class AsyncReadMode(EnvironmentVariable, type=bool):
     """
     It does not wait for the end of reading information from the source.
 
@@ -643,7 +643,7 @@ class ExperimentalAsyncReadMode(EnvironmentVariable, type=bool):
     from which the source is deleted.
     """
 
-    varname = "MODIN_EXPERIMENTAL_ASYNC_READ_MODE"
+    varname = "MODIN_ASYNC_READ_MODE"
     default = False
 
 
