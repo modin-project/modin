@@ -22,6 +22,7 @@ import fsspec
 import os
 from modin.config import StorageFormat
 from modin.logging import ClassLogger
+from modin.utils import ModinAssumptionError
 import numpy as np
 from pandas.io.common import is_url, is_fsspec_url
 
@@ -151,7 +152,14 @@ class FileDispatcher(ClassLogger):
         dispatcher class `_read` function with passed parameters and performs some
         postprocessing work on the resulting query_compiler object.
         """
-        query_compiler = cls._read(*args, **kwargs)
+        try:
+            query_compiler = cls._read(*args, **kwargs)
+        except ModinAssumptionError as exc:
+            if "fname" in kwargs:
+                fname = kwargs.pop("fname")
+            elif "path_or_buf" in kwargs:
+                fname = kwargs.pop("path_or_buf")
+            return cls.single_worker_read(fname, *args, reason=str(exc), **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
         if StorageFormat.get() == "Pandas":

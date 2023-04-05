@@ -1733,6 +1733,15 @@ class TestJson:
             dtype={"one": "int64", "two": "category"},
         )
 
+    def test_read_json_different_columns(self):
+        with warns_that_defaulting_to_pandas():
+            eval_io(
+                fn_name="read_json",
+                # read_json kwargs
+                path_or_buf="modin/pandas/test/data/test_different_columns_in_rows.json",
+                lines=True,
+            )
+
     @pytest.mark.parametrize(
         "data",
         [json_short_string, json_short_bytes, json_long_string, json_long_bytes],

@@ -772,3 +772,9 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
             print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
             for k, v in d.items():
                 print(f"{k:<{maxlen}}: {v}")
+
+
+class ModinAssumptionError(Exception):
+    "An exception that allows us defaults to pandas if any assumption fails."
+
+    pass
