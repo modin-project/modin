@@ -41,6 +41,7 @@ import numpy as np
 import sys
 from typing import IO, Optional, Union, Iterator, Hashable, Sequence
 import warnings
+from collections import abc
 
 import modin
 from modin.pandas import Categorical
@@ -1335,7 +1336,7 @@ class DataFrame(BasePandasDataset):
         """
         Join columns of another ``DataFrame``.
         """
-        if validate is not None:
+        if validate is not None or (on is not None and isinstance(other, abc.Iterable)):
             return self._default_to_pandas(
                 pandas.DataFrame.join,
                 other,

@@ -166,6 +166,17 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_5203():
+    df1 = pd.DataFrame(np.ones([2, 4]), columns=["a", "b", "c", "d"])
+    df2 = pd.DataFrame(np.ones([2, 4]), columns=["a", "b", "c", "d"])
+    df3 = pd.DataFrame(np.ones([2, 4]), columns=["a", "b", "c", "d"])
+    with pytest.raises(
+        ValueError,
+        match="Joining multiple DataFrames only supported for joining on index",
+    ):
+        df1.join([df2, df3], how="inner", on="a")
+
+
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
