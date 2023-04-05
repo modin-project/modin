@@ -16,7 +16,7 @@
 import inspect
 import pathlib
 import pickle
-from typing import Union, IO, AnyStr, Callable, Optional
+from typing import Union, IO, AnyStr, Callable, Optional, Iterator
 
 import pandas
 import pandas._libs.lib as lib
@@ -24,6 +24,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 
 from . import DataFrame
 from modin.config import IsExperimental
+from modin.core.storage_formats import BaseQueryCompiler
 
 
 def read_sql(
@@ -39,7 +40,7 @@ def read_sql(
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
     max_sessions: Optional[int] = None,
-) -> DataFrame:
+) -> Union[DataFrame, Iterator[DataFrame]]:
     """
     General documentation is available in `modin.pandas.read_sql`.
 
@@ -95,7 +96,7 @@ def read_sql(
 
     Returns
     -------
-    modin.DataFrame
+    modin.DataFrame or Iterator[modin.DataFrame]
     """
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -103,7 +104,10 @@ def read_sql(
 
     assert IsExperimental.get(), "This only works in experimental mode"
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
+    result = FactoryDispatcher.read_sql(**kwargs)
+    if isinstance(result, BaseQueryCompiler):
+        return DataFrame(query_compiler=result)
+    return (DataFrame(query_compiler=qc) for qc in result)
 
 
 def read_custom_text(
