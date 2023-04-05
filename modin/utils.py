@@ -775,6 +775,6 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
 
 
 class ModinAssumptionError(Exception):
-    "An exception that allows us defaults to pandas if any assumption fails."
+    """An exception that allows us defaults to pandas if any assumption fails."""
 
     pass

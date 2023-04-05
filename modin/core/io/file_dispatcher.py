@@ -155,10 +155,8 @@ class FileDispatcher(ClassLogger):
         try:
             query_compiler = cls._read(*args, **kwargs)
         except ModinAssumptionError as exc:
-            if "fname" in kwargs:
-                fname = kwargs.pop("fname")
-            elif "path_or_buf" in kwargs:
-                fname = kwargs.pop("path_or_buf")
+            param_name = "path_or_buf" if "path_or_buf" in kwargs else "fname"
+            fname = kwargs.pop(param_name)
             return cls.single_worker_read(fname, *args, reason=str(exc), **kwargs)
         # TODO (devin-petersohn): Make this section more general for non-pandas kernel
         # implementations.
