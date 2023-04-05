@@ -242,7 +242,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+                axis, map_func, left=partitions, right=by
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
+    def broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,9 +346,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "right"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
 
         Returns
         -------
@@ -365,7 +362,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
-            return apply_func(df, **{other_name: other})
+            return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)

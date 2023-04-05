@@ -16,7 +16,11 @@ on:
       - setup.py
       - versioneer.py
   push:
-
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   lint-black:
     name: lint (black)
@@ -474,6 +478,7 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_utils.py
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
@@ -482,6 +487,11 @@ jobs:
       - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
       - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_window.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -641,6 +651,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_indexing.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_math.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_shaping.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
@@ -764,6 +775,8 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
+        if: matrix.test_task == 'group_3'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.test_task == 'group_3'
@@ -965,6 +978,8 @@ jobs:
       - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
+        if: matrix.test_task == 'group_3'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.test_task == 'group_3'

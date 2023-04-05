@@ -13,15 +13,144 @@
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
+from typing import Tuple, Union
+from functools import lru_cache
 from collections import OrderedDict
 
-import pandas
-import pyarrow
+import pandas as pd
+from pandas import Timestamp
+from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
+
+import pyarrow as pa
+from pyarrow.types import is_dictionary
 
 from modin.error_message import ErrorMessage
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
-class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
+class ColNameCodec:
+    IDX_COL_NAME = "__index__"
+    ROWID_COL_NAME = "__rowid__"
+
+    _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
+    _COL_TYPES = Union[str, int, float, Timestamp, None]
+    _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
+
+    def _encode_tuple(values: Tuple[_COL_TYPES, ...]) -> str:  # noqa: GL08
+        dst = ["_T"]
+        count = len(values)
+        for value in values:
+            if isinstance(value, str):
+                dst.append(value.replace("_", "_Q"))
+            else:
+                dst.append(ColNameCodec._ENCODERS[type(value)](value))
+            count -= 1
+            if count != 0:
+                dst.append("_T")
+        return "".join(dst)
+
+    def _decode_tuple(encoded: str) -> Tuple[_COL_TYPES, ...]:  # noqa: GL08
+        items = []
+        for item in encoded[2:].split("_T"):
+            dec = (
+                None
+                if len(item) < 2 or item[0] != "_"
+                else ColNameCodec._DECODERS.get(item[1], None)
+            )
+            items.append(item.replace("_Q", "_") if dec is None else dec(item))
+        return tuple(items)
+
+    _ENCODERS = {
+        tuple: _encode_tuple,
+        type(None): lambda v: "_N",
+        str: lambda v: "_E" if len(v) == 0 else "_S" + v[1:] if v[0] == "_" else v,
+        int: lambda v: f"_I{v}",
+        float: lambda v: f"_F{v}",
+        Timestamp: lambda v: f"_D{v.timestamp()}_{v.tz}",
+    }
+
+    _DECODERS = {
+        "T": _decode_tuple,
+        "N": lambda v: None,
+        "E": lambda v: "",
+        "S": lambda v: "_" + v[2:],
+        "I": lambda v: int(v[2:]),
+        "F": lambda v: float(v[2:]),
+        "D": lambda v: Timestamp.fromtimestamp(
+            float(v[2 : (idx := v.index("_", 2))]), tz=v[idx + 1 :]
+        ),
+    }
+
+    @staticmethod
+    @lru_cache(1024)
+    def encode(
+        name: _COL_NAME_TYPE,
+        ignore_reserved: bool = True,
+    ) -> str:
+        """
+        Encode column name.
+
+        The supported name types are specified in the type hints. Non-string names
+        are converted to string and prefixed with a corresponding tag.
+
+        Parameters
+        ----------
+        name : str, int, float, Timestamp, None, tuple
+            Column name to be encoded.
+        ignore_reserved : bool, default: True
+            Do not encode reserved names.
+
+        Returns
+        -------
+        str
+            Encoded name.
+        """
+        if (
+            ignore_reserved
+            and isinstance(name, str)
+            and (
+                name.startswith(ColNameCodec.IDX_COL_NAME)
+                or name in ColNameCodec._RESERVED_NAMES
+            )
+        ):
+            return name
+
+        try:
+            return ColNameCodec._ENCODERS[type(name)](name)
+        except KeyError:
+            raise TypeError(f"Unsupported column name: {name}")
+
+    @staticmethod
+    @lru_cache(1024)
+    def decode(name: str) -> _COL_NAME_TYPE:
+        """
+        Decode column name, previously encoded with encode_col_name().
+
+        Parameters
+        ----------
+        name : str
+            Encoded name.
+
+        Returns
+        -------
+        str, int, float, Timestamp, None, tuple
+            Decoded name.
+        """
+        if (
+            len(name) < 2
+            or name[0] != "_"
+            or name.startswith(ColNameCodec.IDX_COL_NAME)
+            or name in ColNameCodec._RESERVED_NAMES
+        ):
+            return name
+
+        try:
+            return ColNameCodec._DECODERS[name[1]](name)
+        except KeyError:
+            raise ValueError(f"Invalid encoded column name: {name}")
+
+
+class LazyProxyCategoricalDtype(pd.CategoricalDtype):
     """
     Proxy class for lazily retrieving categorical dtypes from arrow tables.
 
@@ -33,7 +162,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         Column name.
     """
 
-    def __init__(self, table: pyarrow.Table, column_name: str):
+    def __init__(self, table: pa.Table, column_name: str):
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=table is None,
             extra_log="attempted to bind 'None' pyarrow table to a lazy category",
@@ -43,7 +172,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         self._ordered = False
         self._lazy_categories = None
 
-    def _new(self, table: pyarrow.Table, column_name: str) -> pandas.CategoricalDtype:
+    def _new(self, table: pa.Table, column_name: str) -> pd.CategoricalDtype:
         """
         Create a new proxy, if either table or column name are different.
 
@@ -60,7 +189,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         """
         if self._table is None:
             # The table has been materialized, we don't need a proxy anymore.
-            return pandas.CategoricalDtype(self.categories)
+            return pd.CategoricalDtype(self.categories)
         elif table is self._table and column_name == self._column_name:
             return self
         else:
@@ -70,7 +199,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     def _categories(self):  # noqa: GL08
         if self._table is not None:
             chunks = self._table.column(self._column_name).chunks
-            cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+            cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
             self._lazy_categories = self.validate_categories(cat.unique())
             self._table = None  # The table is not required any more
         return self._lazy_categories
@@ -132,7 +261,7 @@ def check_cols_to_join(what, df, col_names):
                 if col == df._index_name(c):
                     new_name = c
                     break
-        elif df._index_cache is not None:
+        elif df.has_index_cache:
             new_name = f"__index__{0}_{col}"
             df = df._maybe_materialize_rowid()
         if new_name is None:
@@ -186,17 +315,17 @@ def get_data_for_join_by_index(
 
     def to_empty_pandas_df(df):
         # Create an empty pandas frame with the same columns and index.
-        idx = df._index_cache
+        idx = df._index_cache.get() if df.has_index_cache else None
         if idx is not None:
             idx = idx[:1]
         elif df._index_cols is not None:
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
                 names = [df._index_name(n) for n in df._index_cols]
-                idx = pandas.MultiIndex.from_arrays(arrays, names=names)
+                idx = pd.MultiIndex.from_arrays(arrays, names=names)
             else:
-                idx = pandas.Index(name=df._index_name(df._index_cols[0]))
-        return pandas.DataFrame(columns=df.columns, index=idx)
+                idx = pd.Index(name=df._index_name(df._index_cols[0]))
+        return pd.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
     exprs = OrderedDict()
@@ -248,3 +377,44 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
+
+
+def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
+    """
+    Convert the specified arrow table to pandas.
+
+    Parameters
+    ----------
+    at : pyarrow.Table
+        The table to convert.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+
+    def mapper(at):
+        if is_dictionary(at) and isinstance(at.value_type, ArrowIntervalType):
+            # The default mapper fails with TypeError: unhashable type: 'dict'
+            return _CategoricalDtypeMapper
+        return None
+
+    return at.to_pandas(types_mapper=mapper)
+
+
+class _CategoricalDtypeMapper:  # noqa: GL08
+    @staticmethod
+    def __from_arrow__(arr):  # noqa: GL08
+        values = []
+        # Using OrderedDict as an ordered set to preserve the categories order
+        categories = OrderedDict()
+        chunks = arr.chunks if isinstance(arr, pa.ChunkedArray) else (arr,)
+        for chunk in chunks:
+            assert isinstance(chunk, pa.DictionaryArray)
+            cat = chunk.dictionary.to_pandas()
+            values.append(chunk.indices.to_pandas().map(cat))
+            categories.update((c, None) for c in cat)
+        return pd.Categorical(
+            pd.concat(values, ignore_index=True),
+            dtype=pd.CategoricalDtype(categories, ordered=True),
+        )

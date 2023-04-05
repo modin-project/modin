@@ -335,6 +335,30 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
+def test_merge_with_mi_columns():
+    modin_df1, pandas_df1 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "b"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "c"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on=[("col0", "a")]),
+    )
+
+
 @pytest.mark.parametrize("has_index_cache", [True, False])
 def test_merge_on_index(has_index_cache):
     modin_df1, pandas_df1 = create_test_dfs(
@@ -369,17 +393,17 @@ def test_merge_on_index(has_index_cache):
         if has_index_cache:
             modin_df1.index  # triggering index materialization
             modin_df2.index
-            assert modin_df1._query_compiler._modin_frame._index_cache is not None
-            assert modin_df2._query_compiler._modin_frame._index_cache is not None
+            assert modin_df1._query_compiler._modin_frame.has_index_cache
+            assert modin_df2._query_compiler._modin_frame.has_index_cache
         else:
             # Propagate deferred indices to partitions
             # The change in index is not automatically handled by Modin. See #3941.
             modin_df1.index = modin_df1.index
             modin_df1._to_pandas()
-            modin_df1._query_compiler._modin_frame._index_cache = None
+            modin_df1._query_compiler._modin_frame.set_index_cache(None)
             modin_df2.index = modin_df2.index
             modin_df2._to_pandas()
-            modin_df2._query_compiler._modin_frame._index_cache = None
+            modin_df2._query_compiler._modin_frame.set_index_cache(None)
 
     for on in (
         ["col_key1", "idx_key1"],
@@ -619,6 +643,35 @@ def test_sort_values_descending_with_only_two_bins():
     )
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/3941",
+)
+@pytest.mark.parametrize("ignore_index", [True, False])
+def test_sort_values_preserve_index_names(ignore_index):
+    modin_df, pandas_df = create_test_dfs(
+        np.random.choice(128, 128, replace=False).reshape((128, 1))
+    )
+
+    pandas_df.index.names, pandas_df.columns.names = ["custom_name"], ["custom_name"]
+    modin_df.index.names, modin_df.columns.names = ["custom_name"], ["custom_name"]
+    # workaround for #1618 to actually propagate index change
+    modin_df.index = modin_df.index
+    modin_df.columns = modin_df.columns
+
+    def comparator(df1, df2):
+        assert df1.index.names == df2.index.names
+        assert df1.columns.names == df2.columns.names
+        df_equals(df1, df2)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(df.columns[0], ignore_index=ignore_index),
+        comparator=comparator,
+    )
+
+
 @pytest.mark.parametrize("ascending", [True, False])
 def test_sort_values_with_one_partition(ascending):
     # Test case from https://github.com/modin-project/modin/issues/5859
@@ -768,6 +821,13 @@ def test_where():
     pandas_result = pandas_df.where(pandas_cond_df, -pandas_df)
     modin_result = modin_df.where(modin_cond_df, -modin_df)
     assert all((to_pandas(modin_result) == pandas_result).all())
+
+    # test case when other is Series
+    other_data = random_state.randn(len(pandas_df))
+    modin_other, pandas_other = pd.Series(other_data), pandas.Series(other_data)
+    pandas_result = pandas_df.where(pandas_cond_df, pandas_other, axis=0)
+    modin_result = modin_df.where(modin_cond_df, modin_other, axis=0)
+    df_equals(modin_result, pandas_result)
 
     # Test that we choose the right values to replace when `other` == `True`
     # everywhere.

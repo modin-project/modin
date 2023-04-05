@@ -57,6 +57,7 @@ from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
+    cast_function_modin2pandas,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
 from .iterator import PartitionIterator
@@ -143,7 +144,7 @@ class DataFrame(BasePandasDataset):
                 # the DataFrame and sets columns to the columns provided.
                 elif columns is not None and data.name not in columns:
                     self._query_compiler = from_pandas(
-                        self.__constructor__(columns=columns)
+                        pandas.DataFrame(columns=columns)
                     )._query_compiler
                 if index is not None:
                     self._query_compiler = data.loc[index]._query_compiler
@@ -171,7 +172,8 @@ class DataFrame(BasePandasDataset):
             if index is not None:
                 self.set_axis(index, axis=0, inplace=True)
             if dtype is not None:
-                self.astype(dtype, copy=False)
+                casted_obj = self.astype(dtype, copy=False)
+                self._query_compiler = casted_obj._query_compiler
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -383,6 +385,7 @@ class DataFrame(BasePandasDataset):
         """
         Apply a function along an axis of the ``DataFrame``.
         """
+        func = cast_function_modin2pandas(func)
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
             func,
@@ -2509,7 +2512,7 @@ class DataFrame(BasePandasDataset):
         Replace values where the condition is False.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if isinstance(other, pandas.Series) and axis is None:
+        if isinstance(other, Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             if isinstance(other, DataFrame):
@@ -2572,8 +2575,13 @@ class DataFrame(BasePandasDataset):
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
             axis = self._get_axis_number(axis)
-            if isinstance(other, pandas.Series):
-                other = other.reindex(self.index if axis == 0 else self.columns)
+            if isinstance(other, Series):
+                other = other.reindex(
+                    self.index if axis == 0 else self.columns
+                )._query_compiler
+                if other._shape_hint is None:
+                    # To make the query compiler recognizable as a Series at lower levels
+                    other._shape_hint = "column"
             elif is_list_like(other):
                 index = self.index if axis == 0 else self.columns
                 other = pandas.Series(other, index=index)
