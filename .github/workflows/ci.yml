@@ -675,11 +675,14 @@ jobs:
           - group_1
           - group_2
           - group_3
+          - group_4
         exclude: # python engine only have one task group that contains all the tests
           - engine: "python"
             test_task: "group_2"
           - engine: "python"
             test_task: "group_3"
+          - engine: "python"
+            test_task: "group_4"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       # Only test reading from SQL server and postgres on ubuntu for now.
@@ -749,8 +752,6 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
@@ -759,48 +760,52 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - uses: ./.github/workflows/upload-coverage
 
   test-experimental:
