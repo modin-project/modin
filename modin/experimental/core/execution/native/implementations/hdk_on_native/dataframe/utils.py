@@ -13,12 +13,14 @@
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
-from typing import Tuple, Union
+import typing
+from typing import Tuple, Union, List, Any
 from functools import lru_cache
 from collections import OrderedDict
 
-import pandas as pd
+import pandas
 from pandas import Timestamp
+from pandas.core.dtypes.common import get_dtype
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 
 import pyarrow as pa
@@ -163,8 +165,8 @@ def build_categorical_from_at(table, column_name):
     pandas.CategoricalDtype
     """
     chunks = table.column(column_name).chunks
-    cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
-    return pd.CategoricalDtype(cat.unique())
+    cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+    return pandas.CategoricalDtype(cat.unique())
 
 
 def check_join_supported(join_type: str):
@@ -277,10 +279,10 @@ def get_data_for_join_by_index(
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
                 names = [df._index_name(n) for n in df._index_cols]
-                idx = pd.MultiIndex.from_arrays(arrays, names=names)
+                idx = pandas.MultiIndex.from_arrays(arrays, names=names)
             else:
-                idx = pd.Index(name=df._index_name(df._index_cols[0]))
-        return pd.DataFrame(columns=df.columns, index=idx)
+                idx = pandas.Index(name=df._index_name(df._index_cols[0]))
+        return pandas.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
     exprs = OrderedDict()
@@ -296,7 +298,7 @@ def get_data_for_join_by_index(
     if len(merged.index.names) == 1 and (merged.index.names[0] is None):
         index_cols = None
     else:
-        index_cols = left._mangle_index_names(merged.index.names)
+        index_cols = mangle_index_names(merged.index.names)
         for orig_name, mangled_name in zip(merged.index.names, index_cols):
             # Using _dtypes here since it contains all column names,
             # including the index.
@@ -334,6 +336,73 @@ def get_data_for_join_by_index(
     return index_cols, exprs, new_dtypes, merged.columns
 
 
+def mangle_index_names(names: List[ColNameCodec._COL_NAME_TYPE]) -> List[str]:
+    """
+    Return mangled index names for index labels.
+
+    Mangled names are used for index columns because index
+    labels cannot always be used as HDK table column
+    names. E.e. label can be a non-string value or an
+    unallowed string (empty strings, etc.) for a table column
+    name.
+
+    Parameters
+    ----------
+    names : list of str
+        Index labels.
+
+    Returns
+    -------
+    list of str
+        Mangled names.
+    """
+    pref = ColNameCodec.IDX_COL_NAME
+    return [f"{pref}{i}_{ColNameCodec.encode(n)}" for i, n in enumerate(names)]
+
+
+def concat_index_names(frames) -> typing.OrderedDict[str, Any]:
+    """
+    Calculate the index names and dtypes.
+
+    Calculate the index names and dtypes, that the index
+    columns will have after the frames concatenation.
+
+    Parameters
+    ----------
+    frames : list[HdkOnNativeDataframe]
+
+    Returns
+    -------
+    typing.OrderedDict[str, Any]
+    """
+    first = frames[0]
+    names = OrderedDict()
+    if first._index_width() > 1:
+        dtypes = first._dtypes
+        for n in first._index_cols:
+            names[n] = dtypes[n]
+    else:
+        idx_names = set()
+        for f in frames:
+            if f._index_cols is not None:
+                idx_names.update(f._index_cols)
+            elif f.has_index_cache:
+                idx_names.update(mangle_index_names(f.index.names))
+            else:
+                idx_names.update(mangle_index_names([None]))
+            if len(idx_names) > 1:
+                names[mangle_index_names([None])[0]] = get_dtype(int)
+                return names
+
+        if first._index_cols is not None:
+            names[first._index_cols[0]] = first._dtypes[first._index_cols[0]]
+        elif first.has_index_cache:
+            names[mangle_index_names(first.index.names)[0]] = get_dtype(int)
+        else:
+            names[mangle_index_names([None])[0]] = get_dtype(int)
+    return names
+
+
 def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:
     """
     Get common arrow data type.
@@ -362,7 +431,7 @@ def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.Da
     return t2 if pa.types.is_floating(t2) else t1
 
 
-def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
+def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
     """
     Convert the specified arrow table to pandas.
 
@@ -397,7 +466,7 @@ class _CategoricalDtypeMapper:  # noqa: GL08
             cat = chunk.dictionary.to_pandas()
             values.append(chunk.indices.to_pandas().map(cat))
             categories.update((c, None) for c in cat)
-        return pd.Categorical(
-            pd.concat(values, ignore_index=True),
-            dtype=pd.CategoricalDtype(categories, ordered=True),
+        return pandas.Categorical(
+            pandas.concat(values, ignore_index=True),
+            dtype=pandas.CategoricalDtype(categories, ordered=True),
         )

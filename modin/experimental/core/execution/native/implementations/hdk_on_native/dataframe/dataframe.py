@@ -51,6 +51,8 @@ from .utils import (
     get_data_for_join_by_index,
     get_common_arrow_type,
     build_categorical_from_at,
+    concat_index_names,
+    mangle_index_names,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
@@ -1045,58 +1047,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        # In case of different number of columns, HDK performs
-        # slowly and supports only numeric column types.
-        # See https://github.com/intel-ai/hdk/issues/182
-        # To work around this issue, perform concatenation
-        # with arrow.
-        if (
-            len(other_modin_frames) == 0
-            or len(self.columns) == 0
-            or any(is_string_dtype(t) for t in self._dtypes)
-            or all(f._has_arrow_table() for f in ([self] + other_modin_frames))
-            or any(len(f.columns) != len(self.columns) for f in other_modin_frames)
-        ):
-            return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
+        frames = [self] + other_modin_frames
 
-        dtypes = self._dtypes.to_dict()
-        if any(f._dtypes.to_dict() != dtypes for f in other_modin_frames):
-            return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
-
-        # If all frames are either FrameNode or UnionNode and have the same
-        # concatenation options, put all frames into a single UnionNode. It
-        # allows to concatenate multiple frames in a single batch operation.
-        frames = []
-        for f in [self] + other_modin_frames:
-            if isinstance(f._op, FrameNode):
-                frames.append(f)
-            elif (
-                isinstance(f._op, UnionNode)
-                and f._op.join == join
-                and f._op.sort == sort
-                and f._op.ignore_index == ignore_index
-            ):
-                frames.extend(f._op.input)
-            else:
-                frames.clear()
-                break
-        if frames:
-            if sort:
-                new_columns = sorted(self.columns)
-                new_dtypes = [dtypes[col] for col in new_columns]
-                if not ignore_index and self._index_cols is not None:
-                    new_dtypes = [dtypes[col] for col in self._index_cols] + new_dtypes
-            else:
-                new_columns = self.copy_columns_cache()
-                new_dtypes = self.dtypes if ignore_index else self.copy_dtypes_cache()
-            return self.copy(
-                partitions=None,
-                index=None,
-                columns=new_columns,
-                dtypes=new_dtypes,
-                op=UnionNode(frames, join, sort, ignore_index),
-                index_cols=None if ignore_index else self._index_cols,
-            )
+        # This is a special case, where we need to preserve the index of empty frames.
+        if any(len(f.columns) == 0 for f in frames):
+            return self._union_all_arrow(frames, join, sort, ignore_index)
 
         # determine output columns
         new_cols_map = OrderedDict()
@@ -1111,10 +1066,62 @@ class HdkOnNativeDataframe(PandasDataframe):
                 for col in frame.columns:
                     if col not in new_cols_map:
                         new_cols_map[col] = frame._dtypes[col]
-        new_columns = list(new_cols_map.keys())
 
         if sort:
-            new_columns = sorted(new_columns)
+            new_columns = sorted(new_cols_map.keys())
+            new_dtypes = [new_cols_map[col] for col in new_columns]
+        else:
+            new_columns = new_cols_map.keys()
+            new_dtypes = list(new_cols_map.values())
+
+        # If all frames are either FrameNode(materialized frame) or UnionNode,
+        # containing only FrameNodes and having the same concatenation options,
+        # put all frames into a single UnionNode. It allows to concatenate
+        # multiple frames with arrow in a single batch operation.
+        materialized = []
+        for f in frames:
+            if isinstance(f._op, FrameNode):
+                materialized.append(f)
+            elif (
+                isinstance(f._op, UnionNode)
+                and f._op.join == join
+                and f._op.sort == sort
+                and f._op.ignore_index == ignore_index
+            ):
+                materialized.extend(f._op.input)
+            else:
+                materialized.clear()
+                break
+        if materialized:
+            if not ignore_index:
+                index_cols = concat_index_names(frames)
+                new_dtypes = list(index_cols.values()) + new_dtypes
+            return self.copy(
+                partitions=None,
+                index=None,
+                columns=new_columns,
+                dtypes=new_dtypes,
+                op=UnionNode(materialized, join, sort, ignore_index),
+                index_cols=None if ignore_index else list(index_cols.keys()),
+            )
+
+        # In case of different number of columns, HDK performs
+        # slowly and supports only numeric column types.
+        # See https://github.com/intel-ai/hdk/issues/182
+        # To work around this issue, perform concatenation
+        # with arrow.
+        if (
+            len(other_modin_frames) == 0
+            or len(self.columns) == 0
+            or any(len(f.columns) != len(self.columns) for f in other_modin_frames)
+        ):
+            return self._union_all_arrow(frames, join, sort, ignore_index)
+
+        dtypes = self._dtypes.to_dict()
+        if any(is_string_dtype(t) for t in dtypes.values()) or any(
+            f._dtypes.to_dict() != dtypes for f in other_modin_frames
+        ):
+            return self._union_all_arrow(frames, join, sort, ignore_index)
 
         # determine how many index components are going into
         # the resulting table
@@ -1123,15 +1130,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             for frame in other_modin_frames:
                 index_width = min(index_width, frame._index_width())
 
-        # compute resulting dtypes
-        if sort:
-            new_dtypes = [new_cols_map[col] for col in new_columns]
-        else:
-            new_dtypes = list(new_cols_map.values())
-
         # build projections to align all frames
         aligned_frames = []
-        for frame in [self] + other_modin_frames:
+        for frame in frames:
             aligned_index = None
             exprs = OrderedDict()
             uses_rowid = False
@@ -1145,7 +1146,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                         exprs[col] = frame.ref(col)
                 else:
                     assert index_width == 1, "unexpected index width"
-                    aligned_index = self._mangle_index_names([None])
+                    aligned_index = mangle_index_names([None])
                     exprs[aligned_index[0]] = frame.ref(ROWID_COL_NAME)
                     aligned_index_dtypes = [get_dtype(int)]
                     uses_rowid = True
@@ -1217,6 +1218,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     frame._execute()
                 if not frame._has_arrow_table():
                     raise NotImplementedError("PyArrow tables concatenation")
+                self.frame = frame
                 self.index = frame.index
                 self.columns = frame.columns
                 self.index_cols = frame._index_cols
@@ -1267,7 +1269,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 idx = RangeIndex(0, sum(len(f.table) for f in frames))
             else:
                 idx = frames[0].index.append([f.index for f in frames[1:]])
-            idx_cols = self._mangle_index_names(idx.names)
+            idx_cols = mangle_index_names(idx.names)
             idx_df = pd.DataFrame(index=idx).reset_index()
             union = pyarrow.Table.from_pandas(idx_df).rename_columns(idx_cols)
         else:
@@ -1277,7 +1279,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     if ignore_index:
                         frame.index = pd.RangeIndex(0, len(frame.index))
                     idx = frame.index
-                    frame.index_cols = self._mangle_index_names(idx.names)
+                    frame.index_cols = mangle_index_names(idx.names)
                     idx_df = pd.DataFrame(index=idx).reset_index()
                     frame.table = pyarrow.Table.from_pandas(idx_df)
                     frame.table = frame.table.rename_columns(frame.index_cols)
@@ -1308,13 +1310,9 @@ class HdkOnNativeDataframe(PandasDataframe):
                             break
 
                 if idx_equal:
-                    idx = frames[0].index
-                    if isinstance(idx, MultiIndex):
-                        idx_cols = self._mangle_index_names(idx.names)
-                    else:
-                        idx_names = {f.index.name for f in frames}
-                        idx_names = [None] if len(idx_names) > 1 else [idx.name]
-                        idx_cols = self._mangle_index_names(idx_names)
+                    idx_cols = list(
+                        concat_index_names([f.frame for f in frames]).keys()
+                    )
 
                     # Rename index columns
                     for frame in frames:
@@ -1327,7 +1325,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 else:
                     # Align index columns
                     idx = frames[0].index.append([f.index for f in frames[1:]])
-                    idx_cols = self._mangle_index_names(idx.names)
+                    idx_cols = mangle_index_names(idx.names)
                     idx_df = pd.DataFrame(index=idx).reset_index()
                     obj_cols = idx_df.select_dtypes(include=["object"]).columns.tolist()
                     if len(obj_cols) != 0:
@@ -1925,7 +1923,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             exprs = translate_exprs_to_base(self._op.exprs, base)
             exprs = replace_frame_in_exprs(exprs, base, filtered_base)
             if base._index_cols is None:
-                idx_name = self._mangle_index_names([None])[0]
+                idx_name = mangle_index_names([None])[0]
                 exprs[idx_name] = filtered_base.ref(idx_name)
                 exprs.move_to_end(idx_name, last=False)
 
@@ -1963,7 +1961,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         name = self._index_cache.get().name if self.has_index_cache else None
-        name = self._mangle_index_names([name])[0]
+        name = mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref(ROWID_COL_NAME)
         for col in self._table_cols:
@@ -2067,22 +2065,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             )
         self._partitions = new_partitions
         self._op = FrameNode(self)
-
-        if self._index_cols is None:
-            idx_cols = []
-            pref = IDX_COL_NAME
-            at = new_partitions[0][0].arrow_table
-            for c in at.column_names:
-                if c.startswith(pref):
-                    idx_cols.append(c)
-                else:
-                    break
-            assert not any(c.startswith(pref) for c in at.column_names[len(idx_cols) :])
-            if idx_cols:
-                self._index_cache = None
-                self._index_cols = idx_cols
-                self._table_cols = idx_cols + self._table_cols
-                self._dtypes = at.select(idx_cols).to_pandas().dtypes + self._dtypes
 
     def _require_executed_base(self):
         """
@@ -2343,7 +2325,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 at = at.drop(self._index_cols)
 
             new_index = new_index.copy()
-            index_names = self._mangle_index_names(new_index.names)
+            index_names = mangle_index_names(new_index.names)
             new_index.names = index_names
             index_df = pd.DataFrame(data={}, index=new_index)
             index_df = index_df.reset_index()
@@ -2621,7 +2603,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._index_cols is None and name is None:
             return self
 
-        names = self._mangle_index_names([name])
+        names = mangle_index_names([name])
         exprs = OrderedDict()
         if self._index_cols is None:
             exprs[names[0]] = self.ref(ROWID_COL_NAME)
@@ -2676,7 +2658,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 f"Unexpected names count: expected {len(self._index_cols)} got {len(names)}"
             )
 
-        names = self._mangle_index_names(names)
+        names = mangle_index_names(names)
         exprs = OrderedDict()
         for old, new in zip(self._index_cols, names):
             exprs[new] = self.ref(old)
@@ -2865,7 +2847,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             orig_index_names = new_index.names
             orig_df = df
-            index_cols = cls._mangle_index_names(new_index.names)
+            index_cols = mangle_index_names(new_index.names)
             df.index.names = index_cols
             df = df.reset_index()
             orig_df.index.names = orig_index_names
@@ -2911,29 +2893,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
-
-    @classmethod
-    def _mangle_index_names(cls, names):
-        """
-        Return mangled index names for index labels.
-
-        Mangled names are used for index columns because index
-        labels cannot always be used as HDK table column
-        names. E.e. label can be a non-string value or an
-        unallowed string (empty strings, etc.) for a table column
-        name.
-
-        Parameters
-        ----------
-        names : list of str
-            Index labels.
-
-        Returns
-        -------
-        list of str
-            Mangled names.
-        """
-        return [f"{IDX_COL_NAME}{i}_{encode_col_name(n)}" for i, n in enumerate(names)]
 
     @classmethod
     def from_arrow(

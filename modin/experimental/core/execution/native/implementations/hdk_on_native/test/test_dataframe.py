@@ -805,13 +805,16 @@ class TestConcat:
         with ensure_clean(".csv") as file:
             pandas.DataFrame({"a": [1, 2, 3, 4]}).to_csv(file, index=False)
 
-            def test_concat(lib, n_concats, **kwargs):
+            def test_concat(lib, n_concats, sort_last, **kwargs):
                 df = lib.read_csv(file)
                 for _ in range(n_concats):
                     df = lib.concat([df, lib.read_csv(file)])
+                if sort_last:
+                    df = lib.concat([df, lib.read_csv(file)], sort=True)
                 return df
 
-            run_and_compare(test_concat, data={}, n_concats=500)
+            run_and_compare(test_concat, data={}, n_concats=500, sort_last=False)
+            run_and_compare(test_concat, data={}, n_concats=2, sort_last=True)
 
 
 class TestGroupby:
