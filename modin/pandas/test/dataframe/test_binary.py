@@ -178,7 +178,7 @@ def test_comparison(data, op, other):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Dask"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.parametrize(

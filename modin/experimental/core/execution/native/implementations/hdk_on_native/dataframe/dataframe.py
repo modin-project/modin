@@ -221,13 +221,13 @@ class HdkOnNativeDataframe(PandasDataframe):
                     tail = [""] * (columns.nlevels - 1)
                     index_tuples = [(col, *tail) for col in self._index_cols]
                     dtype_index = MultiIndex.from_tuples(index_tuples).append(columns)
-                    self._dtypes = pd.Series(dtypes, index=dtype_index)
+                    self.set_dtypes_cache(pd.Series(dtypes, index=dtype_index))
                 else:
-                    self._dtypes = pd.Series(dtypes, index=self._table_cols)
+                    self.set_dtypes_cache(pd.Series(dtypes, index=self._table_cols))
             else:
-                self._dtypes = pd.Series(dtypes, index=columns)
+                self.set_dtypes_cache(pd.Series(dtypes, index=columns))
         else:
-            self._dtypes = dtypes
+            self.set_dtypes_cache(dtypes)
 
         if partitions is not None:
             self._filter_empties()
@@ -257,7 +257,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             columns=self.copy_columns_cache(),
             row_lengths=self._row_lengths_cache,
             column_widths=self._column_widths_cache,
-            dtypes=self._dtypes.copy() if self._dtypes is not None else None,
+            dtypes=self.copy_dtypes_cache(),
             op=self._op,
             index_cols=self._index_cols,
             uses_rowid=self._uses_rowid,
@@ -386,7 +386,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
             return self.__constructor__(
                 columns=base.columns,
-                dtypes=base._dtypes,
+                dtypes=base.copy_dtypes_cache(),
                 op=op,
                 index_cols=base._index_cols,
                 force_execution_mode=base._force_execution_mode,
@@ -729,7 +729,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         )
         result = base.__constructor__(
             columns=base.columns,
-            dtypes=base._dtypes,
+            dtypes=base.copy_dtypes_cache(),
             op=FilterNode(base, condition),
             index_cols=base._index_cols,
             force_execution_mode=base._force_execution_mode,
@@ -781,7 +781,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         columns = col_dtypes.keys()
-        new_dtypes = self._dtypes.copy()
+        new_dtypes = self.copy_dtypes_cache()
         for column in columns:
             try:
                 old_dtype = np.dtype(self._dtypes[column])
@@ -1079,7 +1079,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         for frame in aligned_frames[1:]:
             new_frame = self.__constructor__(
                 columns=new_columns,
-                dtypes=new_frame._dtypes,
+                dtypes=new_frame.copy_dtypes_cache(),
                 op=UnionNode([new_frame, frame]),
                 index_cols=new_frame._index_cols,
                 force_execution_mode=self._force_execution_mode,
@@ -1676,7 +1676,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
                 base = base.__constructor__(
                     columns=base.columns,
-                    dtypes=base._dtypes,
+                    dtypes=base.copy_dtypes_cache(),
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=base._index_cols,
                     force_execution_mode=base._force_execution_mode,
@@ -1698,7 +1698,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             else:
                 return base.__constructor__(
                     columns=base.columns,
-                    dtypes=base._dtypes,
+                    dtypes=base.copy_dtypes_cache(),
                     op=SortNode(base, columns, ascending, na_position),
                     index_cols=None,
                     force_execution_mode=base._force_execution_mode,
@@ -1706,7 +1706,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             return base.__constructor__(
                 columns=base.columns,
-                dtypes=base._dtypes,
+                dtypes=base.copy_dtypes_cache(),
                 op=SortNode(base, columns, ascending, na_position),
                 index_cols=base._index_cols,
                 force_execution_mode=base._force_execution_mode,
@@ -1753,7 +1753,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         condition = key_exprs[key_col]
         filtered_base = self.__constructor__(
             columns=filter_base.columns,
-            dtypes=filter_base._dtypes,
+            dtypes=filter_base.copy_dtypes_cache(),
             op=FilterNode(filter_base, condition),
             index_cols=filter_base._index_cols,
             force_execution_mode=self._force_execution_mode,
@@ -2381,8 +2381,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             A pandas Series containing the data types for this dataframe.
         """
         if self._index_cols is not None:
+            # [] operator will return pandas.Series
             return self._dtypes[len(self._index_cols) :]
-        return self._dtypes
+        return self._dtypes.get()
 
     def has_multiindex(self):
         """

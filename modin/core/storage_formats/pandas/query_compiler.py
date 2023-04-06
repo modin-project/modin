@@ -521,7 +521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    if self._modin_frame._dtypes is not None:
+                    if self._modin_frame.has_materialized_dtypes:
                         new_dtypes = []
                         for old_col in left_renamer.keys():
                             new_dtypes.append(self.dtypes[old_col])

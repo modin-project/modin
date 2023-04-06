@@ -386,7 +386,7 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         # `dtypes` must be evaluated after `query` so we need to check cache
-        assert modin_result._query_compiler._modin_frame._dtypes is not None
+        assert modin_result._query_compiler._modin_frame.has_dtypes_cache
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 
