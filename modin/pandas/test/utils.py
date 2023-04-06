@@ -679,15 +679,22 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
     if hasattr(pandas_df, "select_dtypes"):
         pandas_df = pandas_df.select_dtypes(exclude=["category"])
 
-    if modin_df.equals(pandas_df) or (
-        all(modin_df.isna().all()) and all(pandas_df.isna().all())
-    ):
+    if modin_df.equals(pandas_df):
+        return
+
+    isna = modin_df.isna().all()
+    if isinstance(isna, bool):
+        if isna:
+            assert pandas_df.isna().all()
+            return
+    elif isna.all():
+        assert pandas_df.isna().all().all()
         return
 
     diff = (modin_df - pandas_df).abs()
     diff /= pandas_df
     diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
-    assert diff_max < max_diff
+    assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
 
 
 def try_modin_df_almost_equals_compare(df1, df2):
