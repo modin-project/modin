@@ -793,8 +793,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         lower : float or list-like
         upper : float or list-like
         axis : {0, 1}
-        inplace : {False}
-            This parameter serves the compatibility purpose. Always has to be False.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
