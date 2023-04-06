@@ -191,6 +191,8 @@ def try_compute_new_dtypes(first, second, infer_dtypes):
         elif infer_dtypes == "float":
             dtypes = compute_dtypes_common_cast(first, second)
             dtypes = dtypes.apply(coerce_int_to_float64)
+        else:
+            dtypes = None
     except NotImplementedError:
         dtypes = None
 
