@@ -66,6 +66,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     parse_dates_values_by_id,
     time_parsing_csv_path,
+    test_data as utils_test_data,
 )
 
 if StorageFormat.get() == "Hdk":
@@ -1671,6 +1672,27 @@ class TestParquet:
             index=True,
             engine=engine,
         )
+
+    def test_to_parquet_s3(self, s3_resource, engine, s3_storage_options):
+        # use utils_test_data because it spans multiple partitions
+        modin_path = "s3://modin-test/modin-dir/modin_df.parquet"
+        mdf, pdf = create_test_dfs(utils_test_data["int_data"])
+        pdf.to_parquet(
+            "s3://modin-test/pandas-dir/pandas_df.parquet",
+            engine=engine,
+            storage_options=s3_storage_options,
+        )
+        mdf.to_parquet(modin_path, engine=engine, storage_options=s3_storage_options)
+        df_equals(
+            pandas.read_parquet(
+                "s3://modin-test/pandas-dir/pandas_df.parquet",
+                storage_options=s3_storage_options,
+            ),
+            pd.read_parquet(modin_path, storage_options=s3_storage_options),
+        )
+        # check we're not creating local file:
+        # https://github.com/modin-project/modin/issues/5888
+        assert not os.path.isdir(modin_path)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",

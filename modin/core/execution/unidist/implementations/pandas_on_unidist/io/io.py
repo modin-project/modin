@@ -14,8 +14,8 @@
 """The module holds the factory which performs I/O using pandas on unidist."""
 
 import io
-import os
 
+import fsspec
 import pandas
 
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
@@ -277,7 +277,9 @@ class PandasOnUnidistIO(UnidistIO):
             return UnidistIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        os.makedirs(output_path, exist_ok=True)
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
+        fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
+        fs.mkdirs(url, exist_ok=True)
 
         def func(df, **kw):
             """

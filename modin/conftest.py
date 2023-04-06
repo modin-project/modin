@@ -14,7 +14,15 @@
 # We turn off mypy type checks in this file because it's not imported anywhere
 # type: ignore
 
+import boto3
+import s3fs
 import os
+import platform
+import subprocess
+import time
+
+import shlex
+import requests
 import sys
 import pytest
 import pandas
@@ -50,6 +58,9 @@ from modin.config import (  # noqa: E402
     MinPartitionSize,
     IsExperimental,
     TestRayClient,
+    GithubCI,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
     AsyncReadMode,
 )
 import uuid  # noqa: E402
@@ -586,3 +597,162 @@ def pytest_sessionfinish(session, exitstatus):
         ray.util.disconnect()
         if ray_client_server:
             ray_client_server.stop(0)
+
+
+@pytest.fixture
+def s3_storage_options(worker_id):
+    # # copied from pandas conftest.py:
+    # https://github.com/pandas-dev/pandas/blob/32f789fbc5d5a72d9d1ac14935635289eeac9009/pandas/tests/io/conftest.py#L45
+    # worker_id is a pytest fixture
+    if GithubCI.get():
+        url = "http://localhost:5000/"
+    else:
+        # If we hit this else-case, this test is being run locally. In that case, we want
+        # each worker to point to a different port for its mock S3 service. The easiest way
+        # to do that is to use the `worker_id`, which is unique, to determine what port to point
+        # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
+        # for each worker, and we never run tests with more than `pytest -n 4`.
+        worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
+        url = f"http://127.0.0.1:555{worker_id}/"
+    return {"client_kwargs": {"endpoint_url": url}}
+
+
+@pytest.fixture(scope="session")
+def s3_base(worker_id):
+    """
+    Fixture for mocking S3 interaction.
+
+    Sets up moto server in separate process locally.
+
+    Yields
+    ------
+    str
+        URL for motoserver/moto CI service.
+    """
+    # copied from pandas conftest.py
+    with pandas._testing.ensure_safe_environment_variables():
+        # still need access keys for https://github.com/getmoto/moto/issues/1924
+        os.environ.setdefault("AWS_ACCESS_KEY_ID", CIAWSAccessKeyID.get())
+        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CIAWSSecretAccessKey.get())
+        os.environ["AWS_REGION"] = "us-west-2"
+        if GithubCI.get():
+            if sys.platform in ("darwin", "win32", "cygwin") or (
+                platform.machine() in ("arm64", "aarch64")
+                or platform.machine().startswith("armv")
+            ):
+                # pandas comments say:
+                # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
+                # - subprocess in CI can cause timeouts
+                # - GitHub Actions do not support
+                #   container services for the above OSs
+                pytest.skip(
+                    (
+                        "S3 tests do not have a corresponding service in Windows, macOS "
+                        + "or ARM platforms"
+                    )
+                )
+            else:
+                # assume CI has started moto in docker container:
+                # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
+                # It would be nice to start moto on another thread as in the
+                # instructions here:
+                # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
+                # but that gives 403 forbidden error when we try to create the bucket
+                yield "http://localhost:5000"
+        else:
+            # Launching moto in server mode, i.e., as a separate process
+            # with an S3 endpoint on localhost
+
+            # If we hit this else-case, this test is being run locally. In that case, we want
+            # each worker to point to a different port for its mock S3 service. The easiest way
+            # to do that is to use the `worker_id`, which is unique, to determine what port to point
+            # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
+            # for each worker, and we never run tests with more than `pytest -n 4`.
+            worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
+            endpoint_port = f"555{worker_id}"
+            endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
+
+            # pipe to null to avoid logging in terminal
+            # TODO any way to throw the error from here? e.g. i had an annoying problem
+            # where I didn't have flask-cors and moto just failed .if there's an error
+            # in the popen command and we throw an error within the body of the context
+            # manager, the test just hangs forever.
+            with subprocess.Popen(
+                # try this https://stackoverflow.com/a/72084867/17554722 ?
+                shlex.split(f"moto_server s3 -p {endpoint_port}"),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            ) as proc:
+                made_connection = False
+                for _ in range(50):
+                    try:
+                        # OK to go once server is accepting connections
+                        if requests.get(endpoint_uri).ok:
+                            made_connection = True
+                            break
+                    except Exception:
+                        # try again while we still have retries
+                        time.sleep(0.1)
+                if not made_connection:
+                    raise RuntimeError(
+                        "Could not connect to moto server after 50 tries."
+                    )
+                yield endpoint_uri
+
+                proc.terminate()
+
+
+@pytest.fixture
+def s3_resource(s3_base):
+    """
+    Set up S3 bucket with contents. The primary bucket name is "modin-test".
+
+    When running locally, this function should be safe even if there are multiple pytest
+    workers running in parallel because each worker gets its own endpoint. When running
+    in CI, we use a single endpoint for all workers, so we can't have multiple pytest
+    workers running in parallel.
+    """
+    bucket = "modin-test"
+    conn = boto3.resource("s3", endpoint_url=s3_base)
+    cli = boto3.client("s3", endpoint_url=s3_base)
+
+    # https://github.com/getmoto/moto/issues/3292
+    # without location, I get
+    # botocore.exceptions.ClientError: An error occurred
+    # (IllegalLocationConstraintException) when calling the CreateBucket operation:
+    # The unspecified location constraint is incompatible for the region specific
+    # endpoint this request was sent to.
+    # even if I delete os.environ['AWS_REGION'] but somehow pandas can get away with
+    # this.
+    try:
+        cli.create_bucket(
+            Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "us-west-2"}
+        )
+    except Exception as e:
+        # OK if bucket already exists, but want to raise other exceptions.
+        # The exception raised by `create_bucket` is made using a factory,
+        # so we need to check using this method of reading the response rather
+        # than just checking the type of the exception.
+        response = getattr(e, "response", {})
+        error_code = response.get("Error", {}).get("Code", "")
+        if error_code not in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
+            raise
+    for _ in range(20):
+        # We want to wait until bucket creation is finished.
+        if cli.list_buckets()["Buckets"]:
+            break
+        time.sleep(0.1)
+    if not cli.list_buckets()["Buckets"]:
+        raise RuntimeError("Could not create bucket")
+
+    s3fs.S3FileSystem.clear_instance_cache()
+    yield conn
+
+    s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
+
+    s3.rm(bucket, recursive=True)
+    for _ in range(20):
+        # We want to wait until the deletion finishes.
+        if not cli.list_buckets()["Buckets"]:
+            break
+        time.sleep(0.1)
