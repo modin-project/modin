@@ -33,6 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
+from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
@@ -2365,6 +2366,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
 
+        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+            new_dtypes = self.dtypes.copy()
+            new_dtypes[col_loc] = [
+                find_common_type([dtype, type(item)])
+                for dtype in new_dtypes[col_loc].values
+            ]
+        else:
+            new_dtypes = None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=1,
             func=_set_item,
@@ -2372,6 +2382,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 

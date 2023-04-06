@@ -971,3 +971,13 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
         assert not modin_frame.has_materialized_columns
         if not has_dtypes_metadata:
             assert not modin_frame.has_dtypes_cache
+
+
+def test_setitem_bool_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    indexer = pd.Series([True, False, True, False])
+
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    df.loc[indexer] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
