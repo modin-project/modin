@@ -491,26 +491,16 @@ def test_melt(data, id_vars, value_vars):
             df = df.melt(*args, **kwargs).dropna()
             return df.sort_values(df.columns.tolist())
 
-        # HDK has different values of category codes than Pandas.
-        # The default comparator fails for categorical dtypes.
-        def comparator(df1, df2):
-            assert all(df1.index == df2.index)
-            for c1, c2 in zip(df1.columns, df2.columns):
-                assert c1 == c2
-                assert all(df1[c1] == df2[c2])
-
     else:
 
         def melt(df, *args, **kwargs):
             return df.melt(*args, **kwargs).sort_values(["variable", "value"])
 
-        comparator = df_equals
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
         id_vars=id_vars,
         value_vars=value_vars,
-        comparator=comparator,
     )
 
 

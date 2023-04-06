@@ -28,6 +28,7 @@ from .utils import (
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
+    get_common_arrow_type,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
@@ -1130,21 +1131,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             key = (col_name, table_col_name)
             field = table.field(table_col_name)
             cur_field = col_fields.get(key, None)
-            if (
-                (cur_field is None)
-                or pyarrow.types.is_null(cur_field.type)
-                or (
-                    (not pyarrow.types.is_string(cur_field.type))
-                    and (not pyarrow.types.is_null(field.type))
-                    and (
-                        pyarrow.types.is_string(field.type)
-                        or (
-                            (field.type.bit_width == cur_field.type.bit_width)
-                            and pyarrow.types.is_floating(field.type)
-                        )
-                        or (field.type.bit_width > cur_field.type.bit_width)
-                    )
-                )
+            if cur_field is None or (
+                cur_field.type != get_common_arrow_type(cur_field.type, field.type)
             ):
                 col_fields[key] = field
 
