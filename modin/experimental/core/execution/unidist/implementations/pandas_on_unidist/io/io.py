@@ -62,7 +62,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
 
     def __make_read(*classes, build_args=build_args):  # noqa: GL08
         # used to reduce code duplication
-        return type("", (UnidistWrapper, *classes), build_args)._read
+        return type("", (UnidistWrapper, *classes), build_args).read
 
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
@@ -105,7 +105,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnUnidistIO.to_pickle(qc, **kwargs)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
             kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
             df.to_pickle(**kwargs)

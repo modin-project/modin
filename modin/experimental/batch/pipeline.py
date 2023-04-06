@@ -258,7 +258,7 @@ class PandasQueryPipeline(object):
                 )
                 new_dfs = []
 
-                def mask_partition(df, i):
+                def mask_partition(df, i):  # pragma: no cover
                     new_length = len(df.index) // self.num_partitions
                     if i == self.num_partitions - 1:
                         return df.iloc[i * new_length :]

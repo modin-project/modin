@@ -656,6 +656,18 @@ class CI_AWS_ACCESS_KEY_ID(EnvironmentVariable, type=str):
     default = "foobar_key"
 
 
+class AsyncReadMode(EnvironmentVariable, type=bool):
+    """
+    It does not wait for the end of reading information from the source.
+
+    Can break situations when reading occurs in a context, when exiting
+    from which the source is deleted.
+    """
+
+    varname = "MODIN_ASYNC_READ_MODE"
+    default = False
+
+
 class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
 

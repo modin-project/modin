@@ -15,6 +15,7 @@ import pytest
 import numpy as np
 import json
 import pandas
+from pandas._testing import assert_series_equal
 from pandas.errors import SpecificationError
 from pandas.core.indexing import IndexingError
 import matplotlib
@@ -77,7 +78,7 @@ from .utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -90,6 +91,9 @@ NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Initialize the environment
+pd.DataFrame()
 
 
 def get_rop(op):
@@ -596,6 +600,10 @@ def test___str__(data):
     assert str(modin_series) == str(pandas_series)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/272",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___sub__(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1046,7 +1054,20 @@ def test_asof_large(where):
     df_equals(modin_series.asof(where), pandas_series.asof(where))
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    [
+        test_data["int_data"],
+        pytest.param(
+            test_data["float_nan_data"],
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not raise IntCastingNaNError",
+            ),
+        ),
+    ],
+    ids=test_data_keys,
+)
 def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
     series_name = "test_series"
@@ -1255,6 +1276,10 @@ def test_clip_sequence(request, data, bound_type):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/271",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
@@ -1262,6 +1287,10 @@ def test_combine(data):
     modin_series.combine(modin_series2, lambda s1, s2: s1 if s1 < s2 else s2)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/271",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_combine_first(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1657,7 +1686,19 @@ def test_dtype(data):
 # the frame is created has timezone None, so that its dtype is datetime64[ns]
 # as opposed to, e.g. datetime64[ns, Europe/Berlin]. To reproduce that bug, we
 # use timezones None and Europe/Berlin.
-@pytest.mark.parametrize("timezone", [None, "Europe/Berlin"])
+@pytest.mark.parametrize(
+    "timezone",
+    [
+        pytest.param(None),
+        pytest.param(
+            "Europe/Berlin",
+            marks=pytest.mark.skipif(
+                StorageFormat.get() == "Hdk",
+                reason="HDK is unable to store TZ in the table schema",
+            ),
+        ),
+    ],
+)
 def test_dt(timezone):
     data = pd.date_range("2016-12-31", periods=128, freq="D", tz=timezone)
     modin_series = pd.Series(data)
@@ -1747,11 +1788,15 @@ def test_dt(timezone):
         df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
         df = lib.concat([df_a, df_b], axis=1)
         eval_result = df.eval("B - A", engine="python")
-        # BaseOnPython had a single partition after the concat, and it
+        # BaseOnPython ahd HDK had a single partition after the concat, and it
         # maintains that partition after eval. In other execution modes,
         # eval() should re-split the result into two column partitions,
         # one of which is empty.
-        if isinstance(df, pd.DataFrame) and get_current_execution() != "BaseOnPython":
+        if (
+            isinstance(df, pd.DataFrame)
+            and get_current_execution() != "BaseOnPython"
+            and StorageFormat.get() != "Hdk"
+        ):
             assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
         return eval_result.dt.days
 
@@ -3226,12 +3271,20 @@ def test_std(request, data, skipna, ddof):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/272",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_sub(data):
     modin_series, pandas_series = create_test_series(data)
     inter_df_math_helper(modin_series, pandas_series, "sub")
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/272",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_subtract(data):
     modin_series, pandas_series = create_test_series(data)
@@ -3584,7 +3637,20 @@ def test_update(data, other_data):
 @pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("bins", [3, None])
-@pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize(
+    "dropna",
+    [
+        pytest.param(None),
+        pytest.param(False),
+        pytest.param(
+            True,
+            marks=pytest.mark.skipif(
+                StorageFormat.get() == "Hdk",
+                reason="https://github.com/modin-project/modin/issues/2896",
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
 def test_value_counts(sort, normalize, bins, dropna, ascending):
     def sort_sensitive_comparator(df1, df2):
@@ -3637,9 +3703,19 @@ def test_value_counts_categorical():
     random_state = np.random.RandomState(seed=42)
     random_state.shuffle(data)
 
+    if StorageFormat.get() == "Hdk":
+        # The order of HDK categories is different from Pandas
+        # and, thus, index comparison fails.
+        def comparator(df1, df2):
+            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+
+    else:
+        comparator = df_equals
+
     eval_general(
         *create_test_series(data, dtype="category"),
         lambda df: df.value_counts(),
+        comparator=comparator,
     )
 
 
@@ -4383,6 +4459,10 @@ def test_cat_ordered(data):
     assert modin_series.cat.ordered == pandas_series.cat.ordered
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="HDK uses internal codes, that are different from Pandas",
+)
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )

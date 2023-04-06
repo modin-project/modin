@@ -484,7 +484,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
                 return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
@@ -521,7 +521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    if self._modin_frame._dtypes is not None:
+                    if self._modin_frame.has_materialized_dtypes:
                         new_dtypes = []
                         for old_col in left_renamer.keys():
                             new_dtypes.append(self.dtypes[old_col])
@@ -604,7 +604,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if how in ["left", "inner"]:
             right_pandas = right.to_pandas()
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -640,7 +640,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self.lazy_execution:
 
-            def _reset(df, *axis_lengths, partition_idx):
+            def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
                 df = df.reset_index(**kwargs)
 
                 if isinstance(df.index, pandas.RangeIndex):
@@ -976,7 +976,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler containing the result of resample aggregation.
         """
 
-        def map_func(df, resample_kwargs=resample_kwargs):
+        def map_func(df, resample_kwargs=resample_kwargs):  # pragma: no cover
             """Resample time-series data of the passed frame and apply aggregation function on it."""
             if df_op is not None:
                 df = df_op(df)
@@ -1304,7 +1304,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = None
             need_reindex = False
 
-        def map_func(df):
+        def map_func(df):  # pragma: no cover
             return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
 
         def is_tree_like_or_1d(calc_index, valid_index):
@@ -1782,7 +1782,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                     break
 
-        def describe_builder(df, internal_indices=[]):
+        def describe_builder(df, internal_indices=[]):  # pragma: no cover
             """Apply `describe` function to the subset of columns in a single partition."""
             # The index of the resulting dataframe is the same amongst all partitions
             # when dealing with the same data type. However, if we work with columns
@@ -1870,7 +1870,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if min_periods is None:
             min_periods = 1
 
-        def map_func(df):
+        def map_func(df):  # pragma: no cover
             """Compute covariance or correlation matrix for the passed frame."""
             df = df.to_numpy()
             n_rows = df.shape[0]
@@ -1925,7 +1925,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else other.to_pandas()
             )
 
-        def map_func(df, other=other, squeeze_self=squeeze_self):
+        def map_func(df, other=other, squeeze_self=squeeze_self):  # pragma: no cover
             """Compute matrix multiplication of the passed frames."""
             result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
             if is_list_like(result):
@@ -1980,7 +1980,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             sorted in the given order.
         """
 
-        def map_func(df, n=n, keep=keep, columns=columns):
+        def map_func(df, n=n, keep=keep, columns=columns):  # pragma: no cover
             """Return first `N` rows of the sorted data for a single partition."""
             if columns is None:
                 return pandas.DataFrame(
@@ -2035,7 +2035,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def mode(self, **kwargs):
         axis = kwargs.get("axis", 0)
 
-        def mode_builder(df):
+        def mode_builder(df):  # pragma: no cover
             """Compute modes for a single partition."""
             result = pandas.DataFrame(df.mode(**kwargs))
             # We return a dataframe with the same shape as the input to ensure
@@ -2073,7 +2073,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if full_axis:
                     value = value.to_pandas().squeeze(axis=1)
 
-                    def fillna_builder(series):
+                    def fillna_builder(series):  # pragma: no cover
                         # `limit` parameter works only on `Series` type, so we have to squeeze both objects to get
                         # correct behavior.
                         return series.squeeze(axis=1).fillna(value=value, **kwargs)
@@ -2360,7 +2360,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __setitem__ methods
     def setitem_bool(self, row_loc, col_loc, item):
-        def _set_item(df, row_loc):
+        def _set_item(df, row_loc):  # pragma: no cover
             df = df.copy()
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
@@ -2467,7 +2467,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler with updated `key` value.
         """
 
-        def setitem_builder(df, internal_indices=[]):
+        def setitem_builder(df, internal_indices=[]):  # pragma: no cover
             """
             Set the row/column to the `value` in a single partition.
 
@@ -2569,7 +2569,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return result
 
-        def _compute_duplicated(df):
+        def _compute_duplicated(df):  # pragma: no cover
             result = df.duplicated(**kwargs)
             if isinstance(result, pandas.Series):
                 result = result.to_frame(
@@ -2609,7 +2609,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 
-        def insert(df, internal_indices=[]):
+        def insert(df, internal_indices=[]):  # pragma: no cover
             """
             Insert new column to the partition.
 
@@ -2700,7 +2700,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):
+        def dict_apply_builder(df, func_dict={}):  # pragma: no cover
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
             return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
@@ -3323,7 +3323,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if len_values == 0:
             len_values = len(self.columns.drop(unique_keys))
 
-        def applyier(df, other):
+        def applyier(df, other):  # pragma: no cover
             """
             Build pivot table for a single partition.
 
@@ -3393,7 +3393,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not is_list_like(columns):
             columns = [columns]
 
-        def map_fn(df):
+        def map_fn(df):  # pragma: no cover
             cols_to_encode = df.columns.intersection(columns)
             return pandas.get_dummies(df, columns=cols_to_encode, **kwargs)
 

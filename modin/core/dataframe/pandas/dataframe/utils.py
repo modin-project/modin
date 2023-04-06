@@ -71,9 +71,11 @@ def build_sort_functions(
             samples, ideal_num_new_partitions, method, key
         )
 
+    dtypes = modin_frame.dtypes
+
     def split_fn(partition, pivots):
         return split_partitions_using_pivots_for_sort(
-            modin_frame, partition, column, pivots, ascending, **kwargs
+            dtypes, partition, column, pivots, ascending, **kwargs
         )
 
     return ShuffleFunctions(
@@ -207,7 +209,7 @@ def pick_pivots_from_samples_for_sort(
 
 
 def split_partitions_using_pivots_for_sort(
-    modin_frame: "PandasDataframe",
+    dtypes: pandas.Series,
     df: pandas.DataFrame,
     column: str,
     pivots: np.ndarray,
@@ -224,8 +226,8 @@ def split_partitions_using_pivots_for_sort(
 
     Parameters
     ----------
-    modin_frame : PandasDataframe
-        The Modin Dataframe calling this function.
+    dtypes : pandas.Series
+        The Modin Dataframe's dtypes.
     df : pandas.Dataframe
         The partition to split.
     column : str
@@ -248,7 +250,7 @@ def split_partitions_using_pivots_for_sort(
     # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
     # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
     # which breaks when we reverse the pivots.
-    if not ascending and pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if not ascending and pandas.api.types.is_numeric_dtype(dtypes[column]):
         # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
         pivots = pivots[::-1]
     key = kwargs.pop("key", None)
@@ -258,7 +260,7 @@ def split_partitions_using_pivots_for_sort(
     cols_to_digitize = non_na_rows[column]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
-    if pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if pandas.api.types.is_numeric_dtype(dtypes[column]):
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
         # `np.digitize` returns results based off of the sort order of the pivots it is passed.
         # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots

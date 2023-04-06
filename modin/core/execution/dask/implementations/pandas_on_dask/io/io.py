@@ -177,7 +177,7 @@ class PandasOnDaskIO(BaseIO):
         kwargs["if_exists"] = "append"
         columns = qc.columns
 
-        def func(df):
+        def func(df):  # pragma: no cover
             """
             Override column names in the wrapped dataframe and convert it to SQL.
 
