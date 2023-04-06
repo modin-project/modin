@@ -14,7 +14,6 @@
 """The module holds the factory which performs I/O using pandas on Ray."""
 
 import io
-import os
 
 import pandas
 from pandas.io.common import get_handle
@@ -53,65 +52,31 @@ class PandasOnRayIO(RayIO):
         frame_partition_cls=PandasOnRayDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayDataframe,
+        base_io=RayIO,
     )
 
-    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+    def __make_read(*classes, build_args=build_args):
         # used to reduce code duplication
         return type("", (RayWrapper, *classes), build_args).read
+
+    def __make_to_method(*classes, build_args=build_args):
+        # used to reduce code duplication
+        return type("", (RayWrapper, *classes), build_args)._to_method
 
     read_csv = __make_read(PandasCSVParser, CSVDispatcher)
     read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
     read_json = __make_read(PandasJSONParser, JSONDispatcher)
     read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
+    to_parquet = __make_to_method(ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
     # read_hdf = __make_read(PandasHDFParser, HDFReader)
     read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    to_sql = __make_to_method(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
 
     del __make_read  # to not pollute class namespace
-
-    @classmethod
-    def to_sql(cls, qc, **kwargs):
-        """
-        Write records stored in the `qc` to a SQL database.
-
-        Parameters
-        ----------
-        qc : BaseQueryCompiler
-            The query compiler of the Modin dataframe that we want to run ``to_sql`` on.
-        **kwargs : dict
-            Parameters for ``pandas.to_sql(**kwargs)``.
-        """
-        # we first insert an empty DF in order to create the full table in the database
-        # This also helps to validate the input against pandas
-        # we would like to_sql() to complete only when all rows have been inserted into the database
-        # since the mapping operation is non-blocking, each partition will return an empty DF
-        # so at the end, the blocking operation will be this empty DF to_pandas
-
-        empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
-        empty_df.to_sql(**kwargs)
-        # so each partition will append its respective DF
-        kwargs["if_exists"] = "append"
-        columns = qc.columns
-
-        def func(df):  # pragma: no cover
-            """
-            Override column names in the wrapped dataframe and convert it to SQL.
-
-            Notes
-            -----
-            This function returns an empty ``pandas.DataFrame`` because ``apply_full_axis``
-            expects a Frame object as a result of operation (and ``to_sql`` has no dataframe result).
-            """
-            df.columns = columns
-            df.to_sql(**kwargs)
-            return pandas.DataFrame()
-
-        # Ensure that the metadata is synchronized
-        qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+    del __make_to_method  # to not pollute class namespace
 
     @staticmethod
     def _to_csv_check_support(kwargs):
@@ -233,82 +198,6 @@ class PandasOnRayIO(RayIO):
             lengths=None,
             enumerate_partitions=True,
             max_retries=0,
-        )
-        # pending completion
-        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
-
-    @staticmethod
-    def _to_parquet_check_support(kwargs):
-        """
-        Check if parallel version of `to_parquet` could be used.
-
-        Parameters
-        ----------
-        kwargs : dict
-            Keyword arguments passed to `.to_parquet()`.
-
-        Returns
-        -------
-        bool
-            Whether parallel version of `to_parquet` is applicable.
-        """
-        path = kwargs["path"]
-        compression = kwargs["compression"]
-        if not isinstance(path, str):
-            return False
-        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        if compression is None or not compression == "snappy":
-            return False
-        return True
-
-    @classmethod
-    def to_parquet(cls, qc, **kwargs):
-        """
-        Write a ``DataFrame`` to the binary parquet format.
-
-        Parameters
-        ----------
-        qc : BaseQueryCompiler
-            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
-        **kwargs : dict
-            Parameters for `pandas.to_parquet(**kwargs)`.
-        """
-        if not cls._to_parquet_check_support(kwargs):
-            return RayIO.to_parquet(qc, **kwargs)
-
-        output_path = kwargs["path"]
-        os.makedirs(output_path, exist_ok=True)
-
-        def func(df, **kw):
-            """
-            Dump a chunk of rows as parquet, then save them to target maintaining order.
-
-            Parameters
-            ----------
-            df : pandas.DataFrame
-                A chunk of rows to write to a parquet file.
-            **kw : dict
-                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
-                `partition_idx` serving as chunk index to maintain rows order.
-            """
-            compression = kwargs["compression"]
-            partition_idx = kw["partition_idx"]
-            kwargs[
-                "path"
-            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
-            df.to_parquet(**kwargs)
-            return pandas.DataFrame()
-
-        # Ensure that the metadata is synchronized
-        qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
-            axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
-            keep_partitioning=True,
-            lengths=None,
-            enumerate_partitions=True,
         )
         # pending completion
         qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())

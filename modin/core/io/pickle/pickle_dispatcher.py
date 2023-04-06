@@ -16,8 +16,11 @@
 import glob
 import warnings
 
+import pandas
+
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.config import NPartitions
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class ExperimentalPickleDispatcher(FileDispatcher):
@@ -89,3 +92,48 @@ class ExperimentalPickleDispatcher(FileDispatcher):
         return cls.query_compiler_cls(
             cls.frame_cls(partition_ids, new_index, new_columns)
         )
+
+    @classmethod
+    def _to_method(cls, qc, **kwargs):
+        """
+        When `*` in the filename all partitions are written to their own separate file.
+
+        The filenames is determined as follows:
+        - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
+        - if `*` is not the filename, then will be used default implementation.
+
+        Examples #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
+        `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want
+            to run ``to_pickle_distributed`` on.
+        **kwargs : dict
+            Parameters for ``pandas.to_pickle(**kwargs)``.
+        """
+        if not (
+            isinstance(kwargs["filepath_or_buffer"], str)
+            and "*" in kwargs["filepath_or_buffer"]
+        ) or not isinstance(qc, PandasQueryCompiler):
+            warnings.warn("Defaulting to Modin core implementation")
+            return cls.base_io.to_pickle(qc, **kwargs)
+
+        def func(df, **kw):  # pragma: no cover
+            idx = str(kw["partition_idx"])
+            # dask doesn't make a copy of kwargs on serialization;
+            # so take a copy ourselves, otherwise the error is:
+            #  kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
+            #  KeyError: 'filepath_or_buffer'
+            dask_kwargs = dict(kwargs)
+            dask_kwargs["path"] = dask_kwargs.pop("filepath_or_buffer").replace(
+                "*", idx
+            )
+            df.to_pickle(**dask_kwargs)
+            return pandas.DataFrame()
+
+        result = qc._modin_frame.apply_full_axis(
+            1, func, new_index=[], new_columns=[], enumerate_partitions=True
+        )
+        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
