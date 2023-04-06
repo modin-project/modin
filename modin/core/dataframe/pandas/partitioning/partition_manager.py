@@ -1581,7 +1581,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Convert our list of block partitions to row partitions. We need to create full-axis
         # row partitions since we need to send the whole partition to the split step as otherwise
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
-        row_partitions = [partition for partition in cls.row_partitions(partitions)]
+        row_partitions = cls.row_partitions(partitions)
         if len(pivots):
             # Gather together all of the sub-partitions
             split_row_partitions = np.array(

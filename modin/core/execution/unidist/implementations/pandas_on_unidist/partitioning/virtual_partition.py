@@ -166,7 +166,9 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         extract_metadata=False,
     ):
         return _deploy_unidist_func.options(
-            num_returns=num_splits * 4 if extract_metadata else num_splits,
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+            if extract_metadata
+            else num_splits,
         ).remote(
             _DEPLOY_SPLIT_FUNC,
             axis,
@@ -225,7 +227,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``unidist.ObjectRef``-s.
         """
         return _deploy_unidist_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
+            num_returns=(num_splits if lengths is None else len(lengths))
+            * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             _DEPLOY_AXIS_FUNC,
@@ -280,7 +283,9 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return _deploy_unidist_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_unidist_func.options(
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+        ).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,

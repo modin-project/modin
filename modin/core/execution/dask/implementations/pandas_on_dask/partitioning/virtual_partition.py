@@ -170,7 +170,9 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 *partitions,
             ),
             f_kwargs={"extract_metadata": extract_metadata},
-            num_returns=num_splits * 4 if extract_metadata else num_splits,
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+            if extract_metadata
+            else num_splits,
             pure=False,
         )
 
@@ -234,7 +236,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 "lengths": lengths,
                 "manual_partition": manual_partition,
             },
-            num_returns=result_num_splits * 4,
+            num_returns=result_num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,
         )
 
@@ -291,7 +293,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 other_shape,
                 *partitions,
             ),
-            num_returns=num_splits * 4,
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,
         )
 

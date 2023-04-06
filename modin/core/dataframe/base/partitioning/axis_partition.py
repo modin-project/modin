@@ -123,12 +123,21 @@ class BaseDataframeAxisPartition(ABC):  # pragma: no cover
             extract_metadata = bool(self._PARTITIONS_METADATA_LEN)
 
         if extract_metadata:
+            # Here we recieve a 1D array of futures describing partitions and their metadata as:
+            # [object_id{partition_idx}, metadata{partition_idx}_{metadata_idx}, ...]
+            # Here's an example of such array:
+            # [
+            #  object_id1, metadata1_1, metadata1_2, ..., metadata1_PARTITIONS_METADATA_LEN,
+            #  object_id2, metadata2_1, ..., metadata2_PARTITIONS_METADATA_LEN,
+            #  ...
+            #  object_idN, metadataN_1, ..., metadataN_PARTITIONS_METADATA_LEN,
+            # ]
             return [
                 self.partition_type(*init_args)
                 for init_args in zip(
                     # `partition_type` consumes `(object_id, *metadata)`, thus adding `+1`
                     *[iter(partitions)]
-                    * (self._PARTITIONS_METADATA_LEN + 1)
+                    * (1 + self._PARTITIONS_METADATA_LEN)
                 )
             ]
         else:
