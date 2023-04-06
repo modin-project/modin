@@ -56,7 +56,7 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     ----------
     first : PandasQueryCompiler
         First operand for which the binary operation would be performed later.
-    second : PandasQueryCompiler
+    second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
 
     Returns
@@ -69,11 +69,33 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     The dtypes of the operands are supposed to be known.
     """
     dtypes_first = first._modin_frame.dtypes.to_dict()
-    dtypes_second = second._modin_frame.dtypes.to_dict()
-    columns_first = set(first.columns)
-    columns_second = set(second.columns)
-    common_columns = columns_first.intersection(columns_second)
-    mismatch_columns = columns_first.union(columns_second) - common_columns
+    if isinstance(second, type(first)):
+        dtypes_second = second._modin_frame.dtypes.to_dict()
+        columns_first = set(first.columns)
+        columns_second = set(second.columns)
+        common_columns = columns_first.intersection(columns_second)
+        mismatch_columns = columns_first.union(columns_second) - common_columns
+    else:
+        if isinstance(second, (dict, list, tuple)):
+            second_dtypes_list = [
+                type(value)
+                for value in (second.values() if isinstance(second, dict) else second)
+            ]
+        elif is_scalar(second) or isinstance(second, np.ndarray):
+            second_dtypes_list = [getattr(second, "dtype", type(second))] * len(
+                dtypes_first
+            )
+        else:
+            raise NotImplementedError(
+                f"Can't compute common type for {type(first)} and {type(second)}."
+            )
+
+        dtypes_second = {
+            key: second_dtypes_list[idx] for idx, key in enumerate(dtypes_first.keys())
+        }
+        common_columns = first.columns
+        mismatch_columns = []
+
     # If at least one column doesn't match, the result of the non matching column would be nan.
     nan_dtype = np.dtype(type(np.nan))
     dtypes = pandas.Series(
@@ -97,7 +119,6 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
             ),
         ]
     )
-    dtypes = dtypes.sort_index()
     return dtypes
 
 
@@ -109,7 +130,7 @@ def compute_dtypes_boolean(first, second) -> np.dtype:
     ----------
     first : PandasQueryCompiler
         First operand for which the binary operation would be performed later.
-    second : PandasQueryCompiler
+    second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
 
     Returns
@@ -122,11 +143,93 @@ def compute_dtypes_boolean(first, second) -> np.dtype:
     Finds a union of columns and finds dtypes for all these columns.
     """
     columns_first = set(first.columns)
-    columns_second = set(second.columns)
-    columns_union = columns_first.union(columns_second)
+    if isinstance(second, type(first)):
+        columns_second = set(second.columns)
+        columns_union = columns_first.union(columns_second)
+    else:
+        columns_union = columns_first
+
     dtypes = pandas.Series([np.dtype(bool)] * len(columns_union), index=columns_union)
-    dtypes = dtypes.sort_index()
     return dtypes
+
+
+def try_compute_new_dtypes(first, second, infer_dtypes):
+    """
+    Precompute resulting dtypes of the binary operation if possible.
+
+    The dtypes won't be precomputed if any of the operands doesn't have their dtypes materialized
+    or if the second operand type is not supported. Supported types: PandasQueryCompiler, list,
+    dict, tuple, np.ndarray.
+
+    Parameters
+    ----------
+    first : PandasQueryCompiler
+        First operand of the binary operation.
+    second : PandasQueryCompiler, list-like or scalar
+        Second operand of the binary operation.
+    infer_dtypes : {"common_cast", "float", "bool"}
+        How dtypes should be infered (see ``Binary.register`` doc for more info).
+
+    Returns
+    -------
+    pandas.Series or None
+    """
+    if not first._modin_frame.has_materialized_dtypes:
+        return None
+
+    if (
+        isinstance(second, type(first))
+        and not second._modin_frame.has_materialized_dtypes
+    ):
+        return None
+
+    try:
+        if infer_dtypes == "bool":
+            dtypes = compute_dtypes_boolean(first, second)
+        if infer_dtypes == "common_cast":
+            dtypes = compute_dtypes_common_cast(first, second)
+        elif infer_dtypes == "float":
+            dtypes = compute_dtypes_common_cast(first, second)
+            dtypes = dtypes.apply(coerce_int_to_float64)
+    except NotImplementedError:
+        dtypes = None
+
+    return dtypes
+
+
+def try_compute_shape_hint(first, second):
+    """
+    Compute a shape-hint for the query compiler of the result of a binary operation.
+
+    Parameters
+    ----------
+    first : PandasQueryCompiler
+        First operand of the binary operation.
+    second : object
+        Second operant of the binary operation.
+
+    Returns
+    -------
+    "column" or None
+    """
+    if not first._modin_frame.has_materialized_columns:
+        return None
+
+    if not isinstance(second, type(first)):
+        return "column" if len(first.columns) == 1 and is_scalar(second) else None
+
+    if not second._modin_frame.has_materialized_columns:
+        return None
+
+    return (
+        "column"
+        if (
+            len(first.columns) == 1
+            and len(second.columns) == 1
+            and first.columns.equals(second.columns)
+        )
+        else None
+    )
 
 
 class Binary(Operator):
@@ -196,29 +299,25 @@ class Binary(Operator):
                 Result of binary function.
             """
             axis = kwargs.get("axis", 0)
-            shape_hint = None
+            if isinstance(other, type(query_compiler)) and broadcast:
+                assert (
+                    len(other.columns) == 1
+                ), "Invalid broadcast argument for `broadcast_apply`, too many columns: {}".format(
+                    len(other.columns)
+                )
+                # Transpose on `axis=1` because we always represent an individual
+                # column or row as a single-column Modin DataFrame
+                if axis == 1:
+                    other = other.transpose()
+
+            new_dtypes = (
+                try_compute_new_dtypes(query_compiler, other, infer_dtypes)
+                if dtypes is None
+                else dtypes
+            )
+            shape_hint = try_compute_shape_hint(query_compiler, other)
             if isinstance(other, type(query_compiler)):
                 if broadcast:
-                    assert (
-                        len(other.columns) == 1
-                    ), "Invalid broadcast argument for `broadcast_apply`, too many columns: {}".format(
-                        len(other.columns)
-                    )
-                    # Transpose on `axis=1` because we always represent an individual
-                    # column or row as a single-column Modin DataFrame
-                    if axis == 1:
-                        other = other.transpose()
-
-                    if (
-                        query_compiler._modin_frame.has_materialized_columns
-                        and other._modin_frame.has_materialized_columns
-                    ):
-                        if (
-                            len(query_compiler.columns) == 1
-                            and len(other.columns) == 1
-                            and query_compiler.columns.equals(other.columns)
-                        ):
-                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
@@ -228,38 +327,17 @@ class Binary(Operator):
                             other._modin_frame,
                             join_type=join_type,
                             labels=labels,
-                            dtypes=dtypes,
+                            dtypes=new_dtypes,
                         ),
                         shape_hint=shape_hint,
                     )
                 else:
-                    if (
-                        other._modin_frame.has_materialized_dtypes
-                        and query_compiler._modin_frame.has_materialized_dtypes
-                    ):
-                        if infer_dtypes == "bool":
-                            dtypes = compute_dtypes_boolean(query_compiler, other)
-                        if infer_dtypes == "common_cast":
-                            dtypes = compute_dtypes_common_cast(query_compiler, other)
-                        elif infer_dtypes == "float":
-                            dtypes = compute_dtypes_common_cast(query_compiler, other)
-                            dtypes = dtypes.apply(coerce_int_to_float64)
-                    if (
-                        query_compiler._modin_frame.has_materialized_columns
-                        and other._modin_frame.has_materialized_columns
-                    ):
-                        if (
-                            len(query_compiler.columns) == 1
-                            and len(other.columns) == 1
-                            and query_compiler.columns.equals(other.columns)
-                        ):
-                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
-                            dtypes=dtypes,
+                            dtypes=new_dtypes,
                         ),
                         shape_hint=shape_hint,
                     )
@@ -272,18 +350,12 @@ class Binary(Operator):
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=query_compiler.columns,
-                        dtypes=dtypes,
+                        dtypes=new_dtypes,
                     )
                 else:
-                    if (
-                        query_compiler._modin_frame.has_materialized_columns
-                        and len(query_compiler._modin_frame.columns) == 1
-                        and is_scalar(other)
-                    ):
-                        shape_hint = "column"
                     new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs),
-                        dtypes=dtypes,
+                        dtypes=new_dtypes,
                     )
                 return query_compiler.__constructor__(
                     new_modin_frame, shape_hint=shape_hint

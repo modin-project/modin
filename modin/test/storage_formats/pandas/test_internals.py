@@ -971,3 +971,35 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
         assert not modin_frame.has_materialized_columns
         if not has_dtypes_metadata:
             assert not modin_frame.has_dtypes_cache
+
+
+def test_binary_op_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
+
+    def setup_cache(df, has_cache=True):
+        if has_cache:
+            _ = df.dtypes
+            assert df._query_compiler._modin_frame.has_materialized_dtypes
+        else:
+            df._query_compiler._modin_frame.set_dtypes_cache(None)
+            assert not df._query_compiler._modin_frame.has_materialized_dtypes
+        return df
+
+    def assert_cache(df, has_cache=True):
+        assert not (has_cache ^ df._query_compiler._modin_frame.has_materialized_dtypes)
+
+    # Check when `other` is a non-distributed object
+    assert_cache(setup_cache(df) + 2.0)
+    assert_cache(setup_cache(df) + {"a": 2.0, "b": 4})
+    assert_cache(setup_cache(df) + [2.0, 4])
+    assert_cache(setup_cache(df) + np.array([2.0, 4]))
+
+    # Check when `other` is a dataframe
+    other = pd.DataFrame({"b": [3, 4, 5], "c": [4.0, 5.0, 6.0]})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+    # Check when `other` is a series
+    other = pd.Series({"b": 3.0, "c": 4.0})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
