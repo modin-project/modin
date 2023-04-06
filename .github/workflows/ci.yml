@@ -712,6 +712,10 @@ jobs:
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     services:
+      # This service only needs to run for test_task group_4; however, GitHub does not
+      # currently support conditionally running services. This issue: 
+      # is open https://github.com/actions/runner/issues/822 - until GitHub implements this feature,
+      # we will just have to run `moto` for all groups.
       moto:
         image: motoserver/moto
         ports:

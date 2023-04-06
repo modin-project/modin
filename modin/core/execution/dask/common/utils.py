@@ -13,16 +13,17 @@
 
 """Module houses utility function to initialize Dask environment."""
 
+import os
+
 from modin.config import (
     CpuCount,
     Memory,
     NPartitions,
-    ModinGithubCI,
-    CI_AWS_ACCESS_KEY_ID,
-    CI_AWS_SECRET_ACCESS_KEY,
+    GithubCI,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
 )
 from modin.error_message import ErrorMessage
-import os
 
 
 def initialize_dask():
@@ -47,12 +48,12 @@ def initialize_dask():
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
         client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
-        if ModinGithubCI.get():
+        if GithubCI.get():
             # set these keys to run tests that write to the mock s3 service. this seems
             # to be the way to pass environment variables to the workers:
             # https://jacobtomlinson.dev/posts/2021/bio-for-2021/
-            access_key = CI_AWS_ACCESS_KEY_ID.get()
-            aws_secret = CI_AWS_SECRET_ACCESS_KEY.get()
+            access_key = CIAWSAccessKeyID.get()
+            aws_secret = CIAWSSecretAccessKey.get()
             client.run(
                 lambda: os.environ.update(
                     {

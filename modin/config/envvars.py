@@ -628,7 +628,7 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
-class ModinGithubCI(EnvironmentVariable, type=bool):
+class GithubCI(EnvironmentVariable, type=bool):
     """Set to true when running Modin in GitHub CI."""
 
     varname = "MODIN_GITHUB_CI"
@@ -642,14 +642,14 @@ class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     default = False
 
 
-class CI_AWS_SECRET_ACCESS_KEY(EnvironmentVariable, type=str):
+class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
     """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
 
     varname = "AWS_SECRET_ACCESS_KEY"
     default = "foobar_secret"
 
 
-class CI_AWS_ACCESS_KEY_ID(EnvironmentVariable, type=str):
+class CIAWSAccessKeyID(EnvironmentVariable, type=str):
     """Set to AWS_ACCESS_KEY_ID when running mock S3 tests for Modin in GitHub CI."""
 
     varname = "AWS_ACCESS_KEY_ID"

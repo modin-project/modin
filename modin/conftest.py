@@ -58,9 +58,9 @@ from modin.config import (  # noqa: E402
     MinPartitionSize,
     IsExperimental,
     TestRayClient,
-    ModinGithubCI,
-    CI_AWS_ACCESS_KEY_ID,
-    CI_AWS_SECRET_ACCESS_KEY,
+    GithubCI,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
     AsyncReadMode,
 )
 import uuid  # noqa: E402
@@ -604,7 +604,7 @@ def s3_storage_options(worker_id):
     # # copied from pandas conftest.py:
     # https://github.com/pandas-dev/pandas/blob/32f789fbc5d5a72d9d1ac14935635289eeac9009/pandas/tests/io/conftest.py#L45
     # worker_id is a pytest fixture
-    if ModinGithubCI.get():
+    if GithubCI.get():
         url = "http://localhost:5000/"
     else:
         # If we hit this else-case, this test is being run locally. In that case, we want
@@ -632,10 +632,10 @@ def s3_base(worker_id):
     # copied from pandas conftest.py
     with pandas._testing.ensure_safe_environment_variables():
         # still need access keys for https://github.com/getmoto/moto/issues/1924
-        os.environ.setdefault("AWS_ACCESS_KEY_ID", CI_AWS_ACCESS_KEY_ID.get())
-        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CI_AWS_SECRET_ACCESS_KEY.get())
+        os.environ.setdefault("AWS_ACCESS_KEY_ID", CIAWSAccessKeyID.get())
+        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CIAWSSecretAccessKey.get())
         os.environ["AWS_REGION"] = "us-west-2"
-        if ModinGithubCI.get():
+        if GithubCI.get():
             if sys.platform in ("darwin", "win32", "cygwin") or (
                 platform.machine() in ("arm64", "aarch64")
                 or platform.machine().startswith("armv")
