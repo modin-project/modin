@@ -726,9 +726,7 @@ def s3_resource(s3_base):
         # than just checking the type of the exception.
         response = getattr(e, "response", {})
         error_code = response.get("Error", {}).get("Code", "")
-        if error_code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
-            pass
-        else:
+        if error_code not in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
             raise
     for _ in range(20):
         # We want to wait until bucket creation is finished.
