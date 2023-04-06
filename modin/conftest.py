@@ -600,7 +600,7 @@ def s3_storage_options(worker_id):
         # each worker to point to a different port for its mock S3 service. The easiest way
         # to do that is to use the `worker_id`, which is unique, to determine what port to point
         # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
-        # for each worker, and we never run tests with more than `pytest -n 4`. 
+        # for each worker, and we never run tests with more than `pytest -n 4`.
         worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
         url = f"http://127.0.0.1:555{worker_id}/"
     return {"client_kwargs": {"endpoint_url": url}}
@@ -610,8 +610,13 @@ def s3_storage_options(worker_id):
 def s3_base(worker_id):
     """
     Fixture for mocking S3 interaction.
-    Sets up moto server in separate process locally
-    Return url for motoserver/moto CI service
+
+    Sets up moto server in separate process locally.
+
+    Yields
+    ------
+    str
+        URL for motoserver/moto CI service.
     """
     # copied from pandas conftest.py
     with pandas._testing.ensure_safe_environment_variables():
@@ -620,12 +625,9 @@ def s3_base(worker_id):
         os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "foobar_secret")
         os.environ["AWS_REGION"] = "us-west-2"
         if ModinGithubCI.get():
-            if (
-                sys.platform in ("darwin", "win32", "cygwin")
-                or (
-                    platform.machine() in ("arm64", "aarch64")
-                    or platform.machine().startswith("armv")
-                )
+            if sys.platform in ("darwin", "win32", "cygwin") or (
+                platform.machine() in ("arm64", "aarch64")
+                or platform.machine().startswith("armv")
             ):
                 # pandas comments say:
                 # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
@@ -654,7 +656,7 @@ def s3_base(worker_id):
             # each worker to point to a different port for its mock S3 service. The easiest way
             # to do that is to use the `worker_id`, which is unique, to determine what port to point
             # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
-            # for each worker, and we never run tests with more than `pytest -n 4`. 
+            # for each worker, and we never run tests with more than `pytest -n 4`.
             worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
             endpoint_port = f"555{worker_id}"
             endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
@@ -681,7 +683,9 @@ def s3_base(worker_id):
                         # try again while we still have retries
                         time.sleep(0.1)
                 if not made_connection:
-                    raise RuntimeError("Could not connect to moto server after 50 tries.")                        
+                    raise RuntimeError(
+                        "Could not connect to moto server after 50 tries."
+                    )
                 yield endpoint_uri
 
                 proc.terminate()
@@ -690,8 +694,7 @@ def s3_base(worker_id):
 @pytest.fixture
 def s3_resource(s3_base):
     """
-    Sets up S3 bucket with contents
-    The primary bucket name is "modin-test."
+    Set up S3 bucket with contents. The primary bucket name is "modin-test".
 
     When running locally, this function should be safe even if there are multiple pytest
     workers running in parallel because each worker gets its own endpoint. When running
