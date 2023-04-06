@@ -948,7 +948,6 @@ jobs:
       - uses: ./.github/workflows/upload-coverage
 
   test-windows:
-    name: test-windows
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: windows-latest
     defaults:
