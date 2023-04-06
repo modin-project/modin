@@ -281,7 +281,7 @@ class PandasOnRayIO(RayIO):
             return RayIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        client_kwargs = kwargs.get("storage_options", {}).get("client_kwargs", {})
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)
 
