@@ -53,29 +53,22 @@ class PandasOnUnidistIO(UnidistIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnUnidistDataframe,
     )
-    read_csv = type(
-        "", (UnidistWrapper, PandasCSVParser, CSVDispatcher), build_args
-    ).read
-    read_fwf = type(
-        "", (UnidistWrapper, PandasFWFParser, FWFDispatcher), build_args
-    ).read
-    read_json = type(
-        "", (UnidistWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (UnidistWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+
+    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (UnidistWrapper, *classes), build_args).read
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (UnidistWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (UnidistWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type(
-        "", (UnidistWrapper, PandasSQLParser, SQLDispatcher), build_args
-    ).read
-    read_excel = type(
-        "", (UnidistWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
 
     @classmethod
     def to_sql(cls, qc, **kwargs):

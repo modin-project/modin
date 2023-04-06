@@ -57,23 +57,21 @@ class PandasOnDaskIO(BaseIO):
         query_compiler_cls=PandasQueryCompiler,
     )
 
-    read_csv = type("", (DaskWrapper, PandasCSVParser, CSVDispatcher), build_args).read
-    read_fwf = type("", (DaskWrapper, PandasFWFParser, FWFDispatcher), build_args).read
-    read_json = type(
-        "", (DaskWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (DaskWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).read
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (DaskWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (DaskWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type("", (DaskWrapper, PandasSQLParser, SQLDispatcher), build_args).read
-    read_excel = type(
-        "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
 
     @staticmethod
     def _to_parquet_check_support(kwargs):

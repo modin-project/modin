@@ -54,23 +54,22 @@ class PandasOnRayIO(RayIO):
         query_compiler_cls=PandasQueryCompiler,
         frame_cls=PandasOnRayDataframe,
     )
-    read_csv = type("", (RayWrapper, PandasCSVParser, CSVDispatcher), build_args).read
-    read_fwf = type("", (RayWrapper, PandasFWFParser, FWFDispatcher), build_args).read
-    read_json = type(
-        "", (RayWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (RayWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+
+    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (RayWrapper, *classes), build_args).read
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (RayWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (RayWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type("", (RayWrapper, PandasSQLParser, SQLDispatcher), build_args).read
-    read_excel = type(
-        "", (RayWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
 
     @classmethod
     def to_sql(cls, qc, **kwargs):
