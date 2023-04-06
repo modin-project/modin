@@ -60,7 +60,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
 
     def __make_read(*classes, build_args=build_args):
         # used to reduce code duplication
-        return type("", (RayWrapper, *classes), build_args)._read
+        return type("", (RayWrapper, *classes), build_args).read
 
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 

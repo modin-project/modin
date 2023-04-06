@@ -50,6 +50,7 @@ from modin.config import (  # noqa: E402
     MinPartitionSize,
     IsExperimental,
     TestRayClient,
+    AsyncReadMode,
 )
 import uuid  # noqa: E402
 
@@ -546,6 +547,14 @@ def set_num_partitions(request):
     NPartitions.put(request.param)
     yield
     NPartitions.put(old_num_partitions)
+
+
+@pytest.fixture
+def set_async_read_mode(request):
+    old_async_read_mode = AsyncReadMode.get()
+    AsyncReadMode.put(request.param)
+    yield
+    AsyncReadMode.put(old_async_read_mode)
 
 
 @pytest.fixture

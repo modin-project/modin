@@ -68,8 +68,8 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     -----
     The dtypes of the operands are supposed to be known.
     """
-    dtypes_first = first._modin_frame._dtypes.to_dict()
-    dtypes_second = second._modin_frame._dtypes.to_dict()
+    dtypes_first = first._modin_frame.dtypes.to_dict()
+    dtypes_second = second._modin_frame.dtypes.to_dict()
     columns_first = set(first.columns)
     columns_second = set(second.columns)
     common_columns = columns_first.intersection(columns_second)
@@ -234,8 +234,8 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        other._modin_frame._dtypes is not None
-                        and query_compiler._modin_frame._dtypes is not None
+                        other._modin_frame.has_materialized_dtypes
+                        and query_compiler._modin_frame.has_materialized_dtypes
                     ):
                         if infer_dtypes == "bool":
                             dtypes = compute_dtypes_boolean(query_compiler, other)

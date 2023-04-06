@@ -35,6 +35,7 @@ from modin.config import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     ReadSqlEngine,
+    AsyncReadMode,
 )
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1195,16 +1196,25 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("buffer_start_pos", [0, 10])
-    def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_csv_file_handle(
+        self, read_mode, make_csv_file, buffer_start_pos, set_async_read_mode
+    ):
         with ensure_clean() as unique_filename:
             make_csv_file(filename=unique_filename)
 
             with open(unique_filename, mode=read_mode) as buffer:
                 buffer.seek(buffer_start_pos)
-                df_pandas = pandas.read_csv(buffer)
+                pandas_df = pandas.read_csv(buffer)
                 buffer.seek(buffer_start_pos)
-                df_modin = pd.read_csv(buffer)
-        df_equals(df_modin, df_pandas)
+                modin_df = pd.read_csv(buffer)
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(modin_df, pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(modin_df, pandas_df)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1280,7 +1290,8 @@ class TestCsv:
         ).set_index("key")
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
-    def test_read_csv_issue_5150(self):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_csv_issue_5150(self, set_async_read_mode):
         with ensure_clean(".csv") as unique_filename:
             pandas_df = pandas.DataFrame(
                 np.random.randint(0, 100, size=(2**6, 2**6))
@@ -1289,7 +1300,13 @@ class TestCsv:
             expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
             modin_df = pd.read_csv(unique_filename, index_col=False)
             actual_pandas_df = modin_df._to_pandas()
-        df_equals(expected_pandas_df, actual_pandas_df)
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(expected_pandas_df, actual_pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(expected_pandas_df, actual_pandas_df)
 
 
 class TestTable:
@@ -1302,7 +1319,8 @@ class TestTable:
                 filepath_or_buffer=unique_filename,
             )
 
-    def test_read_table_within_decorator(self, make_csv_file):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_table_within_decorator(self, make_csv_file, set_async_read_mode):
         @dummy_decorator()
         def wrapped_read_table(file, method):
             if method == "pandas":
@@ -1320,7 +1338,13 @@ class TestTable:
         if StorageFormat.get() == "Hdk":
             modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
 
-        df_equals(modin_df, pandas_df)
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(modin_df, pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
         with ensure_clean() as unique_filename:

@@ -776,7 +776,7 @@ def test_sort_values_with_string_index():
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="We only need to test this case where sort does not default to pandas.",
 )
 @pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
@@ -799,7 +799,7 @@ def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_positio
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="We only need to test this case where sort does not default to pandas.",
 )
 def test_sort_values_with_sort_key_on_partition_boundary():
