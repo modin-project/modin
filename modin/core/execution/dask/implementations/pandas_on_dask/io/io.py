@@ -115,14 +115,7 @@ class PandasOnDaskIO(BaseIO):
             return BaseIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        if (
-            "storage_options" in kwargs
-            and kwargs["storage_options"] is not None
-            and "client_kwargs" in kwargs["storage_options"]
-        ):
-            client_kwargs = kwargs["storage_options"]["client_kwargs"]
-        else:
-            client_kwargs = {}
+        client_kwargs = kwargs.get("storage_options", {}).get("client_kwargs", {})
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)
 

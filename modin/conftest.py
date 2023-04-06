@@ -596,6 +596,11 @@ def s3_storage_options(worker_id):
     if ModinGithubCI.get():
         url = "http://localhost:5000/"
     else:
+        # If we hit this else-case, this test is being run locally. In that case, we want
+        # each worker to point to a different port for its mock S3 service. The easiest way
+        # to do that is to use the `worker_id`, which is unique, to determine what port to point
+        # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
+        # for each worker, and we never run tests with more than `pytest -n 4`. 
         worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
         url = f"http://127.0.0.1:555{worker_id}/"
     return {"client_kwargs": {"endpoint_url": url}}
@@ -616,15 +621,14 @@ def s3_base(worker_id):
         os.environ["AWS_REGION"] = "us-west-2"
         if ModinGithubCI.get():
             if (
-                sys.platform == "darwin"
-                or (sys.platform == "win32" or sys.platform == "cygwin")
+                sys.platform in ("darwin", "win32", "cygwin")
                 or (
                     platform.machine() in ("arm64", "aarch64")
                     or platform.machine().startswith("armv")
                 )
             ):
                 # pandas comments say:
-                # NOT RUN on Windows/macOS/ARM, only Ubuntu
+                # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
                 # - subprocess in CI can cause timeouts
                 # - GitHub Actions do not support
                 #   container services for the above OSs
@@ -646,6 +650,11 @@ def s3_base(worker_id):
             # Launching moto in server mode, i.e., as a separate process
             # with an S3 endpoint on localhost
 
+            # If we hit this else-case, this test is being run locally. In that case, we want
+            # each worker to point to a different port for its mock S3 service. The easiest way
+            # to do that is to use the `worker_id`, which is unique, to determine what port to point
+            # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
+            # for each worker, and we never run tests with more than `pytest -n 4`. 
             worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
             endpoint_port = f"555{worker_id}"
             endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
@@ -661,23 +670,18 @@ def s3_base(worker_id):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             ) as proc:
-                retries_left = 50
                 made_connection = False
-                while retries_left > 0:
+                for _ in range(50):
                     try:
                         # OK to go once server is accepting connections
-                        r = requests.get(endpoint_uri)
-                        made_connection = r.ok
+                        if requests.get(endpoint_uri).ok:
+                            made_connection = True
+                            break
                     except Exception:
-                        # try again if we have retries.
-                        pass
-                    finally:
-                        retries_left -= 1
+                        # try again while we still have retries
                         time.sleep(0.1)
-                    if made_connection:
-                        break
                 if not made_connection:
-                    raise RuntimeError("Could not connect to moto server")
+                    raise RuntimeError("Could not connect to moto server after 50 tries.")                        
                 yield endpoint_uri
 
                 proc.terminate()
@@ -710,13 +714,22 @@ def s3_resource(s3_base):
         cli.create_bucket(
             Bucket=bucket, CreateBucketConfiguration={"LocationConstraint": "us-west-2"}
         )
-    except Exception:
-        # OK if bucket already exists.
-        pass
-    timeout = 2
-    while not cli.list_buckets()["Buckets"] and timeout > 0:
+    except Exception as e:
+        # OK if bucket already exists, but want to raise other exceptions.
+        # The exception raised by `create_bucket` is made using a factory,
+        # so we need to check using this method of reading the response rather
+        # than just checking the type of the exception.
+        response = getattr(e, "response", {})
+        error_code = response.get("Error", {}).get("Code", "")
+        if error_code in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
+            pass
+        else:
+            raise
+    for _ in range(20):
+        # We want to wait until bucket creation is finished.
+        if cli.list_buckets()["Buckets"]:
+            break
         time.sleep(0.1)
-        timeout -= 0.1
     if not cli.list_buckets()["Buckets"]:
         raise RuntimeError("Could not create bucket")
 
@@ -725,12 +738,9 @@ def s3_resource(s3_base):
 
     s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
 
-    try:
-        s3.rm(bucket, recursive=True)
-    except Exception:
-        # OK if bucket already deleted.
-        pass
-    timeout = 2
-    while cli.list_buckets()["Buckets"] and timeout > 0:
+    s3.rm(bucket, recursive=True)
+    for _ in range(20):
+        # We want to wait until the deletion finishes.
+        if not cli.list_buckets()["Buckets"]:
+            break
         time.sleep(0.1)
-        timeout -= 0.1

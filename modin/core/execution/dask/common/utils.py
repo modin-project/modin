@@ -47,8 +47,8 @@ def initialize_dask():
             client.run(
                 lambda: os.environ.update(
                     {
-                        "AWS_ACCESS_KEY_ID": "foobar_key",
-                        "AWS_SECRET_ACCESS_KEY": "foobar_secret",
+                        "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
+                        "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
                     }
                 )
             )

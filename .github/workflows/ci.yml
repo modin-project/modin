@@ -669,7 +669,7 @@ jobs:
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
-      # thse variables to test writing to the mock s3 filesystem.
+      # these variables to test writing to the mock s3 filesystem.
       - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
@@ -779,6 +779,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
@@ -834,6 +835,7 @@ jobs:
           conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: ./.github/workflows/upload-coverage
 
