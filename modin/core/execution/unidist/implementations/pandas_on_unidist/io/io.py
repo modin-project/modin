@@ -101,7 +101,7 @@ class PandasOnUnidistIO(UnidistIO):
         kwargs["if_exists"] = "append"
         columns = qc.columns
 
-        def func(df):
+        def func(df):  # pragma: no cover
             """
             Override column names in the wrapped dataframe and convert it to SQL.
 
@@ -241,9 +241,7 @@ class PandasOnUnidistIO(UnidistIO):
             max_retries=0,
         )
         # pending completion
-        UnidistWrapper.materialize(
-            [partition.list_of_blocks[0] for partition in result.flatten()]
-        )
+        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -318,6 +316,5 @@ class PandasOnUnidistIO(UnidistIO):
             lengths=None,
             enumerate_partitions=True,
         )
-        UnidistWrapper.materialize(
-            [part.list_of_blocks[0] for row in result for part in row]
-        )
+        # pending completion
+        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())

@@ -71,9 +71,11 @@ def build_sort_functions(
             samples, ideal_num_new_partitions, method, key
         )
 
+    dtypes = modin_frame.dtypes
+
     def split_fn(partition, pivots):
         return split_partitions_using_pivots_for_sort(
-            modin_frame, partition, column, pivots, ascending, **kwargs
+            dtypes, partition, column, pivots, ascending, **kwargs
         )
 
     return ShuffleFunctions(
@@ -207,7 +209,7 @@ def pick_pivots_from_samples_for_sort(
 
 
 def split_partitions_using_pivots_for_sort(
-    modin_frame: "PandasDataframe",
+    dtypes: pandas.Series,
     df: pandas.DataFrame,
     column: str,
     pivots: np.ndarray,
@@ -224,8 +226,8 @@ def split_partitions_using_pivots_for_sort(
 
     Parameters
     ----------
-    modin_frame : PandasDataframe
-        The Modin Dataframe calling this function.
+    dtypes : pandas.Series
+        The Modin Dataframe's dtypes.
     df : pandas.Dataframe
         The partition to split.
     column : str
@@ -248,7 +250,7 @@ def split_partitions_using_pivots_for_sort(
     # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
     # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
     # which breaks when we reverse the pivots.
-    if not ascending and pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if not ascending and pandas.api.types.is_numeric_dtype(dtypes[column]):
         # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
         pivots = pivots[::-1]
     key = kwargs.pop("key", None)
@@ -258,7 +260,7 @@ def split_partitions_using_pivots_for_sort(
     cols_to_digitize = non_na_rows[column]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
-    if pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column]):
+    if pandas.api.types.is_numeric_dtype(dtypes[column]):
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
         # `np.digitize` returns results based off of the sort order of the pivots it is passed.
         # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
@@ -274,7 +276,8 @@ def split_partitions_using_pivots_for_sort(
             groupby_col = len(pivots) - groupby_col
     if len(non_na_rows) == 1:
         groups = [
-            pandas.DataFrame(columns=df.columns).astype(df.dtypes)
+            # taking an empty slice for an index's metadata
+            pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(df.dtypes)
             if i != groupby_col
             else non_na_rows
             for i in range(len(pivots) + 1)
@@ -282,9 +285,11 @@ def split_partitions_using_pivots_for_sort(
     else:
         grouped = non_na_rows.groupby(groupby_col)
         groups = [
-            grouped.get_group(i)
-            if i in grouped.keys
-            else pandas.DataFrame(columns=df.columns).astype(df.dtypes)
+            grouped.get_group(i) if i in grouped.keys
+            # taking an empty slice for an index's metadata
+            else pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
+                df.dtypes
+            )
             for i in range(len(pivots) + 1)
         ]
     index_to_insert_na_vals = -1 if kwargs.get("na_position", "last") == "last" else 0
@@ -292,3 +297,97 @@ def split_partitions_using_pivots_for_sort(
         [groups[index_to_insert_na_vals], na_rows]
     ).astype(df.dtypes)
     return tuple(groups)
+
+
+def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
+    """
+    Lazily propagate metadata for the ``PandasDataframe``.
+
+    This decorator first adds the minimum required reindexing operations
+    to each partition's queue of functions to be lazily applied for
+    each PandasDataframe in the arguments by applying the function
+    run_f_on_minimally_updated_metadata. The decorator also sets the
+    flags for deferred metadata synchronization on the function result
+    if necessary.
+
+    Parameters
+    ----------
+    apply_axis : str, default: None
+        The axes on which to apply the reindexing operations to the `self._partitions` lazily.
+        Case None: No lazy metadata propagation.
+        Case "both": Add reindexing operations on both axes to partition queue.
+        Case "opposite": Add reindexing operations complementary to given axis.
+        Case "rows": Add reindexing operations on row axis to partition queue.
+    axis_arg : int, default: -1
+        The index or column axis.
+    transpose : bool, default: False
+        Boolean for if a transpose operation is being used.
+
+    Returns
+    -------
+    Wrapped Function.
+    """
+
+    def decorator(f):
+        from functools import wraps
+
+        @wraps(f)
+        def run_f_on_minimally_updated_metadata(self, *args, **kwargs):
+            from .dataframe import PandasDataframe
+
+            for obj in (
+                [self]
+                + [o for o in args if isinstance(o, PandasDataframe)]
+                + [v for v in kwargs.values() if isinstance(v, PandasDataframe)]
+                + [
+                    d
+                    for o in args
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
+                + [
+                    d
+                    for _, o in kwargs.items()
+                    if isinstance(o, list)
+                    for d in o
+                    if isinstance(d, PandasDataframe)
+                ]
+            ):
+                if apply_axis == "both":
+                    if obj._deferred_index and obj._deferred_column:
+                        obj._propagate_index_objs(axis=None)
+                    elif obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                    elif obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                elif apply_axis == "opposite":
+                    if "axis" not in kwargs:
+                        axis = args[axis_arg]
+                    else:
+                        axis = kwargs["axis"]
+                    if axis == 0 and obj._deferred_column:
+                        obj._propagate_index_objs(axis=1)
+                    elif axis == 1 and obj._deferred_index:
+                        obj._propagate_index_objs(axis=0)
+                elif apply_axis == "rows":
+                    obj._propagate_index_objs(axis=0)
+            result = f(self, *args, **kwargs)
+            if apply_axis is None and not transpose:
+                result._deferred_index = self._deferred_index
+                result._deferred_column = self._deferred_column
+            elif apply_axis is None and transpose:
+                result._deferred_index = self._deferred_column
+                result._deferred_column = self._deferred_index
+            elif apply_axis == "opposite":
+                if axis == 0:
+                    result._deferred_index = self._deferred_index
+                else:
+                    result._deferred_column = self._deferred_column
+            elif apply_axis == "rows":
+                result._deferred_column = self._deferred_column
+            return result
+
+        return run_f_on_minimally_updated_metadata
+
+    return decorator

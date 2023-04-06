@@ -18,12 +18,15 @@ Module houses `FileDispatcher` class.
 for direct files processing.
 """
 
-import fsspec
 import os
-from modin.config import StorageFormat
-from modin.logging import ClassLogger
+
+import fsspec
 import numpy as np
 from pandas.io.common import is_url, is_fsspec_url
+
+from modin.logging import ClassLogger
+from modin.config import AsyncReadMode
+
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
@@ -152,27 +155,16 @@ class FileDispatcher(ClassLogger):
         postprocessing work on the resulting query_compiler object.
         """
         query_compiler = cls._read(*args, **kwargs)
-        # TODO (devin-petersohn): Make this section more general for non-pandas kernel
-        # implementations.
-        if StorageFormat.get() == "Pandas":
-            import pandas as kernel_lib
-        elif StorageFormat.get() == "Cudf":
-            import cudf as kernel_lib
-        else:
-            raise NotImplementedError("FIXME")
-
-        if hasattr(query_compiler, "dtypes") and any(
-            isinstance(t, kernel_lib.CategoricalDtype) for t in query_compiler.dtypes
-        ):
-            dtypes = query_compiler.dtypes
-            return query_compiler.astype(
-                {
-                    t: dtypes[t]
-                    for t in dtypes.index
-                    if isinstance(dtypes[t], kernel_lib.CategoricalDtype)
-                },
-                kwargs.get("errors", "raise"),
-            )
+        # TextFileReader can also be returned from `_read`.
+        if not AsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
+            # at the moment it is not possible to use `wait_partitions` function;
+            # in a situation where the reading function is called in a row with the
+            # same parameters, `wait_partitions` considers that we have waited for
+            # the end of remote calculations, however, when trying to materialize the
+            # received data, it is clear that the calculations have not yet ended.
+            # for example, `test_io_exp.py::test_read_evaluated_dict` is failed because of that.
+            # see #5944 for details
+            _ = query_compiler.dtypes
         return query_compiler
 
     @classmethod

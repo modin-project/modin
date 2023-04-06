@@ -35,6 +35,7 @@ from modin.config import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     ReadSqlEngine,
+    AsyncReadMode,
 )
 from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
@@ -1195,16 +1196,25 @@ class TestCsv:
         ],
     )
     @pytest.mark.parametrize("buffer_start_pos", [0, 10])
-    def test_read_csv_file_handle(self, read_mode, make_csv_file, buffer_start_pos):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_csv_file_handle(
+        self, read_mode, make_csv_file, buffer_start_pos, set_async_read_mode
+    ):
         with ensure_clean() as unique_filename:
             make_csv_file(filename=unique_filename)
 
             with open(unique_filename, mode=read_mode) as buffer:
                 buffer.seek(buffer_start_pos)
-                df_pandas = pandas.read_csv(buffer)
+                pandas_df = pandas.read_csv(buffer)
                 buffer.seek(buffer_start_pos)
-                df_modin = pd.read_csv(buffer)
-        df_equals(df_modin, df_pandas)
+                modin_df = pd.read_csv(buffer)
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(modin_df, pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(modin_df, pandas_df)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1280,7 +1290,8 @@ class TestCsv:
         ).set_index("key")
         eval_to_file(modin_df, pandas_df, "to_csv", "csv")
 
-    def test_read_csv_issue_5150(self):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_csv_issue_5150(self, set_async_read_mode):
         with ensure_clean(".csv") as unique_filename:
             pandas_df = pandas.DataFrame(
                 np.random.randint(0, 100, size=(2**6, 2**6))
@@ -1289,7 +1300,13 @@ class TestCsv:
             expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
             modin_df = pd.read_csv(unique_filename, index_col=False)
             actual_pandas_df = modin_df._to_pandas()
-        df_equals(expected_pandas_df, actual_pandas_df)
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(expected_pandas_df, actual_pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(expected_pandas_df, actual_pandas_df)
 
 
 class TestTable:
@@ -1302,7 +1319,8 @@ class TestTable:
                 filepath_or_buffer=unique_filename,
             )
 
-    def test_read_table_within_decorator(self, make_csv_file):
+    @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+    def test_read_table_within_decorator(self, make_csv_file, set_async_read_mode):
         @dummy_decorator()
         def wrapped_read_table(file, method):
             if method == "pandas":
@@ -1317,7 +1335,16 @@ class TestTable:
             pandas_df = wrapped_read_table(unique_filename, method="pandas")
             modin_df = wrapped_read_table(unique_filename, method="modin")
 
-        df_equals(modin_df, pandas_df)
+        if StorageFormat.get() == "Hdk":
+            modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
+
+            if AsyncReadMode.get():
+                # If read operations are asynchronous, then the dataframes
+                # check should be inside `ensure_clean_dir` context
+                # because the file may be deleted before actual reading starts
+                df_equals(modin_df, pandas_df)
+        if not AsyncReadMode.get():
+            df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1446,6 +1473,10 @@ class TestParquet:
                 columns=columns,
             )
 
+    @pytest.mark.skipif(
+        StorageFormat.get() == "Hdk",
+        reason="https://github.com/intel-ai/hdk/issues/291",
+    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -1656,6 +1687,33 @@ class TestParquet:
 
             df_equals(test_df, read_df)
 
+    def test_read_parquet_5767(self, engine):
+        test_df = pandas.DataFrame({"a": [1, 2, 3, 4], "b": [1, 1, 2, 2]})
+        file_name = "modin_issue#0000.parquet"
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + file_name, engine=engine, partition_cols=["b"])
+            read_df = pd.read_parquet(Path(path + file_name))
+        # both Modin and pandas read column "b" as a category
+        df_equals(test_df, read_df.astype("int64"))
+
+    def test_read_parquet_5509(self, engine):
+        test_df = pandas.DataFrame({"col_a": [1, 2, 3], "col_b": ["a", "b", "c"]})
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/data"
+            os.makedirs(path)
+            test_df.to_parquet(path + "/5509.parquet")
+            with warns_that_defaulting_to_pandas():
+                eval_io(
+                    fn_name="read_parquet",
+                    path=path + "/5509.parquet",
+                    columns=["col_b"],
+                    engine=engine,
+                    filters=[[("col_a", "==", 1)]],
+                )
+
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
         # https://github.com/modin-project/modin/issues/4636
@@ -1817,7 +1875,7 @@ class TestExcel:
             df_equals(modin_df.get(key), pandas_df.get(key))
 
     @pytest.mark.xfail(
-        Engine.get() != "Python",
+        Engine.get() != "Python" and StorageFormat.get() != "Hdk",
         reason="pandas throws the exception. See pandas issue #39250 for more info",
     )
     @check_file_leaks
@@ -1856,6 +1914,18 @@ class TestExcel:
         eval_io(
             fn_name="read_excel",
             io="modin/pandas/test/data/every_other_row_nan.xlsx",
+        )
+
+    @pytest.mark.xfail(
+        StorageFormat.get() == "Hdk",
+        reason="The frame contains different dtypes in the same column and could not be converted to arrow",
+    )
+    @check_file_leaks
+    def test_read_excel_header_none(self):
+        eval_io(
+            fn_name="read_excel",
+            io="modin/pandas/test/data/every_other_row_nan.xlsx",
+            header=None,
         )
 
     @pytest.mark.parametrize(

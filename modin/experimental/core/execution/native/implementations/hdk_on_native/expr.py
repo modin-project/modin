@@ -670,7 +670,7 @@ class LiteralExpr(BaseExpr):
     """
 
     def __init__(self, val):
-        assert val is None or isinstance(
+        if val is not None and not isinstance(
             val,
             (
                 int,
@@ -686,7 +686,8 @@ class LiteralExpr(BaseExpr):
                 np.uint32,
                 np.uint64,
             ),
-        ), f"unsupported literal value {val} of type {type(val)}"
+        ):
+            raise NotImplementedError(f"Literal value {val} of type {type(val)}")
         self.val = val
         if val is None:
             self._dtype = get_dtype(float)

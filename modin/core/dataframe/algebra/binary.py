@@ -68,8 +68,8 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     -----
     The dtypes of the operands are supposed to be known.
     """
-    dtypes_first = first._modin_frame._dtypes.to_dict()
-    dtypes_second = second._modin_frame._dtypes.to_dict()
+    dtypes_first = first._modin_frame.dtypes.to_dict()
+    dtypes_second = second._modin_frame.dtypes.to_dict()
     columns_first = set(first.columns)
     columns_second = set(second.columns)
     common_columns = columns_first.intersection(columns_second)
@@ -197,7 +197,6 @@ class Binary(Operator):
             """
             axis = kwargs.get("axis", 0)
             shape_hint = None
-            self_columns = query_compiler._modin_frame._columns_cache
             if isinstance(other, type(query_compiler)):
                 if broadcast:
                     assert (
@@ -211,13 +210,13 @@ class Binary(Operator):
                         other = other.transpose()
 
                     if (
-                        self_columns is not None
-                        and other._modin_frame._columns_cache is not None
+                        query_compiler._modin_frame.has_materialized_columns
+                        and other._modin_frame.has_materialized_columns
                     ):
                         if (
-                            len(self_columns) == 1
+                            len(query_compiler.columns) == 1
                             and len(other.columns) == 1
-                            and self_columns.equals(other.columns)
+                            and query_compiler.columns.equals(other.columns)
                         ):
                             shape_hint = "column"
                     return query_compiler.__constructor__(
@@ -235,8 +234,8 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        other._modin_frame._dtypes is not None
-                        and query_compiler._modin_frame._dtypes is not None
+                        other._modin_frame.has_materialized_dtypes
+                        and query_compiler._modin_frame.has_materialized_dtypes
                     ):
                         if infer_dtypes == "bool":
                             dtypes = compute_dtypes_boolean(query_compiler, other)
@@ -246,11 +245,11 @@ class Binary(Operator):
                             dtypes = compute_dtypes_common_cast(query_compiler, other)
                             dtypes = dtypes.apply(coerce_int_to_float64)
                     if (
-                        self_columns is not None
-                        and other._modin_frame._columns_cache is not None
+                        query_compiler._modin_frame.has_materialized_columns
+                        and other._modin_frame.has_materialized_columns
                     ):
                         if (
-                            len(self_columns) == 1
+                            len(query_compiler.columns) == 1
                             and len(other.columns) == 1
                             and query_compiler.columns.equals(other.columns)
                         ):
@@ -277,8 +276,8 @@ class Binary(Operator):
                     )
                 else:
                     if (
-                        self_columns is not None
-                        and len(self_columns) == 1
+                        query_compiler._modin_frame.has_materialized_columns
+                        and len(query_compiler._modin_frame.columns) == 1
                         and is_scalar(other)
                     ):
                         shape_hint = "column"
