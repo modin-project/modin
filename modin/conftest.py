@@ -59,6 +59,8 @@ from modin.config import (  # noqa: E402
     IsExperimental,
     TestRayClient,
     ModinGithubCI,
+    CI_AWS_ACCESS_KEY_ID,
+    CI_AWS_SECRET_ACCESS_KEY,
 )
 import uuid  # noqa: E402
 
@@ -621,8 +623,8 @@ def s3_base(worker_id):
     # copied from pandas conftest.py
     with pandas._testing.ensure_safe_environment_variables():
         # still need access keys for https://github.com/getmoto/moto/issues/1924
-        os.environ.setdefault("AWS_ACCESS_KEY_ID", "foobar_key")
-        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "foobar_secret")
+        os.environ.setdefault("AWS_ACCESS_KEY_ID", CI_AWS_ACCESS_KEY_ID.get())
+        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CI_AWS_SECRET_ACCESS_KEY.get())
         os.environ["AWS_REGION"] = "us-west-2"
         if ModinGithubCI.get():
             if sys.platform in ("darwin", "win32", "cygwin") or (

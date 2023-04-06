@@ -642,6 +642,20 @@ class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     default = False
 
 
+class CI_AWS_SECRET_ACCESS_KEY(EnvironmentVariable, type=str):
+    """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_SECRET_ACCESS_KEY"
+    default = "foobar_secret"
+
+
+class CI_AWS_ACCESS_KEY_ID(EnvironmentVariable, type=str):
+    """Set to AWS_ACCESS_KEY_ID when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_ACCESS_KEY_ID"
+    default = "foobar_key"
+
+
 class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
 

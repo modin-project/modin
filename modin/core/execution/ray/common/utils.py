@@ -33,6 +33,8 @@ from modin.config import (
     NPartitions,
     ValueSource,
     ModinGithubCI,
+    CI_AWS_SECRET_ACCESS_KEY,
+    CI_AWS_ACCESS_KEY_ID,
 )
 from modin.error_message import ErrorMessage
 from .engine_wrapper import RayWrapper
@@ -80,8 +82,8 @@ def initialize_ray(
         # need these to write parquet to the moto service mocking s3.
         env_vars.update(
             {
-                "AWS_ACCESS_KEY_ID": os.environ["AWS_ACCESS_KEY_ID"],
-                "AWS_SECRET_ACCESS_KEY": os.environ["AWS_SECRET_ACCESS_KEY"],
+                "AWS_ACCESS_KEY_ID": CI_AWS_ACCESS_KEY_ID.get(),
+                "AWS_SECRET_ACCESS_KEY": CI_AWS_SECRET_ACCESS_KEY.get(),
             }
         )
     extra_init_kw = {"runtime_env": {"env_vars": env_vars}}
