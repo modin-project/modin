@@ -979,5 +979,14 @@ def test_setitem_bool_preserve_dtypes():
 
     assert df._query_compiler._modin_frame.has_materialized_dtypes
 
+    # slice(None) as a col_loc
     df.loc[indexer] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # list as a col_loc
+    df.loc[indexer, ["a", "b"]] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # scalar as a col_loc
+    df.loc[indexer, "a"] = 2.0
     assert df._query_compiler._modin_frame.has_materialized_dtypes

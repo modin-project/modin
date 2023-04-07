@@ -2368,10 +2368,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if self._modin_frame.has_materialized_dtypes and is_scalar(item):
             new_dtypes = self.dtypes.copy()
-            new_dtypes[col_loc] = [
-                find_common_type([dtype, type(item)])
-                for dtype in new_dtypes[col_loc].values
-            ]
+            old_dtypes = new_dtypes[col_loc]
+            if isinstance(old_dtypes, pandas.Series):
+                new_dtypes[col_loc] = [
+                    find_common_type([dtype, type(item)]) for dtype in old_dtypes.values
+                ]
+            else:
+                new_dtypes[col_loc] = find_common_type([old_dtypes, type(item)])
         else:
             new_dtypes = None
 
