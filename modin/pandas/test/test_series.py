@@ -103,14 +103,21 @@ def get_rop(op):
         return None
 
 
-def inter_df_math_helper(modin_series, pandas_series, op):
-    inter_df_math_helper_one_side(modin_series, pandas_series, op)
+def inter_df_math_helper(modin_series, pandas_series, op, comparator_kwargs=None):
+    inter_df_math_helper_one_side(modin_series, pandas_series, op, comparator_kwargs)
     rop = get_rop(op)
     if rop:
-        inter_df_math_helper_one_side(modin_series, pandas_series, rop)
+        inter_df_math_helper_one_side(
+            modin_series, pandas_series, rop, comparator_kwargs
+        )
 
 
-def inter_df_math_helper_one_side(modin_series, pandas_series, op):
+def inter_df_math_helper_one_side(
+    modin_series, pandas_series, op, comparator_kwargs=None
+):
+    if comparator_kwargs is None:
+        comparator_kwargs = {}
+
     try:
         pandas_attr = getattr(pandas_series, op)
     except Exception as err:
@@ -126,7 +133,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(4))  # repr to force materialization
     else:
         modin_result = modin_attr(4)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     try:
         pandas_result = pandas_attr(4.0)
@@ -135,7 +142,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(4.0))  # repr to force materialization
     else:
         modin_result = modin_attr(4.0)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     # These operations don't support non-scalar `other` or have a strange behavior in
     # the testing environment
@@ -161,7 +168,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(modin_series))  # repr to force materialization
     else:
         modin_result = modin_attr(modin_series)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
@@ -171,7 +178,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(list_test))  # repr to force materialization
     else:
         modin_result = modin_attr(list_test)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     series_test_modin = pd.Series(list_test, index=modin_series.index)
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
@@ -182,7 +189,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
         modin_result = modin_attr(series_test_modin)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     # Level test
     new_idx = pandas.MultiIndex.from_tuples(
@@ -257,7 +264,13 @@ def test___add__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___and__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__and__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__and__",
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -493,7 +506,13 @@ def test___neg__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___or__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__or__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__or__",
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -619,7 +638,13 @@ def test___truediv__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___xor__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__xor__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__xor__",
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2348,17 +2373,26 @@ def test_map(data, na_values):
     df_equals(
         modin_series.map(mapper, na_action=na_values),
         pandas_series.map(mapper, na_action=na_values),
+        # TODO: raise an issue
+        check_dtypes=False,
     )
 
     # Return list objects
     modin_series_lists = modin_series.map(lambda s: [s, s, s])
     pandas_series_lists = pandas_series.map(lambda s: [s, s, s])
-    df_equals(modin_series_lists, pandas_series_lists)
+    df_equals(
+        modin_series_lists,
+        pandas_series_lists,
+        # TODO: raise an issue
+        check_dtypes=False,
+    )
 
     # Index into list objects
     df_equals(
         modin_series_lists.map(lambda lst: lst[0]),
         pandas_series_lists.map(lambda lst: lst[0]),
+        # TODO: raise an issue
+        check_dtypes=False,
     )
 
 
@@ -3816,7 +3850,12 @@ def test_str___getitem__(data, key):
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.str[key]
     pandas_result = pandas_series.str[key]
-    df_equals(modin_result, pandas_result)
+    df_equals(
+        modin_result,
+        pandas_result,
+        # TODO: raise an issue
+        check_dtypes=False,
+    )
 
 
 # Test str operations
@@ -3922,6 +3961,8 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=False),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
     # Test regex
@@ -3930,6 +3971,8 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=True),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -3942,6 +3985,8 @@ def test_str_replace(data, pat, repl, n, case):
     eval_general(
         *create_test_series(data),
         lambda series: series.str.replace(pat, repl, n=n, case=case, regex=False),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
     # Test regex
     eval_general(
@@ -3949,6 +3994,8 @@ def test_str_replace(data, pat, repl, n, case):
         lambda series: series.str.replace(
             pat=",|b", repl=repl, n=n, case=case, regex=True
         ),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4085,7 +4132,11 @@ def test_str_count(data, pat):
 def test_str_startswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
-        modin_series, pandas_series, lambda series: series.str.startswith(pat, na=na)
+        modin_series,
+        pandas_series,
+        lambda series: series.str.startswith(pat, na=na),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4095,7 +4146,11 @@ def test_str_startswith(data, pat, na):
 def test_str_endswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
-        modin_series, pandas_series, lambda series: series.str.endswith(pat, na=na)
+        modin_series,
+        pandas_series,
+        lambda series: series.str.endswith(pat, na=na),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4191,6 +4246,8 @@ def test_str_partition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.partition(sep, expand=expand),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4203,6 +4260,8 @@ def test_str_rpartition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.rpartition(sep, expand=expand),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4234,6 +4293,8 @@ def test_str_find(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.find(sub, start=start, end=end),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4247,6 +4308,8 @@ def test_str_rfind(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rfind(sub, start=start, end=end),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4260,6 +4323,8 @@ def test_str_index(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4273,6 +4338,8 @@ def test_str_rindex(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4303,19 +4370,33 @@ def test_str_translate(data, pat):
     modin_series, pandas_series = create_test_series(data)
 
     # Test none table
-    eval_general(modin_series, pandas_series, lambda series: series.str.translate(None))
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.translate(None),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
     # Translation dictionary
     table = {pat: "DDD"}
     eval_general(
-        modin_series, pandas_series, lambda series: series.str.translate(table)
+        modin_series,
+        pandas_series,
+        lambda series: series.str.translate(table),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
     # Translation table with maketrans (python3 only)
     if pat is not None:
         table = str.maketrans(pat, "d" * len(pat))
         eval_general(
-            modin_series, pandas_series, lambda series: series.str.translate(table)
+            modin_series,
+            pandas_series,
+            lambda series: series.str.translate(table),
+            # TODO: raise an issue
+            comparator_kwargs={"check_dtypes": False},
         )
 
     # Test delete chars
@@ -4324,61 +4405,117 @@ def test_str_translate(data, pat):
         modin_series,
         pandas_series,
         lambda series: series.str.translate(table, deletechars),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalnum(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isalnum())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isalnum(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalpha(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isalpha())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isalpha(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdigit(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isdigit())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isdigit(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isspace(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isspace())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isspace(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_islower(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.islower())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.islower(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isupper(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isupper())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isupper(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_istitle(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.istitle())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.istitle(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isnumeric(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isnumeric())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isnumeric(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdecimal(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isdecimal())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isdecimal(),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

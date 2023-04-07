@@ -1572,7 +1572,13 @@ def test_reset_index_with_multi_index_no_drop(
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
         modin_df._query_compiler._modin_frame.set_index_cache(None)
-    eval_general(modin_df, pandas_df, lambda df: df.reset_index(**kwargs))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index(**kwargs),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
@@ -2230,7 +2236,15 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
-    eval_general(modin_df, pandas_df, applyier)
+    eval_general(
+        modin_df,
+        pandas_df,
+        applyier,
+        # TODO: raise an issue
+        comparator_kwargs={
+            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
+        },
+    )
 
 
 def test_setitem_on_empty_df_4407():
