@@ -186,7 +186,7 @@ def try_compute_new_dtypes(first, second, infer_dtypes):
     try:
         if infer_dtypes == "bool":
             dtypes = compute_dtypes_boolean(first, second)
-        if infer_dtypes == "common_cast":
+        elif infer_dtypes == "common_cast":
             dtypes = compute_dtypes_common_cast(first, second)
         elif infer_dtypes == "float":
             dtypes = compute_dtypes_common_cast(first, second)
@@ -197,41 +197,6 @@ def try_compute_new_dtypes(first, second, infer_dtypes):
         dtypes = None
 
     return dtypes
-
-
-def try_compute_shape_hint(first, second):
-    """
-    Compute a shape-hint for the query compiler of the result of a binary operation.
-
-    Parameters
-    ----------
-    first : PandasQueryCompiler
-        First operand of the binary operation.
-    second : object
-        Second operant of the binary operation.
-
-    Returns
-    -------
-    "column" or None
-    """
-    if not first._modin_frame.has_materialized_columns:
-        return None
-
-    if not isinstance(second, type(first)):
-        return "column" if len(first.columns) == 1 and is_scalar(second) else None
-
-    if not second._modin_frame.has_materialized_columns:
-        return None
-
-    return (
-        "column"
-        if (
-            len(first.columns) == 1
-            and len(second.columns) == 1
-            and first.columns.equals(second.columns)
-        )
-        else None
-    )
 
 
 class Binary(Operator):
@@ -317,9 +282,19 @@ class Binary(Operator):
                 if dtypes is None
                 else dtypes
             )
-            shape_hint = try_compute_shape_hint(query_compiler, other)
+            shape_hint = None
             if isinstance(other, type(query_compiler)):
                 if broadcast:
+                    if (
+                        query_compiler._modin_frame.has_materialized_columns
+                        and other._modin_frame.has_materialized_columns
+                    ):
+                        if (
+                            len(query_compiler.columns) == 1
+                            and len(other.columns) == 1
+                            and query_compiler.columns.equals(other.columns)
+                        ):
+                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.broadcast_apply(
                             axis,
@@ -334,6 +309,16 @@ class Binary(Operator):
                         shape_hint=shape_hint,
                     )
                 else:
+                    if (
+                        query_compiler._modin_frame.has_materialized_columns
+                        and other._modin_frame.has_materialized_columns
+                    ):
+                        if (
+                            len(query_compiler.columns) == 1
+                            and len(other.columns) == 1
+                            and query_compiler.columns.equals(other.columns)
+                        ):
+                            shape_hint = "column"
                     return query_compiler.__constructor__(
                         query_compiler._modin_frame.n_ary_op(
                             lambda x, y: func(x, y, *args, **kwargs),
@@ -355,6 +340,12 @@ class Binary(Operator):
                         dtypes=new_dtypes,
                     )
                 else:
+                    if (
+                        query_compiler._modin_frame.has_materialized_columns
+                        and len(query_compiler._modin_frame.columns) == 1
+                        and is_scalar(other)
+                    ):
+                        shape_hint = "column"
                     new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs),
                         dtypes=new_dtypes,
