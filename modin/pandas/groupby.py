@@ -934,10 +934,28 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
+    def __reset_as_index(self):
+        if self._as_index:
+            return self
+        # groupby().head()/.tail() ignore as_index, so override it to True
+        groupby_kwargs = self._kwargs.copy()
+        groupby_kwargs["as_index"] = True
+        return type(self)(
+            self._df,
+            self._by,
+            self._axis,
+            drop=self._drop,
+            idx_name=self._idx_name,
+            squeeze=self._squeeze,
+            **groupby_kwargs,
+        )
+
     def head(self, n=5):
-        return self._check_index(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_head,
+        work_object = self.__reset_as_index()
+
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                type(work_object._query_compiler).groupby_head,
                 agg_kwargs=dict(n=n),
                 numeric_only=False,
             )
@@ -1021,9 +1039,10 @@ class DataFrameGroupBy(ClassLogger):
         return result
 
     def tail(self, n=5):
-        return self._check_index(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_tail,
+        work_object = self.__reset_as_index()
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                type(work_object._query_compiler).groupby_tail,
                 agg_kwargs=dict(n=n),
                 numeric_only=False,
             )

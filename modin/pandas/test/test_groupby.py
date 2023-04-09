@@ -124,13 +124,28 @@ def test_mixed_dtypes_groupby(as_index):
             pandas_groupby = pandas_df.set_index(by[0]).groupby(
                 by=by[-1], as_index=as_index
             )
+            # difference in behaviour between .groupby().ffill() and
+            # .groupby.fillna(method='ffill') on duplicated indices
+            # caused by https://github.com/pandas-dev/pandas/issues/43412
+            # is hurting the tests, for now sort the frames
+            md_sorted_grpby = (
+                modin_df.set_index(by[0])
+                .sort_index()
+                .groupby(by=by[0], as_index=as_index)
+            )
+            pd_sorted_grpby = (
+                pandas_df.set_index(by[0])
+                .sort_index()
+                .groupby(by=by[0], as_index=as_index)
+            )
         else:
             modin_groupby = modin_df.groupby(by=by[0], as_index=as_index)
             pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
+            md_sorted_grpby, pd_sorted_grpby = modin_groupby, pandas_groupby
 
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
+        eval_general(md_sorted_grpby, pd_sorted_grpby, lambda df: df.ffill())
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -163,9 +178,9 @@ def test_mixed_dtypes_groupby(as_index):
 
         eval_dtypes(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
+        eval_general(md_sorted_grpby, pd_sorted_grpby, lambda df: df.backfill())
         eval_cummin(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
+        eval_general(md_sorted_grpby, pd_sorted_grpby, lambda df: df.bfill())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
         eval_prod(modin_groupby, pandas_groupby)
         if as_index:
