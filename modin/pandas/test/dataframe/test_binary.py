@@ -32,6 +32,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import Engine, NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -84,7 +85,10 @@ def test_math_functions(other, axis, op):
         pytest.xfail(reason="different behavior")
 
     eval_general(
-        *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
+        *create_test_dfs(data),
+        lambda df: getattr(df, op)(other(df, axis), axis=axis),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
 
 

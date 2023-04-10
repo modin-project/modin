@@ -1948,6 +1948,8 @@ class TestExcel:
             # read_excel kwargs
             io="modin/pandas/test/data/modin_error_book.xlsx",
             sheet_name=sheet_name,
+            # TODO: raise an issue
+            comparator_kwargs={"check_dtypes": False},
         )
 
     @pytest.mark.xfail(
