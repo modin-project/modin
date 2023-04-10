@@ -85,10 +85,7 @@ def test_math_functions(other, axis, op):
         pytest.xfail(reason="different behavior")
 
     eval_general(
-        *create_test_dfs(data),
-        lambda df: getattr(df, op)(other(df, axis), axis=axis),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
+        *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
     )
 
 
@@ -113,6 +110,8 @@ def test_math_functions_fill_value(other, fill_value, op):
         modin_df,
         pandas_df,
         lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
 
 
