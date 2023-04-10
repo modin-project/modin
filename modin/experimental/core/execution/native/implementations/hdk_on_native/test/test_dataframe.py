@@ -800,21 +800,33 @@ class TestConcat:
             force_lazy=False,
         )
 
+    @pytest.mark.parametrize("transform", [True, False])
+    @pytest.mark.parametrize("sort_last", [True, False])
     # RecursionError in case of concatenation of big number of frames
-    def test_issue_5889(self):
+    def test_issue_5889(self, transform, sort_last):
         with ensure_clean(".csv") as file:
-            pandas.DataFrame({"a": [1, 2, 3, 4]}).to_csv(file, index=False)
+            data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
+            pandas.DataFrame(data).to_csv(file, index=False)
 
-            def test_concat(lib, n_concats, sort_last, **kwargs):
-                df = lib.read_csv(file)
-                for _ in range(n_concats):
-                    df = lib.concat([df, lib.read_csv(file)])
+            def test_concat(lib, **kwargs):
+                if transform:
+
+                    def read_csv():
+                        return lib.read_csv(file)["b"]
+
+                else:
+
+                    def read_csv():
+                        return lib.read_csv(file)
+
+                df = read_csv()
+                for _ in range(100):
+                    df = lib.concat([df, read_csv()])
                 if sort_last:
-                    df = lib.concat([df, lib.read_csv(file)], sort=True)
+                    df = lib.concat([df, read_csv()], sort=True)
                 return df
 
-            run_and_compare(test_concat, data={}, n_concats=500, sort_last=False)
-            run_and_compare(test_concat, data={}, n_concats=2, sort_last=True)
+            run_and_compare(test_concat, data={})
 
 
 class TestGroupby:

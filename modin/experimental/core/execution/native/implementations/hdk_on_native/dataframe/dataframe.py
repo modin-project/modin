@@ -42,7 +42,6 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from modin.logging import disable_logging
 from .utils import (
     ColNameCodec,
     arrow_to_pandas,
@@ -1184,16 +1183,14 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return new_frame
 
-    @disable_logging
-    def _union_all_arrow(
-        self, other_modin_frames, join, sort, ignore_index, as_frame=True
-    ):
+    @staticmethod
+    def _union_all_arrow(frames, join, sort, ignore_index, frame_to_table=None):
         """
         Concatenate frames' rows, using the PyArrow API.
 
         Parameters
         ----------
-        other_modin_frames : list of HdkOnNativeDataframe
+        frames : list of HdkOnNativeDataframe
             Frames to concat.
         join : {"outer", "inner"}
             How to handle columns with mismatched names.
@@ -1203,8 +1200,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             Sort unaligned columns for 'outer' join.
         ignore_index : bool
             Ignore index columns.
-        as_frame : bool, default: True
-            Convert the resulting table to frame.
+        frame_to_table : dict, default: None
+            Dictionary, containing arrow tables for each frame.
+            If not None, this method returns an arrow table.
 
         Returns
         -------
@@ -1214,17 +1212,20 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         class FrameData:
             def __init__(self, frame):
-                if not frame._has_arrow_table():
-                    frame._execute()
-                if not frame._has_arrow_table():
-                    raise NotImplementedError("PyArrow tables concatenation")
+                if frame_to_table is None:
+                    if not frame._has_arrow_table():
+                        frame._execute()
+                    if not frame._has_arrow_table():
+                        raise NotImplementedError("PyArrow tables concatenation")
+                    self.table = frame._partitions[0][0].arrow_table
+                else:
+                    self.table = frame_to_table[frame]
                 self.frame = frame
                 self.index = frame.index
                 self.columns = frame.columns
                 self.index_cols = frame._index_cols
-                self.table: pyarrow.Table = frame._partitions[0][0].arrow_table
 
-        frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
+        frames: List[FrameData] = [FrameData(f) for f in frames]
         col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
 
         # Add field to the col_fields dictionary. If the field is already exists, chose
@@ -1360,13 +1361,13 @@ class HdkOnNativeDataframe(PandasDataframe):
                     union = union.add_column(i, idx_table.field(i), idx_table.column(i))
 
         return (
-            self.from_arrow(
+            HdkOnNativeDataframe.from_arrow(
                 union,
                 index_cols=idx_cols,
                 columns=[k[0] for k in col_fields.keys()],
                 encode_col_names=False,
             )
-            if as_frame
+            if frame_to_table is None
             else union
         )
 
@@ -2041,14 +2042,25 @@ class HdkOnNativeDataframe(PandasDataframe):
         if isinstance(self._op, FrameNode):
             return
 
+        stack = [self._materialize, self]
+        while stack:
+            frame = stack.pop()
+            if callable(frame):
+                frame()
+            elif isinstance(frame._op, FrameNode):
+                continue
+            elif frame._require_executed_base():
+                for i in reversed(frame._op.input):
+                    if not isinstance(i._op, FrameNode):
+                        stack.append(i._materialize)
+                        stack.append(i)
+            else:
+                stack.extend(reversed(frame._op.input))
+
+    def _materialize(self):
+        """Materialize this frame."""
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected execution triggered on lazy frame")
-
-        # Some frames require rowid which is available for executed frames only.
-        # Also there is a common pattern when MaskNode is executed to print
-        # frame. If we run the whole tree then any following frame usage will
-        # require re-compute. So we just execute MaskNode's operands.
-        self._run_sub_queries()
 
         if self._can_execute_arrow():
             new_table = self._execute_arrow()
@@ -2063,6 +2075,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             new_partitions = self._partition_mgr_cls.run_exec_plan(
                 self._op, self._table_cols
             )
+
         self._partitions = new_partitions
         self._op = FrameNode(self)
 
@@ -2078,23 +2091,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             return True
         return self._uses_rowid
 
-    def _run_sub_queries(self):
-        """
-        Run sub-queries for materialization.
-
-        Materialize all frames in the execution tree which have to
-        be materialized to materialize this frame.
-        """
-        if isinstance(self._op, FrameNode):
-            return
-
-        if self._require_executed_base():
-            for op in self._op.input:
-                op._execute()
-        else:
-            for frame in self._op.input:
-                frame._run_sub_queries()
-
     def _can_execute_arrow(self):
         """
         Check for possibility of Arrow execution.
@@ -2108,18 +2104,26 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         if isinstance(self._op, FrameNode):
             return self._has_arrow_table()
-        elif isinstance(self._op, MaskNode):
-            return (
-                self._op.row_labels is None and self._op.input[0]._can_execute_arrow()
-            )
-        elif isinstance(self._op, TransformNode):
-            return (
-                self._op.is_simple_select() and self._op.input[0]._can_execute_arrow()
-            )
-        elif isinstance(self._op, UnionNode):
-            return all(frame._can_execute_arrow() for frame in self._op.input)
-        else:
-            return False
+
+        stack = [self]
+        while stack:
+            frame = stack.pop()
+            if isinstance(frame._op, FrameNode):
+                if not frame._has_arrow_table():
+                    return False
+            elif isinstance(frame._op, MaskNode):
+                if frame._op.row_labels is not None:
+                    return False
+                stack.append(frame._op.input[0])
+            elif isinstance(frame._op, TransformNode):
+                if not frame._op.is_simple_select():
+                    return False
+                stack.append(frame._op.input[0])
+            elif isinstance(frame._op, UnionNode):
+                stack.extend(frame._op.input)
+            else:
+                return False
+        return True
 
     def _execute_arrow(self):
         """
@@ -2130,27 +2134,71 @@ class HdkOnNativeDataframe(PandasDataframe):
         pyarrow.Table
             The resulting table.
         """
-        if isinstance(self._op, FrameNode):
-            if self._partitions.size == 0:
-                return pyarrow.Table.from_pandas(pd.DataFrame({}))
-            else:
-                assert self._partitions.size == 1
-                return self._partitions[0][0].get()
-        elif isinstance(self._op, MaskNode):
-            return self._op.input[0]._arrow_row_slice(self._op.row_positions)
-        elif isinstance(self._op, TransformNode):
-            return self._op.input[0]._arrow_select(self._op.exprs)
-        elif isinstance(self._op, UnionNode):
-            return self._arrow_concat(self._op)
-        else:
-            raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
+        result = None
+        stack = [self]
 
-    def _arrow_select(self, exprs):
+        while stack:
+            frame = stack.pop()
+
+            if callable(frame):
+                frame()
+            elif isinstance(frame._op, FrameNode):
+                if frame._partitions.size == 0:
+                    result = pyarrow.Table.from_pandas(pd.DataFrame({}))
+                else:
+                    assert frame._partitions.size == 1
+                    result = frame._partitions[0][0].get()
+            elif isinstance(frame._op, MaskNode):
+
+                def slice(positions=frame._op.row_positions):
+                    nonlocal result
+                    result = self._arrow_row_slice(result, positions)
+
+                stack.append(slice)
+                stack.append(frame._op.input[0])
+            elif isinstance(frame._op, TransformNode):
+
+                def select(exprs=frame._op.exprs):
+                    nonlocal result
+                    result = self._arrow_select(result, exprs)
+
+                stack.append(select)
+                stack.append(frame._op.input[0])
+            elif isinstance(frame._op, UnionNode):
+
+                def union(op=frame._op, tables={}, input=iter(frame._op.input)):
+                    nonlocal result
+
+                    if (i := next(input, None)) is None:
+                        result = self._union_all_arrow(
+                            op.input, op.join, op.sort, op.ignore_index, tables
+                        )
+                    else:
+
+                        def add_result(f=i):
+                            tables[f] = result
+
+                        stack.append(frame if callable(frame) else union)
+                        stack.append(add_result)
+                        stack.append(i)
+
+                union()
+            else:
+                raise RuntimeError(
+                    f"Unexpected op ({type(frame._op)}) in _execute_arrow"
+                )
+
+        return result
+
+    @staticmethod
+    def _arrow_select(table, exprs):
         """
-        Perform column selection on the frame using Arrow API.
+        Perform column selection on the table using Arrow API.
 
         Parameters
         ----------
+        table : pyarrow.Table
+            The table to select from.
         exprs : dict
             Select expressions.
 
@@ -2159,8 +2207,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         pyarrow.Table
             The resulting table.
         """
-        table = self._execute_arrow()
-
         new_fields = []
         new_columns = []
 
@@ -2183,12 +2229,15 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return pyarrow.Table.from_arrays(new_columns, schema=new_schema)
 
-    def _arrow_row_slice(self, row_positions):
+    @staticmethod
+    def _arrow_row_slice(table, row_positions):
         """
-        Perform row selection on the frame using Arrow API.
+        Perform row selection on the table using Arrow API.
 
         Parameters
         ----------
+        table : pyarrow.Table
+            The table to select from.
         row_positions : list of int
             Row positions to select.
 
@@ -2197,8 +2246,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         pyarrow.Table
             The resulting table.
         """
-        table = self._execute_arrow()
-
         if not isinstance(row_positions, slice) and not is_range_like(row_positions):
             if not isinstance(row_positions, (pyarrow.Array, np.ndarray, list)):
                 row_positions = pyarrow.array(row_positions)
@@ -2218,26 +2265,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             indices = np.arange(start, stop, step)
             return table.take(indices)
-
-    @classmethod
-    def _arrow_concat(cls, node):
-        """
-        Concat frames' rows using Arrow API.
-
-        Parameters
-        ----------
-        node : UnionNode
-            Frames to concat.
-
-        Returns
-        -------
-        pyarrow.Table
-            The resulting table.
-        """
-        frames = node.input
-        return frames[0]._union_all_arrow(
-            frames[1:], node.join, node.sort, node.ignore_index, as_frame=False
-        )
 
     def _build_index_cache(self):
         """
