@@ -133,6 +133,19 @@ class DataFrameGroupBy(ClassLogger):
         self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
+    def __override(self, **kwargs):
+        new_kw = dict(
+            df=self._df,
+            by=self._by,
+            axis=self._axis,
+            squeeze=self._squeeze,
+            idx_name=self._idx_name,
+            drop=self._drop,
+            **self._kwargs,
+        )
+        new_kw.update(kwargs)
+        return type(self)(**new_kw)
+
     def __getattr__(self, key):
         """
         Alter regular attribute access, looks up the name in the columns.
@@ -807,11 +820,13 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        return self._check_index(
-            self._wrap_aggregation(
-                qc_method=type(self._query_compiler).groupby_get_group,
+        work_object = self.__override(df=obj if obj is not None else self._df)
+
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                qc_method=type(work_object._query_compiler).groupby_get_group,
                 numeric_only=False,
-                agg_kwargs=dict(name=name, obj=obj),
+                agg_kwargs=dict(name=name),
             )
         )
 
@@ -934,24 +949,9 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def __reset_as_index(self):
-        if self._as_index:
-            return self
-        # groupby().head()/.tail() ignore as_index, so override it to True
-        groupby_kwargs = self._kwargs.copy()
-        groupby_kwargs["as_index"] = True
-        return type(self)(
-            self._df,
-            self._by,
-            self._axis,
-            drop=self._drop,
-            idx_name=self._idx_name,
-            squeeze=self._squeeze,
-            **groupby_kwargs,
-        )
-
     def head(self, n=5):
-        work_object = self.__reset_as_index()
+        # groupby().head()/.tail() ignore as_index, so override it to True
+        work_object = self.__override(as_index=True)
 
         return work_object._check_index(
             work_object._wrap_aggregation(
@@ -1039,7 +1039,8 @@ class DataFrameGroupBy(ClassLogger):
         return result
 
     def tail(self, n=5):
-        work_object = self.__reset_as_index()
+        # groupby().head()/.tail() ignore as_index, so override it to True
+        work_object = self.__override(as_index=True)
         return work_object._check_index(
             work_object._wrap_aggregation(
                 type(work_object._query_compiler).groupby_tail,
