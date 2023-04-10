@@ -608,6 +608,15 @@ def assert_all_act_same(condition, *objs):
     assert not res
 
 
+def _maybe_cast_to_pandas_dtype(dtype):
+    """Cast passed `dtype` to according pandas dtype if needed for the sake of equality comparison."""
+    # If we're running in a cloud mode then all the numpy types are substituted with a proxy net-reference,
+    # Such dtypes won't pass equality check with pandas dtypes thus manually converting them to a pure numpy
+    if "netref" in str(type(dtype)):
+        return np.dtype(dtype.name)
+    return dtype
+
+
 def assert_dtypes_equal(df1, df2):
     """
     Assert that the two passed DataFrame/Series objects have equal dtypes.
@@ -643,7 +652,7 @@ def assert_dtypes_equal(df1, df2):
     assert len(dtypes1) == len(dtypes2)
 
     for col in dtypes1.keys():
-        type1, type2 = dtypes1[col], dtypes2[col]
+        type1, type2 = map(_maybe_cast_to_pandas_dtype, (dtypes1[col], dtypes2[col]))
         assert_all_act_same(is_numeric_dtype, type1, type2)
         assert_all_act_same(
             lambda obj: is_object_dtype(obj) or is_string_dtype(obj), type1, type2
