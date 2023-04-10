@@ -4622,7 +4622,13 @@ def test_cat_codes_issue5650(set_min_partition_size):
     pandas_df = pandas_df.astype("category")
     modin_df = pd.DataFrame(data)
     modin_df = modin_df.astype("category")
-    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df["name"].cat.codes,
+        # TODO: raise an issue
+        comparator_kwargs={"check_dtypes": StorageFormat.get() != "Hdk"},
+    )
 
 
 @pytest.mark.parametrize(

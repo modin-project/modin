@@ -52,13 +52,13 @@ def eval_io(
     For parameters description please refer to ``modin.pandas.test.utils.eval_io``.
     """
 
-    def hdk_comparator(df1, df2):
+    def hdk_comparator(df1, df2, check_dtypes=True):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to HDK."""
         with ForceHdkImport(df1, df2):
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             df1, df2 = align_datetime_dtypes(df1, df2)
-            comparator(df1, df2)
+            comparator(df1, df2, check_dtypes=check_dtypes)
 
     general_eval_io(
         fn_name,
