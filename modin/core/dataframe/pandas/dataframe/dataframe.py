@@ -3269,7 +3269,7 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
-            frames = [frame for frame in [self] + others]
+            frames = [self] + others
             if all(frame.has_materialized_dtypes for frame in frames):
                 all_dtypes = [frame.dtypes for frame in frames]
                 new_dtypes = pandas.concat(all_dtypes, axis=1)
