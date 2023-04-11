@@ -224,7 +224,7 @@ def test_combine_first():
     df_equals(
         modin_df1.combine_first(modin_df2),
         pandas_df1.combine_first(pandas_df2),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5959
         check_dtypes=False,
     )
 
@@ -504,7 +504,7 @@ def test_pivot(data, index, columns, values):
         values=values,
         check_exception_type=None,
         # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        # comparator_kwargs={"check_dtypes": False},
     )
 
 

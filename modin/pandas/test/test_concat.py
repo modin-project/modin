@@ -134,7 +134,7 @@ def test_mixed_inner_concat():
     df_equals(
         pd.concat(mixed_dfs, join="inner"),
         pandas.concat([df, df2, df3], join="inner"),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5963
         check_dtypes=False,
     )
 
@@ -252,7 +252,7 @@ def test_sort_order(sort, join, axis):
     df_equals(
         pandas_concat,
         modin_concat,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5963
         check_dtypes=join != "inner",
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)
@@ -282,8 +282,8 @@ def test_concat_empty(data1, index1, data2, index2, axis, join):
     df_equals(
         pdf,
         mdf,
-        # TODO: raise an issue
-        check_dtypes=False,
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=join != "inner",
     )
 
 
@@ -293,7 +293,7 @@ def test_concat_empty_df_series():
     df_equals(
         pdf,
         mdf,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5964
         check_dtypes=False,
     )
     pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
@@ -301,7 +301,7 @@ def test_concat_empty_df_series():
     df_equals(
         pdf,
         mdf,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5964
         check_dtypes=False,
     )
 

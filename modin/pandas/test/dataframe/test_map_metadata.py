@@ -506,7 +506,7 @@ def test_astype_errors(errors):
         modin_df,
         pandas_df,
         lambda df: df.astype("int", errors=errors),
-        # TODO: add issue
+        # https://github.com/modin-project/modin/issues/5962
         comparator_kwargs={"check_dtypes": errors != "ignore"},
     )
 

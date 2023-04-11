@@ -638,7 +638,7 @@ def assert_dtypes_equal(df1, df2):
         df2, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
     ):
         return
-
+    # breakpoint()
     if isinstance(df1.dtypes, (pandas.Series, pd.Series)):
         dtypes1 = df1.dtypes.to_dict()
         dtypes2 = df2.dtypes.to_dict()

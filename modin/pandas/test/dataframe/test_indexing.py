@@ -1576,7 +1576,7 @@ def test_reset_index_with_multi_index_no_drop(
         modin_df,
         pandas_df,
         lambda df: df.reset_index(**kwargs),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5960
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -2240,7 +2240,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         modin_df,
         pandas_df,
         applyier,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5961
         comparator_kwargs={
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },

@@ -268,7 +268,7 @@ def test___and__(data):
         modin_series,
         pandas_series,
         "__and__",
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -510,7 +510,7 @@ def test___or__(data):
         modin_series,
         pandas_series,
         "__or__",
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -642,7 +642,7 @@ def test___xor__(data):
         modin_series,
         pandas_series,
         "__xor__",
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -2373,26 +2373,19 @@ def test_map(data, na_values):
     df_equals(
         modin_series.map(mapper, na_action=na_values),
         pandas_series.map(mapper, na_action=na_values),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5967
         check_dtypes=False,
     )
 
     # Return list objects
     modin_series_lists = modin_series.map(lambda s: [s, s, s])
     pandas_series_lists = pandas_series.map(lambda s: [s, s, s])
-    df_equals(
-        modin_series_lists,
-        pandas_series_lists,
-        # TODO: raise an issue
-        check_dtypes=False,
-    )
+    df_equals(modin_series_lists, pandas_series_lists)
 
     # Index into list objects
     df_equals(
         modin_series_lists.map(lambda lst: lst[0]),
         pandas_series_lists.map(lambda lst: lst[0]),
-        # TODO: raise an issue
-        check_dtypes=False,
     )
 
 
@@ -3853,7 +3846,7 @@ def test_str___getitem__(data, key):
     df_equals(
         modin_result,
         pandas_result,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5968
         check_dtypes=False,
     )
 
