@@ -91,7 +91,7 @@ A Deeper Dive
 **seaborn**
 -----------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/seaborn.ipynb>`_
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/seaborn.ipynb>`_
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5435 
@@ -100,7 +100,7 @@ Github Issues
 **plotly**
 ----------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/plotly.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/plotly.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5447 
@@ -109,13 +109,13 @@ Github Issues
 **matplotlib**
 --------------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/matplotlib.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/matplotlib.ipynb>`_ 
 
 
 **altair**
 ----------
 
-`Jupyter Notebook <https://github.com/lmodin-project/modin/blob/master/docs/jupyter/altair.ipynb>`_ 
+`Jupyter Notebook <https://github.com/lmodin-project/modin/blob/master/examples/jupyter/integrations/altair.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5438
@@ -123,7 +123,7 @@ Github Issues
 **bokeh**
 ---------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/bokeh.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/bokeh.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5437
@@ -131,17 +131,17 @@ Github Issues
 **sklearn**
 -----------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/sklearn.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/sklearn.ipynb>`_ 
 
 **Hugging Face**
 ----------------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/huggingface.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/huggingface.ipynb>`_ 
 
 **Tensorflow**
 --------------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/tensorflow.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/tensorflow.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5439
@@ -149,17 +149,17 @@ Github Issues
 **NLTK**
 ---------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/NLTK.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/NLTK.ipynb>`_ 
 
 **XGBoost**
 -----------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/xgboost.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/xgboost.ipynb>`_ 
 
 **statsmodels**
 ---------------
 
-`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/docs/jupyter/statsmodels.ipynb>`_ 
+`Jupyter Notebook <https://github.com/modin-project/modin/blob/master/examples/jupyter/integrations/statsmodels.ipynb>`_ 
 
 Github Issues
     * https://github.com/modin-project/modin/issues/5440
