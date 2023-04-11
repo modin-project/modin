@@ -716,17 +716,17 @@ def to_pickle(
 @enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
-    usecols: Union[Sequence[str], type(None)] = None,
+    usecols: Sequence[str] | None = None,
     convert_categoricals: bool = True,
 ):  # noqa: PR01, RT01, D200
     """
     Load an SPSS file from the file path, returning a DataFrame.
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
-        query_compiler=FactoryDispatcher.read_spss(path, usecols, convert_categoricals)
-    )
+    return DataFrame(query_compiler=FactoryDispatcher.read_spss(**kwargs))
 
 
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
@@ -761,7 +761,7 @@ def read_orc(
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(pandas.read_orc(path, columns, **kwargs))
+    return DataFrame(pandas.read_orc(path, columns=columns, **kwargs))
 
 
 @_inherit_docstrings(pandas.HDFStore)

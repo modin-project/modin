@@ -174,42 +174,9 @@ class BaseIO:
         summary="Load data from Google BigQuery into query compiler",
         returns=_doc_returns_qc,
     )
-    def read_gbq(
-        cls,
-        query: str,
-        project_id=None,
-        index_col=None,
-        col_order=None,
-        reauth=False,
-        auth_local_webserver=False,
-        dialect=None,
-        location=None,
-        configuration=None,
-        credentials=None,
-        use_bqstorage_api=None,
-        private_key=None,
-        verbose=None,
-        progress_bar_type=None,
-        max_results=None,
-    ):  # noqa: PR01
+    def read_gbq(cls, query: str, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_gbq`")
-        return cls.from_pandas(
-            pandas.read_gbq(
-                query,
-                project_id=project_id,
-                index_col=index_col,
-                col_order=col_order,
-                reauth=reauth,
-                auth_local_webserver=auth_local_webserver,
-                dialect=dialect,
-                location=location,
-                configuration=configuration,
-                credentials=credentials,
-                use_bqstorage_api=use_bqstorage_api,
-                progress_bar_type=progress_bar_type,
-                max_results=max_results,
-            )
-        )
+        return cls.from_pandas(pandas.read_gbq(query, **kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
