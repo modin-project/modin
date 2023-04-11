@@ -111,7 +111,9 @@ class PandasOnRayIO(RayIO):
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        RayWrapper.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )
 
     @staticmethod
     def _to_csv_check_support(kwargs):
@@ -235,7 +237,9 @@ class PandasOnRayIO(RayIO):
             max_retries=0,
         )
         # pending completion
-        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
+        RayWrapper.materialize(
+            [part.list_of_blocks[0] for row in result for part in row]
+        )
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -313,4 +317,6 @@ class PandasOnRayIO(RayIO):
             enumerate_partitions=True,
         )
         # pending completion
-        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
+        RayWrapper.materialize(
+            [part.list_of_blocks[0] for row in result for part in row]
+        )
