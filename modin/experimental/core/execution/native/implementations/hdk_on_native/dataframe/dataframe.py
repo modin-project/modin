@@ -28,6 +28,7 @@ from .utils import (
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
+    get_common_arrow_type,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 
@@ -1124,21 +1125,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
         col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
 
+        # Add field to the col_fields dictionary. If the field is already exists, chose
+        # the most appropriate field, according to the fields type and bit_width.
         def add_col_field(table, col_name, table_col_name):
             key = (col_name, table_col_name)
             field = table.field(table_col_name)
             cur_field = col_fields.get(key, None)
-            if (
-                (cur_field is None)
-                or pyarrow.types.is_null(cur_field.type)
-                or (
-                    (not pyarrow.types.is_string(cur_field.type))
-                    and (not pyarrow.types.is_null(field.type))
-                    and (
-                        pyarrow.types.is_string(field.type)
-                        or (field.type.bit_width > cur_field.type.bit_width)
-                    )
-                )
+            if cur_field is None or (
+                cur_field.type != get_common_arrow_type(cur_field.type, field.type)
             ):
                 col_fields[key] = field
 
@@ -1235,7 +1229,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                     idx = frames[0].index.append([f.index for f in frames[1:]])
                     idx_cols = self._mangle_index_names(idx.names)
                     idx_df = pd.DataFrame(index=idx).reset_index()
-                    idx_table = pyarrow.Table.from_pandas(idx_df)
+                    obj_cols = idx_df.select_dtypes(include=["object"]).columns.tolist()
+                    if len(obj_cols) != 0:
+                        # PyArrow fails to convert object fields. Converting to str.
+                        idx_df[obj_cols] = idx_df[obj_cols].astype(str)
+                    idx_table = pyarrow.Table.from_pandas(idx_df, preserve_index=False)
                     idx_table = idx_table.rename_columns(idx_cols)
 
             if sort:

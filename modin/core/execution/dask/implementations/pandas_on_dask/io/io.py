@@ -13,8 +13,7 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
-import os
-
+import fsspec
 import pandas
 
 from modin.core.io import BaseIO
@@ -57,23 +56,21 @@ class PandasOnDaskIO(BaseIO):
         query_compiler_cls=PandasQueryCompiler,
     )
 
-    read_csv = type("", (DaskWrapper, PandasCSVParser, CSVDispatcher), build_args).read
-    read_fwf = type("", (DaskWrapper, PandasFWFParser, FWFDispatcher), build_args).read
-    read_json = type(
-        "", (DaskWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (DaskWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).read
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (DaskWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (DaskWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type("", (DaskWrapper, PandasSQLParser, SQLDispatcher), build_args).read
-    read_excel = type(
-        "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -116,7 +113,9 @@ class PandasOnDaskIO(BaseIO):
             return BaseIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        os.makedirs(output_path, exist_ok=True)
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
+        fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
+        fs.mkdirs(url, exist_ok=True)
 
         def func(df, **kw):
             """
