@@ -379,6 +379,34 @@ def get_data_for_join_by_index(
     return index_cols, exprs, new_dtypes, merged.columns
 
 
+def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:
+    """
+    Get common arrow data type.
+
+    Parameters
+    ----------
+    t1 : pa.lib.DataType
+    t2 : pa.lib.DataType
+
+    Returns
+    -------
+    pa.lib.DataType
+    """
+    if pa.types.is_string(t1):
+        return t1
+    if pa.types.is_string(t2):
+        return t2
+    if pa.types.is_null(t1):
+        return t2
+    if pa.types.is_null(t2):
+        return t1
+    if t1.bit_width > t2.bit_width:
+        return t1
+    if t1.bit_width < t2.bit_width:
+        return t2
+    return t2 if pa.types.is_floating(t2) else t1
+
+
 def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
     """
     Convert the specified arrow table to pandas.

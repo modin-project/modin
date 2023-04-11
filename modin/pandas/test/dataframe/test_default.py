@@ -45,7 +45,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -242,16 +242,28 @@ def test_corr(min_periods):
 @pytest.mark.parametrize("min_periods", [1, 3, 5])
 @pytest.mark.parametrize("ddof", [1, 2, 4])
 def test_cov(min_periods, ddof):
+    # Modin result may slightly differ from pandas result
+    # due to floating pointing arithmetic.
+    if StorageFormat.get() == "Hdk":
+
+        def comparator1(df1, df2):
+            modin_df_almost_equals_pandas(df1, df2, max_diff=0.0002)
+
+        comparator2 = comparator1
+    else:
+        comparator1 = df_equals
+        comparator2 = modin_df_almost_equals_pandas
+
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: df.cov(min_periods=min_periods, ddof=ddof),
+        comparator=comparator1,
     )
-    # Modin result may slightly differ from pandas result
-    # due to floating pointing arithmetic.
+
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.cov(min_periods=min_periods),
-        comparator=modin_df_almost_equals_pandas,
+        comparator=comparator2,
     )
 
 
@@ -472,11 +484,21 @@ def test_mad_level(level):
     "value_vars", [lambda df: df.columns[-1], lambda df: df.columns[-4:], None]
 )
 def test_melt(data, id_vars, value_vars):
+    if StorageFormat.get() == "Hdk":
+        # Drop NA and sort by all columns to make sure the order
+        # is identical to Pandas.
+        def melt(df, *args, **kwargs):
+            df = df.melt(*args, **kwargs).dropna()
+            return df.sort_values(df.columns.tolist())
+
+    else:
+
+        def melt(df, *args, **kwargs):
+            return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.melt(*args, **kwargs)
-        .sort_values(["variable", "value"])
-        .reset_index(drop=True),
+        lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
         id_vars=id_vars,
         value_vars=value_vars,
     )
@@ -1186,12 +1208,13 @@ def test_setattr_axes():
             # In BaseOnPython, setting columns raises a warning because get_axis
             #  defaults to pandas.
             warnings.simplefilter("error")
-        df.index = ["foo", "bar"]
-        df.columns = [9, 10]
+        if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
+            df.index = ["foo", "bar"]
+            # Check that ensure_index was called
+            pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
 
-    # Check that ensure_index was called
-    pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
-    pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+        df.columns = [9, 10]
+        pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
