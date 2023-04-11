@@ -26,6 +26,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -356,4 +357,13 @@ def test_concat_different_num_cols(
 
     mdf = concat(pd.DataFrame, pd)
     pdf = concat(pandas.DataFrame, pandas)
-    df_equals(pdf, mdf)
+    df_equals(
+        pdf,
+        mdf,
+        # Empty slicing causes this bug:
+        # https://github.com/modin-project/modin/issues/5974
+        check_dtypes=not (
+            get_current_execution() == "BaseOnPython"
+            and any(o == 0 for o in (df1_cols, df2_cols, df1_rows, df2_rows))
+        ),
+    )

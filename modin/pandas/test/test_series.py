@@ -3954,7 +3954,7 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=False),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -3964,7 +3964,7 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=True),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -3978,8 +3978,8 @@ def test_str_replace(data, pat, repl, n, case):
     eval_general(
         *create_test_series(data),
         lambda series: series.str.replace(pat, repl, n=n, case=case, regex=False),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        # https://github.com/modin-project/modin/issues/5970
+        comparator_kwargs={"check_dtypes": pat is not None},
     )
     # Test regex
     eval_general(
@@ -3987,8 +3987,8 @@ def test_str_replace(data, pat, repl, n, case):
         lambda series: series.str.replace(
             pat=",|b", repl=repl, n=n, case=case, regex=True
         ),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        # https://github.com/modin-project/modin/issues/5970
+        comparator_kwargs={"check_dtypes": pat is not None},
     )
 
 
@@ -4128,7 +4128,7 @@ def test_str_startswith(data, pat, na):
         modin_series,
         pandas_series,
         lambda series: series.str.startswith(pat, na=na),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4142,7 +4142,7 @@ def test_str_endswith(data, pat, na):
         modin_series,
         pandas_series,
         lambda series: series.str.endswith(pat, na=na),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4239,8 +4239,8 @@ def test_str_partition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.partition(sep, expand=expand),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        # https://github.com/modin-project/modin/issues/5971
+        comparator_kwargs={"check_dtypes": sep is not None},
     )
 
 
@@ -4253,8 +4253,8 @@ def test_str_rpartition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.rpartition(sep, expand=expand),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        # https://github.com/modin-project/modin/issues/5971
+        comparator_kwargs={"check_dtypes": sep is not None},
     )
 
 
@@ -4286,7 +4286,7 @@ def test_str_find(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.find(sub, start=start, end=end),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5972
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4301,7 +4301,7 @@ def test_str_rfind(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rfind(sub, start=start, end=end),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5972
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4316,7 +4316,7 @@ def test_str_index(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5972
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4331,7 +4331,7 @@ def test_str_rindex(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5972
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4367,29 +4367,21 @@ def test_str_translate(data, pat):
         modin_series,
         pandas_series,
         lambda series: series.str.translate(None),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5970
         comparator_kwargs={"check_dtypes": False},
     )
 
     # Translation dictionary
     table = {pat: "DDD"}
     eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: series.str.translate(table),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
+        modin_series, pandas_series, lambda series: series.str.translate(table)
     )
 
     # Translation table with maketrans (python3 only)
     if pat is not None:
         table = str.maketrans(pat, "d" * len(pat))
         eval_general(
-            modin_series,
-            pandas_series,
-            lambda series: series.str.translate(table),
-            # TODO: raise an issue
-            comparator_kwargs={"check_dtypes": False},
+            modin_series, pandas_series, lambda series: series.str.translate(table)
         )
 
     # Test delete chars
@@ -4398,8 +4390,6 @@ def test_str_translate(data, pat):
         modin_series,
         pandas_series,
         lambda series: series.str.translate(table, deletechars),
-        # TODO: raise an issue
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4410,7 +4400,7 @@ def test_str_isalnum(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isalnum(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4422,7 +4412,7 @@ def test_str_isalpha(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isalpha(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4434,7 +4424,7 @@ def test_str_isdigit(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isdigit(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4446,7 +4436,7 @@ def test_str_isspace(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isspace(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4458,7 +4448,7 @@ def test_str_islower(data):
         modin_series,
         pandas_series,
         lambda series: series.str.islower(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4470,7 +4460,7 @@ def test_str_isupper(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isupper(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4482,7 +4472,7 @@ def test_str_istitle(data):
         modin_series,
         pandas_series,
         lambda series: series.str.istitle(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4494,7 +4484,7 @@ def test_str_isnumeric(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isnumeric(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4506,7 +4496,7 @@ def test_str_isdecimal(data):
         modin_series,
         pandas_series,
         lambda series: series.str.isdecimal(),
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5969
         comparator_kwargs={"check_dtypes": False},
     )
 
@@ -4619,7 +4609,7 @@ def test_cat_codes_issue5650(set_min_partition_size):
         modin_df,
         pandas_df,
         lambda df: df["name"].cat.codes,
-        # TODO: raise an issue
+        # https://github.com/modin-project/modin/issues/5973
         comparator_kwargs={"check_dtypes": StorageFormat.get() != "Hdk"},
     )
 

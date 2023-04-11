@@ -110,7 +110,8 @@ def test_math_functions_fill_value(other, fill_value, op):
         modin_df,
         pandas_df,
         lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
-        # TODO: raise an issue
+        # This test causes an empty slice to be generated thus triggering:
+        # https://github.com/modin-project/modin/issues/5974
         comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
 

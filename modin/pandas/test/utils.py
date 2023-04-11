@@ -599,13 +599,7 @@ def assert_all_act_same(condition, *objs):
     if len(results) < 2:
         return
 
-    # Finding XOR of all elements in the list, if all elements are equal
-    # the `res` has to be `False` at the end of the loop
-    res = results[0]
-    for obj in results[1:]:
-        res ^= obj
-
-    assert not res
+    assert all(results[0] == res for res in results[1:])
 
 
 def _maybe_cast_to_pandas_dtype(dtype):
@@ -638,17 +632,17 @@ def assert_dtypes_equal(df1, df2):
         df2, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
     ):
         return
-    # breakpoint()
+
     if isinstance(df1.dtypes, (pandas.Series, pd.Series)):
-        dtypes1 = df1.dtypes.to_dict()
-        dtypes2 = df2.dtypes.to_dict()
+        dtypes1 = df1.dtypes
+        dtypes2 = df2.dtypes
     else:
         # Case when `dtypes` is a scalar
-        dtypes1 = {"col": df1.dtypes}
-        dtypes2 = {"col": df2.dtypes}
+        dtypes1 = pandas.Series({"col": df1.dtypes})
+        dtypes2 = pandas.Series({"col": df2.dtypes})
 
     # Don't require for dtypes to be in the same order
-    assert set(dtypes1.keys()) == set(dtypes2.keys())
+    assert len(dtypes1.index.difference(dtypes2.index)) == 0
     assert len(dtypes1) == len(dtypes2)
 
     for col in dtypes1.keys():

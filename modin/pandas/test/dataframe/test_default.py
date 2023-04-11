@@ -503,8 +503,6 @@ def test_pivot(data, index, columns, values):
         columns=columns,
         values=values,
         check_exception_type=None,
-        # TODO: raise an issue
-        # comparator_kwargs={"check_dtypes": False},
     )
 
 

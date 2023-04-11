@@ -71,8 +71,13 @@ def test_insert_item(axis, item_length, loc, replace):
     md_res = md_item1._query_compiler.insert_item(
         axis=axis, loc=index_loc, value=md_item2._query_compiler, replace=replace
     ).to_pandas()
-    # TODO: raise an issue
-    df_equals(md_res, pd_res, check_dtypes=False)
+    df_equals(
+        md_res,
+        pd_res,
+        # This test causes an empty slice to be generated thus triggering:
+        # https://github.com/modin-project/modin/issues/5974
+        check_dtypes=axis != 0,
+    )
 
     index_loc = get_loc(pd_item2, loc)
 
@@ -81,5 +86,10 @@ def test_insert_item(axis, item_length, loc, replace):
         axis=axis, loc=index_loc, value=md_item1._query_compiler, replace=replace
     ).to_pandas()
 
-    # TODO: raise an issue
-    df_equals(md_res, pd_res, check_dtypes=False)
+    df_equals(
+        md_res,
+        pd_res,
+        # This test causes an empty slice to be generated thus triggering:
+        # https://github.com/modin-project/modin/issues/5974
+        check_dtypes=axis != 0,
+    )
