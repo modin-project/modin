@@ -1,6 +1,6 @@
 name: ci
 on:
-  pull_request:
+  push:
     paths:
       # NOTE: keep these paths in sync with the paths that trigger the
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
@@ -15,7 +15,6 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
-  push:
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
