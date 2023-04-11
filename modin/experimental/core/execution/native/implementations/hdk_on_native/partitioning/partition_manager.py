@@ -20,7 +20,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from ..dataframe.utils import ColNameCodec, mangle_index_names
+from ..dataframe.utils import ColNameCodec
 from ..partitioning.partition import HdkOnNativeDataframePartition
 from ..db_worker import DbWorker
 from ..calcite_builder import CalciteBuilder
@@ -296,7 +296,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                                 if frame.has_materialized_index
                                 else [None]
                             )
-                            idx_names = mangle_index_names(idx_names)
+                            idx_names = ColNameCodec.mangle_index_names(idx_names)
                             obj = pyarrow.table(
                                 {n: [] for n in idx_names},
                                 schema=pyarrow.schema(

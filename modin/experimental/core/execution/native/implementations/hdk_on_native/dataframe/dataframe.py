@@ -55,15 +55,6 @@ from .utils import (
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
-
-from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import (
-    get_dtype,
-    is_list_like,
-    is_bool_dtype,
-    is_string_dtype,
-    is_categorical_dtype,
-)
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
@@ -98,6 +89,9 @@ IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
 ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME
 encode_col_name = ColNameCodec.encode
 decode_col_name = ColNameCodec.decode
+concat_index_names = ColNameCodec.concat_index_names
+mangle_index_names = ColNameCodec.mangle_index_names
+demangle_index_names = ColNameCodec.demangle_index_names
 
 
 class HdkOnNativeDataframe(PandasDataframe):
@@ -2294,7 +2288,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     index_df = index_at.to_pandas()
                     index_df.set_index(self._index_cols, inplace=True)
                     idx = index_df.index
-                    idx.rename(self._index_names(self._index_cols), inplace=True)
+                    idx.rename(demangle_index_names(self._index_cols), inplace=True)
                     if (
                         isinstance(idx, (pd.DatetimeIndex, pd.TimedeltaIndex))
                         and len(idx) >= 3  # infer_freq() requires at least 3 values
@@ -2397,7 +2391,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # Need to demangle index names.
             exprs = OrderedDict()
             for i, c in enumerate(self._index_cols):
-                name = self._index_name(c)
+                name = ColNameCodec.demangle_index_name(c)
                 if name is None:
                     name = f"level_{i}"
                 if name in exprs:
@@ -2750,7 +2744,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 df.index = self._index_cache.get().copy()
             else:
                 df.set_index(self._index_cols, inplace=True)
-                df.index.rename(self._index_names(self._index_cols), inplace=True)
+                df.index.rename(demangle_index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
@@ -2765,45 +2759,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         df.columns = self.columns
 
         return df
-
-    def _index_names(self, cols):
-        """
-        Demangle index column names to index labels.
-
-        Parameters
-        ----------
-        cols : list of str
-            Index column names.
-
-        Returns
-        -------
-        list of str
-            Demangled index names.
-        """
-        if len(cols) == 1:
-            return self._index_name(cols[0])
-        return [self._index_name(n) for n in cols]
-
-    def _index_name(self, col):
-        """
-        Demangle index column name into index label.
-
-        Parameters
-        ----------
-        col : str
-            Index column name.
-
-        Returns
-        -------
-        str
-            Demangled index name.
-        """
-        match = re.search(f"{IDX_COL_NAME}\\d+_(.*)", col)
-        if match:
-            name = match.group(1)
-            return None if name == MODIN_UNNAMED_SERIES_LABEL else decode_col_name(name)
-
-        return col
 
     def _find_index_or_col(self, col):
         """
