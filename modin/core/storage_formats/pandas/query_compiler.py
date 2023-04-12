@@ -2178,9 +2178,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # correctness and cleanliness of the code.
         if axis == 1:
             q_index = new_columns
-            new_columns = pandas.Float64Index(q)
+            new_columns = pandas.Index(q)
         else:
-            q_index = pandas.Float64Index(q)
+            q_index = pandas.Index(q)
         new_modin_frame = query_compiler._modin_frame.apply_full_axis(
             axis,
             lambda df: quantile_builder(df, **kwargs),

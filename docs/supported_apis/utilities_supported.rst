@@ -90,9 +90,6 @@ contributing a distributed version of any of these objects, feel free to open a
 * IntervalDtype
 * PeriodDtype
 * RangeIndex
-* Int64Index
-* UInt64Index
-* Float64Index
 * TimedeltaIndex
 * IntervalIndex
 * IndexSlice
