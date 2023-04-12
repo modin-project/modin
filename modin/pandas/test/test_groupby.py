@@ -194,12 +194,6 @@ def test_mixed_dtypes_groupby(as_index):
             eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda df: df.mad(),
-            modin_df_almost_equals_pandas,
-        )
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
@@ -411,12 +405,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
         )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.mad(),
-        modin_df_almost_equals_pandas,
-    )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.rank())
     eval_max(modin_groupby, pandas_groupby)
     eval_len(modin_groupby, pandas_groupby)
@@ -586,12 +574,6 @@ def test_single_group_row_groupby():
         eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.mad(),
-        modin_df_almost_equals_pandas,
-    )
     eval_rank(modin_groupby, pandas_groupby)
     eval_max(modin_groupby, pandas_groupby)
     eval_var(modin_groupby, pandas_groupby)
@@ -705,12 +687,6 @@ def test_large_row_groupby(is_by_category):
         eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.mad(),
-        modin_df_almost_equals_pandas,
-    )
     eval_rank(modin_groupby, pandas_groupby)
     eval_max(modin_groupby, pandas_groupby)
     eval_var(modin_groupby, pandas_groupby)
@@ -812,12 +788,6 @@ def test_simple_col_groupby():
     eval_prod(modin_groupby, pandas_groupby)
     eval_std(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.mad(),
-        modin_df_almost_equals_pandas,
-    )
     eval_max(modin_groupby, pandas_groupby)
     eval_var(modin_groupby, pandas_groupby)
     eval_len(modin_groupby, pandas_groupby)
@@ -955,12 +925,6 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda df: df.mad(),
-            modin_df_almost_equals_pandas,
-        )
         eval_rank(modin_groupby, pandas_groupby)
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
@@ -2198,17 +2162,6 @@ def test_mean_with_datetime(by_func):
 
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
-
-
-def test_groupby_mad_warn():
-    modin_df, pandas_df = create_test_dfs(test_groupby_data)
-    md_grp = modin_df.groupby(by=modin_df.columns[0])
-    pd_grp = pandas_df.groupby(by=pandas_df.columns[0])
-
-    msg = "The 'mad' method is deprecated and will be removed in a future version."
-    for grp_obj in (md_grp, pd_grp):
-        with pytest.warns(FutureWarning, match=msg):
-            grp_obj.mad()
 
 
 def test_groupby_backfill_warn():

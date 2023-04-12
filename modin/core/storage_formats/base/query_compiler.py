@@ -5140,20 +5140,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
 
     @doc_utils.doc_reduce_agg(
-        method="mean absolute deviation",
-        params="""
-        axis : {0, 1}
-        skipna : bool
-        level : None, default: None
-            Serves the compatibility purpose. Always has to be None.""",
-        refer_to="mad",
-    )
-    def mad(self, axis, skipna, level=None):
-        return DataFrameDefault.register(pandas.DataFrame.mad)(
-            self, axis=axis, skipna=skipna, level=level
-        )
-
-    @doc_utils.doc_reduce_agg(
         method="unbiased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
     )
     def kurt(self, axis, level=None, numeric_only=None, skipna=True, **kwargs):

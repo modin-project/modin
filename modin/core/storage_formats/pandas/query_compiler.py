@@ -933,7 +933,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     sum_min_count = Reduce.register(pandas.DataFrame.sum)
     prod_min_count = Reduce.register(pandas.DataFrame.prod)
     quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
-    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:

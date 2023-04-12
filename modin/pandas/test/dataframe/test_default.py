@@ -450,32 +450,6 @@ def test_last():
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 
-@pytest.mark.parametrize("data", test_data_values)
-@pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("skipna", [None, True, False])
-def test_mad(data, axis, skipna):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    df_equals(
-        modin_df.mad(axis=axis, skipna=skipna, level=None),
-        pandas_df.mad(axis=axis, skipna=skipna, level=None),
-    )
-
-
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_mad_level(level):
-    data = test_data_values[0]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    modin_df.columns = index
-    pandas_df.columns = index
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.mad(axis=1, level=level),
-    )
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "id_vars", [lambda df: df.columns[0], lambda df: df.columns[:4], None]

@@ -1836,26 +1836,6 @@ class BasePandasDataset(ClassLogger):
 
         return _LocIndexer(self)
 
-    def mad(self, axis=None, skipna=True, level=None):  # noqa: PR01, RT01, D200
-        """
-        Return the mean absolute deviation of the values over the requested axis.
-        """
-        validate_bool_kwarg(skipna, "skipna")
-        axis = self._get_axis_number(axis)
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).mad()
-
-        return self._reduce_dimension(
-            self._query_compiler.mad(axis=axis, skipna=skipna, level=level)
-        )
-
     def mask(
         self,
         cond,

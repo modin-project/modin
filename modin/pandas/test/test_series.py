@@ -2325,17 +2325,6 @@ def test_lt(data):
     inter_df_math_helper(modin_series, pandas_series, "lt")
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("axis", [None, 0])
-@pytest.mark.parametrize("skipna", [None, True, False])
-@pytest.mark.parametrize("level", [0, -1, None])
-def test_mad(level, data, axis, skipna):
-    eval_general(
-        *create_test_series(data),
-        lambda df: df.mad(axis=axis, skipna=skipna, level=level),
-    )
-
-
 @pytest.mark.parametrize("na_values", ["ignore", None], ids=["na_ignore", "na_none"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_map(data, na_values):

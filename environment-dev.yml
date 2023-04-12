@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
+  - pandas==2.0.0
   - numpy>=1.18.5
   - ray-default>=1.13.0
   - pyarrow

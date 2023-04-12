@@ -582,7 +582,6 @@ default to pandas.
 .. _`loc`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.loc.html#pandas.DataFrame.loc
 .. _`lookup`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lookup.html#pandas.DataFrame.lookup
 .. _`lt`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lt.html#pandas.DataFrame.lt
-.. _`mad`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mad.html#pandas.DataFrame.mad
 .. _`mask`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mask.html#pandas.DataFrame.mask
 .. _`max`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.max.html#pandas.DataFrame.max
 .. _`mean`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mean.html#pandas.DataFrame.mean

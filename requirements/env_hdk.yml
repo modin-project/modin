@@ -2,7 +2,7 @@ name: modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
+  - pandas==2.0.0
   - pyarrow
   - numpy>=1.18.5
   - fsspec
