@@ -2231,7 +2231,7 @@ def test_last():
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
-@pytest.mark.parametrize("func", ["all", "any", "mad", "count"])
+@pytest.mark.parametrize("func", ["all", "any", "count"])
 def test_index_order(func):
     # see #1708 and #1869 for details
     s_modin, s_pandas = create_test_series(test_data["float_nan_data"])
