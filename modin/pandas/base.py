@@ -31,7 +31,6 @@ from pandas.core.indexes.api import ensure_index
 import pandas.core.window.rolling
 import pandas.core.resample
 import pandas.core.generic
-from pandas.core.indexing import convert_to_index_sliceable
 from pandas.util._validators import (
     validate_percentile,
     validate_bool_kwarg,
@@ -3665,9 +3664,7 @@ class BasePandasDataset(ClassLogger):
         if isinstance(key, slice) or (
             isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
         ):
-            indexer = convert_to_index_sliceable(
-                pandas.DataFrame(index=self.index), key
-            )
+            indexer = self.index._convert_slice_indexer(key, kind="getitem")
         if indexer is not None:
             return self._getitem_slice(indexer)
         else:
@@ -3772,7 +3769,7 @@ class BasePandasDataset(ClassLogger):
         value : object
             Value to assing to the rows.
         """
-        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        indexer = self.index._convert_slice_indexer(key, kind="getitem")
         self.iloc[indexer] = value
 
     def _getitem_slice(self, key: slice):
