@@ -12,13 +12,12 @@
 # governing permissions and limitations under the License.
 
 from contextlib import nullcontext
-import os
 import glob
 import json
 
 import numpy as np
 import pandas
-from pandas._testing import ensure_clean, ensure_clean_dir
+from pandas._testing import ensure_clean
 import pytest
 
 import modin.experimental.pandas as pd
@@ -38,10 +37,9 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
     reason=f"{Engine.get()} does not have experimental API",
 )
 def test_from_sql_distributed(make_sql_connection):
-    with ensure_clean_dir() as dirname:
-        filename = "test_from_sql_distributed.db"
+    with ensure_clean("test_from_sql_distributed.db") as filename:
         table = "test_from_sql_distributed"
-        conn = make_sql_connection(os.path.join(dirname, filename), table)
+        conn = make_sql_connection(filename, table)
         query = "select * from {0}".format(table)
 
         pandas_df = pandas.read_sql(query, conn)
@@ -71,10 +69,9 @@ def test_from_sql_distributed(make_sql_connection):
     reason=f"{Engine.get()} does not have experimental API",
 )
 def test_from_sql_defaults(make_sql_connection):
-    with ensure_clean_dir() as dirname:
-        filename = "test_from_sql_distributed.db"
+    with ensure_clean("test_from_sql_distributed.db") as filename:
         table = "test_from_sql_distributed"
-        conn = make_sql_connection(os.path.join(dirname, filename), table)
+        conn = make_sql_connection(filename, table)
         query = "select * from {0}".format(table)
 
         pandas_df = pandas.read_sql(query, conn)
@@ -308,7 +305,7 @@ def test_read_custom_json_text(set_async_read_mode):
         )
         if AsyncReadMode.get():
             # If read operations are asynchronous, then the dataframes
-            # check should be inside `ensure_clean_dir` context
+            # check should be inside `ensure_clean` context
             # because the file may be deleted before actual reading starts
             df_equals(df1, df2)
     if not AsyncReadMode.get():
@@ -365,7 +362,7 @@ def test_read_evaluated_dict(set_async_read_mode):
         )
         if AsyncReadMode.get():
             # If read operations are asynchronous, then the dataframes
-            # check should be inside `ensure_clean_dir` context
+            # check should be inside `ensure_clean` context
             # because the file may be deleted before actual reading starts
             df_equals(df1, df2)
     if not AsyncReadMode.get():
