@@ -14,6 +14,6 @@
 """Utilities and classes to handle work with metadata."""
 
 from .index import ModinIndex
-from .dtypes import ModinDtypes
+from .dtypes import ModinDtypes, LazyProxyCategoricalDtype
 
-__all__ = ["ModinDtypes", "ModinIndex"]
+__all__ = ["ModinDtypes", "ModinIndex", "LazyProxyCategoricalDtype"]

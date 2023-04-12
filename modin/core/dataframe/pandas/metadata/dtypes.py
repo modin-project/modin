@@ -148,3 +148,64 @@ class ModinDtypes:
         if not self.is_materialized:
             self.get()
         return key in self._value
+
+
+class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
+    """
+    Proxy class for lazily retrieving categorical dtypes from arrow parents.
+
+    Parameters
+    ----------
+    parent : pyarrow.parent
+        Source parent.
+    column_name : str
+        Column name.
+    """
+
+    def __init__(self, parent, column_name: str):
+        self._parent = parent
+        self._column_name = column_name
+        self._ordered = False
+        self._categories_val = None
+
+    def _new(self, parent, column_name: str) -> pandas.CategoricalDtype:
+        """
+        Create a new proxy, if either parent or column name are different.
+
+        Parameters
+        ----------
+        parent : pyarrow.parent
+            Source parent.
+        column_name : str
+            Column name.
+
+        Returns
+        -------
+        pandas.CategoricalDtype or LazyProxyCategoricalDtype
+        """
+        if self._is_materialized:
+            # The parent has been materialized, we don't need a proxy anymore.
+            return pandas.CategoricalDtype(self.categories)
+        elif parent is self._parent and column_name == self._column_name:
+            return self
+        else:
+            return LazyProxyCategoricalDtype(parent, column_name)
+
+    @property
+    def _categories(self):  # noqa: GL08
+        if not self._is_materialized:
+            self._materialize_categories()
+        return self._categories_val
+
+    @property
+    def _is_materialized(self):
+        return self._categories_val is not None
+
+    def _materialize_categories(self):
+        self._categories_val = self._parent._compute_dtypes(columns=[self._column_name])[self._column_name].categories
+        self._parent = None # The parent is not required any more
+
+    @_categories.setter
+    def _set_categories(self, categories):  # noqa: GL08
+        self._categories_val = categories
+        self._parent = None

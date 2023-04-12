@@ -42,7 +42,7 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     build_sort_functions,
     lazy_metadata_decorator,
 )
-from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex
+from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex, LazyProxyCategoricalDtype
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -243,6 +243,10 @@ class PandasDataframe(ClassLogger):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
+        if isinstance(dtypes, pandas.Series) or (isinstance(dtypes, ModinDtypes) and dtypes.is_materialized):
+            for key, value in dtypes.items():
+                if isinstance(value, LazyProxyCategoricalDtype):
+                    dtypes[key] = value._new(self, column_name=key)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
@@ -265,7 +269,9 @@ class PandasDataframe(ClassLogger):
             self.set_dtypes_cache(dtypes)
         return dtypes
 
-    def _compute_dtypes(self):
+    _materialized_dtypes = {}
+
+    def _compute_dtypes(self, columns=None):
         """
         Compute the data types via TreeReduce pattern.
 
@@ -278,10 +284,17 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
+        if columns is not None:
+            # Sorting positions to request columns in the order they're stored (it's more efficient)
+            numeric_indices = sorted(self.columns.get_indexer_for(columns))
+            obj = self._take_2d_positional(col_positions=numeric_indices)
+        else:
+            obj = self
+
         # For now we will use a pandas Series for the dtypes.
-        if len(self.columns) > 0:
+        if len(obj.columns) > 0:
             dtypes = (
-                self.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
+                obj.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
                 .to_pandas()
                 .iloc[0]
             )
@@ -289,6 +302,7 @@ class PandasDataframe(ClassLogger):
             dtypes = pandas.Series([])
         # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
+        self._materialized_dtypes.update(dtypes)
         return dtypes
 
     _index_cache = None
@@ -1303,8 +1317,7 @@ class PandasDataframe(ClassLogger):
                     new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
                 elif isinstance(new_dtype, str) and new_dtype == "category":
-                    new_dtypes = None
-                    break
+                    new_dtypes[column] = LazyProxyCategoricalDtype(parent=self, column_name=column)
                 else:
                     new_dtypes[column] = new_dtype
 
