@@ -521,7 +521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    if self._modin_frame._dtypes is not None:
+                    if self._modin_frame.has_materialized_dtypes:
                         new_dtypes = []
                         for old_col in left_renamer.keys():
                             new_dtypes.append(self.dtypes[old_col])
@@ -3360,6 +3360,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
+        # TODO: we should be able to drop this logic with pandas 2.0 as it removes `numeric_only=None`
+        # parameter for groupby thus making the behavior of processing of non-numeric columns more
+        # predictable (we can decide whether to raise an exception before actually executing groupby)
         if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame

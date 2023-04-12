@@ -628,6 +628,13 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
+class GithubCI(EnvironmentVariable, type=bool):
+    """Set to true when running Modin in GitHub CI."""
+
+    varname = "MODIN_GITHUB_CI"
+    default = False
+
+
 class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
     """Set to true to use Modin's experimental NumPy API."""
 
@@ -639,6 +646,31 @@ class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
     """Set to true to use Modin's experimental group by implementation."""
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
+    default = False
+
+class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
+    """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_SECRET_ACCESS_KEY"
+    default = "foobar_secret"
+
+
+class CIAWSAccessKeyID(EnvironmentVariable, type=str):
+    """Set to AWS_ACCESS_KEY_ID when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_ACCESS_KEY_ID"
+    default = "foobar_key"
+
+
+class AsyncReadMode(EnvironmentVariable, type=bool):
+    """
+    It does not wait for the end of reading information from the source.
+
+    Can break situations when reading occurs in a context, when exiting
+    from which the source is deleted.
+    """
+
+    varname = "MODIN_ASYNC_READ_MODE"
     default = False
 
 

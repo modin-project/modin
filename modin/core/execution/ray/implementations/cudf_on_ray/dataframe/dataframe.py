@@ -216,14 +216,14 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
                     self.column_widths,
                     col_partitions_list,
                 )
-                if self._dtypes is not None:
+                if self.has_materialized_dtypes:
                     new_dtypes = self.dtypes[col_positions]
                 else:
                     new_dtypes = None
             else:
                 new_col_widths = [len(idx) for _, idx in col_partitions_list.items()]
                 new_columns = self.columns[sorted(col_positions)]
-                if self._dtypes is not None:
+                if self.has_materialized_dtypes:
                     new_dtypes = self.dtypes.iloc[sorted(col_positions)]
                 else:
                     new_dtypes = None
@@ -233,7 +233,7 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             }
             new_col_widths = self.column_widths
             new_columns = self.columns
-            if self._dtypes is not None:
+            if self.has_materialized_dtypes:
                 new_dtypes = self.dtypes
             else:
                 new_dtypes = None

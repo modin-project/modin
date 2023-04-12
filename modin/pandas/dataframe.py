@@ -144,7 +144,7 @@ class DataFrame(BasePandasDataset):
                 # the DataFrame and sets columns to the columns provided.
                 elif columns is not None and data.name not in columns:
                     self._query_compiler = from_pandas(
-                        self.__constructor__(columns=columns)
+                        pandas.DataFrame(columns=columns)
                     )._query_compiler
                 if index is not None:
                     self._query_compiler = data.loc[index]._query_compiler
@@ -172,7 +172,8 @@ class DataFrame(BasePandasDataset):
             if index is not None:
                 self.set_axis(index, axis=0, inplace=True)
             if dtype is not None:
-                self.astype(dtype, copy=False)
+                casted_obj = self.astype(dtype, copy=False)
+                self._query_compiler = casted_obj._query_compiler
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -1334,6 +1335,10 @@ class DataFrame(BasePandasDataset):
         """
         Join columns of another ``DataFrame``.
         """
+        if on is not None and not isinstance(other, (Series, DataFrame)):
+            raise ValueError(
+                "Joining multiple DataFrames only supported for joining on index"
+            )
         if validate is not None:
             return self._default_to_pandas(
                 pandas.DataFrame.join,

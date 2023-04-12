@@ -226,6 +226,8 @@ def split_partitions_using_pivots_for_sort(
 
     Parameters
     ----------
+    dtypes : pandas.Series
+        The Modin Dataframe's dtypes.
     df : pandas.Dataframe
         The partition to split.
     column : str
@@ -260,6 +262,7 @@ def split_partitions_using_pivots_for_sort(
     cols_to_digitize = non_na_rows[column]
     if key is not None:
         cols_to_digitize = key(cols_to_digitize)
+
     if is_numeric_column:
         groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
         # `np.digitize` returns results based off of the sort order of the pivots it is passed.

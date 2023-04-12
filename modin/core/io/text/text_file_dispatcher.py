@@ -927,11 +927,6 @@ class TextFileDispatcher(FileDispatcher):
         partition_ids = cls.build_partition(
             partition_ids, [None] * len(index_ids), column_widths
         )
-        # Compute dtypes by collecting and combining all of the partition dtypes. The
-        # reported dtypes from differing rows can be different based on the inference in
-        # the limited data seen by each worker. We use pandas to compute the exact dtype
-        # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
         new_frame = cls.frame_cls(
             partition_ids,
@@ -939,7 +934,7 @@ class TextFileDispatcher(FileDispatcher):
             column_names,
             None,
             column_widths,
-            dtypes=dtypes,
+            dtypes=lambda: cls.get_dtypes(dtypes_ids, column_names),
         )
         new_query_compiler = cls.query_compiler_cls(new_frame)
         skipfooter = kwargs.get("skipfooter", None)

@@ -14,3 +14,5 @@ jobs:
         # NOTE: If you change the allowed prefixes here, update
         # the documentation about them in /docs/development/contributing.rst
         regexp: '^(?:FEAT|DOCS|FIX|REFACTOR|TEST|PERF)-#\d+:'
+env:
+  MODIN_GITHUB_CI: true

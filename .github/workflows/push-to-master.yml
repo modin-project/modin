@@ -8,6 +8,8 @@ concurrency:
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
@@ -15,6 +17,14 @@ jobs:
       run:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -67,6 +77,8 @@ jobs:
           python -m pytest modin/numpy/test/test_array_logic.py
           python -m pytest modin/numpy/test/test_array_linalg.py
           python -m pytest modin/numpy/test/test_array_indexing.py
+          python -m pytest modin/numpy/test/test_array_math.py
+          python -m pytest modin/numpy/test/test_array_shaping.py
           python -m pytest modin/pandas/test/test_rolling.py
           python -m pytest modin/pandas/test/test_concat.py
           python -m pytest modin/pandas/test/test_groupby.py
@@ -118,6 +130,14 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     strategy:
       matrix:
         python-version: ["3.8"]
@@ -140,6 +160,8 @@ jobs:
           - modin/numpy/test/test_array_logic.py
           - modin/numpy/test/test_array_linalg.py
           - modin/numpy/test/test_array_indexing.py
+          - modin/numpy/test/test_array_math.py
+          - modin/numpy/test/test_array_shaping.py
           - modin/pandas/test/test_rolling.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py

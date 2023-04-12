@@ -669,7 +669,7 @@ def df_equals(df1, df2):
             np.testing.assert_almost_equal(df1, df2)
 
 
-def modin_df_almost_equals_pandas(modin_df, pandas_df):
+def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
     df_categories_equals(modin_df._to_pandas(), pandas_df)
 
     modin_df = to_pandas(modin_df)
@@ -679,15 +679,22 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
     if hasattr(pandas_df, "select_dtypes"):
         pandas_df = pandas_df.select_dtypes(exclude=["category"])
 
-    difference = modin_df - pandas_df
-    diff_max = difference.max()
-    if isinstance(diff_max, pandas.Series):
-        diff_max = diff_max.max()
-    assert (
-        modin_df.equals(pandas_df)
-        or diff_max < 0.0001
-        or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
-    )
+    if modin_df.equals(pandas_df):
+        return
+
+    isna = modin_df.isna().all()
+    if isinstance(isna, bool):
+        if isna:
+            assert pandas_df.isna().all()
+            return
+    elif isna.all():
+        assert pandas_df.isna().all().all()
+        return
+
+    diff = (modin_df - pandas_df).abs()
+    diff /= pandas_df
+    diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
+    assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
 
 
 def try_modin_df_almost_equals_compare(df1, df2):

@@ -220,7 +220,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):
-        return self.__constructor__(self._modin_frame, self._shape_hint)
+        return self.__constructor__(self._modin_frame.copy(), self._shape_hint)
 
     def getitem_column_array(self, key, numeric=False):
         shape_hint = "column" if len(key) == 1 else None

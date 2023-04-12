@@ -983,8 +983,21 @@ class BasePandasDataset(ClassLogger):
             # Assume that the dtype is a scalar.
             col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
-        new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
-        return self._create_or_update_from_compiler(new_query_compiler, not copy)
+        if not copy:
+            # If the new types match the old ones, then copying can be avoided
+            if self._query_compiler._modin_frame.has_materialized_dtypes:
+                frame_dtypes = self._query_compiler._modin_frame.dtypes
+                for col in col_dtypes:
+                    if col_dtypes[col] != frame_dtypes[col]:
+                        copy = True
+                        break
+            else:
+                copy = True
+
+        if copy:
+            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            return self._create_or_update_from_compiler(new_query_compiler)
+        return self
 
     @property
     def at(self, axis=None):  # noqa: PR01, RT01, D200
@@ -1314,7 +1327,7 @@ class BasePandasDataset(ClassLogger):
                         getattr(self, axis)
                     )
                     if len(non_existent):
-                        raise ValueError(f"labels {non_existent} not contained in axis")
+                        raise KeyError(f"labels {non_existent} not contained in axis")
                 else:
                     axes[axis] = [
                         obj for obj in axes[axis] if obj in getattr(self, axis)

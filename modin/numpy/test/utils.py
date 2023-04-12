@@ -11,9 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Utilities and classes to handle work with metadata."""
+import numpy
 
-from .index import ModinIndex
-from .dtypes import ModinDtypes
+import modin.numpy as np
 
-__all__ = ["ModinDtypes", "ModinIndex"]
+
+def assert_scalar_or_array_equal(x1, x2, err_msg=None):
+    """
+    Assert whether the result of the numpy and modin computations are the same.
+
+    If either argument is a modin array object, then `_to_numpy()` is called on it.
+    The arguments are compared with `numpy.testing.assert_array_equals`.
+    """
+    if isinstance(x1, np.array):
+        x1 = x1._to_numpy()
+    if isinstance(x2, np.array):
+        x2 = x2._to_numpy()
+    numpy.testing.assert_array_equal(x1, x2, err_msg=err_msg)
