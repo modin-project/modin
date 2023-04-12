@@ -1,6 +1,6 @@
 name: ci-notebooks
 on:
-  pull_request:
+  push:
     paths:
       - modin/**
       - examples/tutorial/**
