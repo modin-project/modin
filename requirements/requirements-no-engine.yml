@@ -5,7 +5,7 @@ dependencies:
   - numpy>=1.18.5
   - pyarrow>=4.0.1
   - fsspec
-  - xarray
+  # - xarray
   - Jinja2
   - scipy
   - pip

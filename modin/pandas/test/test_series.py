@@ -3436,6 +3436,7 @@ def test_to_timestamp():
         series.to_period().to_timestamp()
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
