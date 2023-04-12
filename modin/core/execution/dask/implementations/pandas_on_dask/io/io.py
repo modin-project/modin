@@ -191,4 +191,6 @@ class PandasOnDaskIO(BaseIO):
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        DaskWrapper.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )
