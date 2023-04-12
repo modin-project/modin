@@ -648,6 +648,7 @@ class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
     default = False
 
+
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
     """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
 
