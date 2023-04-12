@@ -29,7 +29,7 @@ Modin Interoperability by Library
    * - seaborn
      - 73% (11/15)
      - **Pandas**: Accepts Pandas DataFrames as inputs for producing plot |br|
-       **Modin**: Mostly accepts Modin DataFrames as inputs for producing plots, but fails in some cases (pairplot, lmplot), and for others (catplot, objects.Plot) works for some parameter combinations  but fails with others
+       **Modin**: Mostly accepts Modin DataFrames as inputs for producing plots, but fails completely in some cases (pairplot, lmplot), and in others (catplot, objects.Plot) only works for some parameter combinations
 
    * - plotly
      - 78% (7 / 9)
