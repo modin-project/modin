@@ -232,7 +232,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self.fillna(limit=limit, method='ffill')
+        return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1):
         return self._wrap_aggregation(
@@ -419,8 +419,8 @@ class DataFrameGroupBy(ClassLogger):
                 # Note: when agg-ing picker doesn't raise this, just returns NaN
                 raise ValueError(
                     "For a DataFrame or Series groupby.nth, dropna must be "
-                    "either None, 'any' or 'all', "
-                    f"(was passed {dropna})."
+                    + "either None, 'any' or 'all', "
+                    + f"(was passed {dropna})."
                 )
 
         return self._check_index(
@@ -634,7 +634,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
-        return self.fillna(limit=limit, method='bfill')
+        return self.fillna(limit=limit, method="bfill")
 
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
@@ -803,7 +803,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.corrwith)
 
     def pad(self, limit=None):
-        return self.fillna(limit=limit, method='pad')
+        return self.fillna(limit=limit, method="pad")
 
     def max(self, numeric_only=False, min_count=-1):
         return self._wrap_aggregation(
@@ -1536,7 +1536,8 @@ class SeriesGroupBy(DataFrameGroupBy):
         if isinstance(func, dict):
             raise SpecificationError("nested renamer is not supported")
         elif is_list_like(func):
-            from .dataframe import DataFrame            
+            from .dataframe import DataFrame
+
             result = DataFrame(
                 query_compiler=self._query_compiler.groupby_agg(
                     by=self._by,
@@ -1545,7 +1546,8 @@ class SeriesGroupBy(DataFrameGroupBy):
                     groupby_kwargs=self._kwargs,
                     agg_args=args,
                     agg_kwargs=kwargs,
-                ))
+                )
+            )
             # query compiler always gives result a multiindex on the axis with the
             # function names, but series always gets a regular index on the columns
             # because there is no need to identify which original column's aggregation
@@ -1557,6 +1559,7 @@ class SeriesGroupBy(DataFrameGroupBy):
             return super().aggregate(func, *args, **kwargs)
 
     agg = aggregate
+
 
 if IsExperimental.get():
     from modin.experimental.cloud.meta_magic import make_wrapped_class
