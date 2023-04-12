@@ -136,4 +136,6 @@ class ExperimentalPickleDispatcher(FileDispatcher):
         result = qc._modin_frame.apply_full_axis(
             1, func, new_index=[], new_columns=[], enumerate_partitions=True
         )
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        cls.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )

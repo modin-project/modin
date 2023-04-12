@@ -20,7 +20,9 @@ concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   lint-black:
     name: lint (black)
@@ -445,6 +447,14 @@ jobs:
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -492,6 +502,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_series.py
       - run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest modin/pandas/test/dataframe/test_window.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -589,6 +600,14 @@ jobs:
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -654,7 +673,9 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_shaping.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
+      # need an extra argument "genv" to set environment variables for mpiexec. We need
+      # these variables to test writing to the mock s3 filesystem.
+      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
@@ -691,6 +712,18 @@ jobs:
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
+    services:
+      # This service only needs to run for test_task group_4; however, GitHub does not
+      # currently support conditionally running services. This issue: 
+      # is open https://github.com/actions/runner/issues/822 - until GitHub implements this feature,
+      # we will just have to run `moto` for all groups.
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
@@ -796,6 +829,7 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
@@ -818,6 +852,14 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
     name: test experimental
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -848,6 +890,7 @@ jobs:
           conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: ./.github/workflows/upload-coverage
 
@@ -861,6 +904,14 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
     name: test cloud
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -1021,6 +1072,14 @@ jobs:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:

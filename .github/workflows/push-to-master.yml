@@ -7,7 +7,9 @@ concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
@@ -15,6 +17,14 @@ jobs:
       run:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
         with:
@@ -120,6 +130,14 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     strategy:
       matrix:
         python-version: ["3.8"]
