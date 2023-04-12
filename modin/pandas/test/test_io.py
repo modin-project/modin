@@ -534,7 +534,7 @@ class TestCsv:
     @pytest.mark.parametrize("infer_datetime_format", [True, False])
     @pytest.mark.parametrize("keep_date_col", [True, False])
     @pytest.mark.parametrize(
-        "date_parser", [None, lambda x: pandas.datetime.strptime(x, "%Y-%m-%d")]
+        "date_parser", [None, lambda x: pandas.to_datetime(x, format="%Y-%m-%d")]
     )
     @pytest.mark.parametrize("dayfirst", [True, False])
     @pytest.mark.parametrize("cache_dates", [True, False])
