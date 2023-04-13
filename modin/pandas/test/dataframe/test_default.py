@@ -1046,14 +1046,6 @@ def test_truncate(data):
         df_equals(modin_result, pandas_result)
 
 
-def test_tshift():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    data = np.random.randint(0, 100, size=(len(idx), 4))
-    modin_df = pd.DataFrame(data, index=idx)
-    pandas_df = pandas.DataFrame(data, index=idx)
-    df_equals(modin_df.tshift(4), pandas_df.tshift(4))
-
-
 def test_tz_convert():
     modin_idx = pd.date_range(
         "1/1/2012", periods=500, freq="2D", tz="America/Los_Angeles"

@@ -1303,12 +1303,6 @@ class DataFrame(BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def iteritems(self):  # noqa: RT01, D200
-        """
-        Iterate over (column name, ``Series``) pairs.
-        """
-        return self.items()
-
     def itertuples(self, index=True, name="Pandas"):  # noqa: PR01, D200
         """
         Iterate over ``DataFrame`` rows as ``namedtuple``-s.

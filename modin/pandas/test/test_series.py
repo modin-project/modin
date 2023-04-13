@@ -2158,19 +2158,6 @@ def test_items(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_iteritems(data):
-    modin_series, pandas_series = create_test_series(data)
-
-    modin_items = modin_series.iteritems()
-    pandas_items = pandas_series.iteritems()
-    for modin_item, pandas_item in zip(modin_items, pandas_items):
-        modin_index, modin_scalar = modin_item
-        pandas_index, pandas_scalar = pandas_item
-        df_equals(modin_scalar, pandas_scalar)
-        assert pandas_index == modin_index
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_keys(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(modin_series.keys(), pandas_series.keys())
@@ -3498,14 +3485,6 @@ def test_truncate(data):
     df_equals(
         modin_series.truncate(before, after), pandas_series.truncate(before, after)
     )
-
-
-def test_tshift():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    data = np.random.randint(0, 100, size=len(idx))
-    modin_series = pd.Series(data, index=idx)
-    pandas_series = pandas.Series(data, index=idx)
-    df_equals(modin_series.tshift(4), pandas_series.tshift(4))
 
 
 def test_tz_convert():

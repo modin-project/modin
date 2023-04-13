@@ -1232,12 +1232,6 @@ class Series(BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def iteritems(self):  # noqa: RT01, D200
-        """
-        Lazily iterate over (index, value) tuples.
-        """
-        return self.items()
-
     def keys(self):  # noqa: RT01, D200
         """
         Return alias for index.

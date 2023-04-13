@@ -2844,7 +2844,9 @@ class BasePandasDataset(ClassLogger):
                     new_frame.columns = res_columns
                     return new_frame
         else:
-            return self.tshift(periods, freq)
+            axis = self._get_axis_number(axis)
+            new_labels = self.axes[axis].shift(periods, freq=freq)
+            return self.set_axis(new_labels, axis=axis)
 
     def skew(
         self,
@@ -3400,14 +3402,6 @@ class BasePandasDataset(ClassLogger):
         s = slice(*self.axes[axis].slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
-
-    def tshift(self, periods=1, freq=None, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Shift the time index, using the index's frequency if available.
-        """
-        axis = self._get_axis_number(axis)
-        new_labels = self.axes[axis].shift(periods, freq=freq)
-        return self.set_axis(new_labels, axis=axis)
 
     def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """

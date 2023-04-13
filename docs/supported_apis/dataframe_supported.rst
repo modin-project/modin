@@ -204,8 +204,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``items``                  | `items`_                  | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``iteritems``              | `iteritems`_              | P                      | Modin does not parallelize iteration in Python     |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``iterrows``               | `iterrows`_               | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``itertuples``             | `itertuples`_             | P                      | Modin does not parallelize iteration in Python     |
@@ -457,8 +455,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``truncate``               | `truncate`_               | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``tshift``                 | `tshift`_                 | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``tz_convert``             | `tz_convert`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``tz_localize``            | `tz_localize`_            | Y                      |                                                    |
@@ -566,7 +562,6 @@ default to pandas.
 .. _`isna`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isna.html#pandas.DataFrame.isna
 .. _`isnull`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isnull.html#pandas.DataFrame.isnull
 .. _`items`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.items.html#pandas.DataFrame.items
-.. _`iteritems`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iteritems.html#pandas.DataFrame.iteritems
 .. _`iterrows`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iterrows.html#pandas.DataFrame.iterrows
 .. _`itertuples`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.itertuples.html#pandas.DataFrame.itertuples
 .. _`ix`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ix.html#pandas.DataFrame.ix
@@ -678,7 +673,6 @@ default to pandas.
 .. _`transpose`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.transpose.html#pandas.DataFrame.transpose
 .. _`truediv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.truediv.html#pandas.DataFrame.truediv
 .. _`truncate`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.truncate.html#pandas.DataFrame.truncate
-.. _`tshift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tshift.html#pandas.DataFrame.tshift
 .. _`tz_convert`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tz_convert.html#pandas.DataFrame.tz_convert
 .. _`tz_localize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tz_localize.html#pandas.DataFrame.tz_localize
 .. _`unstack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.unstack.html#pandas.DataFrame.unstack

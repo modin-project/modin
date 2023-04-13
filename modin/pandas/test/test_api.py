@@ -316,13 +316,14 @@ def test_series_api_equality():
     pandas_dir = [obj for obj in dir(pandas.Series) if obj[0] != "_"]
 
     ignore = ["timetuple"]
-    missing_from_modin = set(pandas_dir) - set(modin_dir)
-    assert not len(
-        missing_from_modin - set(ignore)
-    ), "Differences found in API: {}".format(len(missing_from_modin - set(ignore)))
-    assert not len(
-        set(modin_dir) - set(pandas_dir)
-    ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
+    missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        missing_from_modin
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]

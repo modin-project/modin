@@ -41,8 +41,8 @@ NPartitions.put(4)
 matplotlib.use("Agg")
 
 
-@pytest.mark.parametrize("method", ["items", "iteritems", "iterrows"])
-def test_items_iteritems_iterrows(method):
+@pytest.mark.parametrize("method", ["items", "iterrows"])
+def test_items_iterrows(method):
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 

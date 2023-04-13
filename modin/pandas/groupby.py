@@ -294,10 +294,6 @@ class DataFrameGroupBy(ClassLogger):
         """
         return self._default_to_pandas(lambda df: df.__bytes__())
 
-    @property
-    def tshift(self):
-        return self._default_to_pandas(lambda df: df.tshift)
-
     _groups_cache = no_default
 
     # TODO: since python 3.9:
