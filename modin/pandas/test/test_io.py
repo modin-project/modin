@@ -2642,6 +2642,9 @@ class TestXml:
 
 
 class TestOrc:
+    # It's not easy to add infrastructure for `orc` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
     def test_read_orc(self):
         test_args = ("fake_path",)
         test_kwargs = {"columns": ["A"], "fake_kwarg": "some_pyarrow_parameter"}
@@ -2653,6 +2656,9 @@ class TestOrc:
 
 
 class TestSpss:
+    # It's not easy to add infrastructure for `spss` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
     def test_read_spss(self):
         test_args = ("fake_path", ["A"], False)
         with mock.patch(

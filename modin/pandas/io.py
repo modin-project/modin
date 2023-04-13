@@ -722,11 +722,13 @@ def read_spss(
     """
     Load an SPSS file from the file path, returning a DataFrame.
     """
-    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_spss(**kwargs))
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_spss(
+            path=path, usecols=usecols, convert_categoricals=convert_categoricals
+        )
+    )
 
 
 @_inherit_docstrings(pandas.json_normalize, apilink="pandas.json_normalize")
