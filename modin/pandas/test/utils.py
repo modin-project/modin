@@ -594,12 +594,18 @@ def assert_all_act_same(condition, *objs):
         Condition to run on the passed objects.
     *objs :
         Objects to pass to the condition.
+
+    Returns
+    -------
+    bool
+        Result of the condition.
     """
     results = [condition(obj) for obj in objs]
     if len(results) < 2:
         return
 
     assert all(results[0] == res for res in results[1:])
+    return results[0]
 
 
 def _maybe_cast_to_pandas_dtype(dtype):
@@ -645,17 +651,23 @@ def assert_dtypes_equal(df1, df2):
     assert len(dtypes1.index.difference(dtypes2.index)) == 0
     assert len(dtypes1) == len(dtypes2)
 
+    dtype_comparators = (
+        is_numeric_dtype,
+        lambda obj: is_object_dtype(obj) or is_string_dtype(obj),
+        is_bool_dtype,
+        is_categorical_dtype,
+        is_datetime64_any_dtype,
+        is_timedelta64_dtype,
+        is_period_dtype,
+    )
+
     for col in dtypes1.keys():
         type1, type2 = map(_maybe_cast_to_pandas_dtype, (dtypes1[col], dtypes2[col]))
-        assert_all_act_same(is_numeric_dtype, type1, type2)
-        assert_all_act_same(
-            lambda obj: is_object_dtype(obj) or is_string_dtype(obj), type1, type2
-        )
-        assert_all_act_same(is_bool_dtype, type1, type2)
-        assert_all_act_same(is_categorical_dtype, type1, type2)
-        assert_all_act_same(is_datetime64_any_dtype, type1, type2)
-        assert_all_act_same(is_timedelta64_dtype, type1, type2)
-        assert_all_act_same(is_period_dtype, type1, type2)
+        for comparator in dtype_comparators:
+            if assert_all_act_same(comparator, type1, type2):
+                # We met a dtype that both types satisfy, so we can stop iterating
+                # over comparators and compare next dtypes
+                break
 
 
 def df_equals(df1, df2, check_dtypes=True):
@@ -923,9 +935,7 @@ def eval_general(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
     if values is not None:
-        comparator(*values) if comparator_kwargs is None else comparator(
-            *values, **comparator_kwargs
-        )
+        comparator(*values, **(comparator_kwargs or {}))
 
 
 def eval_io(
