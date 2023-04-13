@@ -573,65 +573,6 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
-    def append(
-        self, other, ignore_index=False, verify_integrity=False, sort=False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Append rows of `other` to the end of caller, returning a new object.
-        """
-        if sort is False:
-            warnings.warn(
-                "Due to https://github.com/pandas-dev/pandas/issues/35092, "
-                + "Pandas ignores sort=False; Modin correctly does not sort."
-            )
-        if isinstance(other, (Series, dict)):
-            if isinstance(other, dict):
-                other = Series(other)
-            if other.name is None and not ignore_index:
-                raise TypeError(
-                    "Can only append a Series if ignore_index=True"
-                    + " or if the Series has a name"
-                )
-            if other.name is not None:
-                # other must have the same index name as self, otherwise
-                # index name will be reset
-                name = other.name
-                # We must transpose here because a Series becomes a new row, and the
-                # structure of the query compiler is currently columnar
-                other = other._query_compiler.transpose()
-                other.index = pandas.Index([name], name=self.index.name)
-            else:
-                # See note above about transpose
-                other = other._query_compiler.transpose()
-        elif isinstance(other, list):
-            if not all(isinstance(o, BasePandasDataset) for o in other):
-                other = self.__constructor__(pandas.DataFrame(other))._query_compiler
-            else:
-                other = [obj._query_compiler for obj in other]
-        else:
-            other = other._query_compiler
-
-        # If ignore_index is False, by definition the Index will be correct.
-        # We also do this first to ensure that we don't waste compute/memory.
-        if verify_integrity and not ignore_index:
-            appended_index = (
-                self.index.append(other.index)
-                if not isinstance(other, list)
-                else self.index.append([o.index for o in other])
-            )
-            is_valid = next((False for idx in appended_index.duplicated() if idx), True)
-            if not is_valid:
-                raise ValueError(
-                    "Indexes have overlapping values: {}".format(
-                        appended_index[appended_index.duplicated()]
-                    )
-                )
-
-        query_compiler = self._query_compiler.concat(
-            0, other, ignore_index=ignore_index, sort=sort
-        )
-        return self.__constructor__(query_compiler=query_compiler)
-
     def assign(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Assign new columns to a ``DataFrame``.

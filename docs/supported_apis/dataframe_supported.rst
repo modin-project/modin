@@ -45,9 +45,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``any``                    | `any`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``append``                 | `append`_                 | Y                      | **Hdk**: ``Y`` but ``sort`` and                    |
-|                            |                           |                        | ``ignore_index`` parameters ignored                |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``apply``                  | `apply`_                  | Y                      | See ``agg``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``applymap``               | `applymap`_               | Y                      |                                                    |
@@ -482,7 +479,6 @@ default to pandas.
 .. _`align`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.align.html#pandas.DataFrame.align
 .. _`all`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.all.html#pandas.DataFrame.all
 .. _`any`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.any.html#pandas.DataFrame.any
-.. _`append`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.append.html#pandas.DataFrame.append
 .. _`apply`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html#pandas.DataFrame.apply
 .. _`applymap`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.applymap.html#pandas.DataFrame.applymap
 .. _`asfreq`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.asfreq.html#pandas.DataFrame.asfreq

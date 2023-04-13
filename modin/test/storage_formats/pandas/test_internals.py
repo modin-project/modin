@@ -159,7 +159,7 @@ def test_aligning_partitions():
     modin_df1, _ = create_test_dfs({"a": data, "b": data})
     modin_df = modin_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
     repr(modin_df2)
