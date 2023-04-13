@@ -221,7 +221,12 @@ def test_combine_first():
     data2 = {"A": [1, 1], "B": [3, 3]}
     modin_df2 = pd.DataFrame(data2)
     pandas_df2 = pandas.DataFrame(data2)
-    df_equals(modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2))
+    df_equals(
+        modin_df1.combine_first(modin_df2),
+        pandas_df1.combine_first(pandas_df2),
+        # https://github.com/modin-project/modin/issues/5959
+        check_dtypes=False,
+    )
 
 
 @pytest.mark.parametrize("min_periods", [1, 3, 5])

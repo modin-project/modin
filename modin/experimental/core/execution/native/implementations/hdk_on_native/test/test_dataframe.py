@@ -2521,7 +2521,6 @@ class TestFromArrow:
         mdf = from_arrow(at)
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
-        df_equals(mdf, pdf)
 
         mdt = mdf.dtypes[0]
         pdt = pdf.dtypes[0]
@@ -2541,6 +2540,9 @@ class TestFromArrow:
         assert pdt == mdt
         assert repr(mdt) == repr(pdt)
 
+        # `df_equals` triggers categories materialization and thus
+        # has to be called after all checks for laziness
+        df_equals(mdf, pdf)
         # Should be materialized now
         assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
 
