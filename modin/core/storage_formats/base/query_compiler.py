@@ -3373,6 +3373,78 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
         )
 
+    @doc_utils.doc_groupby_method(
+        action="get n largest values in group",
+        result="n largest values",
+        refer_to="nlargest",
+    )
+    def groupby_nlargest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nlargest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get n nsmallest values in group",
+        result="n nsmallest values",
+        refer_to="nsmallest",
+    )
+    def groupby_nsmallest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nsmallest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get unique values in group",
+        result="unique values",
+        refer_to="unique",
+    )
+    def groupby_unique(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="unique",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")
