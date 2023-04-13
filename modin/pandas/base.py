@@ -1341,11 +1341,13 @@ class BasePandasDataset(ClassLogger):
 
     def dropna(
         self,
+        *,
         axis: Axis = 0,
         how: str | NoDefault = no_default,
         thresh: int | NoDefault = no_default,
         subset: IndexLabel = None,
         inplace: bool = False,
+        ignore_index: bool = False,
     ):  # noqa: PR01, RT01, D200
         """
         Remove missing values.
@@ -1374,6 +1376,10 @@ class BasePandasDataset(ClassLogger):
         new_query_compiler = self._query_compiler.dropna(
             axis=axis, how=how, thresh=thresh, subset=subset
         )
+        if ignore_index:
+            new_query_compiler.index = pandas.RangeIndex(
+                stop=len(new_query_compiler.index)
+            )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def droplevel(self, level, axis=0):  # noqa: PR01, RT01, D200

@@ -890,11 +890,15 @@ class Series(BasePandasDataset):
             keep=keep, inplace=inplace, ignore_index=ignore_index
         )
 
-    def dropna(self, axis=0, inplace=False, how=None):  # noqa: PR01, RT01, D200
+    def dropna(
+        self, *, axis=0, inplace=False, how=None, ignore_index=False
+    ):  # noqa: PR01, RT01, D200
         """
         Return a new Series with missing values removed.
         """
-        return super(Series, self).dropna(axis=axis, inplace=inplace)
+        return super(Series, self).dropna(
+            axis=axis, inplace=inplace, ignore_index=ignore_index
+        )
 
     def duplicated(self, keep="first"):  # noqa: PR01, RT01, D200
         """
