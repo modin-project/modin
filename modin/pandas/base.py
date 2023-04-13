@@ -1774,21 +1774,9 @@ class BasePandasDataset(ClassLogger):
         return _iLocIndexer(self)
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
-    def kurt(
-        self, axis=no_default, skipna=True, level=None, numeric_only=None, **kwargs
-    ):
+    def kurt(self, axis=0, skipna=True, numeric_only=False, **kwargs):
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        if level is not None:
-            func_kwargs = {
-                "skipna": skipna,
-                "level": level,
-                "numeric_only": numeric_only,
-            }
-
-            return self.__constructor__(
-                query_compiler=self._query_compiler.apply("kurt", axis, **func_kwargs)
-            )
 
         if numeric_only is not None and not numeric_only:
             self._validate_dtypes(numeric_only=True)
@@ -1803,7 +1791,6 @@ class BasePandasDataset(ClassLogger):
             data._query_compiler.kurt(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 **kwargs,
             )

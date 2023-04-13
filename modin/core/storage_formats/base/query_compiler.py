@@ -5149,7 +5149,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.doc_reduce_agg(
         method="unbiased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
     )
-    def kurt(self, axis, level=None, numeric_only=None, skipna=True, **kwargs):
+    def kurt(self, axis, numeric_only=False, skipna=True, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.kurt)(
             self, axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
         )

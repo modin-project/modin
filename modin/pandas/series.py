@@ -1156,17 +1156,16 @@ class Series(BasePandasDataset):
 
     def kurt(
         self,
-        axis: Axis | None | NoDefault = no_default,
+        axis: Axis = 0,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased kurtosis over requested axis.
         """
         axis = self._get_axis_number(axis)
-        return super(Series, self).kurt(axis, skipna, level, numeric_only, **kwargs)
+        return super(Series, self).kurt(axis, skipna, numeric_only, **kwargs)
 
     kurtosis = kurt
 
