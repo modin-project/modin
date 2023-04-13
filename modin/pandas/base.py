@@ -2873,18 +2873,17 @@ class BasePandasDataset(ClassLogger):
 
     def std(
         self,
-        axis: Axis | None = None,
+        axis: Optional[Axis] = None,
         skipna: bool = True,
-        level: Level | None = None,
         ddof: int = 1,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return sample standard deviation over requested axis.
         """
         return self._stat_operation(
-            "std", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+            "std", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
         )
 
     def sub(
@@ -3436,18 +3435,17 @@ class BasePandasDataset(ClassLogger):
 
     def var(
         self,
-        axis: Axis | None = None,
+        axis: Optional[Axis] = None,
         skipna: bool = True,
-        level: Level | None = None,
         ddof: int = 1,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased variance over requested axis.
         """
         return self._stat_operation(
-            "var", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+            "var", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
         )
 
     def __abs__(self):
