@@ -2635,18 +2635,17 @@ class BasePandasDataset(ClassLogger):
 
     def sem(
         self,
-        axis: Axis | None = None,
+        axis: Optional[Axis] = None,
         skipna: bool = True,
-        level: Level | None = None,
         ddof: int = 1,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased standard error of the mean over requested axis.
         """
         return self._stat_operation(
-            "sem", axis, skipna, level, numeric_only, ddof=ddof, **kwargs
+            "sem", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
         )
 
     def mean(
@@ -2790,16 +2789,15 @@ class BasePandasDataset(ClassLogger):
 
     def skew(
         self,
-        axis: Axis | None | NoDefault = no_default,
+        axis: Axis = 0,
         skipna: bool = True,
-        level: Level | None = None,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased skew over requested axis.
         """
-        return self._stat_operation("skew", axis, skipna, level, numeric_only, **kwargs)
+        return self._stat_operation("skew", axis, skipna, None, numeric_only, **kwargs)
 
     def sort_index(
         self,
