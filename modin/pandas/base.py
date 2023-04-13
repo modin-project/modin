@@ -2883,14 +2883,13 @@ class BasePandasDataset(ClassLogger):
             return self.iloc[-n:]
         return self.iloc[len(self.index) :]
 
-    def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
+    def take(self, indices, axis=0, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the elements in the given *positional* indices along an axis.
         """
         axis = self._get_axis_number(axis)
         slice_obj = indices if axis == 0 else (slice(None), indices)
-        result = self.iloc[slice_obj]
-        return result if not is_copy else result.copy()
+        return self.iloc[slice_obj]
 
     def to_clipboard(
         self, excel=True, sep=None, **kwargs
@@ -2967,9 +2966,7 @@ class BasePandasDataset(ClassLogger):
         startcol=0,
         engine=None,
         merge_cells=True,
-        encoding=no_default,
         inf_rep="inf",
-        verbose=no_default,
         freeze_panes=None,
         storage_options: StorageOptions = None,
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
@@ -3048,7 +3045,6 @@ class BasePandasDataset(ClassLogger):
         self,
         buf=None,
         columns=None,
-        col_space=None,
         header=True,
         index=True,
         na_rep="NaN",
@@ -3076,7 +3072,6 @@ class BasePandasDataset(ClassLogger):
             "to_latex",
             buf=buf,
             columns=columns,
-            col_space=col_space,
             header=header,
             index=index,
             na_rep=na_rep,

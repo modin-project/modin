@@ -1772,11 +1772,11 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
 
-    def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
+    def take(self, indices, axis=0, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the elements in the given positional indices along an axis.
         """
-        return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
+        return super(Series, self).take(indices, axis=axis, **kwargs)
 
     def to_dict(self, into=dict):  # pragma: no cover # noqa: PR01, RT01, D200
         """
