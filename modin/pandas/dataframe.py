@@ -354,20 +354,20 @@ class DataFrame(BasePandasDataset):
         """
         return len(self.index), len(self.columns)
 
-    def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
+    def add_prefix(self, prefix, axis=None):  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis or 1)
         )
 
-    def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
+    def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis or 1)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):

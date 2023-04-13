@@ -522,20 +522,20 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
-    def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
+    def add_prefix(self, prefix, axis=None):  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix, axis=0)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis=axis or 0)
         )
 
-    def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
+    def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix, axis=0)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis=axis or 0)
         )
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
