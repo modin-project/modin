@@ -54,23 +54,6 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: mypy --config-file mypy.ini
 
-  build-docs:
-    if: github.event_name == 'pull_request'
-    name: build docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
-          cache: "pip"
-          cache-dependency-path: '**/requirements-doc.txt'
-      - run: pip install -r docs/requirements-doc.txt
-      - run: cd docs && sphinx-build -T -E -W -b html . build
-
   lint-pydocstyle:
     if: github.event_name == 'pull_request'
     name: lint (pydocstyle)
