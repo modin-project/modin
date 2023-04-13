@@ -1854,32 +1854,21 @@ class BasePandasDataset(ClassLogger):
 
     def max(
         self,
-        axis: int | None | NoDefault = no_default,
+        axis: Axis = 0,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the maximum of the values over the requested axis.
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                "max",
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
         return data._reduce_dimension(
             data._query_compiler.max(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 **kwargs,
             )
@@ -2673,16 +2662,15 @@ class BasePandasDataset(ClassLogger):
 
     def mean(
         self,
-        axis: "int | None | NoDefault" = no_default,
+        axis: Axis = 0,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return the mean of the values over the requested axis.
         """
-        return self._stat_operation("mean", axis, skipna, level, numeric_only, **kwargs)
+        return self._stat_operation("mean", axis, skipna, None, numeric_only, **kwargs)
 
     def median(
         self,
