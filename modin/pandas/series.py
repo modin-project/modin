@@ -1437,27 +1437,18 @@ class Series(BasePandasDataset):
         return data
 
     @_inherit_docstrings(pandas.Series.reindex, apilink="pandas.Series.reindex")
-    def reindex(self, *args, **kwargs):
-        if args:
-            if len(args) > 1:
-                raise TypeError("Only one positional argument ('index') is allowed")
-            if "index" in kwargs:
-                raise TypeError(
-                    "'index' passed as both positional and keyword argument"
-                )
-            kwargs.update({"index": args[0]})
-        index = kwargs.pop("index", None)
-        method = kwargs.pop("method", None)
-        level = kwargs.pop("level", None)
-        copy = kwargs.pop("copy", True)
-        limit = kwargs.pop("limit", None)
-        tolerance = kwargs.pop("tolerance", None)
-        fill_value = kwargs.pop("fill_value", None)
-        if kwargs:
-            raise TypeError(
-                "reindex() got an unexpected keyword "
-                + f'argument "{list(kwargs.keys())[0]}"'
-            )
+    def reindex(
+        self,
+        index=None,
+        *,
+        axis: Axis = None,
+        method: str = None,
+        copy: bool = None,
+        level=None,
+        fill_value=None,
+        limit: int = None,
+        tolerance=None,
+    ):  # noqa: PR01, RT01, D200
         return super(Series, self).reindex(
             index=index,
             columns=None,
@@ -1810,7 +1801,7 @@ class Series(BasePandasDataset):
             )
         )
 
-    def swaplevel(self, i=-2, j=-1, copy=True):  # noqa: PR01, RT01, D200
+    def swaplevel(self, i=-2, j=-1, copy=None):  # noqa: PR01, RT01, D200
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
@@ -1878,7 +1869,7 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_period(self, freq=None, copy=True):  # noqa: PR01, RT01, D200
+    def to_period(self, freq=None, copy=None):  # noqa: PR01, RT01, D200
         """
         Cast to PeriodArray/Index at a particular frequency.
         """
@@ -1915,7 +1906,7 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_timestamp(self, freq=None, how="start", copy=True):  # noqa: PR01, RT01, D200
+    def to_timestamp(self, freq=None, how="start", copy=None):  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of Timestamps, at beginning of period.
         """
@@ -1943,7 +1934,7 @@ class Series(BasePandasDataset):
     div = divide = truediv
 
     def truncate(
-        self, before=None, after=None, axis=None, copy=True
+        self, before=None, after=None, axis=None, copy=None
     ):  # noqa: PR01, RT01, D200
         """
         Truncate a Series before and after some index value.

@@ -2272,7 +2272,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def to_period(
-        self, freq=None, axis=0, copy=True
+        self, freq=None, axis=0, copy=None
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Convert ``DataFrame`` from ``DatetimeIndex`` to ``PeriodIndex``.
@@ -2366,7 +2366,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def to_timestamp(
-        self, freq=None, how="start", axis=0, copy=True
+        self, freq=None, how="start", axis=0, copy=None
     ):  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of timestamps, at *beginning* of period.

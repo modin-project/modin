@@ -1605,7 +1605,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, dtype=col_dtypes, errors=errors
         )
 
-    def infer_objects(self):
+    def infer_objects(self, copy):
         """
         Attempt to infer better dtypes for object columns.
 
@@ -1618,7 +1618,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New query compiler with udpated dtypes.
         """
-        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self)
+        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self, copy)
 
     def convert_dtypes(
         self,

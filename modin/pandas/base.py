@@ -707,7 +707,7 @@ class BasePandasDataset(ClassLogger):
         join="outer",
         axis=None,
         level=None,
-        copy=True,
+        copy=None,
         fill_value=None,
         method=None,
         limit=None,
@@ -949,10 +949,12 @@ class BasePandasDataset(ClassLogger):
             result = result.squeeze()
         return result
 
-    def astype(self, dtype, copy=True, errors="raise"):  # noqa: PR01, RT01, D200
+    def astype(self, dtype, copy=None, errors="raise"):  # noqa: PR01, RT01, D200
         """
         Cast a Modin object to a specified dtype `dtype`.
         """
+        if copy is None:
+            copy = True
         # dtype can be a series, a dict, or a scalar. If it's series or scalar,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
@@ -1707,11 +1709,13 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def infer_objects(self):  # noqa: RT01, D200
+    def infer_objects(self, copy=None):  # noqa: RT01, D200
         """
         Attempt to infer better dtypes for object columns.
         """
-        return self._query_compiler.infer_objects()
+        if copy is None:
+            copy = True
+        return self._query_compiler.infer_objects(copy)
 
     def convert_dtypes(
         self,
@@ -2249,7 +2253,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def reindex_like(
-        self, other, method=None, copy=True, limit=None, tolerance=None
+        self, other, method=None, copy=None, limit=None, tolerance=None
     ):  # noqa: PR01, RT01, D200
         """
         Return an object with matching indices as `other` object.
@@ -2712,44 +2716,18 @@ class BasePandasDataset(ClassLogger):
     def set_axis(
         self,
         labels,
-        axis: Axis = 0,
-        inplace=no_default,
         *,
-        copy=no_default,
+        axis: Axis = 0,
+        copy=None,
     ):  # noqa: PR01, RT01, D200
         """
         Assign desired index to given axis.
         """
-        if inplace is not no_default:
-            warnings.warn(
-                f"{type(self).__name__}.set_axis 'inplace' keyword is deprecated "
-                + "and will be removed in a future version. Use "
-                + "`obj = obj.set_axis(..., copy=False)` instead",
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            inplace = False
-
-        if inplace:
-            if copy is True:
-                raise ValueError("Cannot specify both inplace=True and copy=True")
-            copy = False
-        elif copy is no_default:
+        if copy is None:
             copy = True
-        if is_scalar(labels):
-            warnings.warn(
-                'set_axis now takes "labels" as first argument, and '
-                + '"axis" as named parameter. The old form, with "axis" as '
-                + 'first parameter and "labels" as second, is still supported '
-                + "but will be deprecated in a future version of pandas.",
-                FutureWarning,
-                stacklevel=2,
-            )
-            labels, axis = axis, labels
         obj = self.copy() if copy else self
         setattr(obj, pandas.DataFrame._get_axis_name(axis), labels)
-        return None if inplace is True else obj
+        return obj
 
     def set_flags(
         self, *, copy: bool = False, allows_duplicate_labels: Optional[bool] = None
@@ -2961,10 +2939,12 @@ class BasePandasDataset(ClassLogger):
 
     subtract = sub
 
-    def swapaxes(self, axis1, axis2, copy=True):  # noqa: PR01, RT01, D200
+    def swapaxes(self, axis1, axis2, copy=None):  # noqa: PR01, RT01, D200
         """
         Interchange axes and swap values axes appropriately.
         """
+        if copy is None:
+            copy = True
         axis1 = self._get_axis_number(axis1)
         axis2 = self._get_axis_number(axis2)
         if axis1 != axis2:
@@ -3263,7 +3243,7 @@ class BasePandasDataset(ClassLogger):
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_period(
-        self, freq=None, axis=0, copy=True
+        self, freq=None, axis=0, copy=None
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Convert `BasePandasDataset` from DatetimeIndex to PeriodIndex.
@@ -3360,7 +3340,7 @@ class BasePandasDataset(ClassLogger):
 
     # TODO(williamma12): When this gets implemented, have the series one call this.
     def to_timestamp(
-        self, freq=None, how="start", axis=0, copy=True
+        self, freq=None, how="start", axis=0, copy=None
     ):  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of timestamps, at *beginning* of period.
@@ -3388,7 +3368,7 @@ class BasePandasDataset(ClassLogger):
     div = divide = truediv
 
     def truncate(
-        self, before=None, after=None, axis=None, copy=True
+        self, before=None, after=None, axis=None, copy=None
     ):  # noqa: PR01, RT01, D200
         """
         Truncate a `BasePandasDataset` before and after some index value.
@@ -3421,10 +3401,12 @@ class BasePandasDataset(ClassLogger):
             raise ValueError("transforms cannot produce aggregated results")
         return result
 
-    def tz_convert(self, tz, axis=0, level=None, copy=True):  # noqa: PR01, RT01, D200
+    def tz_convert(self, tz, axis=0, level=None, copy=None):  # noqa: PR01, RT01, D200
         """
         Convert tz-aware axis to target time zone.
         """
+        if copy is None:
+            copy = True
         axis = self._get_axis_number(axis)
         if level is not None:
             new_labels = (
@@ -3436,11 +3418,13 @@ class BasePandasDataset(ClassLogger):
         return obj.set_axis(new_labels, axis, copy=copy)
 
     def tz_localize(
-        self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
+        self, tz, axis=0, level=None, copy=None, ambiguous="raise", nonexistent="raise"
     ):  # noqa: PR01, RT01, D200
         """
         Localize tz-naive index of a `BasePandasDataset` to target time zone.
         """
+        if copy is None:
+            copy = True
         axis = self._get_axis_number(axis)
         new_labels = (
             pandas.Series(index=self.axes[axis])

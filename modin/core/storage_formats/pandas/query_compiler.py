@@ -1711,7 +1711,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # invalid type keys.
         return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
 
-    def infer_objects(self):
+    def infer_objects(self, copy):
         return self.__constructor__(self._modin_frame.infer_objects())
 
     # Column/Row partitions reduce operations
