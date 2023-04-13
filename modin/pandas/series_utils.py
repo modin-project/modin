@@ -127,7 +127,7 @@ class CategoryMethods(ClassLogger):
         )
 
 
-@_inherit_docstrings(pandas.core.strings.StringMethods)
+@_inherit_docstrings(pandas.core.strings.accessor.StringMethods)
 class StringMethods(ClassLogger):
     def __init__(self, series):
         # Check if dtypes is objects
@@ -605,6 +605,13 @@ class DatetimeProperties(ClassLogger):
     @property
     def freq(self):
         return self._query_compiler.dt_freq().to_pandas().squeeze()
+
+    @property
+    def unit(self):
+        return Series(query_compiler=self._query_compiler.dt_unit())
+
+    def as_unit(self, *args, **kwargs):
+        return Series(query_compiler=self._query_compiler.dt_as_unit(*args, **kwargs))
 
     def to_period(self, *args, **kwargs):
         return Series(query_compiler=self._query_compiler.dt_to_period(*args, **kwargs))

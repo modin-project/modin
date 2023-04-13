@@ -3800,6 +3800,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
+    @doc_utils.add_refer_to("Series.dt.unit")
+    def dt_unit(self):
+        return DateTimeDefault.register(pandas.Series.dt.unit)(self)
+
+    @doc_utils.add_refer_to("Series.dt.as_unit")
+    def dt_as_unit(self, *args, **kwargs):
+        return DateTimeDefault.register(pandas.Series.dt.as_unit)(self, *args, **kwargs)
+
     @doc_utils.doc_dt_timestamp(
         prop="Calculate year, week, and day according to the ISO 8601 standard.",
         refer_to="isocalendar",
