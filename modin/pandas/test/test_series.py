@@ -103,14 +103,21 @@ def get_rop(op):
         return None
 
 
-def inter_df_math_helper(modin_series, pandas_series, op):
-    inter_df_math_helper_one_side(modin_series, pandas_series, op)
+def inter_df_math_helper(modin_series, pandas_series, op, comparator_kwargs=None):
+    inter_df_math_helper_one_side(modin_series, pandas_series, op, comparator_kwargs)
     rop = get_rop(op)
     if rop:
-        inter_df_math_helper_one_side(modin_series, pandas_series, rop)
+        inter_df_math_helper_one_side(
+            modin_series, pandas_series, rop, comparator_kwargs
+        )
 
 
-def inter_df_math_helper_one_side(modin_series, pandas_series, op):
+def inter_df_math_helper_one_side(
+    modin_series, pandas_series, op, comparator_kwargs=None
+):
+    if comparator_kwargs is None:
+        comparator_kwargs = {}
+
     try:
         pandas_attr = getattr(pandas_series, op)
     except Exception as err:
@@ -126,7 +133,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(4))  # repr to force materialization
     else:
         modin_result = modin_attr(4)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     try:
         pandas_result = pandas_attr(4.0)
@@ -135,7 +142,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(4.0))  # repr to force materialization
     else:
         modin_result = modin_attr(4.0)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     # These operations don't support non-scalar `other` or have a strange behavior in
     # the testing environment
@@ -161,7 +168,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(modin_series))  # repr to force materialization
     else:
         modin_result = modin_attr(modin_series)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
@@ -171,7 +178,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(list_test))  # repr to force materialization
     else:
         modin_result = modin_attr(list_test)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     series_test_modin = pd.Series(list_test, index=modin_series.index)
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
@@ -182,7 +189,7 @@ def inter_df_math_helper_one_side(modin_series, pandas_series, op):
             repr(modin_attr(series_test_modin))  # repr to force materialization
     else:
         modin_result = modin_attr(series_test_modin)
-        df_equals(modin_result, pandas_result)
+        df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     # Level test
     new_idx = pandas.MultiIndex.from_tuples(
@@ -257,7 +264,13 @@ def test___add__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___and__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__and__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__and__",
+        # https://github.com/modin-project/modin/issues/5966
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -493,7 +506,13 @@ def test___neg__(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___or__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__or__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__or__",
+        # https://github.com/modin-project/modin/issues/5966
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -619,7 +638,13 @@ def test___truediv__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___xor__(data):
     modin_series, pandas_series = create_test_series(data)
-    inter_df_math_helper(modin_series, pandas_series, "__xor__")
+    inter_df_math_helper(
+        modin_series,
+        pandas_series,
+        "__xor__",
+        # https://github.com/modin-project/modin/issues/5966
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2318,6 +2343,8 @@ def test_map(data, na_values):
     df_equals(
         modin_series.map(mapper, na_action=na_values),
         pandas_series.map(mapper, na_action=na_values),
+        # https://github.com/modin-project/modin/issues/5967
+        check_dtypes=False,
     )
 
     # Return list objects
@@ -3773,7 +3800,12 @@ def test_str___getitem__(data, key):
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.str[key]
     pandas_result = pandas_series.str[key]
-    df_equals(modin_result, pandas_result)
+    df_equals(
+        modin_result,
+        pandas_result,
+        # https://github.com/modin-project/modin/issues/5968
+        check_dtypes=False,
+    )
 
 
 # Test str operations
@@ -3879,6 +3911,8 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=False),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
     )
 
     # Test regex
@@ -3887,6 +3921,8 @@ def test_str_contains(data, pat, case, na):
         modin_series,
         pandas_series,
         lambda series: series.str.contains(pat, case=case, na=na, regex=True),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -3899,6 +3935,8 @@ def test_str_replace(data, pat, repl, n, case):
     eval_general(
         *create_test_series(data),
         lambda series: series.str.replace(pat, repl, n=n, case=case, regex=False),
+        # https://github.com/modin-project/modin/issues/5970
+        comparator_kwargs={"check_dtypes": pat is not None},
     )
     # Test regex
     eval_general(
@@ -3906,6 +3944,8 @@ def test_str_replace(data, pat, repl, n, case):
         lambda series: series.str.replace(
             pat=",|b", repl=repl, n=n, case=case, regex=True
         ),
+        # https://github.com/modin-project/modin/issues/5970
+        comparator_kwargs={"check_dtypes": pat is not None},
     )
 
 
@@ -4042,7 +4082,11 @@ def test_str_count(data, pat):
 def test_str_startswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
-        modin_series, pandas_series, lambda series: series.str.startswith(pat, na=na)
+        modin_series,
+        pandas_series,
+        lambda series: series.str.startswith(pat, na=na),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4052,7 +4096,11 @@ def test_str_startswith(data, pat, na):
 def test_str_endswith(data, pat, na):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
-        modin_series, pandas_series, lambda series: series.str.endswith(pat, na=na)
+        modin_series,
+        pandas_series,
+        lambda series: series.str.endswith(pat, na=na),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4148,6 +4196,8 @@ def test_str_partition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.partition(sep, expand=expand),
+        # https://github.com/modin-project/modin/issues/5971
+        comparator_kwargs={"check_dtypes": sep is not None},
     )
 
 
@@ -4160,6 +4210,8 @@ def test_str_rpartition(data, sep, expand):
         modin_series,
         pandas_series,
         lambda series: series.str.rpartition(sep, expand=expand),
+        # https://github.com/modin-project/modin/issues/5971
+        comparator_kwargs={"check_dtypes": sep is not None},
     )
 
 
@@ -4191,6 +4243,8 @@ def test_str_find(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.find(sub, start=start, end=end),
+        # https://github.com/modin-project/modin/issues/5972
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4204,6 +4258,8 @@ def test_str_rfind(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rfind(sub, start=start, end=end),
+        # https://github.com/modin-project/modin/issues/5972
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4217,6 +4273,8 @@ def test_str_index(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
+        # https://github.com/modin-project/modin/issues/5972
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4230,6 +4288,8 @@ def test_str_rindex(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
+        # https://github.com/modin-project/modin/issues/5972
+        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4260,7 +4320,13 @@ def test_str_translate(data, pat):
     modin_series, pandas_series = create_test_series(data)
 
     # Test none table
-    eval_general(modin_series, pandas_series, lambda series: series.str.translate(None))
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.translate(None),
+        # https://github.com/modin-project/modin/issues/5970
+        comparator_kwargs={"check_dtypes": False},
+    )
 
     # Translation dictionary
     table = {pat: "DDD"}
@@ -4287,55 +4353,109 @@ def test_str_translate(data, pat):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalnum(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isalnum())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isalnum(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isalpha(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isalpha())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isalpha(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdigit(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isdigit())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isdigit(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isspace(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isspace())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isspace(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_islower(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.islower())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.islower(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isupper(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isupper())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isupper(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_istitle(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.istitle())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.istitle(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isnumeric(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isnumeric())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isnumeric(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_str_isdecimal(data):
     modin_series, pandas_series = create_test_series(data)
-    eval_general(modin_series, pandas_series, lambda series: series.str.isdecimal())
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.str.isdecimal(),
+        # https://github.com/modin-project/modin/issues/5969
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4442,7 +4562,13 @@ def test_cat_codes_issue5650(set_min_partition_size):
     pandas_df = pandas_df.astype("category")
     modin_df = pd.DataFrame(data)
     modin_df = modin_df.astype("category")
-    eval_general(modin_df, pandas_df, lambda df: df["name"].cat.codes)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df["name"].cat.codes,
+        # https://github.com/modin-project/modin/issues/5973
+        comparator_kwargs={"check_dtypes": StorageFormat.get() != "Hdk"},
+    )
 
 
 @pytest.mark.parametrize(

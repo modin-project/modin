@@ -37,6 +37,7 @@ from pandas.core.dtypes.common import (
     get_dtype,
     is_list_like,
     is_bool_dtype,
+    is_string_dtype,
     is_categorical_dtype,
 )
 from modin.error_message import ErrorMessage
@@ -998,6 +999,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             len(other_modin_frames) == 0
             or len(self.columns) == 0
             or all(f._has_arrow_table() for f in ([self] + other_modin_frames))
+            or any(is_string_dtype(t) for t in self._dtypes)
             or any(len(f.columns) != len(self.columns) for f in other_modin_frames)
             or any(set(f._dtypes) != set(self._dtypes) for f in other_modin_frames)
         ):

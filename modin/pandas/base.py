@@ -1058,7 +1058,7 @@ class BasePandasDataset(ClassLogger):
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, **kwargs
+            lower=lower, upper=upper, axis=axis, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
