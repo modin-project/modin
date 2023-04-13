@@ -638,7 +638,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(
-        self, method="pearson", min_periods=1, numeric_only=no_default
+        self, method="pearson", min_periods=1, numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation of columns, excluding NA/null values.
@@ -658,7 +658,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def corrwith(
-        self, other, axis=0, drop=False, method="pearson", numeric_only=no_default
+        self, other, axis=0, drop=False, method="pearson", numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation.
@@ -675,7 +675,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def cov(
-        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default
+        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
