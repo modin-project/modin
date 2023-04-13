@@ -1399,13 +1399,15 @@ class DataFrame(BasePandasDataset):
         right_index=False,
         sort=False,
         suffixes=("_x", "_y"),
-        copy=True,
+        copy=None,
         indicator=False,
         validate=None,
     ):  # noqa: PR01, RT01, D200
         """
         Merge ``DataFrame`` or named ``Series`` objects with a database-style join.
         """
+        if copy is None:
+            copy = True
         if isinstance(right, Series):
             if right.name is None:
                 raise ValueError("Cannot merge a Series without a name")
@@ -1528,10 +1530,14 @@ class DataFrame(BasePandasDataset):
                 query_compiler=self._query_compiler.unstack(level, fill_value)
             )
 
-    def pivot(self, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
+    def pivot(self, *, columns, index=NoDefault, values=NoDefault):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
+        if index is NoDefault:
+            index = None
+        if values is NoDefault:
+            values = None
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
