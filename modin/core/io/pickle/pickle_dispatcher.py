@@ -94,7 +94,7 @@ class ExperimentalPickleDispatcher(FileDispatcher):
         )
 
     @classmethod
-    def _to_method(cls, qc, **kwargs):
+    def write(cls, qc, **kwargs):
         """
         When `*` in the filename all partitions are written to their own separate file.
 
