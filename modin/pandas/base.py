@@ -1430,7 +1430,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def expanding(
-        self, min_periods=1, center=None, axis=0, method="single"
+        self, min_periods=1, axis=0, method="single"
     ):  # noqa: PR01, RT01, D200
         """
         Provide expanding window calculations.
@@ -1438,7 +1438,6 @@ class BasePandasDataset(ClassLogger):
         return self._default_to_pandas(
             "expanding",
             min_periods=min_periods,
-            center=center,
             axis=axis,
             method=method,
         )
@@ -2276,8 +2275,6 @@ class BasePandasDataset(ClassLogger):
         label: Optional[str] = None,
         convention: str = "start",
         kind: Optional[str] = None,
-        loffset=None,
-        base: Optional[int] = None,
         on: Level = None,
         level: Level = None,
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
@@ -2297,8 +2294,6 @@ class BasePandasDataset(ClassLogger):
             label=label,
             convention=convention,
             kind=kind,
-            loffset=loffset,
-            base=base,
             on=on,
             level=level,
             origin=origin,
