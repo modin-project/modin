@@ -1336,12 +1336,6 @@ class DataFrame(BasePandasDataset):
             "le", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def lookup(self, row_labels, col_labels):  # noqa: PR01, RT01, D200
-        """
-        Label-based "fancy indexing" function for ``DataFrame``.
-        """
-        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
-
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
         Get less than comparison of ``DataFrame`` and `other`, element-wise (binary operator `le`).

@@ -224,8 +224,6 @@ default to pandas.
 |                            |                           |                        | **Hdk**: ``P``, read access fully supported,       |
 |                            |                           |                        | write access: no row and 2D assignments support    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``lookup``                 | `lookup`_                 | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``lt``                     | `lt`_                     | Y                      | See ``add``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``mask``                   | `mask`_                   | D                      |                                                    |
@@ -567,7 +565,6 @@ default to pandas.
 .. _`last_valid_index`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.last_valid_index.html#pandas.DataFrame.last_valid_index
 .. _`le`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.le.html#pandas.DataFrame.le
 .. _`loc`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.loc.html#pandas.DataFrame.loc
-.. _`lookup`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lookup.html#pandas.DataFrame.lookup
 .. _`lt`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lt.html#pandas.DataFrame.lt
 .. _`mask`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mask.html#pandas.DataFrame.mask
 .. _`max`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.max.html#pandas.DataFrame.max
