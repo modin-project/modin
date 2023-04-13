@@ -1026,9 +1026,7 @@ class BasePandasDataset(ClassLogger):
         self: "BasePandasDataset",
         start_time,
         end_time,
-        include_start: "bool | NoDefault" = no_default,
-        include_end: "bool | NoDefault" = no_default,
-        inclusive: "str | None" = None,
+        inclusive="both",
         axis=None,
     ):  # noqa: PR01, RT01, D200
         axis = self._get_axis_number(axis)
@@ -1038,8 +1036,6 @@ class BasePandasDataset(ClassLogger):
             .between_time(
                 start_time,
                 end_time,
-                include_start=include_start,
-                include_end=include_end,
                 inclusive=inclusive,
             )
             .index
