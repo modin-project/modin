@@ -426,26 +426,13 @@ class DataFrame(BasePandasDataset):
         level=None,
         as_index=True,
         sort=True,
-        group_keys=no_default,
-        squeeze: bool = no_default,
+        group_keys=True,
         observed=False,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
-        if squeeze is not no_default:
-            warnings.warn(
-                (
-                    "The `squeeze` parameter is deprecated and "
-                    + "will be removed in a future version."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            squeeze = False
-
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -533,7 +520,7 @@ class DataFrame(BasePandasDataset):
             as_index,
             sort,
             group_keys,
-            squeeze,
+            False,
             idx_name,
             observed=observed,
             drop=drop,

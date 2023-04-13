@@ -932,9 +932,7 @@ class Series(BasePandasDataset):
             ignore_index=ignore_index,
         )
 
-    def factorize(
-        self, sort=False, use_na_sentinel=True
-    ):  # noqa: PR01, RT01, D200
+    def factorize(self, sort=False, use_na_sentinel=True):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
         """
@@ -997,26 +995,13 @@ class Series(BasePandasDataset):
         level=None,
         as_index=True,
         sort=True,
-        group_keys=no_default,
-        squeeze=no_default,
+        group_keys=True,
         observed=False,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Group Series using a mapper or by a Series of columns.
         """
-        if squeeze is not no_default:
-            warnings.warn(
-                (
-                    "The `squeeze` parameter is deprecated and "
-                    + "will be removed in a future version."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            squeeze = False
-
         from .groupby import SeriesGroupBy
 
         if not as_index:
@@ -1036,7 +1021,7 @@ class Series(BasePandasDataset):
             as_index,
             sort,
             group_keys,
-            squeeze,
+            False,
             idx_name=None,
             observed=observed,
             drop=False,
