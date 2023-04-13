@@ -1638,8 +1638,7 @@ class DataFrame(BasePandasDataset):
         self,
         axis=None,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -1648,17 +1647,6 @@ class DataFrame(BasePandasDataset):
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).prod(
-                numeric_only=numeric_only, min_count=min_count
-            )
 
         axis_to_apply = self.columns if axis else self.index
         if (
@@ -1677,7 +1665,6 @@ class DataFrame(BasePandasDataset):
                 data._query_compiler.prod_min_count(
                     axis=axis,
                     skipna=skipna,
-                    level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
                     **kwargs,
@@ -1687,7 +1674,6 @@ class DataFrame(BasePandasDataset):
             data._query_compiler.prod(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
