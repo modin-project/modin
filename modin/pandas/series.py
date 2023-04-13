@@ -1213,12 +1213,11 @@ class Series(BasePandasDataset):
     def mask(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
+        *,
         inplace=False,
         axis=None,
         level=None,
-        errors=no_default,
-        try_cast=no_default,
     ):
         return self._default_to_pandas(
             pandas.Series.mask,
@@ -1227,8 +1226,6 @@ class Series(BasePandasDataset):
             inplace=inplace,
             axis=axis,
             level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200

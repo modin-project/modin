@@ -1834,12 +1834,11 @@ class BasePandasDataset(ClassLogger):
     def mask(
         self,
         cond,
-        other=np.nan,
+        other=no_default,
+        *,
         inplace: bool = False,
-        axis: Axis | None = None,
+        axis: Axis = None,
         level: Level = None,
-        errors: IgnoreRaise | NoDefault = "raise",
-        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is True.
@@ -1851,8 +1850,6 @@ class BasePandasDataset(ClassLogger):
             inplace=inplace,
             axis=axis,
             level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     def max(
