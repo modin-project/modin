@@ -166,6 +166,21 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_5203():
+    data = np.ones([2, 4])
+    kwargs = {"columns": ["a", "b", "c", "d"]}
+    modin_dfs, pandas_dfs = [None] * 3, [None] * 3
+    for idx in range(len(modin_dfs)):
+        modin_dfs[idx], pandas_dfs[idx] = create_test_dfs(data, **kwargs)
+
+    for dfs in (modin_dfs, pandas_dfs):
+        with pytest.raises(
+            ValueError,
+            match="Joining multiple DataFrames only supported for joining on index",
+        ):
+            dfs[0].join([dfs[1], dfs[2]], how="inner", on="a")
+
+
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [

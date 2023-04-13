@@ -1474,10 +1474,6 @@ class TestParquet:
                 columns=columns,
             )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="https://github.com/intel-ai/hdk/issues/291",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
