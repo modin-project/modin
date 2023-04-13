@@ -1511,6 +1511,7 @@ class SeriesGroupBy(DataFrameGroupBy):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_unique,
                 numeric_only=False,
+                self_is_series=True,
             )
         )
 
@@ -1520,6 +1521,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                 type(self._query_compiler).groupby_nlargest,
                 agg_kwargs=dict(n=n, keep=keep),
                 numeric_only=True,
+                self_is_series=True,
             )
         )
 
@@ -1529,6 +1531,7 @@ class SeriesGroupBy(DataFrameGroupBy):
                 type(self._query_compiler).groupby_nsmallest,
                 agg_kwargs=dict(n=n, keep=keep),
                 numeric_only=True,
+                self_is_series=True,
             )
         )
 

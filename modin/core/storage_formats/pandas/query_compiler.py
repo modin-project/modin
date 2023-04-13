@@ -3036,6 +3036,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        self_is_series=False,
     ):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3138,7 +3139,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                grouped_df = (df.squeeze() if self_is_series else df).groupby(
+                    by=by, axis=axis, **groupby_kwargs
+                )
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except DataError:

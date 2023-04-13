@@ -364,6 +364,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        self_is_series=False,
     ):
         # TODO: handle `drop` args
         if callable(agg_func):

@@ -2762,6 +2762,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        self_is_series=False,
     ):
         """
         Group QueryCompiler data and apply passed aggregation function.
@@ -2790,6 +2791,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
+        self_is_series : bool, default: False
+            Whether `self` represents a series.
 
         Returns
         -------
@@ -3386,6 +3389,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_args,
         agg_kwargs,
         drop=False,
+        self_is_series=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -3395,6 +3399,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            self_is_series=self_is_series,
         )
 
     @doc_utils.doc_groupby_method(
@@ -3410,6 +3415,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_args,
         agg_kwargs,
         drop=False,
+        self_is_series=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -3419,6 +3425,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            self_is_series=self_is_series,
         )
 
     @doc_utils.doc_groupby_method(
@@ -3434,6 +3441,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_args,
         agg_kwargs,
         drop=False,
+        self_is_series=False,
     ):
         return self.groupby_agg(
             by=by,
@@ -3443,6 +3451,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            self_is_series=self_is_series,
         )
 
     # END Manual Partitioning methods
