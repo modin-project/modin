@@ -1308,7 +1308,6 @@ def _make_csv_file(filenames):
                 compression=compression,
                 index=False,
                 decimal=decimal_separator if decimal_separator else ".",
-                line_terminator=line_terminator,
                 quoting=quoting,
                 quotechar=quotechar,
                 doublequote=doublequote,
