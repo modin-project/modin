@@ -49,6 +49,7 @@ from pandas._typing import (
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
     RandomState,
+    DtypeBackend,
 )
 import pickle as pkl
 import re
@@ -1719,6 +1720,7 @@ class BasePandasDataset(ClassLogger):
         convert_integer: bool = True,
         convert_boolean: bool = True,
         convert_floating: bool = True,
+        dtype_backend: DtypeBackend = "numpy_nullable",
     ):  # noqa: PR01, RT01, D200
         """
         Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
@@ -1730,6 +1732,7 @@ class BasePandasDataset(ClassLogger):
                 convert_integer=convert_integer,
                 convert_boolean=convert_boolean,
                 convert_floating=convert_floating,
+                dtype_backend=dtype_backend,
             )
         )
 

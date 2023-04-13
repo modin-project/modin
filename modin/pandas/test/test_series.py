@@ -2092,12 +2092,6 @@ def test_interpolate(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_is_monotonic(data):
-    modin_series, pandas_series = create_test_series(data)
-    assert modin_series.is_monotonic == pandas_series.is_monotonic
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_is_monotonic_decreasing(data):
     modin_series, pandas_series = create_test_series(data)
     assert modin_series.is_monotonic_decreasing == pandas_series.is_monotonic_decreasing

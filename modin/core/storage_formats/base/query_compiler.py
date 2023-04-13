@@ -39,7 +39,7 @@ from modin.config import StorageFormat
 from pandas.core.dtypes.common import is_scalar, is_number
 import pandas.core.resample
 import pandas
-from pandas._typing import IndexLabel, Suffixes
+from pandas._typing import IndexLabel, Suffixes, DtypeBackend
 import numpy as np
 from typing import List, Hashable, Optional
 
@@ -1627,6 +1627,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         convert_integer: bool = True,
         convert_boolean: bool = True,
         convert_floating: bool = True,
+        dtype_backend: DtypeBackend = "numpy_nullable",
     ):
         """
         Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
@@ -1645,6 +1646,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Whether, if possible, conversion can be done to floating extension types.
             If `convert_integer` is also True, preference will be give to integer dtypes
             if the floats can be faithfully casted to integers.
+        dtype_backend : {"numpy_nullable", "pyarrow"}, default "numpy_nullable"
+            Which dtype_backend to use, e.g. whether a DataFrame should use nullable
+            dtypes for all dtypes that have a nullable
+            implementation when "numpy_nullable" is set, pyarrow is used for all
+            dtypes if "pyarrow" is set.
 
         Returns
         -------
@@ -1658,6 +1664,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             convert_integer=convert_integer,
             convert_boolean=convert_boolean,
             convert_floating=convert_floating,
+            dtype_backend=dtype_backend,
         )
 
     @property

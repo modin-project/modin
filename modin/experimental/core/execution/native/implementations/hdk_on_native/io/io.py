@@ -100,6 +100,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "memory_map",
         "float_precision",
         "storage_options",
+        "dtype_backend",
     ]
 
     @classmethod

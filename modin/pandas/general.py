@@ -18,6 +18,8 @@ import numpy as np
 
 from typing import Hashable, Iterable, Mapping, Union
 from pandas.core.dtypes.common import is_list_like
+from pandas._libs.lib import no_default, NoDefault
+from pandas._typing import DtypeBackend
 
 from modin.error_message import ErrorMessage
 from .base import BasePandasDataset
@@ -262,13 +264,22 @@ def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D20
 
 @_inherit_docstrings(pandas.to_numeric, apilink="pandas.to_numeric")
 @enable_logging
-def to_numeric(arg, errors="raise", downcast=None):  # noqa: PR01, RT01, D200
+def to_numeric(
+    arg,
+    errors="raise",
+    downcast=None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+):  # noqa: PR01, RT01, D200
     """
     Convert argument to a numeric type.
     """
     if not isinstance(arg, Series):
-        return pandas.to_numeric(arg, errors=errors, downcast=downcast)
-    return arg._to_numeric(errors=errors, downcast=downcast)
+        return pandas.to_numeric(
+            arg, errors=errors, downcast=downcast, dtype_backend=dtype_backend
+        )
+    return arg._to_numeric(
+        errors=errors, downcast=downcast, dtype_backend=dtype_backend
+    )
 
 
 @_inherit_docstrings(pandas.qcut, apilink="pandas.qcut")

@@ -41,6 +41,7 @@ from pandas._typing import (
     ConvertersArg,
     ParseDatesArg,
     XMLParsers,
+    DtypeBackend,
 )
 import pathlib
 import pickle
@@ -116,27 +117,11 @@ def read_xml(
     iterparse: dict[str, list[str]] | None = None,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("read_xml")
-    return DataFrame(
-        pandas.read_xml(
-            path_or_buffer,
-            xpath=xpath,
-            namespaces=namespaces,
-            elems_only=elems_only,
-            attrs_only=attrs_only,
-            names=names,
-            dtype=dtype,
-            converters=converters,
-            parse_dates=parse_dates,
-            encoding=encoding,
-            parser=parser,
-            stylesheet=stylesheet,
-            iterparse=iterparse,
-            compression=compression,
-            storage_options=storage_options,
-        )
-    )
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(pandas.read_xml(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -202,6 +187,7 @@ def read_csv(
     memory_map: bool = False,
     float_precision: Literal["high", "legacy"] | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
@@ -337,6 +323,7 @@ def read_json(
     compression: CompressionOptions = "infer",
     nrows: int | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -389,37 +376,25 @@ def read_html(
     keep_default_na: bool = True,
     displayed_only: bool = True,
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
-        query_compiler=FactoryDispatcher.read_html(
-            io,
-            match=match,
-            flavor=flavor,
-            header=header,
-            index_col=index_col,
-            skiprows=skiprows,
-            attrs=attrs,
-            parse_dates=parse_dates,
-            thousands=thousands,
-            encoding=encoding,
-            decimal=decimal,
-            converters=converters,
-            na_values=na_values,
-            keep_default_na=keep_default_na,
-            displayed_only=displayed_only,
-            extract_links=extract_links,
-        )
-    )
+    return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
 @enable_logging
-def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT01, D200
+def read_clipboard(
+    sep=r"\s+",
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    **kwargs,
+):  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read text from clipboard and pass to read_csv.
     """
@@ -466,6 +441,7 @@ def read_excel(
     convert_float: bool | None = None,
     mangle_dupe_cols: bool = True,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
@@ -517,6 +493,7 @@ def read_feather(
     columns: Sequence[Hashable] | None = None,
     use_threads: bool = True,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -602,6 +579,7 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL query or database table into a DataFrame.
@@ -626,6 +604,7 @@ def read_fwf(
     colspecs="infer",
     widths=None,
     infer_nrows=100,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     **kwds,
 ):  # noqa: PR01, RT01, D200
     """
@@ -660,6 +639,7 @@ def read_sql_table(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL database table into a DataFrame.
@@ -682,6 +662,7 @@ def read_sql_query(
     parse_dates: list[str] | dict[str, str] | None = None,
     chunksize: int | None = None,
     dtype: DtypeArg | None = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | Iterator[DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -718,6 +699,7 @@ def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Union[Sequence[str], type(None)] = None,
     convert_categoricals: bool = True,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
     """
     Load an SPSS file from the file path, returning a DataFrame.
@@ -725,7 +707,9 @@ def read_spss(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
-        query_compiler=FactoryDispatcher.read_spss(path, usecols, convert_categoricals)
+        query_compiler=FactoryDispatcher.read_spss(
+            path, usecols, convert_categoricals, dtype_backend
+        )
     )
 
 
@@ -755,13 +739,16 @@ def json_normalize(
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
 @enable_logging
 def read_orc(
-    path, columns: Optional[List[str]] = None, **kwargs
+    path,
+    columns: Optional[List[str]] = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    **kwargs,
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(pandas.read_orc(path, columns, **kwargs))
+    return DataFrame(pandas.read_orc(path, columns, dtype_backend, **kwargs))
 
 
 @_inherit_docstrings(pandas.HDFStore)

@@ -2208,13 +2208,11 @@ class Series(BasePandasDataset):
         return self.isna().sum() > 0
 
     @property
-    def is_monotonic(self):  # noqa: RT01, D200
+    def is_monotonic_increasing(self):  # noqa: RT01, D200
         """
         Return True if values in the Series are monotonic_increasing.
         """
         return self._reduce_dimension(self._query_compiler.is_monotonic_increasing())
-
-    is_monotonic_increasing = is_monotonic
 
     @property
     def is_monotonic_decreasing(self):  # noqa: RT01, D200
