@@ -135,9 +135,6 @@ def read_csv(
     names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze: bool | None = None,
-    prefix: str | NoDefault = no_default,
-    mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
     engine: CSVEngine | None = None,
@@ -156,9 +153,10 @@ def read_csv(
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=None,
-    infer_datetime_format: bool = False,
+    infer_datetime_format: bool = no_default,
     keep_date_col: bool = False,
-    date_parser=None,
+    date_parser=no_default,
+    date_format=None,
     dayfirst: bool = False,
     cache_dates: bool = True,
     # Iteration
@@ -178,9 +176,7 @@ def read_csv(
     encoding_errors: str | None = "strict",
     dialect: str | csv.Dialect | None = None,
     # Error Handling
-    error_bad_lines: bool | None = None,
-    warn_bad_lines: bool | None = None,
-    on_bad_lines=None,
+    on_bad_lines="error",
     # Internal
     delim_whitespace: bool = False,
     low_memory=_c_parser_defaults["low_memory"],
@@ -212,9 +208,6 @@ def read_table(
     names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze: bool | None = None,
-    prefix: str | NoDefault = no_default,
-    mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
     engine: CSVEngine | None = None,
@@ -233,9 +226,10 @@ def read_table(
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=False,
-    infer_datetime_format: bool = False,
+    infer_datetime_format: bool = no_default,
     keep_date_col: bool = False,
-    date_parser=None,
+    date_parser=no_default,
+    date_format: str = None,
     dayfirst: bool = False,
     cache_dates: bool = True,
     # Iteration
@@ -255,15 +249,14 @@ def read_table(
     encoding_errors: str | None = "strict",
     dialect: str | csv.Dialect | None = None,
     # Error Handling
-    error_bad_lines: bool | None = None,
-    warn_bad_lines: bool | None = None,
-    on_bad_lines=None,
+    on_bad_lines="error",
     # Internal
     delim_whitespace=False,
     low_memory=_c_parser_defaults["low_memory"],
     memory_map: bool = False,
     float_precision: str | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_table_signature = {
@@ -286,7 +279,8 @@ def read_parquet(
     engine: str = "auto",
     columns: list[str] | None = None,
     storage_options: StorageOptions = None,
-    use_nullable_dtypes: bool = False,
+    use_nullable_dtypes: bool = no_default,
+    dtype_backend=no_default,
     **kwargs,
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -298,6 +292,7 @@ def read_parquet(
             columns=columns,
             storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
+            dtype_backend=dtype_backend,
             **kwargs,
         )
     )
@@ -307,13 +302,13 @@ def read_parquet(
 @enable_logging
 def read_json(
     path_or_buf,
+    *,
     orient: str | None = None,
     typ: Literal["frame", "series"] = "frame",
     dtype: DtypeArg | None = None,
     convert_axes=None,
     convert_dates: bool | list[str] = True,
     keep_default_dates: bool = True,
-    numpy: bool = False,
     precise_float: bool = False,
     date_unit: str | None = None,
     encoding: str | None = None,
@@ -324,6 +319,7 @@ def read_json(
     nrows: int | None = None,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    engine="ujson",
 ) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -420,7 +416,6 @@ def read_excel(
     | Sequence[str]
     | Callable[[str], bool]
     | None = None,
-    squeeze: bool | None = None,
     dtype: DtypeArg | None = None,
     engine: Literal[("xlrd", "openpyxl", "odf", "pyxlsb")] | None = None,
     converters: dict[str, Callable] | dict[int, Callable] | None = None,
@@ -433,13 +428,12 @@ def read_excel(
     na_filter: bool = True,
     verbose: bool = False,
     parse_dates: list | dict | bool = False,
-    date_parser: Callable | None = None,
+    date_parser: Union[Callable, NoDefault] = no_default,
+    date_format=None,
     thousands: str | None = None,
     decimal: str = ".",
     comment: str | None = None,
     skipfooter: int = 0,
-    convert_float: bool | None = None,
-    mangle_dupe_cols: bool = True,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | dict[IntStrT, DataFrame]:

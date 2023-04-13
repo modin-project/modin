@@ -16,7 +16,7 @@
 import pandas
 import numpy as np
 
-from typing import Hashable, Iterable, Mapping, Union
+from typing import Hashable, Iterable, Mapping, Union, Optional
 from pandas.core.dtypes.common import is_list_like
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import DtypeBackend
@@ -74,7 +74,7 @@ def merge(
     right_index: bool = False,
     sort: bool = False,
     suffixes=("_x", "_y"),
-    copy: bool = True,
+    copy: Optional[bool] = None,
     indicator: bool = False,
     validate=None,
 ):  # noqa: PR01, RT01, D200
@@ -253,10 +253,16 @@ def pivot_table(
 
 @_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
 @enable_logging
-def pivot(data, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
+def pivot(
+    data, *, columns, index=NoDefault, values=NoDefault
+):  # noqa: PR01, RT01, D200
     """
     Return reshaped DataFrame organized by given index / column values.
     """
+    if index is NoDefault:
+        index = None
+    if values is NoDefault:
+        values = None
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
@@ -359,7 +365,7 @@ def concat(
     names=None,
     verify_integrity: bool = False,
     sort: bool = False,
-    copy: bool = True,
+    copy: bool = None,
 ) -> "DataFrame | Series":  # noqa: PR01, RT01, D200
     """
     Concatenate Modin objects along a particular axis.
@@ -505,11 +511,11 @@ def to_datetime(
     errors="raise",
     dayfirst=False,
     yearfirst=False,
-    utc=None,
+    utc=False,
     format=None,
-    exact=True,
+    exact=no_default,
     unit=None,
-    infer_datetime_format=False,
+    infer_datetime_format=no_default,
     origin="unix",
     cache=True,
 ):  # noqa: PR01, RT01, D200
@@ -652,7 +658,7 @@ def crosstab(
 
 # Adding docstring since pandas docs don't have web section for this function.
 @enable_logging
-def lreshape(data: DataFrame, groups, dropna=True, label=None):
+def lreshape(data: DataFrame, groups, dropna=True):
     """
     Reshape wide-format data to long. Generalized inverse of ``DataFrame.pivot``.
 
@@ -668,8 +674,6 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
         Dictionary in the form: `{new_name : list_of_columns}`.
     dropna : bool, default: True
         Whether include columns whose entries are all NaN or not.
-    label : optional
-        Deprecated parameter.
 
     Returns
     -------
@@ -679,9 +683,7 @@ def lreshape(data: DataFrame, groups, dropna=True, label=None):
     if not isinstance(data, DataFrame):
         raise ValueError("can not lreshape with instance of type {}".format(type(data)))
     ErrorMessage.default_to_pandas("`lreshape`")
-    return DataFrame(
-        pandas.lreshape(to_pandas(data), groups, dropna=dropna, label=label)
-    )
+    return DataFrame(pandas.lreshape(to_pandas(data), groups, dropna=dropna))
 
 
 @_inherit_docstrings(pandas.wide_to_long, apilink="pandas.wide_to_long")

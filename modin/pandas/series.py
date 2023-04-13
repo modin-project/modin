@@ -87,7 +87,7 @@ class Series(BasePandasDataset):
         index=None,
         dtype=None,
         name=None,
-        copy=False,
+        copy=None,
         fastpath=False,
         query_compiler=None,
     ):
