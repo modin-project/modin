@@ -933,7 +933,7 @@ class Series(BasePandasDataset):
         )
 
     def factorize(
-        self, sort=False, na_sentinel=no_default, use_na_sentinel=no_default
+        self, sort=False, use_na_sentinel=True
     ):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
@@ -941,7 +941,6 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(
             pandas.Series.factorize,
             sort=sort,
-            na_sentinel=na_sentinel,
             use_na_sentinel=use_na_sentinel,
         )
 
