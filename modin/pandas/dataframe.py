@@ -977,7 +977,6 @@ class DataFrame(BasePandasDataset):
         max_cols: Optional[int] = None,
         memory_usage: Optional[Union[bool, str]] = None,
         show_counts: Optional[bool] = None,
-        null_counts: Optional[bool] = None,
     ):  # noqa: PR01, D200
         """
         Print a concise summary of the ``DataFrame``.
@@ -1011,13 +1010,13 @@ class DataFrame(BasePandasDataset):
         if buf is None:
             buf = sys.stdout
 
-        if null_counts is None:
-            null_counts = not exceeds_info_cols
+        if show_counts is None:
+            show_counts = not exceeds_info_cols
 
         if verbose is None:
             verbose = not exceeds_info_cols
 
-        if null_counts and verbose:
+        if show_counts and verbose:
             # We're gonna take items from `non_null_count` in a loop, which
             # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
             # that will be faster.
@@ -1049,7 +1048,7 @@ class DataFrame(BasePandasDataset):
             header = put_str(head_label, lengths["head"]) + put_str(
                 column_label, lengths["column"]
             )
-            if null_counts:
+            if show_counts:
                 lengths["null"] = max(
                     len(null_label),
                     max(len(pprint_thing(x)) for x in non_null_count)
@@ -1063,7 +1062,7 @@ class DataFrame(BasePandasDataset):
             delimiters = put_str(delimiter * lengths["head"]) + put_str(
                 delimiter * lengths["column"]
             )
-            if null_counts:
+            if show_counts:
                 delimiters += put_str(delimiter * lengths["null"])
             delimiters += put_str(delimiter * lengths["dtype"], spaces=dtype_spaces)
             output.append(delimiters)
@@ -1082,7 +1081,7 @@ class DataFrame(BasePandasDataset):
                 to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
                     col_s, lengths["column"]
                 )
-                if null_counts:
+                if show_counts:
                     non_null = pprint_thing(non_null_count[col])
                     to_append += put_str(
                         "{} non-null".format(non_null), lengths["null"]
@@ -1530,7 +1529,9 @@ class DataFrame(BasePandasDataset):
                 query_compiler=self._query_compiler.unstack(level, fill_value)
             )
 
-    def pivot(self, *, columns, index=NoDefault, values=NoDefault):  # noqa: PR01, RT01, D200
+    def pivot(
+        self, *, columns, index=NoDefault, values=NoDefault
+    ):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
