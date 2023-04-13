@@ -716,7 +716,7 @@ def to_pickle(
 @enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
-    usecols: Sequence[str] | None = None,
+    usecols: Optional[Sequence[str]] = None,
     convert_categoricals: bool = True,
 ):  # noqa: PR01, RT01, D200
     """

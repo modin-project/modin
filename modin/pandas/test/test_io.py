@@ -2491,12 +2491,9 @@ class TestGbq:
 
     def test_read_gbq_mock(self):
         test_args = ("fake_query",)
-        test_kwargs = {"project_id": "test_id", "dialect": "standart"}
-        all_params = inspect.signature(pd.read_gbq).parameters
-        for param in all_params:
-            # 'query' - positional arg
-            if param not in test_kwargs and param != "query":
-                test_kwargs[param] = all_params[param].default
+        test_kwargs = inspect.signature(pd.read_gbq).parameters.copy()
+        test_kwargs.update(project_id="test_id", dialect="standart")
+        test_kwargs.pop("query", None)
         with mock.patch(
             "pandas.read_gbq", return_value=pandas.DataFrame([])
         ) as read_gbq:
