@@ -206,23 +206,9 @@ class Resampler(ClassLogger):
             )
         )
 
-    def backfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_backfill(
-                self.resample_kwargs, limit
-            )
-        )
-
     def bfill(self, limit=None):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_bfill(
-                self.resample_kwargs, limit
-            )
-        )
-
-    def pad(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_pad(
                 self.resample_kwargs, limit
             )
         )

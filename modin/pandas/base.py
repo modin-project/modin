@@ -45,7 +45,6 @@ from pandas._typing import (
     Axis,
     IndexLabel,
     Level,
-    IgnoreRaise,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
     RandomState,

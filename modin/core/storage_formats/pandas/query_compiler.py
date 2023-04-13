@@ -1044,9 +1044,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_ffill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "ffill", limit=limit)
 
-    def resample_backfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "backfill", limit=limit)
-
     def resample_bfill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "bfill", limit=limit)
 

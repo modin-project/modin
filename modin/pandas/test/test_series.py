@@ -2893,10 +2893,8 @@ def test_resample(closed, label, level):
             modin_resampler.fillna(method="nearest"),
             pandas_resampler.fillna(method="nearest"),
         )
-        df_equals(modin_resampler.pad(), pandas_resampler.pad())
         df_equals(modin_resampler.nearest(), pandas_resampler.nearest())
         df_equals(modin_resampler.bfill(), pandas_resampler.bfill())
-        df_equals(modin_resampler.backfill(), pandas_resampler.backfill())
         df_equals(modin_resampler.ffill(), pandas_resampler.ffill())
     df_equals(
         modin_resampler.apply(["sum", "mean", "max"]),

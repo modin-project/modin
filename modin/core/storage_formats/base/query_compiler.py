@@ -4179,14 +4179,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, fill_value
         )
 
-    # FIXME: `resample_backfill` is an alias for `resample_bfill`, one of these method
-    # should be removed (Modin issue #3107).
-    @doc_utils.doc_resample_fillna(method="back-fill", refer_to="backfill")
-    def resample_backfill(self, resample_kwargs, limit):
-        return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
-            self, resample_kwargs, limit
-        )
-
     @doc_utils.doc_resample_fillna(method="back-fill", refer_to="bfill")
     def resample_bfill(self, resample_kwargs, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.bfill)(
@@ -4355,12 +4347,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
         )(self, resample_kwargs, *args, **kwargs)
-
-    @doc_utils.doc_resample_fillna(method="'pad'", refer_to="pad")
-    def resample_pad(self, resample_kwargs, limit):
-        return ResampleDefault.register(pandas.core.resample.Resampler.pad)(
-            self, resample_kwargs, limit
-        )
 
     # FIXME: This method require us to build high-level resampler object
     # which we shouldn't do at the query compiler. We need to move this at the front.

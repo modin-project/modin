@@ -681,7 +681,7 @@ def test_resampler(rule, axis):
     [
         *("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
         *("min", "median", "mean", "max", "last", "first", "nunique", "var"),
-        *("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
+        *("interpolate", "asfreq", "nearest", "bfill", "ffill"),
     ],
 )
 def test_resampler_functions(rule, axis, method):

@@ -163,7 +163,6 @@ def test_mixed_dtypes_groupby(as_index):
 
         eval_dtypes(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
         eval_cummin(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
@@ -365,7 +364,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
     eval_prod(modin_groupby, pandas_groupby)
@@ -553,7 +551,6 @@ def test_single_group_row_groupby():
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
     eval_cummin(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
@@ -665,7 +662,6 @@ def test_large_row_groupby(is_by_category):
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
     eval_cummin(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
@@ -783,7 +779,6 @@ def test_simple_col_groupby():
         eval_apply(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
     eval_prod(modin_groupby, pandas_groupby)
     eval_std(modin_groupby, pandas_groupby)
@@ -909,7 +904,6 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             eval_apply(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
         eval_cummin(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
@@ -2162,15 +2156,6 @@ def test_mean_with_datetime(by_func):
 
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
-
-
-def test_groupby_backfill_warn():
-    modin_df = pd.DataFrame(test_groupby_data)
-    md_grp = modin_df.groupby(by=modin_df.columns[0])
-
-    msg = "backfill is deprecated and will be removed in a future version."
-    with pytest.warns(FutureWarning, match=msg):
-        md_grp.backfill()
 
 
 @pytest.mark.parametrize(

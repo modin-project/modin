@@ -13,8 +13,6 @@
 
 """Implement GroupBy public API as pandas does."""
 
-import warnings
-
 import numpy as np
 import pandas
 from pandas.core.apply import reconstruct_func
@@ -459,17 +457,6 @@ class DataFrameGroupBy(ClassLogger):
     def first(self, **kwargs):
         return self._default_to_pandas(lambda df: df.first(**kwargs))
 
-    def backfill(self, limit=None):
-        warnings.warn(
-            (
-                "backfill is deprecated and will be removed in a future version. "
-                + "Use bfill instead."
-            ),
-            FutureWarning,
-            stacklevel=2,
-        )
-        return self.bfill(limit)
-
     _internal_by_cache = no_default
 
     # TODO: since python 3.9:
@@ -737,9 +724,6 @@ class DataFrameGroupBy(ClassLogger):
     @property
     def corrwith(self):
         return self._default_to_pandas(lambda df: df.corrwith)
-
-    def pad(self, limit=None):
-        return self._default_to_pandas(lambda df: df.pad(limit=limit))
 
     def max(self, numeric_only=False, min_count=-1):
         return self._wrap_aggregation(
