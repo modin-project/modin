@@ -49,9 +49,10 @@ from .utils import (
     check_cols_to_join,
     get_data_for_join_by_index,
     get_common_arrow_type,
-    build_categorical_from_at,
     concat_index_names,
     mangle_index_names,
+    get_common_pandas_type,
+    build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
@@ -1047,25 +1048,36 @@ class HdkOnNativeDataframe(PandasDataframe):
             return self._union_all_arrow(frames, join, sort, ignore_index)
 
         # determine output columns
-        new_cols_map = OrderedDict()
-        for col in self.columns:
-            new_cols_map[col] = self._dtypes[col]
-        for frame in other_modin_frames:
-            if join == "inner":
-                for col in list(new_cols_map):
-                    if col not in frame.columns:
-                        del new_cols_map[col]
-            else:
-                for col in frame.columns:
-                    if col not in new_cols_map:
-                        new_cols_map[col] = frame._dtypes[col]
+        def join_cols():
+            new_cols_map = OrderedDict()
+            for col in self.columns:
+                new_cols_map[col] = self._dtypes[col]
+            for frame in other_modin_frames:
+                if join == "inner":
+                    for col in list(new_cols_map):
+                        if col not in frame.columns:
+                            del new_cols_map[col]
+                else:
+                    for col in frame.columns:
+                        if col not in new_cols_map:
+                            new_cols_map[col] = frame._dtypes[col]
 
-        if sort:
-            new_columns = sorted(new_cols_map.keys())
-            new_dtypes = [new_cols_map[col] for col in new_columns]
-        else:
-            new_columns = new_cols_map.keys()
-            new_dtypes = list(new_cols_map.values())
+            for frame in other_modin_frames:
+                frame_dtypes = frame._dtypes
+                for col, dtype in new_cols_map.items():
+                    if col in frame_dtypes:
+                        new_cols_map[col] = get_common_pandas_type(
+                            dtype, frame_dtypes[col]
+                        )
+
+            if sort:
+                new_columns = sorted(new_cols_map.keys())
+                new_dtypes = [new_cols_map[col] for col in new_columns]
+            else:
+                new_columns = new_cols_map.keys()
+                new_dtypes = list(new_cols_map.values())
+
+            return new_columns, new_dtypes
 
         # If all frames are either FrameNode(materialized frame) or UnionNode,
         # containing only FrameNodes and having the same concatenation options,
@@ -1086,6 +1098,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 materialized.clear()
                 break
         if materialized:
+            new_columns, new_dtypes = join_cols()
             if not ignore_index:
                 index_cols = concat_index_names(frames)
                 new_dtypes = list(index_cols.values()) + new_dtypes
@@ -1115,6 +1128,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             f._dtypes.to_dict() != dtypes for f in other_modin_frames
         ):
             return self._union_all_arrow(frames, join, sort, ignore_index)
+
+        new_columns, new_dtypes = join_cols()
 
         # determine how many index components are going into
         # the resulting table

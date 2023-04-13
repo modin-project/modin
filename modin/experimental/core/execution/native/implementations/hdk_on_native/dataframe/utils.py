@@ -20,6 +20,8 @@ from typing import Tuple, Union, List, Any
 from functools import lru_cache
 from collections import OrderedDict
 
+import numpy as np
+
 import pandas
 from pandas import Timestamp
 from pandas.core.dtypes.common import get_dtype
@@ -455,6 +457,32 @@ def get_data_for_join_by_index(
     return index_cols, exprs, new_dtypes, merged.columns
 
 
+def get_common_pandas_type(t1: np.dtype, t2: np.dtype) -> np.dtype:
+    """
+    Get common pandas data type.
+
+    Parameters
+    ----------
+    t1 : np.dtype
+    t2 : np.dtype
+
+    Returns
+    -------
+    np.dtype
+    """
+    if t1 == t2:
+        return t1
+    if pandas.api.types.is_string_dtype(t1):
+        return t1
+    if pandas.api.types.is_string_dtype(t2):
+        return t2
+    if pandas.isna(t1):
+        return t2
+    if pandas.isna(t2):
+        return t1
+    return np.promote_types(np.dtype(t1), np.dtype(t2))
+
+
 def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:
     """
     Get common arrow data type.
@@ -468,6 +496,8 @@ def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.Da
     -------
     pa.lib.DataType
     """
+    if t1 == t2:
+        return t1
     if pa.types.is_string(t1):
         return t1
     if pa.types.is_string(t2):
@@ -476,11 +506,10 @@ def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.Da
         return t2
     if pa.types.is_null(t2):
         return t1
-    if t1.bit_width > t2.bit_width:
-        return t1
-    if t1.bit_width < t2.bit_width:
-        return t2
-    return t2 if pa.types.is_floating(t2) else t1
+
+    t1 = t1.to_pandas_dtype()
+    t2 = t2.to_pandas_dtype()
+    return pa.from_numpy_dtype(np.promote_types(t1, t2))
 
 
 def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
