@@ -775,6 +775,17 @@ class TestConcat:
 
         df_equals(ref, exp)
 
+    def test_concat_str(self):
+        def concat(df1, df2, lib, **kwargs):
+            return lib.concat([df1.dropna(), df2.dropna()]).astype(str)
+
+        run_and_compare(
+            concat,
+            data={"a": ["1", "2", "3"]},
+            data2={"a": ["4", "5", "6"]},
+            force_lazy=False,
+        )
+
 
 class TestGroupby:
     data = {
