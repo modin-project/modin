@@ -1686,14 +1686,14 @@ class DataFrame(BasePandasDataset):
         self,
         q=0.5,
         axis=0,
-        numeric_only=no_default,
+        numeric_only=False,
         interpolation="linear",
         method="single",
     ):
         return super(DataFrame, self).quantile(
             q=q,
             axis=axis,
-            numeric_only=True if numeric_only is no_default else numeric_only,
+            numeric_only=numeric_only,
             interpolation=interpolation,
             method=method,
         )

@@ -2991,8 +2991,8 @@ class BasePandasDataset(ClassLogger):
             storage_options=storage_options,
         )
 
-    def to_dict(self, orient="dict", into=dict):  # pragma: no cover
-        return self._default_to_pandas("to_dict", orient=orient, into=into)
+    def to_dict(self, orient="dict", into=dict, index=True):  # pragma: no cover
+        return self._default_to_pandas("to_dict", orient=orient, into=into, index=index)
 
     def to_hdf(
         self, path_or_buf, key, format="table", **kwargs
