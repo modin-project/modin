@@ -580,6 +580,7 @@ def read_sql(
     columns=None,
     chunksize=None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    dtype=None,
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL query or database table into a DataFrame.

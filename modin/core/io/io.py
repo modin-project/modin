@@ -22,6 +22,7 @@ from typing import Any
 
 import pandas
 from pandas.util._decorators import doc
+from pandas._libs.lib import no_default
 
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
@@ -436,6 +437,8 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
+        dtype=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
