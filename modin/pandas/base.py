@@ -3067,6 +3067,7 @@ class BasePandasDataset(ClassLogger):
         index=True,
         indent=None,
         storage_options: StorageOptions = None,
+        mode="w",
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Convert the object to a JSON string.
@@ -3085,6 +3086,7 @@ class BasePandasDataset(ClassLogger):
             index=index,
             indent=indent,
             storage_options=storage_options,
+            mode=mode,
         )
 
     def to_latex(
