@@ -602,7 +602,7 @@ def assert_all_act_same(condition, *objs):
     """
     results = [condition(obj) for obj in objs]
     if len(results) < 2:
-        return
+        return results[0] if len(results) else None
 
     assert all(results[0] == res for res in results[1:])
     return results[0]
