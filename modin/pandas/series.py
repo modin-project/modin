@@ -880,11 +880,15 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.dot(other, squeeze_self=True)
         )
 
-    def drop_duplicates(self, keep="first", inplace=False):  # noqa: PR01, RT01, D200
+    def drop_duplicates(
+        self, *, keep="first", inplace=False, ignore_index=False
+    ):  # noqa: PR01, RT01, D200
         """
         Return Series with duplicate values removed.
         """
-        return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
+        return super(Series, self).drop_duplicates(
+            keep=keep, inplace=inplace, ignore_index=ignore_index
+        )
 
     def dropna(self, axis=0, inplace=False, how=None):  # noqa: PR01, RT01, D200
         """

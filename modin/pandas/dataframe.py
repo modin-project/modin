@@ -308,7 +308,7 @@ class DataFrame(BasePandasDataset):
         return 2
 
     def drop_duplicates(
-        self, subset=None, keep="first", inplace=False, ignore_index=False
+        self, subset=None, *, keep="first", inplace=False, ignore_index=False
     ):  # noqa: PR01, RT01, D200
         """
         Return ``DataFrame`` with duplicate rows removed.
