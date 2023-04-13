@@ -1966,11 +1966,10 @@ class Series(BasePandasDataset):
         self,
         cond,
         other=no_default,
+        *,
         inplace=False,
         axis=None,
         level=None,
-        errors=no_default,
-        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.
@@ -1984,8 +1983,6 @@ class Series(BasePandasDataset):
             inplace=inplace,
             axis=axis,
             level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     @property

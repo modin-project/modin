@@ -2372,11 +2372,10 @@ class DataFrame(BasePandasDataset):
         self,
         cond,
         other=no_default,
+        *,
         inplace=False,
         axis=None,
         level=None,
-        errors="raise",
-        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.
@@ -2396,8 +2395,6 @@ class DataFrame(BasePandasDataset):
                 inplace=False,
                 axis=axis,
                 level=level,
-                errors=errors,
-                try_cast=try_cast,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         cond = cond(self) if callable(cond) else cond
