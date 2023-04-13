@@ -26,6 +26,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -132,7 +133,10 @@ def test_mixed_inner_concat():
     mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     df_equals(
-        pd.concat(mixed_dfs, join="inner"), pandas.concat([df, df2, df3], join="inner")
+        pd.concat(mixed_dfs, join="inner"),
+        pandas.concat([df, df2, df3], join="inner"),
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=False,
     )
 
 
@@ -249,6 +253,8 @@ def test_sort_order(sort, join, axis):
     df_equals(
         pandas_concat,
         modin_concat,
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=join != "inner",
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)
 
@@ -274,16 +280,31 @@ def test_concat_empty(data1, index1, data2, index2, axis, join):
     mdf1 = pd.DataFrame(data1, index=index1)
     mdf2 = pd.DataFrame(data2, index=index2)
     mdf = pd.concat((mdf1, mdf2), axis=axis, join=join)
-    df_equals(pdf, mdf)
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=join != "inner",
+    )
 
 
 def test_concat_empty_df_series():
     pdf = pandas.concat((pandas.DataFrame({"A": [1, 2, 3]}), pandas.Series()))
     mdf = pd.concat((pd.DataFrame({"A": [1, 2, 3]}), pd.Series()))
-    df_equals(pdf, mdf)
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5964
+        check_dtypes=False,
+    )
     pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
     mdf = pd.concat((pd.DataFrame(), pd.Series([1, 2, 3])))
-    df_equals(pdf, mdf)
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5964
+        check_dtypes=False,
+    )
 
 
 @pytest.mark.skipif(
@@ -336,4 +357,13 @@ def test_concat_different_num_cols(
 
     mdf = concat(pd.DataFrame, pd)
     pdf = concat(pandas.DataFrame, pandas)
-    df_equals(pdf, mdf)
+    df_equals(
+        pdf,
+        mdf,
+        # Empty slicing causes this bug:
+        # https://github.com/modin-project/modin/issues/5974
+        check_dtypes=not (
+            get_current_execution() == "BaseOnPython"
+            and any(o == 0 for o in (df1_cols, df2_cols, df1_rows, df2_rows))
+        ),
+    )

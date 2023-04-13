@@ -21,6 +21,7 @@ import fsspec
 from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
+from pandas.io.common import stringify_path
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -612,6 +613,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
+        if any(arg not in ("storage_options", "use_nullable_dtypes") for arg in kwargs):
+            return cls.single_worker_read(
+                path,
+                engine=engine,
+                columns=columns,
+                reason="Parquet options that are not currently supported",
+                **kwargs,
+            )
+        path = stringify_path(path)
         if isinstance(path, list):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
             # files in parallel.

@@ -242,7 +242,7 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Rebalancing partitions is only supported for Dask and Ray engines",
 )
 @pytest.mark.parametrize(
@@ -358,7 +358,7 @@ def test_rebalance_partitions(test_type, set_num_partitions):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Only Dask and Ray engines have virtual partitions.",
 )
 @pytest.mark.parametrize(
@@ -476,7 +476,7 @@ class TestDrainVirtualPartitionCallQueue:
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="Only Dask and Ray engines have virtual partitions.",
 )
 @pytest.mark.parametrize(
@@ -901,3 +901,73 @@ def test_shuffle_partitions_with_empty_pivots(ascending):
 
     assert new_partitions.shape == (1, 1)
     assert ref.equals(res)
+
+
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partition_preserve_names(ascending):
+    """
+    This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
+    preserve their index/column names.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    index_name = "custom_name"
+    df.index.name = index_name
+    df.columns.name = index_name
+
+    # Pivots that contain empty bins
+    pivots = [2, 2, 5, 7]
+    splits = split_partitions_using_pivots_for_sort(
+        df, df, column="numeric_col", pivots=pivots, ascending=ascending
+    )
+
+    for part in splits:
+        assert part.index.name == index_name
+        assert part.columns.name == index_name
+
+
+@pytest.mark.parametrize("has_cols_metadata", [True, False])
+@pytest.mark.parametrize("has_dtypes_metadata", [True, False])
+def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
+    df1 = pd.DataFrame({"a": [1, 1, 2, 2], "b": list("abcd")})
+    df2 = pd.DataFrame({"a": [4, 2, 1, 3], "b": list("bcaf"), "c": [3, 2, 1, 0]})
+
+    modin_frame = df1._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_materialized_columns
+    else:
+        modin_frame._columns_cache = None
+
+    if has_dtypes_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_dtypes_cache
+    else:
+        modin_frame.set_dtypes_cache(None)
+
+    res = df1.merge(df2, on="b")._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        assert res.has_materialized_columns
+        if has_dtypes_metadata:
+            assert res.has_dtypes_cache
+        else:
+            # Verify that no materialization was triggered
+            assert not res.has_dtypes_cache
+            assert not modin_frame.has_dtypes_cache
+    else:
+        # Verify that no materialization was triggered
+        assert not res.has_materialized_columns
+        assert not res.has_dtypes_cache
+        assert not modin_frame.has_materialized_columns
+        if not has_dtypes_metadata:
+            assert not modin_frame.has_dtypes_cache

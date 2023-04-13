@@ -40,7 +40,7 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, MinPartitionSize
+from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
@@ -513,6 +513,18 @@ def test_loc_4456(
 
     eval_loc(modin_df, pandas_df, pdf_value, key)
     eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
+
+
+def test_loc_5829():
+    data = {"a": [1, 2, 3, 4, 5], "b": [11, 12, 13, 14, 15]}
+    modin_df = pd.DataFrame(data, dtype=object)
+    pandas_df = pandas.DataFrame(data, dtype=object)
+    eval_loc(
+        modin_df,
+        pandas_df,
+        value=np.array([[24, 34, 44], [25, 35, 45]]),
+        key=([3, 4], ["c", "d", "e"]),
+    )
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
@@ -1382,7 +1394,19 @@ def test_reset_index(data, test_async_reset_index):
     df_equals(modin_df_cp, pd_df_cp)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    [
+        test_data["int_data"],
+        pytest.param(
+            test_data["float_nan_data"],
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="https://github.com/modin-project/modin/issues/2896",
+            ),
+        ),
+    ],
+)
 def test_reset_index_multiindex_groupby(data):
     # GH#4394
     modin_df, pandas_df = create_test_dfs(data)
@@ -1548,7 +1572,13 @@ def test_reset_index_with_multi_index_no_drop(
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
         modin_df._query_compiler._modin_frame.set_index_cache(None)
-    eval_general(modin_df, pandas_df, lambda df: df.reset_index(**kwargs))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index(**kwargs),
+        # https://github.com/modin-project/modin/issues/5960
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
@@ -1648,7 +1678,19 @@ def test_reset_index_with_multi_index_drop(
     )
 
 
-@pytest.mark.parametrize("test_async_reset_index", [False, True])
+@pytest.mark.parametrize(
+    "test_async_reset_index",
+    [
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not store trivial indexes.",
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("index_levels_names_max_levels", [0, 1, 2])
 def test_reset_index_with_named_index(
     index_levels_names_max_levels, test_async_reset_index
@@ -2087,6 +2129,10 @@ def test___setitem__(data):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/165",
+)
 def test___setitem__partitions_aligning():
     # from issue #2390
     modin_df = pd.DataFrame({"a": [1, 2, 3]})
@@ -2154,6 +2200,9 @@ def test___setitem__mask():
         modin_df[array] = 20
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk", reason="https://github.com/intel-ai/hdk/issues/165"
+)
 @pytest.mark.parametrize(
     "data",
     [
@@ -2187,7 +2236,15 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
-    eval_general(modin_df, pandas_df, applyier)
+    eval_general(
+        modin_df,
+        pandas_df,
+        applyier,
+        # https://github.com/modin-project/modin/issues/5961
+        comparator_kwargs={
+            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
+        },
+    )
 
 
 def test_setitem_on_empty_df_4407():

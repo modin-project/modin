@@ -52,13 +52,13 @@ def eval_io(
     For parameters description please refer to ``modin.pandas.test.utils.eval_io``.
     """
 
-    def hdk_comparator(df1, df2):
+    def hdk_comparator(df1, df2, **kwargs):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to HDK."""
         with ForceHdkImport(df1, df2):
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             df1, df2 = align_datetime_dtypes(df1, df2)
-            comparator(df1, df2)
+            comparator(df1, df2, **kwargs)
 
     general_eval_io(
         fn_name,
@@ -161,13 +161,17 @@ class ForceHdkImport:
             df.shape  # to trigger real execution
             if df.empty:
                 continue
-            partition = df._query_compiler._modin_frame._partitions[0][0]
+            modin_frame = df._query_compiler._modin_frame
+            partition = modin_frame._partitions[0][0]
             if partition.frame_id is not None:
                 continue
             frame = partition.get()
             if isinstance(frame, (pandas.DataFrame, pandas.Series)):
-                frame_id = DbWorker().import_pandas_dataframe(frame)
-            elif isinstance(frame, pa.Table):
+                frame = pa.Table.from_pandas(frame)
+            if isinstance(frame, pa.Table):
+                _, cols = modin_frame._partition_mgr_cls._get_unsupported_cols(frame)
+                if len(cols) != 0:
+                    continue
                 frame_id = DbWorker().import_arrow_table(frame)
             else:
                 raise TypeError(
@@ -198,8 +202,6 @@ class ForceHdkImport:
             # as it has a chance of running via pyarrow bypassing HDK
             new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
                 modin_frame._op,
-                modin_frame._index_cols,
-                modin_frame._dtypes,
                 modin_frame._table_cols,
             )
             modin_frame._partitions = new_partitions

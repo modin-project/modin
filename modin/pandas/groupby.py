@@ -36,6 +36,7 @@ from modin.utils import (
     wrap_into_list,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.pandas.utils import cast_function_modin2pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
@@ -222,6 +223,20 @@ class DataFrameGroupBy(ClassLogger):
 
     def sem(self, ddof=1):
         return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+
+    def sample(self, n=None, frac=None, replace=False, weights=None, random_state=None):
+        return self._default_to_pandas(
+            lambda df: df.sample(
+                n=n,
+                frac=frac,
+                replace=replace,
+                weights=weights,
+                random_state=random_state,
+            )
+        )
+
+    def ewm(self, *args, **kwargs):
+        return self._default_to_pandas(lambda df: df.ewm(*args, **kwargs))
 
     def value_counts(
         self,
@@ -419,6 +434,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, **kwargs):
+        func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
@@ -1385,6 +1401,27 @@ class SeriesGroupBy(DataFrameGroupBy):
                 dropna=dropna,
             )
         )
+
+    @property
+    def is_monotonic_decreasing(self):
+        return self._default_to_pandas(lambda ser: ser.is_monotonic_decreasing)
+
+    @property
+    def is_monotonic_increasing(self):
+        return self._default_to_pandas(lambda ser: ser.is_monotonic_increasing)
+
+    def nlargest(self, n: int = 5, keep: str = "first") -> Series:
+        return self._default_to_pandas(lambda ser: ser.nlargest(n=n, keep=keep))
+
+    def nsmallest(self, n: int = 5, keep: str = "first") -> Series:
+        return self._default_to_pandas(lambda ser: ser.nsmallest(n=n, keep=keep))
+
+    def unique(self):
+        return self._default_to_pandas(lambda ser: ser.unique())
+
+    @property
+    def dtype(self):
+        return self._default_to_pandas(lambda ser: ser.dtype)
 
 
 if IsExperimental.get():

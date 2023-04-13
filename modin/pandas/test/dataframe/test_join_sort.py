@@ -166,6 +166,21 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_5203():
+    data = np.ones([2, 4])
+    kwargs = {"columns": ["a", "b", "c", "d"]}
+    modin_dfs, pandas_dfs = [None] * 3, [None] * 3
+    for idx in range(len(modin_dfs)):
+        modin_dfs[idx], pandas_dfs[idx] = create_test_dfs(data, **kwargs)
+
+    for dfs in (modin_dfs, pandas_dfs):
+        with pytest.raises(
+            ValueError,
+            match="Joining multiple DataFrames only supported for joining on index",
+        ):
+            dfs[0].join([dfs[1], dfs[2]], how="inner", on="a")
+
+
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
@@ -333,6 +348,30 @@ def test_merge(test_data, test_data2):
 
     with pytest.raises(TypeError):
         modin_df.merge("Non-valid type")
+
+
+def test_merge_with_mi_columns():
+    modin_df1, pandas_df1 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "b"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {
+            ("col0", "a"): [1, 2, 3, 4],
+            ("col0", "c"): [2, 3, 4, 5],
+            ("col1", "a"): [3, 4, 5, 6],
+        }
+    )
+
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on=[("col0", "a")]),
+    )
 
 
 @pytest.mark.parametrize("has_index_cache", [True, False])
@@ -619,6 +658,35 @@ def test_sort_values_descending_with_only_two_bins():
     )
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/3941",
+)
+@pytest.mark.parametrize("ignore_index", [True, False])
+def test_sort_values_preserve_index_names(ignore_index):
+    modin_df, pandas_df = create_test_dfs(
+        np.random.choice(128, 128, replace=False).reshape((128, 1))
+    )
+
+    pandas_df.index.names, pandas_df.columns.names = ["custom_name"], ["custom_name"]
+    modin_df.index.names, modin_df.columns.names = ["custom_name"], ["custom_name"]
+    # workaround for #1618 to actually propagate index change
+    modin_df.index = modin_df.index
+    modin_df.columns = modin_df.columns
+
+    def comparator(df1, df2):
+        assert df1.index.names == df2.index.names
+        assert df1.columns.names == df2.columns.names
+        df_equals(df1, df2)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.sort_values(df.columns[0], ignore_index=ignore_index),
+        comparator=comparator,
+    )
+
+
 @pytest.mark.parametrize("ascending", [True, False])
 def test_sort_values_with_one_partition(ascending):
     # Test case from https://github.com/modin-project/modin/issues/5859
@@ -723,7 +791,7 @@ def test_sort_values_with_string_index():
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="We only need to test this case where sort does not default to pandas.",
 )
 @pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
@@ -746,7 +814,7 @@ def test_sort_values_with_only_one_non_na_row_in_partition(ascending, na_positio
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ["Ray", "Dask", "Unidist"],
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason="We only need to test this case where sort does not default to pandas.",
 )
 def test_sort_values_with_sort_key_on_partition_boundary():

@@ -245,6 +245,22 @@ def test_apply_udf(data, func):
     )
 
 
+def test_apply_modin_func_4635():
+    data = [1]
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df.apply(pd.Series.sum), pandas_df.apply(pandas.Series.sum))
+
+    data = {"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]}
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_df = modin_df.set_index(["a"])
+    pandas_df = pandas_df.set_index(["a"])
+
+    df_equals(
+        modin_df.groupby("a", group_keys=False).apply(pd.DataFrame.sample, n=1),
+        pandas_df.groupby("a", group_keys=False).apply(pandas.DataFrame.sample, n=1),
+    )
+
+
 def test_eval_df_use_case():
     frame_data = {"a": random_state.randn(10), "b": random_state.randn(10)}
     df = pandas.DataFrame(frame_data)
@@ -370,7 +386,7 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         # `dtypes` must be evaluated after `query` so we need to check cache
-        assert modin_result._query_compiler._modin_frame._dtypes is not None
+        assert modin_result._query_compiler._modin_frame.has_dtypes_cache
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 

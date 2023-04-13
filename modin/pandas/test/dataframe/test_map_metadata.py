@@ -502,7 +502,42 @@ def test_astype():
 def test_astype_errors(errors):
     data = {"a": ["a", 2, -1]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.astype("int", errors=errors),
+        # https://github.com/modin-project/modin/issues/5962
+        comparator_kwargs={"check_dtypes": errors != "ignore"},
+    )
+
+
+@pytest.mark.parametrize(
+    "has_dtypes",
+    [
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not support cases when `.dtypes` is None",
+            ),
+        ),
+        True,
+    ],
+)
+def test_astype_copy(has_dtypes):
+    data = [1]
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    if not has_dtypes:
+        modin_df._query_compiler._modin_frame.set_dtypes_cache(None)
+    eval_general(modin_df, pandas_df, lambda df: df.astype(str, copy=False))
+
+    # trivial case where copying can be avoided, behavior should match pandas
+    s1 = pd.Series([1, 2])
+    if not has_dtypes:
+        modin_df._query_compiler._modin_frame.set_dtypes_cache(None)
+    s2 = s1.astype("int64", copy=False)
+    s2[0] = 10
+    df_equals(s1, s2)
 
 
 @pytest.mark.parametrize("dtypes_are_dict", [True, False])
@@ -622,6 +657,10 @@ def test_convert_dtypes_single_partition(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="HDK does not support columns with different types",
+)
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -714,10 +753,10 @@ def test_drop():
     df_equals(modin_simple.drop([0, 1, 3], axis=0), simple.loc[[2], :])
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
-    pytest.raises(ValueError, modin_simple.drop, 5)
-    pytest.raises(ValueError, modin_simple.drop, "C", 1)
-    pytest.raises(ValueError, modin_simple.drop, [1, 5])
-    pytest.raises(ValueError, modin_simple.drop, ["A", "C"], 1)
+    pytest.raises(KeyError, modin_simple.drop, 5)
+    pytest.raises(KeyError, modin_simple.drop, "C", 1)
+    pytest.raises(KeyError, modin_simple.drop, [1, 5])
+    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], 1)
 
     # errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)

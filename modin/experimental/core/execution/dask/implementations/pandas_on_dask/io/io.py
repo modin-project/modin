@@ -62,7 +62,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
 
     def __make_read(*classes, build_args=build_args):  # noqa: GL08
         # used to reduce code duplication
-        return type("", (DaskWrapper, *classes), build_args)._read
+        return type("", (DaskWrapper, *classes), build_args).read
 
     read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
 
@@ -105,7 +105,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
             warnings.warn("Defaulting to Modin core implementation")
             return PandasOnDaskIO.to_pickle(qc, **kwargs)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
             # dask doesn't make a copy of kwargs on serialization;
             # so take a copy ourselves, otherwise the error is:
@@ -121,4 +121,6 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         result = qc._modin_frame.apply_full_axis(
             1, func, new_index=[], new_columns=[], enumerate_partitions=True
         )
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        DaskWrapper.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )

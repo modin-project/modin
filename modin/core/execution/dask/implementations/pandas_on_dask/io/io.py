@@ -13,8 +13,7 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
-import os
-
+import fsspec
 import pandas
 
 from modin.core.io import BaseIO
@@ -27,6 +26,7 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
 )
 from modin.core.io import (
     CSVDispatcher,
+    FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
     FeatherDispatcher,
@@ -35,6 +35,7 @@ from modin.core.io import (
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
     PandasFeatherParser,
@@ -55,22 +56,21 @@ class PandasOnDaskIO(BaseIO):
         query_compiler_cls=PandasQueryCompiler,
     )
 
-    read_csv = type("", (DaskWrapper, PandasCSVParser, CSVDispatcher), build_args).read
-    read_json = type(
-        "", (DaskWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (DaskWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).read
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (DaskWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (DaskWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type("", (DaskWrapper, PandasSQLParser, SQLDispatcher), build_args).read
-    read_excel = type(
-        "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
@@ -113,7 +113,9 @@ class PandasOnDaskIO(BaseIO):
             return BaseIO.to_parquet(qc, **kwargs)
 
         output_path = kwargs["path"]
-        os.makedirs(output_path, exist_ok=True)
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
+        fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
+        fs.mkdirs(url, exist_ok=True)
 
         def func(df, **kw):
             """
@@ -173,7 +175,7 @@ class PandasOnDaskIO(BaseIO):
         kwargs["if_exists"] = "append"
         columns = qc.columns
 
-        def func(df):
+        def func(df):  # pragma: no cover
             """
             Override column names in the wrapped dataframe and convert it to SQL.
 
@@ -189,4 +191,6 @@ class PandasOnDaskIO(BaseIO):
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        DaskWrapper.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )

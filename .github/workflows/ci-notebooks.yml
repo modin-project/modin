@@ -7,6 +7,13 @@ on:
       - .github/workflows/ci-notebooks.yml
       - setup.cfg
       - setup.py
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-tutorial-notebooks:
     defaults:

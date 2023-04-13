@@ -440,18 +440,20 @@ class BaseIO:
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
-        return cls.from_pandas(
-            pandas.read_sql(
-                sql,
-                con,
-                index_col=index_col,
-                coerce_float=coerce_float,
-                params=params,
-                parse_dates=parse_dates,
-                columns=columns,
-                chunksize=chunksize,
-            )
+        result = pandas.read_sql(
+            sql,
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
         )
+
+        if isinstance(result, (pandas.DataFrame, pandas.Series)):
+            return cls.from_pandas(result)
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
