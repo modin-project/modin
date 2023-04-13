@@ -367,8 +367,6 @@ default to pandas.
 | ``skew``                   | `skew`_                   | P                      | Modin defaults to pandas if given the ``level``    |
 |                            |                           |                        | param                                              |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``slice_shift``            | `slice_shift`_            | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``sort_index``             | `sort_index`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``sort_values``            | `sort_values`_            | Y                      | Shuffles data. Order of indexes that have the      |
@@ -634,7 +632,6 @@ default to pandas.
 .. _`shift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.shift.html#pandas.DataFrame.shift
 .. _`size`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.size.html#pandas.DataFrame.size
 .. _`skew`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.skew.html#pandas.DataFrame.skew
-.. _`slice_shift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.slice_shift.html#pandas.DataFrame.slice_shift
 .. _`sort_index`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_index.html#pandas.DataFrame.sort_index
 .. _`sort_values`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_values.html#pandas.DataFrame.sort_values
 .. _`sparse`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sparse.html#pandas-dataframe-sparse

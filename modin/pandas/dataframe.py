@@ -1589,34 +1589,6 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Equivalent to `shift` without copying data.
-        """
-        if periods == 0:
-            return self.copy()
-
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                return self.__constructor__(columns=self.columns)
-            else:
-                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
-                new_df.index = (
-                    self.index[periods:] if periods > 0 else self.index[:periods]
-                )
-                return new_df
-        else:
-            if abs(periods) >= len(self.columns):
-                return self.__constructor__(index=self.index)
-            else:
-                new_df = (
-                    self.iloc[:, :-periods] if periods > 0 else self.iloc[:, -periods:]
-                )
-                new_df.columns = (
-                    self.columns[periods:] if periods > 0 else self.columns[:periods]
-                )
-                return new_df
-
     def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
         """
         Pivot a level of the (necessarily hierarchical) index labels.

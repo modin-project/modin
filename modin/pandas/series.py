@@ -1386,29 +1386,6 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.nsmallest(n=n, keep=keep)
         )
 
-    def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Equivalent to `shift` without copying data.
-        """
-        if periods == 0:
-            return self.copy()
-
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                return self.__constructor__(dtype=self.dtype, name=self.name)
-            else:
-                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
-                new_df.index = (
-                    self.index[periods:] if periods > 0 else self.index[:periods]
-                )
-                return new_df
-        else:
-            raise ValueError(
-                "No axis named {axis} for object type {type}".format(
-                    axis=axis, type=type(self)
-                )
-            )
-
     def shift(
         self, periods=1, freq=None, axis=0, fill_value=None
     ):  # noqa: PR01, RT01, D200

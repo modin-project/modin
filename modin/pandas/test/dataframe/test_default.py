@@ -816,7 +816,7 @@ def test_resample_getitem(columns):
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_shift_slice_shift(data, index, axis, periods):
+def test_shift(data, index, axis, periods):
     modin_df, pandas_df = create_test_dfs(data)
     if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
@@ -831,10 +831,6 @@ def test_shift_slice_shift(data, index, axis, periods):
     df_equals(
         modin_df.shift(periods=periods, axis=axis, fill_value=777),
         pandas_df.shift(periods=periods, axis=axis, fill_value=777),
-    )
-    df_equals(
-        modin_df.slice_shift(periods=periods, axis=axis),
-        pandas_df.slice_shift(periods=periods, axis=axis),
     )
 
 
