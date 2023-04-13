@@ -1035,7 +1035,7 @@ class BasePandasDataset(ClassLogger):
             return self._to_pandas().bool()
 
     def clip(
-        self, lower=None, upper=None, axis=None, inplace=False, *args, **kwargs
+        self, lower=None, upper=None, *, axis=None, inplace=False, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Trim values at input threshold(s).
@@ -1045,7 +1045,7 @@ class BasePandasDataset(ClassLogger):
             axis = self._get_axis_number(axis)
         self._validate_dtypes(numeric_only=True)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        axis = numpy_compat.function.validate_clip_with_axis(axis, args, kwargs)
+        axis = numpy_compat.function.validate_clip_with_axis(axis, (), kwargs)
         # any np.nan bounds are treated as None
         if lower is not None and np.any(np.isnan(lower)):
             lower = None
@@ -1059,7 +1059,7 @@ class BasePandasDataset(ClassLogger):
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+            lower=lower, upper=upper, axis=axis, inplace=inplace, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -1087,21 +1087,15 @@ class BasePandasDataset(ClassLogger):
         self._add_sibling(new_obj)
         return new_obj
 
-    def count(self, axis=0, level=None, numeric_only=False):  # noqa: PR01, RT01, D200
+    def count(self, axis=0, numeric_only=False):  # noqa: PR01, RT01, D200
         """
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
         frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
-        if level is not None:
-            if not frame._query_compiler.has_multiindex(axis=axis):
-                raise TypeError("Can only count levels on hierarchical columns.")
-            return frame.groupby(level=level, axis=axis, sort=True).count()
         return frame._reduce_dimension(
-            frame._query_compiler.count(
-                axis=axis, level=level, numeric_only=numeric_only
-            )
+            frame._query_compiler.count(axis=axis, numeric_only=numeric_only)
         )
 
     def cummax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -1165,7 +1159,10 @@ class BasePandasDataset(ClassLogger):
         )
 
     def describe(
-        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
+        self,
+        percentiles=None,
+        include=None,
+        exclude=None,
     ):  # noqa: PR01, RT01, D200
         """
         Generate descriptive statistics.
@@ -1218,7 +1215,6 @@ class BasePandasDataset(ClassLogger):
                 percentiles=percentiles,
                 include=include,
                 exclude=exclude,
-                datetime_is_numeric=datetime_is_numeric,
             )
         )
 

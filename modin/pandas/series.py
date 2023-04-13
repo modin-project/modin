@@ -772,11 +772,11 @@ class Series(BasePandasDataset):
             )
         )
 
-    def count(self, level=None):  # noqa: PR01, RT01, D200
+    def count(self):  # noqa: PR01, RT01, D200
         """
         Return number of non-NA/null observations in the Series.
         """
-        return super(Series, self).count(level=level)
+        return super(Series, self).count()
 
     def cov(
         self, other, min_periods=None, ddof: Optional[int] = 1
@@ -816,14 +816,19 @@ class Series(BasePandasDataset):
         return result
 
     def describe(
-        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
+        self,
+        percentiles=None,
+        include=None,
+        exclude=None,
     ):  # noqa: PR01, RT01, D200
         """
         Generate descriptive statistics.
         """
         # Pandas ignores the `include` and `exclude` for Series for some reason.
         return super(Series, self).describe(
-            percentiles=percentiles, datetime_is_numeric=datetime_is_numeric
+            percentiles=percentiles,
+            include=include,
+            exclude=exclude,
         )
 
     def diff(self, periods=1):  # noqa: PR01, RT01, D200

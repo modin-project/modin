@@ -1904,9 +1904,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         percentiles : list-like
         include : "all" or list of dtypes, optional
         exclude : list of dtypes, optional
-        datetime_is_numeric : bool
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
