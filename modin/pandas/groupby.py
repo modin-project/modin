@@ -732,7 +732,10 @@ class DataFrameGroupBy(ClassLogger):
                 kwargs = {}
             func = func_dict
         elif is_list_like(func):
-            return self._wrap_aggregation(
+            # for list-list aggregation pandas always puts
+            # groups as index in the result, ignoring as_index,
+            # so we have to reset it to default value
+            return self.__override(as_index=True)._wrap_aggregation(
                 qc_method=type(self._query_compiler).groupby_agg,
                 numeric_only=False,
                 agg_func=func,
