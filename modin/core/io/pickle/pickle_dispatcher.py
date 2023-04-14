@@ -118,7 +118,8 @@ class ExperimentalPickleDispatcher(FileDispatcher):
             and "*" in kwargs["filepath_or_buffer"]
         ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
-            return cls.base_io.to_pickle(qc, **kwargs)
+            cls.base_io.to_pickle(qc, **kwargs)
+            return
 
         def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
