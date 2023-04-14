@@ -32,25 +32,25 @@ if Engine.get() == "Ray":
 
     put_func = RayWrapper.put
     get_func = RayWrapper.materialize
-    FutureType = ObjectRef
+    is_future = lambda obj: isinstance(obj, ObjectRef)  # noqa: E731
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
 
     put_func = DaskWrapper.put
     get_func = DaskWrapper.materialize
-    FutureType = Future
+    is_future = lambda obj: isinstance(obj, Future)  # noqa: E731
 elif Engine.get() == "Unidist":
     from modin.core.execution.unidist.common import UnidistWrapper
-    from unidist import ObjectRef
+    from unidist import is_object_ref
 
     put_func = UnidistWrapper.put
     get_func = UnidistWrapper.materialize
-    FutureType = ObjectRef
+    is_future = is_object_ref
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
     get_func = lambda x: x  # noqa: E731
-    FutureType = object
+    is_future = lambda obj: isinstance(obj, object)  # noqa: E731
 else:
     raise NotImplementedError(
         f"'{Engine.get()}' engine is not supported by these test suites"
@@ -190,7 +190,7 @@ def test_from_partitions_mismatched_labels(axis, index, columns):
 @pytest.mark.parametrize("is_width_future", [False, True])
 def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_future):
     def deserialize(obj):
-        if isinstance(obj, FutureType):
+        if is_future(obj):
             return get_func(obj)
         return obj
 
