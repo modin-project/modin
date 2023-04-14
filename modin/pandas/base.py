@@ -3529,9 +3529,7 @@ class BasePandasDataset(ClassLogger):
         # see if we can slice the rows
         # This lets us reuse code in pandas to error check
         indexer = None
-        if isinstance(key, slice) or (
-            isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
-        ):
+        if isinstance(key, slice):
             indexer = self.index._convert_slice_indexer(key, kind="getitem")
         if indexer is not None:
             return self._getitem_slice(indexer)
