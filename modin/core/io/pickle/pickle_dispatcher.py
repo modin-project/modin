@@ -96,13 +96,13 @@ class ExperimentalPickleDispatcher(FileDispatcher):
     @classmethod
     def write(cls, qc, **kwargs):
         """
-        When `*` in the filename all partitions are written to their own separate file.
+        When `*` is in the filename, all partitions are written to their own separate file.
 
         The filenames is determined as follows:
-        - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
-        - if `*` is not the filename, then will be used default implementation.
+        - if `*` is in the filename, then it will be replaced by the ascending sequence 0, 1, 2, …
+        - if `*` is not in the filename, then the default implementation will be used.
 
-        Examples #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
+        Example: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
         `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
 
         Parameters
