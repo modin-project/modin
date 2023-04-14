@@ -125,27 +125,6 @@ class TimeMerge:
         )
 
 
-class TimeAppend:
-    param_names = ["shapes"]
-    params = [get_benchmark_shapes("hdk.TimeAppend")]
-
-    def setup(self, shapes):
-        self.df1, self.df2 = (
-            generate_dataframe(
-                "int",
-                *shape,
-                RAND_LOW,
-                RAND_HIGH,
-                cache_prefix=f"{i}-th_frame_to_append",
-            )
-            for i, shape in enumerate(shapes)
-        )
-        trigger_import(self.df1, self.df2)
-
-    def time_append(self, shapes):
-        execute(self.df1.append(self.df2))
-
-
 class TimeBinaryOpDataFrame:
     param_names = ["shape", "binary_op"]
     params = [
