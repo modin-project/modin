@@ -3327,7 +3327,7 @@ class BasePandasDataset(ClassLogger):
         else:
             new_labels = self.axes[axis].tz_convert(tz)
         obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, copy=copy)
+        return obj.set_axis(new_labels, axis=axis, copy=copy)
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=None, ambiguous="raise", nonexistent="raise"

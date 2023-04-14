@@ -1278,9 +1278,7 @@ class DataFrameGroupBy(ClassLogger):
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            groupby_obj = df.groupby(
-                by=by, axis=self._axis, squeeze=self._squeeze, **self._kwargs
-            )
+            groupby_obj = df.groupby(by=by, axis=self._axis, **self._kwargs)
 
             if callable(f):
                 return f(groupby_obj, *args, **kwargs)
