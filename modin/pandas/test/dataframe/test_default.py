@@ -389,7 +389,7 @@ def test_info_default_param(data):
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
 @pytest.mark.parametrize("show_counts", [True, False])
-def atest_info(data, verbose, max_cols, memory_usage, show_counts):
+def test_info(data, verbose, max_cols, memory_usage, show_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -664,9 +664,7 @@ def test_resampler(rule, axis):
         test_data_resample["index"],
     )
     modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis)
-    pandas_resampler = pandas.DataFrame(data, index=index).resample(
-        rule, axis=axis
-    )
+    pandas_resampler = pandas.DataFrame(data, index=index).resample(rule, axis=axis)
 
     assert pandas_resampler.indices == modin_resampler.indices
     assert pandas_resampler.groups == modin_resampler.groups

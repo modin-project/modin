@@ -61,17 +61,16 @@ class CategoryMethods(ClassLogger):
     def codes(self):
         return Series(query_compiler=self._query_compiler.cat_codes())
 
-    def rename_categories(self, new_categories, inplace=False):
+    def rename_categories(self, new_categories):
         return self._default_to_pandas(
-            pandas.Series.cat.rename_categories, new_categories, inplace=inplace
+            pandas.Series.cat.rename_categories, new_categories
         )
 
-    def reorder_categories(self, new_categories, ordered=None, inplace=False):
+    def reorder_categories(self, new_categories, ordered=None):
         return self._default_to_pandas(
             pandas.Series.cat.reorder_categories,
             new_categories,
             ordered=ordered,
-            inplace=inplace,
         )
 
     def add_categories(self, new_categories, inplace=False):
@@ -98,11 +97,11 @@ class CategoryMethods(ClassLogger):
             inplace=inplace,
         )
 
-    def as_ordered(self, inplace=False):
-        return self._default_to_pandas(pandas.Series.cat.as_ordered, inplace=inplace)
+    def as_ordered(self, *args, **kwargs):
+        return self._default_to_pandas(pandas.Series.cat.as_ordered, *args, **kwargs)
 
-    def as_unordered(self, inplace=False):
-        return self._default_to_pandas(pandas.Series.cat.as_unordered, inplace=inplace)
+    def as_unordered(self, *args, **kwargs):
+        return self._default_to_pandas(pandas.Series.cat.as_unordered, *args, **kwargs)
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """

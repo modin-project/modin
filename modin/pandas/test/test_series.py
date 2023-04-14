@@ -2852,7 +2852,6 @@ def test_replace():
 def test_resample(closed, label, level):
     rule = "5T"
     freq = "H"
-    base = 2
 
     index = pandas.date_range("1/1/2000", periods=12, freq=freq)
     pandas_series = pandas.Series(range(12), index=index)
@@ -4574,11 +4573,10 @@ def test_cat_codes_issue5650(set_min_partition_size):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_rename_categories(data, inplace):
+def test_cat_rename_categories(data):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.rename_categories(list("qwert"), inplace=inplace)
-    modin_result = modin_series.cat.rename_categories(list("qwert"), inplace=inplace)
+    pandas_result = pandas_series.cat.rename_categories(list("qwert"))
+    modin_result = modin_series.cat.rename_categories(list("qwert"))
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4587,15 +4585,10 @@ def test_cat_rename_categories(data, inplace):
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
 @pytest.mark.parametrize("ordered", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_reorder_categories(data, ordered, inplace):
+def test_cat_reorder_categories(data, ordered):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.reorder_categories(
-        list("tades"), ordered=ordered, inplace=inplace
-    )
-    modin_result = modin_series.cat.reorder_categories(
-        list("tades"), ordered=ordered, inplace=inplace
-    )
+    pandas_result = pandas_series.cat.reorder_categories(list("tades"), ordered=ordered)
+    modin_result = modin_series.cat.reorder_categories(list("tades"), ordered=ordered)
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4659,11 +4652,10 @@ def test_cat_set_categories(data, ordered, rename, inplace):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_as_ordered(data, inplace):
+def test_cat_as_ordered(data):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.as_ordered(inplace=inplace)
-    modin_result = modin_series.cat.as_ordered(inplace=inplace)
+    pandas_result = pandas_series.cat.as_ordered()
+    modin_result = modin_series.cat.as_ordered()
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4671,11 +4663,10 @@ def test_cat_as_ordered(data, inplace):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_as_unordered(data, inplace):
+def test_cat_as_unordered(data):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.as_unordered(inplace=inplace)
-    modin_result = modin_series.cat.as_unordered(inplace=inplace)
+    pandas_result = pandas_series.cat.as_unordered()
+    modin_result = modin_series.cat.as_unordered()
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
