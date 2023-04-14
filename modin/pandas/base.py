@@ -1235,6 +1235,7 @@ class BasePandasDataset(ClassLogger):
     def drop(
         self,
         labels=None,
+        *,
         axis=0,
         index=None,
         columns=None,
@@ -1262,12 +1263,12 @@ class BasePandasDataset(ClassLogger):
         if labels is not None:
             if index is not None or columns is not None:
                 raise ValueError("Cannot specify both 'labels' and 'index'/'columns'")
-            axis = pandas.DataFrame()._get_axis_name(axis)
-            axes = {axis: labels}
+            axis_name = self._get_axis_name(axis)
+            axes = {axis_name: labels}
         elif index is not None or columns is not None:
-            axes, _ = pandas.DataFrame()._construct_axes_from_arguments(
-                (index, columns), {}
-            )
+            axes = {"index": index}
+            if self.ndim == 2:
+                axes["columns"] = columns
         else:
             raise ValueError(
                 "Need to specify at least one of 'labels', 'index' or 'columns'"

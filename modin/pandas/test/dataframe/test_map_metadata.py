@@ -689,9 +689,9 @@ def test_drop():
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
     pytest.raises(KeyError, modin_simple.drop, 5)
-    pytest.raises(KeyError, modin_simple.drop, "C", 1)
+    pytest.raises(KeyError, modin_simple.drop, "C", axis=1)
     pytest.raises(KeyError, modin_simple.drop, [1, 5])
-    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], 1)
+    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], axis=1)
 
     # errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)
