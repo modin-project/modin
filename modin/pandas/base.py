@@ -1674,7 +1674,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def infer_objects(self, copy=None):  # noqa: RT01, D200
+    def infer_objects(self, copy=None):  # noqa: PR01, RT01, D200
         """
         Attempt to infer better dtypes for object columns.
         """

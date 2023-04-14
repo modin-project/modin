@@ -190,9 +190,6 @@ def read_csv(
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
     }
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    f_locals.pop("mangle_dupe_cols", None)
     kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
     return _read(**kwargs)
 
@@ -265,9 +262,6 @@ def read_table(
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
     if f_locals.get("sep", sep) is False or f_locals.get("sep", sep) is no_default:
         f_locals["sep"] = "\t"
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    f_locals.pop("mangle_dupe_cols", None)
     kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_table_signature}
     return _read(**kwargs)
 
@@ -438,9 +432,6 @@ def read_excel(
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    kwargs.pop("mangle_dupe_cols", None)
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 

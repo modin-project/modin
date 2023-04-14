@@ -264,7 +264,6 @@ class TestCsv:
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
-    @pytest.mark.parametrize("prefix", [None, "_", "col"])
     @pytest.mark.parametrize(
         "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
     )
@@ -276,7 +275,6 @@ class TestCsv:
         self,
         header,
         index_col,
-        prefix,
         names,
         usecols,
         skip_blank_lines,
@@ -293,7 +291,6 @@ class TestCsv:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
             header=header,
             index_col=index_col,
-            prefix=prefix,
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
@@ -460,50 +457,6 @@ class TestCsv:
 
             eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
-    @pytest.mark.parametrize(
-        "test_case",
-        ["single_element", "single_column", "multiple_columns"],
-    )
-    def test_read_csv_squeeze(self, request, test_case):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="Error EOFError: stream has been closed in `modin in the cloud` mode - issue #3329"
-            )
-        with ensure_clean(".csv") as unique_filename:
-            str_single_element = "1"
-            str_single_col = "1\n2\n3\n"
-            str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
-            case_to_data = {
-                "single_element": str_single_element,
-                "single_column": str_single_col,
-                "multiple_columns": str_four_cols,
-            }
-
-            eval_io_from_str(case_to_data[test_case], unique_filename, squeeze=True)
-            eval_io_from_str(
-                case_to_data[test_case], unique_filename, header=None, squeeze=True
-            )
-
-    def test_read_csv_mangle_dupe_cols(self):
-        with ensure_clean() as unique_filename, pytest.warns(
-            FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
-        ):
-            str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
-            eval_io_from_str(
-                str_non_unique_cols, unique_filename, mangle_dupe_cols=True
-            )
-
-    # Putting this filterwarnings in setup.cfg doesn't seem to catch the error.
-    @pytest.mark.filterwarnings(
-        "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
-    )
-    def test_read_csv_does_not_warn_mangle_dupe_cols_kwarg(self):
-        with ensure_clean() as unique_filename:
-            eval_io_from_str(
-                "a,b,c\n1,2,3\n",
-                unique_filename,
-            )
-
     # NA and Missing Data Handling tests
     @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
     @pytest.mark.parametrize("keep_default_na", [True, False])
@@ -536,7 +489,8 @@ class TestCsv:
     @pytest.mark.parametrize("infer_datetime_format", [True, False])
     @pytest.mark.parametrize("keep_date_col", [True, False])
     @pytest.mark.parametrize(
-        "date_parser", [None, lambda x: pandas.to_datetime(x, format="%Y-%m-%d")]
+        "date_parser",
+        [lib.no_default, lambda x: pandas.to_datetime(x, format="%Y-%m-%d")],
     )
     @pytest.mark.parametrize("dayfirst", [True, False])
     @pytest.mark.parametrize("cache_dates", [True, False])
