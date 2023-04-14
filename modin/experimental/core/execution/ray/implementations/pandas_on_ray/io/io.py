@@ -27,10 +27,12 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
 from modin.core.io import (
     CSVGlobDispatcher,
-    ExperimentalPickleDispatcher,
     ExperimentalCustomTextDispatcher,
 )
-from modin.experimental.core.io import ExperimentalSQLDispatcher
+from modin.experimental.core.io import (
+    ExperimentalSQLDispatcher,
+    ExperimentalPickleDispatcher,
+)
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )

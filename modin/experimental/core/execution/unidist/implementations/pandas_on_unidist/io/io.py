@@ -29,10 +29,12 @@ from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
 )
 from modin.core.io import (
     CSVGlobDispatcher,
-    ExperimentalPickleDispatcher,
     ExperimentalCustomTextDispatcher,
 )
-from modin.experimental.core.io import ExperimentalSQLDispatcher
+from modin.experimental.core.io import (
+    ExperimentalSQLDispatcher,
+    ExperimentalPickleDispatcher,
+)
 from modin.core.execution.unidist.implementations.pandas_on_unidist.dataframe import (
     PandasOnUnidistDataframe,
 )
