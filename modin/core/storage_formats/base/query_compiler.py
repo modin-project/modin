@@ -1603,13 +1603,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, dtype=col_dtypes, errors=errors
         )
 
-    def infer_objects(self, copy):
+    def infer_objects(self, copy=None):
         """
         Attempt to infer better dtypes for object columns.
 
         Attempts soft conversion of object-dtyped columns, leaving non-object
         and unconvertible columns unchanged. The inference rules are the same
         as during normal Series/DataFrame construction.
+
+        Parameters
+        ----------
+        copy : bool, optional
+            Whether to make a copy for non-object or non-inferrable columns or Series.
 
         Returns
         -------
@@ -1644,10 +1649,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Whether, if possible, conversion can be done to floating extension types.
             If `convert_integer` is also True, preference will be give to integer dtypes
             if the floats can be faithfully casted to integers.
-        dtype_backend : {"numpy_nullable", "pyarrow"}, default "numpy_nullable"
+        dtype_backend : {"numpy_nullable", "pyarrow"}, default: "numpy_nullable"
             Which dtype_backend to use, e.g. whether a DataFrame should use nullable
             dtypes for all dtypes that have a nullable
-            implementation when "numpy_nullable" is set, pyarrow is used for all
+            implementation when "numpy_nullable" is set, PyArrow is used for all
             dtypes if "pyarrow" is set.
 
         Returns
