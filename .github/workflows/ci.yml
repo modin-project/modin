@@ -314,7 +314,6 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/base/test_internals.py
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
-      - run: python -m pytest modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
@@ -629,6 +628,7 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
@@ -749,6 +749,8 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+      - run: python -m pytest modin/test/test_partition_api.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'

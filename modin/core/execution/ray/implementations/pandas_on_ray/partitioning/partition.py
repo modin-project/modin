@@ -317,10 +317,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             IP address of the node that holds the data.
         """
         if self._ip_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._ip_cache = self.apply(lambda df: df)._ip_cache
+            self._ip_cache = self.apply(lambda df: df)._ip_cache
         if isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache

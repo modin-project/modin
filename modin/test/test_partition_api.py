@@ -40,6 +40,13 @@ elif Engine.get() == "Dask":
     put_func = DaskWrapper.put
     get_func = DaskWrapper.materialize
     FutureType = Future
+elif Engine.get() == "Unidist":
+    from modin.core.execution.unidist.common import UnidistWrapper
+    from unidist import ObjectRef
+
+    put_func = UnidistWrapper.put
+    get_func = UnidistWrapper.materialize
+    FutureType = ObjectRef
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
     get_func = lambda x: x  # noqa: E731
@@ -132,7 +139,7 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
         else [num_cols, num_cols]
     )
     futures = []
-    if Engine.get() == "Ray":
+    if Engine.get() in ("Ray", "Unidist"):
         if axis is None:
             futures = [[put_func(df1), put_func(df2)]]
         else:
