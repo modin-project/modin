@@ -748,6 +748,8 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+      - run: python -m pytest modin/pandas/test/internals/test_progress_bar.py
+        if: matrix.engine != 'python' && matrix.test_task == 'group_1'
       - run: python -m pytest modin/pandas/test/internals/test_repartition.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py

@@ -62,6 +62,7 @@ from modin.config import (  # noqa: E402
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     AsyncReadMode,
+    ProgressBar,
 )
 import uuid  # noqa: E402
 
@@ -574,6 +575,13 @@ def set_min_partition_size(request):
     MinPartitionSize.put(request.param)
     yield
     MinPartitionSize.put(old_min_partition_size)
+
+
+@pytest.fixture
+def enable_benchmark_mode(request):
+    ProgressBar.enable()
+    yield
+    ProgressBar.disable()
 
 
 ray_client_server = None
