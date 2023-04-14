@@ -3350,7 +3350,7 @@ class BasePandasDataset(ClassLogger):
             )
             .index
         )
-        return self.set_axis(new_labels, axis, copy=copy)
+        return self.set_axis(new_labels, axis=axis, copy=copy)
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(

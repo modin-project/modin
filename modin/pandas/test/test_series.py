@@ -2865,10 +2865,10 @@ def test_resample(closed, label, level):
         pandas_series.index = index
         modin_series.index = index
     pandas_resampler = pandas_series.resample(
-        rule, closed=closed, label=label, base=base, level=level
+        rule, closed=closed, label=label, level=level
     )
     modin_resampler = modin_series.resample(
-        rule, closed=closed, label=label, base=base, level=level
+        rule, closed=closed, label=label, level=level
     )
 
     df_equals(modin_resampler.count(), pandas_resampler.count())
