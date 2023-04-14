@@ -3038,11 +3038,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
         self_is_series=False,
     ):
-        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        level = groupby_kwargs.get("level", None)
+        if is_list_like(level) and len(level) == 1:
+            level = level[0]
+        # We default to pandas in complex cases of level groupby, i.e. when level is given and
+        # it is not an integer in a multi-index axis or by is not None.
+        complex_level = level is not None and (
+            by is not None
+            or not isinstance(level, int)
+            or not self.has_multiindex(axis)
+        )
+
+        # Also defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.
-        if len(self.columns) == 0 or len(self.index) == 0:
+        if complex_level or len(self.columns) == 0 or len(self.index) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
@@ -3067,6 +3078,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
+        # remove 'level' from kwargs as we're going to handle it separately
+        groupby_kwargs.pop("level", None)
         by, internal_by = self._groupby_internal_columns(by, drop)
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
@@ -3136,6 +3149,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = []
 
             by += not_broadcastable_by
+            if level is not None:
+                assert not by, "When handling simple level groupby, `by` must be empty"
+                by = df.axes[axis].get_level_values(level)
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
