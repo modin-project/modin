@@ -2502,7 +2502,11 @@ class TestStata:
     def test_to_stata(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_stata", extension="stata"
+            tmp_path,
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_stata",
+            extension="stata",
         )
 
 
@@ -2555,6 +2559,7 @@ class TestFeather:
     def test_to_feather(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
+            tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_feather",
