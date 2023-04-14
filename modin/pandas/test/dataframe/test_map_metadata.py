@@ -755,7 +755,7 @@ def test_drop_api_equivalence():
     modin_df2 = modin_df.drop(index="a")
     df_equals(modin_df1, modin_df2)
 
-    modin_df1 = modin_df.drop("d", 1)
+    modin_df1 = modin_df.drop("d", axis=1)
     modin_df2 = modin_df.drop(columns="d")
     df_equals(modin_df1, modin_df2)
 

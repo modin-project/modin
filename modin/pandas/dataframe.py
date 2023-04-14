@@ -1947,6 +1947,30 @@ class DataFrame(BasePandasDataset):
         ]
         return self.drop(columns=self.columns[indicate], inplace=False)
 
+    def __array_wrap__(self, result, context=None):
+        """
+        Get called after a ufunc and other functions.
+
+        Parameters
+        ----------
+        result : np.ndarray
+            The result of the ufunc or other function called on the NumPy array
+            returned by __array__.
+        context : tuple of (func, tuple, int), optional
+            This parameter is returned by ufuncs as a 3-element tuple: (name of the
+            ufunc, arguments of the ufunc, domain of the ufunc), but is not set by
+            other NumPy functions.
+
+        Returns
+        -------
+        BasePandasDataset
+            Wrapped Modin object.
+        """
+        # TODO: This is very inefficient. __array__ and as_matrix have been
+        # changed to call the more efficient to_numpy, but this has been left
+        # unchanged since we are not sure of its purpose.
+        return self._default_to_pandas("__array_wrap__", result, context=context)
+
     def set_index(
         self, keys, drop=True, append=False, inplace=False, verify_integrity=False
     ):  # noqa: PR01, RT01, D200
