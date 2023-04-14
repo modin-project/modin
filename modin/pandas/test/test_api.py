@@ -162,8 +162,6 @@ def test_dataframe_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
-    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
-    allowed_different.append("rename_axis")
     difference = []
 
     # Check that we don't have extra params

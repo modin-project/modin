@@ -78,6 +78,8 @@ class Series(BasePandasDataset):
         A query compiler object to create the Series from.
     """
 
+    _AXIS_ORDERS = ["index"]
+    _AXIS_LEN = len(_AXIS_ORDERS)
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
 

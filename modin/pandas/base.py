@@ -548,6 +548,10 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
+    def _get_axis_name(cls, axis):
+        axis_number = cls._get_axis_number(axis)
+        return cls._AXIS_ORDERS[axis_number]
+
     @pandas.util.cache_readonly
     def __constructor__(self):
         """
@@ -2190,31 +2194,29 @@ class BasePandasDataset(ClassLogger):
         )
 
     def rename_axis(
-        self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
+        self,
+        mapper=no_default,
+        *,
+        index=no_default,
+        columns=no_default,
+        axis=0,
+        copy=None,
+        inplace=False,
     ):  # noqa: PR01, RT01, D200
         """
         Set the name of the axis for the index or columns.
         """
-        kwargs = {
-            "index": index,
-            "columns": columns,
-            "axis": axis,
-            "copy": copy,
-        }
-        if inplace is not None:
-            kwargs["inplace"] = inplace
-        else:
-            inplace = False
-        axes, kwargs = getattr(
-            pandas, type(self).__name__
-        )()._construct_axes_from_arguments((), kwargs, sentinel=sentinel)
+        axes = {"index": index, "columns": columns}
+
+        if copy is None:
+            copy = True
+
         if axis is not None:
             axis = self._get_axis_number(axis)
-        else:
-            axis = 0
+
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if mapper is not None:
+        if mapper is not no_default:
             # Use v0.23 behavior if a scalar or list
             non_mapper = is_scalar(mapper) or (
                 is_list_like(mapper) and not is_dict_like(mapper)
@@ -2227,11 +2229,10 @@ class BasePandasDataset(ClassLogger):
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
 
-            for axis in axes:
-                if axes[axis] is None:
+            for axis in range(self._AXIS_LEN):
+                v = axes.get(self._get_axis_name(axis))
+                if v is no_default:
                     continue
-                v = axes[axis]
-                axis = self._get_axis_number(axis)
                 non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
                 if non_mapper:
                     newnames = v

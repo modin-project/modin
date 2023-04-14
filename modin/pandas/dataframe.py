@@ -113,6 +113,8 @@ class DataFrame(BasePandasDataset):
     ``pd.read_csv``).
     """
 
+    _AXIS_ORDERS = ["index", "columns"]
+    _AXIS_LEN = len(_AXIS_ORDERS)
     _pandas_class = pandas.DataFrame
 
     def __init__(
