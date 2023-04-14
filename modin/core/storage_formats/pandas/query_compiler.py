@@ -3160,6 +3160,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
+                except ValueError:
+                    # when we're aggregating a column which isn't present in given
+                    # partition, pandas can throw a ValueError
+                    if len(df.columns.difference(by)):
+                        raise  # this is not the expected case, report back
+                    # this should actually be an empty dataframe with correct
+                    # metadata, so use bogus aggregation instead
+                    result = grouped_df.agg("min", *agg_args, **agg_kwargs)
                 except DataError:
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
