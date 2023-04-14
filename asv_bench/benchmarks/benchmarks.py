@@ -471,7 +471,7 @@ class TimeDrop:
         self.labels = self.df.axes[axis][:drop_count]
 
     def time_drop(self, shape, axis, drop_ncols):
-        execute(self.df.drop(self.labels, axis))
+        execute(self.df.drop(self.labels, axis=axis))
 
 
 class TimeHead:
