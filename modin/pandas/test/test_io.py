@@ -19,7 +19,7 @@ import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
-from pandas._testing import ensure_clean, ensure_clean_dir
+from pandas._testing import ensure_clean
 from pathlib import Path
 from collections import OrderedDict
 from modin.config.envvars import MinPartitionSize
@@ -46,7 +46,6 @@ from scipy import sparse
 import sys
 import sqlalchemy as sa
 import csv
-import tempfile
 from typing import Dict
 
 from .utils import (
@@ -141,12 +140,14 @@ def setup_clipboard(row_size=NROWS):
     df.to_clipboard()
 
 
-def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
+def parquet_eval_to_file(tmp_dir, modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     """
     Helper function to test `to_parquet` method.
 
     Parameters
     ----------
+    tmp_dir : Union[str, Path]
+        Temporary directory.
     modin_obj : pd.DataFrame
         A Modin DataFrame or a Series to test `to_parquet` method.
     pandas_obj: pandas.DataFrame
@@ -156,75 +157,71 @@ def parquet_eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     extension : str
         Extension of the test file.
     """
-    with ensure_clean_dir() as dirname:
-        unique_filename_modin = get_unique_filename(
-            extension=extension, data_dir=dirname
-        )
-        unique_filename_pandas = get_unique_filename(
-            extension=extension, data_dir=dirname
-        )
+    unique_filename_modin = get_unique_filename(extension=extension, data_dir=tmp_dir)
+    unique_filename_pandas = get_unique_filename(extension=extension, data_dir=tmp_dir)
 
-        engine = fn_kwargs.get("engine", "auto")
+    engine = fn_kwargs.get("engine", "auto")
 
-        getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+    getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+    getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
 
-        pandas_df = pandas.read_parquet(unique_filename_pandas, engine=engine)
-        modin_df = pd.read_parquet(unique_filename_modin, engine=engine)
+    pandas_df = pandas.read_parquet(unique_filename_pandas, engine=engine)
+    modin_df = pd.read_parquet(unique_filename_modin, engine=engine)
     df_equals(pandas_df, modin_df)
 
 
-def eval_to_file(modin_obj, pandas_obj, fn, extension, **fn_kwargs):
-    """Helper function to test `to_<extension>` methods.
-
-    Args:
-        modin_obj: Modin DataFrame or Series to test `to_<extension>` method.
-        pandas_obj: Pandas DataFrame or Series to test `to_<extension>` method.
-        fn: name of the method, that should be tested.
-        extension: Extension of the test file.
+def eval_to_file(tmp_dir, modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     """
-    with ensure_clean_dir() as dirname:
-        unique_filename_modin = get_unique_filename(
-            extension=extension, data_dir=dirname
-        )
-        unique_filename_pandas = get_unique_filename(
-            extension=extension, data_dir=dirname
-        )
+    Test `fn` method of `modin_obj` and `pandas_obj`.
 
-        # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
-        # in order to increase the stability of tests, we repeat the call of
-        # the entire function manually
-        last_exception = None
-        for _ in range(3):
-            try:
-                getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
-            except EXCEPTIONS as err:
-                last_exception = err
-                continue
-            break
-        # If we do have an exception that's valid let's raise it
-        if last_exception:
-            raise last_exception
+    Parameters
+    ----------
+    tmp_dir : Union[str, Path]
+        Temporary directory.
+    modin_obj: Modin DataFrame or Series
+        Object to test.
+    pandas_obj: Pandas DataFrame or Series
+        Object to test.
+    fn: str
+        Name of the method, that should be tested.
+    extension: str
+        Extension of the test file.
+    """
+    unique_filename_modin = get_unique_filename(extension=extension, data_dir=tmp_dir)
+    unique_filename_pandas = get_unique_filename(extension=extension, data_dir=tmp_dir)
 
-        getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+    # parameter `max_retries=0` is set for `to_csv` function on Ray engine,
+    # in order to increase the stability of tests, we repeat the call of
+    # the entire function manually
+    last_exception = None
+    for _ in range(3):
+        try:
+            getattr(modin_obj, fn)(unique_filename_modin, **fn_kwargs)
+        except EXCEPTIONS as err:
+            last_exception = err
+            continue
+        break
+    # If we do have an exception that's valid let's raise it
+    if last_exception:
+        raise last_exception
 
-        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+    getattr(pandas_obj, fn)(unique_filename_pandas, **fn_kwargs)
+
+    assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
 @pytest.fixture
-def make_parquet_dir():
-    with tempfile.TemporaryDirectory() as tmp_dir:
+def make_parquet_dir(tmp_path):
+    def _make_parquet_dir(
+        dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
+    ):
+        for filename, df in dfs_by_filename.items():
+            df.to_parquet(
+                os.path.join(tmp_path, filename), row_group_size=row_group_size
+            )
+        return tmp_path
 
-        def _make_parquet_dir(
-            dfs_by_filename: Dict[str, pandas.DataFrame], row_group_size: int
-        ):
-            for filename, df in dfs_by_filename.items():
-                df.to_parquet(
-                    os.path.join(tmp_dir, filename), row_group_size=row_group_size
-                )
-            return tmp_dir
-
-        yield _make_parquet_dir
+    yield _make_parquet_dir
 
 
 @pytest.mark.usefixtures("TestReadCSVFixture")
@@ -1115,11 +1112,12 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_to_csv(self, header, mode):
+    def test_to_csv(self, tmp_path, header, mode):
         pandas_df = generate_dataframe()
         modin_df = pd.DataFrame(pandas_df)
 
         eval_to_file(
+            tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_csv",
@@ -1136,11 +1134,15 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_dataframe_to_csv(self):
+    def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_csv", extension="csv"
+            tmp_path,
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_csv",
+            extension="csv",
         )
 
     @pytest.mark.skipif(
@@ -1151,13 +1153,17 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_series_to_csv(self):
+    def test_series_to_csv(self, tmp_path):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
         ).squeeze()
         modin_s = pd.Series(pandas_s)
         eval_to_file(
-            modin_obj=modin_s, pandas_obj=pandas_s, fn="to_csv", extension="csv"
+            tmp_path,
+            modin_obj=modin_s,
+            pandas_obj=pandas_s,
+            fn="to_csv",
+            extension="csv",
         )
 
     def test_read_csv_within_decorator(self):
@@ -1211,7 +1217,7 @@ class TestCsv:
                 modin_df = pd.read_csv(buffer)
             if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean_dir` context
+                # check should be inside `ensure_clean` context
                 # because the file may be deleted before actual reading starts
                 df_equals(modin_df, pandas_df)
         if not AsyncReadMode.get():
@@ -1271,7 +1277,7 @@ class TestCsv:
             dtype="str",  # to avoid issues with heterogeneous data
         )
 
-    def test_to_csv_with_index(self):
+    def test_to_csv_with_index(self, tmp_path):
         cols = 100
         arows = 20000
         keyrange = 100
@@ -1289,7 +1295,7 @@ class TestCsv:
             values,
             columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
         ).set_index("key")
-        eval_to_file(modin_df, pandas_df, "to_csv", "csv")
+        eval_to_file(tmp_path, modin_df, pandas_df, "to_csv", "csv")
 
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
     def test_read_csv_issue_5150(self, set_async_read_mode):
@@ -1303,7 +1309,7 @@ class TestCsv:
             actual_pandas_df = modin_df._to_pandas()
             if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean_dir` context
+                # check should be inside `ensure_clean` context
                 # because the file may be deleted before actual reading starts
                 df_equals(expected_pandas_df, actual_pandas_df)
         if not AsyncReadMode.get():
@@ -1341,7 +1347,7 @@ class TestTable:
 
             if AsyncReadMode.get():
                 # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean_dir` context
+                # check should be inside `ensure_clean` context
                 # because the file may be deleted before actual reading starts
                 df_equals(modin_df, pandas_df)
         if not AsyncReadMode.get():
@@ -1398,7 +1404,7 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_indexing_by_column(self, engine, make_parquet_file):
+    def test_read_parquet_indexing_by_column(self, tmp_path, engine, make_parquet_file):
         # Test indexing into a column of Modin with various parquet file row lengths.
         # Specifically, tests for https://github.com/modin-project/modin/issues/3527
         # which fails when min_partition_size < nrows < min_partition_size * (num_partitions - 1)
@@ -1406,11 +1412,10 @@ class TestParquet:
         nrows = (
             MinPartitionSize.get() + 1
         )  # Use the minimal guaranteed failing value for nrows.
-        with ensure_clean_dir() as dirname:
-            unique_filename = get_unique_filename(extension="parquet", data_dir=dirname)
-            make_parquet_file(filename=unique_filename, nrows=nrows)
+        unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        make_parquet_file(filename=unique_filename, nrows=nrows)
 
-            parquet_df = pd.read_parquet(unique_filename, engine=engine)
+        parquet_df = pd.read_parquet(unique_filename, engine=engine)
         for col in parquet_df.columns:
             parquet_df[col]
 
@@ -1460,19 +1465,18 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_partitioned_directory(
-        self, make_parquet_file, columns, engine
+        self, tmp_path, make_parquet_file, columns, engine
     ):
-        with ensure_clean_dir() as dirname:
-            unique_filename = get_unique_filename(extension=None, data_dir=dirname)
-            make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
+        unique_filename = get_unique_filename(extension=None, data_dir=tmp_path)
+        make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
 
-            eval_io(
-                fn_name="read_parquet",
-                # read_parquet kwargs
-                engine=engine,
-                path=unique_filename,
-                columns=columns,
-            )
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=unique_filename,
+            columns=columns,
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1536,7 +1540,7 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_pandas_index_partitioned(self, engine):
+    def test_read_parquet_pandas_index_partitioned(self, tmp_path, engine):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         pandas_df = pandas.DataFrame(
             {
@@ -1546,16 +1550,15 @@ class TestParquet:
                 "C": ["c"] * 2000,
             }
         )
-        with ensure_clean_dir() as dirname:
-            unique_filename = get_unique_filename(extension="parquet", data_dir=dirname)
-            pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
-            # read the same parquet using modin.pandas
-            eval_io(
-                "read_parquet",
-                # read_parquet kwargs
-                path=unique_filename,
-                engine=engine,
-            )
+        unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
+        # read the same parquet using modin.pandas
+        eval_io(
+            "read_parquet",
+            # read_parquet kwargs
+            path=unique_filename,
+            engine=engine,
+        )
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1604,49 +1607,48 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_without_metadata(self, engine):
+    def test_read_parquet_without_metadata(self, tmp_path, engine):
         """Test that Modin can read parquet files not written by pandas."""
         from pyarrow import csv
         from pyarrow import parquet
 
-        with ensure_clean_dir() as dirname:
-            parquet_fname = get_unique_filename(extension="parquet", data_dir=dirname)
-            csv_fname = get_unique_filename(extension="parquet", data_dir=dirname)
-            pandas_df = pandas.DataFrame(
-                {
-                    "idx": np.random.randint(0, 100_000, size=2000),
-                    "A": np.random.randint(0, 10, size=2000),
-                    "B": ["a", "b"] * 1000,
-                    "C": ["c"] * 2000,
-                }
-            )
-            pandas_df.to_csv(csv_fname, index=False)
-            # read into pyarrow table and write it to a parquet file
-            t = csv.read_csv(csv_fname)
-            parquet.write_table(t, parquet_fname)
+        parquet_fname = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        csv_fname = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        pandas_df = pandas.DataFrame(
+            {
+                "idx": np.random.randint(0, 100_000, size=2000),
+                "A": np.random.randint(0, 10, size=2000),
+                "B": ["a", "b"] * 1000,
+                "C": ["c"] * 2000,
+            }
+        )
+        pandas_df.to_csv(csv_fname, index=False)
+        # read into pyarrow table and write it to a parquet file
+        t = csv.read_csv(csv_fname)
+        parquet.write_table(t, parquet_fname)
 
-            eval_io(
-                "read_parquet",
-                # read_parquet kwargs
-                path=parquet_fname,
-                engine=engine,
-            )
+        eval_io(
+            "read_parquet",
+            # read_parquet kwargs
+            path=parquet_fname,
+            engine=engine,
+        )
 
-    def test_read_empty_parquet_file(self, engine):
+    def test_read_empty_parquet_file(self, tmp_path, engine):
         test_df = pandas.DataFrame()
-        with tempfile.TemporaryDirectory() as directory:
-            path = f"{directory}/data"
-            os.makedirs(path)
-            test_df.to_parquet(path + "/part-00000.parquet")
-            eval_io(fn_name="read_parquet", path=path, engine=engine)
+        path = tmp_path / "data"
+        path.mkdir()
+        test_df.to_parquet(path / "part-00000.parquet")
+        eval_io(fn_name="read_parquet", path=path, engine=engine)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_to_parquet(self, engine):
+    def test_to_parquet(self, tmp_path, engine):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         parquet_eval_to_file(
+            tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
@@ -1654,13 +1656,14 @@ class TestParquet:
             engine=engine,
         )
 
-    def test_to_parquet_keep_index(self, engine):
+    def test_to_parquet_keep_index(self, tmp_path, engine):
         data = {"c0": [0, 1] * 1000, "c1": [2, 3] * 1000}
         modin_df, pandas_df = create_test_dfs(data)
         modin_df.index.name = "foo"
         pandas_df.index.name = "foo"
 
         parquet_eval_to_file(
+            tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
@@ -1694,43 +1697,39 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_read_parquet_2462(self, engine):
+    def test_read_parquet_2462(self, tmp_path, engine):
         test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
+        path = tmp_path / "data"
+        path.mkdir()
+        test_df.to_parquet(path / "part-00000.parquet", engine=engine)
+        read_df = pd.read_parquet(path, engine=engine)
+        df_equals(test_df, read_df)
 
-        with tempfile.TemporaryDirectory() as directory:
-            path = f"{directory}/data"
-            os.makedirs(path)
-            test_df.to_parquet(path + "/part-00000.parquet", engine=engine)
-            read_df = pd.read_parquet(path, engine=engine)
-
-            df_equals(test_df, read_df)
-
-    def test_read_parquet_5767(self, engine):
+    def test_read_parquet_5767(self, tmp_path, engine):
         test_df = pandas.DataFrame({"a": [1, 2, 3, 4], "b": [1, 1, 2, 2]})
+        path = tmp_path / "data"
+        path.mkdir()
         file_name = "modin_issue#0000.parquet"
-        with tempfile.TemporaryDirectory() as directory:
-            path = f"{directory}/data"
-            os.makedirs(path)
-            test_df.to_parquet(path + file_name, engine=engine, partition_cols=["b"])
-            read_df = pd.read_parquet(Path(path + file_name))
+        test_df.to_parquet(path / file_name, engine=engine, partition_cols=["b"])
+        read_df = pd.read_parquet(path / file_name)
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
-    def test_read_parquet_5509(self, engine):
+    def test_read_parquet_5509(self, tmp_path, engine):
         test_df = pandas.DataFrame({"col_a": [1, 2, 3], "col_b": ["a", "b", "c"]})
 
-        with tempfile.TemporaryDirectory() as directory:
-            path = f"{directory}/data"
-            os.makedirs(path)
-            test_df.to_parquet(path + "/5509.parquet")
-            with warns_that_defaulting_to_pandas():
-                eval_io(
-                    fn_name="read_parquet",
-                    path=path + "/5509.parquet",
-                    columns=["col_b"],
-                    engine=engine,
-                    filters=[[("col_a", "==", 1)]],
-                )
+        path = tmp_path / "data"
+        path.mkdir()
+        file_name = "5509.parquet"
+        test_df.to_parquet(path / file_name)
+        with warns_that_defaulting_to_pandas():
+            eval_io(
+                fn_name="read_parquet",
+                path=path / file_name,
+                columns=["col_b"],
+                engine=engine,
+                filters=[[("col_a", "==", 1)]],
+            )
 
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
@@ -1791,10 +1790,14 @@ class TestJson:
             data.seek(0)
         df_equals(modin_df, pandas.read_json(data))
 
-    def test_to_json(self):
+    def test_to_json(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_json", extension="json"
+            tmp_path,
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_json",
+            extension="json",
         )
 
     @pytest.mark.parametrize(
@@ -1989,23 +1992,24 @@ class TestExcel:
             pandas_excel_file.close()
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
-    def test_to_excel(self):
+    def test_to_excel(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-        with ensure_clean_dir() as dir:
-            unique_filename_modin = get_unique_filename(extension="xlsx", data_dir=dir)
-            unique_filename_pandas = get_unique_filename(extension="xlsx", data_dir=dir)
+        unique_filename_modin = get_unique_filename(extension="xlsx", data_dir=tmp_path)
+        unique_filename_pandas = get_unique_filename(
+            extension="xlsx", data_dir=tmp_path
+        )
 
-            modin_writer = pandas.ExcelWriter(unique_filename_modin)
-            pandas_writer = pandas.ExcelWriter(unique_filename_pandas)
+        modin_writer = pandas.ExcelWriter(unique_filename_modin)
+        pandas_writer = pandas.ExcelWriter(unique_filename_pandas)
 
-            modin_df.to_excel(modin_writer)
-            pandas_df.to_excel(pandas_writer)
+        modin_df.to_excel(modin_writer)
+        pandas_df.to_excel(pandas_writer)
 
-            modin_writer.save()
-            pandas_writer.save()
+        modin_writer.save()
+        pandas_writer.save()
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
     @check_file_leaks
     @pytest.mark.xfail(
@@ -2041,33 +2045,28 @@ class TestHdf:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_HDFStore(self):
-        with ensure_clean_dir() as dirname:
-            unique_filename_modin = get_unique_filename(
-                extension="hdf", data_dir=dirname
-            )
-            unique_filename_pandas = get_unique_filename(
-                extension="hdf", data_dir=dirname
-            )
+    def test_HDFStore(self, tmp_path):
+        unique_filename_modin = get_unique_filename(extension="hdf", data_dir=tmp_path)
+        unique_filename_pandas = get_unique_filename(extension="hdf", data_dir=tmp_path)
 
-            modin_store = pd.HDFStore(unique_filename_modin)
-            pandas_store = pandas.HDFStore(unique_filename_pandas)
+        modin_store = pd.HDFStore(unique_filename_modin)
+        pandas_store = pandas.HDFStore(unique_filename_pandas)
 
-            modin_df, pandas_df = create_test_dfs(TEST_DATA)
+        modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-            modin_store["foo"] = modin_df
-            pandas_store["foo"] = pandas_df
+        modin_store["foo"] = modin_df
+        pandas_store["foo"] = pandas_df
 
-            modin_df = modin_store.get("foo")
-            pandas_df = pandas_store.get("foo")
-            df_equals(modin_df, pandas_df)
+        modin_df = modin_store.get("foo")
+        pandas_df = pandas_store.get("foo")
+        df_equals(modin_df, pandas_df)
 
-            modin_store.close()
-            pandas_store.close()
-            modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
-            pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
-            df_equals(modin_df, pandas_df)
-            assert isinstance(modin_store, pd.HDFStore)
+        modin_store.close()
+        pandas_store.close()
+        modin_df = pandas.read_hdf(unique_filename_modin, key="foo", mode="r")
+        pandas_df = pandas.read_hdf(unique_filename_pandas, key="foo", mode="r")
+        df_equals(modin_df, pandas_df)
+        assert isinstance(modin_store, pd.HDFStore)
 
         with ensure_clean(".hdf5") as hdf_file:
             with pd.HDFStore(hdf_file, mode="w") as store:
@@ -2100,60 +2099,59 @@ class TestSql:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
-    def test_read_sql(self, make_sql_connection, read_sql_engine):
-        with ensure_clean_dir() as dirname:
-            filename = get_unique_filename(".db")
-            table = "test_read_sql"
-            conn = make_sql_connection(os.path.join(dirname, filename), table)
-            query = f"select * from {table}"
+    def test_read_sql(self, tmp_path, make_sql_connection, read_sql_engine):
+        filename = get_unique_filename(".db")
+        table = "test_read_sql"
+        conn = make_sql_connection(tmp_path / filename, table)
+        query = f"select * from {table}"
 
-            eval_io(
-                fn_name="read_sql",
-                # read_sql kwargs
-                sql=query,
-                con=conn,
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=conn,
+        )
+
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=conn,
+            index_col="index",
+        )
+
+        with warns_that_defaulting_to_pandas():
+            pd.read_sql_query(query, conn)
+
+        with warns_that_defaulting_to_pandas():
+            pd.read_sql_table(table, conn)
+
+        # Test SQLAlchemy engine
+        sqlalchemy_engine = sa.create_engine(conn)
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=sqlalchemy_engine,
+        )
+
+        # Test SQLAlchemy Connection
+        sqlalchemy_connection = sqlalchemy_engine.connect()
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=sqlalchemy_connection,
+        )
+
+        ReadSqlEngine.put(read_sql_engine)
+        if ReadSqlEngine.get() == "Connectorx":
+            modin_df = pd.read_sql(sql=query, con=conn)
+        else:
+            modin_df = pd.read_sql(
+                sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
             )
-
-            eval_io(
-                fn_name="read_sql",
-                # read_sql kwargs
-                sql=query,
-                con=conn,
-                index_col="index",
-            )
-
-            with warns_that_defaulting_to_pandas():
-                pd.read_sql_query(query, conn)
-
-            with warns_that_defaulting_to_pandas():
-                pd.read_sql_table(table, conn)
-
-            # Test SQLAlchemy engine
-            sqlalchemy_engine = sa.create_engine(conn)
-            eval_io(
-                fn_name="read_sql",
-                # read_sql kwargs
-                sql=query,
-                con=sqlalchemy_engine,
-            )
-
-            # Test SQLAlchemy Connection
-            sqlalchemy_connection = sqlalchemy_engine.connect()
-            eval_io(
-                fn_name="read_sql",
-                # read_sql kwargs
-                sql=query,
-                con=sqlalchemy_connection,
-            )
-
-            ReadSqlEngine.put(read_sql_engine)
-            if ReadSqlEngine.get() == "Connectorx":
-                modin_df = pd.read_sql(sql=query, con=conn)
-            else:
-                modin_df = pd.read_sql(
-                    sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
-                )
-            pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
+        pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.skipif(
@@ -2222,26 +2220,25 @@ class TestSql:
             df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("index", [False, True])
-    def test_to_sql(self, make_sql_connection, index):
+    def test_to_sql(self, tmp_path, make_sql_connection, index):
         table_name = f"test_to_sql_{str(index)}"
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
-        with ensure_clean_dir() as dirname:
-            # We do not pass the table name so the fixture won't generate a table
-            conn = make_sql_connection(os.path.join(dirname, f"{table_name}_modin.db"))
-            modin_df.to_sql(table_name, conn, index=index)
-            df_modin_sql = pandas.read_sql(
-                table_name, con=conn, index_col="index" if index else None
-            )
+        # We do not pass the table name so the fixture won't generate a table
+        conn = make_sql_connection(tmp_path / f"{table_name}_modin.db")
+        modin_df.to_sql(table_name, conn, index=index)
+        df_modin_sql = pandas.read_sql(
+            table_name, con=conn, index_col="index" if index else None
+        )
 
-            # We do not pass the table name so the fixture won't generate a table
-            conn = make_sql_connection(os.path.join(dirname, f"{table_name}_pandas.db"))
-            pandas_df.to_sql(table_name, conn, index=index)
-            df_pandas_sql = pandas.read_sql(
-                table_name, con=conn, index_col="index" if index else None
-            )
+        # We do not pass the table name so the fixture won't generate a table
+        conn = make_sql_connection(tmp_path / f"{table_name}_pandas.db")
+        pandas_df.to_sql(table_name, conn, index=index)
+        df_pandas_sql = pandas.read_sql(
+            table_name, con=conn, index_col="index" if index else None
+        )
 
-            assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
+        assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
 class TestHtml:
@@ -2249,11 +2246,15 @@ class TestHtml:
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
 
-    def test_to_html(self):
+    def test_to_html(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_html", extension="html"
+            tmp_path,
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_html",
+            extension="html",
         )
 
 
@@ -2498,7 +2499,7 @@ class TestStata:
             filepath_or_buffer=make_stata_file(),
         )
 
-    def test_to_stata(self):
+    def test_to_stata(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_stata", extension="stata"
@@ -2551,7 +2552,7 @@ class TestFeather:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_to_feather(self):
+    def test_to_feather(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
             modin_obj=modin_df,
@@ -2593,22 +2594,21 @@ class TestPickle:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="There is no point in writing to local files.",
     )
-    def test_to_pickle(self):
+    def test_to_pickle(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
-            modin_obj=modin_df, pandas_obj=pandas_df, fn="to_pickle", extension="pkl"
+            tmp_path,
+            modin_obj=modin_df,
+            pandas_obj=pandas_df,
+            fn="to_pickle",
+            extension="pkl",
         )
-        with ensure_clean_dir() as dirname:
-            unique_filename_modin = get_unique_filename(
-                extension="pkl", data_dir=dirname
-            )
-            unique_filename_pandas = get_unique_filename(
-                extension="pkl", data_dir=dirname
-            )
-            pd.to_pickle(modin_df, unique_filename_modin)
-            pandas.to_pickle(pandas_df, unique_filename_pandas)
+        unique_filename_modin = get_unique_filename(extension="pkl", data_dir=tmp_path)
+        unique_filename_pandas = get_unique_filename(extension="pkl", data_dir=tmp_path)
+        pd.to_pickle(modin_df, unique_filename_modin)
+        pandas.to_pickle(pandas_df, unique_filename_pandas)
 
-            assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
 @pytest.mark.xfail(
