@@ -613,7 +613,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        if any(arg not in ("storage_options", "use_nullable_dtypes") for arg in kwargs):
+        if any(
+            arg not in ("storage_options", "use_nullable_dtypes", "dtype_backend")
+            for arg in kwargs
+        ):
             return cls.single_worker_read(
                 path,
                 engine=engine,
