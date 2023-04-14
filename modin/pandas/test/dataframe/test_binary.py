@@ -260,7 +260,7 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
 
     modin_df2 = pd.concat((modin_df, modin_df))
-    pandas_df2 = pd.concat((pandas_df, pandas_df))
+    pandas_df2 = pandas.concat((pandas_df, pandas_df))
     if is_more_other_partitions:
         modin_df2, modin_df1 = modin_df1, modin_df2
         pandas_df2, pandas_df1 = pandas_df1, pandas_df2
