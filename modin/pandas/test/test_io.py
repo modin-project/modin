@@ -794,20 +794,11 @@ class TestCsv:
             )
 
     # Error Handling parameters tests
-    @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
-    @pytest.mark.parametrize("error_bad_lines", [True, False, None])
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
-    def test_read_csv_error_handling(
-        self,
-        warn_bad_lines,
-        error_bad_lines,
-        on_bad_lines,
-    ):
+    def test_read_csv_error_handling(self, on_bad_lines):
         # in that case exceptions are raised both by Modin and pandas
         # and tests pass
-        raise_exception_case = on_bad_lines is not None and (
-            error_bad_lines is not None or warn_bad_lines is not None
-        )
+        raise_exception_case = on_bad_lines is not None
         if (
             not raise_exception_case
             and Engine.get() not in ["Python", "Cloudpython"]
@@ -818,8 +809,6 @@ class TestCsv:
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
-            warn_bad_lines=warn_bad_lines,
-            error_bad_lines=error_bad_lines,
             on_bad_lines=on_bad_lines,
         )
 

@@ -93,8 +93,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "dialect",
         "quoting",
         "comment",
-        "warn_bad_lines",
-        "error_bad_lines",
         "on_bad_lines",
         "low_memory",
         "memory_map",
@@ -484,8 +482,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         delimiter = read_csv_kwargs["delimiter"]
         sep = read_csv_kwargs["sep"]
         on_bad_lines = read_csv_kwargs["on_bad_lines"]
-        error_bad_lines = read_csv_kwargs["error_bad_lines"]
-        warn_bad_lines = read_csv_kwargs["warn_bad_lines"]
         delim_whitespace = read_csv_kwargs["delim_whitespace"]
 
         if delimiter and (sep is not lib.no_default):
@@ -502,12 +498,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 "Specified a delimiter with both sep and "
                 + "delim_whitespace=True; you can only specify one."
             )
-        if on_bad_lines is not None:
-            if error_bad_lines is not None or warn_bad_lines is not None:
-                raise ValueError(
-                    "Both on_bad_lines and error_bad_lines/warn_bad_lines are set. "
-                    + "Please only set on_bad_lines."
-                )
 
         if on_bad_lines not in ["error", "warn", "skip", None]:
             raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines.")

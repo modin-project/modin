@@ -212,8 +212,6 @@ def _make_parser_func(sep: str) -> Callable:
         encoding=None,
         encoding_errors="strict",
         dialect=None,
-        error_bad_lines=None,
-        warn_bad_lines=None,
         on_bad_lines=None,
         skipfooter=0,
         doublequote=True,
