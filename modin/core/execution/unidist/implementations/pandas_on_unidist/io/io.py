@@ -168,7 +168,7 @@ class PandasOnUnidistIO(UnidistIO):
 
         signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             """
             Dump a chunk of rows as csv, then save them to target maintaining order.
 
@@ -285,7 +285,7 @@ class PandasOnUnidistIO(UnidistIO):
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             """
             Dump a chunk of rows as parquet, then save them to target maintaining order.
 
