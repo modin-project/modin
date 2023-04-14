@@ -1047,9 +1047,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_bfill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "bfill", limit=limit)
 
-    def resample_pad(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "pad", limit=limit)
-
     def resample_nearest(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "nearest", limit=limit)
 

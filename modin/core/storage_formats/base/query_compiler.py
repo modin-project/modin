@@ -4199,8 +4199,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs
         )
 
-    # FIXME: `resample_ffill` is an alias for `resample_pad`, one of these method
-    # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="forward-fill", refer_to="ffill")
     def resample_ffill(self, resample_kwargs, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
