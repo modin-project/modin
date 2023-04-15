@@ -4747,8 +4747,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         expand : bool, default: False""",
     )
-    def str_rsplit(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.rsplit)(self, pat, n, expand)
+    def str_rsplit(self, pat=None, *, n=-1, expand=False):
+        return StrDefault.register(pandas.Series.str.rsplit)(
+            self, pat, n=n, expand=expand
+        )
 
     @doc_utils.doc_str_method(refer_to="rstrip", params="to_strip : str, optional")
     def str_rstrip(self, to_strip=None):
@@ -4783,8 +4785,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         expand : bool, default: False""",
     )
-    def str_split(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
+    def str_split(self, pat=None, *, n=-1, expand=False, regex=None):
+        return StrDefault.register(pandas.Series.str.split)(
+            self, pat, n=n, expand=expand, regex=regex
+        )
 
     @doc_utils.doc_str_method(
         refer_to="startswith",

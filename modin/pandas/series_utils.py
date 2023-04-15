@@ -142,22 +142,29 @@ class StringMethods(ClassLogger):
             pandas.Series.str.decode, encoding, errors=errors
         )
 
-    def split(self, pat=None, n=-1, expand=False):
+    def split(self, pat=None, *, n=-1, expand=False, regex=None):
         if not pat and pat is not None:
             raise ValueError("split() requires a non-empty pattern match.")
 
         if expand:
             return self._default_to_pandas(
-                pandas.Series.str.split, pat=pat, n=n, expand=expand
+                pandas.Series.str.split,
+                pat=pat,
+                n=n,
+                expand=expand,
+                regex=regex,
             )
         else:
             return Series(
                 query_compiler=self._query_compiler.str_split(
-                    pat=pat, n=n, expand=expand
+                    pat=pat,
+                    n=n,
+                    expand=expand,
+                    regex=regex,
                 )
             )
 
-    def rsplit(self, pat=None, n=-1, expand=False):
+    def rsplit(self, pat=None, *, n=-1, expand=False):
         if not pat and pat is not None:
             raise ValueError("rsplit() requires a non-empty pattern match.")
 
