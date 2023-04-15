@@ -73,28 +73,21 @@ class CategoryMethods(ClassLogger):
             ordered=ordered,
         )
 
-    def add_categories(self, new_categories, inplace=False):
-        return self._default_to_pandas(
-            pandas.Series.cat.add_categories, new_categories, inplace=inplace
-        )
+    def add_categories(self, new_categories):
+        return self._default_to_pandas(pandas.Series.cat.add_categories, new_categories)
 
-    def remove_categories(self, removals, inplace=False):
-        return self._default_to_pandas(
-            pandas.Series.cat.remove_categories, removals, inplace=inplace
-        )
+    def remove_categories(self, removals):
+        return self._default_to_pandas(pandas.Series.cat.remove_categories, removals)
 
-    def remove_unused_categories(self, inplace=False):
-        return self._default_to_pandas(
-            pandas.Series.cat.remove_unused_categories, inplace=inplace
-        )
+    def remove_unused_categories(self):
+        return self._default_to_pandas(pandas.Series.cat.remove_unused_categories)
 
-    def set_categories(self, new_categories, ordered=None, rename=False, inplace=False):
+    def set_categories(self, new_categories, ordered=None, rename=False):
         return self._default_to_pandas(
             pandas.Series.cat.set_categories,
             new_categories,
             ordered=ordered,
             rename=rename,
-            inplace=inplace,
         )
 
     def as_ordered(self, *args, **kwargs):

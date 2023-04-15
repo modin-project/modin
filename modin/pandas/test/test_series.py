@@ -4580,11 +4580,10 @@ def test_cat_reorder_categories(data, ordered):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_add_categories(data, inplace):
+def test_cat_add_categories(data):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.add_categories(list("qw"), inplace=inplace)
-    modin_result = modin_series.cat.add_categories(list("qw"), inplace=inplace)
+    pandas_result = pandas_series.cat.add_categories(list("qw"))
+    modin_result = modin_series.cat.add_categories(list("qw"))
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4592,11 +4591,10 @@ def test_cat_add_categories(data, inplace):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_remove_categories(data, inplace):
+def test_cat_remove_categories(data):
     modin_series, pandas_series = create_test_series(data.copy())
-    pandas_result = pandas_series.cat.remove_categories(list("at"), inplace=inplace)
-    modin_result = modin_series.cat.remove_categories(list("at"), inplace=inplace)
+    pandas_result = pandas_series.cat.remove_categories(list("at"))
+    modin_result = modin_series.cat.remove_categories(list("at"))
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4604,13 +4602,12 @@ def test_cat_remove_categories(data, inplace):
 @pytest.mark.parametrize(
     "data", test_data_categorical_values, ids=test_data_categorical_keys
 )
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_remove_unused_categories(data, inplace):
+def test_cat_remove_unused_categories(data):
     modin_series, pandas_series = create_test_series(data.copy())
     pandas_series[1] = np.nan
-    pandas_result = pandas_series.cat.remove_unused_categories(inplace=inplace)
+    pandas_result = pandas_series.cat.remove_unused_categories()
     modin_series[1] = np.nan
-    modin_result = modin_series.cat.remove_unused_categories(inplace=inplace)
+    modin_result = modin_series.cat.remove_unused_categories()
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
 
@@ -4620,14 +4617,13 @@ def test_cat_remove_unused_categories(data, inplace):
 )
 @pytest.mark.parametrize("ordered", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("rename", [True, False])
-@pytest.mark.parametrize("inplace", [True, False])
-def test_cat_set_categories(data, ordered, rename, inplace):
+def test_cat_set_categories(data, ordered, rename):
     modin_series, pandas_series = create_test_series(data.copy())
     pandas_result = pandas_series.cat.set_categories(
-        list("qwert"), ordered=ordered, rename=rename, inplace=inplace
+        list("qwert"), ordered=ordered, rename=rename
     )
     modin_result = modin_series.cat.set_categories(
-        list("qwert"), ordered=ordered, rename=rename, inplace=inplace
+        list("qwert"), ordered=ordered, rename=rename
     )
     df_equals(modin_series, pandas_series)
     df_equals(modin_result, pandas_result)
