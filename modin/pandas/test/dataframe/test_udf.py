@@ -352,7 +352,7 @@ def test_pipe(data):
 
     def g(x, arg1=0):
         for _ in range(arg1):
-            x = x.append(x)
+            x = (pd if isinstance(x, pd.DataFrame) else pandas).concat((x, x))
         return x
 
     def f(x, arg2=0, arg3=0):
