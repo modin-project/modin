@@ -33,10 +33,6 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason=f"{Engine.get()} does not have experimental API",
-)
 def test_from_sql_distributed(make_sql_connection):
     with ensure_clean_dir() as dirname:
         filename = "test_from_sql_distributed.db"
@@ -66,10 +62,6 @@ def test_from_sql_distributed(make_sql_connection):
     df_equals(modin_df_from_table, pandas_df)
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason=f"{Engine.get()} does not have experimental API",
-)
 def test_from_sql_defaults(make_sql_connection):
     with ensure_clean_dir() as dirname:
         filename = "test_from_sql_distributed.db"
