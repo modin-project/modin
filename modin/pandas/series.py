@@ -1108,6 +1108,7 @@ class Series(BasePandasDataset):
     def interpolate(
         self,
         method="linear",
+        *,
         axis=0,
         limit=None,
         inplace=False,

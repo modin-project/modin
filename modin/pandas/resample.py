@@ -237,6 +237,7 @@ class Resampler(ClassLogger):
     def interpolate(
         self,
         method="linear",
+        *,
         axis=0,
         limit=None,
         inplace=False,
@@ -249,12 +250,12 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_interpolate(
                 self.resample_kwargs,
                 method,
-                axis,
-                limit,
-                inplace,
-                limit_direction,
-                limit_area,
-                downcast,
+                axis=axis,
+                limit=limit,
+                inplace=inplace,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
                 **kwargs,
             )
         )
