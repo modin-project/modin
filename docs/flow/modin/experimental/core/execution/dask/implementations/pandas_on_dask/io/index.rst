@@ -1,13 +1,13 @@
 :orphan:
 
-IO module Description For Pandas-on-Ray Execution
-"""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For Pandas-on-Dask Execution
+""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''
 
-This module houses experimental functionality with pandas storage format and Ray
-engine. This functionality is concentrated in the :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO`
+This module houses experimental functionality with pandas storage format and Dask
+engine. This functionality is concentrated in the :py:class:`~modin.experimental.core.execution.dask.implementations.pandas_on_dask.io.io.ExperimentalPandasOnDaskIO`
 class, that contains methods, which extend typical pandas API to give user
 more flexibility with IO operations.
 
@@ -25,7 +25,7 @@ statement as follows:
 Submodules Description
 ''''''''''''''''''''''
 
-The ``modin.experimental.core.execution.ray.implementations.pandas_on_ray`` module primarily houses utils and 
+The ``modin.experimental.core.execution.dask.implementations.pandas_on_dask`` module primarily houses utils and 
 functions for the experimental IO class:
 
 * ``io.py`` - submodule containing IO class and parse functions, which are responsible
@@ -34,5 +34,5 @@ functions for the experimental IO class:
 Public API
 ''''''''''
 
-.. autoclass:: modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO
+.. autoclass:: modin.experimental.core.execution.dask.implementations.pandas_on_dask.io.io.ExperimentalPandasOnDaskIO
   :members:

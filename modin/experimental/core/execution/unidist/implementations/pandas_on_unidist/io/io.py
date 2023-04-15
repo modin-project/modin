@@ -27,13 +27,11 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
     PandasOnUnidistIO,
 )
-from modin.core.io import (
-    CSVGlobDispatcher,
-    ExperimentalCustomTextDispatcher,
-)
 from modin.experimental.core.io import (
+    CSVGlobDispatcher,
     ExperimentalSQLDispatcher,
     ExperimentalPickleDispatcher,
+    ExperimentalCustomTextDispatcher,
 )
 from modin.core.execution.unidist.implementations.pandas_on_unidist.dataframe import (
     PandasOnUnidistDataframe,
