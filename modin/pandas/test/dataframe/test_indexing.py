@@ -2424,8 +2424,8 @@ def test_index_order():
 
     for func in ["all", "any", "count"]:
         df_equals(
-            getattr(df_modin, func)(level=0).index,
-            getattr(df_pandas, func)(level=0).index,
+            getattr(df_modin, func)().index,
+            getattr(df_pandas, func)().index,
         )
 
 
