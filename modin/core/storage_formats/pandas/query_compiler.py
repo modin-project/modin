@@ -1656,8 +1656,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
     dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes=np.int64)
     dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes=np.int64)
-    dt_week = Map.register(_dt_prop_map("week"), dtypes=np.int64)
-    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"), dtypes=np.int64)
     dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
     dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
     dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
