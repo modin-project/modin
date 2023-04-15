@@ -18,6 +18,7 @@ import pandas
 from pandas._testing import assert_series_equal
 from pandas.errors import SpecificationError
 from pandas.core.indexing import IndexingError
+import pandas._libs.lib as lib
 import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
@@ -2220,9 +2221,10 @@ def test_index_order(func):
     s_modin.index = index
     s_pandas.index = index
 
+    # The result of the operation is not a Series, `.index` is missed
     df_equals(
-        getattr(s_modin, func)(level=0).index,
-        getattr(s_pandas, func)(level=0).index,
+        getattr(s_modin, func)(),
+        getattr(s_pandas, func)(),
     )
 
 
@@ -2376,7 +2378,7 @@ def test_median_skew_std_sum_var_prod_sem_1953(method):
     ]
     modin_s = pd.Series(data, index=arrays)
     pandas_s = pandas.Series(data, index=arrays)
-    eval_general(modin_s, pandas_s, lambda s: getattr(s, method)(level=0))
+    eval_general(modin_s, pandas_s, lambda s: getattr(s, method)())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2505,7 +2507,7 @@ def test_pipe(data):
 
     def g(x, arg1=0):
         for _ in range(arg1):
-            x = x.append(x)
+            x = (pd if isinstance(x, pd.Series) else pandas).concat((x, x))
         return x
 
     def f(x, arg2=0, arg3=0):
@@ -2905,7 +2907,7 @@ def test_resample(closed, label, level):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("drop", [True, False], ids=["True", "False"])
-@pytest.mark.parametrize("name", [None, "Custom name"])
+@pytest.mark.parametrize("name", [lib.no_default, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
     eval_general(
@@ -4493,9 +4495,14 @@ def test_hasattr_sparse(is_sparse_data):
 def test_cat_categories(data):
     modin_series, pandas_series = create_test_series(data.copy())
     df_equals(modin_series.cat.categories, pandas_series.cat.categories)
-    pandas_series.cat.categories = list("qwert")
-    modin_series.cat.categories = list("qwert")
-    df_equals(modin_series, pandas_series)
+
+    def set_categories(ser):
+        ser.cat.categories = list("qwert")
+        return ser
+
+    # pandas 2.0.0: Removed setting Categorical.categories directly (GH47834)
+    # Just check the exception
+    eval_general(modin_series, pandas_series, set_categories)
 
 
 @pytest.mark.parametrize(

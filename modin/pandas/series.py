@@ -1486,6 +1486,7 @@ class Series(BasePandasDataset):
     def reset_index(
         self,
         level=None,
+        *,
         drop=False,
         name=no_default,
         inplace=False,

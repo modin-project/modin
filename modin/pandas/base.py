@@ -2275,6 +2275,7 @@ class BasePandasDataset(ClassLogger):
     def reset_index(
         self,
         level: IndexLabel = None,
+        *,
         drop: bool = False,
         inplace: bool = False,
         col_level: Hashable = 0,
