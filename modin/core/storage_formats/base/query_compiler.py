@@ -4096,17 +4096,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, tz, ambiguous, nonexistent
         )
 
-    @doc_utils.doc_dt_timestamp(prop="week component", refer_to="week")
-    def dt_week(self):
-        return DateTimeDefault.register(pandas.Series.dt.week)(self)
-
     @doc_utils.doc_dt_timestamp(prop="integer day of week", refer_to="weekday")
     def dt_weekday(self):
         return DateTimeDefault.register(pandas.Series.dt.weekday)(self)
-
-    @doc_utils.doc_dt_timestamp(prop="week of year", refer_to="weekofyear")
-    def dt_weekofyear(self):
-        return DateTimeDefault.register(pandas.Series.dt.weekofyear)(self)
 
     @doc_utils.doc_dt_timestamp(prop="year component", refer_to="year")
     def dt_year(self):
