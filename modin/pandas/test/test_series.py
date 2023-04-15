@@ -542,13 +542,7 @@ def test___repr__(name, dt_index, data):
         )
         pandas_series.index = modin_series.index = index
 
-    if get_current_execution() == "BaseOnPython" and data == "empty":
-        # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
-        assert modin_series.dtype == np.object_
-        assert pandas_series.dtype == np.float64
-        df_equals(modin_series.index, pandas_series.index)
-    else:
-        assert repr(modin_series) == repr(pandas_series)
+    assert repr(modin_series) == repr(pandas_series)
 
 
 def test___repr__4186():
@@ -1690,12 +1684,7 @@ def test_dropna_inplace(data):
 
 def test_dtype_empty():
     modin_series, pandas_series = pd.Series(), pandas.Series()
-    if get_current_execution() == "BaseOnPython":
-        # TODO: Remove this when default `dtype` of empty Series will be `object` in pandas (see #3142).
-        assert modin_series.dtype == np.object_
-        assert pandas_series.dtype == np.float64
-    else:
-        assert modin_series.dtype == pandas_series.dtype
+    assert modin_series.dtype == pandas_series.dtype
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1740,8 +1729,6 @@ def test_dt(timezone):
     df_equals(modin_series.dt.second, pandas_series.dt.second)
     df_equals(modin_series.dt.microsecond, pandas_series.dt.microsecond)
     df_equals(modin_series.dt.nanosecond, pandas_series.dt.nanosecond)
-    df_equals(modin_series.dt.week, pandas_series.dt.week)
-    df_equals(modin_series.dt.weekofyear, pandas_series.dt.weekofyear)
     df_equals(modin_series.dt.dayofweek, pandas_series.dt.dayofweek)
     df_equals(modin_series.dt.day_of_week, pandas_series.dt.day_of_week)
     df_equals(modin_series.dt.weekday, pandas_series.dt.weekday)
