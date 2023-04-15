@@ -1213,8 +1213,8 @@ def test_between_time():
         pandas_series.between_time("3:00", "8:00"),
     )
     df_equals(
-        modin_series.between_time("3:00", "8:00", False),
-        pandas_series.between_time("3:00", "8:00", False),
+        modin_series.between_time("3:00", "8:00", inclusive="right"),
+        pandas_series.between_time("3:00", "8:00", inclusive="right"),
     )
 
 
@@ -1240,7 +1240,7 @@ def test_bfill(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
-    modin_series, pandas_series = create_test_series(data)
+    modin_series, _ = create_test_series(data)
 
     with pytest.raises(ValueError):
         modin_series.bool()

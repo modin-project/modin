@@ -829,8 +829,8 @@ class Series(BasePandasDataset):
         # Pandas ignores the `include` and `exclude` for Series for some reason.
         return super(Series, self).describe(
             percentiles=percentiles,
-            include=include,
-            exclude=exclude,
+            include=None,
+            exclude=None,
         )
 
     def diff(self, periods=1):  # noqa: PR01, RT01, D200
