@@ -505,7 +505,7 @@ def test_median_skew_std_var_sem_1953(method):
     # These shouldn't default to pandas: follow up on
     # https://github.com/modin-project/modin/issues/1953
     with warns_that_defaulting_to_pandas():
-        eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
+        eval_general(modin_df, pandas_df, lambda df: getattr(df, method)())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

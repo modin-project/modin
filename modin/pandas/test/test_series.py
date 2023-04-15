@@ -2212,22 +2212,6 @@ def test_kurtosis_numeric_only(axis, numeric_only):
     )
 
 
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_kurtosis_level(level):
-    data = test_data["int_data"]
-    modin_s, pandas_s = create_test_series(data)
-
-    index = generate_multiindex(len(data.keys()))
-    modin_s.columns = index
-    pandas_s.columns = index
-
-    eval_general(
-        modin_s,
-        pandas_s,
-        lambda s: s.kurtosis(axis=1, level=level),
-    )
-
-
 def test_last():
     modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
     pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")

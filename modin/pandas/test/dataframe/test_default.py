@@ -424,22 +424,6 @@ def test_kurt_kurtosis(axis, skipna, numeric_only, method):
     )
 
 
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_kurt_kurtosis_level(level):
-    data = test_data["int_data"]
-    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    df_modin.columns = index
-    df_pandas.columns = index
-
-    eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(axis=1, level=level),
-    )
-
-
 def test_last():
     modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
     pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")

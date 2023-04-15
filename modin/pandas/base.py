@@ -1741,14 +1741,10 @@ class BasePandasDataset(ClassLogger):
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
 
-        if numeric_only is not None and not numeric_only:
+        if not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
-        data = (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        data = self._get_numeric_data(axis) if numeric_only else self
 
         return self._reduce_dimension(
             data._query_compiler.kurt(
@@ -1842,8 +1838,7 @@ class BasePandasDataset(ClassLogger):
         op_name: str,
         axis: Union[int, str],
         skipna: bool,
-        level: Optional[Union[int, str]],
-        numeric_only: Optional[bool] = None,
+        numeric_only: Optional[bool] = False,
         **kwargs,
     ):
         """
@@ -1857,10 +1852,7 @@ class BasePandasDataset(ClassLogger):
             Axis to apply method on.
         skipna : bool
             Exclude NA/null values when computing the result.
-        level : int or str
-            If specified `axis` is a MultiIndex, applying method along a particular
-            level, collapsing into a Series.
-        numeric_only : bool, optional
+        numeric_only : bool, default: False
             Include only float, int, boolean columns. If None, will attempt
             to use everything, then use only numeric data.
         **kwargs : dict
@@ -1876,37 +1868,15 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        if level is not None:
-            return self._default_to_pandas(
-                op_name,
-                axis=axis,
-                skipna=skipna,
-                level=level,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        # If `numeric_only` is None, then we can do this precheck to whether or not
-        # frame contains non-numeric columns, if it doesn't, then we can pass to a query compiler
-        # `numeric_only=False` parameter and make its work easier in that case, rather than
-        # performing under complicate `numeric_only=None` parameter
-        if not numeric_only:
-            try:
-                self._validate_dtypes(numeric_only=True)
-            except TypeError:
-                if numeric_only is not None:
-                    raise
-            else:
-                numeric_only = False
 
-        data = (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        if not numeric_only:
+            # fix for 'test_reduce_specific'
+            self._validate_dtypes(numeric_only=True)
+
+        data = self._get_numeric_data(axis) if numeric_only else self
         result_qc = getattr(data._query_compiler, op_name)(
             axis=axis,
             skipna=skipna,
-            level=level,
             numeric_only=numeric_only,
             **kwargs,
         )
@@ -2601,7 +2571,7 @@ class BasePandasDataset(ClassLogger):
         Return unbiased standard error of the mean over requested axis.
         """
         return self._stat_operation(
-            "sem", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
+            "sem", axis, skipna, numeric_only, ddof=ddof, **kwargs
         )
 
     def mean(
@@ -2614,7 +2584,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
-        return self._stat_operation("mean", axis, skipna, None, numeric_only, **kwargs)
+        return self._stat_operation("mean", axis, skipna, numeric_only, **kwargs)
 
     def median(
         self,
@@ -2626,9 +2596,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
-        return self._stat_operation(
-            "median", axis, skipna, None, numeric_only, **kwargs
-        )
+        return self._stat_operation("median", axis, skipna, numeric_only, **kwargs)
 
     def set_axis(
         self,
@@ -2753,7 +2721,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return unbiased skew over requested axis.
         """
-        return self._stat_operation("skew", axis, skipna, None, numeric_only, **kwargs)
+        return self._stat_operation("skew", axis, skipna, numeric_only, **kwargs)
 
     def sort_index(
         self,
@@ -2839,7 +2807,7 @@ class BasePandasDataset(ClassLogger):
         Return sample standard deviation over requested axis.
         """
         return self._stat_operation(
-            "std", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
+            "std", axis, skipna, numeric_only, ddof=ddof, **kwargs
         )
 
     def sub(
@@ -3384,6 +3352,8 @@ class BasePandasDataset(ClassLogger):
         #     counted_values.index = pandas.MultiIndex.from_arrays(
         #         [counted_values.index], names=counted_values.index.names
         #     )
+        # https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html#value-counts-sets-the-resulting-name-to-count
+        counted_values.name = "proportion" if normalize else "count"
         return counted_values
 
     def var(
@@ -3398,7 +3368,7 @@ class BasePandasDataset(ClassLogger):
         Return unbiased variance over requested axis.
         """
         return self._stat_operation(
-            "var", axis, skipna, None, numeric_only, ddof=ddof, **kwargs
+            "var", axis, skipna, numeric_only, ddof=ddof, **kwargs
         )
 
     def __abs__(self):

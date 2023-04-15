@@ -1955,6 +1955,8 @@ class Series(BasePandasDataset):
         )
         # pandas sets output index names to None because the Series name already contains it
         counted_values._query_compiler.set_index_name(None)
+        # https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html#value-counts-sets-the-resulting-name-to-count
+        counted_values.name = "proportion" if normalize else "count"
         return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200

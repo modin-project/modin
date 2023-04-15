@@ -254,7 +254,7 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def mean(self, numeric_only=None):
+    def mean(self, numeric_only=False):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
@@ -580,7 +580,7 @@ class DataFrameGroupBy(ClassLogger):
     def idxmin(self):
         return self._default_to_pandas(lambda df: df.idxmin())
 
-    def prod(self, numeric_only=None, min_count=0):
+    def prod(self, numeric_only=False, min_count=0):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_prod,
             agg_kwargs=dict(min_count=min_count),
@@ -790,7 +790,7 @@ class DataFrameGroupBy(ClassLogger):
             result.name = None
         return result.fillna(0)
 
-    def sum(self, numeric_only=None, min_count=0):
+    def sum(self, numeric_only=False, min_count=0):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sum,
             agg_kwargs=dict(min_count=min_count),
@@ -843,7 +843,7 @@ class DataFrameGroupBy(ClassLogger):
     def resample(self, rule, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
 
-    def median(self, numeric_only=None):
+    def median(self, numeric_only=False):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_median,
@@ -1129,7 +1129,7 @@ class DataFrameGroupBy(ClassLogger):
     def _wrap_aggregation(
         self,
         qc_method,
-        numeric_only=None,
+        numeric_only=False,
         agg_args=None,
         agg_kwargs=None,
         **kwargs,
@@ -1161,14 +1161,6 @@ class DataFrameGroupBy(ClassLogger):
         """
         agg_args = tuple() if agg_args is None else agg_args
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
-
-        if numeric_only is None:
-            # pandas behavior: if `numeric_only` wasn't explicitly specified then
-            # the parameter is considered to be `False` if there are no numeric types
-            # in the frame and `True` otherwise.
-            numeric_only = any(
-                is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes
-            )
 
         if numeric_only and self.ndim == 2:
             by_cols = self._internal_by

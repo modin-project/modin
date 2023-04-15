@@ -1655,6 +1655,7 @@ class DataFrame(BasePandasDataset):
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
+            # potential place to remove
             and numeric_only is None
             and min_count > len(axis_to_apply)
         ):
@@ -2101,6 +2102,7 @@ class DataFrame(BasePandasDataset):
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
+            # potential place to remove
             and numeric_only is None
             and min_count > len(axis_to_apply)
         ):
@@ -2915,11 +2917,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
-        return (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
@@ -2970,11 +2968,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
-        return (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _to_pandas(self):
         """
