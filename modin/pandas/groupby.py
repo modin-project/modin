@@ -185,7 +185,11 @@ class DataFrameGroupBy(ClassLogger):
     def ngroups(self):
         return len(self)
 
-    def skew(self, axis=0, skipna=True, numeric_only=False, **kwargs):
+    def skew(self, axis=no_default, skipna=True, numeric_only=False, **kwargs):
+        # default behaviour for aggregations; for the reference see
+        # `_op_via_apply` func in pandas==2.0.0
+        if axis is None or axis is no_default:
+            axis = self._axis
         agg_kwargs = dict(
             axis=axis,
             skipna=skipna,

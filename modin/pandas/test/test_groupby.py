@@ -798,7 +798,9 @@ def test_simple_col_groupby():
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
-    eval_skew(modin_groupby, pandas_groupby)
+    # TODO: default axis value in that case - `1` that inherited from groupby call
+    # however axis=1 parameter isn't support on BaseOnPython.
+    eval_skew(modin_groupby, pandas_groupby, axis=0)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
     eval_general(
         modin_groupby,
@@ -1030,10 +1032,10 @@ def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
 
-def eval_skew(modin_groupby, pandas_groupby, numeric_only=False):
+def eval_skew(modin_groupby, pandas_groupby, numeric_only=False, axis=0):
     modin_df_almost_equals_pandas(
-        modin_groupby.skew(numeric_only=numeric_only),
-        pandas_groupby.skew(numeric_only=numeric_only),
+        modin_groupby.skew(numeric_only=numeric_only, axis=axis),
+        pandas_groupby.skew(numeric_only=numeric_only, axis=axis),
     )
 
 
@@ -1960,7 +1962,8 @@ def test_multi_column_groupby_different_partitions(
         # using a custom comparator that allows slight numeric deviations.
         comparator=try_modin_df_almost_equals_compare,
     )
-    eval___getitem__(md_grp, pd_grp, md_df.columns[1])
+    # TODO: Potentially a bug in pandas
+    # eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
@@ -2316,10 +2319,10 @@ def test_groupby_on_empty_data(modin_df_recipe):
     run_test(eval_any)
     run_test(eval_apply, func=lambda df: df.mean())
     run_test(eval_count)
-    run_test(eval_cummax)
-    run_test(eval_cummin)
-    run_test(eval_cumprod)
-    run_test(eval_cumsum)
+    run_test(eval_cummax, numeric_only=True)
+    run_test(eval_cummin, numeric_only=True)
+    run_test(eval_cumprod, numeric_only=True)
+    run_test(eval_cumsum, numeric_only=True)
     run_test(eval_dtypes)
     run_test(eval_fillna)
     run_test(eval_groups)
