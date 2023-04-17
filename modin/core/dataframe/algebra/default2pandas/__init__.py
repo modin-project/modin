@@ -35,4 +35,5 @@ __all__ = [
     "DefaultMethod",
     "CatDefault",
     "GroupByDefault",
+    "SeriesGroupByDefault",
 ]

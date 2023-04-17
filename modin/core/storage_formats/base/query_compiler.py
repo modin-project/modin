@@ -2793,7 +2793,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
         series_groupby : bool, default: False
-            Whether we should treat `self` as Series when performing groupby
+            Whether we should treat `self` as Series when performing groupby.
 
         Returns
         -------
