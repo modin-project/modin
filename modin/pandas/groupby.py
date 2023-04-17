@@ -370,13 +370,13 @@ class DataFrameGroupBy(ClassLogger):
     def nth(self, n, dropna=None):
         return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
 
-    def cumsum(self, axis=0, *args, **kwargs):
+    def cumsum(self, axis=0, *args, numeric_only=False, **kwargs):
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumsum,
                 agg_args=args,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=True,
+                numeric_only=numeric_only,
             )
         )
 
@@ -401,12 +401,12 @@ class DataFrameGroupBy(ClassLogger):
             lambda df: df.filter(func, dropna=dropna, *args, **kwargs)
         )
 
-    def cummax(self, axis=0, **kwargs):
+    def cummax(self, axis=0, numeric_only=False, **kwargs):
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummax,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=False,
+                numeric_only=numeric_only,
             )
         )
 
@@ -547,12 +547,12 @@ class DataFrameGroupBy(ClassLogger):
             **kwargs,
         )
 
-    def cummin(self, axis=0, **kwargs):
+    def cummin(self, axis=0, numeric_only=False, **kwargs):
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummin,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=False,
+                numeric_only=numeric_only,
             )
         )
 
@@ -834,13 +834,13 @@ class DataFrameGroupBy(ClassLogger):
     def head(self, n=5):
         return self._default_to_pandas(lambda df: df.head(n))
 
-    def cumprod(self, axis=0, *args, **kwargs):
+    def cumprod(self, axis=0, *args, numeric_only=False, **kwargs):
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumprod,
                 agg_args=args,
                 agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=True,
+                numeric_only=numeric_only,
             )
         )
 
