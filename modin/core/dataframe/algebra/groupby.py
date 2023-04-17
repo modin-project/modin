@@ -353,7 +353,9 @@ class GroupByReduce(TreeReduce):
                     if isinstance(map_func, dict)
                     else map_func
                 )
-            default_to_pandas_func = GroupByDefault.register(default_to_pandas_func)
+            default_to_pandas_func = GroupByDefault.get(
+                query_compiler._shape_hint
+            ).register(default_to_pandas_func)
             return default_to_pandas_func(
                 query_compiler,
                 by=by,

@@ -3036,7 +3036,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
-        self_is_series=False,
     ):
         level = groupby_kwargs.get("level", None)
         if is_list_like(level) and len(level) == 1:
@@ -3069,7 +3068,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
             agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
+                GroupByDefault.get(self._shape_hint).get_aggregation_method(how),
+                func=agg_func,
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
@@ -3155,9 +3155,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
-                grouped_df = (df.squeeze() if self_is_series else df).groupby(
-                    by=by, axis=axis, **groupby_kwargs
-                )
+                target_df = df.squeeze() if self._shape_hint is not None else df
+                grouped_df = target_df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except ValueError:

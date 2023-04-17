@@ -34,6 +34,10 @@ class GroupBy:
     ]
 
     @classmethod
+    def _call_groupby(cls, df, *args, **kwargs):
+        return df.groupby(*args, **kwargs)
+
+    @classmethod
     def validate_by(cls, by):
         """
         Build valid `by` parameter for `pandas.DataFrame.groupby`.
@@ -158,7 +162,7 @@ class GroupBy:
             """Group DataFrame and apply aggregation function to each group."""
             by = cls.validate_by(by)
 
-            grp = df.groupby(by, axis=axis, **groupby_kwargs)
+            grp = cls._call_groupby(df, by, axis=axis, **groupby_kwargs)
             agg_func = cls.get_func(key, **kwargs)
             result = agg_func(grp, *agg_args, **agg_kwargs)
 
@@ -189,7 +193,7 @@ class GroupBy:
             """Group DataFrame and apply aggregation function to each group."""
             if not isinstance(by, (pandas.Series, pandas.DataFrame)):
                 by = cls.validate_by(by)
-                grp = df.groupby(by, axis=axis, **groupby_kwargs)
+                grp = cls._call_groupby(df, by, axis=axis, **groupby_kwargs)
                 grp_agg_func = cls.get_func(agg_func, **kwargs)
                 return grp_agg_func(
                     grp,
@@ -214,7 +218,7 @@ class GroupBy:
             as_index = groupby_kwargs.pop("as_index", True)
             groupby_kwargs["as_index"] = True
 
-            grp = df.groupby(by, axis=axis, **groupby_kwargs)
+            grp = cls._call_groupby(df, by, axis=axis, **groupby_kwargs)
             func = cls.get_func(agg_func, **kwargs)
             result = func(grp, *agg_args, **agg_kwargs)
             method = kwargs.get("method")
@@ -279,8 +283,9 @@ class GroupBy:
             return cls.build_aggregate_method(func)
         return cls.build_groupby_reduce_method(func)
 
-    @staticmethod
+    @classmethod
     def handle_as_index_for_dataframe(
+        cls,
         result,
         internal_by_cols,
         by_cols_dtypes=None,
@@ -331,7 +336,7 @@ class GroupBy:
         if not inplace:
             result = result.copy()
 
-        reset_index, drop, lvls_to_drop, cols_to_drop = GroupBy.handle_as_index(
+        reset_index, drop, lvls_to_drop, cols_to_drop = cls.handle_as_index(
             result_cols=result.columns,
             result_index_names=result.index.names,
             internal_by_cols=internal_by_cols,
@@ -517,8 +522,16 @@ class GroupBy:
         return reset_index, drop, lvls_to_drop, cols_to_drop
 
 
+class SeriesGroupBy(GroupBy):
+    @classmethod
+    def _call_groupby(cls, df, *args, **kwargs):
+        return super()._call_groupby(df.squeeze(), *args, **kwargs)
+
+
 class GroupByDefault(DefaultMethod):
     """Builder for default-to-pandas GroupBy aggregation functions."""
+
+    _groupby_cls = GroupBy
 
     OBJECT_TYPE = "GroupBy"
 
@@ -542,7 +555,25 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return super().register(
-            GroupBy.build_groupby(func), fn_name=func.__name__, **kwargs
+            cls._groupby_cls.build_groupby(func), fn_name=func.__name__, **kwargs
+        )
+
+    @staticmethod
+    def get(shape_hint):
+        """
+        Get correct GroupByDefault depending on whether shape hint is Series or Dataframe.
+
+        Parameters
+        ----------
+        shape_hint : {"column", "row", None}
+            Whether we want the class for Series (if "column" or "row") or DataFrame.
+
+        Returns
+        -------
+        GroupByDefault or SeriesGroupByDefault
+        """
+        return (
+            SeriesGroupByDefault if shape_hint in ("column", "row") else GroupByDefault
         )
 
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
@@ -551,7 +582,7 @@ class GroupByDefault(DefaultMethod):
     #   2. `.apply(func)` applies func to a DataFrames, holding a whole group (group-wise).
     #   3. `.transform(func)` is the same as `.apply()` but also broadcast the `func`
     #      result to the group's original shape.
-    __aggregation_methods_dict = {
+    _aggregation_methods_dict = {
         "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
         "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,
         "transform": pandas.core.groupby.DataFrameGroupBy.transform,
@@ -575,4 +606,14 @@ class GroupByDefault(DefaultMethod):
         -----
         Visit ``BaseQueryCompiler.groupby_agg`` doc-string for more information about `how` parameter.
         """
-        return cls.__aggregation_methods_dict[how]
+        return cls._aggregation_methods_dict[how]
+
+
+class SeriesGroupByDefault(GroupByDefault):
+    _groupby_cls = SeriesGroupBy
+
+    _aggregation_methods_dict = {
+        "axis_wise": pandas.core.groupby.SeriesGroupBy.aggregate,
+        "group_wise": pandas.core.groupby.SeriesGroupBy.apply,
+        "transform": pandas.core.groupby.SeriesGroupBy.transform,
+    }

@@ -1426,6 +1426,14 @@ class DataFrameGroupBy(ClassLogger):
 class SeriesGroupBy(DataFrameGroupBy):
     _pandas_class = pandas.core.groupby.SeriesGroupBy
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._query_compiler._shape_hint is None:
+            # TODO: ._shape_hint should be maintained properly elsewhere
+            # Note that we make a copy of QC here to not corrupt it somewhere else
+            self._query_compiler = self._query_compiler.copy()
+            self._query_compiler._shape_hint = "column"
+
     @property
     def ndim(self):
         """
@@ -1514,7 +1522,6 @@ class SeriesGroupBy(DataFrameGroupBy):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_unique,
                 numeric_only=False,
-                self_is_series=True,
             )
         )
 
@@ -1524,7 +1531,6 @@ class SeriesGroupBy(DataFrameGroupBy):
                 type(self._query_compiler).groupby_nlargest,
                 agg_kwargs=dict(n=n, keep=keep),
                 numeric_only=True,
-                self_is_series=True,
             )
         )
 
@@ -1534,7 +1540,6 @@ class SeriesGroupBy(DataFrameGroupBy):
                 type(self._query_compiler).groupby_nsmallest,
                 agg_kwargs=dict(n=n, keep=keep),
                 numeric_only=True,
-                self_is_series=True,
             )
         )
 
