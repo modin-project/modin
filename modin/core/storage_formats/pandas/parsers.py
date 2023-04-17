@@ -41,7 +41,6 @@ Data parsing mechanism differs depending on the data format type:
 
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
-from pathlib import Path
 import fsspec
 import numpy as np
 import pandas
@@ -781,7 +780,7 @@ engine : str
         storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path
-        if isinstance(files_for_parser, (str, Path)):
+        if isinstance(files_for_parser, str):
             return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
 
         for file_for_parser in files_for_parser:

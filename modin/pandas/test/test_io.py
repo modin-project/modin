@@ -1725,7 +1725,7 @@ class TestParquet:
         with warns_that_defaulting_to_pandas():
             eval_io(
                 fn_name="read_parquet",
-                path=path / file_name,
+                path=str(path / file_name),
                 columns=["col_b"],
                 engine=engine,
                 filters=[[("col_a", "==", 1)]],
