@@ -34,7 +34,8 @@ class GroupBy:
     ]
 
     @classmethod
-    def _call_groupby(cls, df, *args, **kwargs):
+    def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
+        """Call .groupby() on passed `df`."""
         return df.groupby(*args, **kwargs)
 
     @classmethod
@@ -523,8 +524,11 @@ class GroupBy:
 
 
 class SeriesGroupBy(GroupBy):
+    """Builder for GroupBy aggregation functions for Series."""
+
     @classmethod
-    def _call_groupby(cls, df, *args, **kwargs):
+    def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
+        """Call .groupby() on passed `df` squeezed to Series."""
         return super()._call_groupby(df.squeeze(), *args, **kwargs)
 
 
@@ -610,6 +614,8 @@ class GroupByDefault(DefaultMethod):
 
 
 class SeriesGroupByDefault(GroupByDefault):
+    """Builder for default-to-pandas GroupBy aggregation functions for Series."""
+
     _groupby_cls = SeriesGroupBy
 
     _aggregation_methods_dict = {
