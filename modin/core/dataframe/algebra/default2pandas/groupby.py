@@ -225,7 +225,7 @@ class GroupBy:
             method = kwargs.get("method")
 
             if isinstance(result, pandas.Series):
-                result = result.to_frame(MODIN_UNNAMED_SERIES_LABEL)
+                result = result.to_frame(result.name or MODIN_UNNAMED_SERIES_LABEL)
 
             if not as_index:
                 if isinstance(by, pandas.Series):
@@ -529,7 +529,16 @@ class SeriesGroupBy(GroupBy):
     @classmethod
     def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
         """Call .groupby() on passed `df` squeezed to Series."""
-        return super()._call_groupby(df.squeeze(), *args, **kwargs)
+        # We can end up here by two means - either by "true" call
+        # like Series().groupby() or by df.groupby()[item].
+
+        if len(df.columns) == 1:
+            # Series().groupby() case
+            return df.squeeze(axis=1).groupby(*args, **kwargs)
+        # In second case surrounding logic will supplement grouping columns,
+        # so we need to drop them after grouping is over; our originally
+        # selected column is always the first, so use it
+        return df.groupby(*args, **kwargs)[df.columns[0]]
 
 
 class GroupByDefault(DefaultMethod):
