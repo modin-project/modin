@@ -522,7 +522,6 @@ class DataFrame(BasePandasDataset):
             as_index,
             sort,
             group_keys,
-            False,
             idx_name,
             observed=observed,
             drop=drop,

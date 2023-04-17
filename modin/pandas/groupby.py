@@ -70,7 +70,6 @@ _DEFAULT_BEHAVIOUR = {
     "_pandas_class",
     "_query_compiler",
     "_sort",
-    "_squeeze",
     "_wrap_aggregation",
 }
 
@@ -88,7 +87,6 @@ class DataFrameGroupBy(ClassLogger):
         as_index,
         sort,
         group_keys,
-        squeeze,
         idx_name,
         drop,
         **kwargs,
@@ -128,7 +126,6 @@ class DataFrameGroupBy(ClassLogger):
             "as_index": as_index,
             "group_keys": group_keys,
         }
-        self._squeeze = squeeze
         self._kwargs.update(kwargs)
 
     def __getattr__(self, key):
@@ -200,7 +197,6 @@ class DataFrameGroupBy(ClassLogger):
                     axis=self._axis,
                     idx_name=self._idx_name,
                     drop=self._drop,
-                    squeeze=self._squeeze,
                     **self._kwargs,
                 )
             else:
@@ -512,7 +508,6 @@ class DataFrameGroupBy(ClassLogger):
             "by": self._by,
             "axis": self._axis,
             "idx_name": self._idx_name,
-            "squeeze": self._squeeze,
         }
         # The rules of type deduction for the resulted object is the following:
         #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
@@ -760,7 +755,6 @@ class DataFrameGroupBy(ClassLogger):
                 0,
                 drop=self._drop,
                 idx_name=self._idx_name,
-                squeeze=self._squeeze,
                 **self._kwargs,
             ).size()
         work_object = type(self)(
@@ -769,7 +763,6 @@ class DataFrameGroupBy(ClassLogger):
             self._axis,
             drop=False,
             idx_name=None,
-            squeeze=self._squeeze,
             **self._kwargs,
         )
         result = work_object._wrap_aggregation(
@@ -894,7 +887,6 @@ class DataFrameGroupBy(ClassLogger):
             axis=self._axis,
             idx_name=self._idx_name,
             drop=self._drop,
-            squeeze=self._squeeze,
             **new_groupby_kwargs,
         )
         return work_object._check_index_name(
@@ -1180,7 +1172,7 @@ class DataFrameGroupBy(ClassLogger):
         else:
             groupby_qc = self._query_compiler
 
-        result = type(self._df)(
+        return type(self._df)(
             query_compiler=qc_method(
                 groupby_qc,
                 by=self._by,
@@ -1192,9 +1184,6 @@ class DataFrameGroupBy(ClassLogger):
                 **kwargs,
             )
         )
-        if self._squeeze:
-            return result.squeeze()
-        return result
 
     def _check_index(self, result):
         """
