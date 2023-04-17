@@ -444,12 +444,14 @@ class DataFrame(BasePandasDataset):
         # groupby takes place.
         drop = False
 
+        return_tuple_when_iterating = None
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
             and len(by) == 1
         ):
             by = by[0]
+            return_tuple_when_iterating = True
 
         if callable(by):
             by = self.index.map(by)
@@ -526,6 +528,7 @@ class DataFrame(BasePandasDataset):
             observed=observed,
             drop=drop,
             dropna=dropna,
+            return_tuple_when_iterating=return_tuple_when_iterating,
         )
 
     def keys(self):  # noqa: RT01, D200

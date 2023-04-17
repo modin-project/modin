@@ -77,6 +77,7 @@ _DEFAULT_BEHAVIOUR = {
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(ClassLogger):
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
+    _return_tuple_when_iterating = None
 
     def __init__(
         self,
@@ -98,6 +99,12 @@ class DataFrameGroupBy(ClassLogger):
         self._columns = self._query_compiler.columns
         self._by = by
         self._drop = drop
+        # When providing a list of columns of length one to DataFrame.groupby(),
+        # the keys that are returned by iterating over the resulting DataFrameGroupBy
+        # object will now be tuples of length one (pandas#GH47761)
+        self._return_tuple_when_iterating = kwargs.pop(
+            "return_tuple_when_iterating", None
+        )
 
         if (
             level is None
@@ -178,38 +185,18 @@ class DataFrameGroupBy(ClassLogger):
     def ngroups(self):
         return len(self)
 
-    def skew(self, *args, **kwargs):
-        # The 'skew' aggregation is less tolerant to non-numeric columns than others
-        # (i.e. it doesn't allow numeric categoricals), thus dropping non-numeric
-        # columns here since `._wrap_aggregation(numeric_only=True, ...)` is not enough
-        if self.ndim == 2:
-            by_cols = self._internal_by
-            mask_cols = [
-                col
-                for col, dtype in self._df.dtypes.items()
-                if is_numeric_dtype(dtype) or col in by_cols
-            ]
-            if not self._df.columns.equals(mask_cols):
-                masked_df = self._df[mask_cols]
-                masked_obj = type(self)(
-                    df=masked_df,
-                    by=self._by,
-                    axis=self._axis,
-                    idx_name=self._idx_name,
-                    drop=self._drop,
-                    **self._kwargs,
-                )
-            else:
-                masked_obj = self
-        else:
-            masked_obj = self
+    def skew(self, axis=0, skipna=True, numeric_only=False, **kwargs):
+        agg_kwargs = dict(
+            axis=axis,
+            skipna=skipna,
+            numeric_only=numeric_only,
+        )
+        agg_kwargs.update(kwargs)
 
-        return masked_obj._wrap_aggregation(
-            type(masked_obj._query_compiler).groupby_skew,
-            agg_args=args,
-            agg_kwargs=kwargs,
-            # Don't want to try to drop non-numeric columns for the second time
-            numeric_only=False,
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_skew,
+            agg_kwargs=agg_kwargs,
+            numeric_only=numeric_only,
         )
 
     def ffill(self, limit=None):
@@ -1004,7 +991,7 @@ class DataFrameGroupBy(ClassLogger):
         if self._axis == 0:
             return (
                 (
-                    k,
+                    (k,) if self._return_tuple_when_iterating else k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_row_array(
                             indices[k]
@@ -1016,7 +1003,7 @@ class DataFrameGroupBy(ClassLogger):
         else:
             return (
                 (
-                    k,
+                    (k,) if self._return_tuple_when_iterating else k,
                     DataFrame(
                         query_compiler=self._query_compiler.getitem_column_array(
                             indices[k], numeric=True
