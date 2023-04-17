@@ -819,7 +819,7 @@ def test_create_categorical_dataframe_with_duplicate_column_name():
 @pytest.mark.parametrize(
     "func, regex",
     [
-        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df.mean(), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
         (
