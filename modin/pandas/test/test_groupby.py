@@ -98,6 +98,9 @@ def build_types_asserter(comparator):
 
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
+    # The data for this test contains non-numeric types. In pandas version 1.5.3 and older,
+    # it automatically determined whether to filter non-numeric data if `numeric_only=None`.
+    # Now this needs to be done explicitly via `numeric_only=True`.
     frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
     pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
     # Convert every other column to string
@@ -142,19 +145,19 @@ def test_mixed_dtypes_groupby(as_index):
         )
         eval_general(modin_groupby, pandas_groupby, lambda df: df.ewm(com=0.5).std())
         eval_shift(modin_groupby, pandas_groupby)
-        eval_mean(modin_groupby, pandas_groupby)
+        eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
         eval_ndim(modin_groupby, pandas_groupby)
-        eval_cumsum(modin_groupby, pandas_groupby)
+        eval_cumsum(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
         )
-        eval_cummax(modin_groupby, pandas_groupby)
+        eval_cummax(modin_groupby, pandas_groupby, numeric_only=True)
 
         # TODO Add more apply functions
         apply_functions = [lambda df: df.sum(), min]
@@ -163,14 +166,14 @@ def test_mixed_dtypes_groupby(as_index):
 
         eval_dtypes(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-        eval_cummin(modin_groupby, pandas_groupby)
+        eval_cummin(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
-        eval_prod(modin_groupby, pandas_groupby)
+        eval_prod(modin_groupby, pandas_groupby, numeric_only=True)
         if as_index:
-            eval_std(modin_groupby, pandas_groupby)
-            eval_var(modin_groupby, pandas_groupby)
-            eval_skew(modin_groupby, pandas_groupby)
+            eval_std(modin_groupby, pandas_groupby, numeric_only=True)
+            eval_var(modin_groupby, pandas_groupby, numeric_only=True)
+            eval_skew(modin_groupby, pandas_groupby, numeric_only=True)
 
         agg_functions = [
             lambda df: df.sum(),
@@ -199,9 +202,9 @@ def test_mixed_dtypes_groupby(as_index):
         eval_ngroup(modin_groupby, pandas_groupby)
         eval_nunique(modin_groupby, pandas_groupby)
         eval_value_counts(modin_groupby, pandas_groupby)
-        eval_median(modin_groupby, pandas_groupby)
+        eval_median(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
-        eval_cumprod(modin_groupby, pandas_groupby)
+        eval_cumprod(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1027,12 +1030,18 @@ def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
 
-def eval_skew(modin_groupby, pandas_groupby):
-    modin_df_almost_equals_pandas(modin_groupby.skew(), pandas_groupby.skew())
+def eval_skew(modin_groupby, pandas_groupby, numeric_only=False):
+    modin_df_almost_equals_pandas(
+        modin_groupby.skew(numeric_only=numeric_only),
+        pandas_groupby.skew(numeric_only=numeric_only),
+    )
 
 
-def eval_mean(modin_groupby, pandas_groupby):
-    modin_df_almost_equals_pandas(modin_groupby.mean(), pandas_groupby.mean())
+def eval_mean(modin_groupby, pandas_groupby, numeric_only=False):
+    modin_df_almost_equals_pandas(
+        modin_groupby.mean(numeric_only=numeric_only),
+        pandas_groupby.mean(numeric_only=numeric_only),
+    )
 
 
 def eval_any(modin_groupby, pandas_groupby):
@@ -1047,12 +1056,25 @@ def eval_ndim(modin_groupby, pandas_groupby):
     assert modin_groupby.ndim == pandas_groupby.ndim
 
 
-def eval_cumsum(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis))
+def eval_cumsum(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+    df_equals(
+        modin_groupby.cumsum(axis=axis, numeric_only=numeric_only),
+        pandas_groupby.cumsum(axis=axis, numeric_only=numeric_only),
+    )
 
 
-def eval_cummax(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis))
+def eval_cummax(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+    df_equals(
+        modin_groupby.cummax(axis=axis, numeric_only=numeric_only),
+        pandas_groupby.cummax(axis=axis, numeric_only=numeric_only),
+    )
+
+
+def eval_cummin(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+    df_equals(
+        modin_groupby.cummin(axis=axis, numeric_only=numeric_only),
+        pandas_groupby.cummin(axis=axis, numeric_only=numeric_only),
+    )
 
 
 def eval_apply(modin_groupby, pandas_groupby, func):
@@ -1063,16 +1085,18 @@ def eval_dtypes(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.dtypes, pandas_groupby.dtypes)
 
 
-def eval_cummin(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis))
+def eval_prod(modin_groupby, pandas_groupby, numeric_only=False):
+    df_equals(
+        modin_groupby.prod(numeric_only=numeric_only),
+        pandas_groupby.prod(numeric_only=numeric_only),
+    )
 
 
-def eval_prod(modin_groupby, pandas_groupby):
-    df_equals(modin_groupby.prod(), pandas_groupby.prod())
-
-
-def eval_std(modin_groupby, pandas_groupby):
-    modin_df_almost_equals_pandas(modin_groupby.std(), pandas_groupby.std())
+def eval_std(modin_groupby, pandas_groupby, numeric_only=False):
+    modin_df_almost_equals_pandas(
+        modin_groupby.std(numeric_only=numeric_only),
+        pandas_groupby.std(numeric_only=numeric_only),
+    )
 
 
 def eval_aggregate(modin_groupby, pandas_groupby, func):
@@ -1091,8 +1115,11 @@ def eval_max(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.max(), pandas_groupby.max())
 
 
-def eval_var(modin_groupby, pandas_groupby):
-    modin_df_almost_equals_pandas(modin_groupby.var(), pandas_groupby.var())
+def eval_var(modin_groupby, pandas_groupby, numeric_only=False):
+    modin_df_almost_equals_pandas(
+        modin_groupby.var(numeric_only=numeric_only),
+        pandas_groupby.var(numeric_only=numeric_only),
+    )
 
 
 def eval_len(modin_groupby, pandas_groupby):
@@ -1115,13 +1142,22 @@ def eval_value_counts(modin_groupby, pandas_groupby):
     df_equals(modin_groupby.value_counts(), pandas_groupby.value_counts())
 
 
-def eval_median(modin_groupby, pandas_groupby):
-    modin_df_almost_equals_pandas(modin_groupby.median(), pandas_groupby.median())
+def eval_median(modin_groupby, pandas_groupby, numeric_only=False):
+    modin_df_almost_equals_pandas(
+        modin_groupby.median(numeric_only=numeric_only),
+        pandas_groupby.median(numeric_only=numeric_only),
+    )
 
 
-def eval_cumprod(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumprod(), pandas_groupby.cumprod())
-    df_equals(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis))
+def eval_cumprod(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+    df_equals(
+        modin_groupby.cumprod(numeric_only=numeric_only),
+        pandas_groupby.cumprod(numeric_only=numeric_only),
+    )
+    df_equals(
+        modin_groupby.cumprod(axis=axis, numeric_only=numeric_only),
+        pandas_groupby.cumprod(axis=axis, numeric_only=numeric_only),
+    )
 
 
 def eval_transform(modin_groupby, pandas_groupby, func):
@@ -2021,6 +2057,13 @@ def test_handle_as_index(
         pytest.skip(
             "The linked bug makes pandas raise an exception when 'by' is categorical: "
             + "https://github.com/pandas-dev/pandas/issues/36698"
+        )
+
+    if has_categorical_by and (
+        callable(agg_func) or ("apply_sum" in request.node.callspec.id.split("-"))
+    ):
+        pytest.skip(
+            "TypeError: 'Categorical' with dtype category does not support reduction 'sum'"
         )
 
     df = pandas.DataFrame(test_groupby_data)

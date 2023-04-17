@@ -569,11 +569,11 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    def std(self, ddof=1):
+    def std(self, ddof=1, engine=None, engine_kwargs=None, numeric_only=False):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_std,
-            agg_kwargs=dict(ddof=ddof),
-            numeric_only=True,
+            agg_kwargs=dict(ddof=ddof, engine=engine, engine_kwargs=engine_kwargs),
+            numeric_only=numeric_only,
         )
 
     def aggregate(self, func=None, *args, **kwargs):
@@ -714,11 +714,11 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def var(self, ddof=1):
+    def var(self, ddof=1, engine=None, engine_kwargs=None, numeric_only=False):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_var,
-            agg_kwargs=dict(ddof=ddof),
-            numeric_only=True,
+            agg_kwargs=dict(ddof=ddof, engine=engine, engine_kwargs=engine_kwargs),
+            numeric_only=numeric_only,
         )
 
     def get_group(self, name, obj=None):
