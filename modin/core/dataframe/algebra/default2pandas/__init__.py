@@ -22,7 +22,7 @@ from .resample import ResampleDefault
 from .rolling import RollingDefault
 from .default import DefaultMethod
 from .cat import CatDefault
-from .groupby import GroupByDefault
+from .groupby import GroupByDefault, SeriesGroupByDefault
 
 __all__ = [
     "DataFrameDefault",

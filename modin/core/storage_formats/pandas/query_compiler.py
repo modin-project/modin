@@ -59,7 +59,11 @@ from modin.core.dataframe.algebra import (
     Binary,
     GroupByReduce,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.core.dataframe.algebra.default2pandas.groupby import (
+    GroupBy,
+    GroupByDefault,
+    SeriesGroupByDefault,
+)
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
@@ -3036,6 +3040,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         level = groupby_kwargs.get("level", None)
         if is_list_like(level) and len(level) == 1:
@@ -3068,7 +3073,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
             agg_func = functools.partial(
-                GroupByDefault.get(self._shape_hint).get_aggregation_method(how),
+                (
+                    SeriesGroupByDefault if series_groupby else GroupByDefault
+                ).get_aggregation_method(how),
                 func=agg_func,
             )
 
@@ -3155,7 +3162,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
-                target_df = df.squeeze() if self._shape_hint is not None else df
+                target_df = df.squeeze(axis=1) if series_groupby else df
                 grouped_df = target_df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)

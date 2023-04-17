@@ -1426,14 +1426,6 @@ class DataFrameGroupBy(ClassLogger):
 class SeriesGroupBy(DataFrameGroupBy):
     _pandas_class = pandas.core.groupby.SeriesGroupBy
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if self._query_compiler._shape_hint is None:
-            # TODO: ._shape_hint should be maintained properly elsewhere
-            # Note that we make a copy of QC here to not corrupt it somewhere else
-            self._query_compiler = self._query_compiler.copy()
-            self._query_compiler._shape_hint = "column"
-
     @property
     def ndim(self):
         """

@@ -571,24 +571,6 @@ class GroupByDefault(DefaultMethod):
             cls._groupby_cls.build_groupby(func), fn_name=func.__name__, **kwargs
         )
 
-    @staticmethod
-    def get(shape_hint):
-        """
-        Get correct GroupByDefault depending on whether shape hint is Series or Dataframe.
-
-        Parameters
-        ----------
-        shape_hint : {"column", "row", None}
-            Whether we want the class for Series (if "column" or "row") or DataFrame.
-
-        Returns
-        -------
-        GroupByDefault or SeriesGroupByDefault
-        """
-        return (
-            SeriesGroupByDefault if shape_hint in ("column", "row") else GroupByDefault
-        )
-
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
     # it's based on `how` to apply it. Going by pandas documentation:
     #   1. `.aggregate(func)` applies func row/column wise.

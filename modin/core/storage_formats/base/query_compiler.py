@@ -29,6 +29,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     RollingDefault,
     CatDefault,
     GroupByDefault,
+    SeriesGroupByDefault,
 )
 from modin.error_message import ErrorMessage
 from . import doc_utils
@@ -2762,6 +2763,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         """
         Group QueryCompiler data and apply passed aggregation function.
@@ -2790,6 +2792,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
+        series_groupby : bool, default: False
+            Whether we should treat `self` as Series when performing groupby
 
         Returns
         -------
@@ -2802,7 +2806,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
-        defaulter = GroupByDefault.get(self._shape_hint)
+        defaulter = SeriesGroupByDefault if series_groupby else GroupByDefault
         return defaulter.register(defaulter.get_aggregation_method(how))(
             self,
             by=by,
@@ -3396,6 +3400,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            series_groupby=True,
         )
 
     @doc_utils.doc_groupby_method(
@@ -3420,6 +3425,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            series_groupby=True,
         )
 
     @doc_utils.doc_groupby_method(
@@ -3444,6 +3450,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+            series_groupby=True,
         )
 
     # END Manual Partitioning methods
