@@ -26,7 +26,7 @@ from modin.core.storage_formats.pandas.parsers import (
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
 from modin.experimental.core.io import (
-    CSVGlobDispatcher,
+    ExperimentalCSVGlobDispatcher,
     ExperimentalSQLDispatcher,
     ExperimentalPickleDispatcher,
     ExperimentalCustomTextDispatcher,
@@ -63,7 +63,7 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         # used to reduce code duplication
         return type("", (RayWrapper, *classes), build_args).write
 
-    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    read_csv_glob = __make_read(PandasCSVGlobParser, ExperimentalCSVGlobDispatcher)
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )

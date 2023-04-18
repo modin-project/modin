@@ -17,7 +17,7 @@ ExperimentalPandasOnRayIO classes and modules
 
 - :py:class:`~modin.experimental.core.execution.ray.implementations.pandas_on_ray.io.io.ExperimentalPandasOnRayIO`
 - :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnRayFactory`
-- :py:class:`~modin.experimental.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher`
+- :py:class:`~modin.experimental.core.io.text.csv_glob_dispatcher.ExperimentalCSVGlobDispatcher`
 - :py:class:`~modin.experimental.core.io.sql.sql_dispatcher.ExperimentalSQLDispatcher`
 - :py:class:`~modin.experimental.core.io.pickle.pickle_dispatcher.ExperimentalPickleDispatcher`
 - :py:class:`~modin.experimental.core.io.text.custom_text_dispatcher.ExperimentalCustomTextDispatcher`
