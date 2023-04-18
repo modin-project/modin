@@ -504,6 +504,7 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_table`")
         return cls.from_pandas(
@@ -516,6 +517,7 @@ class BaseIO:
                 parse_dates=parse_dates,
                 columns=columns,
                 chunksize=chunksize,
+                dtype_backend=dtype_backend,
             )
         )
 
