@@ -1613,7 +1613,8 @@ def test_agg_4604():
         pytest.param(
             "mean",
             marks=pytest.mark.xfail(
-                condition=ExperimentalGroupbyImpl.get(),
+                condition=ExperimentalGroupbyImpl.get()
+                and Engine.get() in ("Dask", "Ray", "Unidist"),
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
@@ -1624,7 +1625,8 @@ def test_agg_4604():
         pytest.param(
             "median",
             marks=pytest.mark.xfail(
-                condition=ExperimentalGroupbyImpl.get(),
+                condition=ExperimentalGroupbyImpl.get()
+                and Engine.get() in ("Dask", "Ray", "Unidist"),
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
