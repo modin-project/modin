@@ -1,7 +1,7 @@
 :orphan:
 
-IO module Description For Pandas-on-Dask Execution
-""""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For ExperimentalPandasOnDask Execution
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''

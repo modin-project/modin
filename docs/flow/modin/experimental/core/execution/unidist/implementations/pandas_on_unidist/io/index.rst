@@ -1,7 +1,7 @@
 :orphan:
 
-IO module Description For Pandas-on-Unidist Execution
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For ExperimentalPandasOnUnidist Execution
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''

@@ -1,7 +1,7 @@
 :orphan:
 
-IO module Description For Pandas-on-Ray Execution
-"""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For ExperimentalPandasOnRay Execution
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''
