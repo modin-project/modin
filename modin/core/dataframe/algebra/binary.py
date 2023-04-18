@@ -48,7 +48,7 @@ def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
         return dtype
 
 
-def compute_dtypes_common_cast(first, second) -> np.dtype:
+def compute_dtypes_common_cast(first, second, trigger_computations=False) -> np.dtype:
     """
     Precompute data types for binary operations by finding common type between operands.
 
@@ -68,6 +68,16 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     -----
     The dtypes of the operands are supposed to be known.
     """
+    if not trigger_computations:
+        if not first._modin_frame.has_materialized_dtypes:
+            return None
+
+        if (
+            isinstance(second, type(first))
+            and not second._modin_frame.has_materialized_dtypes
+        ):
+            return None
+
     dtypes_first = first._modin_frame.dtypes.to_dict()
     if isinstance(second, type(first)):
         dtypes_second = second._modin_frame.dtypes.to_dict()
@@ -122,7 +132,7 @@ def compute_dtypes_common_cast(first, second) -> np.dtype:
     return dtypes
 
 
-def compute_dtypes_boolean(first, second) -> np.dtype:
+def compute_dtypes_boolean(first, second, trigger_computations=False) -> np.dtype:
     """
     Precompute data types for boolean operations.
 
@@ -142,6 +152,13 @@ def compute_dtypes_boolean(first, second) -> np.dtype:
     -----
     Finds a union of columns and finds dtypes for all these columns.
     """
+    if not trigger_computations:
+        if not first._modin_frame.has_columns_cache:
+            return None
+        
+        if isinstance(second, type(first)) and not second._modin_frame.has_columns_cache:
+            return None
+
     columns_first = set(first.columns)
     if isinstance(second, type(first)):
         columns_second = set(second.columns)
@@ -174,15 +191,6 @@ def try_compute_new_dtypes(first, second, infer_dtypes):
     -------
     pandas.Series or None
     """
-    if not first._modin_frame.has_materialized_dtypes:
-        return None
-
-    if (
-        isinstance(second, type(first))
-        and not second._modin_frame.has_materialized_dtypes
-    ):
-        return None
-
     try:
         if infer_dtypes == "bool":
             dtypes = compute_dtypes_boolean(first, second)
@@ -255,8 +263,8 @@ class Binary(Operator):
                 at the query compiler level, so this parameter is a hint that passed from a high level API.
             *args : args,
                 Arguments that will be passed to `func`.
-            dtypes : "copy" or None, default: None
-                Whether to keep old dtypes or infer new dtypes from data.
+            dtypes : "copy", scalar dtype or None, default: None
+                Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
             **kwargs : kwargs,
                 Arguments that will be passed to `func`.
 
@@ -276,12 +284,13 @@ class Binary(Operator):
                 # column or row as a single-column Modin DataFrame
                 if axis == 1:
                     other = other.transpose()
-
-            new_dtypes = (
-                try_compute_new_dtypes(query_compiler, other, infer_dtypes)
-                if dtypes is None
-                else dtypes
-            )
+            if dtypes is None:
+                new_dtypes = (
+                    try_compute_new_dtypes(query_compiler, other, infer_dtypes)
+                    if dtypes is None
+                    else dtypes
+                )
+            
             shape_hint = None
             if isinstance(other, type(query_compiler)):
                 if broadcast:
