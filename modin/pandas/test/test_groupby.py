@@ -1612,11 +1612,23 @@ def test_agg_4604():
         "quantile",
         pytest.param(
             "mean",
+            marks=pytest.mark.xfail(
+                condition=ExperimentalGroupbyImpl.get(),
+                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
+                + "Remove this after the transition to pandas 2.0",
+            ),
         ),
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
-        "median",
+        pytest.param(
+            "median",
+            marks=pytest.mark.xfail(
+                condition=ExperimentalGroupbyImpl.get(),
+                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
+                + "Remove this after the transition to pandas 2.0",
+            ),
+        ),
         "unique",
         "cumprod",
     ],
