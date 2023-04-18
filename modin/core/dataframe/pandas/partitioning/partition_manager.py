@@ -1581,16 +1581,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # Convert our list of block partitions to row partitions. We need to create full-axis
         # row partitions since we need to send the whole partition to the split step as otherwise
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
-        row_partitions = [
-            partition.force_materialization().list_of_block_partitions[0]
-            for partition in cls.row_partitions(partitions)
-        ]
+        row_partitions = cls.row_partitions(partitions)
         if len(pivots):
             # Gather together all of the sub-partitions
             split_row_partitions = np.array(
                 [
                     partition.split(
-                        shuffle_functions.split_function, len(pivots) + 1, pivots
+                        shuffle_functions.split_function,
+                        num_splits=len(pivots) + 1,
+                        f_args=(pivots,),
+                        # The partition's metadata will never be accessed for the split partitions,
+                        # thus no need to compute it.
+                        extract_metadata=False,
                     )
                     for partition in row_partitions
                 ]
@@ -1608,5 +1610,5 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         else:
             # If there are not pivots we can simply apply the function row-wise
             return np.array(
-                [[row_part.apply(final_shuffle_func)] for row_part in row_partitions]
+                [row_part.apply(final_shuffle_func) for row_part in row_partitions]
             )

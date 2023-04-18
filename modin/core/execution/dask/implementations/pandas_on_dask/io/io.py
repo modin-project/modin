@@ -117,7 +117,7 @@ class PandasOnDaskIO(BaseIO):
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)
 
-        def func(df, **kw):
+        def func(df, **kw):  # pragma: no cover
             """
             Dump a chunk of rows as parquet, then save them to target maintaining order.
 
