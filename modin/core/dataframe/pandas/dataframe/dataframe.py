@@ -2240,12 +2240,12 @@ class PandasDataframe(ClassLogger):
         """
         if not isinstance(columns, list):
             columns = [columns]
-        # When we do a sort on the result of Series.value_counts, we don't rename the index until
-        # after everything is done, which causes an error when sorting the partitions, since the
-        # index and the column share the same name, when in actuality, the index's name should be
-        # None. This fixes the indexes name beforehand in that case, so that the sort works.
 
         def sort_function(df):  # pragma: no cover
+            # When we do a sort on the result of Series.value_counts, we don't rename the index until
+            # after everything is done, which causes an error when sorting the partitions, since the
+            # index and the column share the same name, when in actuality, the index's name should be
+            # None. This fixes the indexes name beforehand in that case, so that the sort works.
             index_renaming = None
             if any(name in df.columns for name in df.index.names):
                 index_renaming = df.index.names
@@ -2255,15 +2255,15 @@ class PandasDataframe(ClassLogger):
                 df.index = df.index.set_names(index_renaming)
             return df
 
+        # If this df is empty, we don't want to try and shuffle or sort.
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            return self.copy()
+
         axis = Axis(axis)
         if axis != Axis.ROW_WISE:
             raise NotImplementedError(
                 f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
             )
-
-        # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
-            return self.copy()
 
         new_partitions = self._apply_func_to_range_partitioning(
             key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
