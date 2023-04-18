@@ -2499,21 +2499,19 @@ class TestDuplicateColumns:
             labels = [
                 np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))
             ]
-            inplace = kwargs["set_axis_inplace"]
-            res = df.set_axis(labels, axis=1, inplace=inplace)
-            return df if inplace else res
+            return df.set_axis(labels, axis=1, copy=kwargs["copy"])
 
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=True,
+            copy=True,
         )
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=False,
+            copy=False,
         )
 
 

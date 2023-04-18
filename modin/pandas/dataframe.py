@@ -170,9 +170,9 @@ class DataFrame(BasePandasDataset):
             if columns is not None and not isinstance(columns, pandas.Index):
                 columns = pandas.Index(columns)
             if columns is not None:
-                self.set_axis(columns, axis=1, inplace=True)
+                self = self.set_axis(columns, axis=1, copy=False)
             if index is not None:
-                self.set_axis(index, axis=0, inplace=True)
+                self = self.set_axis(index, axis=0, copy=False)
             if dtype is not None:
                 casted_obj = self.astype(dtype, copy=False)
                 self._query_compiler = casted_obj._query_compiler
