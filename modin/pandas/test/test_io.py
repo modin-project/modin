@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import unittest.mock as mock
+import inspect
 import contextlib
 import pytest
 import numpy as np
@@ -66,6 +68,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     parse_dates_values_by_id,
     time_parsing_csv_path,
+    test_data as utils_test_data,
 )
 
 if StorageFormat.get() == "Hdk":
@@ -1473,10 +1476,6 @@ class TestParquet:
                 columns=columns,
             )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="https://github.com/intel-ai/hdk/issues/291",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -1671,6 +1670,27 @@ class TestParquet:
             index=True,
             engine=engine,
         )
+
+    def test_to_parquet_s3(self, s3_resource, engine, s3_storage_options):
+        # use utils_test_data because it spans multiple partitions
+        modin_path = "s3://modin-test/modin-dir/modin_df.parquet"
+        mdf, pdf = create_test_dfs(utils_test_data["int_data"])
+        pdf.to_parquet(
+            "s3://modin-test/pandas-dir/pandas_df.parquet",
+            engine=engine,
+            storage_options=s3_storage_options,
+        )
+        mdf.to_parquet(modin_path, engine=engine, storage_options=s3_storage_options)
+        df_equals(
+            pandas.read_parquet(
+                "s3://modin-test/pandas-dir/pandas_df.parquet",
+                storage_options=s3_storage_options,
+            ),
+            pd.read_parquet(modin_path, storage_options=s3_storage_options),
+        )
+        # check we're not creating local file:
+        # https://github.com/modin-project/modin/issues/5888
+        assert not os.path.isdir(modin_path)
 
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
@@ -1948,6 +1968,8 @@ class TestExcel:
             # read_excel kwargs
             io="modin/pandas/test/data/modin_error_book.xlsx",
             sheet_name=sheet_name,
+            # https://github.com/modin-project/modin/issues/5965
+            comparator_kwargs={"check_dtypes": False},
         )
 
     @pytest.mark.xfail(
@@ -2469,6 +2491,17 @@ class TestGbq:
         ):
             modin_df.to_gbq("modin.table")
 
+    def test_read_gbq_mock(self):
+        test_args = ("fake_query",)
+        test_kwargs = inspect.signature(pd.read_gbq).parameters.copy()
+        test_kwargs.update(project_id="test_id", dialect="standart")
+        test_kwargs.pop("query", None)
+        with mock.patch(
+            "pandas.read_gbq", return_value=pandas.DataFrame([])
+        ) as read_gbq:
+            pd.read_gbq(*test_args, **test_kwargs)
+        read_gbq.assert_called_once_with(*test_args, **test_kwargs)
+
 
 class TestStata:
     def test_read_stata(self, make_stata_file):
@@ -2589,6 +2622,62 @@ class TestPickle:
             pandas.to_pickle(pandas_df, unique_filename_pandas)
 
             assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
+
+
+class TestXml:
+    def test_read_xml(self):
+        # example from pandas
+        data = """<?xml version='1.0' encoding='utf-8'?>
+<data xmlns="http://example.com">
+ <row>
+   <shape>square</shape>
+   <degrees>360</degrees>
+   <sides>4.0</sides>
+ </row>
+ <row>
+   <shape>circle</shape>
+   <degrees>360</degrees>
+   <sides/>
+ </row>
+"""
+        eval_io("read_xml", path_or_buffer=data)
+
+
+class TestOrc:
+    # It's not easy to add infrastructure for `orc` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
+    def test_read_orc(self):
+        test_args = ("fake_path",)
+        test_kwargs = {"columns": ["A"], "fake_kwarg": "some_pyarrow_parameter"}
+        with mock.patch(
+            "pandas.read_orc", return_value=pandas.DataFrame([])
+        ) as read_orc:
+            pd.read_orc(*test_args, **test_kwargs)
+        read_orc.assert_called_once_with(*test_args, **test_kwargs)
+
+
+class TestSpss:
+    # It's not easy to add infrastructure for `spss` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
+    def test_read_spss(self):
+        test_args = ("fake_path", ["A"], False)
+        with mock.patch(
+            "pandas.read_spss", return_value=pandas.DataFrame([])
+        ) as read_spss:
+            pd.read_spss(*test_args)
+        read_spss.assert_called_once_with(*test_args)
+
+
+def test_json_normalize():
+    # example from pandas
+    data = [
+        {"id": 1, "name": {"first": "Coleen", "last": "Volk"}},
+        {"name": {"given": "Mark", "family": "Regner"}},
+        {"id": 2, "name": "Faye Raker"},
+    ]
+    eval_io("json_normalize", data=data)
 
 
 @pytest.mark.xfail(

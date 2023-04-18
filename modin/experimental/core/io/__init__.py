@@ -14,7 +14,9 @@
 """Experimental IO functions implementations."""
 
 from .sql.sql_dispatcher import ExperimentalSQLDispatcher
+from .pickle.pickle_dispatcher import ExperimentalPickleDispatcher
 
 __all__ = [
     "ExperimentalSQLDispatcher",
+    "ExperimentalPickleDispatcher",
 ]

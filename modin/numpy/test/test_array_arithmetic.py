@@ -15,6 +15,7 @@ import numpy
 import pytest
 
 import modin.numpy as np
+from .utils import assert_scalar_or_array_equal
 
 
 @pytest.mark.parametrize(
@@ -67,8 +68,8 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
     else:
         modin_result = getattr(np.array(operand1), operator)(np.array(operand2))
     if operator not in ["__truediv__", "__rtruediv__"]:
-        numpy.testing.assert_array_equal(
-            modin_result._to_numpy(),
+        assert_scalar_or_array_equal(
+            modin_result,
             numpy_result,
             err_msg=f"Binary Op {operator} failed.",
         )
@@ -148,16 +149,17 @@ def test_arithmetic(operator):
 def test_arithmetic_nans_and_zeros():
     numpy_arr1 = numpy.array([[1, 0, 3], [numpy.nan, 0, numpy.nan]])
     numpy_arr2 = numpy.array([1, 0, 0])
-    numpy.testing.assert_array_equal(
+    assert_scalar_or_array_equal(
+        (np.array(numpy_arr1) // np.array(numpy_arr2)),
         numpy_arr1 // numpy_arr2,
-        (np.array(numpy_arr1) // np.array(numpy_arr2))._to_numpy(),
     )
-    numpy.testing.assert_array_equal(
-        numpy.array([0]) // 0, (np.array([0]) // 0)._to_numpy()
+    assert_scalar_or_array_equal(
+        (np.array([0]) // 0),
+        numpy.array([0]) // 0,
     )
-    numpy.testing.assert_array_equal(
+    assert_scalar_or_array_equal(
+        (np.array([0], dtype=numpy.float64) // 0),
         numpy.array([0], dtype=numpy.float64) // 0,
-        (np.array([0], dtype=numpy.float64) // 0)._to_numpy(),
     )
 
 
@@ -166,39 +168,39 @@ def test_scalar_arithmetic(size):
     numpy_arr = numpy.random.randint(-100, 100, size=size)
     modin_arr = np.array(numpy_arr)
     scalar = numpy.random.randint(1, 100)
-    numpy.testing.assert_array_equal(
-        (scalar * modin_arr)._to_numpy(), scalar * numpy_arr, err_msg="__mul__ failed."
+    assert_scalar_or_array_equal(
+        (scalar * modin_arr), scalar * numpy_arr, err_msg="__mul__ failed."
     )
-    numpy.testing.assert_array_equal(
-        (modin_arr * scalar)._to_numpy(),
+    assert_scalar_or_array_equal(
+        (modin_arr * scalar),
         scalar * numpy_arr,
         err_msg="__rmul__ failed.",
     )
-    numpy.testing.assert_array_equal(
-        (scalar / modin_arr)._to_numpy(),
+    assert_scalar_or_array_equal(
+        (scalar / modin_arr),
         scalar / numpy_arr,
         err_msg="__rtruediv__ failed.",
     )
-    numpy.testing.assert_array_equal(
-        (modin_arr / scalar)._to_numpy(),
+    assert_scalar_or_array_equal(
+        (modin_arr / scalar),
         numpy_arr / scalar,
         err_msg="__truediv__ failed.",
     )
-    numpy.testing.assert_array_equal(
-        (scalar + modin_arr)._to_numpy(),
+    assert_scalar_or_array_equal(
+        (scalar + modin_arr),
         scalar + numpy_arr,
         err_msg="__radd__ failed.",
     )
-    numpy.testing.assert_array_equal(
-        (modin_arr + scalar)._to_numpy(), scalar + numpy_arr, err_msg="__add__ failed."
+    assert_scalar_or_array_equal(
+        (modin_arr + scalar), scalar + numpy_arr, err_msg="__add__ failed."
     )
-    numpy.testing.assert_array_equal(
-        (scalar - modin_arr)._to_numpy(),
+    assert_scalar_or_array_equal(
+        (scalar - modin_arr),
         scalar - numpy_arr,
         err_msg="__rsub__ failed.",
     )
-    numpy.testing.assert_array_equal(
-        (modin_arr - scalar)._to_numpy(), numpy_arr - scalar, err_msg="__sub__ failed."
+    assert_scalar_or_array_equal(
+        (modin_arr - scalar), numpy_arr - scalar, err_msg="__sub__ failed."
     )
 
 
@@ -206,27 +208,27 @@ def test_scalar_arithmetic(size):
 def test_unary_arithmetic(op_name):
     numpy_flat_arr = numpy.random.randint(-100, 100, size=100)
     modin_flat_arr = np.array(numpy_flat_arr)
-    numpy.testing.assert_array_equal(
+    assert_scalar_or_array_equal(
+        getattr(np, op_name)(modin_flat_arr),
         getattr(numpy, op_name)(numpy_flat_arr),
-        getattr(np, op_name)(modin_flat_arr)._to_numpy(),
     )
     numpy_arr = numpy_flat_arr.reshape((10, 10))
     modin_arr = np.array(numpy_arr)
-    numpy.testing.assert_array_equal(
-        getattr(numpy, op_name)(numpy_arr), getattr(np, op_name)(modin_arr)._to_numpy()
+    assert_scalar_or_array_equal(
+        getattr(np, op_name)(modin_arr), getattr(numpy, op_name)(numpy_arr)
     )
 
 
 def test_invert():
     numpy_flat_arr = numpy.random.randint(-100, 100, size=100)
     modin_flat_arr = np.array(numpy_flat_arr)
-    numpy.testing.assert_array_equal(~numpy_flat_arr, (~modin_flat_arr)._to_numpy())
+    assert_scalar_or_array_equal(~modin_flat_arr, ~numpy_flat_arr)
     numpy_arr = numpy_flat_arr.reshape((10, 10))
     modin_arr = np.array(numpy_arr)
-    numpy.testing.assert_array_equal(~numpy_arr, (~modin_arr)._to_numpy())
+    assert_scalar_or_array_equal(~modin_arr, ~numpy_arr)
     numpy_flat_arr = numpy.random.randint(-100, 100, size=100) < 0
     modin_flat_arr = np.array(numpy_flat_arr)
-    numpy.testing.assert_array_equal(~numpy_flat_arr, (~modin_flat_arr)._to_numpy())
+    assert_scalar_or_array_equal(~modin_flat_arr, ~numpy_flat_arr)
     numpy_arr = numpy_flat_arr.reshape((10, 10))
     modin_arr = np.array(numpy_arr)
-    numpy.testing.assert_array_equal(~numpy_arr, (~modin_arr)._to_numpy())
+    assert_scalar_or_array_equal(~modin_arr, ~numpy_arr)

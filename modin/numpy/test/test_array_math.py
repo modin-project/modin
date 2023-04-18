@@ -15,6 +15,7 @@ import numpy
 import pytest
 
 import modin.numpy as np
+from .utils import assert_scalar_or_array_equal
 
 
 @pytest.mark.parametrize(
@@ -30,7 +31,7 @@ import modin.numpy as np
 def test_argmax_argmin(data, op):
     numpy_result = getattr(numpy, op)(numpy.array(data))
     modin_result = getattr(np, op)(np.array(data))
-    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 def test_rem_mod():
@@ -39,8 +40,8 @@ def test_rem_mod():
     b = numpy.array(([-3, 3], [3, -7]))
     numpy_result = numpy.remainder(a, b)
     modin_result = np.remainder(np.array(a), np.array(b))
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
     numpy_result = numpy.mod(a, b)
     modin_result = np.mod(np.array(a), np.array(b))
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
