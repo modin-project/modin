@@ -4,7 +4,7 @@ Experimental IO Module Description
 """"""""""""""""""""""""""""""""""
 
 The module is used mostly for storing experimental utils and
-dispatcher classes for reading files of different formats.
+dispatcher classes for reading/writing files of different formats.
 
 Submodules Description
 ''''''''''''''''''''''

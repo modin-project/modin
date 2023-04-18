@@ -13,7 +13,7 @@ PandasOnDask and ExperimentalPandasOnDask differences
 - another IO class ``PandasOnDaskIO`` -> ``ExperimentalPandasOnDaskIO``
 
 ExperimentalPandasOnDaskIO classes and modules
--------------------------------------------------
+----------------------------------------------
 
 - :py:class:`~modin.experimental.core.execution.dask.implementations.pandas_on_dask.io.io.ExperimentalPandasOnDaskIO`
 - :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnDaskFactory`
