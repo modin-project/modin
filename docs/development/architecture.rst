@@ -354,9 +354,10 @@ details. The documentation covers most modules, with more docs being added every
    |   │   |   |   └───dask
    |   |   |   |       └───implementations
    │   │   │   │           └─── :doc:`pandas_on_dask </flow/modin/experimental/core/execution/dask/implementations/pandas_on_dask/index>`
-   │   │   │   └─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
-   |   │   │       ├─── :doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
-   │   │   │       └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
+   │   │   │   ├─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
+   |   │   │   |   ├─── :doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
+   │   │   │   |   └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
+   |   |   |   └─── :doc:`io </flow/modin/experimental/core/io/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
    │   │   ├───spreadsheet
