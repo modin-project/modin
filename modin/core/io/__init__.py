@@ -28,7 +28,6 @@ from .column_stores.parquet_dispatcher import ParquetDispatcher
 from .column_stores.hdf_dispatcher import HDFDispatcher
 from .column_stores.feather_dispatcher import FeatherDispatcher
 from .sql.sql_dispatcher import SQLDispatcher
-from .pickle.pickle_dispatcher import ExperimentalPickleDispatcher
 
 __all__ = [
     "BaseIO",
@@ -43,6 +42,5 @@ __all__ = [
     "FeatherDispatcher",
     "SQLDispatcher",
     "ExcelDispatcher",
-    "ExperimentalPickleDispatcher",
     "ExperimentalCustomTextDispatcher",
 ]

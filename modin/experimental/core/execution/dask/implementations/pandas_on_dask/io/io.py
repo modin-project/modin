@@ -18,10 +18,6 @@ Any function or class can be considered experimental API if it is not strictly r
 Query Compiler API, even if it is only extending the API.
 """
 
-import warnings
-
-import pandas
-
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVGlobParser,
     ExperimentalPandasPickleParser,
@@ -31,10 +27,12 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
 from modin.core.io import (
     CSVGlobDispatcher,
-    ExperimentalPickleDispatcher,
     ExperimentalCustomTextDispatcher,
 )
-from modin.experimental.core.io import ExperimentalSQLDispatcher
+from modin.experimental.core.io import (
+    ExperimentalSQLDispatcher,
+    ExperimentalPickleDispatcher,
+)
 
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
     PandasOnDaskDataframe,
@@ -60,65 +58,23 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         base_io=PandasOnDaskIO,
     )
 
-    def __make_read(*classes, build_args=build_args):  # noqa: GL08
+    def __make_read(*classes, build_args=build_args):
         # used to reduce code duplication
         return type("", (DaskWrapper, *classes), build_args).read
 
-    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    def __make_write(*classes, build_args=build_args):
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).write
 
+    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )
-
+    to_pickle_distributed = __make_write(ExperimentalPickleDispatcher)
     read_custom_text = __make_read(
         ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )
-
     read_sql = __make_read(ExperimentalSQLDispatcher)
 
     del __make_read  # to not pollute class namespace
-
-    @classmethod
-    def to_pickle_distributed(cls, qc, **kwargs):
-        """
-        When `*` in the filename all partitions are written to their own separate file.
-
-        The filenames is determined as follows:
-        - if `*` in the filename then it will be replaced by the increasing sequence 0, 1, 2, …
-        - if `*` is not the filename, then will be used default implementation.
-
-        Examples #1: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
-        `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
-
-        Parameters
-        ----------
-        qc : BaseQueryCompiler
-            The query compiler of the Modin dataframe that we want
-            to run ``to_pickle_distributed`` on.
-        **kwargs : dict
-            Parameters for ``pandas.to_pickle(**kwargs)``.
-        """
-        if not (
-            isinstance(kwargs["filepath_or_buffer"], str)
-            and "*" in kwargs["filepath_or_buffer"]
-        ) or not isinstance(qc, PandasQueryCompiler):
-            warnings.warn("Defaulting to Modin core implementation")
-            return PandasOnDaskIO.to_pickle(qc, **kwargs)
-
-        def func(df, **kw):  # pragma: no cover
-            idx = str(kw["partition_idx"])
-            # dask doesn't make a copy of kwargs on serialization;
-            # so take a copy ourselves, otherwise the error is:
-            #  kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
-            #  KeyError: 'filepath_or_buffer'
-            dask_kwargs = dict(kwargs)
-            dask_kwargs["path"] = dask_kwargs.pop("filepath_or_buffer").replace(
-                "*", idx
-            )
-            df.to_pickle(**dask_kwargs)
-            return pandas.DataFrame()
-
-        result = qc._modin_frame.apply_full_axis(
-            1, func, new_index=[], new_columns=[], enumerate_partitions=True
-        )
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+    del __make_write  # to not pollute class namespace

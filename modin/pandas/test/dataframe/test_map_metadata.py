@@ -502,7 +502,13 @@ def test_astype():
 def test_astype_errors(errors):
     data = {"a": ["a", 2, -1]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.astype("int", errors=errors),
+        # https://github.com/modin-project/modin/issues/5962
+        comparator_kwargs={"check_dtypes": errors != "ignore"},
+    )
 
 
 @pytest.mark.parametrize(

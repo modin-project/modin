@@ -3269,8 +3269,9 @@ class PandasDataframe(ClassLogger):
         if axis == Axis.ROW_WISE:
             new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
-            all_dtypes = [frame.copy_dtypes_cache() for frame in [self] + others]
-            if all(dtypes is not None for dtypes in all_dtypes):
+            frames = [self] + others
+            if all(frame.has_materialized_dtypes for frame in frames):
+                all_dtypes = [frame.dtypes for frame in frames]
                 new_dtypes = pandas.concat(all_dtypes, axis=1)
                 # 'nan' value will be placed in a row if a column doesn't exist in all frames;
                 # this value is np.float64 type so we need an explicit conversion
