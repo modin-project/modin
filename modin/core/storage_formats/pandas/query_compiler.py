@@ -2386,7 +2386,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     find_common_type([dtype, item_type]) for dtype in old_dtypes.values
                 ]
             else:
-                new_dtypes[col_loc] = find_common_type([old_dtypes, type(item)])
+                new_dtypes[col_loc] = find_common_type([old_dtypes, item_type])
         else:
             new_dtypes = None
 
