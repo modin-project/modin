@@ -3395,7 +3395,7 @@ class PandasDataframe(ClassLogger):
         axis = Axis(axis)
         if axis != Axis.ROW_WISE:
             raise NotImplementedError(
-                f"Algebra groupby only implemented row-wise. {axis.name} groupby not implemented yet!"
+                f"Algebra groupby only implemented row-wise. {axis.name} axis groupby not implemented yet!"
             )
 
         if not isinstance(by, list):
