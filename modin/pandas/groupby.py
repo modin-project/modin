@@ -193,9 +193,9 @@ class DataFrameGroupBy(ClassLogger):
 
         # `groupby_skew` can't handle `axis`, `skipna` parameters
         # that should be added into `agg_kwargs`;
-        # if the values of these parameters are different from the default ones,
-        # then we need to default to pandas
-        if axis != 0 or not skipna:
+        # looks like an implicit supported combination of parameters in the
+        # previous implementation: axis == 1, skipna==True
+        if axis != 1 or not skipna:
             return self._default_to_pandas(
                 lambda df: df.skew(
                     axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs

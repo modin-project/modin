@@ -516,8 +516,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
-        # TODO: Potentially a bug in pandas
-        # eval___getitem__(modin_groupby, pandas_groupby, "col3")
+        eval___getitem__(modin_groupby, pandas_groupby, "col3")
     eval_groups(modin_groupby, pandas_groupby)
     # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
@@ -1032,10 +1031,13 @@ def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
 
-def eval_skew(modin_groupby, pandas_groupby, numeric_only=False, axis=0):
+def eval_skew(modin_groupby, pandas_groupby, numeric_only=False, axis=None):
+    kwargs = dict(numeric_only=numeric_only)
+    if axis is not None:
+        kwargs["axis"] = axis
     modin_df_almost_equals_pandas(
-        modin_groupby.skew(numeric_only=numeric_only, axis=axis),
-        pandas_groupby.skew(numeric_only=numeric_only, axis=axis),
+        modin_groupby.skew(**kwargs),
+        pandas_groupby.skew(**kwargs),
     )
 
 
@@ -1234,7 +1236,8 @@ def eval___getitem__(md_grp, pd_grp, item):
 
         return test
 
-    # issue-#3252
+    # issue-#3252, https://github.com/pandas-dev/pandas/issues/52760
+    """
     eval_general(
         md_grp,
         pd_grp,
@@ -1247,6 +1250,7 @@ def eval___getitem__(md_grp, pd_grp, item):
         build_list_agg(["mean", "count"]),
         comparator=build_types_asserter(df_equals),
     )
+    """
     # Explicit default-to-pandas test
     eval_general(
         md_grp,
@@ -1966,8 +1970,7 @@ def test_multi_column_groupby_different_partitions(
         # using a custom comparator that allows slight numeric deviations.
         comparator=try_modin_df_almost_equals_compare,
     )
-    # TODO: Potentially a bug in pandas
-    # eval___getitem__(md_grp, pd_grp, md_df.columns[1])
+    eval___getitem__(md_grp, pd_grp, md_df.columns[1])
     eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
 
 
