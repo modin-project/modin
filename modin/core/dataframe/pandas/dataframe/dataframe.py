@@ -3401,7 +3401,7 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
-        def apply_func(df):
+        def apply_func(df):  # pragma: no cover
             if any(dtype == "category" for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
