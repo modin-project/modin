@@ -25,12 +25,12 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.ray.implementations.pandas_on_ray.io import PandasOnRayIO
-from modin.core.io import (
-    CSVGlobDispatcher,
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalSQLDispatcher,
     ExperimentalPickleDispatcher,
     ExperimentalCustomTextDispatcher,
 )
-from modin.experimental.core.io import ExperimentalSQLDispatcher
 from modin.core.execution.ray.implementations.pandas_on_ray.dataframe import (
     PandasOnRayDataframe,
 )
@@ -59,19 +59,19 @@ class ExperimentalPandasOnRayIO(PandasOnRayIO):
         # used to reduce code duplication
         return type("", (RayWrapper, *classes), build_args).read
 
-    def __make_to_method(*classes, build_args=build_args):
+    def __make_write(*classes, build_args=build_args):
         # used to reduce code duplication
-        return type("", (RayWrapper, *classes), build_args)._to_method
+        return type("", (RayWrapper, *classes), build_args).write
 
-    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    read_csv_glob = __make_read(PandasCSVGlobParser, ExperimentalCSVGlobDispatcher)
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )
-    to_pickle_distributed = __make_to_method(ExperimentalPickleDispatcher)
+    to_pickle_distributed = __make_write(ExperimentalPickleDispatcher)
     read_custom_text = __make_read(
         ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )
     read_sql = __make_read(ExperimentalSQLDispatcher)
 
     del __make_read  # to not pollute class namespace
-    del __make_to_method  # to not pollute class namespace
+    del __make_write  # to not pollute class namespace

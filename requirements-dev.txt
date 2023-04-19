@@ -52,3 +52,6 @@ fastparquet<2023.1.0
 # for release script
 PyGithub
 pygit2
+moto
+flask-cors
+boto3

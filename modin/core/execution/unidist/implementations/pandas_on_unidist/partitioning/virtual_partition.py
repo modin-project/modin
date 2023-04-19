@@ -30,6 +30,9 @@ from modin.utils import _inherit_docstrings
 # which is called inside of `UnidistWrapper.put`.
 _DEPLOY_AXIS_FUNC = UnidistWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
 _DRAIN = UnidistWrapper.put(PandasDataframeAxisPartition.drain)
+_DEPLOY_SPLIT_FUNC = UnidistWrapper.put(
+    PandasDataframeAxisPartition.deploy_splitting_func
+)
 
 
 class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -54,6 +57,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
+    _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnUnidistDataframePartition
     instance_type = unidist.core.base.object_ref.ObjectRef
     axis = None
@@ -150,6 +154,33 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         return result
 
     @classmethod
+    @_inherit_docstrings(PandasDataframeAxisPartition.deploy_splitting_func)
+    def deploy_splitting_func(
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        *partitions,
+        extract_metadata=False,
+    ):
+        return _deploy_unidist_func.options(
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+            if extract_metadata
+            else num_splits,
+        ).remote(
+            _DEPLOY_SPLIT_FUNC,
+            axis,
+            func,
+            f_args,
+            f_kwargs,
+            num_splits,
+            *partitions,
+            extract_metadata=extract_metadata,
+        )
+
+    @classmethod
     def deploy_axis_func(
         cls,
         axis,
@@ -196,7 +227,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``unidist.ObjectRef``-s.
         """
         return _deploy_unidist_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
+            num_returns=(num_splits if lengths is None else len(lengths))
+            * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             _DEPLOY_AXIS_FUNC,
@@ -251,7 +283,9 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``unidist.ObjectRef``-s.
         """
-        return _deploy_unidist_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_unidist_func.options(
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+        ).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -262,25 +296,6 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             other_shape,
             *partitions,
         )
-
-    def _wrap_partitions(self, partitions):
-        """
-        Wrap partitions passed as a list of ``unidist.ObjectRef`` with ``PandasOnUnidistDataframePartition`` class.
-
-        Parameters
-        ----------
-        partitions : list
-            List of ``unidist.ObjectRef``.
-
-        Returns
-        -------
-        list
-            List of ``PandasOnUnidistDataframePartition`` objects.
-        """
-        return [
-            self.partition_type(object_id, length, width, ip)
-            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
-        ]
 
     def apply(
         self,
@@ -520,7 +535,14 @@ class PandasOnUnidistDataframeRowPartition(PandasOnUnidistDataframeVirtualPartit
 
 @unidist.remote
 def _deploy_unidist_func(
-    deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
+    deployer,
+    axis,
+    f_to_deploy,
+    f_args,
+    f_kwargs,
+    *args,
+    extract_metadata=True,
+    **kwargs,
 ):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
@@ -545,6 +567,11 @@ def _deploy_unidist_func(
         Keyword arguments to pass to ``f_to_deploy``.
     *args : list
         Positional arguments to pass to ``deployer``.
+    extract_metadata : bool, default: True
+        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+        the load on object storage as the remote function would return 4 times fewer futures.
+        Passing `False` makes sense for temporary results where you know for sure that the
+        metadata will never be requested.
     **kwargs : dict
         Keyword arguments to pass to ``deployer``.
 
@@ -559,6 +586,8 @@ def _deploy_unidist_func(
     """
     f_args = deserialize(f_args)
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    if not extract_metadata:
+        return result
     ip = unidist.get_ip()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip

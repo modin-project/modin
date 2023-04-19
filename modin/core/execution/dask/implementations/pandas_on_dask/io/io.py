@@ -58,21 +58,21 @@ class PandasOnDaskIO(BaseIO):
         # used to reduce code duplication
         return type("", (DaskWrapper, *classes), build_args).read
 
-    def __make_to_method(*classes, build_args=build_args):
+    def __make_write(*classes, build_args=build_args):
         # used to reduce code duplication
-        return type("", (DaskWrapper, *classes), build_args)._to_method
+        return type("", (DaskWrapper, *classes), build_args).write
 
     read_csv = __make_read(PandasCSVParser, CSVDispatcher)
     read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
     read_json = __make_read(PandasJSONParser, JSONDispatcher)
     read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
-    to_parquet = __make_to_method(ParquetDispatcher)
+    to_parquet = __make_write(ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
     # read_hdf = __make_read(PandasHDFParser, HDFReader)
     read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
-    to_sql = __make_to_method(SQLDispatcher)
+    to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
 
     del __make_read  # to not pollute class namespace
-    del __make_to_method  # to not pollute class namespace
+    del __make_write  # to not pollute class namespace

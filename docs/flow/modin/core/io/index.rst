@@ -59,8 +59,7 @@ classes for reading files of different formats.
     ``_read_rows`` function for moving file offset at the specified amount of rows
     and many other functions.
   
-  * format/feature specific dispatchers: ``csv_dispatcher.py``, ``csv_glob_dispatcher.py``
-    (reading multiple files simultaneously, experimental feature), ``excel_dispatcher.py``,
+  * format/feature specific dispatchers: ``csv_dispatcher.py``, ``excel_dispatcher.py``,
     ``fwf_dispatcher.py`` and ``json_dispatcher.py``.
 
 * column_stores - directory for storing all columnar store file format dispatcher classes
