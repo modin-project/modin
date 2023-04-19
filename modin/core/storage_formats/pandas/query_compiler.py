@@ -2700,15 +2700,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):  # pragma: no cover
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+
+        def dict_apply_builder(df, internal_indices=[]):  # pragma: no cover
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
-            return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
+            # It looks like it doesn't need to use `internal_indices` option internally
+            # for the case since `apply` use labels from dictionary keys in `func` variable.
+            return pandas.DataFrame(df.apply(func, *args, **kwargs))
 
-        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+        labels = list(func.keys())
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
-                axis, dict_apply_builder, func, keep_remaining=False
+                axis,
+                dict_apply_builder,
+                labels,
+                new_index=labels if axis == 1 else None,
+                new_columns=labels if axis == 0 else None,
+                keep_remaining=False,
             )
         )
 
