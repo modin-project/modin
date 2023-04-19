@@ -683,7 +683,7 @@ def to_pickle(
 @enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
-    usecols: Union[Sequence[str], type(None)] = None,
+    usecols: Optional[Sequence[str]] = None,
     convert_categoricals: bool = True,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
@@ -694,7 +694,10 @@ def read_spss(
 
     return DataFrame(
         query_compiler=FactoryDispatcher.read_spss(
-            path, usecols, convert_categoricals, dtype_backend
+            path=path,
+            usecols=usecols,
+            convert_categoricals=convert_categoricals,
+            dtype_backend=dtype_backend,
         )
     )
 
@@ -734,7 +737,9 @@ def read_orc(
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(pandas.read_orc(path, columns, dtype_backend, **kwargs))
+    return DataFrame(
+        pandas.read_orc(path, columns=columns, dtype_backend=dtype_backend, **kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.HDFStore)

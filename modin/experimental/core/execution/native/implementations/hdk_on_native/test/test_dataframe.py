@@ -319,6 +319,20 @@ class TestCSV:
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize("parse_dates", [None, True, False])
+    def test_read_csv_datetime_tz(self, engine, parse_dates):
+        with ensure_clean(".csv") as file:
+            with open(file, "w") as f:
+                f.write("test\n2023-01-01T00:00:00.000-07:00")
+
+            eval_io(
+                fn_name="read_csv",
+                filepath_or_buffer=file,
+                md_extra_kwargs={"engine": engine},
+                parse_dates=parse_dates,
+            )
+
+    @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize(
         "usecols",
         [

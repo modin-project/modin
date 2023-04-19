@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import unittest.mock as mock
+import inspect
 import contextlib
 import pytest
 import numpy as np
@@ -2423,6 +2425,17 @@ class TestGbq:
         ):
             modin_df.to_gbq("modin.table")
 
+    def test_read_gbq_mock(self):
+        test_args = ("fake_query",)
+        test_kwargs = inspect.signature(pd.read_gbq).parameters.copy()
+        test_kwargs.update(project_id="test_id", dialect="standart")
+        test_kwargs.pop("query", None)
+        with mock.patch(
+            "pandas.read_gbq", return_value=pandas.DataFrame([])
+        ) as read_gbq:
+            pd.read_gbq(*test_args, **test_kwargs)
+        read_gbq.assert_called_once_with(*test_args, **test_kwargs)
+
 
 class TestStata:
     def test_read_stata(self, make_stata_file):
@@ -2532,6 +2545,62 @@ class TestPickle:
         eval_to_file(
             modin_obj=modin_df, pandas_obj=pandas_df, fn="to_pickle", extension="pkl"
         )
+
+
+class TestXml:
+    def test_read_xml(self):
+        # example from pandas
+        data = """<?xml version='1.0' encoding='utf-8'?>
+<data xmlns="http://example.com">
+ <row>
+   <shape>square</shape>
+   <degrees>360</degrees>
+   <sides>4.0</sides>
+ </row>
+ <row>
+   <shape>circle</shape>
+   <degrees>360</degrees>
+   <sides/>
+ </row>
+"""
+        eval_io("read_xml", path_or_buffer=data)
+
+
+class TestOrc:
+    # It's not easy to add infrastructure for `orc` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
+    def test_read_orc(self):
+        test_args = ("fake_path",)
+        test_kwargs = {"columns": ["A"], "fake_kwarg": "some_pyarrow_parameter"}
+        with mock.patch(
+            "pandas.read_orc", return_value=pandas.DataFrame([])
+        ) as read_orc:
+            pd.read_orc(*test_args, **test_kwargs)
+        read_orc.assert_called_once_with(*test_args, **test_kwargs)
+
+
+class TestSpss:
+    # It's not easy to add infrastructure for `spss` format.
+    # In case of defaulting to pandas, it's enough
+    # to check that the parameters are passed to pandas.
+    def test_read_spss(self):
+        test_args = ("fake_path", ["A"], False)
+        with mock.patch(
+            "pandas.read_spss", return_value=pandas.DataFrame([])
+        ) as read_spss:
+            pd.read_spss(*test_args)
+        read_spss.assert_called_once_with(*test_args)
+
+
+def test_json_normalize():
+    # example from pandas
+    data = [
+        {"id": 1, "name": {"first": "Coleen", "last": "Volk"}},
+        {"name": {"given": "Mark", "family": "Regner"}},
+        {"id": 2, "name": "Faye Raker"},
+    ]
+    eval_io("json_normalize", data=data)
 
 
 @pytest.mark.xfail(
