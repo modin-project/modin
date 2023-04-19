@@ -17,6 +17,7 @@ from .default import DefaultMethod
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
+
 # Defines a set of string names of functions that are executed in a transform-way in groupby
 from pandas.core.groupby.base import transformation_kernels
 from typing import Any

@@ -643,7 +643,14 @@ class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
 
 
 class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
-    """Set to true to use Modin's experimental group by implementation."""
+    """
+    Set to true to use Modin's experimental group by implementation.
+
+    Experimental groupby is implemented using a range-partitioning technique,
+    note that it may not always work better than the original Modin's TreeReduce
+    and Fold implementations. For more information visit the according section
+    of Modin's documentation: TODO: add a link to the section once it's written.
+    """
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
     default = False
