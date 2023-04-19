@@ -706,7 +706,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return True
 
     @classmethod
-    def _to_method(cls, qc, **kwargs):
+    def write(cls, qc, **kwargs):
         """
         Write a ``DataFrame`` to the binary parquet format.
 
@@ -754,4 +754,4 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             enumerate_partitions=True,
         )
         # pending completion
-        qc._modin_frame._partition_mgr_cls.wait_partitions(result.flatten())
+        cls.materialize([part.list_of_blocks[0] for row in result for part in row])

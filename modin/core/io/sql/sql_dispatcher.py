@@ -111,7 +111,7 @@ class SQLDispatcher(FileDispatcher):
         return cls.query_compiler_cls(new_frame)
 
     @classmethod
-    def _to_method(cls, qc, **kwargs):
+    def write(cls, qc, **kwargs):
         """
         Write records stored in the `qc` to a SQL database.
 
@@ -150,4 +150,6 @@ class SQLDispatcher(FileDispatcher):
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame.apply_full_axis(1, func, new_index=[], new_columns=[])
-        result._partition_mgr_cls.wait_partitions(result._partitions.flatten())
+        cls.materialize(
+            [part.list_of_blocks[0] for row in result._partitions for part in row]
+        )
