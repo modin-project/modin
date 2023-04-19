@@ -3030,9 +3030,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by=by,
             axis=axis,
             agg_func=lambda df: df.dtypes,
-            # passing 'group_wise' will make the function be applied to the 'by' columns as well,
-            # this is exactly what we want when 'as_index=False'
-            how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
+            how="group_wise",
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             groupby_kwargs=groupby_kwargs,

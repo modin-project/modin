@@ -195,7 +195,7 @@ class DataFrameGroupBy(ClassLogger):
         # that should be added into `agg_kwargs`;
         # if the values of these parameters are different from the default ones,
         # then we need to default to pandas
-        if axis != 0 or skipna != True:
+        if axis != 0 or not skipna:
             return self._default_to_pandas(
                 lambda df: df.skew(
                     axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs

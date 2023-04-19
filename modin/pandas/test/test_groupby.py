@@ -1652,7 +1652,11 @@ def test_agg_exceptions(operation):
 
     data1 = {
         "column_to_by": ["foo", "bar", "baz", "bar"] * (N // 4),
-        "nan_column": [None] * N,
+        # Earlier, the type of this column was `object`. In such a situation,
+        # when performing aggregation on different column partitions, different
+        # exceptions were thrown. The exception that engines return to the main
+        # process was non-deterministic, either `TypeError` or `NotImplementedError`.
+        "nan_column": [np.nan] * N,
     }
 
     data2 = {
