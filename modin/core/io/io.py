@@ -635,3 +635,14 @@ class BaseIO:
             obj = obj.to_pandas()
 
         return obj.to_parquet(**kwargs)
+
+    @classmethod
+    def _is_supported_sqlalchemy_object(cls, obj):  # noqa: GL08
+        supported = None
+        try:
+            import sqlalchemy as sa
+
+            supported = isinstance(obj, (sa.engine.Engine, sa.engine.Connection))
+        except ImportError:
+            supported = False
+        return supported
