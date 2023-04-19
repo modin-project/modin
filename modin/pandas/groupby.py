@@ -190,16 +190,21 @@ class DataFrameGroupBy(ClassLogger):
         # `_op_via_apply` func in pandas==2.0.0
         if axis is None or axis is no_default:
             axis = self._axis
-        agg_kwargs = dict(
-            axis=axis,
-            skipna=skipna,
-            numeric_only=numeric_only,
-        )
-        agg_kwargs.update(kwargs)
+
+        # `groupby_skew` can't handle `axis`, `skipna` parameters
+        # that should be added into `agg_kwargs`;
+        # if the values of these parameters are different from the default ones,
+        # then we need to default to pandas
+        if axis != 0 or skipna != True:
+            return self._default_to_pandas(
+                lambda df: df.skew(
+                    axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
+                )
+            )
 
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_skew,
-            agg_kwargs=agg_kwargs,
+            agg_kwargs=kwargs,
             numeric_only=numeric_only,
         )
 
