@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from pandas.api.types import is_scalar
+from pandas.api.types import is_scalar, is_bool_dtype, is_float_dtype 
 
 from .operator import Operator
 
@@ -132,7 +132,7 @@ def compute_dtypes_common_cast(first, second, trigger_computations=False) -> np.
     return dtypes
 
 
-def compute_dtypes_boolean(first, second, trigger_computations=False) -> np.dtype:
+def build_dtypes_series(first, second, dtype, trigger_computations=False) -> np.dtype:
     """
     Precompute data types for boolean operations.
 
@@ -142,6 +142,8 @@ def compute_dtypes_boolean(first, second, trigger_computations=False) -> np.dtyp
         First operand for which the binary operation would be performed later.
     second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
+    dtype : np.dtype
+    trigger_computations : bool, default: False
 
     Returns
     -------
@@ -166,11 +168,11 @@ def compute_dtypes_boolean(first, second, trigger_computations=False) -> np.dtyp
     else:
         columns_union = columns_first
 
-    dtypes = pandas.Series([np.dtype(bool)] * len(columns_union), index=columns_union)
+    dtypes = pandas.Series([dtype] * len(columns_union), index=columns_union)
     return dtypes
 
 
-def try_compute_new_dtypes(first, second, infer_dtypes):
+def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
     """
     Precompute resulting dtypes of the binary operation if possible.
 
@@ -184,21 +186,26 @@ def try_compute_new_dtypes(first, second, infer_dtypes):
         First operand of the binary operation.
     second : PandasQueryCompiler, list-like or scalar
         Second operand of the binary operation.
-    infer_dtypes : {"common_cast", "float", "bool"}
+    infer_dtypes : {"common_cast", "float", "bool", None}
         How dtypes should be infered (see ``Binary.register`` doc for more info).
 
     Returns
     -------
     pandas.Series or None
     """
+    if infer_dtypes is None and result_dtype is None:
+        return None
+
     try:
-        if infer_dtypes == "bool":
-            dtypes = compute_dtypes_boolean(first, second)
+        if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
+            dtypes = build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
             dtypes = compute_dtypes_common_cast(first, second)
-        elif infer_dtypes == "float":
+        elif infer_dtypes == "float" or is_float_dtype(result_dtype):
             dtypes = compute_dtypes_common_cast(first, second)
             dtypes = dtypes.apply(coerce_int_to_float64)
+        elif result_dtype is not None:
+            dtypes = build_dtypes_series(first, second, dtype=result_dtype)  
         else:
             dtypes = None
     except NotImplementedError:
@@ -284,12 +291,8 @@ class Binary(Operator):
                 # column or row as a single-column Modin DataFrame
                 if axis == 1:
                     other = other.transpose()
-            if dtypes is None:
-                new_dtypes = (
-                    try_compute_new_dtypes(query_compiler, other, infer_dtypes)
-                    if dtypes is None
-                    else dtypes
-                )
+            if dtypes != "copy":
+                dtypes = try_compute_new_dtypes(query_compiler, other, infer_dtypes, dtypes)
             
             shape_hint = None
             if isinstance(other, type(query_compiler)):
@@ -313,7 +316,7 @@ class Binary(Operator):
                             other._modin_frame,
                             join_type=join_type,
                             labels=labels,
-                            dtypes=new_dtypes,
+                            dtypes=dtypes,
                         ),
                         shape_hint=shape_hint,
                     )
@@ -333,7 +336,7 @@ class Binary(Operator):
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
-                            dtypes=new_dtypes,
+                            dtypes=dtypes,
                         ),
                         shape_hint=shape_hint,
                     )
@@ -346,7 +349,7 @@ class Binary(Operator):
                         lambda df: func(df, other, *args, **kwargs),
                         new_index=query_compiler.index,
                         new_columns=query_compiler.columns,
-                        dtypes=new_dtypes,
+                        dtypes=dtypes,
                     )
                 else:
                     if (
@@ -357,7 +360,7 @@ class Binary(Operator):
                         shape_hint = "column"
                     new_modin_frame = query_compiler._modin_frame.map(
                         lambda df: func(df, other, *args, **kwargs),
-                        dtypes=new_dtypes,
+                        dtypes=dtypes,
                     )
                 return query_compiler.__constructor__(
                     new_modin_frame, shape_hint=shape_hint
