@@ -33,6 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
+from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
@@ -2365,6 +2366,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
 
+        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+            new_dtypes = self.dtypes.copy()
+            old_dtypes = new_dtypes[col_loc]
+
+            if hasattr(item, "dtype"):
+                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
+                # we would like to get its internal dtype
+                item_type = item.dtype
+            elif hasattr(item, "to_numpy"):
+                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
+                # we would like to convert it and get its proper internal dtype
+                item_type = item.to_numpy().dtype
+            else:
+                item_type = type(item)
+
+            if isinstance(old_dtypes, pandas.Series):
+                new_dtypes[col_loc] = [
+                    find_common_type([dtype, item_type]) for dtype in old_dtypes.values
+                ]
+            else:
+                new_dtypes[col_loc] = find_common_type([old_dtypes, item_type])
+        else:
+            new_dtypes = None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=1,
             func=_set_item,
@@ -2372,6 +2397,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 
