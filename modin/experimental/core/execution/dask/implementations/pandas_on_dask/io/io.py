@@ -25,13 +25,11 @@ from modin.core.storage_formats.pandas.parsers import (
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.dask.implementations.pandas_on_dask.io import PandasOnDaskIO
-from modin.core.io import (
-    CSVGlobDispatcher,
-    ExperimentalCustomTextDispatcher,
-)
 from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
     ExperimentalSQLDispatcher,
     ExperimentalPickleDispatcher,
+    ExperimentalCustomTextDispatcher,
 )
 
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
@@ -66,7 +64,7 @@ class ExperimentalPandasOnDaskIO(PandasOnDaskIO):
         # used to reduce code duplication
         return type("", (DaskWrapper, *classes), build_args).write
 
-    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    read_csv_glob = __make_read(PandasCSVGlobParser, ExperimentalCSVGlobDispatcher)
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )

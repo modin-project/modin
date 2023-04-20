@@ -27,13 +27,11 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.unidist.implementations.pandas_on_unidist.io import (
     PandasOnUnidistIO,
 )
-from modin.core.io import (
-    CSVGlobDispatcher,
-    ExperimentalCustomTextDispatcher,
-)
 from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
     ExperimentalSQLDispatcher,
     ExperimentalPickleDispatcher,
+    ExperimentalCustomTextDispatcher,
 )
 from modin.core.execution.unidist.implementations.pandas_on_unidist.dataframe import (
     PandasOnUnidistDataframe,
@@ -67,7 +65,7 @@ class ExperimentalPandasOnUnidistIO(PandasOnUnidistIO):
         # used to reduce code duplication
         return type("", (UnidistWrapper, *classes), build_args).write
 
-    read_csv_glob = __make_read(PandasCSVGlobParser, CSVGlobDispatcher)
+    read_csv_glob = __make_read(PandasCSVGlobParser, ExperimentalCSVGlobDispatcher)
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
     )

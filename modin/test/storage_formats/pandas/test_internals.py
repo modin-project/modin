@@ -1003,3 +1003,22 @@ def test_binary_op_preserve_dtypes():
     other = pd.Series({"b": 3.0, "c": 4.0})
     assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
     assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+
+def test_setitem_bool_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    indexer = pd.Series([True, False, True, False])
+
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # slice(None) as a col_loc
+    df.loc[indexer] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # list as a col_loc
+    df.loc[indexer, ["a", "b"]] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # scalar as a col_loc
+    df.loc[indexer, "a"] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes

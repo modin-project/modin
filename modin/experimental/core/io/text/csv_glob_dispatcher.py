@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses `CSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
+"""Module houses `ExperimentalCSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
 
 from contextlib import ExitStack
 import csv
@@ -30,7 +30,7 @@ from modin.core.io.file_dispatcher import OpenFile
 from modin.core.io.text.csv_dispatcher import CSVDispatcher
 
 
-class CSVGlobDispatcher(CSVDispatcher):
+class ExperimentalCSVGlobDispatcher(CSVDispatcher):
     """Class contains utils for reading multiple `.csv` files simultaneously."""
 
     @classmethod
