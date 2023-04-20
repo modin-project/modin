@@ -11,6 +11,8 @@ as it implements everything an execution backend needs to be fully conformant to
 * :doc:`PandasDataframePartition <partitioning/partition>` implements ``Partition`` interface holding ``pandas.DataFrame``.
 * :doc:`PandasDataframeAxisPartition <partitioning/axis_partition>` is a joined group of ``PandasDataframePartition``-s along some axis (either rows or labels)
 * :doc:`PandasDataframePartitionManager <partitioning/partition_manager>` is the manager that implements the primitives used for Dataframe Algebra operations over ``PandasDataframePartition``-s
+* :doc:`ModinDtypes <metadata/dtypes>`
+* :doc:`ModinIndex <metadata/index>`
 
 .. toctree::
     :hidden:
@@ -19,3 +21,5 @@ as it implements everything an execution backend needs to be fully conformant to
     partitioning/partition
     partitioning/axis_partition
     partitioning/partition_manager
+    metadata/dtypes
+    metadata/index

@@ -33,6 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
+from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
@@ -521,7 +522,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    if self._modin_frame._dtypes is not None:
+                    if self._modin_frame.has_materialized_dtypes:
                         new_dtypes = []
                         for old_col in left_renamer.keys():
                             new_dtypes.append(self.dtypes[old_col])
@@ -2365,6 +2366,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
 
+        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+            new_dtypes = self.dtypes.copy()
+            old_dtypes = new_dtypes[col_loc]
+
+            if hasattr(item, "dtype"):
+                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
+                # we would like to get its internal dtype
+                item_type = item.dtype
+            elif hasattr(item, "to_numpy"):
+                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
+                # we would like to convert it and get its proper internal dtype
+                item_type = item.to_numpy().dtype
+            else:
+                item_type = type(item)
+
+            if isinstance(old_dtypes, pandas.Series):
+                new_dtypes[col_loc] = [
+                    find_common_type([dtype, item_type]) for dtype in old_dtypes.values
+                ]
+            else:
+                new_dtypes[col_loc] = find_common_type([old_dtypes, item_type])
+        else:
+            new_dtypes = None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=1,
             func=_set_item,
@@ -2372,6 +2397,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2700,15 +2726,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):  # pragma: no cover
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+
+        def dict_apply_builder(df, internal_indices=[]):  # pragma: no cover
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
-            return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
+            # It looks like it doesn't need to use `internal_indices` option internally
+            # for the case since `apply` use labels from dictionary keys in `func` variable.
+            return pandas.DataFrame(df.apply(func, *args, **kwargs))
 
-        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+        labels = list(func.keys())
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
-                axis, dict_apply_builder, func, keep_remaining=False
+                axis,
+                dict_apply_builder,
+                labels,
+                new_index=labels if axis == 1 else None,
+                new_columns=labels if axis == 0 else None,
+                keep_remaining=False,
             )
         )
 
@@ -3215,6 +3250,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
+        # TODO: we should be able to drop this logic with pandas 2.0 as it removes `numeric_only=None`
+        # parameter for groupby thus making the behavior of processing of non-numeric columns more
+        # predictable (we can decide whether to raise an exception before actually executing groupby)
         if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame

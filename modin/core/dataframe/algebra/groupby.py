@@ -272,7 +272,10 @@ class GroupByReduce(TreeReduce):
                 inplace=True,
             )
         # Result could not always be a frame, so wrapping it into DataFrame
-        return pandas.DataFrame(result)
+        result = pandas.DataFrame(result)
+        if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
+            result.index.name = None
+        return result
 
     @classmethod
     def caller(
@@ -400,8 +403,6 @@ class GroupByReduce(TreeReduce):
         )
 
         result = query_compiler.__constructor__(new_modin_frame)
-        if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
-            result.index.name = None
         return result
 
     @classmethod

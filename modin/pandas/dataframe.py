@@ -1335,6 +1335,10 @@ class DataFrame(BasePandasDataset):
         """
         Join columns of another ``DataFrame``.
         """
+        if on is not None and not isinstance(other, (Series, DataFrame)):
+            raise ValueError(
+                "Joining multiple DataFrames only supported for joining on index"
+            )
         if validate is not None:
             return self._default_to_pandas(
                 pandas.DataFrame.join,

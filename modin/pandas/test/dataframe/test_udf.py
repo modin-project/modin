@@ -40,7 +40,7 @@ from modin.pandas.test.utils import (
     arg_keys,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -116,13 +116,6 @@ def test_aggregate_error_checking():
         modin_df.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Pandas",
-    reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    + "implementation for pandas storage format, this prevents us from catching the desired"
-    + "exception. You can track this bug at:"
-    + "https://github.com/modin-project/modin/issues/3221",
-)
 @pytest.mark.parametrize(
     "func",
     agg_func_values + agg_func_except_values,
@@ -242,6 +235,51 @@ def test_apply_udf(data, func):
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         other=lambda df: df,
+    )
+
+
+def test_apply_dict_4828():
+    data = [[2, 4], [1, 3]]
+    modin_df1, pandas_df1 = create_test_dfs(data)
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 0
+    modin_df2, pandas_df2 = create_test_dfs(data, index=[2, 3])
+    modin_df3 = pd.concat([modin_df1, modin_df2], axis=0)
+    pandas_df3 = pandas.concat([pandas_df1, pandas_df2], axis=0)
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 1
+    modin_df4, pandas_df4 = create_test_dfs(data, columns=[2, 3])
+    modin_df5 = pd.concat([modin_df1, modin_df4], axis=1)
+    pandas_df5 = pandas.concat([pandas_df1, pandas_df4], axis=1)
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
     )
 
 
@@ -386,7 +424,7 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         # `dtypes` must be evaluated after `query` so we need to check cache
-        assert modin_result._query_compiler._modin_frame._dtypes is not None
+        assert modin_result._query_compiler._modin_frame.has_dtypes_cache
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 

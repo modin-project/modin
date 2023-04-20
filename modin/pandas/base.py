@@ -985,8 +985,8 @@ class BasePandasDataset(ClassLogger):
 
         if not copy:
             # If the new types match the old ones, then copying can be avoided
-            frame_dtypes = self._query_compiler._modin_frame._dtypes
-            if frame_dtypes is not None:
+            if self._query_compiler._modin_frame.has_materialized_dtypes:
+                frame_dtypes = self._query_compiler._modin_frame.dtypes
                 for col in col_dtypes:
                     if col_dtypes[col] != frame_dtypes[col]:
                         copy = True
@@ -1097,7 +1097,7 @@ class BasePandasDataset(ClassLogger):
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+            lower=lower, upper=upper, axis=axis, *args, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 

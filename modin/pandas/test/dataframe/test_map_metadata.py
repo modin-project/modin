@@ -502,7 +502,13 @@ def test_astype():
 def test_astype_errors(errors):
     data = {"a": ["a", 2, -1]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: df.astype("int", errors=errors))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.astype("int", errors=errors),
+        # https://github.com/modin-project/modin/issues/5962
+        comparator_kwargs={"check_dtypes": errors != "ignore"},
+    )
 
 
 @pytest.mark.parametrize(
@@ -522,13 +528,13 @@ def test_astype_copy(has_dtypes):
     data = [1]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     if not has_dtypes:
-        modin_df._query_compiler._modin_frame._dtypes = None
+        modin_df._query_compiler._modin_frame.set_dtypes_cache(None)
     eval_general(modin_df, pandas_df, lambda df: df.astype(str, copy=False))
 
     # trivial case where copying can be avoided, behavior should match pandas
     s1 = pd.Series([1, 2])
     if not has_dtypes:
-        modin_df._query_compiler._modin_frame._dtypes = None
+        modin_df._query_compiler._modin_frame.set_dtypes_cache(None)
     s2 = s1.astype("int64", copy=False)
     s2[0] = 10
     df_equals(s1, s2)
