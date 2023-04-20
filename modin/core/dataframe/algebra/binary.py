@@ -15,7 +15,8 @@
 
 import numpy as np
 import pandas
-from pandas.api.types import is_scalar, is_bool_dtype, is_float_dtype 
+from pandas.api.types import is_scalar, is_bool_dtype, is_float_dtype
+from typing import Optional
 
 from .operator import Operator
 
@@ -48,7 +49,9 @@ def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
         return dtype
 
 
-def compute_dtypes_common_cast(first, second, trigger_computations=False) -> np.dtype:
+def maybe_compute_dtypes_common_cast(
+    first, second, trigger_computations=False
+) -> Optional[pandas.Series]:
     """
     Precompute data types for binary operations by finding common type between operands.
 
@@ -58,11 +61,15 @@ def compute_dtypes_common_cast(first, second, trigger_computations=False) -> np.
         First operand for which the binary operation would be performed later.
     second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
+    trigger_computations : bool, default: False
+        Whether to trigger computation of the lazy metadata for `first` and `second`.
+        If False is specified this method will return None if any of the operands doesn't
+        have materialized dtypes.
 
     Returns
     -------
-    dtypes
-        The pandas series with precomputed dtypes.
+    pandas.Series
+        The pandas series with precomputed dtypes or None if there's not enough metadata to compute it.
 
     Notes
     -----
@@ -132,9 +139,11 @@ def compute_dtypes_common_cast(first, second, trigger_computations=False) -> np.
     return dtypes
 
 
-def build_dtypes_series(first, second, dtype, trigger_computations=False) -> np.dtype:
+def maybe_build_dtypes_series(
+    first, second, dtype, trigger_computations=False
+) -> Optional[pandas.Series]:
     """
-    Precompute data types for boolean operations.
+    Build a ``pandas.Series`` describing dtypes of the result of a binary operation.
 
     Parameters
     ----------
@@ -143,12 +152,16 @@ def build_dtypes_series(first, second, dtype, trigger_computations=False) -> np.
     second : PandasQueryCompiler, list-like or scalar
         Second operand for which the binary operation would be performed later.
     dtype : np.dtype
+        Dtype of the result.
     trigger_computations : bool, default: False
+        Whether to trigger computation of the lazy metadata for `first` and `second`.
+        If False is specified this method will return None if any of the operands doesn't
+        have materialized columns.
 
     Returns
     -------
-    dtypes
-        The pandas series with precomputed dtypes.
+    pandas.Series or None
+        The pandas series with precomputed dtypes or None if there's not enough metadata to compute it.
 
     Notes
     -----
@@ -157,8 +170,11 @@ def build_dtypes_series(first, second, dtype, trigger_computations=False) -> np.
     if not trigger_computations:
         if not first._modin_frame.has_columns_cache:
             return None
-        
-        if isinstance(second, type(first)) and not second._modin_frame.has_columns_cache:
+
+        if (
+            isinstance(second, type(first))
+            and not second._modin_frame.has_columns_cache
+        ):
             return None
 
     columns_first = set(first.columns)
@@ -186,8 +202,10 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
         First operand of the binary operation.
     second : PandasQueryCompiler, list-like or scalar
         Second operand of the binary operation.
-    infer_dtypes : {"common_cast", "float", "bool", None}
+    infer_dtypes : {"common_cast", "float", "bool", None}, default: None
         How dtypes should be infered (see ``Binary.register`` doc for more info).
+    result_dtype : np.dtype, optional
+        NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
 
     Returns
     -------
@@ -198,14 +216,15 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
-            dtypes = build_dtypes_series(first, second, dtype=np.dtype(bool))
+            dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
-            dtypes = compute_dtypes_common_cast(first, second)
+            dtypes = maybe_compute_dtypes_common_cast(first, second)
         elif infer_dtypes == "float" or is_float_dtype(result_dtype):
-            dtypes = compute_dtypes_common_cast(first, second)
-            dtypes = dtypes.apply(coerce_int_to_float64)
+            dtypes = maybe_compute_dtypes_common_cast(first, second)
+            if dtypes is not None:
+                dtypes = dtypes.apply(coerce_int_to_float64)
         elif result_dtype is not None:
-            dtypes = build_dtypes_series(first, second, dtype=result_dtype)  
+            dtypes = maybe_build_dtypes_series(first, second, dtype=result_dtype)
         else:
             dtypes = None
     except NotImplementedError:
@@ -292,8 +311,10 @@ class Binary(Operator):
                 if axis == 1:
                     other = other.transpose()
             if dtypes != "copy":
-                dtypes = try_compute_new_dtypes(query_compiler, other, infer_dtypes, dtypes)
-            
+                dtypes = try_compute_new_dtypes(
+                    query_compiler, other, infer_dtypes, dtypes
+                )
+
             shape_hint = None
             if isinstance(other, type(query_compiler)):
                 if broadcast:
