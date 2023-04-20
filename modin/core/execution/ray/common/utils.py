@@ -77,6 +77,10 @@ def initialize_ray(
         What password to use when connecting to Redis.
         If not specified, ``modin.config.RayRedisPassword`` is used.
     """
+    # We need these vars to be set for each Ray's worker in order to ensure that
+    # the `pandas` module has been fully imported inside of each process before
+    # any execution begins:
+    # https://github.com/modin-project/modin/pull/4603
     env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
     if GithubCI.get():
         # need these to write parquet to the moto service mocking s3.
@@ -86,9 +90,10 @@ def initialize_ray(
                 "AWS_SECRET_ACCESS_KEY": CIAWSSecretAccessKey.get(),
             }
         )
-    extra_init_kw = {"runtime_env": {"env_vars": env_vars}}
-    if not ray.is_initialized() or override_is_cluster:
-        cluster = override_is_cluster or IsRayCluster.get()
+    extra_init_kw = {}
+    cluster = override_is_cluster or IsRayCluster.get()
+    was_ray_initialized = ray.is_initialized()
+    if not was_ray_initialized or override_is_cluster:
         redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = (
             (
@@ -102,6 +107,7 @@ def initialize_ray(
         )
 
         if cluster:
+            extra_init_kw["runtime_env"] = {"env_vars": env_vars}
             # We only start ray in a cluster setting for the head node.
             ray.init(
                 address=redis_address or "auto",
@@ -131,6 +137,14 @@ def initialize_ray(
                 "_memory": object_store_memory,
                 **extra_init_kw,
             }
+            # It should be enough to simply set the required variables for the main process
+            # for Ray to automatically propagate them to each new worker on the same maching.
+            # Although Ray doesn't guarantee this behavior it works as expected most of the
+            # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
+            # is usually causing. You can visit this gh-issue for more info:
+            # https://github.com/modin-project/modin/issues/5157#issuecomment-1500225150
+            for key, value in env_vars.items():
+                os.environ[key] = value
             ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
@@ -146,13 +160,19 @@ def initialize_ray(
 
     # Now ray is initialized, check runtime env config - especially useful if we join
     # an externally pre-configured cluster
-    env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
-    for varname, varvalue in extra_init_kw["runtime_env"]["env_vars"].items():
-        if str(env_vars.get(varname, "")) != str(varvalue):
-            ErrorMessage.single_warning(
-                "When using a pre-initialized Ray cluster, please ensure that the runtime env "
-                + f"sets environment variable {varname} to {varvalue}"
-            )
+    runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
+    for varname, varvalue in env_vars.items():
+        if str(runtime_env_vars.get(varname, "")) != str(varvalue):
+            if cluster or (
+                # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
+                # to be set at least as a process environment variable
+                not cluster
+                and os.environ.get(varname, "") != str(varvalue)
+            ):
+                ErrorMessage.single_warning(
+                    "When using a pre-initialized Ray cluster, please ensure that the runtime env "
+                    + f"sets environment variable {varname} to {varvalue}"
+                )
 
     num_cpus = int(ray.cluster_resources()["CPU"])
     num_gpus = int(ray.cluster_resources().get("GPU", 0))
