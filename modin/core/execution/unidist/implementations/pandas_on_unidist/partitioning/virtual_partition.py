@@ -248,7 +248,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            cls._get_deploy_split_func(),
+            cls._get_deploy_axis_func(),
             axis,
             func,
             f_args,
