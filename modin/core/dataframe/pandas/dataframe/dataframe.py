@@ -199,6 +199,21 @@ class PandasDataframe(ClassLogger):
         """
         return [self.row_lengths, self.column_widths]
 
+    def _set_axis_widths_cache(self, value, axis=0):
+        """
+        Set the row/column widths cache for the specified axis.
+
+        Parameters
+        ----------
+        value : list of ints
+        axis : int, default: 0
+            0 for row lengths and 1 for column widths.
+        """
+        if axis == 0:
+            self._row_lengths_cache = value
+        else:
+            self._column_widths_cache = value
+
     @property
     def has_dtypes_cache(self):
         """
@@ -320,6 +335,20 @@ class PandasDataframe(ClassLogger):
         else:
             self._columns_cache = ModinIndex(columns)
 
+    def set_axis_cache(self, value, axis=0):
+        """
+        Set cache for the specified axis (index or columns).
+
+        Parameters
+        ----------
+        value : sequence, callable or None
+        axis : int, default: 0
+        """
+        if axis == 0:
+            self.set_index_cache(value)
+        else:
+            self.set_columns_cache(value)
+
     @property
     def has_index_cache(self):
         """
@@ -369,6 +398,24 @@ class PandasDataframe(ClassLogger):
         if columns_cache is not None:
             columns_cache = columns_cache.copy()
         return columns_cache
+
+    def copy_axis_cache(self, axis=0):
+        """
+        Copy the axis cache (index or columns).
+
+        Parameters
+        ----------
+        axis : int, default: 0
+
+        Returns
+        -------
+        pandas.Index, callable or None
+            If there is an pandas.Index in the cache, then copying occurs.
+        """
+        if axis == 0:
+            return self.copy_index_cache()
+        else:
+            return self.copy_columns_cache()
 
     @property
     def has_materialized_index(self):
@@ -2105,13 +2152,12 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        np.ndarray
-            2D array of partitions storing result of the applied `func`.
+        PandasDataframe
+            A new dataframe.
         """
         # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:
-            # The method's API forces us to return raw partitions
-            return self.apply_full_axis(axis=1, func=func)._partitions
+            return self.apply_full_axis(axis=1, func=func)
 
         ideal_num_new_partitions = len(self._partitions)
         m = len(self.index) / ideal_num_new_partitions
@@ -2149,11 +2195,7 @@ class PandasDataframe(ClassLogger):
                         [len(self.columns)],
                         self.dtypes,
                     )
-                # The method's API forces us to return raw partitions
-                return modin_frame.apply_full_axis(
-                    axis=0,
-                    func=func,
-                )._partitions
+                return modin_frame.apply_full_axis(axis=0, func=func)
 
         if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
@@ -2209,7 +2251,7 @@ class PandasDataframe(ClassLogger):
             func,
         )
 
-        return new_partitions
+        return self.__constructor__(new_partitions)
 
     @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
@@ -2265,35 +2307,27 @@ class PandasDataframe(ClassLogger):
                 f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
             )
 
-        new_partitions = self._apply_func_to_range_partitioning(
+        result = self._apply_func_to_range_partitioning(
             key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
         )
-        new_axes = (
-            [None, self.copy_columns_cache()]
-            if axis == Axis.ROW_WISE
-            else [self.copy_index_cache(), None]
-        )
-        new_lengths = [None, None]
-        if kwargs.get("ignore_index", False):
-            new_axes[axis.value] = RangeIndex(len(self.get_axis(axis.value)))
 
+        result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)
+        result.set_dtypes_cache(self.copy_dtypes_cache())
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
-        new_lengths[axis.value ^ 1] = (
-            [len(self.columns)] if self.has_materialized_columns else None
-        )
+        if self.has_materialized_columns:
+            self._set_axis_widths_cache([len(self.columns)], axis=axis.value ^ 1)
+
+        if kwargs.get("ignore_index", False):
+            result.index = RangeIndex(len(self.get_axis(axis.value)))
+
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
         # We should add a fix to check if there is skew in the partitions and rebalance
         # them if necessary. Calling `rebalance_partitions` won't do this, since it only
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
-        new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.copy_dtypes_cache()
-        )
-        if kwargs.get("ignore_index", False):
-            new_modin_frame._propagate_index_objs(axis=0)
-        return new_modin_frame
+        return result
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
@@ -3409,18 +3443,18 @@ class PandasDataframe(ClassLogger):
                 )
             return operator(df.groupby(by, **kwargs))
 
-        new_partitions = self._apply_func_to_range_partitioning(
+        result = self._apply_func_to_range_partitioning(
             key_column=by[0],
             func=apply_func,
         )
 
-        kw = {}
         if result_schema is not None:
-            kw["dtypes"] = pandas.Series(result_schema)
-            kw["columns"] = kw["dtypes"].index
-            kw["row_lengths"] = [len(kw["columns"])]
+            new_dtypes = pandas.Series(result_schema)
 
-        return self.__constructor__(new_partitions, **kw)
+            result.set_dtypes_cache(new_dtypes)
+            result.set_columns_cache(new_dtypes.index)
+
+        return result
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(

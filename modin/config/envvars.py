@@ -648,7 +648,7 @@ class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
 
     Experimental groupby is implemented using a range-partitioning technique,
     note that it may not always work better than the original Modin's TreeReduce
-    and Fold implementations. For more information visit the according section
+    and FullAxis implementations. For more information visit the according section
     of Modin's documentation: TODO: add a link to the section once it's written.
     """
 
