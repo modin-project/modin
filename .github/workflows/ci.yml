@@ -665,7 +665,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - run: |
           python -m pip install lazy_import
-          mpiexec -n 1 python -m pytest modin/pandas/test/integration_test/
+          mpiexec -n 1 python -m pytest modin/pandas/test/integrations/
       - uses: ./.github/workflows/upload-coverage
 
   test-all:
@@ -828,7 +828,7 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: |
           python -m pip install lazy_import
-          python -m pytest modin/pandas/test/integration_test/
+          python -m pytest modin/pandas/test/integrations/
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - uses: ./.github/workflows/upload-coverage
 
