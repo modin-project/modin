@@ -25,16 +25,6 @@ from .partition import PandasOnUnidistDataframePartition
 from modin.utils import _inherit_docstrings
 
 
-# If unidist has not been initialized yet by Modin,
-# unidist itself handles initialization when calling `unidist.put`,
-# which is called inside of `UnidistWrapper.put`.
-_DEPLOY_AXIS_FUNC = UnidistWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
-_DRAIN = UnidistWrapper.put(PandasDataframeAxisPartition.drain)
-_DEPLOY_SPLIT_FUNC = UnidistWrapper.put(
-    PandasDataframeAxisPartition.deploy_splitting_func
-)
-
-
 class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
@@ -61,6 +51,32 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
     partition_type = PandasOnUnidistDataframePartition
     instance_type = unidist.core.base.object_ref.ObjectRef
     axis = None
+
+    _DEPLOY_AXIS_FUNC = None
+    _DEPLOY_SPLIT_FUNC = None
+    _DRAIN_FUNC = None
+
+    @classmethod
+    def _get_deploy_axis_func(cls):  # noqa: GL08
+        if cls._DEPLOY_AXIS_FUNC is None:
+            cls._DEPLOY_AXIS_FUNC = UnidistWrapper.put(
+                PandasDataframeAxisPartition.deploy_axis_func
+            )
+        return cls._DEPLOY_AXIS_FUNC
+
+    @classmethod
+    def _get_deploy_split_func(cls):  # noqa: GL08
+        if cls._DEPLOY_SPLIT_FUNC is None:
+            cls._DEPLOY_SPLIT_FUNC = UnidistWrapper.put(
+                PandasDataframeAxisPartition.deploy_splitting_func
+            )
+        return cls._DEPLOY_SPLIT_FUNC
+
+    @classmethod
+    def _get_drain_func(cls):  # noqa: GL08
+        if cls._DRAIN_FUNC is None:
+            cls._DRAIN_FUNC = UnidistWrapper.put(PandasDataframeAxisPartition.drain)
+        return cls._DRAIN_FUNC
 
     def __init__(
         self,
@@ -170,7 +186,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             if extract_metadata
             else num_splits,
         ).remote(
-            _DEPLOY_SPLIT_FUNC,
+            cls._get_deploy_split_func(),
             axis,
             func,
             f_args,
@@ -231,7 +247,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            _DEPLOY_AXIS_FUNC,
+            cls._get_deploy_split_func(),
             axis,
             func,
             f_args,
@@ -481,7 +497,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             _ = self.list_of_blocks
             return
         drained = super(PandasOnUnidistDataframeVirtualPartition, self).apply(
-            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
+            self._get_drain_func(), num_splits=num_splits, call_queue=self.call_queue
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
