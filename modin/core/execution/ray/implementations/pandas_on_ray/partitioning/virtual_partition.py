@@ -53,6 +53,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = ray.ObjectRef
     axis = None
 
+    # these variables are specially initialized at runtime (#6023)
     _DEPLOY_AXIS_FUNC = None
     _DEPLOY_SPLIT_FUNC = None
     _DRAIN_FUNC = None

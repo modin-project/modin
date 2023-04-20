@@ -52,6 +52,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
     instance_type = unidist.core.base.object_ref.ObjectRef
     axis = None
 
+    # these variables are specially initialized at runtime (#6023)
     _DEPLOY_AXIS_FUNC = None
     _DEPLOY_SPLIT_FUNC = None
     _DRAIN_FUNC = None
