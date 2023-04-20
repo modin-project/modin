@@ -37,7 +37,10 @@ elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
 
-    put_func = DaskWrapper.put
+    # Looks like there is a key collision;
+    # https://github.com/dask/distributed/issues/3703#issuecomment-619446739
+    # recommends to use `hash=False`. Perhaps this should be the default value of `put`.
+    put_func = lambda obj: DaskWrapper.put(obj, hash=False)  # noqa: E731
     get_func = DaskWrapper.materialize
     is_future = lambda obj: isinstance(obj, Future)  # noqa: E731
 elif Engine.get() == "Unidist":
@@ -146,9 +149,9 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
             futures = [put_func(df1), put_func(df2)]
     if Engine.get() == "Dask":
         if axis is None:
-            futures = [put_func([df1, df2], hash=False)]
+            futures = [put_func([df1, df2])]
         else:
-            futures = put_func([df1, df2], hash=False)
+            futures = put_func([df1, df2])
     actual_df = from_partitions(
         futures,
         axis,
