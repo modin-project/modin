@@ -39,6 +39,7 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
+import csv
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
@@ -174,6 +175,7 @@ class PandasParser(ClassLogger):
             **(kwargs.pop("storage_options", None) or {}),
         ) as bio:
             header = b""
+            first_line = None
             # In this case we beware that first line can contain BOM, so
             # adding this line to the `header` for reading and then skip it
             if encoding and (
@@ -188,7 +190,9 @@ class PandasParser(ClassLogger):
                     header = fio.readline().encode(encoding)
                     kwargs["skiprows"] = 1
                 for _ in range(header_size):
+                    # `first_line` can be '' if end of file is reached
                     header += fio.readline().encode(encoding)
+                first_line = fio.readline().encode(encoding)
             elif encoding is not None:
                 if header_size == 0:
                     header = bio.readline()
@@ -200,13 +204,30 @@ class PandasParser(ClassLogger):
             else:
                 for _ in range(header_size):
                     header += bio.readline()
-
+            if first_line is None:
+                # `first_line` can be b'' if end of file is reached
+                first_line = bio.readline()
             bio.seek(start)
-            to_read = header + bio.read(end - start)
+            to_read = bio.read(end - start)
+            header_with_to_read = header + to_read
         if "memory_map" in kwargs:
             kwargs = kwargs.copy()
             del kwargs["memory_map"]
-        pandas_df = callback(BytesIO(to_read), **kwargs)
+
+        try:
+            pandas_df = callback(BytesIO(header_with_to_read), **kwargs)
+        except pandas.errors.ParserError:
+            # looks like pandas determines the number of fields by the first line
+            # after the header, let's try like this and discard it after reading;
+            # as a test of the approach's operability, it's better to use it in some
+            # cases, not in all
+            if kwargs["quoting"] == csv.QUOTE_NONE and first_line:
+                pandas_df = callback(BytesIO(header + first_line + to_read), **kwargs)
+                # drop the first line
+                pandas_df = pandas_df.iloc[1:]
+            else:
+                raise
+
         index = (
             pandas_df.index
             if not isinstance(pandas_df.index, pandas.RangeIndex)

@@ -868,10 +868,19 @@ class TextFileDispatcher(FileDispatcher):
             Partitions rows lengths.
         """
         index_objs = cls.materialize(index_ids)
-        if len(index_objs) == 0 or isinstance(index_objs[0], int):
+
+        # due to arbitrary splitting and index, we cannot be guaranteed to get
+        # the same types, so we need to check all objects, not just the first one
+        if len(index_objs) == 0 or all(
+            isinstance(index_obj, int) for index_obj in index_objs
+        ):
             row_lengths = index_objs
             new_index = pandas.RangeIndex(sum(index_objs))
         else:
+            for i in range(len(index_objs)):
+                if isinstance(index_objs[i], int):
+                    index_objs[i] = pandas.RangeIndex(index_objs[i])
+
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
             new_index.name = index_name

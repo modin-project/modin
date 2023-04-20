@@ -1240,6 +1240,14 @@ class TestCsv:
             index_col="col1",
         )
 
+    def test_read_csv_4649(self):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="modin/pandas/test/data/issue_4649.csv",
+            quoting=csv.QUOTE_NONE,
+        )
+
     @pytest.mark.parametrize(
         "skiprows",
         [
