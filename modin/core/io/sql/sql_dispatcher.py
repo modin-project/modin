@@ -111,6 +111,17 @@ class SQLDispatcher(FileDispatcher):
         return cls.query_compiler_cls(new_frame)
 
     @classmethod
+    def _is_supported_sqlalchemy_object(cls, obj):  # noqa: GL08
+        supported = None
+        try:
+            import sqlalchemy as sa
+
+            supported = isinstance(obj, (sa.engine.Engine, sa.engine.Connection))
+        except ImportError:
+            supported = False
+        return supported
+
+    @classmethod
     def write(cls, qc, **kwargs):
         """
         Write records stored in the `qc` to a SQL database.
