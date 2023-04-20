@@ -199,9 +199,9 @@ class PandasDataframe(ClassLogger):
         """
         return [self.row_lengths, self.column_widths]
 
-    def _set_axis_widths_cache(self, value, axis=0):
+    def _set_axis_lengths_cache(self, value, axis=0):
         """
-        Set the row/column widths cache for the specified axis.
+        Set the row/column lengths cache for the specified axis.
 
         Parameters
         ----------
@@ -2316,7 +2316,7 @@ class PandasDataframe(ClassLogger):
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
         if self.has_materialized_columns:
-            self._set_axis_widths_cache([len(self.columns)], axis=axis.value ^ 1)
+            self._set_axis_lengths_cache([len(self.columns)], axis=axis.value ^ 1)
 
         if kwargs.get("ignore_index", False):
             result.index = RangeIndex(len(self.get_axis(axis.value)))
