@@ -26,12 +26,6 @@ from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
 
 
-# If Ray has not been initialized yet by Modin,
-# it will be initialized when calling `RayWrapper.put`.
-_DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
-_DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
-
-
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
@@ -57,6 +51,24 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
     axis = None
+
+    # these variables are intentionally initialized at runtime (see #6023)
+    _DEPLOY_AXIS_FUNC = None
+    _DRAIN_FUNC = None
+
+    @classmethod
+    def _get_deploy_axis_func(cls):  # noqa: GL08
+        if cls._DEPLOY_AXIS_FUNC is None:
+            cls._DEPLOY_AXIS_FUNC = RayWrapper.put(
+                PandasDataframeAxisPartition.deploy_axis_func
+            )
+        return cls._DEPLOY_AXIS_FUNC
+
+    @classmethod
+    def _get_drain_func(cls):  # noqa: GL08
+        if cls._DRAIN_FUNC is None:
+            cls._DRAIN_FUNC = RayWrapper.put(PandasDataframeAxisPartition.drain)
+        return cls._DRAIN_FUNC
 
     def __init__(
         self,
@@ -200,7 +212,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_returns=(num_splits if lengths is None else len(lengths)) * 4,
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            _DEPLOY_AXIS_FUNC,
+            cls._get_deploy_axis_func(),
             axis,
             func,
             f_args,
@@ -473,7 +485,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             _ = self.list_of_blocks
             return
         drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
+            self._get_drain_func(), num_splits=num_splits, call_queue=self.call_queue
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
