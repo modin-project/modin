@@ -823,8 +823,9 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: python -m pytest modin/pandas/test/interoperability
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - uses: ./.github/workflows/upload-coverage
 
   test-experimental:
