@@ -19,6 +19,7 @@ from pandas.api.types import is_scalar, is_bool_dtype, is_float_dtype
 from typing import Optional
 
 from .operator import Operator
+from modin.error_message import ErrorMessage
 
 
 def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
@@ -107,6 +108,12 @@ def maybe_compute_dtypes_common_cast(
                 f"Can't compute common type for {type(first)} and {type(second)}."
             )
 
+        # We verify operands shapes at the front-end, invalid operands shouldn't be
+        # propagated to the query compiler level
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=len(second_dtypes_list) != len(dtypes_first),
+            message="Shapes of the operands of a binary operation don't match",
+        )
         dtypes_second = {
             key: second_dtypes_list[idx] for idx, key in enumerate(dtypes_first.keys())
         }
