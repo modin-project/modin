@@ -665,6 +665,9 @@ jobs:
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: |
+          python -m pip install lazy_import
+          mpiexec -n 1 python -m pytest modin/pandas/test/integrations/
       - uses: ./.github/workflows/upload-coverage
 
   test-all:
@@ -824,6 +827,10 @@ jobs:
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: |
+          python -m pip install lazy_import
+          python -m pytest modin/pandas/test/integrations/
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - uses: ./.github/workflows/upload-coverage
 
