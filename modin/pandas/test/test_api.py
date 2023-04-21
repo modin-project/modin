@@ -165,76 +165,8 @@ def test_dataframe_api_equality():
     allowed_different = ["to_hdf", "hist"]
     # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
     allowed_different.append("rename_axis")
-    difference = []
 
-    # Check that we don't have extra params
-    for m in modin_dir:
-        if m in allowed_different:
-            continue
-        try:
-            pandas_sig = dict(
-                inspect.signature(getattr(pandas.DataFrame, m)).parameters
-            )
-        except TypeError:
-            continue
-        try:
-            modin_sig = dict(inspect.signature(getattr(pd.DataFrame, m)).parameters)
-        except TypeError:
-            continue
-
-        if not pandas_sig == modin_sig:
-            append_val = (
-                m,
-                {
-                    i: pandas_sig[i]
-                    for i in pandas_sig.keys()
-                    if i not in modin_sig
-                    or pandas_sig[i].default != modin_sig[i].default
-                    and not (
-                        pandas_sig[i].default is np.nan
-                        and modin_sig[i].default is np.nan
-                    )
-                },
-            )
-            try:
-                # This validates that there are actually values to add to the difference
-                # based on the condition above.
-                if len(list(append_val[-1])[-1]) > 0:
-                    difference.append(append_val)
-            except IndexError:
-                pass
-
-    assert not len(difference), "Missing params found in API: {}".format(difference)
-
-    # Check that we have all params
-    for m in modin_dir:
-        if m in allowed_different:
-            continue
-        try:
-            pandas_sig = dict(
-                inspect.signature(getattr(pandas.DataFrame, m)).parameters
-            )
-        except TypeError:
-            continue
-        try:
-            modin_sig = dict(inspect.signature(getattr(pd.DataFrame, m)).parameters)
-        except TypeError:
-            continue
-
-        if not pandas_sig == modin_sig:
-            append_val = (
-                m,
-                {i: modin_sig[i] for i in modin_sig.keys() if i not in pandas_sig},
-            )
-            try:
-                # This validates that there are actually values to add to the difference
-                # based on the condition above.
-                if len(list(append_val[-1])[-1]) > 0:
-                    difference.append(append_val)
-            except IndexError:
-                pass
-
-    assert not len(difference), "Extra params found in API: {}".format(difference)
+    assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 
 
 def test_series_str_api_equality():
@@ -249,6 +181,7 @@ def test_series_str_api_equality():
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
+    assert_parameters_eq((pandas.Series.str, pd.Series.str), modin_dir, [])
 
 
 def test_series_dt_api_equality():
@@ -329,17 +262,24 @@ def test_series_api_equality():
     allowed_different = ["to_hdf", "hist"]
     # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
     allowed_different.append("rename_axis")
+
+    assert_parameters_eq((pandas.Series, pd.Series), modin_dir, allowed_different)
+
+
+def assert_parameters_eq(objects, attributes, allowed_different):
+    pandas_obj, modin_obj = objects
     difference = []
 
-    for m in modin_dir:
+    # Check that Modin functions/methods don't have extra params
+    for m in attributes:
         if m in allowed_different:
             continue
         try:
-            pandas_sig = dict(inspect.signature(getattr(pandas.Series, m)).parameters)
+            pandas_sig = dict(inspect.signature(getattr(pandas_obj, m)).parameters)
         except TypeError:
             continue
         try:
-            modin_sig = dict(inspect.signature(getattr(pd.Series, m)).parameters)
+            modin_sig = dict(inspect.signature(getattr(modin_obj, m)).parameters)
         except TypeError:
             continue
 
@@ -366,15 +306,17 @@ def test_series_api_equality():
                 pass
     assert not len(difference), "Missing params found in API: {}".format(difference)
 
-    for m in modin_dir:
+    difference = []
+    # Check that Modin functions/methods have all params as pandas
+    for m in attributes:
         if m in allowed_different:
             continue
         try:
-            pandas_sig = dict(inspect.signature(getattr(pandas.Series, m)).parameters)
+            pandas_sig = dict(inspect.signature(getattr(pandas_obj, m)).parameters)
         except TypeError:
             continue
         try:
-            modin_sig = dict(inspect.signature(getattr(pd.Series, m)).parameters)
+            modin_sig = dict(inspect.signature(getattr(modin_obj, m)).parameters)
         except TypeError:
             continue
 
