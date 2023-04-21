@@ -15,7 +15,7 @@
 
 import numpy as np
 import pandas
-from pandas.api.types import is_scalar, is_bool_dtype, is_float_dtype
+from pandas.api.types import is_scalar, is_bool_dtype
 from typing import Optional
 
 from .operator import Operator
@@ -226,13 +226,15 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
             dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(first, second)
-        elif infer_dtypes == "float" or is_float_dtype(result_dtype):
+        elif infer_dtypes == "float":
             dtypes = maybe_compute_dtypes_common_cast(first, second)
             if dtypes is not None:
                 dtypes = dtypes.apply(coerce_int_to_float64)
-        elif result_dtype is not None:
-            dtypes = maybe_build_dtypes_series(first, second, dtype=result_dtype)
         else:
+            # For now we only know how to handle `result_dtype == bool` as that's
+            # the only value that is being passed here right now, it's unclear
+            # how we should behave in case of an arbitrary dtype, so let's wait
+            # for at least one case to appear for this regard.
             dtypes = None
     except NotImplementedError:
         dtypes = None
