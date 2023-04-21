@@ -112,7 +112,7 @@ def maybe_compute_dtypes_common_cast(
         # propagated to the query compiler level
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=len(second_dtypes_list) != len(dtypes_first),
-            message="Shapes of the operands of a binary operation don't match",
+            extra_log="Shapes of the operands of a binary operation don't match",
         )
         dtypes_second = {
             key: second_dtypes_list[idx] for idx, key in enumerate(dtypes_first.keys())
