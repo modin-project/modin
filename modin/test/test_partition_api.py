@@ -27,7 +27,8 @@ PartitionClass = (
 )
 
 if Engine.get() == "Ray":
-    from modin.core.execution.ray.common import RayWrapper, ObjectIDType
+    from modin.core.execution.ray.common import RayWrapper
+    from modin.core.execution.ray.common.utils import ObjectIDType
 
     put_func = RayWrapper.put
     get_func = RayWrapper.materialize
