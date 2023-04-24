@@ -5,7 +5,7 @@
 
 | <h3>Dev Community & Support</h3> | <h3>Forums</h3> | <h3>Socials</h3> | <h3>Docs</h3> |
 |:---: | :---: | :---: | :---: |
-| [![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA) | [![Stack Overflow](https://img.shields.io/badge/-Stackoverflow-FE7A16?style=for-the-badge&logo=stack-overflow&logoColor=white)](https://stackoverflow.com/questions/tagged/modin) | <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/modin_project?style=social" height=28 align="center"> | <a href="https://modin.readthedocs.io/en/latest/?badge=latest"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=latest" height=28 align="center"></a> |
+| [![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA) | [![Stack Overflow](https://img.shields.io/badge/-Stackoverflow-FE7A16?style=for-the-badge&logo=stack-overflow&logoColor=white)](https://stackoverflow.com/questions/tagged/modin) | <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/modin_project?style=social" height=28 align="center"> | <a href="https://modin.readthedocs.io/en/0.20.1/?badge=0.20.1"><img alt="" src="https://readthedocs.org/projects/modin/badge/?version=0.20.1" height=28 align="center"></a> |
 
 </div>
 
@@ -13,7 +13,7 @@
 <a href="https://pepy.tech/project/modin"><img src="https://static.pepy.tech/personalized-badge/modin?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads" align="center"></a>
 <a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
 <a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
-<a href="https://pypi.org/project/modin/"><img src="https://badge.fury.io/py/modin.svg" alt="PyPI version" align="center"></a>
+<a href="https://pypi.org/project/modin/0.20.1"><img src="https://img.shields.io/badge/pypi-0.20.1-blue.svg" alt="PyPI version" align="center"></a>
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
 
