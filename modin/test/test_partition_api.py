@@ -27,12 +27,11 @@ PartitionClass = (
 )
 
 if Engine.get() == "Ray":
-    from modin.core.execution.ray.common import RayWrapper
-    from ray import ObjectRef
+    from modin.core.execution.ray.common import RayWrapper, ObjectIDType
 
     put_func = RayWrapper.put
     get_func = RayWrapper.materialize
-    is_future = lambda obj: isinstance(obj, ObjectRef)  # noqa: E731
+    is_future = lambda obj: isinstance(obj, ObjectIDType)  # noqa: E731
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
@@ -142,16 +141,10 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
         else [num_cols, num_cols]
     )
     futures = []
-    if Engine.get() in ("Ray", "Unidist"):
-        if axis is None:
-            futures = [[put_func(df1), put_func(df2)]]
-        else:
-            futures = [put_func(df1), put_func(df2)]
-    if Engine.get() == "Dask":
-        if axis is None:
-            futures = [put_func([df1, df2])]
-        else:
-            futures = put_func([df1, df2])
+    if axis is None:
+        futures = [[put_func(df1), put_func(df2)]]
+    else:
+        futures = [put_func(df1), put_func(df2)]
     actual_df = from_partitions(
         futures,
         axis,
