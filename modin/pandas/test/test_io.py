@@ -2585,7 +2585,7 @@ class TestSpss:
     # In case of defaulting to pandas, it's enough
     # to check that the parameters are passed to pandas.
     def test_read_spss(self):
-        test_args = ("fake_path", ["A"], False)
+        test_args = ("fake_path", ["A"], False, lib.no_default)
         with mock.patch(
             "pandas.read_spss", return_value=pandas.DataFrame([])
         ) as read_spss:

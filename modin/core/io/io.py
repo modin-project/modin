@@ -550,9 +550,13 @@ class BaseIO:
         summary="Load an SPSS file from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def read_spss(cls, path, usecols, convert_categoricals):  # noqa: PR01
+    def read_spss(
+        cls, path, usecols, convert_categoricals, dtype_backend
+    ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_spss`")
-        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
+        return cls.from_pandas(
+            pandas.read_spss(path, usecols, convert_categoricals, dtype_backend)
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_sql, apilink="pandas.DataFrame.to_sql")
