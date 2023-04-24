@@ -20,13 +20,13 @@ concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
 env:
   MODIN_GITHUB_CI: true
 jobs:
   lint-mypy:
     name: lint (mypy)
-    runs-on: macos-latest
+    runs-on: [ macos-latest, ubuntu-latest ]
     steps:
       - uses: actions/checkout@v3
         with:

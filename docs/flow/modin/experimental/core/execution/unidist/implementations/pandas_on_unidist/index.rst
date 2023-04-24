@@ -17,6 +17,9 @@ ExperimentalPandasOnUnidistIO classes and modules
 
 - :py:class:`~modin.experimental.core.execution.unidist.implementations.pandas_on_unidist.io.io.ExperimentalPandasOnUnidistIO`
 - :py:class:`~modin.core.execution.dispatching.factories.factories.ExperimentalPandasOnUnidistFactory`
-- :py:class:`~modin.core.io.text.csv_glob_dispatcher.CSVGlobDispatcher`
+- :py:class:`~modin.experimental.core.io.text.csv_glob_dispatcher.ExperimentalCSVGlobDispatcher`
+- :py:class:`~modin.experimental.core.io.sql.sql_dispatcher.ExperimentalSQLDispatcher`
+- :py:class:`~modin.experimental.core.io.pickle.pickle_dispatcher.ExperimentalPickleDispatcher`
+- :py:class:`~modin.experimental.core.io.text.custom_text_dispatcher.ExperimentalCustomTextDispatcher`
 - :py:class:`~modin.core.storage_formats.pandas.parsers.PandasCSVGlobParser`
 - :doc:`ExperimentalPandasOnUnidist IO module </flow/modin/experimental/core/execution/unidist/implementations/pandas_on_unidist/io/index>`

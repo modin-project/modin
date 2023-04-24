@@ -26,12 +26,6 @@ from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
 
 
-# If Ray has not been initialized yet by Modin,
-# it will be initialized when calling `RayWrapper.put`.
-_DEPLOY_AXIS_FUNC = RayWrapper.put(PandasDataframeAxisPartition.deploy_axis_func)
-_DRAIN = RayWrapper.put(PandasDataframeAxisPartition.drain)
-
-
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
     """
     The class implements the interface in ``PandasDataframeAxisPartition``.
@@ -54,9 +48,37 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
+    _PARTITIONS_METADATA_LEN = 3  # (length, width, ip)
     partition_type = PandasOnRayDataframePartition
     instance_type = ray.ObjectRef
     axis = None
+
+    # these variables are intentionally initialized at runtime (see #6023)
+    _DEPLOY_AXIS_FUNC = None
+    _DEPLOY_SPLIT_FUNC = None
+    _DRAIN_FUNC = None
+
+    @classmethod
+    def _get_deploy_axis_func(cls):  # noqa: GL08
+        if cls._DEPLOY_AXIS_FUNC is None:
+            cls._DEPLOY_AXIS_FUNC = RayWrapper.put(
+                PandasDataframeAxisPartition.deploy_axis_func
+            )
+        return cls._DEPLOY_AXIS_FUNC
+
+    @classmethod
+    def _get_deploy_split_func(cls):  # noqa: GL08
+        if cls._DEPLOY_SPLIT_FUNC is None:
+            cls._DEPLOY_SPLIT_FUNC = RayWrapper.put(
+                PandasDataframeAxisPartition.deploy_splitting_func
+            )
+        return cls._DEPLOY_SPLIT_FUNC
+
+    @classmethod
+    def _get_drain_func(cls):  # noqa: GL08
+        if cls._DRAIN_FUNC is None:
+            cls._DRAIN_FUNC = RayWrapper.put(PandasDataframeAxisPartition.drain)
+        return cls._DRAIN_FUNC
 
     def __init__(
         self,
@@ -151,6 +173,33 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         return result
 
     @classmethod
+    @_inherit_docstrings(PandasDataframeAxisPartition.deploy_splitting_func)
+    def deploy_splitting_func(
+        cls,
+        axis,
+        func,
+        f_args,
+        f_kwargs,
+        num_splits,
+        *partitions,
+        extract_metadata=False,
+    ):
+        return _deploy_ray_func.options(
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+            if extract_metadata
+            else num_splits,
+        ).remote(
+            cls._get_deploy_split_func(),
+            axis,
+            func,
+            f_args,
+            f_kwargs,
+            num_splits,
+            *partitions,
+            extract_metadata=extract_metadata,
+        )
+
+    @classmethod
     def deploy_axis_func(
         cls,
         axis,
@@ -197,10 +246,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             A list of ``ray.ObjectRef``-s.
         """
         return _deploy_ray_func.options(
-            num_returns=(num_splits if lengths is None else len(lengths)) * 4,
+            num_returns=(num_splits if lengths is None else len(lengths))
+            * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
-            _DEPLOY_AXIS_FUNC,
+            cls._get_deploy_axis_func(),
             axis,
             func,
             f_args,
@@ -252,7 +302,9 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         list
             A list of ``ray.ObjectRef``-s.
         """
-        return _deploy_ray_func.options(num_returns=num_splits * 4).remote(
+        return _deploy_ray_func.options(
+            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+        ).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
@@ -263,25 +315,6 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             other_shape,
             *partitions,
         )
-
-    def _wrap_partitions(self, partitions):
-        """
-        Wrap partitions passed as a list of ``ray.ObjectRef`` with ``PandasOnRayDataframePartition`` class.
-
-        Parameters
-        ----------
-        partitions : list
-            List of ``ray.ObjectRef``.
-
-        Returns
-        -------
-        list
-            List of ``PandasOnRayDataframePartition`` objects.
-        """
-        return [
-            self.partition_type(object_id, length, width, ip)
-            for (object_id, length, width, ip) in zip(*[iter(partitions)] * 4)
-        ]
 
     def apply(
         self,
@@ -473,7 +506,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             _ = self.list_of_blocks
             return
         drained = super(PandasOnRayDataframeVirtualPartition, self).apply(
-            _DRAIN, num_splits=num_splits, call_queue=self.call_queue
+            self._get_drain_func(), num_splits=num_splits, call_queue=self.call_queue
         )
         self._list_of_block_partitions = drained
         self.call_queue = []
@@ -532,7 +565,14 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 
 @ray.remote
 def _deploy_ray_func(
-    deployer, axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs
+    deployer,
+    axis,
+    f_to_deploy,
+    f_args,
+    f_kwargs,
+    *args,
+    extract_metadata=True,
+    **kwargs,
 ):  # pragma: no cover
     """
     Execute a function on an axis partition in a worker process.
@@ -557,6 +597,11 @@ def _deploy_ray_func(
         Keyword arguments to pass to ``f_to_deploy``.
     *args : list
         Positional arguments to pass to ``deployer``.
+    extract_metadata : bool, default: True
+        Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
+        the load on object storage as the remote function would return 4 times fewer futures.
+        Passing `False` makes sense for temporary results where you know for sure that the
+        metadata will never be requested.
     **kwargs : dict
         Keyword arguments to pass to ``deployer``.
 
@@ -571,6 +616,8 @@ def _deploy_ray_func(
     """
     f_args = deserialize(f_args)
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    if not extract_metadata:
+        return result
     ip = get_node_ip_address()
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
