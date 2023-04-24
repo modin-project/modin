@@ -2630,7 +2630,8 @@ def test_from_spmatrix():
     reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
 )
 def test_to_dense():
-    modin_df, pandas_df = create_test_dfs({"col1": pandas.SparseArray([0, 1, 0])})
+    data = {"col1": pandas.arrays.SparseArray([0, 1, 0])}
+    modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
