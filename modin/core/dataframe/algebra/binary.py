@@ -51,7 +51,7 @@ def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
 
 
 def maybe_compute_dtypes_common_cast(
-    first, second, trigger_computations=False
+    first, second, trigger_computations=False, axis=0
 ) -> Optional[pandas.Series]:
     """
     Precompute data types for binary operations by finding common type between operands.
@@ -66,6 +66,8 @@ def maybe_compute_dtypes_common_cast(
         Whether to trigger computation of the lazy metadata for `first` and `second`.
         If False is specified this method will return None if any of the operands doesn't
         have materialized dtypes.
+    axis : int, default: 0
+        Axis to perform the binary operation along.
 
     Returns
     -------
@@ -92,13 +94,26 @@ def maybe_compute_dtypes_common_cast(
         columns_first = set(first.columns)
         columns_second = set(second.columns)
         common_columns = columns_first.intersection(columns_second)
-        mismatch_columns = columns_first.union(columns_second) - common_columns
+        # Here we want to XOR the sets in order to find the columns that do not
+        # belong to the intersection, these will be NaN columns in the result
+        mismatch_columns = columns_first ^ columns_second
+    elif isinstance(second, dict):
+        dtypes_second = {key: type(value) for key, value in second.items()}
+        columns_first = set(first.columns)
+        columns_second = set(second.keys())
+        common_columns = columns_first.intersection(columns_second)
+        # Here we want to find the difference between the sets in order to find columns
+        # that are missing in the dictionary, this will be NaN columns in the result
+        mismatch_columns = columns_first.difference(columns_second)
     else:
-        if isinstance(second, (dict, list, tuple)):
-            second_dtypes_list = [
-                type(value)
-                for value in (second.values() if isinstance(second, dict) else second)
-            ]
+        if isinstance(second, (list, tuple)):
+            second_dtypes_list = (
+                [type(value) for value in second]
+                if axis == 1
+                # Here we've been given a column so it has only one dtype,
+                # Infering the dtype using `np.array`, TODO: maybe there's more efficient way?
+                else [np.array(second).dtype] * len(dtypes_first)
+            )
         elif is_scalar(second) or isinstance(second, np.ndarray):
             second_dtypes_list = [getattr(second, "dtype", type(second))] * len(
                 dtypes_first
@@ -107,7 +122,6 @@ def maybe_compute_dtypes_common_cast(
             raise NotImplementedError(
                 f"Can't compute common type for {type(first)} and {type(second)}."
             )
-
         # We verify operands shapes at the front-end, invalid operands shouldn't be
         # propagated to the query compiler level
         ErrorMessage.catch_bugs_and_request_email(
@@ -195,7 +209,7 @@ def maybe_build_dtypes_series(
     return dtypes
 
 
-def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
+def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None, axis=0):
     """
     Precompute resulting dtypes of the binary operation if possible.
 
@@ -213,6 +227,8 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
         How dtypes should be infered (see ``Binary.register`` doc for more info).
     result_dtype : np.dtype, optional
         NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
+    axis : int, default: 0
+        Axis to perform the binary operation along.
 
     Returns
     -------
@@ -225,9 +241,9 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None):
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
             dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
-            dtypes = maybe_compute_dtypes_common_cast(first, second)
+            dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
         elif infer_dtypes == "float":
-            dtypes = maybe_compute_dtypes_common_cast(first, second)
+            dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
             if dtypes is not None:
                 dtypes = dtypes.apply(coerce_int_to_float64)
         else:
@@ -321,7 +337,7 @@ class Binary(Operator):
                     other = other.transpose()
             if dtypes != "copy":
                 dtypes = try_compute_new_dtypes(
-                    query_compiler, other, infer_dtypes, dtypes
+                    query_compiler, other, infer_dtypes, dtypes, axis
                 )
 
             shape_hint = None
