@@ -26,7 +26,7 @@ env:
 jobs:
   lint-mypy:
     name: lint (mypy)
-    runs-on: [ macos-latest, ubuntu-latest ]
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
         with:
