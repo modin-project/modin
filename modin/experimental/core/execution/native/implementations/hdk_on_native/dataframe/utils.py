@@ -25,6 +25,12 @@ import pandas
 from pandas import Timestamp
 from pandas.core.dtypes.common import get_dtype, is_string_dtype
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
+from pandas.core.dtypes.common import (
+    is_string_dtype,
+    is_any_int_dtype,
+    is_datetime64_dtype,
+    is_categorical_dtype,
+)
 
 import pyarrow as pa
 from pyarrow.types import is_dictionary
@@ -334,18 +340,32 @@ def check_cols_to_join(what, df, col_names):
     Tuple[HdkOnNativeDataframe, list]
         The aligned data frame and column names.
     """
-    cols = df.columns
+
+    def check_dtype(name, dtype):
+        if not (
+            is_string_dtype(dtype)
+            or is_any_int_dtype(dtype)
+            or is_datetime64_dtype(dtype)
+            or is_categorical_dtype(dtype)
+        ):
+            raise NotImplementedError(f"Join on column '{name}' of type '{dtype}'")
+
+    dtypes = df.dtypes
     new_col_names = col_names
     for i, col in enumerate(col_names):
-        if col in cols:
+        dtype = dtypes.get(col, None)
+        if dtype is not None:
+            check_dtype(col, dtype)
             continue
+
         new_name = None
         if df._index_cols is not None:
             for c in df._index_cols:
                 if col == ColNameCodec.demangle_index_name(c):
                     new_name = c
+                    check_dtype(col, df._dtypes[c])
                     break
-        elif df.has_index_cache:
+        elif df.has_index_cache and df.index.name == col:
             new_name = f"__index__{0}_{col}"
             df = df._maybe_materialize_rowid()
         if new_name is None:

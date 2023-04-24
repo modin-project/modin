@@ -1588,6 +1588,52 @@ class TestMerge:
                 iterations=i,
             )
 
+    def test_merge_float(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={"A": [1, 2] * 1000},
+            data2={"A": [1.0, 3.0] * 1000},
+            on_columns="A",
+            force_lazy=False,
+        )
+
+    def test_merge_categorical(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={"A": [1, 2] * 1000},
+            data2={"A": [1.0, 3.0] * 1000},
+            on_columns="A",
+            constructor_kwargs={"dtype": "category"},
+            comparator=lambda df1, df2: df1["A"].values == df2["A"].values,
+        )
+
+    def test_merge_date(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={
+                "A": [
+                    pd.Timestamp("2023-01-01"),
+                    pd.Timestamp("2023-01-02"),
+                ]
+            },
+            data2={
+                "A": [
+                    pd.Timestamp("2023-01-01"),
+                    pd.Timestamp("2023-01-03"),
+                ]
+            },
+            on_columns="A",
+        )
+
 
 class TestBinaryOp:
     data = {
