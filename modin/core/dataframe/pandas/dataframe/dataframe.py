@@ -1838,9 +1838,9 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
-        elif dtypes is not None:
+        elif dtypes is not None and not isinstance(dtypes, pandas.Series):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
@@ -2632,8 +2632,8 @@ class PandasDataframe(ClassLogger):
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : "copy" or None, default: None
-            Whether keep old dtypes or infer new dtypes from data.
+        dtypes : "copy", pandas.Series or None, default: None
+            Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
 
         Returns
         -------
@@ -2654,7 +2654,7 @@ class PandasDataframe(ClassLogger):
         new_frame = self._partition_mgr_cls.broadcast_apply(
             axis, func, left_parts, right_parts
         )
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
 
         def _pick_axis(get_axis, sizes_cache):
