@@ -2572,7 +2572,11 @@ class TestOrc:
     # to check that the parameters are passed to pandas.
     def test_read_orc(self):
         test_args = ("fake_path",)
-        test_kwargs = {"columns": ["A"], "fake_kwarg": "some_pyarrow_parameter"}
+        test_kwargs = dict(
+            columns=["A"],
+            dtype_backend=lib.no_default,
+            fake_kwarg="some_pyarrow_parameter",
+        )
         with mock.patch(
             "pandas.read_orc", return_value=pandas.DataFrame([])
         ) as read_orc:
