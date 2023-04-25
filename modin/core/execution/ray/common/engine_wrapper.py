@@ -120,7 +120,7 @@ class RayWrapper:
 
         Parameters
         ----------
-        objs_ids : list, scalar
+        obj_ids : list, scalar
         """
         if not isinstance(obj_ids, list):
             obj_ids = [obj_ids]
