@@ -42,7 +42,7 @@ class CategoryMethods(ClassLogger):
         self._query_compiler = series._query_compiler
 
     @pandas.util.cache_readonly
-    def _Series(self):
+    def _Series(self):  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 
@@ -142,7 +142,7 @@ class StringMethods(ClassLogger):
         self._query_compiler = data._query_compiler
 
     @pandas.util.cache_readonly
-    def _Series(self):
+    def _Series(self):  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 
@@ -517,7 +517,7 @@ class DatetimeProperties(ClassLogger):
         self._query_compiler = series._query_compiler
 
     @pandas.util.cache_readonly
-    def _Series(self):
+    def _Series(self):  # noqa: GL08
         # to avoid cyclic import
         from .series import Series
 
