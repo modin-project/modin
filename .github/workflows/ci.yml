@@ -417,6 +417,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
       - uses: ./.github/workflows/upload-coverage
@@ -645,6 +646,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
@@ -784,6 +786,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
@@ -1012,6 +1016,8 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.test_task == 'group_3'
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest modin/pandas/test/test_groupby.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
         if: matrix.test_task == 'group_4'

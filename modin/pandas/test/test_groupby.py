@@ -17,7 +17,7 @@ import pandas
 import numpy as np
 from unittest import mock
 
-from modin.config.envvars import Engine
+from modin.config.envvars import Engine, ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -98,7 +98,7 @@ def build_types_asserter(comparator):
 
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_dtypes_groupby(as_index):
-    frame_data = np.random.randint(97, 198, size=(2**6, 2**4))
+    frame_data = np.random.RandomState(42).randint(97, 198, size=(2**6, 2**4))
     pandas_df = pandas.DataFrame(frame_data).add_prefix("col")
     # Convert every other column to string
     for col in pandas_df.iloc[
@@ -1015,6 +1015,17 @@ def test_multi_column_groupby():
         modin_df.groupby(by, axis=1).count()
 
 
+def sort_index_if_experimental_groupby(*dfs):
+    """
+    This method should be applied before comparing results of ``groupby.transform`` as
+    the experimental implementation changes the order of rows for that:
+    https://github.com/modin-project/modin/issues/5924
+    """
+    if ExperimentalGroupbyImpl.get():
+        return tuple(df.sort_index() for df in dfs)
+    return dfs
+
+
 def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
@@ -1040,11 +1051,19 @@ def eval_ndim(modin_groupby, pandas_groupby):
 
 
 def eval_cumsum(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumsum(axis=axis), pandas_groupby.cumsum(axis=axis)
+        )
+    )
 
 
 def eval_cummax(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cummax(axis=axis), pandas_groupby.cummax(axis=axis)
+        )
+    )
 
 
 def eval_apply(modin_groupby, pandas_groupby, func):
@@ -1056,7 +1075,11 @@ def eval_dtypes(modin_groupby, pandas_groupby):
 
 
 def eval_cummin(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cummin(axis=axis), pandas_groupby.cummin(axis=axis)
+        )
+    )
 
 
 def eval_prod(modin_groupby, pandas_groupby):
@@ -1112,17 +1135,31 @@ def eval_median(modin_groupby, pandas_groupby):
 
 
 def eval_cumprod(modin_groupby, pandas_groupby, axis=0):
-    df_equals(modin_groupby.cumprod(), pandas_groupby.cumprod())
-    df_equals(modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumprod(), pandas_groupby.cumprod()
+        )
+    )
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.cumprod(axis=axis), pandas_groupby.cumprod(axis=axis)
+        )
+    )
 
 
 def eval_transform(modin_groupby, pandas_groupby, func):
-    df_equals(modin_groupby.transform(func), pandas_groupby.transform(func))
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.transform(func), pandas_groupby.transform(func)
+        )
+    )
 
 
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
-        modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
+        *sort_index_if_experimental_groupby(
+            modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
+        )
     )
 
 
@@ -1219,20 +1256,26 @@ def eval_groups(modin_groupby, pandas_groupby):
 
 
 def eval_shift(modin_groupby, pandas_groupby):
+    def comparator(df1, df2):
+        df_equals(*sort_index_if_experimental_groupby(df1, df2))
+
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(),
+        comparator=comparator,
     )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(periods=0),
+        comparator=comparator,
     )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda groupby: groupby.shift(periods=-3),
+        comparator=comparator,
     )
 
     # Disabled for `BaseOnPython` because of the issue with `getitem_array`.
@@ -1251,12 +1294,13 @@ def eval_shift(modin_groupby, pandas_groupby):
             indexer = algorithms.unique1d(indexer)
             modin_res = modin_res.take(indexer)
 
-            df_equals(modin_res, pandas_res)
+            comparator(modin_res, pandas_res)
         else:
             eval_general(
                 modin_groupby,
                 pandas_groupby,
                 lambda groupby: groupby.shift(axis=1, fill_value=777),
+                comparator=comparator,
             )
 
 
@@ -1500,8 +1544,10 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         True,
         pytest.param(
             False,
-            marks=pytest.mark.xfail_executions(
-                ["BaseOnPython"], reason="See Pandas issue #39103"
+            marks=pytest.mark.skipif(
+                get_current_execution() == "BaseOnPython"
+                or ExperimentalGroupbyImpl.get(),
+                reason="See Pandas issue #39103",
             ),
         ),
     ],
@@ -1566,11 +1612,25 @@ def test_agg_4604():
         "quantile",
         pytest.param(
             "mean",
+            marks=pytest.mark.xfail(
+                condition=ExperimentalGroupbyImpl.get()
+                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
+                + "Remove this after the transition to pandas 2.0",
+            ),
         ),
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
-        "median",
+        pytest.param(
+            "median",
+            marks=pytest.mark.xfail(
+                condition=ExperimentalGroupbyImpl.get()
+                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
+                + "Remove this after the transition to pandas 2.0",
+            ),
+        ),
         "unique",
         "cumprod",
     ],
@@ -1616,7 +1676,16 @@ def test_agg_exceptions(operation):
     }
 
     data = {**data1, **data2}
-    eval_aggregation(*create_test_dfs(data), operation=operation)
+
+    def comparator(df1, df2):
+        from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+
+        if GroupBy.is_transformation_kernel(operation):
+            df1, df2 = sort_index_if_experimental_groupby(df1, df2)
+
+        df_equals(df1, df2)
+
+    eval_aggregation(*create_test_dfs(data), operation=operation, comparator=comparator)
 
 
 @pytest.mark.skip(

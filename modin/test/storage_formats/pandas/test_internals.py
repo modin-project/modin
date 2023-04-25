@@ -811,7 +811,13 @@ def test_split_partitions_kernel(
 
     # Randomly reordering rows in the dataframe
     df = df.reindex(random_state.permutation(df.index))
-    bins = split_partitions_using_pivots_for_sort(df, df, col_name, pivots, ascending)
+    bins = split_partitions_using_pivots_for_sort(
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=pivots,
+        ascending=ascending,
+    )
 
     # Building reference bounds to make the result verification simpler
     bounds = np.concatenate([[min_val], pivots, [max_val]])
@@ -856,7 +862,11 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
     )
 
     result = split_partitions_using_pivots_for_sort(
-        df, df, col_name, pivots=[], ascending=ascending
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=[],
+        ascending=ascending,
     )
     # We're expecting to recieve a single split here
     assert isinstance(result, tuple)
@@ -926,7 +936,11 @@ def test_split_partition_preserve_names(ascending):
     # Pivots that contain empty bins
     pivots = [2, 2, 5, 7]
     splits = split_partitions_using_pivots_for_sort(
-        df, df, column="numeric_col", pivots=pivots, ascending=ascending
+        df,
+        column="numeric_col",
+        is_numeric_column=True,
+        pivots=pivots,
+        ascending=ascending,
     )
 
     for part in splits:
