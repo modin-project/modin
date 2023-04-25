@@ -2424,6 +2424,16 @@ class TestLoc:
         pds = pandas.Series(data[next(iter(data.keys()))]).iloc[1:]
         df_equals(mds, pds)
 
+    def test_iloc_issue_6037(self):
+        def iloc(df, **kwargs):
+            return df.iloc[:-1].dropna()
+
+        run_and_compare(
+            fn=iloc,
+            data={"A": range(1000000)},
+            force_lazy=False,
+        )
+
 
 class TestStr:
     def test_str(self):
