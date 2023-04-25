@@ -232,6 +232,11 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
+        ErrorMessage.single_warning(
+            ".ffill() is implemented using .fillna() in Modin, "
+            + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
+            + "on dataframes with duplicated indices"
+        )
         return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1):
@@ -634,6 +639,11 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
+        ErrorMessage.single_warning(
+            ".bfill() is implemented using .fillna() in Modin, "
+            + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
+            + "on dataframes with duplicated indices"
+        )
         return self.fillna(limit=limit, method="bfill")
 
     def idxmin(self):
@@ -806,6 +816,11 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.corrwith)
 
     def pad(self, limit=None):
+        ErrorMessage.single_warning(
+            ".pad() is implemented using .fillna() in Modin, "
+            + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
+            + "on dataframes with duplicated indices"
+        )
         return self.fillna(limit=limit, method="pad")
 
     def max(self, numeric_only=False, min_count=-1):
