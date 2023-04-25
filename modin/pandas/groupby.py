@@ -415,7 +415,7 @@ class DataFrameGroupBy(ClassLogger):
             if not is_integer(n):
                 raise ValueError("dropna option only supported for an integer argument")
 
-            if dropna not in ["any", "all"]:
+            if dropna not in ("any", "all"):
                 # Note: when agg-ing picker doesn't raise this, just returns NaN
                 raise ValueError(
                     "For a DataFrame or Series groupby.nth, dropna must be "
