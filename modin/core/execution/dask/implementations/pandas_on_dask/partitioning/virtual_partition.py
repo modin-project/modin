@@ -15,7 +15,6 @@
 
 from distributed import Future
 from distributed.utils import get_ip
-from dask.distributed import wait
 
 import pandas
 
@@ -225,7 +224,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self.list_of_blocks)
+        DaskWrapper.wait(self.list_of_blocks)
 
 
 @_inherit_docstrings(PandasOnDaskDataframeVirtualPartition.__init__)

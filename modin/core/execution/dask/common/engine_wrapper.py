@@ -16,6 +16,7 @@
 from collections import UserDict
 
 from distributed.client import default_client
+from dask.distributed import wait
 
 
 def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
@@ -133,3 +134,16 @@ class DaskWrapper:
             data = UserDict(data)
         client = default_client()
         return client.scatter(data, **kwargs)
+
+    @classmethod
+    def wait(cls, obj_ids):
+        """
+        Wait on the objects without materializing them (blocking operation).
+
+        Parameters
+        ----------
+        obj_ids : list, scalar
+        """
+        if not isinstance(obj_ids, list):
+            obj_ids = [obj_ids]
+        wait(obj_ids, return_when="ALL_COMPLETED")

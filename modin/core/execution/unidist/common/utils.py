@@ -89,28 +89,3 @@ def deserialize(obj):  # pragma: no cover
         return dict(zip(obj.keys(), deserialize(tuple(obj.values()))))
     else:
         return obj
-
-
-def wait(obj_refs):
-    """
-    Wrap ``unidist.wait`` to handle duplicate object references.
-
-    Parameters
-    ----------
-    obj_refs : List[unidist.ObjectRef]
-        The object IDs to wait on.
-
-    Returns
-    -------
-    Tuple[List[ObjectRef], List[ObjectRef]]
-        A list of object refs that are ready, and a list of object refs remaining (this
-        is the same as for ``ray.wait``). Unlike ``ray.wait``, the order of these refs is not
-        guaranteed.
-
-    Notes
-    -----
-    ``ray.wait`` assumes a list of unique object references: see
-    https://github.com/modin-project/modin/issues/5045.
-    """
-    unique_refs = list(set(obj_refs))
-    return unidist.wait(unique_refs, num_returns=len(unique_refs))

@@ -17,7 +17,6 @@ from modin.core.execution.unidist.generic.partitioning import (
     GenericUnidistDataframePartitionManager,
 )
 from modin.core.execution.unidist.common import UnidistWrapper
-from modin.core.execution.unidist.common.utils import wait
 from .virtual_partition import (
     PandasOnUnidistDataframeColumnPartition,
     PandasOnUnidistDataframeRowPartition,
@@ -47,10 +46,9 @@ class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionM
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        blocks = [
-            block for partition in partitions for block in partition.list_of_blocks
-        ]
-        wait(blocks)
+        UnidistWrapper.wait(
+            [block for partition in partitions for block in partition.list_of_blocks]
+        )
 
 
 def _make_wrapped_method(name: str):

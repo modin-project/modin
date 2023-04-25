@@ -110,6 +110,23 @@ class RayWrapper:
         """
         return ray.put(data, **kwargs)
 
+    @classmethod
+    def wait(cls, obj_ids):
+        """
+        Wait on the objects without materializing them (blocking operation).
+
+        ``ray.wait`` assumes a list of unique object references: see
+        https://github.com/modin-project/modin/issues/5045
+
+        Parameters
+        ----------
+        objs_ids : list, scalar
+        """
+        if not isinstance(obj_ids, list):
+            obj_ids = [obj_ids]
+        unique_ids = list(set(obj_ids))
+        ray.wait(unique_ids, num_returns=len(unique_ids))
+
 
 @ray.remote
 class SignalActor:  # pragma: no cover
