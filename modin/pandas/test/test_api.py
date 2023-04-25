@@ -59,6 +59,7 @@ def test_top_level_api_equality():
         "datetime",
         "warnings",
         "os",
+        "series_utils",
     ]
 
     assert not len(
