@@ -91,14 +91,13 @@ def initialize_ray(
             }
         )
     extra_init_kw = {}
-    cluster = override_is_cluster or IsRayCluster.get()
-    was_ray_initialized = ray.is_initialized()
-    if not was_ray_initialized or override_is_cluster:
+    is_cluster = override_is_cluster or IsRayCluster.get()
+    if ray.is_initialized() or override_is_cluster:
         redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = (
             (
                 ray.ray_constants.REDIS_DEFAULT_PASSWORD
-                if cluster
+                if is_cluster
                 else RayRedisPassword.get()
             )
             if override_redis_password is None
@@ -106,7 +105,7 @@ def initialize_ray(
             else override_redis_password or RayRedisPassword.get()
         )
 
-        if cluster:
+        if is_cluster:
             extra_init_kw["runtime_env"] = {"env_vars": env_vars}
             # We only start ray in a cluster setting for the head node.
             ray.init(
@@ -138,7 +137,7 @@ def initialize_ray(
                 **extra_init_kw,
             }
             # It should be enough to simply set the required variables for the main process
-            # for Ray to automatically propagate them to each new worker on the same maching.
+            # for Ray to automatically propagate them to each new worker on the same node.
             # Although Ray doesn't guarantee this behavior it works as expected most of the
             # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
             # is usually causing. You can visit this gh-issue for more info:
@@ -163,10 +162,10 @@ def initialize_ray(
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
     for varname, varvalue in env_vars.items():
         if str(runtime_env_vars.get(varname, "")) != str(varvalue):
-            if cluster or (
+            if is_cluster or (
                 # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
                 # to be set at least as a process environment variable
-                not cluster
+                not is_cluster
                 and os.environ.get(varname, "") != str(varvalue)
             ):
                 ErrorMessage.single_warning(
