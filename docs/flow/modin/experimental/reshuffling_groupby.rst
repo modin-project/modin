@@ -11,13 +11,17 @@ In order to enable/disable this new implementation you have to specify ``cfg.Exp
 
     In [4]: import modin.config as cfg; cfg.ExperimentalGroupbyImpl.put(True)
 
-    In [5]: # past this point Modin will always use the new reshuffling groupby implementation
+    In [5]: # past this point, Modin will always use the new reshuffling groupby implementation
 
     In [6]: cfg.ExperimentalGroupbyImpl.put(False)
 
-    In [7]: # past this point Modin won't use reshuffling groupby implementation no more
+    In [7]: # past this point, Modin won't use reshuffling groupby implementation anymore
 
 The reshuffling implementation appears to be quite efficient when compared to old TreeReduce and FullAxis implementations:
+
+.. note::
+
+    All of the examples below were run on Intel(R) Xeon(R) Gold 6238R CPU @ 2.20GHz (112 cores), 192gb RAM
 
 .. code-block:: ipython
 
