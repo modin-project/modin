@@ -128,7 +128,7 @@ class RayWrapper:
         unique_ids = list(set(obj_ids))
         if num_returns is None:
             num_returns = len(unique_ids)
-        ray.wait(unique_ids, num_returns=len(unique_ids))
+        ray.wait(unique_ids, num_returns=num_returns)
 
 
 @ray.remote
