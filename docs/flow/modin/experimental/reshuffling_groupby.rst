@@ -40,7 +40,7 @@ The reshuffling implementation appears to be quite efficient when compared to ol
 Although it may look like the new implementation always outperforms the old ones, it's not actually true.
 There's a decent overhead on building the range partitioning itself, meaning that the old implementations
 may act better on smaller data sizes or when the grouping columns (a key column to build range partitioning)
-have to small unique values (and thus fewer units of parallelization):
+have too few unique values (and thus fewer units of parallelization):
 
 .. code-block:: ipython
 
