@@ -92,7 +92,7 @@ def initialize_ray(
         )
     extra_init_kw = {}
     is_cluster = override_is_cluster or IsRayCluster.get()
-    if ray.is_initialized() or override_is_cluster:
+    if not ray.is_initialized() or override_is_cluster:
         redis_address = override_redis_address or RayRedisAddress.get()
         redis_password = (
             (
