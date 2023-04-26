@@ -136,14 +136,22 @@ class DaskWrapper:
         return client.scatter(data, **kwargs)
 
     @classmethod
-    def wait(cls, obj_ids):
+    def wait(cls, obj_ids, num_returns=None):
         """
         Wait on the objects without materializing them (blocking operation).
 
         Parameters
         ----------
         obj_ids : list, scalar
+        num_returns : int, optional
         """
         if not isinstance(obj_ids, list):
             obj_ids = [obj_ids]
-        wait(obj_ids, return_when="ALL_COMPLETED")
+        if num_returns is None:
+            num_returns = len(obj_ids)
+        if num_returns == len(obj_ids):
+            wait(obj_ids, return_when="ALL_COMPLETED")
+        else:
+            # Dask doesn't natively support `num_returns` as int
+            for _ in range(num_returns):
+                wait(obj_ids, return_when="FIRST_COMPLETED")

@@ -111,7 +111,7 @@ class RayWrapper:
         return ray.put(data, **kwargs)
 
     @classmethod
-    def wait(cls, obj_ids):
+    def wait(cls, obj_ids, num_returns=None):
         """
         Wait on the objects without materializing them (blocking operation).
 
@@ -121,10 +121,13 @@ class RayWrapper:
         Parameters
         ----------
         obj_ids : list, scalar
+        num_returns : int, optional
         """
         if not isinstance(obj_ids, list):
             obj_ids = [obj_ids]
         unique_ids = list(set(obj_ids))
+        if num_returns is None:
+            num_returns = len(unique_ids)
         ray.wait(unique_ids, num_returns=len(unique_ids))
 
 

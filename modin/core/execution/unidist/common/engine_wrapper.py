@@ -110,7 +110,7 @@ class UnidistWrapper:
         return unidist.put(data)
 
     @classmethod
-    def wait(cls, obj_ids):
+    def wait(cls, obj_ids, num_returns=None):
         """
         Wait on the objects without materializing them (blocking operation).
 
@@ -120,11 +120,14 @@ class UnidistWrapper:
         Parameters
         ----------
         obj_ids : list, scalar
+        num_returns : int, optional
         """
         if not isinstance(obj_ids, list):
             obj_ids = [obj_ids]
         unique_ids = list(set(obj_ids))
-        unidist.wait(unique_ids, num_returns=len(unique_ids))
+        if num_returns is None:
+            num_returns = len(unique_ids)
+        unidist.wait(unique_ids, num_returns=num_returns)
 
 
 @unidist.remote
