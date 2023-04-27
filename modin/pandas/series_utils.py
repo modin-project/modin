@@ -39,7 +39,6 @@ if TYPE_CHECKING:
 class CategoryMethods(ClassLogger):
     def __init__(self, series):
         self._series = series
-        self._series_type = type(series)
         self._query_compiler = series._query_compiler
 
     @pandas.util.cache_readonly
@@ -522,7 +521,6 @@ class StringMethods(ClassLogger):
 class DatetimeProperties(ClassLogger):
     def __init__(self, series):
         self._series = series
-        self._series_type = type(series)
         self._query_compiler = series._query_compiler
 
     @pandas.util.cache_readonly

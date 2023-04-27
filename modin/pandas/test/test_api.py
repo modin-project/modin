@@ -51,7 +51,6 @@ def test_top_level_api_equality():
         "iterator",
         "series",
         "accessor",
-        "series_utils",
         "base",
         "utils",
         "dataframe",
