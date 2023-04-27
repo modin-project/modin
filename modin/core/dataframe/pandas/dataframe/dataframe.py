@@ -203,6 +203,21 @@ class PandasDataframe(ClassLogger):
         """
         return [self.row_lengths, self.column_widths]
 
+    def _set_axis_lengths_cache(self, value, axis=0):
+        """
+        Set the row/column lengths cache for the specified axis.
+
+        Parameters
+        ----------
+        value : list of ints
+        axis : int, default: 0
+            0 for row lengths and 1 for column widths.
+        """
+        if axis == 0:
+            self._row_lengths_cache = value
+        else:
+            self._column_widths_cache = value
+
     @property
     def has_dtypes_cache(self):
         """
@@ -340,6 +355,20 @@ class PandasDataframe(ClassLogger):
         else:
             self._columns_cache = ModinIndex(columns)
 
+    def set_axis_cache(self, value, axis=0):
+        """
+        Set cache for the specified axis (index or columns).
+
+        Parameters
+        ----------
+        value : sequence, callable or None
+        axis : int, default: 0
+        """
+        if axis == 0:
+            self.set_index_cache(value)
+        else:
+            self.set_columns_cache(value)
+
     @property
     def has_index_cache(self):
         """
@@ -389,6 +418,24 @@ class PandasDataframe(ClassLogger):
         if columns_cache is not None:
             columns_cache = columns_cache.copy()
         return columns_cache
+
+    def copy_axis_cache(self, axis=0):
+        """
+        Copy the axis cache (index or columns).
+
+        Parameters
+        ----------
+        axis : int, default: 0
+
+        Returns
+        -------
+        pandas.Index, callable or None
+            If there is an pandas.Index in the cache, then copying occurs.
+        """
+        if axis == 0:
+            return self.copy_index_cache()
+        else:
+            return self.copy_columns_cache()
 
     @property
     def has_materialized_index(self):
@@ -1864,9 +1911,9 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
-        elif dtypes is not None:
+        elif dtypes is not None and not isinstance(dtypes, pandas.Series):
             dtypes = pandas.Series(
                 [np.dtype(dtypes)] * len(self.columns), index=self.columns
             )
@@ -2112,63 +2159,31 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
-    def sort_by(
-        self,
-        axis: Union[int, Axis],
-        columns: Union[str, List[str]],
-        ascending: bool = True,
-        **kwargs,
-    ) -> "PandasDataframe":
+    def _apply_func_to_range_partitioning(
+        self, key_column, func, ascending=True, **kwargs
+    ):
         """
-        Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+        Reshuffle data so it would be range partitioned and then apply the passed function row-wise.
 
         Parameters
         ----------
-        axis : int or modin.core.dataframe.base.utils.Axis
-            The axis to perform the sort over.
-        columns : string or list
-            Column label(s) to use to determine lexicographical ordering.
-        ascending : boolean, default: True
-            Whether to sort in ascending or descending order.
+        key_column : hashable
+            Column name to build the range partitioning for.
+        func : callable(pandas.DataFrame) -> pandas.DataFrame
+            Function to apply against partitions.
+        ascending : bool, default: True
+            Whether the range should be built in ascending or descending order.
         **kwargs : dict
-            Keyword arguments to pass when sorting partitions.
+            Additional arguments to forward to the range builder function.
 
         Returns
         -------
         PandasDataframe
-            A new PandasDataframe sorted into lexicographical order by the specified column(s).
+            A new dataframe.
         """
-        if not isinstance(columns, list):
-            columns = [columns]
-        # When we do a sort on the result of Series.value_counts, we don't rename the index until
-        # after everything is done, which causes an error when sorting the partitions, since the
-        # index and the column share the same name, when in actuality, the index's name should be
-        # None. This fixes the indexes name beforehand in that case, so that the sort works.
-
-        def sort_function(df):  # pragma: no cover
-            index_renaming = None
-            if any(name in df.columns for name in df.index.names):
-                index_renaming = df.index.names
-                df.index = df.index.set_names([None] * len(df.index.names))
-            df = df.sort_values(by=columns, ascending=ascending, **kwargs)
-            if index_renaming is not None:
-                df.index = df.index.set_names(index_renaming)
-            return df
-
-        axis = Axis(axis)
-        if axis != Axis.ROW_WISE:
-            raise NotImplementedError(
-                f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
-            )
-
-        # If there's only one row partition can simply apply sorting row-wise without the need to reshuffle
+        # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:
-            return self.apply_full_axis(axis=1, func=sort_function)
-
-        # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
-            return self.copy()
+            return self.apply_full_axis(axis=1, func=func)
 
         ideal_num_new_partitions = len(self._partitions)
         m = len(self.index) / ideal_num_new_partitions
@@ -2206,12 +2221,9 @@ class PandasDataframe(ClassLogger):
                         [len(self.columns)],
                         self.dtypes,
                     )
-                return modin_frame.apply_full_axis(
-                    0,
-                    sort_function,
-                )
+                return modin_frame.apply_full_axis(axis=0, func=func)
 
-        if self.dtypes[columns[0]] == object:
+        if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
             method = "inverted_cdf"
@@ -2220,7 +2232,7 @@ class PandasDataframe(ClassLogger):
 
         shuffling_functions = build_sort_functions(
             self,
-            columns[0],
+            key_column,
             method,
             ascending[0] if is_list_like(ascending) else ascending,
             ideal_num_new_partitions,
@@ -2250,7 +2262,7 @@ class PandasDataframe(ClassLogger):
         else:
             new_partitions = self._partitions
 
-        major_col_partition_index = self.columns.get_loc(columns[0])
+        major_col_partition_index = self.columns.get_loc(key_column)
         cols_seen = 0
         index = -1
         for i, length in enumerate(self.column_widths):
@@ -2262,34 +2274,86 @@ class PandasDataframe(ClassLogger):
             new_partitions,
             index,
             shuffling_functions,
-            sort_function,
+            func,
         )
-        new_axes = (
-            [None, self.copy_columns_cache()]
-            if axis == Axis.ROW_WISE
-            else [self.copy_index_cache(), None]
-        )
-        new_lengths = [None, None]
-        if kwargs.get("ignore_index", False):
-            new_axes[axis.value] = RangeIndex(len(self.get_axis(axis.value)))
 
+        return self.__constructor__(new_partitions)
+
+    @lazy_metadata_decorator(apply_axis="both")
+    def sort_by(
+        self,
+        axis: Union[int, Axis],
+        columns: Union[str, List[str]],
+        ascending: bool = True,
+        **kwargs,
+    ) -> "PandasDataframe":
+        """
+        Logically reorder rows (columns if axis=1) lexicographically by the data in a column or set of columns.
+
+        Parameters
+        ----------
+        axis : int or modin.core.dataframe.base.utils.Axis
+            The axis to perform the sort over.
+        columns : string or list
+            Column label(s) to use to determine lexicographical ordering.
+        ascending : boolean, default: True
+            Whether to sort in ascending or descending order.
+        **kwargs : dict
+            Keyword arguments to pass when sorting partitions.
+
+        Returns
+        -------
+        PandasDataframe
+            A new PandasDataframe sorted into lexicographical order by the specified column(s).
+        """
+        if not isinstance(columns, list):
+            columns = [columns]
+
+        def sort_function(df):  # pragma: no cover
+            # When we do a sort on the result of Series.value_counts, we don't rename the index until
+            # after everything is done, which causes an error when sorting the partitions, since the
+            # index and the column share the same name, when in actuality, the index's name should be
+            # None. This fixes the indexes name beforehand in that case, so that the sort works.
+            index_renaming = None
+            if any(name in df.columns for name in df.index.names):
+                index_renaming = df.index.names
+                df.index = df.index.set_names([None] * len(df.index.names))
+            df = df.sort_values(by=columns, ascending=ascending, **kwargs)
+            if index_renaming is not None:
+                df.index = df.index.set_names(index_renaming)
+            return df
+
+        # If this df is empty, we don't want to try and shuffle or sort.
+        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+            return self.copy()
+
+        axis = Axis(axis)
+        if axis != Axis.ROW_WISE:
+            raise NotImplementedError(
+                f"Algebra sort only implemented row-wise. {axis.name} sort not implemented yet!"
+            )
+
+        result = self._apply_func_to_range_partitioning(
+            key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
+        )
+
+        result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)
+        result.set_dtypes_cache(self.copy_dtypes_cache())
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
-        new_lengths[axis.value ^ 1] = (
-            [len(self.columns)] if self.has_materialized_columns else None
-        )
+        if self.has_materialized_columns:
+            self._set_axis_lengths_cache([len(self.columns)], axis=axis.value ^ 1)
+
+        if kwargs.get("ignore_index", False):
+            result.index = RangeIndex(len(self.get_axis(axis.value)))
+
         # Since the strategy to pick our pivots involves random sampling
         # we could end up picking poor pivots, leading to skew in our partitions.
         # We should add a fix to check if there is skew in the partitions and rebalance
         # them if necessary. Calling `rebalance_partitions` won't do this, since it only
         # resolves the case where there isn't the right amount of partitions - not where
         # there is skew across the lengths of partitions.
-        new_modin_frame = self.__constructor__(
-            new_partitions, *new_axes, *new_lengths, self.copy_dtypes_cache()
-        )
-        if kwargs.get("ignore_index", False):
-            new_modin_frame._propagate_index_objs(axis=0)
-        return new_modin_frame
+        return result
 
     @lazy_metadata_decorator(apply_axis="both")
     def filter(self, axis: Union[Axis, int], condition: Callable) -> "PandasDataframe":
@@ -2658,8 +2722,8 @@ class PandasDataframe(ClassLogger):
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        dtypes : "copy" or None, default: None
-            Whether keep old dtypes or infer new dtypes from data.
+        dtypes : "copy", pandas.Series or None, default: None
+            Dtypes of the result. "copy" to keep old dtypes and None to compute them on demand.
 
         Returns
         -------
@@ -2680,7 +2744,7 @@ class PandasDataframe(ClassLogger):
         new_frame = self._partition_mgr_cls.broadcast_apply(
             axis, func, left_parts, right_parts
         )
-        if dtypes == "copy":
+        if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
 
         def _pick_axis(get_axis, sizes_cache):
@@ -3344,12 +3408,14 @@ class PandasDataframe(ClassLogger):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby(
         self,
         axis: Union[int, Axis],
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
+        **kwargs: dict,
     ) -> "PandasDataframe":
         """
         Generate groups based on values in the input column(s) and perform the specified operation on each.
@@ -3360,12 +3426,14 @@ class PandasDataframe(ClassLogger):
             The axis to apply the grouping over.
         by : string or list of strings
             One or more column labels to use for grouping.
-        operator : callable
+        operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+        **kwargs : dict
+            Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
         Returns
         -------
@@ -3384,7 +3452,35 @@ class PandasDataframe(ClassLogger):
         Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
         algebra implementation.
         """
-        pass
+        axis = Axis(axis)
+        if axis != Axis.ROW_WISE:
+            raise NotImplementedError(
+                f"Algebra groupby only implemented row-wise. {axis.name} axis groupby not implemented yet!"
+            )
+
+        if not isinstance(by, list):
+            by = [by]
+
+        def apply_func(df):  # pragma: no cover
+            if any(dtype == "category" for dtype in df.dtypes[by].values):
+                raise NotImplementedError(
+                    "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                    + "https://github.com/modin-project/modin/issues/5925"
+                )
+            return operator(df.groupby(by, **kwargs))
+
+        result = self._apply_func_to_range_partitioning(
+            key_column=by[0],
+            func=apply_func,
+        )
+
+        if result_schema is not None:
+            new_dtypes = pandas.Series(result_schema)
+
+            result.set_dtypes_cache(new_dtypes)
+            result.set_columns_cache(new_dtypes.index)
+
+        return result
 
     @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
     def groupby_reduce(

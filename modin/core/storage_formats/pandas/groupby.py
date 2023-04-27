@@ -18,6 +18,8 @@ import numpy as np
 
 from modin.utils import hashable
 from modin.core.dataframe.algebra import GroupByReduce
+from modin.config import ExperimentalGroupbyImpl
+from modin.error_message import ErrorMessage
 
 
 class GroupbyReduceImpl:
@@ -84,7 +86,24 @@ class GroupbyReduceImpl:
             with TreeReduce algorithm.
         """
         map_fn, reduce_fn, d2p_fn = cls.get_impl(agg_name)
-        return GroupByReduce.register(map_fn, reduce_fn, default_to_pandas_func=d2p_fn)
+        map_reduce_method = GroupByReduce.register(
+            map_fn, reduce_fn, default_to_pandas_func=d2p_fn
+        )
+
+        def method(query_compiler, *args, **kwargs):
+            if ExperimentalGroupbyImpl.get():
+                try:
+                    return query_compiler._groupby_shuffle(
+                        *args, agg_func=agg_name, **kwargs
+                    )
+                except NotImplementedError as e:
+                    ErrorMessage.warn(
+                        f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                        + "\nFalling back to a TreeReduce implementation."
+                    )
+            return map_reduce_method(query_compiler, *args, **kwargs)
+
+        return method
 
     @staticmethod
     def _build_skew_impl():

@@ -319,6 +319,20 @@ class TestCSV:
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize("parse_dates", [None, True, False])
+    def test_read_csv_datetime_tz(self, engine, parse_dates):
+        with ensure_clean(".csv") as file:
+            with open(file, "w") as f:
+                f.write("test\n2023-01-01T00:00:00.000-07:00")
+
+            eval_io(
+                fn_name="read_csv",
+                filepath_or_buffer=file,
+                md_extra_kwargs={"engine": engine},
+                parse_dates=parse_dates,
+            )
+
+    @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize(
         "usecols",
         [
@@ -774,6 +788,17 @@ class TestConcat:
         exp = pd.concat([df1, df2], axis=1, join="inner")
 
         df_equals(ref, exp)
+
+    def test_concat_str(self):
+        def concat(df1, df2, lib, **kwargs):
+            return lib.concat([df1.dropna(), df2.dropna()]).astype(str)
+
+        run_and_compare(
+            concat,
+            data={"a": ["1", "2", "3"]},
+            data2={"a": ["4", "5", "6"]},
+            force_lazy=False,
+        )
 
 
 class TestGroupby:
@@ -2399,6 +2424,16 @@ class TestLoc:
         pds = pandas.Series(data[next(iter(data.keys()))]).iloc[1:]
         df_equals(mds, pds)
 
+    def test_iloc_issue_6037(self):
+        def iloc(df, **kwargs):
+            return df.iloc[:-1].dropna()
+
+        run_and_compare(
+            fn=iloc,
+            data={"A": range(1000000)},
+            force_lazy=False,
+        )
+
 
 class TestStr:
     def test_str(self):
@@ -2521,7 +2556,6 @@ class TestFromArrow:
         mdf = from_arrow(at)
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
-        df_equals(mdf, pdf)
 
         mdt = mdf.dtypes[0]
         pdt = pdf.dtypes[0]
@@ -2541,6 +2575,9 @@ class TestFromArrow:
         assert pdt == mdt
         assert repr(mdt) == repr(pdt)
 
+        # `df_equals` triggers categories materialization and thus
+        # has to be called after all checks for laziness
+        df_equals(mdf, pdf)
         # Should be materialized now
         assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
 
