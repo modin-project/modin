@@ -154,29 +154,33 @@ class ModinDtypes:
 
 class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     """
-    Proxy class for lazily retrieving categorical dtypes from arrow parents.
+    A lazy proxy representing ``pandas.CategoricalDtype``.
 
     Parameters
     ----------
-    parent : pyarrow.parent
-        Source parent.
-    column_name : str
-        Column name.
+    categories : list-like, optional
+    ordered : bool, default: False
+
+    Notes
+    -----
+    Important note! One shouldn't use the class' constructor to instantiate a proxy instance,
+    it's intended only for compatibility purposes! In order to create a new proxy instance
+    use the appropriate static method `._build_proxy(...)`.
     """
 
     def __init__(self, categories=None, ordered=False):
         super().__init__(categories, ordered)
 
-    def _new(self, parent, column_name: str) -> pandas.CategoricalDtype:
+    def _update_proxy(self, parent, column_name):
         """
         Create a new proxy, if either parent or column name are different.
 
         Parameters
         ----------
-        parent : pyarrow.parent
-            Source parent.
+        parent : object
+            Source object to extract categories on demand.
         column_name : str
-            Column name.
+            Column name of the categorical column in the source object.
 
         Returns
         -------
@@ -193,7 +197,23 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
             )
 
     @classmethod
-    def _build_proxy(cls, parent, column_name, materializer=None):
+    def _build_proxy(cls, parent, column_name, materializer):
+        """
+        Construct a lazy proxy.
+
+        Parameters
+        ----------
+        parent : object
+            Source object to extract categories on demand.
+        column_name : str
+            Column name of the categorical column in the source object.
+        materializer : callable(parent, column_name) -> pandas.CategoricalDtype
+            A function to call in order to extract categorical values.
+
+        Returns
+        -------
+        LazyProxyCategoricalDtype
+        """
         result = cls(categories=None)
         result._parent = parent
         result._column_name = column_name
@@ -202,29 +222,63 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         return result
 
     def __reduce__(self):
+        """
+        Serialize an object of this class.
+
+        Returns
+        -------
+        tuple
+
+        Notes
+        -----
+        This object is serialized into a ``pandas.CategoricalDtype`` as an actual proxy can't be
+        properly serialized because of the references it stores for its potentially distributed parent.
+        """
         return (pandas.CategoricalDtype, (self.categories, self.ordered))
 
     @property
-    def _categories(self):  # noqa: GL08
+    def _categories(self):
+        """
+        Get materialized categorical values.
+
+        Returns
+        -------
+        pandas.Index
+        """
         if not self._is_materialized:
             self._materialize_categories()
         return self._categories_val
 
     @property
-    def _is_materialized(self):
+    def _is_materialized(self) -> bool:
+        """
+        Check whether categorical values were already materialized.
+
+        Returns
+        -------
+        bool
+        """
         return self._categories_val is not None
 
     @_categories.setter
     def _categories(self, categories):  # noqa: GL08
+        """
+        Set new categorical values.
+
+        Parameters
+        ----------
+        categories : list-like
+        """
         self._categories_val = categories
         self._parent = None  # The parent is not required any more
         self._materializer = None
 
     def _materialize_categories(self):
+        """Materialize actual categorical values."""
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=self._parent is None,
             extra_log="attempted to bind 'None' pyarrow table to a lazy category",
         )
-        categoricals = self._materializer(self._parent)
+        categoricals = self._materializer(self._parent, self._column_name)
         self._categories = categoricals.categories
         self._ordered = categoricals.ordered

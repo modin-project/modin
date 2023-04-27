@@ -28,6 +28,7 @@ from .utils import (
     check_cols_to_join,
     get_data_for_join_by_index,
     get_common_arrow_type,
+    build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import ModinDtypes, LazyProxyCategoricalDtype
@@ -432,7 +433,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             ):
                 for key, value in dtypes.items():
                     if isinstance(value, LazyProxyCategoricalDtype):
-                        dtypes[key] = value._new(table, key)
+                        dtypes[key] = value._update_proxy(table, key)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
@@ -2827,7 +2828,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     LazyProxyCategoricalDtype._build_proxy(
                         parent=at,
                         column_name=col._name,
-                        materializer=_build_categorical_from_at,
+                        materializer=build_categorical_from_at,
                     )
                 )
             else:

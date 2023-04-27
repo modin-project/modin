@@ -24,7 +24,6 @@ from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 import pyarrow as pa
 from pyarrow.types import is_dictionary
 
-from modin.error_message import ErrorMessage
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -150,64 +149,22 @@ class ColNameCodec:
             raise ValueError(f"Invalid encoded column name: {name}")
 
 
-class LazyProxyCategoricalDtype(pd.CategoricalDtype):
+def build_categorical_from_at(table, column_name):
     """
-    Proxy class for lazily retrieving categorical dtypes from arrow tables.
+    Build ``pandas.CategoricalDtype`` from a dictionary column of the passed PyArrow Table.
 
     Parameters
     ----------
     table : pyarrow.Table
-        Source table.
     column_name : str
-        Column name.
+
+    Returns
+    -------
+    pandas.CategoricalDtype
     """
-
-    def __init__(self, table: pa.Table, column_name: str):
-        ErrorMessage.catch_bugs_and_request_email(
-            failure_condition=table is None,
-            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
-        )
-        self._table = table
-        self._column_name = column_name
-        self._ordered = False
-        self._lazy_categories = None
-
-    def _new(self, table: pa.Table, column_name: str) -> pd.CategoricalDtype:
-        """
-        Create a new proxy, if either table or column name are different.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            Source table.
-        column_name : str
-            Column name.
-
-        Returns
-        -------
-        pandas.CategoricalDtype or LazyProxyCategoricalDtype
-        """
-        if self._table is None:
-            # The table has been materialized, we don't need a proxy anymore.
-            return pd.CategoricalDtype(self.categories)
-        elif table is self._table and column_name == self._column_name:
-            return self
-        else:
-            return LazyProxyCategoricalDtype(table, column_name)
-
-    @property
-    def _categories(self):  # noqa: GL08
-        if self._table is not None:
-            chunks = self._table.column(self._column_name).chunks
-            cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
-            self._lazy_categories = self.validate_categories(cat.unique())
-            self._table = None  # The table is not required any more
-        return self._lazy_categories
-
-    @_categories.setter
-    def _set_categories(self, categories):  # noqa: GL08
-        self._lazy_categories = categories
-        self._table = None
+    chunks = table.column(column_name).chunks
+    cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+    return pd.CategoricalDtype(cat.unique())
 
 
 def check_join_supported(join_type: str):

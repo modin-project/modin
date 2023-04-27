@@ -267,7 +267,7 @@ class PandasDataframe(ClassLogger):
         ):
             for key, value in dtypes.items():
                 if isinstance(value, LazyProxyCategoricalDtype):
-                    dtypes[key] = value._new(self, column_name=key)
+                    dtypes[key] = value._update_proxy(self, column_name=key)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
@@ -294,7 +294,13 @@ class PandasDataframe(ClassLogger):
 
     def _compute_dtypes(self, columns=None):
         """
-        Compute the data types via TreeReduce pattern.
+        Compute the data types via TreeReduce pattern for the specified columns.
+
+        Parameters
+        ----------
+        columns : list-like, default: None
+            Columns to compute dtypes for. If not specified compute dtypes
+            for all the columns in the dataframe.
 
         Returns
         -------
