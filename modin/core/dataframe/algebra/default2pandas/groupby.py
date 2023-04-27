@@ -18,7 +18,11 @@ from .default import DefaultMethod
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+# Defines a set of string names of functions that are executed in a transform-way in groupby
+from pandas.core.groupby.base import transformation_kernels
+from typing import Any
+
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -32,6 +36,24 @@ class GroupBy:
         pandas.core.groupby.DataFrameGroupBy.agg,
         pandas.core.groupby.DataFrameGroupBy.aggregate,
     ]
+
+    @staticmethod
+    def is_transformation_kernel(agg_func: Any) -> bool:
+        """
+        Check whether a passed aggregation function is a transformation.
+
+        Transformation means that the result of the function will be broadcasted
+        to the frame's original shape.
+
+        Parameters
+        ----------
+        agg_func : Any
+
+        Returns
+        -------
+        bool
+        """
+        return hashable(agg_func) and agg_func in transformation_kernels
 
     @classmethod
     def validate_by(cls, by):

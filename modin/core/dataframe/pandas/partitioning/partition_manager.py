@@ -844,7 +844,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     def get_objects_from_partitions(cls, partitions):
         """
-        Get the objects wrapped by `partitions`.
+        Get the objects wrapped by `partitions` (in parallel if supported).
 
         Parameters
         ----------
@@ -855,12 +855,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         -------
         list
             The objects wrapped by `partitions`.
-
-        Notes
-        -----
-        This method should be implemented in a more efficient way for engines that support
-        getting objects in parallel.
         """
+        if hasattr(cls, "_execution_wrapper"):
+            # more efficient parallel implementation
+            for idx, part in enumerate(partitions):
+                if hasattr(part, "force_materialization"):
+                    partitions[idx] = part.force_materialization()
+            assert all(
+                [len(partition.list_of_blocks) == 1 for partition in partitions]
+            ), "Implementation assumes that each partition contains a single block."
+            return cls._execution_wrapper.materialize(
+                [partition.list_of_blocks[0] for partition in partitions]
+            )
         return [partition.get() for partition in partitions]
 
     @classmethod

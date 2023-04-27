@@ -36,29 +36,29 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_distributed(make_sql_connection):
-    with ensure_clean("test_from_sql_distributed.db") as filename:
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(filename, table)
-        query = "select * from {0}".format(table)
+def test_from_sql_distributed(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        modin_df_from_query = pd.read_sql(
-            query,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
-        modin_df_from_table = pd.read_sql(
-            table,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df_from_query = pd.read_sql(
+        query,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
+    modin_df_from_table = pd.read_sql(
+        table,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
@@ -68,17 +68,17 @@ def test_from_sql_distributed(make_sql_connection):
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_defaults(make_sql_connection):
-    with ensure_clean("test_from_sql_distributed.db") as filename:
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(filename, table)
-        query = "select * from {0}".format(table)
+def test_from_sql_defaults(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_query = pd.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_table = pd.read_sql(table, conn)
+    pandas_df = pandas.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_query = pd.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_table = pd.read_sql(table, conn)
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)

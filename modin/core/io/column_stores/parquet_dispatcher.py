@@ -22,6 +22,7 @@ from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
 from pandas.io.common import stringify_path
+import pandas
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -681,3 +682,81 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ]
 
         return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)
+
+    @staticmethod
+    def _to_parquet_check_support(kwargs):
+        """
+        Check if parallel version of `to_parquet` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to `.to_parquet()`.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of `to_parquet` is applicable.
+        """
+        path = kwargs["path"]
+        compression = kwargs["compression"]
+        if not isinstance(path, str):
+            return False
+        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+        if compression is None or not compression == "snappy":
+            return False
+        return True
+
+    @classmethod
+    def write(cls, qc, **kwargs):
+        """
+        Write a ``DataFrame`` to the binary parquet format.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
+        **kwargs : dict
+            Parameters for `pandas.to_parquet(**kwargs)`.
+        """
+        if not cls._to_parquet_check_support(kwargs):
+            return cls.base_io.to_parquet(qc, **kwargs)
+
+        output_path = kwargs["path"]
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
+        fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
+        fs.mkdirs(url, exist_ok=True)
+
+        def func(df, **kw):  # pragma: no cover
+            """
+            Dump a chunk of rows as parquet, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a parquet file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
+            compression = kwargs["compression"]
+            partition_idx = kw["partition_idx"]
+            kwargs[
+                "path"
+            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            df.to_parquet(**kwargs)
+            return pandas.DataFrame()
+
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+            axis=1,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
+            enumerate_partitions=True,
+        )
+        # pending completion
+        cls.materialize([part.list_of_blocks[0] for row in result for part in row])

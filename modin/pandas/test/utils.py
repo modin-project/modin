@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import re
+from pathlib import Path
+from typing import Union
 import pytest
 import numpy as np
 import math
@@ -1145,7 +1147,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = "",
+    data_dir: Union[str, Path] = "",
     suffix: str = "",
     debug_mode=False,
 ):
@@ -1159,7 +1161,7 @@ def get_unique_filename(
         Unique combiantion of test parameters for creation of unique name.
     extension: str
         Extension of unique file.
-    data_dir: str
+    data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.

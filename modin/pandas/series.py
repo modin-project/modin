@@ -39,6 +39,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
 from .accessor import CachedAccessor, SparseAccessor
+from .series_utils import StringMethods
 
 
 if TYPE_CHECKING:
@@ -1704,6 +1705,7 @@ class Series(BasePandasDataset):
         )
 
     sparse = CachedAccessor("sparse", SparseAccessor)
+    str = CachedAccessor("str", StringMethods)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -2107,15 +2109,6 @@ class Series(BasePandasDataset):
         Return a tuple of the shape of the underlying data.
         """
         return (len(self),)
-
-    @property
-    def str(self):  # noqa: RT01, D200
-        """
-        Vectorized string functions for Series and Index.
-        """
-        from .series_utils import StringMethods
-
-        return StringMethods(self)
 
     def _to_pandas(self):
         """
