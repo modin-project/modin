@@ -512,9 +512,9 @@ class StringMethods(ClassLogger):
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
 class DatetimeProperties(ClassLogger):
-    def __init__(self, series):
-        self._series = series
-        self._query_compiler = series._query_compiler
+    def __init__(self, data):
+        self._series = data
+        self._query_compiler = data._query_compiler
 
     @pandas.util.cache_readonly
     def _Series(self):  # noqa: GL08
