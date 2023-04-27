@@ -290,8 +290,6 @@ class PandasDataframe(ClassLogger):
             self.set_dtypes_cache(dtypes)
         return dtypes
 
-    _materialized_dtypes = {}
-
     def _compute_dtypes(self, columns=None):
         """
         Compute the data types via TreeReduce pattern for the specified columns.
@@ -329,7 +327,6 @@ class PandasDataframe(ClassLogger):
             dtypes = pandas.Series([])
         # reset name to None because we use MODIN_UNNAMED_SERIES_LABEL internally
         dtypes.name = None
-        self._materialized_dtypes.update(dtypes)
         return dtypes
 
     _index_cache = None

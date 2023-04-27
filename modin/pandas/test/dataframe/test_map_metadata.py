@@ -685,7 +685,7 @@ class TestCategoricalProxyDtype:
         )
 
         lazy_proxy.categories  # trigger materialization
-        # `._new` now should produce pandas Categoricals instead of a proxy as it already has materialized data
+        # `._update_proxy` now should produce pandas Categoricals instead of a proxy as it already has materialized data
         assert (
             type(lazy_proxy._update_proxy(lazy_proxy._parent, lazy_proxy._column_name))
             == pandas.CategoricalDtype

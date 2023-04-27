@@ -261,7 +261,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         return self._categories_val is not None
 
     @_categories.setter
-    def _categories(self, categories):  # noqa: GL08
+    def _categories(self, categories):
         """
         Set new categorical values.
 
