@@ -15,6 +15,8 @@
 
 import pandas
 
+from modin.error_message import ErrorMessage
+
 
 class ModinDtypes:
     """
@@ -162,11 +164,8 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         Column name.
     """
 
-    def __init__(self, parent, column_name: str):
-        self._parent = parent
-        self._column_name = column_name
-        self._ordered = False
-        self._categories_val = None
+    def __init__(self, categories=None, ordered=False):
+        super().__init__(categories, ordered)
 
     def _new(self, parent, column_name: str) -> pandas.CategoricalDtype:
         """
@@ -185,11 +184,25 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         """
         if self._is_materialized:
             # The parent has been materialized, we don't need a proxy anymore.
-            return pandas.CategoricalDtype(self.categories)
+            return pandas.CategoricalDtype(self.categories, ordered=self._ordered)
         elif parent is self._parent and column_name == self._column_name:
             return self
         else:
-            return LazyProxyCategoricalDtype(parent, column_name)
+            return LazyProxyCategoricalDtype._build_proxy(
+                parent, column_name, self._materializer
+            )
+
+    @classmethod
+    def _build_proxy(cls, parent, column_name, materializer=None):
+        result = cls(categories=None)
+        result._parent = parent
+        result._column_name = column_name
+        result._categories_val = None
+        result._materializer = materializer
+        return result
+
+    def __reduce__(self):
+        return (pandas.CategoricalDtype, (self.categories, self.ordered))
 
     @property
     def _categories(self):  # noqa: GL08
@@ -201,11 +214,17 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     def _is_materialized(self):
         return self._categories_val is not None
 
-    def _materialize_categories(self):
-        self._categories_val = self._parent._compute_dtypes(columns=[self._column_name])[self._column_name].categories
-        self._parent = None # The parent is not required any more
-
     @_categories.setter
-    def _set_categories(self, categories):  # noqa: GL08
+    def _categories(self, categories):  # noqa: GL08
         self._categories_val = categories
-        self._parent = None
+        self._parent = None  # The parent is not required any more
+        self._materializer = None
+
+    def _materialize_categories(self):
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=self._parent is None,
+            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
+        )
+        categoricals = self._materializer(self._parent)
+        self._categories = categoricals.categories
+        self._ordered = categoricals.ordered

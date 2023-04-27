@@ -42,7 +42,11 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     build_sort_functions,
     lazy_metadata_decorator,
 )
-from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex, LazyProxyCategoricalDtype
+from modin.core.dataframe.pandas.metadata import (
+    ModinDtypes,
+    ModinIndex,
+    LazyProxyCategoricalDtype,
+)
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -243,7 +247,9 @@ class PandasDataframe(ClassLogger):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
-        if isinstance(dtypes, pandas.Series) or (isinstance(dtypes, ModinDtypes) and dtypes.is_materialized):
+        if isinstance(dtypes, pandas.Series) or (
+            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
+        ):
             for key, value in dtypes.items():
                 if isinstance(value, LazyProxyCategoricalDtype):
                     dtypes[key] = value._new(self, column_name=key)
@@ -1317,7 +1323,14 @@ class PandasDataframe(ClassLogger):
                     new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
                 elif isinstance(new_dtype, str) and new_dtype == "category":
-                    new_dtypes[column] = LazyProxyCategoricalDtype(parent=self, column_name=column)
+                    new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
+                        # Actual parent will substitute `None` at `.set_dtypes_cache`
+                        parent=None,
+                        column_name=column,
+                        materializer=lambda parent, column: parent._compute_dtypes(
+                            columns=[column]
+                        )[column],
+                    )
                 else:
                     new_dtypes[column] = new_dtype
 

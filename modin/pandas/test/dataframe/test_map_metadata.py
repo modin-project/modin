@@ -49,6 +49,7 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 
 NPartitions.put(4)
 
@@ -598,6 +599,68 @@ def test_astype_category_large():
     pandas_result = pandas_df.astype("category")
     df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython doesn't have proxy categories",
+)
+class TestCategoricalProxyDtype:
+    @staticmethod
+    def _get_lazy_proxy():
+        if StorageFormat.get("Pandas"):
+            df = pd.DataFrame({"a": [1, 1, 2], "b": [3, 4, 5]})
+            df = df.astype({"a": "category"})
+            return df.dtypes["a"]
+        else:
+            pass
+
+    def test_if_proxy_lazy(self):
+        """Verify that proxy is able to pass simple comparison checks without triggering materialization."""
+        lazy_proxy = self._get_lazy_proxy()
+
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+        assert not lazy_proxy._is_materialized
+
+        assert lazy_proxy == "category"
+        assert isinstance(lazy_proxy, pd.CategoricalDtype)
+        assert isinstance(lazy_proxy, pandas.CategoricalDtype)
+        assert pandas.api.types.is_categorical_dtype(lazy_proxy)
+        assert not lazy_proxy.ordered
+        assert not lazy_proxy._is_materialized
+
+        assert lazy_proxy.categories.equals(pandas.Index([1, 2]))
+        assert lazy_proxy._is_materialized
+
+    def test_proxy_as_dtype(self):
+        """Verify that proxy can be used as an actual dtype."""
+        modin_df, pandas_df = create_test_dfs({"a": [1, 1, 2], "b": [3, 4, 5]})
+        modin_df = modin_df.astype({"a": "category"})
+        pandas_df = pandas_df.astype({"a": "category"})
+
+        modin_cat = modin_df.dtypes["a"]
+        pandas_cat = pandas_df.dtypes["a"]
+
+        assert isinstance(modin_cat, LazyProxyCategoricalDtype)
+        assert not modin_cat._is_materialized
+
+        modin_df2, pandas_df2 = create_test_dfs({"c": [2, 2, 3, 4, 5, 6]})
+        eval_general(
+            (modin_df2, modin_cat),
+            (pandas_df2, pandas_cat),
+            lambda args: args[0].astype({"c": args[1]}),
+        )
+
+    def test_proxy_with_pandas_constructor(self):
+        """Verify that users still can use pandas' constructor using `type(cat)(...)` notation."""
+        lazy_proxy = self._get_lazy_proxy()
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+
+        new_category_dtype = type(lazy_proxy)(categories=[3, 4, 5], ordered=True)
+        assert not lazy_proxy._is_materialized
+        assert new_category_dtype._is_materialized
+        assert new_category_dtype.categories.equals(pandas.Index([3, 4, 5]))
+        assert new_category_dtype.ordered
 
 
 def test_infer_objects_single_partition():

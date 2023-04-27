@@ -22,7 +22,6 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
 from .utils import (
-    LazyProxyCategoricalDtype,
     ColNameCodec,
     arrow_to_pandas,
     check_join_supported,
@@ -31,6 +30,7 @@ from .utils import (
     get_common_arrow_type,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
+from modin.core.dataframe.pandas.metadata import ModinDtypes, LazyProxyCategoricalDtype
 
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
@@ -233,13 +233,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         if partitions is not None:
             self._filter_empties()
 
-        if self._has_arrow_table() and self._partitions.size > 0:
-            assert self._partitions.size == 1
-            table = self._partitions[0][0].get()
-            for i, t in enumerate(dtypes):
-                if isinstance(t, LazyProxyCategoricalDtype):
-                    dtypes[i] = t._new(table, table.column_names[i])
-
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
 
@@ -421,6 +414,28 @@ class HdkOnNativeDataframe(PandasDataframe):
         list of dtype
         """
         return [expr._dtype for expr in exprs.values()]
+
+    def set_dtypes_cache(self, dtypes):
+        """
+        Set dtypes cache.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes or callable
+        """
+        if self._has_arrow_table() and self._partitions.size > 0:
+            assert self._partitions.size == 1
+            table = self._partitions[0][0].get()
+            if isinstance(dtypes, pd.Series) or (
+                isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
+            ):
+                for key, value in dtypes.items():
+                    if isinstance(value, LazyProxyCategoricalDtype):
+                        dtypes[key] = value._new(table, key)
+        if isinstance(dtypes, ModinDtypes) or dtypes is None:
+            self._dtypes = dtypes
+        else:
+            self._dtypes = ModinDtypes(dtypes)
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """
@@ -2806,7 +2821,13 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         for col in at.columns:
             if pyarrow.types.is_dictionary(col.type):
-                new_dtypes.append(LazyProxyCategoricalDtype(at, col._name))
+                new_dtypes.append(
+                    LazyProxyCategoricalDtype._build_proxy(
+                        parent=at,
+                        column_name=col._name,
+                        materializer=_build_categorical_from_at,
+                    )
+                )
             else:
                 new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 
