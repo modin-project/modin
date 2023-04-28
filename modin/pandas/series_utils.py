@@ -151,7 +151,7 @@ class StringMethods(ClassLogger):
     def casefold(self):
         return self._default_to_pandas(pandas.Series.str.casefold)
 
-    def cat(self, others=None, sep=None, na_rep=None, join=None):
+    def cat(self, others=None, sep=None, na_rep=None, join="left"):
         if isinstance(others, self._Series):
             others = others._to_pandas()
         return self._default_to_pandas(
@@ -169,19 +169,12 @@ class StringMethods(ClassLogger):
 
         if expand:
             return self._default_to_pandas(
-                pandas.Series.str.split,
-                pat=pat,
-                n=n,
-                expand=expand,
-                regex=regex,
+                pandas.Series.str.split, pat=pat, n=n, expand=expand, regex=regex
             )
         else:
             return self._Series(
                 query_compiler=self._query_compiler.str_split(
-                    pat=pat,
-                    n=n,
-                    expand=expand,
-                    regex=regex,
+                    pat=pat, n=n, expand=expand, regex=regex
                 )
             )
 
@@ -292,7 +285,7 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_count(pat, flags=flags)
         )
 
-    def startswith(self, pat, na=np.NaN):
+    def startswith(self, pat, na=None):
         return self._Series(
             query_compiler=self._query_compiler.str_startswith(pat, na=na)
         )
@@ -302,7 +295,7 @@ class StringMethods(ClassLogger):
             pandas.Series.str.encode, encoding, errors=errors
         )
 
-    def endswith(self, pat, na=np.NaN):
+    def endswith(self, pat, na=None):
         return self._Series(
             query_compiler=self._query_compiler.str_endswith(pat, na=na)
         )
@@ -327,7 +320,9 @@ class StringMethods(ClassLogger):
         if not isinstance(pat, (str, _pattern_type)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
-            query_compiler=self._query_compiler.str_match(pat, flags=flags, na=na)
+            query_compiler=self._query_compiler.str_match(
+                pat, case=case, flags=flags, na=na
+            )
         )
 
     def extract(self, pat, flags=0, expand=True):
