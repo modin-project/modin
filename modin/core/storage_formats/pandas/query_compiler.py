@@ -883,7 +883,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # TODO-FIX: this function may work incorrectly with user-defined "numeric" values.
         # Since `count(numeric_only=True)` discards all unknown "numeric" types, we can get incorrect
         # divisor inside the reduce function.
-        def map_fn(df, **kwargs):
+        def map_fn(df, numeric_only=False, **kwargs):
             """
             Perform Map phase of the `mean`.
 
@@ -891,8 +891,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """
             result = pandas.DataFrame(
                 {
-                    "sum": df.sum(axis=axis, skipna=skipna),
-                    "count": df.count(axis=axis, numeric_only=True),
+                    "sum": df.sum(axis=axis, skipna=skipna, numeric_only=numeric_only),
+                    "count": df.count(axis=axis, numeric_only=numeric_only),
                 }
             )
             return result if axis else result.T
