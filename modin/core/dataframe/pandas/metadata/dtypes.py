@@ -165,7 +165,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     -----
     Important note! One shouldn't use the class' constructor to instantiate a proxy instance,
     it's intended only for compatibility purposes! In order to create a new proxy instance
-    use the appropriate static method `._build_proxy(...)`.
+    use the appropriate class method `._build_proxy(...)`.
     """
 
     def __init__(self, categories=None, ordered=False):
@@ -249,17 +249,6 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
             self._materialize_categories()
         return self._categories_val
 
-    @property
-    def _is_materialized(self) -> bool:
-        """
-        Check whether categorical values were already materialized.
-
-        Returns
-        -------
-        bool
-        """
-        return self._categories_val is not None
-
     @_categories.setter
     def _categories(self, categories):
         """
@@ -272,6 +261,17 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         self._categories_val = categories
         self._parent = None  # The parent is not required any more
         self._materializer = None
+
+    @property
+    def _is_materialized(self) -> bool:
+        """
+        Check whether categorical values were already materialized.
+
+        Returns
+        -------
+        bool
+        """
+        return self._categories_val is not None
 
     def _materialize_categories(self):
         """Materialize actual categorical values."""
