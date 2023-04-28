@@ -4499,10 +4499,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN
+        na : object, default: None
         regex : bool, default: True""",
     )
-    def str_contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+    def str_contains(self, pat, case=True, flags=0, na=None, regex=True):
         return StrDefault.register(pandas.Series.str.contains)(
             self, pat, case, flags, na, regex
         )
@@ -4511,19 +4511,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="count",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_count(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.count)(self, pat, flags, **kwargs)
+    def str_count(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.count)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="endswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_endswith(self, pat, na=np.NaN):
+    def str_endswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.endswith)(self, pat, na)
 
     @doc_utils.doc_str_method(
@@ -4540,13 +4539,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="findall",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_findall(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.findall)(
-            self, pat, flags, **kwargs
-        )
+    def str_findall(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.findall)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="fullmatch",
@@ -4642,9 +4638,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_match(self, pat, case=True, flags=0, na=np.NaN):
+    def str_match(self, pat, case=True, flags=0, na=None):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
 
     @doc_utils.doc_str_method(
@@ -4702,9 +4698,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         case : bool, optional
         flags : int, default: 0
-        regex : bool, default: True""",
+        regex : bool, default: None""",
     )
-    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
         return StrDefault.register(pandas.Series.str.replace)(
             self, pat, repl, n, case, flags, regex
         )
@@ -4788,18 +4784,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         params="""
         pat : str, optional
         n : int, default: -1
-        expand : bool, default: False""",
+        expand : bool, default: False
+        regex : bool, default: None""",
     )
-    def str_split(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
+    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+        return StrDefault.register(pandas.Series.str.split)(
+            self, pat, n=n, expand=expand, regex=regex
+        )
 
     @doc_utils.doc_str_method(
         refer_to="startswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_startswith(self, pat, na=np.NaN):
+    def str_startswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.startswith)(self, pat, na)
 
     @doc_utils.doc_str_method(refer_to="strip", params="to_strip : str, optional")
