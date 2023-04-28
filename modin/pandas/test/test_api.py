@@ -211,6 +211,9 @@ def test_series_cat_api_equality():
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
+    # all methods of `pandas.Series.cat` don't have any information about parameters,
+    # just method(*args, **kwargs)
+    assert_parameters_eq((pandas.core.arrays.Categorical, pd.Series.cat), modin_dir, [])
 
 
 @pytest.mark.parametrize("obj", ["DataFrame", "Series"])
