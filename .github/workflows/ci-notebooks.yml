@@ -79,7 +79,7 @@ jobs:
       # the dev requirements match them.
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
         if: matrix.execution != 'hdk_on_native'
-      - run: pip install flake8-print jupyter nbformat nbconvert
+      - run: pip install flake8-print jupyter ipython<8.13.0 nbformat nbconvert
         if: matrix.execution == 'hdk_on_native'
       - run: pip list
         if: matrix.execution != 'hdk_on_native'

@@ -1,5 +1,6 @@
 fsspec
 jupyterlab
+ipython<8.13.0  # IPython 8.13+ supports Python 3.9 and above
 ipywidgets
 modin[dask]
 modin[spreadsheet]
