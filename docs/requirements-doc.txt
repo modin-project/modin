@@ -18,3 +18,4 @@ git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867
 sphinxcontrib_plantuml
 sphinx-issues
 xgboost>=1.7.1,<2.0.0
+ipython<8.13.0
