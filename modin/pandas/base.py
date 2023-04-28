@@ -1868,6 +1868,10 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        if op_name == "median":
+            numpy_compat.function.validate_median((), kwargs)
+        else:
+            numpy_compat.function.validate_stat_func((), kwargs, fname=op_name)
 
         if not numeric_only:
             # fix for 'test_reduce_specific'
