@@ -141,7 +141,9 @@ def test_apply_key_error(func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
-    func_kwargs = dict(axis=axis, **({"level": level} if level is not no_default else {}))
+    func_kwargs = dict(
+        axis=axis, **({"level": level} if level is not no_default else {})
+    )
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
     level_1 = np.random.choice([3, 4, 5], rows_number)
