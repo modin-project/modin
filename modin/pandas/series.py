@@ -39,7 +39,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
 from .accessor import CachedAccessor, SparseAccessor
-from .series_utils import StringMethods
+from .series_utils import CategoryMethods, StringMethods
 
 
 if TYPE_CHECKING:
@@ -1704,6 +1704,7 @@ class Series(BasePandasDataset):
             result._query_compiler, inplace=inplace
         )
 
+    cat = CachedAccessor("cat", CategoryMethods)
     sparse = CachedAccessor("sparse", SparseAccessor)
     str = CachedAccessor("str", StringMethods)
 
@@ -2020,15 +2021,6 @@ class Series(BasePandasDataset):
         Return a list of the row axis labels.
         """
         return [self.index]
-
-    @property
-    def cat(self):  # noqa: RT01, D200
-        """
-        Accessor object for categorical properties of the Series values.
-        """
-        from .series_utils import CategoryMethods
-
-        return CategoryMethods(self)
 
     @property
     def dt(self):  # noqa: RT01, D200

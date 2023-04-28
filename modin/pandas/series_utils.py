@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(ClassLogger):
-    def __init__(self, series):
-        self._series = series
-        self._query_compiler = series._query_compiler
+    def __init__(self, data):
+        self._series = data
+        self._query_compiler = data._query_compiler
 
     @pandas.util.cache_readonly
     def _Series(self):  # noqa: GL08
@@ -143,7 +143,7 @@ class StringMethods(ClassLogger):
     def casefold(self):
         return self._default_to_pandas(pandas.Series.str.casefold)
 
-    def cat(self, others=None, sep=None, na_rep=None, join=None):
+    def cat(self, others=None, sep=None, na_rep=None, join="left"):
         if isinstance(others, self._Series):
             others = others._to_pandas()
         return self._default_to_pandas(
@@ -161,19 +161,12 @@ class StringMethods(ClassLogger):
 
         if expand:
             return self._default_to_pandas(
-                pandas.Series.str.split,
-                pat=pat,
-                n=n,
-                expand=expand,
-                regex=regex,
+                pandas.Series.str.split, pat=pat, n=n, expand=expand, regex=regex
             )
         else:
             return self._Series(
                 query_compiler=self._query_compiler.str_split(
-                    pat=pat,
-                    n=n,
-                    expand=expand,
-                    regex=regex,
+                    pat=pat, n=n, expand=expand, regex=regex
                 )
             )
 
@@ -203,7 +196,7 @@ class StringMethods(ClassLogger):
     def get_dummies(self, sep="|"):
         return self._default_to_pandas(pandas.Series.str.get_dummies, sep=sep)
 
-    def contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+    def contains(self, pat, case=True, flags=0, na=None, regex=True):
         if pat is None and not case:
             raise AttributeError("'NoneType' object has no attribute 'upper'")
         return self._Series(
@@ -212,7 +205,7 @@ class StringMethods(ClassLogger):
             )
         )
 
-    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
         if not (isinstance(repl, str) or callable(repl)):
             raise TypeError("repl must be a string or callable")
         return self._Series(
@@ -277,14 +270,14 @@ class StringMethods(ClassLogger):
             )
         )
 
-    def count(self, pat, flags=0, **kwargs):
+    def count(self, pat, flags=0):
         if not isinstance(pat, (str, _pattern_type)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
-            query_compiler=self._query_compiler.str_count(pat, flags=flags, **kwargs)
+            query_compiler=self._query_compiler.str_count(pat, flags=flags)
         )
 
-    def startswith(self, pat, na=np.NaN):
+    def startswith(self, pat, na=None):
         return self._Series(
             query_compiler=self._query_compiler.str_startswith(pat, na=na)
         )
@@ -294,16 +287,16 @@ class StringMethods(ClassLogger):
             pandas.Series.str.encode, encoding, errors=errors
         )
 
-    def endswith(self, pat, na=np.NaN):
+    def endswith(self, pat, na=None):
         return self._Series(
             query_compiler=self._query_compiler.str_endswith(pat, na=na)
         )
 
-    def findall(self, pat, flags=0, **kwargs):
+    def findall(self, pat, flags=0):
         if not isinstance(pat, (str, _pattern_type)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
-            query_compiler=self._query_compiler.str_findall(pat, flags=flags, **kwargs)
+            query_compiler=self._query_compiler.str_findall(pat, flags=flags)
         )
 
     def fullmatch(self, pat, case=True, flags=0, na=None):
@@ -315,11 +308,13 @@ class StringMethods(ClassLogger):
             )
         )
 
-    def match(self, pat, case=True, flags=0, na=np.NaN):
+    def match(self, pat, case=True, flags=0, na=None):
         if not isinstance(pat, (str, _pattern_type)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
-            query_compiler=self._query_compiler.str_match(pat, flags=flags, na=na)
+            query_compiler=self._query_compiler.str_match(
+                pat, case=case, flags=flags, na=na
+            )
         )
 
     def extract(self, pat, flags=0, expand=True):
