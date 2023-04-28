@@ -42,7 +42,6 @@ from modin.pandas.test.utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
