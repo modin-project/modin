@@ -1870,6 +1870,9 @@ class BasePandasDataset(ClassLogger):
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if op_name == "median":
             numpy_compat.function.validate_median((), kwargs)
+        elif op_name in ("sem", "var", "std"):
+            val_kwargs = {k: v for k, v in kwargs.items() if k != "ddof"}
+            numpy_compat.function.validate_stat_ddof_func((), val_kwargs, fname=op_name)
         else:
             numpy_compat.function.validate_stat_func((), kwargs, fname=op_name)
 
