@@ -274,12 +274,7 @@ class Rolling(ClassLogger):
         )
 
     def rank(
-        self,
-        method="average",
-        ascending=True,
-        pct=False,
-        numeric_only=False,
-        **kwargs
+        self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_rank(
@@ -289,7 +284,7 @@ class Rolling(ClassLogger):
                 ascending,
                 pct,
                 numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
 
@@ -310,11 +305,22 @@ class Expanding(ClassLogger):
         ]
         self.axis = axis
 
-    def aggregate(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
+    def aggregate(self, func, *args, **kwargs):
+        from .dataframe import DataFrame
+
+        dataframe = DataFrame(
             query_compiler=self._query_compiler.expanding_aggregate(
-                self.axis, self.expanding_args, *args, **kwargs)
+                self.axis, self.expanding_args, func, *args, **kwargs
+            )
         )
+        if isinstance(self._dataframe, DataFrame):
+            return dataframe
+        elif is_list_like(func):
+            dataframe.columns = dataframe.columns.droplevel()
+            return dataframe
+        else:
+            return dataframe.squeeze()
+
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_sum(
@@ -393,12 +399,7 @@ class Expanding(ClassLogger):
         )
 
     def rank(
-        self,
-        method="average",
-        ascending=True,
-        pct=False,
-        numeric_only=False,
-        **kwargs
+        self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_rank(
@@ -408,6 +409,6 @@ class Expanding(ClassLogger):
                 ascending,
                 pct,
                 numeric_only,
-                **kwargs
+                **kwargs,
             )
         )

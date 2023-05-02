@@ -5049,6 +5049,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # Begin Expanding methods
 
+    def expanding_aggregate(self, fold_axis, expanding_args, func, *args, **kwargs):
+        return RollingDefault.register(
+            pandas.core.window.expanding.Expanding.aggregate
+        )(self, expanding_args, func, *args, **kwargs)
+
     def expanding_sum(self, fold_axis, expanding_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.expanding.Expanding.sum)(
             self, expanding_args, *args, **kwargs
@@ -5063,6 +5068,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return RollingDefault.register(pandas.core.window.expanding.Expanding.max)(
             self, expanding_args, *args, **kwargs
         )
+
     def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.expanding.Expanding.mean)(
             self, expanding_args, *args, **kwargs
