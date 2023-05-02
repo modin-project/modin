@@ -3155,7 +3155,7 @@ class DataFrame(BasePandasDataset):
             if not is_list_like(name):
                 name = [name]
             renamed = renamed.reset_index()
-            mapper = {n1:n2 for n1, n2 in zip(renamed.columns, list(name))}
+            mapper = {n1: n2 for n1, n2 in zip(renamed.columns, list(name))}
             renamed = renamed.rename(columns=mapper).set_index(list(name))
         else:
             raise NotImplementedError("'axis=1' is not supported yet")
