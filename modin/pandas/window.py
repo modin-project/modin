@@ -279,7 +279,7 @@ class Rolling(ClassLogger):
                 self.axis, self.rolling_args, quantile, interpolation, **kwargs
             )
         )
-    
+
     def rank(
         self,
         method="average",
@@ -299,4 +299,3 @@ class Rolling(ClassLogger):
                 **kwargs
             )
         )
-

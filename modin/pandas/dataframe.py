@@ -3152,13 +3152,9 @@ class DataFrame(BasePandasDataset):
         axis = self._get_axis_number(axis)
         renamed = self if inplace else self.copy()
         if axis == 0:
-            if not is_list_like(name):
-                name = [name]
-            renamed = renamed.reset_index()
-            mapper = {n1:n2 for n1, n2 in zip(renamed.columns, list(name))}
-            renamed = renamed.rename(columns=mapper).set_index(list(name))
+            renamed.index = renamed.index.set_names(name)
         else:
-            raise NotImplementedError("'axis=1' is not supported yet")
+            renamed.columns = renamed.columns.set_names(name)
         if not inplace:
             return renamed
 
