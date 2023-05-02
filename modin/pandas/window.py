@@ -281,12 +281,7 @@ class Rolling(ClassLogger):
         )
 
     def rank(
-        self,
-        method="average",
-        ascending=True,
-        pct=False,
-        numeric_only=False,
-        **kwargs
+        self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
     ):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_rank(
@@ -296,6 +291,6 @@ class Rolling(ClassLogger):
                 ascending,
                 pct,
                 numeric_only,
-                **kwargs
+                **kwargs,
             )
         )
