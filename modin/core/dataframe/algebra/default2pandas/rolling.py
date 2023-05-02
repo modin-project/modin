@@ -94,7 +94,7 @@ class ExpandingDefault(DefaultMethod):
 
         def fn(df, rolling_args, *args, **kwargs):
             """Create rolling window for the passed frame and execute specified `func` on it."""
-            roller = df.rolling(*rolling_args)
+            roller = df.expanding(*rolling_args)
 
             if type(func) == property:
                 return func.fget(roller)
