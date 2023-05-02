@@ -169,6 +169,13 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
     """
 
     def __init__(self, categories=None, ordered=False):
+        # These will be initialized later inside of the `._build_proxy()` method
+        self._parent, self._column_name, self._categories_val, self._materializer = (
+            None,
+            None,
+            None,
+            None,
+        )
         super().__init__(categories, ordered)
 
     def _update_proxy(self, parent, column_name):
@@ -214,10 +221,9 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         -------
         LazyProxyCategoricalDtype
         """
-        result = cls(categories=None)
+        result = cls()
         result._parent = parent
         result._column_name = column_name
-        result._categories_val = None
         result._materializer = materializer
         return result
 

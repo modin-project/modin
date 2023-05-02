@@ -400,7 +400,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         if self._partitions is None or not isinstance(self._op, FrameNode):
             return False
-        return all(p.arrow_table is not None for p in self._partitions.flatten())
+        return self._partitions.size > 0 and all(
+            p.arrow_table is not None for p in self._partitions.flatten()
+        )
 
     def _dtypes_for_exprs(self, exprs):
         """
@@ -425,7 +427,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
-        if self._has_arrow_table() and self._partitions.size > 0:
+        if self._has_arrow_table():
             assert self._partitions.size == 1
             table = self._partitions[0][0].get()
             if isinstance(dtypes, pd.Series) or (
