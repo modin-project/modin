@@ -951,15 +951,9 @@ class DataFrameGroupBy(ClassLogger):
         return com.pipe(self, func, *args, **kwargs)
 
     def cumcount(self, ascending=True):
-        result = self._wrap_aggregation(
-            type(self._query_compiler).groupby_cumcount,
-            numeric_only=False,
-            agg_kwargs=dict(ascending=ascending),
-        )
-        if not isinstance(result, Series):
-            # The result should always be a Series with name None and type int64
-            result = result.squeeze(axis=1)
-            result.name = None
+        result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
+        # pandas does not name the index on cumcount
+        result._query_compiler.set_index_name(None)
         return result
 
     def tail(self, n=5):
