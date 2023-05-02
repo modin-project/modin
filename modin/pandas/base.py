@@ -1390,10 +1390,10 @@ class BasePandasDataset(ClassLogger):
             if is_integer(level):
                 level = index_columns[level]
             elif is_list_like(level):
-                level = [index_columns[l] if is_integer(l) else l for l in level]
+                level = [index_columns[c] if is_integer(c) else c for c in level]
             if is_list_like(level):
-                for l in level:
-                    index_columns.remove(l)
+                for c in level:
+                    index_columns.remove(c)
             else:
                 index_columns.remove(level)
             result = result.reset_index().drop(columns=[level]).set_index(index_columns)
