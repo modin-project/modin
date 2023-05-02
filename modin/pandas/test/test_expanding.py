@@ -20,6 +20,8 @@ from .utils import (
     df_equals,
     test_data_values,
     test_data_keys,
+    eval_general,
+    create_test_dfs,
 )
 from modin.config import NPartitions
 
@@ -39,9 +41,25 @@ def create_test_series(vals):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("method, kwargs", [("count", {}), ("sum", {}), ("mean", {}), ("var", {"ddof": 0}), ("std", {"ddof": 0}), ("min", {}), ("max", {})])
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("count", {}),
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+        ("min", {}),
+        ("max", {}),
+    ],
+)
 def test_dataframe(data, min_periods, axis, method, kwargs):
-    eval_general(*create_test_dfs(data), lambda df: getattr(df.expanding(min_periods=min_periods, center=True, axis=axis), method)(**kwargs))
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: getattr(
+            df.expanding(min_periods=min_periods, center=True, axis=axis), method
+        )(**kwargs)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -69,24 +87,25 @@ def test_dataframe_agg(data, min_periods):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("min_periods", [None, 5])
-def test_series(data, min_periods):
-    modin_series, pandas_series = create_test_series(data)
-    pandas_expanded = pandas_series.expanding(
-        min_periods=min_periods,
-        center=True,
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("count", {}),
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+        ("min", {}),
+        ("max", {}),
+    ],
+)
+def test_series(data, min_periods, method, kwargs):
+    eval_general(
+        *create_test_series(data),
+        lambda df: getattr(df.expanding(min_periods=min_periods, center=True), method)(
+            **kwargs
+        )
     )
-    modin_expanded = modin_series.expanding(
-        min_periods=min_periods,
-        center=True,
-    )
-
-    df_equals(modin_expanded.count(), pandas_expanded.count())
-    df_equals(modin_expanded.sum(), pandas_expanded.sum())
-    df_equals(modin_expanded.mean(), pandas_expanded.mean())
-    df_equals(modin_expanded.var(ddof=0), pandas_expanded.var(ddof=0))
-    df_equals(modin_expanded.std(ddof=0), pandas_expanded.std(ddof=0))
-    df_equals(modin_expanded.min(), pandas_expanded.min())
-    df_equals(modin_expanded.max(), pandas_expanded.max())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

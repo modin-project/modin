@@ -266,28 +266,6 @@ class Rolling(ClassLogger):
 
     agg = aggregate
 
-    def quantile(self, quantile, interpolation="linear", **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_quantile(
-                self.axis, self.rolling_args, quantile, interpolation, **kwargs
-            )
-        )
-
-    def rank(
-        self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
-    ):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_rank(
-                self.axis,
-                self.rolling_args,
-                method,
-                ascending,
-                pct,
-                numeric_only,
-                **kwargs,
-            )
-        )
-
 
 @_inherit_docstrings(
     pandas.core.window.expanding.Expanding,

@@ -1384,21 +1384,12 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with requested index / column level(s) removed.
         """
         axis = self._get_axis_number(axis)
+        new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
         if axis == 0:
-            index_columns = result.index.names.copy()
-            if is_integer(level):
-                level = index_columns[level]
-            elif is_list_like(level):
-                level = [index_columns[c] if is_integer(c) else c for c in level]
-            if is_list_like(level):
-                for c in level:
-                    index_columns.remove(c)
-            else:
-                index_columns.remove(level)
-            result = result.reset_index().drop(columns=[level]).set_index(index_columns)
+            result.index = new_axis
         else:
-            raise NotImplementedError("'axis=1' is not supported yet")
+            result.columns = new_axis
         return result
 
     def drop_duplicates(
