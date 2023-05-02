@@ -15,7 +15,7 @@
 
 from .default import DefaultMethod
 
-   
+
 class RollingDefault(DefaultMethod):
     """Builder for default-to-pandas aggregation on a rolling window functions."""
 

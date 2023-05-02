@@ -64,7 +64,6 @@ from modin import pandas as pd
 from modin.pandas.utils import is_scalar
 from modin.config import IsExperimental
 from modin.logging import disable_logging, ClassLogger
-from .window import Expanding
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -1472,6 +1471,8 @@ class BasePandasDataset(ClassLogger):
         """
         Provide expanding window calculations.
         """
+        from .window import Expanding
+
         return Expanding(
             self,
             min_periods=min_periods,
