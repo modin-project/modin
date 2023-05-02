@@ -39,27 +39,9 @@ def create_test_series(vals):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("axis", [0, 1])
-def test_dataframe(data, min_periods, axis):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    pandas_expanded = pandas_df.expanding(
-        min_periods=min_periods,
-        center=True,
-        axis=axis,
-    )
-    modin_expanded = modin_df.expanding(
-        min_periods=min_periods,
-        center=True,
-        axis=axis,
-    )
-
-    df_equals(modin_expanded.count(), pandas_expanded.count())
-    df_equals(modin_expanded.sum(), pandas_expanded.sum())
-    df_equals(modin_expanded.mean(), pandas_expanded.mean())
-    df_equals(modin_expanded.var(ddof=0), pandas_expanded.var(ddof=0))
-    df_equals(modin_expanded.std(ddof=0), pandas_expanded.std(ddof=0))
-    df_equals(modin_expanded.min(), pandas_expanded.min())
-    df_equals(modin_expanded.max(), pandas_expanded.max())
+@pytest.mark.parametrize("method, kwargs", [("count", {}), ("sum", {}), ("mean", {}), ("var", {"ddof": 0}), ("std", {"ddof": 0}), ("min", {}), ("max", {})])
+def test_dataframe(data, min_periods, axis, method, kwargs):
+    eval_general(*create_test_dfs(data), lambda df: getattr(df.expanding(min_periods=min_periods, center=True, axis=axis), method)(**kwargs))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
