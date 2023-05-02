@@ -1253,6 +1253,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
     )
+    rolling_rank = Fold.register(
+        lambda df, rolling_args, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).rank(
+                method=method,
+                ascending=ascending,
+                pct=pct,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+    )
 
     def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:

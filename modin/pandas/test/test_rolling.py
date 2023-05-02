@@ -77,6 +77,7 @@ def test_dataframe(data, window, min_periods, win_type, axis):
         df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
     # Testing of Rolling class
     else:
+        # TODO turn into eval_general
         df_equals(modin_rolled.count(), pandas_rolled.count())
         df_equals(modin_rolled.sum(), pandas_rolled.sum())
         df_equals(modin_rolled.mean(), pandas_rolled.mean())
@@ -88,6 +89,11 @@ def test_dataframe(data, window, min_periods, win_type, axis):
         df_equals(modin_rolled.skew(), pandas_rolled.skew())
         df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
         df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
+
+        df_equals(modin_rolled.rank(), pandas_rolled.rank())  # method, ascending, pct, numeric_only
+        df_equals(modin_rolled.quantile(0.5), pandas_rolled.quantile(0.5))  # interpolation, numeric_only
+        df_equals(modin_rolled.sem(), pandas_rolled.sem())  # ddof, numeric_only
+
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
         # allows us to rolling aggregate a list of functions over axis 1, test
@@ -201,6 +207,11 @@ def test_series(data, window, min_periods, win_type):
         df_equals(modin_rolled.skew(), pandas_rolled.skew())
         df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
         df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
+
+        df_equals(modin_rolled.rank(), pandas_rolled.rank())  # method, ascending, pct, numeric_only
+        df_equals(modin_rolled.quantile(0.5), pandas_rolled.quantile(0.5))  # interpolation, numeric_only
+        df_equals(modin_rolled.sem(), pandas_rolled.sem())  # ddof, numeric_only
+
         df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
         df_equals(
             modin_rolled.agg([np.sum, np.mean]),
