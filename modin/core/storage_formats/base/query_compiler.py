@@ -27,6 +27,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     ResampleDefault,
     RollingDefault,
+    ExpandingDefault,
     CatDefault,
     GroupByDefault,
 )
@@ -5084,7 +5085,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         build_rules="udf_aggregation",
     )
     def expanding_aggregate(self, fold_axis, expanding_args, func, *args, **kwargs):
-        return RollingDefault.register(
+        return ExpandingDefault.register(
             pandas.core.window.expanding.Expanding.aggregate
         )(self, expanding_args, func, *args, **kwargs)
 
@@ -5098,7 +5099,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_sum(self, fold_axis, expanding_args, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.sum)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sum)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5112,7 +5113,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_min(self, fold_axis, expanding_args, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.min)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.min)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5126,7 +5127,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_max(self, fold_axis, expanding_args, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.max)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.max)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5140,7 +5141,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.mean)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.mean)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5155,7 +5156,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_var(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.var)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.var)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5170,7 +5171,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_std(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.std)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.std)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5185,7 +5186,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def expanding_count(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.count)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.count)(
             self, expanding_args, *args, **kwargs
         )
 
@@ -5203,7 +5204,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def expanding_sem(
         self, fold_axis, expanding_args, ddof=1, numeric_only=False, *args, **kwargs
     ):
-        return RollingDefault.register(pandas.core.window.expanding.Expanding.sem)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sem)(
             self, expanding_args, ddof=ddof, numeric_only=numeric_only, *args, **kwargs
         )
 
