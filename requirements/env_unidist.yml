@@ -49,7 +49,7 @@ dependencies:
   - moto
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
-      - unidist[mpi]@git+https://github.com/arunjose696/unidist.git@scheduling_MPI
+      - unidist[mpi]@git+https://github.com/arunjose696/unidist.git@wait_impl
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - connectorx>=0.2.6a4
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
