@@ -1132,6 +1132,8 @@ class BasePandasDataset(ClassLogger):
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
+        # select_dtypes is only implemented on DataFrames, but the numeric_only
+        # flag will always be set to false by the Series frontend
         frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
         if level is not None:
@@ -1210,27 +1212,30 @@ class BasePandasDataset(ClassLogger):
         """
         Generate descriptive statistics.
         """
+        from .dataframe import DataFrame
         # copied from pandas.core.describe.describe_ndframe
         percentiles = refine_percentiles(percentiles)
         data = self
-        if (include is None) and (exclude is None):
-            # when some numerics are found, keep only numerics
-            default_include: list[npt.DTypeLike] = [np.number]
-            if datetime_is_numeric:
-                default_include.append("datetime")
-            data = self.select_dtypes(include=default_include)
-            if len(data.columns) == 0:
+        if isinstance(self, DataFrame):
+            # include/exclude arguments are ignored for Series
+            if (include is None) and (exclude is None):
+                # when some numerics are found, keep only numerics
+                default_include: list[npt.DTypeLike] = [np.number]
+                if datetime_is_numeric:
+                    default_include.append("datetime")
+                data = self.select_dtypes(include=default_include)
+                if len(data.columns) == 0:
+                    data = self
+            elif include == "all":
+                if exclude is not None:
+                    msg = "exclude must be None when include is 'all'"
+                    raise ValueError(msg)
                 data = self
-        elif include == "all":
-            if exclude is not None:
-                msg = "exclude must be None when include is 'all'"
-                raise ValueError(msg)
-            data = self
-        else:
-            data = self.select_dtypes(
-                include=include,
-                exclude=exclude,
-            )
+            else:
+                data = self.select_dtypes(
+                    include=include,
+                    exclude=exclude,
+                )
         if data.empty:
             # Match pandas error from concatenting empty list of series descriptions.
             raise ValueError("No objects to concatenate")
