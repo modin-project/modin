@@ -1211,12 +1211,10 @@ class BasePandasDataset(ClassLogger):
         """
         Generate descriptive statistics.
         """
-        from .dataframe import DataFrame
-
         # copied from pandas.core.describe.describe_ndframe
         percentiles = refine_percentiles(percentiles)
         data = self
-        if isinstance(self, DataFrame):
+        if self._is_dataframe:
             # include/exclude arguments are ignored for Series
             if (include is None) and (exclude is None):
                 # when some numerics are found, keep only numerics
@@ -1242,6 +1240,8 @@ class BasePandasDataset(ClassLogger):
         return self.__constructor__(
             query_compiler=data._query_compiler.describe(
                 percentiles=percentiles,
+                include=include,
+                exclude=exclude,
                 datetime_is_numeric=datetime_is_numeric,
             )
         )
