@@ -54,6 +54,9 @@ from modin.experimental.core.execution.native.implementations.hdk_on_native.part
 from modin.experimental.core.execution.native.implementations.hdk_on_native.df_algebra import (
     FrameNode,
 )
+from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
+    CalciteSerializer,
+)
 
 
 # Our configuration in pytest.ini requires that we explicitly catch all
@@ -2019,6 +2022,33 @@ class TestDateTime:
             return df["d"].dt.hour
 
         run_and_compare(dt_hour, data=self.datetime_data)
+
+    @pytest.mark.parametrize("cast", [True, False])
+    @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())
+    def test_dt_serialization(self, cast, unit):
+        fill_value = np.datetime64(3, unit)
+
+        def serialize(df, **kwargs):
+            if cast:
+                df = df.astype(f"datetime64[{unit}]")
+            return df.fillna(fill_value)
+
+        def cmp(df1, df2):
+            assert df1["date"].max().asm8 == fill_value
+            assert df2["date"].max().asm8 == fill_value
+            df_equals(df1, df2)
+
+        run_and_compare(
+            serialize,
+            data={
+                "date": [
+                    np.datetime64(1, unit),
+                    np.datetime64(2, unit),
+                    None,
+                ]
+            },
+            comparator=cmp,
+        )
 
 
 class TestCategory:

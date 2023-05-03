@@ -31,6 +31,7 @@ from pandas.core.dtypes.common import (
     is_categorical_dtype,
     is_datetime64_any_dtype,
     is_bool_dtype,
+    is_datetime64_dtype,
 )
 
 from modin.utils import _inherit_docstrings
@@ -65,6 +66,8 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return get_dtype(float)
     if is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype):
         return get_dtype(int)
+    if is_datetime64_dtype(lhs_dtype) and is_datetime64_dtype(rhs_dtype):
+        return np.promote_types(lhs_dtype, rhs_dtype)
     raise NotImplementedError(
         f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
     )
@@ -801,45 +804,48 @@ class LiteralExpr(BaseExpr):
 
     Parameters
     ----------
-    val : int, np.int, float, bool, str or None
+    val : int, np.int, float, bool, str, np.datetime64 or None
         Literal value.
     dtype : None or dtype, default: None
         Value dtype.
 
     Attributes
     ----------
-    val : int, np.int, float, bool, str or None
+    val : int, np.int, float, bool, str, np.datetime64 or None
         Literal value.
     _dtype : dtype
         Literal data type.
     """
 
     def __init__(self, val, dtype=None):
-        if dtype is None:
-            if val is not None and not isinstance(
-                val,
-                (
-                    int,
-                    float,
-                    bool,
-                    str,
-                    np.int8,
-                    np.int16,
-                    np.int32,
-                    np.int64,
-                    np.uint8,
-                    np.uint16,
-                    np.uint32,
-                    np.uint64,
-                ),
-            ):
-                raise NotImplementedError(f"Literal value {val} of type {type(val)}")
-            if val is None:
-                dtype = get_dtype(float)
-            else:
-                dtype = get_dtype(type(val))
+        if val is not None and not isinstance(
+            val,
+            (
+                int,
+                float,
+                bool,
+                str,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+                np.datetime64,
+            ),
+        ):
+            raise NotImplementedError(f"Literal value {val} of type {type(val)}")
         self.val = val
-        self._dtype = dtype
+        if dtype is not None:
+            self._dtype = dtype
+        elif val is None:
+            self._dtype = get_dtype(float)
+        else:
+            self._dtype = (
+                val.dtype if isinstance(val, np.generic) else get_dtype(type(val))
+            )
 
     def copy(self):
         """
@@ -857,8 +863,21 @@ class LiteralExpr(BaseExpr):
 
     @_inherit_docstrings(BaseExpr.cast)
     def cast(self, res_type):
-        dtype = np.dtype(res_type)
-        return LiteralExpr(dtype.type(self.val), dtype)
+        val = self.val
+        if val is not None:
+            if isinstance(val, np.generic):
+                val = val.astype(res_type)
+            elif is_integer_dtype(res_type):
+                val = int(val)
+            elif is_float_dtype(res_type):
+                val = float(val)
+            elif is_bool_dtype(res_type):
+                val = bool(val)
+            elif is_string_dtype(res_type):
+                val = str(val)
+            else:
+                raise TypeError(f"Cannot cast '{val}' to '{res_type}'")
+        return LiteralExpr(val, res_type)
 
     @_inherit_docstrings(BaseExpr.is_null)
     def is_null(self):
@@ -1336,6 +1355,11 @@ def build_if_then_else(cond, then_val, else_val, res_type):
     BaseExpr
         The conditional operator expression.
     """
+    if is_datetime64_dtype(res_type):
+        if then_val._dtype != res_type:
+            then_val = then_val.cast(res_type)
+        if else_val._dtype != res_type:
+            else_val = else_val.cast(res_type)
     return OpExpr("CASE", [cond, then_val, else_val], res_type)
 
 

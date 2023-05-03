@@ -13,6 +13,8 @@
 
 """Module provides ``CalciteSerializer`` class."""
 
+from pandas.core.dtypes.common import is_datetime64_dtype
+
 from .expr import (
     BaseExpr,
     LiteralExpr,
@@ -65,6 +67,7 @@ class CalciteSerializer:
         "bool": "BOOLEAN",
         "float32": "FLOAT",
         "float64": "DOUBLE",
+        "datetime64": "TIMESTAMP",
     }
 
     _INT_OPTS = {
@@ -78,6 +81,22 @@ class CalciteSerializer:
         np.uint64: ("BIGINT", 19),
         int: ("BIGINT", 19),
     }
+
+    _TIMESTAMP_PRECISION = {
+        "Y": 0,
+        "M": 0,
+        "W": 0,
+        "D": 0,
+        "h": 0,
+        "m": 0,
+        "s": 0,
+        "ms": 3,
+        "us": 6,
+        "ns": 9,
+    }
+    _DTYPE_STRINGS.update(
+        {f"datetime64[{u}]": "TIMESTAMP" for u in _TIMESTAMP_PRECISION}
+    )
 
     def serialize(self, plan):
         """
@@ -327,6 +346,22 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": 1,
             }
+        if isinstance(val, np.datetime64):
+            unit = np.datetime_data(val)[0]
+            precision = self._TIMESTAMP_PRECISION.get(unit, None)
+            if precision is not None:
+                if precision == 0 and unit != "s":
+                    val = val.astype("datetime64[s]")
+                return {
+                    "literal": int(val.astype(np.int64)),
+                    "type": "TIMESTAMP",
+                    "target_type": "TIMESTAMP",
+                    "scale": -2147483648,
+                    "precision": precision,
+                    "type_scale": -2147483648,
+                    "type_precision": precision,
+                }
+
         raise NotImplementedError(f"Can not serialize {type(val).__name__}")
 
     def opts_for_int_type(self, int_type):
@@ -367,7 +402,11 @@ class CalciteSerializer:
         """
         _warn_if_unsigned(dtype)
         try:
-            return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
+            type_info = {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
+            if is_datetime64_dtype(dtype):
+                unit = np.datetime_data(dtype)[0]
+                type_info["precision"] = self._TIMESTAMP_PRECISION[unit]
+            return type_info
         except KeyError:
             raise TypeError(f"Unsupported dtype: {dtype}")
 
