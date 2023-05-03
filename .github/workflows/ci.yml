@@ -631,25 +631,11 @@ jobs:
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
-<<<<<<< HEAD
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
-=======
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py -vv  --capture=tee-sys 
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py -vv  --capture=tee-sys
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py -vv  --capture=tee-sys
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py -vv  --capture=tee-sys
->>>>>>> adding verbose logs
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_iter.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_reduce.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_udf.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_window.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_expanding.py
