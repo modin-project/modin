@@ -39,6 +39,7 @@ from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 import hashlib
+from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.config import Engine
@@ -3042,22 +3043,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
         series_groupby=False,
     ):
-        level = groupby_kwargs.get("level", None)
-        if is_list_like(level) and len(level) == 1:
-            level = level[0]
-        # We default to pandas in complex cases of level groupby, i.e. when level is given and
-        # it is not an integer in a multi-index axis or by is not None.
-        complex_level = level is not None and (
-            by is not None
-            or not isinstance(level, int)
-            or not self.has_multiindex(axis)
-        )
-
         # Also defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.
-        if complex_level or len(self.columns) == 0 or len(self.index) == 0:
+        if len(self.columns) == 0 or len(self.index) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
@@ -3066,6 +3056,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
+
+        is_transform_method = how == "transform" or (isinstance(agg_func, str) and agg_func in transformation_kernels)
 
         if isinstance(agg_func, dict):
             assert (
@@ -3085,8 +3077,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        # remove 'level' from kwargs as we're going to handle it separately
-        groupby_kwargs.pop("level", None)
         by, internal_by = self._groupby_internal_columns(by, drop)
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
@@ -3156,9 +3146,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = []
 
             by += not_broadcastable_by
-            if level is not None:
-                assert not by, "When handling simple level groupby, `by` must be empty"
-                by = df.axes[axis].get_level_values(level)
+            level = groupby_kwargs.get("level", None)
+            if level is not None and not by:
+                by = None
+                by_length = len(level) if is_list_like(level) else 1
+            else:
+                by_length = len(by)
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
@@ -3205,11 +3198,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result,
                         internal_by_cols,
                         by_cols_dtypes=df[internal_by_cols].dtypes.values,
-                        by_length=len(by),
+                        by_length=by_length,
                         selection=selection,
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
+                        method="transform" if is_transform_method else None
                     )
                 else:
                     new_index_names = tuple(

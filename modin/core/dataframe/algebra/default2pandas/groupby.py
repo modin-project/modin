@@ -433,7 +433,7 @@ class GroupBy:
         if by_length is None:
             by_length = len(internal_by_cols)
 
-        reset_index = by_length > 0 or selection is not None
+        reset_index = method != "transform" and (by_length > 0 or selection is not None)
 
         # If the method is "size" then the result contains only one unique named column
         # and we don't have to worry about any naming conflicts, so inserting all of
