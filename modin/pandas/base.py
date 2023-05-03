@@ -25,7 +25,6 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
-    pandas_dtype,
     is_integer,
 )
 from pandas.core.indexes.api import ensure_index
@@ -1213,6 +1212,7 @@ class BasePandasDataset(ClassLogger):
         Generate descriptive statistics.
         """
         from .dataframe import DataFrame
+
         # copied from pandas.core.describe.describe_ndframe
         percentiles = refine_percentiles(percentiles)
         data = self
