@@ -72,7 +72,7 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("interpolate", None),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        # ("to_xarray", None),
+        ("to_xarray", None),
         ("flags", None),
         ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
