@@ -1175,8 +1175,6 @@ class Series(BasePandasDataset):
         memory_usage: bool | str | None = None,
         show_counts: bool = True,
     ):
-        # Can't do memory_usage yet
-        memory_usage = False
         return SeriesInfo(self, memory_usage).render(
             buf=buf,
             max_cols=max_cols,

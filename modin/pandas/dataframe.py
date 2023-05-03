@@ -1054,9 +1054,6 @@ class DataFrame(BasePandasDataset):
         """
         Print a concise summary of the ``DataFrame``.
         """
-        # for ponder, set memory_Usage to false for now.
-        memory_usage = False
-
         if null_counts is not None:
             if show_counts is not None:
                 raise ValueError("null_counts used with show_counts. Use show_counts.")
