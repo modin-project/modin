@@ -657,7 +657,7 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
       # these variables to test writing to the mock s3 filesystem.
-      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py  -vv  --capture=tee-sys  -vv  --capture=tee-sys--verbose
+      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py  -vv  --capture=tee-sys  
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py  -vv  --capture=tee-sys
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py  -vv  --capture=tee-sys
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py  -vv  --capture=tee-sys
