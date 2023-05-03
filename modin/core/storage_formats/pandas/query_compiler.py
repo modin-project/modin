@@ -3059,6 +3059,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         is_transform_method = how == "transform" or (isinstance(agg_func, str) and agg_func in transformation_kernels)
 
+        original_agg_func = agg_func
+
         if isinstance(agg_func, dict):
             assert (
                 how == "axis_wise"
@@ -3159,14 +3161,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 grouped_df = target_df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
-                except ValueError:
-                    # when we're aggregating a column which isn't present in given
-                    # partition, pandas can throw a ValueError
-                    if len(df.columns.difference(by)):
-                        raise  # this is not the expected case, report back
-                    # this should actually be an empty dataframe with correct
-                    # metadata, so use bogus aggregation instead
-                    result = grouped_df.agg("min", *agg_args, **agg_kwargs)
                 except DataError:
                     # This happens when the partition is filled with non-numeric data and a
                     # numeric operation is done. We need to build the index here to avoid
@@ -3227,7 +3221,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
-        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+        if isinstance(original_agg_func, dict):
+            apply_indices = list(agg_func.keys())
+        elif isinstance(original_agg_func, list):
+            apply_indices = self.columns.difference(internal_by).tolist()
+        else:
+            apply_indices = None
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
