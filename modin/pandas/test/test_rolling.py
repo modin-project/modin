@@ -20,6 +20,7 @@ from .utils import (
     df_equals,
     test_data_values,
     test_data_keys,
+    eval_general,
     create_test_dfs,
     default_to_pandas_ignore_string,
 )
@@ -48,62 +49,103 @@ def create_test_series(vals):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("win_type", [None, "triang"])
 @pytest.mark.parametrize("axis", [0, 1])
-def test_dataframe(data, window, min_periods, win_type, axis):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("count", {}),
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+        ("min", {}),
+        ("max", {}),
+        ("skew", {}),
+        ("kurt", {}),
+        ("apply", {"func": np.sum}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("quantile", {"q": 0.1}),
+    ],
+)
+def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
+    # Testing of Rolling class
+    modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-    pandas_rolled = pandas_df.rolling(
-        window=window,
-        min_periods=min_periods,
-        win_type=win_type,
-        center=True,
-        axis=axis,
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(
+            df.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type=None,
+                center=True,
+                axis=axis,
+            ),
+            method,
+        )(**kwargs),
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("window", [5, 100])
+@pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize("axis", [0, 1])
+def test_dataframe_agg(data, window, min_periods, axis):
+    modin_df, pandas_df = create_test_dfs(data)
+    if window > len(pandas_df):
+        window = len(pandas_df)
     modin_rolled = modin_df.rolling(
-        window=window,
-        min_periods=min_periods,
-        win_type=win_type,
-        center=True,
-        axis=axis,
+        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
     )
+    pandas_rolled = pandas_df.rolling(
+        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
+    )
+    df_equals(pandas_rolled.aggregate(np.sum), modin_rolled.aggregate(np.sum))
+    # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
+    # allows us to rolling aggregate a list of functions over axis 1, test
+    # that, too.
+    if axis != 1:
+        df_equals(
+            pandas_rolled.aggregate([np.sum, np.mean]),
+            modin_rolled.aggregate([np.sum, np.mean]),
+        )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("window", [5, 100])
+@pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+    ],
+)
+def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
     # Testing of Window class
-    if win_type is not None:
-        df_equals(pandas_rolled.mean(), modin_rolled.mean())
-        df_equals(modin_rolled.sum(), pandas_rolled.sum())
-        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
-    # Testing of Rolling class
-    else:
-        # TODO turn into eval_general
-        df_equals(modin_rolled.count(), pandas_rolled.count())
-        df_equals(modin_rolled.sum(), pandas_rolled.sum())
-        df_equals(modin_rolled.mean(), pandas_rolled.mean())
-        df_equals(modin_rolled.median(), pandas_rolled.median())
-        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
-        df_equals(modin_rolled.min(), pandas_rolled.min())
-        df_equals(modin_rolled.max(), pandas_rolled.max())
-        df_equals(modin_rolled.skew(), pandas_rolled.skew())
-        df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
-        df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
-
-        df_equals(modin_rolled.rank(), pandas_rolled.rank())  # method, ascending, pct, numeric_only
-        df_equals(modin_rolled.quantile(0.5), pandas_rolled.quantile(0.5))  # interpolation, numeric_only
-        df_equals(modin_rolled.sem(), pandas_rolled.sem())  # ddof, numeric_only
-
-        df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
-        # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
-        # allows us to rolling aggregate a list of functions over axis 1, test
-        # that, too.
-        if axis != 1:
-            df_equals(
-                pandas_rolled.aggregate([np.sum, np.mean]),
-                modin_rolled.aggregate([np.sum, np.mean]),
-            )
-        df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+    modin_df, pandas_df = create_test_dfs(data)
+    if window > len(pandas_df):
+        window = len(pandas_df)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(
+            df.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type="triang",
+                center=True,
+                axis=axis,
+            ),
+            method,
+        )(**kwargs),
+    )
 
 
 @pytest.mark.parametrize("axis", [0, "columns"])
@@ -160,64 +202,98 @@ def test_dataframe_dt_index(axis, on, closed, window):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("win_type", [None, "triang"])
-def test_series(data, window, min_periods, win_type):
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("count", {}),
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+        ("min", {}),
+        ("max", {}),
+        ("skew", {}),
+        ("kurt", {}),
+        ("apply", {"func": np.sum}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("aggregate", {"func": np.sum}),
+        ("agg", {"func": [np.sum, np.mean]}),
+        ("quantile", {"q": 0.1}),
+    ],
+)
+def test_series_rolling(data, window, min_periods, method, kwargs):
+    # Test of Rolling class
     modin_series, pandas_series = create_test_series(data)
     if window > len(pandas_series):
         window = len(pandas_series)
-    pandas_rolled = pandas_series.rolling(
-        window=window,
-        min_periods=min_periods,
-        win_type=win_type,
-        center=True,
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: getattr(
+            series.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type=None,
+                center=True,
+            ),
+            method,
+        )(**kwargs),
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("window", [5, 100])
+@pytest.mark.parametrize("min_periods", [None, 5])
+def test_series_corr_cov(data, window, min_periods):
+    modin_series, pandas_series = create_test_series(data)
+    if window > len(pandas_series):
+        window = len(pandas_series)
     modin_rolled = modin_series.rolling(
-        window=window,
-        min_periods=min_periods,
-        win_type=win_type,
-        center=True,
+        window=window, min_periods=min_periods, win_type=None, center=True
     )
-    # Testing of Window class
-    if win_type is not None:
-        df_equals(modin_rolled.mean(), pandas_rolled.mean())
-        df_equals(modin_rolled.sum(), pandas_rolled.sum())
-        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
-    # Testing of Rolling class
-    else:
-        df_equals(modin_rolled.count(), pandas_rolled.count())
-        df_equals(modin_rolled.sum(), pandas_rolled.sum())
-        df_equals(modin_rolled.mean(), pandas_rolled.mean())
-        df_equals(modin_rolled.median(), pandas_rolled.median())
-        df_equals(modin_rolled.var(ddof=0), pandas_rolled.var(ddof=0))
-        df_equals(modin_rolled.std(ddof=0), pandas_rolled.std(ddof=0))
-        df_equals(modin_rolled.min(), pandas_rolled.min())
-        df_equals(modin_rolled.max(), pandas_rolled.max())
-        df_equals(
-            modin_rolled.corr(modin_series),
-            pandas_rolled.corr(pandas_series),
-        )
-        df_equals(
-            modin_rolled.cov(modin_series, True), pandas_rolled.cov(pandas_series, True)
-        )
-        df_equals(
-            modin_rolled.cov(modin_series, False),
-            pandas_rolled.cov(pandas_series, False),
-        )
-        df_equals(modin_rolled.skew(), pandas_rolled.skew())
-        df_equals(modin_rolled.kurt(), pandas_rolled.kurt())
-        df_equals(modin_rolled.apply(np.sum), pandas_rolled.apply(np.sum))
+    pandas_rolled = pandas_series.rolling(
+        window=window, min_periods=min_periods, win_type=None, center=True
+    )
+    df_equals(modin_rolled.corr(modin_series), pandas_rolled.corr(pandas_series))
+    df_equals(
+        modin_rolled.cov(modin_series, True), pandas_rolled.cov(pandas_series, True)
+    )
+    df_equals(
+        modin_rolled.cov(modin_series, False), pandas_rolled.cov(pandas_series, False)
+    )
 
-        df_equals(modin_rolled.rank(), pandas_rolled.rank())  # method, ascending, pct, numeric_only
-        df_equals(modin_rolled.quantile(0.5), pandas_rolled.quantile(0.5))  # interpolation, numeric_only
-        df_equals(modin_rolled.sem(), pandas_rolled.sem())  # ddof, numeric_only
 
-        df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
-        df_equals(
-            modin_rolled.agg([np.sum, np.mean]),
-            pandas_rolled.agg([np.sum, np.mean]),
-        )
-        df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("window", [5, 100])
+@pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize(
+    "method, kwargs",
+    [
+        ("sum", {}),
+        ("mean", {}),
+        ("var", {"ddof": 0}),
+        ("std", {"ddof": 0}),
+    ],
+)
+def test_series_window(data, window, min_periods, method, kwargs):
+    # Test of Window class
+    modin_series, pandas_series = create_test_series(data)
+    if window > len(pandas_series):
+        window = len(pandas_series)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: getattr(
+            series.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type=None,
+                center=True,
+            ),
+            method,
+        )(**kwargs),
+    )
 
 
 @pytest.mark.parametrize("closed", ["both", "right"])
