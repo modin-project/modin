@@ -3057,7 +3057,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
 
-        is_transform_method = how == "transform" or (isinstance(agg_func, str) and agg_func in transformation_kernels)
+        is_transform_method = how == "transform" or (
+            isinstance(agg_func, str) and agg_func in transformation_kernels
+        )
 
         original_agg_func = agg_func
 
@@ -3197,7 +3199,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
-                        method="transform" if is_transform_method else None
+                        method="transform" if is_transform_method else None,
                     )
                 else:
                     new_index_names = tuple(
