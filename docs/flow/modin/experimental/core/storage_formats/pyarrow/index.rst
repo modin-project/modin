@@ -24,4 +24,4 @@ the query compiler level and execution implementation level for PyArrow storage 
 
 .. note::
     Currently the only one available PyArrow storage format factory is ``PyarrowOnRay`` which works
-    in :doc:`experimental mode </flow/modin/experimental/experimental>` only.
+    in :doc:`experimental mode </flow/modin/experimental/index>` only.

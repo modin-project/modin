@@ -60,6 +60,7 @@ def test_top_level_api_equality():
         "warnings",
         "os",
         "series_utils",
+        "window",
     ]
 
     assert not len(

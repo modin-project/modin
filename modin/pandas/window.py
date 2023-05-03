@@ -294,3 +294,128 @@ class Rolling(ClassLogger):
                 **kwargs,
             )
         )
+
+
+@_inherit_docstrings(
+    pandas.core.window.expanding.Expanding,
+    excluded=[pandas.core.window.expanding.Expanding.__init__],
+)
+class Expanding(ClassLogger):
+    def __init__(self, dataframe, min_periods=1, center=None, axis=0, method="single"):
+        self._dataframe = dataframe
+        self._query_compiler = dataframe._query_compiler
+        self.expanding_args = [
+            min_periods,
+            center,
+            axis,
+            method,
+        ]
+        self.axis = axis
+
+    def aggregate(self, func, *args, **kwargs):
+        from .dataframe import DataFrame
+
+        dataframe = DataFrame(
+            query_compiler=self._query_compiler.expanding_aggregate(
+                self.axis, self.expanding_args, func, *args, **kwargs
+            )
+        )
+        if isinstance(self._dataframe, DataFrame):
+            return dataframe
+        elif is_list_like(func):
+            dataframe.columns = dataframe.columns.droplevel()
+            return dataframe
+        else:
+            return dataframe.squeeze()
+
+    def sum(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sum(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def min(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_min(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def max(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_max(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def mean(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_mean(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def var(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_var(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def std(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_std(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def count(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_count(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def sem(self, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sem(
+                self.axis, self.expanding_args, *args, **kwargs
+            )
+        )
+
+    def skew(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_skew(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
+    def kurt(self, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_kurt(
+                self.axis, self.expanding_args, **kwargs
+            )
+        )
+
+    def quantile(self, quantile, interpolation="linear", **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_quantile(
+                self.axis, self.expanding_args, quantile, interpolation, **kwargs
+            )
+        )
+
+    def rank(
+        self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
+    ):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_rank(
+                self.axis,
+                self.expanding_args,
+                method,
+                ascending,
+                pct,
+                numeric_only,
+                **kwargs,
+            )
+        )
