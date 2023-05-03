@@ -5081,6 +5081,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, rolling_args, ddof, *args, **kwargs
         )
 
+    @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
+        result="rank",
+        refer_to="rank",
+        params="""
+        method : {'average', 'min', 'max'}, default: 'average'
+        ascending : bool, default: True
+        pct : bool, default: False
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def rolling_rank(
+        self,
+        fold_axis,
+        rolling_args,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        *args,
+        **kwargs,
+    ):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.rank)(
+            self,
+            rolling_args,
+            method=method,
+            ascending=ascending,
+            pct=pct,
+            numeric_only=numeric_only,
+            *args,
+            **kwargs,
+        )
+
     # End of Rolling methods
 
     # Begin Expanding methods
@@ -5205,6 +5239,22 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",
+        result="quantile",
+        refer_to="quantile",
+        params="""
+        quantile : float
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
+        **kwargs : dict""",
+    )
+    def expanding_quantile(
+        self, fold_axis, expanding_args, quantile, interpolation, *args, **kwargs
+    ):
+        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.quantile)(
+            self, expanding_args, quantile, interpolation, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
         result="unbiased standard error mean",
         refer_to="std",
         win_type="expanding window",
@@ -5219,6 +5269,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     ):
         return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sem)(
             self, expanding_args, ddof=ddof, numeric_only=numeric_only, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="rank",
+        refer_to="rank",
+        params="""
+        method : {'average', 'min', 'max'}, default: 'average'
+        ascending : bool, default: True
+        pct : bool, default: False
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_rank(
+        self,
+        fold_axis,
+        rolling_args,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        *args,
+        **kwargs,
+    ):
+        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.rank)(
+            self,
+            rolling_args,
+            method=method,
+            ascending=ascending,
+            pct=pct,
+            numeric_only=numeric_only,
+            *args,
+            **kwargs,
         )
 
     # End of Expanding methods
