@@ -222,7 +222,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def copy(self):
         return self.__constructor__(self._modin_frame.copy(), self._shape_hint)
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(

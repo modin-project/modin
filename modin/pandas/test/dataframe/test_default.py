@@ -531,24 +531,41 @@ def test_pivot(data, index, columns, values):
 @pytest.mark.parametrize(
     "index",
     [
-        lambda df: df.columns[0],
-        lambda df: [*df.columns[0:2], *df.columns[-7:-4]],
+        pytest.param(lambda df: df.columns[0], id="single_index_col"),
+        pytest.param(
+            lambda df: [*df.columns[0:2], *df.columns[-7:-4]], id="multiple_index_cols"
+        ),
         None,
     ],
 )
 @pytest.mark.parametrize(
     "columns",
     [
-        lambda df: df.columns[len(df.columns) // 2],
-        lambda df: [
-            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
-            df.columns[-7],
-        ],
+        pytest.param(lambda df: df.columns[len(df.columns) // 2], id="single_col"),
+        pytest.param(
+            lambda df: [
+                *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+                df.columns[-7],
+            ],
+            id="multiple_cols",
+        ),
         None,
     ],
 )
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1], None]
+    "values",
+    [
+        pytest.param(lambda df: df.columns[-1], id="single_value_col"),
+        pytest.param(lambda df: df.columns[-4:-1], id="multiple_value_cols"),
+        None,
+    ],
+)
+@pytest.mark.parametrize(
+    "aggfunc",
+    [
+        pytest.param("mean", id="tree_reduce_func"),
+        pytest.param("nunique", id="full_axis_func"),
+    ],
 )
 def test_pivot_table_data(data, index, columns, values):
     md_df, pd_df = create_test_dfs(data)
@@ -574,28 +591,46 @@ def test_pivot_table_data(data, index, columns, values):
 @pytest.mark.parametrize(
     "index",
     [
-        lambda df: df.columns[0],
-        lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
+        pytest.param(lambda df: df.columns[0], id="single_index_column"),
+        pytest.param(
+            lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
+            id="multiple_index_cols",
+        ),
     ],
 )
 @pytest.mark.parametrize(
     "columns",
     [
-        lambda df: df.columns[len(df.columns) // 2],
-        lambda df: [
-            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
-            df.columns[-7],
-        ],
+        pytest.param(lambda df: df.columns[len(df.columns) // 2], id="single_column"),
+        pytest.param(
+            lambda df: [
+                *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+                df.columns[-7],
+            ],
+            id="multiple_cols",
+        ),
     ],
 )
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1]]
+    "values",
+    [
+        pytest.param(lambda df: df.columns[-1], id="single_value"),
+        pytest.param(lambda df: df.columns[-4:-1], id="multiple_values"),
+    ],
 )
 @pytest.mark.parametrize(
     "aggfunc",
-    [["mean", "sum"], lambda df: {df.columns[5]: "mean", df.columns[-5]: "sum"}],
+    [
+        pytest.param(["mean", "sum"], id="list_func"),
+        pytest.param(
+            lambda df: {df.columns[5]: "mean", df.columns[-5]: "sum"}, id="dict_func"
+        ),
+    ],
 )
-@pytest.mark.parametrize("margins_name", ["Custom name", None])
+@pytest.mark.parametrize(
+    "margins_name",
+    [pytest.param("Custom name", id="str_name"), pytest.param(None, id="None_name")],
+)
 def test_pivot_table_margins(
     data,
     index,
