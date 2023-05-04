@@ -2959,6 +2959,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
     groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        result = super().groupby_nth(
+            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+        )
+        if not groupby_kwargs.get("as_index", True):
+            # pandas keeps order of columns intact, follow suit
+            return result.getitem_column_array(self.columns)
+        return result
+
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         if ExperimentalGroupbyImpl.get():
             try:
@@ -3291,7 +3308,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
         series_groupby=False,
     ):
-        # Also defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.

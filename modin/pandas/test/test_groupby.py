@@ -394,6 +394,15 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.pad())
+    if as_index:
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.nth(0))
+    else:
+        # FIXME: df.groupby(as_index=False).nth() does not produce correct index in Modin,
+        #        it should maintain values from df.index, not create a new one
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.nth(0).reset_index(drop=True)
+        )
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -411,6 +420,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax(axis=0))
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin(axis=0))
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
 
     eval_general(
         modin_groupby,
@@ -1313,6 +1323,8 @@ def eval___getitem__(md_grp, pd_grp, item):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
+    for name in pandas_groupby.groups:
+        df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
 def eval_shift(modin_groupby, pandas_groupby):

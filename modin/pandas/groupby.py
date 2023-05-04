@@ -838,7 +838,9 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        work_object = self.__override(df=obj if obj is not None else self._df)
+        work_object = self.__override(
+            df=obj if obj is not None else self._df, as_index=True
+        )
 
         return work_object._check_index(
             work_object._wrap_aggregation(
