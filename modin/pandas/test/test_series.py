@@ -1894,9 +1894,8 @@ def test_ewm(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_expanding(data):
-    modin_series, _ = create_test_series(data)  # noqa: F841
-    with warns_that_defaulting_to_pandas():
-        modin_series.expanding()
+    modin_series, pandas_series = create_test_series(data)  # noqa: F841
+    df_equals(modin_series.expanding().sum(), pandas_series.expanding().sum())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
