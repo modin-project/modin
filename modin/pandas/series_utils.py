@@ -18,18 +18,10 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
 from typing import TYPE_CHECKING
 import re
-import sys
 import numpy as np
 import pandas
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
-
-if sys.version_info[0] == 3 and sys.version_info[1] >= 7:
-    # Python >= 3.7
-    from re import Pattern as _pattern_type
-else:
-    # Python <= 3.6
-    from re import _pattern_type
 
 if TYPE_CHECKING:
     from datetime import tzinfo
@@ -291,7 +283,7 @@ class StringMethods(ClassLogger):
         )
 
     def count(self, pat, flags=0):
-        if not isinstance(pat, (str, _pattern_type)):
+        if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
             query_compiler=self._query_compiler.str_count(pat, flags=flags)
@@ -313,14 +305,14 @@ class StringMethods(ClassLogger):
         )
 
     def findall(self, pat, flags=0):
-        if not isinstance(pat, (str, _pattern_type)):
+        if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
             query_compiler=self._query_compiler.str_findall(pat, flags=flags)
         )
 
     def fullmatch(self, pat, case=True, flags=0, na=None):
-        if not isinstance(pat, (str, _pattern_type)):
+        if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
             query_compiler=self._query_compiler.str_fullmatch(
@@ -329,7 +321,7 @@ class StringMethods(ClassLogger):
         )
 
     def match(self, pat, case=True, flags=0, na=None):
-        if not isinstance(pat, (str, _pattern_type)):
+        if not isinstance(pat, (str, re.Pattern)):
             raise TypeError("first argument must be string or compiled pattern")
         return self._Series(
             query_compiler=self._query_compiler.str_match(
