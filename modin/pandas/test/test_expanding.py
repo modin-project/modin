@@ -51,6 +51,9 @@ def create_test_series(vals):
         ("std", {"ddof": 0}),
         ("min", {}),
         ("max", {}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("quantile", {"q": 0.1}),
     ],
 )
 def test_dataframe(data, min_periods, axis, method, kwargs):
@@ -97,6 +100,9 @@ def test_dataframe_agg(data, min_periods):
         ("std", {"ddof": 0}),
         ("min", {}),
         ("max", {}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("quantile", {"q": 0.1}),
     ],
 )
 def test_series(data, min_periods, method, kwargs):

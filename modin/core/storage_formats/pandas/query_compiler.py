@@ -1213,9 +1213,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
+    expanding_quantile = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).quantile(*args, **kwargs)
+        )
+    )
+
     expanding_sem = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
+    expanding_rank = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).rank(*args, **kwargs)
         )
     )
 
@@ -1245,6 +1257,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    rolling_sem = Fold.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sem(*args, **kwargs)
         )
     )
     rolling_mean = Fold.register(
@@ -1303,6 +1320,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
+            )
+        )
+    )
+    rolling_rank = Fold.register(
+        lambda df, rolling_args, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).rank(
+                method=method,
+                ascending=ascending,
+                pct=pct,
+                numeric_only=numeric_only,
+                **kwargs,
             )
         )
     )
