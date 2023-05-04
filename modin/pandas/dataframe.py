@@ -42,7 +42,6 @@ import sys
 from typing import IO, Optional, Union, Iterator, Hashable, Sequence
 import warnings
 
-import modin
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -1459,18 +1458,6 @@ class DataFrame(BasePandasDataset):
                 ignore_index=ignore_index,
             )
         )
-
-    def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
-        """
-        Return the memory usage of each column in bytes.
-        """
-        if index:
-            result = self._reduce_dimension(
-                self._query_compiler.memory_usage(index=False, deep=deep)
-            )
-            index_value = self.index.memory_usage(deep=deep)
-            return modin.pandas.concat([Series(index_value, index=["Index"]), result])
-        return super(DataFrame, self).memory_usage(index=index, deep=deep)
 
     def merge(
         self,

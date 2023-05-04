@@ -844,11 +844,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod = TreeReduce.register(pandas.DataFrame.prod)
     any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = TreeReduce.register(
+    # memory_usage adds an extra column for index usage, but we don't want to distribute
+    # the index memory usage calculation.
+    _memory_usage_without_index = TreeReduce.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
+
+    def memory_usage(self, **kwargs):
+        index = kwargs.get("index", True)
+        deep = kwargs.get("deep", False)
+        usage_without_index = self._memory_usage_without_index(index=False, deep=deep)
+        return (
+            self.from_pandas(
+                pandas.DataFrame(
+                    [self.index.memory_usage()],
+                    columns=["Index"],
+                    index=[MODIN_UNNAMED_SERIES_LABEL],
+                ),
+                data_cls=type(self._modin_frame),
+            ).concat(axis=1, other=[usage_without_index])
+            if index
+            else usage_without_index
+        )
 
     def max(self, axis, **kwargs):
         def map_func(df, **kwargs):
