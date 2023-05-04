@@ -1097,7 +1097,7 @@ class BasePandasDataset(ClassLogger):
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
         # purpose and does not affect the result, we shouldn't pass them to the query compiler.
         new_query_compiler = self._query_compiler.clip(
-            lower=lower, upper=upper, axis=axis, inplace=inplace, *args, **kwargs
+            lower=lower, upper=upper, axis=axis, *args, **kwargs
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -1471,8 +1471,10 @@ class BasePandasDataset(ClassLogger):
         """
         Provide expanding window calculations.
         """
-        return self._default_to_pandas(
-            "expanding",
+        from .window import Expanding
+
+        return Expanding(
+            self,
             min_periods=min_periods,
             center=center,
             axis=axis,

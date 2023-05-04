@@ -240,6 +240,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 or pyarrow.types.is_null(dtype)
             ):
                 return True
+            if isinstance(dtype, pyarrow.ExtensionType) or pyarrow.types.is_duration(
+                dtype
+            ):
+                return False
             try:
                 pandas_dtype = dtype.to_pandas_dtype()
                 return pandas_dtype != np.dtype("O")

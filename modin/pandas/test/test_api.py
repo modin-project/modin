@@ -59,6 +59,8 @@ def test_top_level_api_equality():
         "datetime",
         "warnings",
         "os",
+        "series_utils",
+        "window",
     ]
 
     assert not len(
@@ -237,7 +239,7 @@ def test_dataframe_api_equality():
 
 
 def test_series_str_api_equality():
-    modin_dir = [obj for obj in dir(pd.Series().str) if obj[0] != "_"]
+    modin_dir = [obj for obj in dir(pd.Series.str) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.Series.str) if obj[0] != "_"]
 
     missing_from_modin = set(pandas_dir) - set(modin_dir)
@@ -265,7 +267,7 @@ def test_series_dt_api_equality():
 
 
 def test_series_cat_api_equality():
-    modin_dir = [obj for obj in dir(pd.Series().cat) if obj[0] != "_"]
+    modin_dir = [obj for obj in dir(pd.Series.cat) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.Series.cat) if obj[0] != "_"]
 
     missing_from_modin = set(pandas_dir) - set(modin_dir)

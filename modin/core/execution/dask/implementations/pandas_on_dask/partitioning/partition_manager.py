@@ -33,33 +33,7 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
     _partition_class = PandasOnDaskDataframePartition
     _column_partitions_class = PandasOnDaskDataframeColumnPartition
     _row_partition_class = PandasOnDaskDataframeRowPartition
-
-    @classmethod
-    def get_objects_from_partitions(cls, partitions):
-        """
-        Get the objects wrapped by `partitions` in parallel.
-
-        This function assumes that each partition in `partitions` contains a single block.
-
-        Parameters
-        ----------
-        partitions : np.ndarray
-            NumPy array with ``PandasDataframePartition``-s.
-
-        Returns
-        -------
-        list
-            The objects wrapped by `partitions`.
-        """
-        for idx, part in enumerate(partitions):
-            if hasattr(part, "force_materialization"):
-                partitions[idx] = part.force_materialization()
-        assert all(
-            [len(partition.list_of_blocks) == 1 for partition in partitions]
-        ), "Implementation assumes that each partition contains a signle block."
-        return DaskWrapper.materialize(
-            [partition.list_of_blocks[0] for partition in partitions]
-        )
+    _execution_wrapper = DaskWrapper
 
     @classmethod
     def wait_partitions(cls, partitions):

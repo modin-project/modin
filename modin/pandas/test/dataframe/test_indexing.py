@@ -1572,7 +1572,13 @@ def test_reset_index_with_multi_index_no_drop(
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
         modin_df._query_compiler._modin_frame.set_index_cache(None)
-    eval_general(modin_df, pandas_df, lambda df: df.reset_index(**kwargs))
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index(**kwargs),
+        # https://github.com/modin-project/modin/issues/5960
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
@@ -2230,7 +2236,15 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
-    eval_general(modin_df, pandas_df, applyier)
+    eval_general(
+        modin_df,
+        pandas_df,
+        applyier,
+        # https://github.com/modin-project/modin/issues/5961
+        comparator_kwargs={
+            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
+        },
+    )
 
 
 def test_setitem_on_empty_df_4407():
@@ -2383,6 +2397,38 @@ def test_iloc_assigning_scalar_none_to_string_frame():
     modin_df.iloc[0, 0] = None
     pandas_df = pandas.DataFrame(data, dtype="string")
     pandas_df.iloc[0, 0] = None
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        1,
+        np.int32(1),
+        1.0,
+        "str val",
+        pandas.Timestamp("1/4/2018"),
+        np.datetime64(0, "ms"),
+        True,
+    ],
+)
+def test_loc_boolean_assignment_scalar_dtypes(value):
+    modin_df, pandas_df = create_test_dfs(
+        {
+            "a": [1, 2, 3],
+            "b": [3.0, 5.0, 6.0],
+            "c": ["a", "b", "c"],
+            "d": [1.0, "c", 2.0],
+            "e": pandas.to_datetime(["1/1/2018", "1/2/2018", "1/3/2018"]),
+            "f": [True, False, True],
+        }
+    )
+    modin_idx, pandas_idx = pd.Series([False, True, True]), pandas.Series(
+        [False, True, True]
+    )
+
+    modin_df.loc[modin_idx] = value
+    pandas_df.loc[pandas_idx] = value
     df_equals(modin_df, pandas_df)
 
 

@@ -33,6 +33,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
+from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
@@ -42,7 +43,7 @@ import hashlib
 from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import Engine
+from modin.config import Engine, ExperimentalGroupbyImpl
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -1165,6 +1166,64 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_kwargs, q, **kwargs):
         return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
+    def expanding_aggregate(self, axis, expanding_args, func, *args, **kwargs):
+        new_modin_frame = self._modin_frame.apply_full_axis(
+            axis,
+            lambda df: pandas.DataFrame(
+                df.expanding(*expanding_args).aggregate(func=func, *args, **kwargs)
+            ),
+            new_index=self.index,
+        )
+        return self.__constructor__(new_modin_frame)
+
+    expanding_sum = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sum(*args, **kwargs)
+        )
+    )
+
+    expanding_min = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).min(*args, **kwargs)
+        )
+    )
+
+    expanding_max = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).max(*args, **kwargs)
+        )
+    )
+
+    expanding_mean = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).mean(*args, **kwargs)
+        )
+    )
+
+    expanding_var = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).var(*args, **kwargs)
+        )
+    )
+
+    expanding_std = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).std(*args, **kwargs)
+        )
+    )
+
+    expanding_count = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).count(*args, **kwargs)
+        )
+    )
+
+    expanding_sem = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
@@ -1589,7 +1648,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_match = Map.register(_str_map("match"), dtypes="copy")
     str_normalize = Map.register(_str_map("normalize"), dtypes="copy")
     str_pad = Map.register(_str_map("pad"), dtypes="copy")
-    str_partition = Map.register(_str_map("partition"), dtypes="copy")
+    _str_partition = Map.register(_str_map("partition"), dtypes="copy")
+
+    def str_partition(self, sep=" ", expand=True):
+        # For `expand`, need an operator that can create more columns than before
+        if expand:
+            return super().str_partition(sep=sep, expand=expand)
+        return self._str_partition(sep=sep, expand=False)
+
     str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
     _str_extract = Map.register(_str_map("extract"), dtypes="copy")
 
@@ -1598,25 +1664,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # need an operator that can create more columns than before
         if expand and regex.groups == 1:
             qc = self._str_extract(pat, flags=flags, expand=expand)
+            qc.columns = get_group_names(regex)
         else:
             qc = super().str_extract(pat, flags=flags, expand=expand)
-        qc.columns = get_group_names(regex)
         return qc
 
     str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
     str_rfind = Map.register(_str_map("rfind"), dtypes="copy", shape_hint="column")
     str_rindex = Map.register(_str_map("rindex"), dtypes="copy", shape_hint="column")
     str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
-    str_rpartition = Map.register(
+    _str_rpartition = Map.register(
         _str_map("rpartition"), dtypes="copy", shape_hint="column"
     )
-    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+
+    def str_rpartition(self, sep=" ", expand=True):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_rpartition(sep=sep, expand=expand)
+        return self._str_rpartition(sep=sep, expand=False)
+
+    _str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+
+    def str_rsplit(self, pat=None, n=-1, expand=False):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_rsplit(pat=pat, n=n, expand=expand)
+        return self._str_rsplit(pat=pat, n=n, expand=False)
+
     str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy", shape_hint="column")
     str_slice = Map.register(_str_map("slice"), dtypes="copy", shape_hint="column")
     str_slice_replace = Map.register(
         _str_map("slice_replace"), dtypes="copy", shape_hint="column"
     )
-    str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+    _str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+
+    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_split(pat=pat, n=n, expand=expand, regex=regex)
+        return self._str_split(pat=pat, n=n, expand=False, regex=regex)
+
     str_startswith = Map.register(
         _str_map("startswith"), dtypes=np.bool_, shape_hint="column"
     )
@@ -2370,6 +2457,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
 
+        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+            new_dtypes = self.dtypes.copy()
+            old_dtypes = new_dtypes[col_loc]
+
+            if hasattr(item, "dtype"):
+                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
+                # we would like to get its internal dtype
+                item_type = item.dtype
+            elif hasattr(item, "to_numpy"):
+                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
+                # we would like to convert it and get its proper internal dtype
+                item_type = item.to_numpy().dtype
+            else:
+                item_type = type(item)
+
+            if isinstance(old_dtypes, pandas.Series):
+                new_dtypes[col_loc] = [
+                    find_common_type([dtype, item_type]) for dtype in old_dtypes.values
+                ]
+            else:
+                new_dtypes[col_loc] = find_common_type([old_dtypes, item_type])
+        else:
+            new_dtypes = None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=1,
             func=_set_item,
@@ -2377,6 +2488,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2705,15 +2817,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):  # pragma: no cover
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+
+        def dict_apply_builder(df, internal_indices=[]):  # pragma: no cover
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
-            return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
+            # It looks like it doesn't need to use `internal_indices` option internally
+            # for the case since `apply` use labels from dictionary keys in `func` variable.
+            return pandas.DataFrame(df.apply(func, *args, **kwargs))
 
-        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+        labels = list(func.keys())
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
-                axis, dict_apply_builder, func, keep_remaining=False
+                axis,
+                dict_apply_builder,
+                labels,
+                new_index=labels if axis == 1 else None,
+                new_columns=labels if axis == 0 else None,
+                keep_remaining=False,
             )
         )
 
@@ -2839,6 +2960,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="mean",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
+                )
+
         _, internal_by = self._groupby_internal_columns(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
@@ -2893,6 +3031,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="size",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
+                )
+
         result = self._groupby_dict_reduce(
             by=by,
             axis=axis,
@@ -3031,6 +3186,99 @@ class PandasQueryCompiler(BaseQueryCompiler):
             drop=drop,
         )
 
+    @_inherit_docstrings(BaseQueryCompiler.groupby_agg)
+    def _groupby_shuffle(
+        self,
+        by,
+        agg_func,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+        how="axis_wise",
+    ):
+        if Engine.get() == "Python":
+            raise NotImplementedError(
+                "Reshuffling groupby is not implemented for python engine, see: "
+                + "https://github.com/modin-project/modin/issues/5916"
+            )
+
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. FIXME: We apparently lose some laziness here (due to index access)
+        # because of the inability to process empty groupby natively.
+        if len(self.columns) == 0 or len(self.index) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
+
+        if isinstance(by, type(self)) and drop:
+            by = by.columns.tolist()
+
+        if not isinstance(by, list):
+            by = [by]
+
+        is_all_labels = all(isinstance(col, (str, tuple)) for col in by)
+        is_all_column_names = (
+            all(col in self.columns for col in by) if is_all_labels else False
+        )
+
+        if not is_all_column_names:
+            raise NotImplementedError(
+                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame. "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
+
+        # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
+        # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
+        if self._modin_frame._dtypes is not None and any(
+            dtype == "category" for dtype in self.dtypes[by].values
+        ):
+            raise NotImplementedError(
+                "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                + "https://github.com/modin-project/modin/issues/5925"
+            )
+
+        is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
+
+        if is_transform:
+            # https://github.com/modin-project/modin/issues/5924
+            ErrorMessage.missmatch_with_pandas(
+                operation="reshuffling groupby",
+                message="the order of rows may be shuffled for the result",
+            )
+
+        if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+
+            subset = by + list(agg_func.keys())
+            # extracting unique values; no we can't use np.unique here as it would
+            # convert a list of tuples to a 2D matrix and so mess up the result
+            subset = list(dict.fromkeys(subset))
+            obj = self.getitem_column_array(subset)
+        else:
+            obj = self
+
+        agg_func = functools.partial(
+            GroupByDefault.get_aggregation_method(how), func=agg_func
+        )
+
+        result = obj._modin_frame.groupby(
+            axis=axis,
+            by=by,
+            operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            **groupby_kwargs,
+        )
+        result_qc = self.__constructor__(result)
+
+        if not is_transform and not groupby_kwargs.get("as_index", True):
+            return result_qc.reset_index(drop=True)
+
+        return result_qc
+
     def groupby_agg(
         self,
         by,
@@ -3051,6 +3299,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
+
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func=agg_func,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                    how=how,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a full-axis implementation."
+                )
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(

@@ -16,6 +16,7 @@
 from __future__ import annotations
 import numpy as np
 import pandas
+from pandas.io.formats.info import SeriesInfo
 from pandas.api.types import is_integer
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.util._validators import validate_bool_kwarg
@@ -39,6 +40,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
 from .accessor import CachedAccessor, SparseAccessor
+from .series_utils import CategoryMethods, StringMethods
 
 
 if TYPE_CHECKING:
@@ -1173,12 +1175,10 @@ class Series(BasePandasDataset):
         memory_usage: bool | str | None = None,
         show_counts: bool = True,
     ):
-        return self._default_to_pandas(
-            pandas.Series.info,
-            verbose=verbose,
+        return SeriesInfo(self, memory_usage).render(
             buf=buf,
             max_cols=max_cols,
-            memory_usage=memory_usage,
+            verbose=verbose,
             show_counts=show_counts,
         )
 
@@ -1835,7 +1835,9 @@ class Series(BasePandasDataset):
             result._query_compiler, inplace=inplace
         )
 
+    cat = CachedAccessor("cat", CategoryMethods)
     sparse = CachedAccessor("sparse", SparseAccessor)
+    str = CachedAccessor("str", StringMethods)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -2167,15 +2169,6 @@ class Series(BasePandasDataset):
         return [self.index]
 
     @property
-    def cat(self):  # noqa: RT01, D200
-        """
-        Accessor object for categorical properties of the Series values.
-        """
-        from .series_utils import CategoryMethods
-
-        return CategoryMethods(self)
-
-    @property
     def dt(self):  # noqa: RT01, D200
         """
         Accessor object for datetimelike properties of the Series values.
@@ -2256,15 +2249,6 @@ class Series(BasePandasDataset):
         Return a tuple of the shape of the underlying data.
         """
         return (len(self),)
-
-    @property
-    def str(self):  # noqa: RT01, D200
-        """
-        Vectorized string functions for Series and Index.
-        """
-        from .series_utils import StringMethods
-
-        return StringMethods(self)
 
     def _to_pandas(self):
         """

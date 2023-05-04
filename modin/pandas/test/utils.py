@@ -12,6 +12,8 @@
 # governing permissions and limitations under the License.
 
 import re
+from pathlib import Path
+from typing import Union
 import pytest
 import numpy as np
 import math
@@ -23,7 +25,18 @@ from pandas.testing import (
     assert_index_equal,
     assert_extension_array_equal,
 )
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import (
+    is_list_like,
+    is_numeric_dtype,
+    is_object_dtype,
+    is_string_dtype,
+    is_bool_dtype,
+    is_categorical_dtype,
+    is_datetime64_any_dtype,
+    is_timedelta64_dtype,
+    is_period_dtype,
+)
+
 from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
 from modin.utils import to_pandas, try_cast_to_pandas
@@ -573,7 +586,93 @@ def assert_empty_frame_equal(df1, df2):
         assert False, f"Empty frames have different types: {type(df1)} != {type(df2)}"
 
 
-def df_equals(df1, df2):
+def assert_all_act_same(condition, *objs):
+    """
+    Assert that all of the objs give the same boolean result for the passed condition (either all True or all False).
+
+    Parameters
+    ----------
+    condition : callable(obj) -> bool
+        Condition to run on the passed objects.
+    *objs :
+        Objects to pass to the condition.
+
+    Returns
+    -------
+    bool
+        Result of the condition.
+    """
+    results = [condition(obj) for obj in objs]
+    if len(results) < 2:
+        return results[0] if len(results) else None
+
+    assert all(results[0] == res for res in results[1:])
+    return results[0]
+
+
+def _maybe_cast_to_pandas_dtype(dtype):
+    """Cast passed `dtype` to according pandas dtype if needed for the sake of equality comparison."""
+    # If we're running in a cloud mode then all the numpy types are substituted with a proxy net-reference,
+    # Such dtypes won't pass equality check with pandas dtypes thus manually converting them to a pure numpy
+    if "netref" in str(type(dtype)):
+        return np.dtype(dtype.name)
+    return dtype
+
+
+def assert_dtypes_equal(df1, df2):
+    """
+    Assert that the two passed DataFrame/Series objects have equal dtypes.
+
+    The function doesn't require that the dtypes are identical, it has the following reliefs:
+        1. The dtypes are not required to be in the same order
+           (e.g. {"col1": int, "col2": float} == {"col2": float, "col1": int})
+        2. The dtypes are only required to be in the same class
+           (e.g. both numerical, both categorical, etc...)
+
+    Parameters
+    ----------
+    df1 : DataFrame or Series
+    df2 : DataFrame or Series
+    """
+    if not isinstance(
+        df1, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
+    ) or not isinstance(
+        df2, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
+    ):
+        return
+
+    if isinstance(df1.dtypes, (pandas.Series, pd.Series)):
+        dtypes1 = df1.dtypes
+        dtypes2 = df2.dtypes
+    else:
+        # Case when `dtypes` is a scalar
+        dtypes1 = pandas.Series({"col": df1.dtypes})
+        dtypes2 = pandas.Series({"col": df2.dtypes})
+
+    # Don't require for dtypes to be in the same order
+    assert len(dtypes1.index.difference(dtypes2.index)) == 0
+    assert len(dtypes1) == len(dtypes2)
+
+    dtype_comparators = (
+        is_numeric_dtype,
+        lambda obj: is_object_dtype(obj) or is_string_dtype(obj),
+        is_bool_dtype,
+        is_categorical_dtype,
+        is_datetime64_any_dtype,
+        is_timedelta64_dtype,
+        is_period_dtype,
+    )
+
+    for col in dtypes1.keys():
+        type1, type2 = map(_maybe_cast_to_pandas_dtype, (dtypes1[col], dtypes2[col]))
+        for comparator in dtype_comparators:
+            if assert_all_act_same(comparator, type1, type2):
+                # We met a dtype that both types satisfy, so we can stop iterating
+                # over comparators and compare next dtypes
+                break
+
+
+def df_equals(df1, df2, check_dtypes=True):
     """Tests if df1 and df2 are equal.
 
     Args:
@@ -615,6 +714,9 @@ def df_equals(df1, df2):
         assert isinstance(df2, type(df1)), "Different type of collection"
         assert len(df1) == len(df2), "Different length result"
         return (df_equals(d1, d2) for d1, d2 in zip(df1, df2))
+
+    if check_dtypes:
+        assert_dtypes_equal(df1, df2)
 
     # Convert to pandas
     if isinstance(df1, (pd.DataFrame, pd.Series)):
@@ -781,6 +883,7 @@ def eval_general(
     raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
+    comparator_kwargs=None,
     **kwargs,
 ):
     if raising_exceptions:
@@ -834,7 +937,7 @@ def eval_general(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
     if values is not None:
-        comparator(*values)
+        comparator(*values, **(comparator_kwargs or {}))
 
 
 def eval_io(
@@ -1044,7 +1147,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = "",
+    data_dir: Union[str, Path] = "",
     suffix: str = "",
     debug_mode=False,
 ):
@@ -1058,7 +1161,7 @@ def get_unique_filename(
         Unique combiantion of test parameters for creation of unique name.
     extension: str
         Extension of unique file.
-    data_dir: str
+    data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.

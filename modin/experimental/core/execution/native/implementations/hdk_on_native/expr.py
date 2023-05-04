@@ -14,6 +14,8 @@
 """Module provides classes for scalar expression trees."""
 
 import abc
+
+import pandas as pd
 from pandas.core.dtypes.common import (
     is_list_like,
     get_dtype,
@@ -183,10 +185,7 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The resulting comparison expression.
         """
-        if not isinstance(other, BaseExpr):
-            other = LiteralExpr(other)
-        new_expr = OpExpr("=", [self, other], get_dtype(bool))
-        return new_expr
+        return self.cmp("=", other)
 
     def le(self, other):
         """
@@ -202,10 +201,43 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The resulting comparison expression.
         """
+        return self.cmp("<=", other)
+
+    def ge(self, other):
+        """
+        Build a greater or equal comparison with `other`.
+
+        Parameters
+        ----------
+        other : BaseExpr or scalar
+            An operand to compare with.
+
+        Returns
+        -------
+        BaseExpr
+            The resulting comparison expression.
+        """
+        return self.cmp(">=", other)
+
+    def cmp(self, op, other):
+        """
+        Build a comparison expression with `other`.
+
+        Parameters
+        ----------
+        op : str
+            A comparison operation.
+        other : BaseExpr or scalar
+            An operand to compare with.
+
+        Returns
+        -------
+        BaseExpr
+            The resulting comparison expression.
+        """
         if not isinstance(other, BaseExpr):
             other = LiteralExpr(other)
-        new_expr = OpExpr("<=", [self, other], get_dtype(bool))
-        return new_expr
+        return OpExpr(op, [self, other], get_dtype(bool))
 
     def cast(self, res_type):
         """
@@ -850,13 +882,12 @@ def build_row_idx_filter_expr(row_idx, row_col):
     if not is_list_like(row_idx):
         return row_col.eq(row_idx)
 
-    exprs = []
-    for idx in row_idx:
-        exprs.append(row_col.eq(idx))
+    if isinstance(row_idx, (pd.RangeIndex, range)) and row_idx.step == 1:
+        exprs = [row_col.ge(row_idx[0]), row_col.le(row_idx[-1])]
+        return OpExpr("AND", exprs, get_dtype(bool))
 
-    res = OpExpr("OR", exprs, get_dtype(bool))
-
-    return res
+    exprs = [row_col.eq(idx) for idx in row_idx]
+    return OpExpr("OR", exprs, get_dtype(bool))
 
 
 def build_if_then_else(cond, then_val, else_val, res_type):

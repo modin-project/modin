@@ -506,13 +506,11 @@ def make_sql_connection():
     Yields:
         Factory that generates sql connection objects
     """
-    filenames = []
 
     def _sql_connection(filename, table=""):
         # Remove file if exists
         if os.path.exists(filename):
             os.remove(filename)
-        filenames.append(filename)
         # Create connection and, if needed, table
         conn = "sqlite:///{}".format(filename)
         if table:
@@ -587,7 +585,12 @@ def pytest_sessionstart(session):
         addr = "localhost:50051"
         global ray_client_server
         ray_client_server = ray_server.serve(addr)
-        ray.util.connect(addr)
+        env_vars = {
+            "AWS_ACCESS_KEY_ID": CIAWSAccessKeyID.get(),
+            "AWS_SECRET_ACCESS_KEY": CIAWSSecretAccessKey.get(),
+        }
+        extra_init_kw = {"runtime_env": {"env_vars": env_vars}}
+        ray.util.connect(addr, ray_init_kwargs=extra_init_kw)
 
 
 def pytest_sessionfinish(session, exitstatus):

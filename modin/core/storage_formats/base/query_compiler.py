@@ -27,6 +27,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     ResampleDefault,
     RollingDefault,
+    ExpandingDefault,
     CatDefault,
     GroupByDefault,
     SeriesGroupByDefault,
@@ -794,8 +795,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         lower : float or list-like
         upper : float or list-like
         axis : {0, 1}
-        inplace : {False}
-            This parameter serves the compatibility purpose. Always has to be False.
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -4795,10 +4794,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN
+        na : object, default: None
         regex : bool, default: True""",
     )
-    def str_contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+    def str_contains(self, pat, case=True, flags=0, na=None, regex=True):
         return StrDefault.register(pandas.Series.str.contains)(
             self, pat, case, flags, na, regex
         )
@@ -4807,19 +4806,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="count",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_count(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.count)(self, pat, flags, **kwargs)
+    def str_count(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.count)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="endswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_endswith(self, pat, na=np.NaN):
+    def str_endswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.endswith)(self, pat, na)
 
     @doc_utils.doc_str_method(
@@ -4836,13 +4834,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="findall",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_findall(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.findall)(
-            self, pat, flags, **kwargs
-        )
+    def str_findall(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.findall)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="fullmatch",
@@ -4938,9 +4933,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_match(self, pat, case=True, flags=0, na=np.NaN):
+    def str_match(self, pat, case=True, flags=0, na=None):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
 
     @doc_utils.doc_str_method(
@@ -4998,9 +4993,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         case : bool, optional
         flags : int, default: 0
-        regex : bool, default: True""",
+        regex : bool, default: None""",
     )
-    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
         return StrDefault.register(pandas.Series.str.replace)(
             self, pat, repl, n, case, flags, regex
         )
@@ -5084,18 +5079,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         params="""
         pat : str, optional
         n : int, default: -1
-        expand : bool, default: False""",
+        expand : bool, default: False
+        regex : bool, default: None""",
     )
-    def str_split(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
+    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+        return StrDefault.register(pandas.Series.str.split)(
+            self, pat, n=n, expand=expand, regex=regex
+        )
 
     @doc_utils.doc_str_method(
         refer_to="startswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_startswith(self, pat, na=np.NaN):
+    def str_startswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.startswith)(self, pat, na)
 
     @doc_utils.doc_str_method(refer_to="strip", params="to_strip : str, optional")
@@ -5135,6 +5133,37 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def str___getitem__(self, key):
         return StrDefault.register(pandas.Series.str.__getitem__)(self, key)
 
+    @doc_utils.doc_str_method(
+        refer_to="encode",
+        params="""
+            encoding : str,
+            errors : str, default = 'strict'""",
+    )
+    def str_encode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.encode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="decode",
+        params="""
+                encoding : str,
+                errors : str, default = 'strict'""",
+    )
+    def str_decode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.decode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="cat",
+        params="""
+            others : Series, Index, DataFrame, np.ndarray or list-like,
+            sep : str, default: '',
+            na_rep : str or None, default: None,
+            join : {'left', 'right', 'outer', 'inner'}, default: 'left'""",
+    )
+    def str_cat(self, others, sep=None, na_rep=None, join="left"):
+        return StrDefault.register(pandas.Series.str.cat)(
+            self, others, sep, na_rep, join
+        )
+
     # End of Str methods
 
     # Rolling methods
@@ -5144,6 +5173,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # from the API level, we should get rid of it (Modin issue #3108).
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="the result of passed functions",
         action="apply specified functions",
         refer_to="aggregate",
@@ -5162,6 +5192,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # one of these should be removed (Modin issue #3107).
     @doc_utils.add_deprecation_warning(replacement_method="rolling_aggregate")
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="the result of passed function",
         action="apply specified function",
         refer_to="apply",
@@ -5192,6 +5223,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="correlation",
         refer_to="corr",
         params="""
@@ -5207,13 +5239,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, rolling_args, other, pairwise, *args, **kwargs
         )
 
-    @doc_utils.doc_window_method(result="number of non-NA values", refer_to="count")
+    @doc_utils.doc_window_method(
+        window_cls_name="Rolling", result="number of non-NA values", refer_to="count"
+    )
     def rolling_count(self, fold_axis, rolling_args):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(
             self, rolling_args
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="covariance",
         refer_to="cov",
         params="""
@@ -5230,7 +5265,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unbiased kurtosis", refer_to="kurt", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="unbiased kurtosis",
+        refer_to="kurt",
+        params="**kwargs : dict",
     )
     def rolling_kurt(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
@@ -5238,6 +5276,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="maximum value",
         refer_to="max",
         params="""
@@ -5250,6 +5289,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="mean value",
         refer_to="mean",
         params="""
@@ -5262,7 +5302,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="median value", refer_to="median", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="median value",
+        refer_to="median",
+        params="**kwargs : dict",
     )
     def rolling_median(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
@@ -5270,6 +5313,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="minimum value",
         refer_to="min",
         params="""
@@ -5282,6 +5326,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="quantile",
         refer_to="quantile",
         params="""
@@ -5297,7 +5342,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unbiased skewness", refer_to="skew", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="unbiased skewness",
+        refer_to="skew",
+        params="**kwargs : dict",
     )
     def rolling_skew(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
@@ -5305,6 +5353,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="standard deviation",
         refer_to="std",
         params="""
@@ -5318,6 +5367,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="sum",
         refer_to="sum",
         params="""
@@ -5330,6 +5380,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="variance",
         refer_to="var",
         params="""
@@ -5344,9 +5395,150 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of Rolling methods
 
+    # Begin Expanding methods
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="the result of passed functions",
+        action="apply specified functions",
+        refer_to="aggregate",
+        win_type="expanding window",
+        params="""
+        func : str, dict, callable(pandas.Series) -> scalar, or list of such
+        *args : iterable
+        **kwargs : dict""",
+        build_rules="udf_aggregation",
+    )
+    def expanding_aggregate(self, fold_axis, expanding_args, func, *args, **kwargs):
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.aggregate
+        )(self, expanding_args, func, *args, **kwargs)
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="sum",
+        refer_to="sum",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_sum(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sum)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="minimum value",
+        refer_to="min",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_min(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.min)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="maximum value",
+        refer_to="max",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_max(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.max)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="mean value",
+        refer_to="mean",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.mean)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="variance",
+        refer_to="var",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_var(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.var)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="standard deviation",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_std(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.std)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="standard deviation",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_count(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.count)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="unbiased standard error mean",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_sem(
+        self, fold_axis, expanding_args, ddof=1, numeric_only=False, *args, **kwargs
+    ):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sem)(
+            self, expanding_args, ddof=ddof, numeric_only=numeric_only, *args, **kwargs
+        )
+
+    # End of Expanding methods
+
     # Window methods
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="mean",
         refer_to="mean",
@@ -5360,6 +5552,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="standard deviation",
         refer_to="std",
@@ -5374,6 +5567,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="sum",
         refer_to="sum",
@@ -5387,6 +5581,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="variance",
         refer_to="var",
