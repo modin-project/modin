@@ -567,7 +567,7 @@ def test_pivot(data, index, columns, values):
         pytest.param("nunique", id="full_axis_func"),
     ],
 )
-def test_pivot_table_data(data, index, columns, values):
+def test_pivot_table_data(data, index, columns, values, aggfunc):
     md_df, pd_df = create_test_dfs(data)
 
     # when values is None the output will be huge-dimensional,
@@ -583,6 +583,7 @@ def test_pivot_table_data(data, index, columns, values):
         index=index,
         columns=columns,
         values=values,
+        aggfunc=aggfunc,
         check_exception_type=None,
     )
 
