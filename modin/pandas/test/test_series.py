@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from __future__ import annotations
+
 import pytest
 import numpy as np
 import json
@@ -24,7 +26,6 @@ from numpy.testing import assert_array_equal
 
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-import sys
 
 from modin.utils import to_pandas
 from .utils import (
@@ -3851,20 +3852,14 @@ def test_str___getitem__(data, key):
 
 
 # Test str operations
-def test_str_cat():
+@pytest.mark.parametrize(
+    "others",
+    [["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN], None],
+    ids=["list", "None"],
+)
+def test_str_cat(others):
     data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN]
-    modin_series, pandas_series = create_test_series(data)
-    others = data
-
-    with warns_that_defaulting_to_pandas():
-        # We are only testing that this defaults to pandas, so we will just check for
-        # the warning
-        modin_series.str.cat(others)
-
-    with warns_that_defaulting_to_pandas():
-        # We are only testing that this defaults to pandas, so we will just check for
-        # the warning
-        modin_series.str.cat(None)
+    eval_general(*create_test_series(data), lambda s: s.str.cat(others=others))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3872,24 +3867,10 @@ def test_str_cat():
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_split(data, pat, n, expand):
-    # Empty pattern not supported on Python 3.7+
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 7 and pat == "":
-        return
-
-    modin_series, pandas_series = create_test_series(data)
-
-    if n >= -1:
-        if expand and pat:
-            with warns_that_defaulting_to_pandas():
-                # We are only testing that this defaults to pandas, so we will just check for
-                # the warning
-                modin_series.str.split(pat, n=n, expand=expand)
-        elif not expand:
-            eval_general(
-                modin_series,
-                pandas_series,
-                lambda series: series.str.split(pat, n=n, expand=expand),
-            )
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.split(pat, n=n, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3897,20 +3878,10 @@ def test_str_split(data, pat, n, expand):
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_rsplit(data, pat, n, expand):
-    modin_series, pandas_series = create_test_series(data)
-
-    if n >= -1:
-        if expand and pat:
-            with warns_that_defaulting_to_pandas():
-                # We are only testing that this defaults to pandas, so we will just check for
-                # the warning
-                modin_series.str.rsplit(pat, n=n, expand=expand)
-        elif not expand:
-            eval_general(
-                modin_series,
-                pandas_series,
-                lambda series: series.str.rsplit(pat, n=n, expand=expand),
-            )
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.rsplit(pat, n=n, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4506,14 +4477,44 @@ def test_casefold(data):
     eval_general(modin_series, pandas_series, lambda series: series.str.casefold())
 
 
-@pytest.mark.parametrize("encoding_type", encoding_types)
-@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_encode(data, encoding_type):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.fixture
+def str_encode_decode_test_data() -> list[str]:
+    return [
+        "abC|DeF,Hik",
+        "234,3245.67",
+        "gSaf,qWer|Gre",
+        "asd3,4sad|",
+        np.NaN,
+        None,
+        # add a string that we can't encode in ascii, and whose utf-8 encoding
+        # we cannot decode in ascii
+        "ക",
+    ]
+
+
+@pytest.mark.parametrize("encoding", encoding_types)
+@pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
+def test_str_encode(encoding, errors, str_encode_decode_test_data):
     eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: series.str.encode(encoding=encoding_type),
+        *create_test_series(str_encode_decode_test_data),
+        lambda s: s.str.encode(encoding, errors=errors),
+    )
+
+
+@pytest.mark.parametrize(
+    "encoding",
+    encoding_types,
+)
+@pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
+def test_str_decode(encoding, errors, str_encode_decode_test_data):
+    eval_general(
+        *create_test_series(
+            [
+                s.encode("utf-8") if isinstance(s, str) else s
+                for s in str_encode_decode_test_data
+            ]
+        ),
+        lambda s: s.str.decode(encoding, errors=errors),
     )
 
 
