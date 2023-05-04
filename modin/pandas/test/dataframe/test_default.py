@@ -563,6 +563,7 @@ def test_pivot(data, index, columns, values):
 @pytest.mark.parametrize(
     "aggfunc",
     [
+        pytest.param(np.mean, id="callable_tree_reduce_func"),
         pytest.param("mean", id="tree_reduce_func"),
         pytest.param("nunique", id="full_axis_func"),
     ],
@@ -632,6 +633,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc):
     "margins_name",
     [pytest.param("Custom name", id="str_name"), pytest.param(None, id="None_name")],
 )
+@pytest.mark.parametrize("fill_value", [None, 0])
 def test_pivot_table_margins(
     data,
     index,
@@ -639,6 +641,7 @@ def test_pivot_table_margins(
     values,
     aggfunc,
     margins_name,
+    fill_value,
 ):
     eval_general(
         *create_test_dfs(data),
@@ -649,6 +652,7 @@ def test_pivot_table_margins(
         aggfunc=aggfunc,
         margins=True,
         margins_name=margins_name,
+        fill_value=fill_value,
     )
 
 
