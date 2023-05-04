@@ -17,6 +17,7 @@ Implement Series's accessors public API as pandas does.
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
 from typing import TYPE_CHECKING
+import re
 import sys
 import numpy as np
 import pandas
@@ -154,22 +155,29 @@ class StringMethods(ClassLogger):
     def cat(self, others=None, sep=None, na_rep=None, join="left"):
         if isinstance(others, self._Series):
             others = others._to_pandas()
-        return self._default_to_pandas(
-            pandas.Series.str.cat, others=others, sep=sep, na_rep=na_rep, join=join
+        compiler_result = self._query_compiler.str_cat(
+            others=others, sep=sep, na_rep=na_rep, join=join
+        )
+        # if others is None, result is a string. otherwise, it's a series.
+        return (
+            compiler_result.to_pandas().squeeze()
+            if others is None
+            else self._Series(query_compiler=compiler_result)
         )
 
     def decode(self, encoding, errors="strict"):
-        return self._default_to_pandas(
-            pandas.Series.str.decode, encoding, errors=errors
+        return self._Series(
+            query_compiler=self._query_compiler.str_decode(encoding, errors)
         )
 
     def split(self, pat=None, n=-1, expand=False, regex=None):
-        if not pat and pat is not None:
-            raise ValueError("split() requires a non-empty pattern match.")
-
         if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.split, pat=pat, n=n, expand=expand, regex=regex
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_split(
+                    pat=pat, n=n, expand=True, regex=regex
+                )
             )
         else:
             return self._Series(
@@ -183,8 +191,12 @@ class StringMethods(ClassLogger):
             raise ValueError("rsplit() requires a non-empty pattern match.")
 
         if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.rsplit, pat=pat, n=n, expand=expand
+            from .dataframe import DataFrame
+
+            return DataFrame(
+                query_compiler=self._query_compiler.str_rsplit(
+                    pat=pat, n=n, expand=True
+                )
             )
         else:
             return self._Series(
@@ -291,8 +303,8 @@ class StringMethods(ClassLogger):
         )
 
     def encode(self, encoding, errors="strict"):
-        return self._default_to_pandas(
-            pandas.Series.str.encode, encoding, errors=errors
+        return self._Series(
+            query_compiler=self._query_compiler.str_encode(encoding, errors)
         )
 
     def endswith(self, pat, na=None):
@@ -326,16 +338,15 @@ class StringMethods(ClassLogger):
         )
 
     def extract(self, pat, flags=0, expand=True):
-        if expand:
-            from .dataframe import DataFrame
+        query_compiler = self._query_compiler.str_extract(
+            pat, flags=flags, expand=expand
+        )
+        from .dataframe import DataFrame
 
-            return DataFrame(
-                query_compiler=self._query_compiler.str_extract(
-                    pat, flags=flags, expand=expand
-                )
-            )
-        return self._default_to_pandas(
-            pandas.Series.str.extract, pat, flags=flags, expand=expand
+        return (
+            DataFrame(query_compiler=query_compiler)
+            if expand or re.compile(pat).groups > 1
+            else self._Series(query_compiler=query_compiler)
         )
 
     def extractall(self, pat, flags=0):
@@ -363,16 +374,11 @@ class StringMethods(ClassLogger):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
 
-        if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.partition, sep=sep, expand=expand
-            )
-        else:
-            return self._Series(
-                query_compiler=self._query_compiler.str_partition(
-                    sep=sep, expand=expand
-                )
-            )
+        from .dataframe import DataFrame
+
+        return (DataFrame if expand else self._Series)(
+            query_compiler=self._query_compiler.str_partition(sep=sep, expand=expand)
+        )
 
     def removeprefix(self, prefix):
         return self._Series(
@@ -391,16 +397,11 @@ class StringMethods(ClassLogger):
         if sep is not None and len(sep) == 0:
             raise ValueError("empty separator")
 
-        if expand:
-            return self._default_to_pandas(
-                pandas.Series.str.rpartition, sep=sep, expand=expand
-            )
-        else:
-            return self._Series(
-                query_compiler=self._query_compiler.str_rpartition(
-                    sep=sep, expand=expand
-                )
-            )
+        from .dataframe import DataFrame
+
+        return (DataFrame if expand else self._Series)(
+            query_compiler=self._query_compiler.str_rpartition(sep=sep, expand=expand)
+        )
 
     def lower(self):
         return self._Series(query_compiler=self._query_compiler.str_lower())

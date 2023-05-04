@@ -4839,6 +4839,37 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def str___getitem__(self, key):
         return StrDefault.register(pandas.Series.str.__getitem__)(self, key)
 
+    @doc_utils.doc_str_method(
+        refer_to="encode",
+        params="""
+            encoding : str,
+            errors : str, default = 'strict'""",
+    )
+    def str_encode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.encode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="decode",
+        params="""
+                encoding : str,
+                errors : str, default = 'strict'""",
+    )
+    def str_decode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.decode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="cat",
+        params="""
+            others : Series, Index, DataFrame, np.ndarray or list-like,
+            sep : str, default: '',
+            na_rep : str or None, default: None,
+            join : {'left', 'right', 'outer', 'inner'}, default: 'left'""",
+    )
+    def str_cat(self, others, sep=None, na_rep=None, join="left"):
+        return StrDefault.register(pandas.Series.str.cat)(
+            self, others, sep, na_rep, join
+        )
+
     # End of Str methods
 
     # Rolling methods
