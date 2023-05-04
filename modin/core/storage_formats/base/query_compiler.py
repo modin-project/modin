@@ -5241,13 +5241,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         window_cls_name="Expanding",
         result="quantile",
         refer_to="quantile",
+        win_type="expanding window",
         params="""
         quantile : float
         interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
         **kwargs : dict""",
     )
     def expanding_quantile(
-        self, fold_axis, expanding_args, quantile, interpolation, *args, **kwargs
+        self, fold_axis, expanding_args, quantile, interpolation, **kwargs
     ):
         return ExpandingDefault.register(pandas.core.window.rolling.Expanding.quantile)(
             self, expanding_args, quantile, interpolation, **kwargs
@@ -5275,6 +5276,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         window_cls_name="Expanding",
         result="rank",
         refer_to="rank",
+        win_type="expanding window",
         params="""
         method : {'average', 'min', 'max'}, default: 'average'
         ascending : bool, default: True
@@ -5286,7 +5288,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def expanding_rank(
         self,
         fold_axis,
-        rolling_args,
+        expanding_args,
         method="average",
         ascending=True,
         pct=False,
@@ -5296,7 +5298,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     ):
         return ExpandingDefault.register(pandas.core.window.rolling.Expanding.rank)(
             self,
-            rolling_args,
+            expanding_args,
             method=method,
             ascending=ascending,
             pct=pct,
