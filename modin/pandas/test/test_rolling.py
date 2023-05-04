@@ -66,6 +66,7 @@ def create_test_series(vals):
         ("rank", {}),
         ("sem", {"ddof": 0}),
         ("quantile", {"q": 0.1}),
+        ("median", {}),
     ],
 )
 def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
@@ -220,6 +221,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
         ("aggregate", {"func": np.sum}),
         ("agg", {"func": [np.sum, np.mean]}),
         ("quantile", {"q": 0.1}),
+        ("median", {}),
     ],
 )
 def test_series_rolling(data, window, min_periods, method, kwargs):
@@ -288,7 +290,7 @@ def test_series_window(data, window, min_periods, method, kwargs):
             series.rolling(
                 window=window,
                 min_periods=min_periods,
-                win_type=None,
+                win_type="triang",
                 center=True,
             ),
             method,
