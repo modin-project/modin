@@ -40,6 +40,7 @@ from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 import hashlib
+from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.config import Engine, ExperimentalGroupbyImpl
@@ -60,7 +61,11 @@ from modin.core.dataframe.algebra import (
     Binary,
     GroupByReduce,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.core.dataframe.algebra.default2pandas.groupby import (
+    GroupBy,
+    GroupByDefault,
+    SeriesGroupByDefault,
+)
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
@@ -3001,6 +3006,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
     groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        result = super().groupby_nth(
+            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+        )
+        if not groupby_kwargs.get("as_index", True):
+            # pandas keeps order of columns intact, follow suit
+            return result.getitem_column_array(self.columns)
+        return result
+
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
         if ExperimentalGroupbyImpl.get():
             try:
@@ -3331,6 +3353,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3364,13 +3387,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
 
+        is_transform_method = how == "transform" or (
+            isinstance(agg_func, str) and agg_func in transformation_kernels
+        )
+
+        original_agg_func = agg_func
+
         if isinstance(agg_func, dict):
             assert (
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
             agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
+                (
+                    SeriesGroupByDefault if series_groupby else GroupByDefault
+                ).get_aggregation_method(how),
+                func=agg_func,
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
@@ -3448,10 +3480,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = []
 
             by += not_broadcastable_by
+            level = groupby_kwargs.get("level", None)
+            if level is not None and not by:
+                by = None
+                by_length = len(level) if is_list_like(level) else 1
+            else:
+                by_length = len(by)
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                target_df = df.squeeze(axis=1) if series_groupby else df
+                grouped_df = target_df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except DataError:
@@ -3485,11 +3524,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result,
                         internal_by_cols,
                         by_cols_dtypes=df[internal_by_cols].dtypes.values,
-                        by_length=len(by),
+                        by_length=by_length,
                         selection=selection,
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
+                        method="transform" if is_transform_method else None,
                     )
                 else:
                     new_index_names = tuple(
@@ -3513,7 +3553,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
-        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+        if isinstance(original_agg_func, dict):
+            apply_indices = list(agg_func.keys())
+        elif isinstance(original_agg_func, list):
+            apply_indices = self.columns.difference(internal_by).tolist()
+        else:
+            apply_indices = None
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,

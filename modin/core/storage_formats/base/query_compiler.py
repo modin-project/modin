@@ -30,6 +30,7 @@ from modin.core.dataframe.algebra.default2pandas import (
     ExpandingDefault,
     CatDefault,
     GroupByDefault,
+    SeriesGroupByDefault,
 )
 from modin.error_message import ErrorMessage
 from . import doc_utils
@@ -2761,6 +2762,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         """
         Group QueryCompiler data and apply passed aggregation function.
@@ -2789,6 +2791,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
+        series_groupby : bool, default: False
+            Whether we should treat `self` as Series when performing groupby.
 
         Returns
         -------
@@ -2801,7 +2805,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
-        return GroupByDefault.register(GroupByDefault.get_aggregation_method(how))(
+        defaulter = SeriesGroupByDefault if series_groupby else GroupByDefault
+        return defaulter.register(defaulter.get_aggregation_method(how))(
             self,
             by=by,
             agg_func=agg_func,
@@ -2849,6 +2854,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return self.groupby_agg(
             by=by,
             agg_func="skew",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute cumulative count",
+        result="count of all the previous values",
+        refer_to="cumcount",
+    )
+    def groupby_cumcount(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cumcount",
             axis=axis,
             groupby_kwargs=groupby_kwargs,
             agg_args=agg_args,
@@ -2967,6 +2996,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return self.groupby_agg(
             by=by,
             agg_func="std",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute standard error", result="standard error", refer_to="sem"
+    )
+    def groupby_sem(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="sem",
             axis=axis,
             groupby_kwargs=groupby_kwargs,
             agg_args=agg_args,
@@ -3135,6 +3186,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="construct DataFrame from group with provided name",
+        result="DataFrame for given group",
+        refer_to="get_group",
+    )
+    def groupby_get_group(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="get_group",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="shift data with the specified settings",
         result="shifted value",
         refer_to="shift",
@@ -3156,6 +3231,225 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get first value in group",
+        result="first value",
+        refer_to="first",
+    )
+    def groupby_first(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="first",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get last value in group",
+        result="last value",
+        refer_to="last",
+    )
+    def groupby_last(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="last",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get first n values of a group",
+        result="first n values of a group",
+        refer_to="head",
+    )
+    def groupby_head(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="head",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get last n values in group",
+        result="last n values",
+        refer_to="tail",
+    )
+    def groupby_tail(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="tail",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get nth value in group",
+        result="nth value",
+        refer_to="nth",
+    )
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nth",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get group number of each value",
+        result="group number of each value",
+        refer_to="ngroup",
+    )
+    def groupby_ngroup(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="ngroup",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get n largest values in group",
+        result="n largest values",
+        refer_to="nlargest",
+    )
+    def groupby_nlargest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nlargest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get n nsmallest values in group",
+        result="n nsmallest values",
+        refer_to="nsmallest",
+    )
+    def groupby_nsmallest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nsmallest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get unique values in group",
+        result="unique values",
+        refer_to="unique",
+    )
+    def groupby_unique(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="unique",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
         )
 
     # END Manual Partitioning methods
