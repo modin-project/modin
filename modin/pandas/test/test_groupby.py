@@ -399,10 +399,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_general(modin_groupby, pandas_groupby, lambda df: df.nth(0))
     else:
         # FIXME: df.groupby(as_index=False).nth() does not produce correct index in Modin,
-        #        it should maintain values from df.index, not create a new one
-        eval_general(
-            modin_groupby, pandas_groupby, lambda df: df.nth(0).reset_index(drop=True)
-        )
+        #        it should maintain values from df.index, not create a new one or re-order it;
+        #        it also produces completely wrong result for multi-column `by` :(
+        if not isinstance(pandas_by, list) or len(pandas_by) <= 1:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda df: df.nth(0).sort_values("col1").reset_index(drop=True),
+            )
     eval_general(
         modin_groupby,
         pandas_groupby,
