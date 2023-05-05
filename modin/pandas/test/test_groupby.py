@@ -1327,6 +1327,10 @@ def eval___getitem__(md_grp, pd_grp, item):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
+    if ExperimentalGroupbyImpl.get():
+        # `.get_group()` doesn't work correctly with experimental groupby:
+        # https://github.com/modin-project/modin/issues/6093
+        return
     for name in pandas_groupby.groups:
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
