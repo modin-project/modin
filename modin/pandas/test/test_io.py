@@ -212,6 +212,44 @@ def eval_to_file(tmp_dir, modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
+def eval_to_csv_file(tmp_dir, modin_obj, pandas_obj, extension, **kwargs):
+    if extension is None:
+        kwargs["mode"] = "t"
+        kwargs["compression"] = "infer"
+        modin_csv = modin_obj.to_csv(**kwargs)
+        pandas_csv = pandas_obj.to_csv(**kwargs)
+        if modin_csv == pandas_csv:
+            return
+
+        force_read = True
+        modin_file = get_unique_filename(extension="csv", data_dir=tmp_dir)
+        pandas_file = get_unique_filename(extension="csv", data_dir=tmp_dir)
+        with open(modin_file, "w") as file:
+            file.write(modin_csv)
+        with open(pandas_file, "w") as file:
+            file.write(pandas_csv)
+    else:
+        force_read = extension != "csv" or kwargs.get("compression", None)
+        modin_file = get_unique_filename(extension=extension, data_dir=tmp_dir)
+        pandas_file = get_unique_filename(extension=extension, data_dir=tmp_dir)
+        modin_obj.to_csv(modin_file, **kwargs)
+        pandas_obj.to_csv(pandas_file, **kwargs)
+
+    if force_read or not assert_files_eq(modin_file, pandas_file):
+        # If the files are not identical, make sure they can
+        # be read by pandas and contains identical data.
+        read_kwargs = {}
+        if kwargs.get("index", None) is not False:
+            read_kwargs["index_col"] = 0
+        if (value := kwargs.get("sep", None)) is not None:
+            read_kwargs["sep"] = value
+        if (value := kwargs.get("compression", None)) is not None:
+            read_kwargs["compression"] = value
+        modin_obj = pandas.read_csv(modin_file, **read_kwargs)
+        pandas_obj = pandas.read_csv(pandas_file, **read_kwargs)
+        df_equals(pandas_obj, modin_obj)
+
+
 @pytest.fixture
 def make_parquet_dir(tmp_path):
     def _make_parquet_dir(
@@ -1104,34 +1142,54 @@ class TestCsv:
             filepath_or_buffer="/some/wrong/path.csv",
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
-    @pytest.mark.parametrize("header", [False, True])
+    @pytest.mark.parametrize("extension", [None, "csv", "csv.gz"])
+    @pytest.mark.parametrize("sep", [" "])
+    @pytest.mark.parametrize("header", [False, True, "sfx-"])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
+    @pytest.mark.parametrize("idx_name", [None, "Index"])
+    @pytest.mark.parametrize("index", [True, False, "New index"])
+    @pytest.mark.parametrize("index_label", [None, False, "New index"])
+    @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
+    @pytest.mark.parametrize("chunksize", [None, NROWS / 10])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_to_csv(self, tmp_path, header, mode):
-        pandas_df = generate_dataframe()
+    def test_to_csv(
+        self,
+        tmp_path,
+        extension,
+        sep,
+        header,
+        mode,
+        idx_name,
+        index,
+        index_label,
+        columns,
+        chunksize,
+    ):
+        pandas_df = generate_dataframe(idx_name=idx_name)
         modin_df = pd.DataFrame(pandas_df)
 
-        eval_to_file(
+        if isinstance(header, str):
+            if columns is None:
+                header = [f"{header}{c}" for c in modin_df.columns]
+            else:
+                header = [f"{header}{c}" for c in columns]
+
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
-            fn="to_csv",
-            extension="csv",
+            extension=extension,
+            sep=sep,
             header=header,
             mode=mode,
+            index=index,
+            index_label=index_label,
+            columns=columns,
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -1139,18 +1197,13 @@ class TestCsv:
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
-        eval_to_file(
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
-            fn="to_csv",
             extension="csv",
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -1160,11 +1213,10 @@ class TestCsv:
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
         ).squeeze()
         modin_s = pd.Series(pandas_s)
-        eval_to_file(
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_s,
             pandas_obj=pandas_s,
-            fn="to_csv",
             extension="csv",
         )
 
@@ -1297,7 +1349,7 @@ class TestCsv:
             values,
             columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
         ).set_index("key")
-        eval_to_file(tmp_path, modin_df, pandas_df, "to_csv", "csv")
+        eval_to_csv_file(tmp_path, modin_df, pandas_df, "csv")
 
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
     def test_read_csv_issue_5150(self, set_async_read_mode):
