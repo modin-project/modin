@@ -27,8 +27,10 @@ from modin.core.dataframe.algebra.default2pandas import (
     BinaryDefault,
     ResampleDefault,
     RollingDefault,
+    ExpandingDefault,
     CatDefault,
     GroupByDefault,
+    SeriesGroupByDefault,
 )
 from modin.error_message import ErrorMessage
 from . import doc_utils
@@ -2760,6 +2762,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         """
         Group QueryCompiler data and apply passed aggregation function.
@@ -2788,6 +2791,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
+        series_groupby : bool, default: False
+            Whether we should treat `self` as Series when performing groupby.
 
         Returns
         -------
@@ -2800,7 +2805,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         elif drop and isinstance(by, type(self)):
             by = list(by.columns)
 
-        return GroupByDefault.register(GroupByDefault.get_aggregation_method(how))(
+        defaulter = SeriesGroupByDefault if series_groupby else GroupByDefault
+        return defaulter.register(defaulter.get_aggregation_method(how))(
             self,
             by=by,
             agg_func=agg_func,
@@ -2848,6 +2854,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return self.groupby_agg(
             by=by,
             agg_func="skew",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute cumulative count",
+        result="count of all the previous values",
+        refer_to="cumcount",
+    )
+    def groupby_cumcount(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cumcount",
             axis=axis,
             groupby_kwargs=groupby_kwargs,
             agg_args=agg_args,
@@ -2966,6 +2996,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return self.groupby_agg(
             by=by,
             agg_func="std",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute standard error", result="standard error", refer_to="sem"
+    )
+    def groupby_sem(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="sem",
             axis=axis,
             groupby_kwargs=groupby_kwargs,
             agg_args=agg_args,
@@ -3134,6 +3186,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="construct DataFrame from group with provided name",
+        result="DataFrame for given group",
+        refer_to="get_group",
+    )
+    def groupby_get_group(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="get_group",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="shift data with the specified settings",
         result="shifted value",
         refer_to="shift",
@@ -3155,6 +3231,225 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get first value in group",
+        result="first value",
+        refer_to="first",
+    )
+    def groupby_first(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="first",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get last value in group",
+        result="last value",
+        refer_to="last",
+    )
+    def groupby_last(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="last",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get first n values of a group",
+        result="first n values of a group",
+        refer_to="head",
+    )
+    def groupby_head(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="head",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get last n values in group",
+        result="last n values",
+        refer_to="tail",
+    )
+    def groupby_tail(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="tail",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get nth value in group",
+        result="nth value",
+        refer_to="nth",
+    )
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nth",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get group number of each value",
+        result="group number of each value",
+        refer_to="ngroup",
+    )
+    def groupby_ngroup(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="ngroup",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get n largest values in group",
+        result="n largest values",
+        refer_to="nlargest",
+    )
+    def groupby_nlargest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nlargest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get n nsmallest values in group",
+        result="n nsmallest values",
+        refer_to="nsmallest",
+    )
+    def groupby_nsmallest(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="nsmallest",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get unique values in group",
+        result="unique values",
+        refer_to="unique",
+    )
+    def groupby_unique(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="unique",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+            series_groupby=True,
         )
 
     # END Manual Partitioning methods
@@ -4499,10 +4794,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN
+        na : object, default: None
         regex : bool, default: True""",
     )
-    def str_contains(self, pat, case=True, flags=0, na=np.NaN, regex=True):
+    def str_contains(self, pat, case=True, flags=0, na=None, regex=True):
         return StrDefault.register(pandas.Series.str.contains)(
             self, pat, case, flags, na, regex
         )
@@ -4511,19 +4806,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="count",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_count(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.count)(self, pat, flags, **kwargs)
+    def str_count(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.count)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="endswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_endswith(self, pat, na=np.NaN):
+    def str_endswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.endswith)(self, pat, na)
 
     @doc_utils.doc_str_method(
@@ -4540,13 +4834,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="findall",
         params="""
         pat : str
-        flags : int, default: 0
-        **kwargs : dict""",
+        flags : int, default: 0""",
     )
-    def str_findall(self, pat, flags=0, **kwargs):
-        return StrDefault.register(pandas.Series.str.findall)(
-            self, pat, flags, **kwargs
-        )
+    def str_findall(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.findall)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="fullmatch",
@@ -4642,9 +4933,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pat : str
         case : bool, default: True
         flags : int, default: 0
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_match(self, pat, case=True, flags=0, na=np.NaN):
+    def str_match(self, pat, case=True, flags=0, na=None):
         return StrDefault.register(pandas.Series.str.match)(self, pat, case, flags, na)
 
     @doc_utils.doc_str_method(
@@ -4702,9 +4993,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         case : bool, optional
         flags : int, default: 0
-        regex : bool, default: True""",
+        regex : bool, default: None""",
     )
-    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=True):
+    def str_replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
         return StrDefault.register(pandas.Series.str.replace)(
             self, pat, repl, n, case, flags, regex
         )
@@ -4788,18 +5079,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         params="""
         pat : str, optional
         n : int, default: -1
-        expand : bool, default: False""",
+        expand : bool, default: False
+        regex : bool, default: None""",
     )
-    def str_split(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.split)(self, pat, n, expand)
+    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+        return StrDefault.register(pandas.Series.str.split)(
+            self, pat, n=n, expand=expand, regex=regex
+        )
 
     @doc_utils.doc_str_method(
         refer_to="startswith",
         params="""
         pat : str
-        na : object, default: np.NaN""",
+        na : object, default: None""",
     )
-    def str_startswith(self, pat, na=np.NaN):
+    def str_startswith(self, pat, na=None):
         return StrDefault.register(pandas.Series.str.startswith)(self, pat, na)
 
     @doc_utils.doc_str_method(refer_to="strip", params="to_strip : str, optional")
@@ -4839,6 +5133,37 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def str___getitem__(self, key):
         return StrDefault.register(pandas.Series.str.__getitem__)(self, key)
 
+    @doc_utils.doc_str_method(
+        refer_to="encode",
+        params="""
+            encoding : str,
+            errors : str, default = 'strict'""",
+    )
+    def str_encode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.encode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="decode",
+        params="""
+                encoding : str,
+                errors : str, default = 'strict'""",
+    )
+    def str_decode(self, encoding, errors):
+        return StrDefault.register(pandas.Series.str.decode)(self, encoding, errors)
+
+    @doc_utils.doc_str_method(
+        refer_to="cat",
+        params="""
+            others : Series, Index, DataFrame, np.ndarray or list-like,
+            sep : str, default: '',
+            na_rep : str or None, default: None,
+            join : {'left', 'right', 'outer', 'inner'}, default: 'left'""",
+    )
+    def str_cat(self, others, sep=None, na_rep=None, join="left"):
+        return StrDefault.register(pandas.Series.str.cat)(
+            self, others, sep, na_rep, join
+        )
+
     # End of Str methods
 
     # Rolling methods
@@ -4848,6 +5173,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # from the API level, we should get rid of it (Modin issue #3108).
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="the result of passed functions",
         action="apply specified functions",
         refer_to="aggregate",
@@ -4866,6 +5192,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # one of these should be removed (Modin issue #3107).
     @doc_utils.add_deprecation_warning(replacement_method="rolling_aggregate")
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="the result of passed function",
         action="apply specified function",
         refer_to="apply",
@@ -4896,6 +5223,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="correlation",
         refer_to="corr",
         params="""
@@ -4911,13 +5239,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, rolling_args, other, pairwise, *args, **kwargs
         )
 
-    @doc_utils.doc_window_method(result="number of non-NA values", refer_to="count")
+    @doc_utils.doc_window_method(
+        window_cls_name="Rolling", result="number of non-NA values", refer_to="count"
+    )
     def rolling_count(self, fold_axis, rolling_args):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(
             self, rolling_args
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="covariance",
         refer_to="cov",
         params="""
@@ -4934,7 +5265,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unbiased kurtosis", refer_to="kurt", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="unbiased kurtosis",
+        refer_to="kurt",
+        params="**kwargs : dict",
     )
     def rolling_kurt(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
@@ -4942,6 +5276,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="maximum value",
         refer_to="max",
         params="""
@@ -4954,6 +5289,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="mean value",
         refer_to="mean",
         params="""
@@ -4966,7 +5302,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="median value", refer_to="median", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="median value",
+        refer_to="median",
+        params="**kwargs : dict",
     )
     def rolling_median(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
@@ -4974,6 +5313,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="minimum value",
         refer_to="min",
         params="""
@@ -4986,6 +5326,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="quantile",
         refer_to="quantile",
         params="""
@@ -5001,7 +5342,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
-        result="unbiased skewness", refer_to="skew", params="**kwargs : dict"
+        window_cls_name="Rolling",
+        result="unbiased skewness",
+        refer_to="skew",
+        params="**kwargs : dict",
     )
     def rolling_skew(self, fold_axis, rolling_args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
@@ -5009,6 +5353,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="standard deviation",
         refer_to="std",
         params="""
@@ -5022,6 +5367,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="sum",
         refer_to="sum",
         params="""
@@ -5034,6 +5380,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
+        result="sem",
+        refer_to="sem",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def rolling_sem(self, fold_axis, rolling_args, *args, **kwargs):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.sem)(
+            self, rolling_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         result="variance",
         refer_to="var",
         params="""
@@ -5046,11 +5406,238 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, rolling_args, ddof, *args, **kwargs
         )
 
+    @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
+        result="rank",
+        refer_to="rank",
+        params="""
+        method : {'average', 'min', 'max'}, default: 'average'
+        ascending : bool, default: True
+        pct : bool, default: False
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def rolling_rank(
+        self,
+        fold_axis,
+        rolling_args,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        *args,
+        **kwargs,
+    ):
+        return RollingDefault.register(pandas.core.window.rolling.Rolling.rank)(
+            self,
+            rolling_args,
+            method=method,
+            ascending=ascending,
+            pct=pct,
+            numeric_only=numeric_only,
+            *args,
+            **kwargs,
+        )
+
     # End of Rolling methods
+
+    # Begin Expanding methods
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="the result of passed functions",
+        action="apply specified functions",
+        refer_to="aggregate",
+        win_type="expanding window",
+        params="""
+        func : str, dict, callable(pandas.Series) -> scalar, or list of such
+        *args : iterable
+        **kwargs : dict""",
+        build_rules="udf_aggregation",
+    )
+    def expanding_aggregate(self, fold_axis, expanding_args, func, *args, **kwargs):
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.aggregate
+        )(self, expanding_args, func, *args, **kwargs)
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="sum",
+        refer_to="sum",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_sum(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sum)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="minimum value",
+        refer_to="min",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_min(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.min)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="maximum value",
+        refer_to="max",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_max(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.max)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="mean value",
+        refer_to="mean",
+        win_type="expanding window",
+        params="""
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_mean(self, fold_axis, expanding_args, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.mean)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="variance",
+        refer_to="var",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_var(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.var)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="standard deviation",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_std(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.std)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="standard deviation",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_count(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.count)(
+            self, expanding_args, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="quantile",
+        refer_to="quantile",
+        win_type="expanding window",
+        params="""
+        quantile : float
+        interpolation : {'linear', 'lower', 'higher', 'midpoint', 'nearest'}, default: 'linear'
+        **kwargs : dict""",
+    )
+    def expanding_quantile(
+        self, fold_axis, expanding_args, quantile, interpolation, **kwargs
+    ):
+        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.quantile)(
+            self, expanding_args, quantile, interpolation, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="unbiased standard error mean",
+        refer_to="std",
+        win_type="expanding window",
+        params="""
+        ddof : int, default: 1
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_sem(
+        self, fold_axis, expanding_args, ddof=1, numeric_only=False, *args, **kwargs
+    ):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.sem)(
+            self, expanding_args, ddof=ddof, numeric_only=numeric_only, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="rank",
+        refer_to="rank",
+        win_type="expanding window",
+        params="""
+        method : {'average', 'min', 'max'}, default: 'average'
+        ascending : bool, default: True
+        pct : bool, default: False
+        numeric_only : bool, default: False
+        *args : iterable
+        **kwargs : dict""",
+    )
+    def expanding_rank(
+        self,
+        fold_axis,
+        expanding_args,
+        method="average",
+        ascending=True,
+        pct=False,
+        numeric_only=False,
+        *args,
+        **kwargs,
+    ):
+        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.rank)(
+            self,
+            expanding_args,
+            method=method,
+            ascending=ascending,
+            pct=pct,
+            numeric_only=numeric_only,
+            *args,
+            **kwargs,
+        )
+
+    # End of Expanding methods
 
     # Window methods
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="mean",
         refer_to="mean",
@@ -5064,6 +5651,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="standard deviation",
         refer_to="std",
@@ -5078,6 +5666,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="sum",
         refer_to="sum",
@@ -5091,6 +5680,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_window_method(
+        window_cls_name="Rolling",
         win_type="window of the specified type",
         result="variance",
         refer_to="var",

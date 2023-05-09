@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - pandas==1.5.3
-  - pyarrow
+  - pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
   - numpy>=1.18.5
   - fsspec
   - pip

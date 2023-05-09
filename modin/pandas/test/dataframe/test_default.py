@@ -63,7 +63,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     "op, make_args",
     [
         ("align", lambda df: {"other": df}),
-        ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
         ("ewm", lambda df: {"com": 0.5}),
         ("from_dict", lambda df: {"data": None}),

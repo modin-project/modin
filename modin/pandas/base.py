@@ -1471,8 +1471,10 @@ class BasePandasDataset(ClassLogger):
         """
         Provide expanding window calculations.
         """
-        return self._default_to_pandas(
-            "expanding",
+        from .window import Expanding
+
+        return Expanding(
+            self,
             min_periods=min_periods,
             center=center,
             axis=axis,

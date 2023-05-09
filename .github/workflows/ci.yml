@@ -1019,7 +1019,7 @@ jobs:
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.test_task == 'group_3'
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
         if: matrix.test_task == 'group_4'
