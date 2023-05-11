@@ -1240,8 +1240,6 @@ class BasePandasDataset(ClassLogger):
         return self.__constructor__(
             query_compiler=data._query_compiler.describe(
                 percentiles=percentiles,
-                include=include,
-                exclude=exclude,
                 datetime_is_numeric=datetime_is_numeric,
             )
         )
