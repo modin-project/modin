@@ -1879,25 +1879,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract column/row partitions reduce operations
 
-    # Abstract column/row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # Currently, this means a Pandas Series will be returned, but in the future
-    # we will implement a Distributed Series, and this will be returned
-    # instead.
     @doc_utils.add_refer_to("DataFrame.describe")
-    def describe(self, **kwargs):  # noqa: PR02
+    def describe(
+        self,
+        percentiles: np.ndarray,
+        datetime_is_numeric: bool,
+    ):
         """
         Generate descriptive statistics.
 
         Parameters
         ----------
         percentiles : list-like
-        include : "all" or list of dtypes, optional
-        exclude : list of dtypes, optional
         datetime_is_numeric : bool
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -1905,9 +1899,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             QueryCompiler object containing the descriptive statistics
             of the underlying data.
         """
-        return DataFrameDefault.register(pandas.DataFrame.describe)(self, **kwargs)
-
-    # END Abstract column/row partitions reduce operations over select indices
+        return DataFrameDefault.register(pandas.DataFrame.describe)(
+            self,
+            percentiles=percentiles,
+            datetime_is_numeric=datetime_is_numeric,
+            include="all",
+        )
 
     # Map across rows/columns
     # These operations require some global knowledge of the full column/row
