@@ -116,7 +116,8 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         -----
         Reading performed by using of `pyarrow.read_csv` function.
         """
-        eng = str(kwargs["engine"]).lower().strip()
+        if eng := kwargs["engine"]:
+            eng = eng.lower().strip()
         try:
             if eng in ("pandas", "c"):
                 return super().read_csv(**kwargs)
@@ -128,21 +129,48 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
 
-            dtype = kwargs["dtype"]
-            if isinstance(dtype, dict):
-                column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
-            else:
-                column_types = cls._dtype_to_arrow(dtype)
-
-            parse_dates = kwargs["parse_dates"]
-            if (type(parse_dates) is list) and type(column_types) is dict:
-                for c in parse_dates:
-                    column_types[c] = pa.timestamp("s")
-
-            names = kwargs["names"]
+            if (names := kwargs["names"]) is lib.no_default:
+                names = None
             skiprows = kwargs["skiprows"]
-            if names not in (lib.no_default, None) and kwargs["header"] == 0:
+            if names and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
+
+            column_names = None
+
+            def get_col_names():
+                nonlocal column_names
+                if column_names is None:
+                    # Using pandas to read the column names
+                    column_names = pandas.read_csv(
+                        kwargs["filepath_or_buffer"], nrows=0, engine="c"
+                    ).columns.tolist()
+                return column_names
+
+            if dtype := kwargs["dtype"]:
+                if isinstance(dtype, dict):
+                    column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
+                else:
+                    dtype = cls._dtype_to_arrow(dtype)
+                    column_types = {name: dtype for name in get_col_names()}
+            else:
+                column_types = {}
+
+            if parse_dates := kwargs["parse_dates"]:
+                if isinstance(parse_dates, list) and isinstance(
+                    parse_dates[0], (str, int)
+                ):
+                    timestamp_dt = pa.timestamp("ns")
+                    if names and isinstance(parse_dates[0], str):
+                        parse_dates = [names.index(name) for name in parse_dates]
+                    if isinstance(parse_dates[0], int):
+                        column_names = get_col_names()
+                        parse_dates = [column_names[i] for i in parse_dates]
+                    for c in parse_dates:
+                        column_types[c] = timestamp_dt
+                elif not isinstance(parse_dates, bool):
+                    raise NotImplementedError(
+                        f"Argument parse_dates={parse_dates} is not supported"
+                    )
 
             sep = kwargs["sep"]
             delimiter = kwargs["delimiter"]
@@ -198,25 +226,28 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 convert_options=co,
             )
 
-            col_names = at.column_names
-            col_counts = {}
-            for name in col_names:
-                col_counts[name] = 1 if name in col_counts else 0
+            if names:
+                at = at.rename_columns(names)
+            else:
+                col_names = at.column_names
+                col_counts = {}
+                for name in col_names:
+                    col_counts[name] = 1 if name in col_counts else 0
 
-            if len(col_names) != len(col_counts):
-                for i, name in enumerate(col_names):
-                    count = col_counts[name]
-                    if count != 0:
-                        if count == 1:
-                            col_counts[name] = 2
-                        else:
-                            new_name = f"{name}.{count - 1}"
-                            while new_name in col_counts:
-                                new_name = f"{name}.{count}"
-                                count += 1
-                            col_counts[name] = count + 1
-                            col_names[i] = new_name
-                at = at.rename_columns(col_names)
+                if len(col_names) != len(col_counts):
+                    for i, name in enumerate(col_names):
+                        count = col_counts[name]
+                        if count != 0:
+                            if count == 1:
+                                col_counts[name] = 2
+                            else:
+                                new_name = f"{name}.{count - 1}"
+                                while new_name in col_counts:
+                                    new_name = f"{name}.{count}"
+                                    count += 1
+                                col_counts[name] = count + 1
+                                col_names[i] = new_name
+                    at = at.rename_columns(col_names)
 
             return cls.from_arrow(at)
         except (
@@ -224,11 +255,14 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             pa.ArrowInvalid,
             NotImplementedError,
             ArrowEngineException,
-        ):
+        ) as err:
             if eng in ["arrow"]:
                 raise
 
-            ErrorMessage.default_to_pandas("`read_csv`")
+            ErrorMessage.warn(
+                f"Failed to read csv {kwargs['filepath_or_buffer']} "
+                + f"due to error: {err}. Defaulting to pandas."
+            )
             return super().read_csv(**kwargs)
 
     @classmethod
