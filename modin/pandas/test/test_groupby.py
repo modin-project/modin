@@ -1023,7 +1023,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             eval_var(modin_groupby, pandas_groupby)
             eval_skew(modin_groupby, pandas_groupby)
 
-        agg_functions = [lambda df: df.sum(), "min", "max", max, sum]
+        agg_functions = [
+            lambda df: df.sum(),
+            "min",
+            "max",
+            max,
+            sum,
+            np.mean,
+            ["min", "max"],
+            [np.mean, np.std, np.var, np.max, np.min],
+        ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
             eval_aggregate(modin_groupby, pandas_groupby, func)
