@@ -1629,7 +1629,7 @@ class BasePandasDataset(ClassLogger):
         Select initial periods of time series data based on a date offset.
         """
         return self._create_or_update_from_compiler(
-            self._query_compiler.first(to_offset(offset))
+            self._query_compiler.first(offset=to_offset(offset))
         )
 
     def first_valid_index(self):  # noqa: RT01, D200
@@ -1812,7 +1812,7 @@ class BasePandasDataset(ClassLogger):
         Select final periods of time series data based on a date offset.
         """
         return self._create_or_update_from_compiler(
-            self._query_compiler.last(to_offset(offset))
+            self._query_compiler.last(offset=to_offset(offset))
         )
 
     def last_valid_index(self):  # noqa: RT01, D200
