@@ -307,6 +307,7 @@ class DataFrameGroupBy(ClassLogger):
                 groupby_kwargs=self._kwargs,
                 agg_args=[],
                 agg_kwargs={},
+                is_df=isinstance(self._df, DataFrame),
             ),
         )
 

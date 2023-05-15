@@ -3459,6 +3459,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         groupby_kwargs,
         agg_args,
         agg_kwargs,
+        is_df,
     ):
         return DataFrameDefault.register(lambda df: df.ohlc())(self)
 
