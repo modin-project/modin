@@ -49,9 +49,6 @@ from .utils import (
     check_cols_to_join,
     get_data_for_join_by_index,
     get_common_arrow_type,
-    concat_index_names,
-    mangle_index_names,
-    get_common_pandas_type,
     build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
@@ -1057,17 +1054,19 @@ class HdkOnNativeDataframe(PandasDataframe):
                     for col in list(new_cols_map):
                         if col not in frame.columns:
                             del new_cols_map[col]
-                else:
+                elif join == "outer":
                     for col in frame.columns:
                         if col not in new_cols_map:
                             new_cols_map[col] = frame._dtypes[col]
+                else:
+                    raise NotImplementedError(f"Unsupported join type {join=}")
 
             for frame in other_modin_frames:
                 frame_dtypes = frame._dtypes
                 for col, dtype in new_cols_map.items():
                     if col in frame_dtypes:
-                        new_cols_map[col] = get_common_pandas_type(
-                            dtype, frame_dtypes[col]
+                        new_cols_map[col] = pd.core.dtypes.cast.find_common_type(
+                            [dtype, frame_dtypes[col]]
                         )
 
             if sort:
@@ -1211,7 +1210,10 @@ class HdkOnNativeDataframe(PandasDataframe):
             Ignore index columns.
         frame_to_table : dict, default: None
             Dictionary, containing arrow tables for each frame.
-            If not None, this method returns an arrow table.
+            If not None, this method returns an arrow table. This
+            parameter is used by the `_execute_arrow()` function,
+            which provides arrow tables for each frame and requires
+            an arrow table to be returned.
 
         Returns
         -------
@@ -2096,7 +2098,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if isinstance(self._op, MaskNode):
+        if isinstance(self._op, MaskNode) or (
+            # HDK does not support union of more than 2 frames.
+            isinstance(self._op, UnionNode)
+            and (len(self._op.input) > 2)
+        ):
             return True
         return self._uses_rowid
 
@@ -2150,7 +2156,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             frame = stack.pop()
 
             if callable(frame):
-                frame()
+                result = frame()
             elif isinstance(frame._op, FrameNode):
                 if frame._partitions.size == 0:
                     result = pyarrow.Table.from_pandas(pd.DataFrame({}))
@@ -2160,26 +2166,33 @@ class HdkOnNativeDataframe(PandasDataframe):
             elif isinstance(frame._op, MaskNode):
 
                 def slice(positions=frame._op.row_positions):
-                    nonlocal result
-                    result = self._arrow_row_slice(result, positions)
+                    return self._arrow_row_slice(result, positions)
 
                 stack.append(slice)
                 stack.append(frame._op.input[0])
             elif isinstance(frame._op, TransformNode):
 
                 def select(exprs=frame._op.exprs):
-                    nonlocal result
-                    result = self._arrow_select(result, exprs)
+                    return self._arrow_select(result, exprs)
 
                 stack.append(select)
                 stack.append(frame._op.input[0])
             elif isinstance(frame._op, UnionNode):
 
                 def union(op=frame._op, tables={}, input=iter(frame._op.input)):
-                    nonlocal result
+                    """
+                    Concatenate the frames.
 
+                    This function is created for each UnionNode. When the function
+                    is created, the frames iterator is saved in the `input` argument.
+                    Then, the function is added to the stack followed by the first
+                    frame from the `input` iterator. When the frame is processed, the
+                    arrow table is added to the `tables` dictionary. This procedure is
+                    repeated until the iterator is not empty. When all the frames are
+                    processed, the arrow tables are concatenated and the result is returned.
+                    """
                     if (i := next(input, None)) is None:
-                        result = self._union_all_arrow(
+                        return self._union_all_arrow(
                             op.input, op.join, op.sort, op.ignore_index, tables
                         )
                     else:
@@ -2187,9 +2200,12 @@ class HdkOnNativeDataframe(PandasDataframe):
                         def add_result(f=i):
                             tables[f] = result
 
+                        # When this function is called, the `frame` attribute contains
+                        # a reference to this function.
                         stack.append(frame if callable(frame) else union)
                         stack.append(add_result)
                         stack.append(i)
+                        return result
 
                 union()
             else:

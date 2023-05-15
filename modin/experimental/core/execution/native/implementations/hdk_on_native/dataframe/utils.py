@@ -242,10 +242,15 @@ class ColNameCodec:
         first = frames[0]
         names = OrderedDict()
         if first._index_width() > 1:
+            # When we're dealing with a MultiIndex case the resulting index
+            # inherits the levels from the first frame in concatenation.
             dtypes = first._dtypes
             for n in first._index_cols:
                 names[n] = dtypes[n]
         else:
+            # In a non-MultiIndex case, we check if all the indices have the same
+            # names, and if they do - inherit the name and dtype from the first frame,
+            # otherwise return metadata matching unnamed RangeIndex.
             mangle = ColNameCodec.mangle_index_names
             idx_names = set()
             for f in frames:
@@ -259,6 +264,7 @@ class ColNameCodec:
                     names[mangle([None])[0]] = get_dtype(int)
                     return names
 
+            # Inherit Index's name and dtype from the first frame.
             if first._index_cols is not None:
                 name = first._index_cols[0]
                 names[name] = first._dtypes[name]
@@ -266,6 +272,7 @@ class ColNameCodec:
                 idx = first.index
                 names[mangle(idx.names)[0]] = idx.dtype
             else:
+                # A trivial index with no name
                 names[mangle([None])[0]] = get_dtype(int)
         return names
 
@@ -455,32 +462,6 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
-
-
-def get_common_pandas_type(t1: np.dtype, t2: np.dtype) -> np.dtype:
-    """
-    Get common pandas data type.
-
-    Parameters
-    ----------
-    t1 : np.dtype
-    t2 : np.dtype
-
-    Returns
-    -------
-    np.dtype
-    """
-    if t1 == t2:
-        return t1
-    if pandas.api.types.is_string_dtype(t1):
-        return t1
-    if pandas.api.types.is_string_dtype(t2):
-        return t2
-    if pandas.isna(t1):
-        return t2
-    if pandas.isna(t2):
-        return t1
-    return np.promote_types(np.dtype(t1), np.dtype(t2))
 
 
 def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:
