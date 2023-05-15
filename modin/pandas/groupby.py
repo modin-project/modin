@@ -474,10 +474,11 @@ class DataFrameGroupBy(ClassLogger):
                 )
         elif isinstance(self._df, DataFrame):
             for col, dtype in self._df.dtypes.items():
-                if (
+                # can't calculate change on non-numeric columns, so check for
+                # non-numeric columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
                     isinstance(self._by, (Series, DataFrame))
-                    and col not in self._by.columns
-                    and not is_numeric_dtype(dtype)
+                    and col in self._by._query_compiler.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 
@@ -1144,10 +1145,11 @@ class DataFrameGroupBy(ClassLogger):
                 )
         elif isinstance(self._df, DataFrame):
             for col, dtype in self._df.dtypes.items():
-                if (
+                # can't calculate diff on non-numeric columns, so check for non-numeric
+                # columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
                     isinstance(self._by, (Series, DataFrame))
-                    and col not in self._by._query_compiler.columns
-                    and not is_numeric_dtype(dtype)
+                    and col in self._by._query_compiler.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 
