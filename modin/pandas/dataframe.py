@@ -1506,8 +1506,10 @@ class DataFrame(BasePandasDataset):
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
-        if not isinstance(self.index, pandas.MultiIndex) or (
-            isinstance(self.index, pandas.MultiIndex)
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.index.names) > 1
+        if not is_multiindex or (
+            is_multiindex
             and is_list_like(level)
             and len(level) == self.index.nlevels
         ):
@@ -1523,6 +1525,9 @@ class DataFrame(BasePandasDataset):
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
+        # If values is None, we use all remaining columns not in index or columns.
+        if values is None:
+            values = [c for c in self.columns if c not in index and c not in columns]
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
@@ -2026,10 +2031,12 @@ class DataFrame(BasePandasDataset):
         """
         Stack the prescribed level(s) from columns to index.
         """
-        if not isinstance(self.columns, pandas.MultiIndex) or (
-            isinstance(self.columns, pandas.MultiIndex)
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.index.names) > 1
+        if not is_multiindex or (
+            is_multiindex
             and is_list_like(level)
-            and len(level) == self.columns.nlevels
+            and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)
