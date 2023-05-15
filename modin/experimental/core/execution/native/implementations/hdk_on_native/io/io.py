@@ -159,10 +159,15 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 if isinstance(parse_dates, list) and isinstance(
                     parse_dates[0], (str, int)
                 ):
+                    # Pandas uses datetime64[ns] dtype for dates.
                     timestamp_dt = pa.timestamp("ns")
                     if names and isinstance(parse_dates[0], str):
+                        # If both `names` and column names in `parse_dates` are
+                        # specified, replace the column names with indices.
                         parse_dates = [names.index(name) for name in parse_dates]
                     if isinstance(parse_dates[0], int):
+                        # If column indices are specified, load the column names
+                        # with pandas and replace the indices with column names.
                         column_names = get_col_names()
                         parse_dates = [column_names[i] for i in parse_dates]
                     for c in parse_dates:
