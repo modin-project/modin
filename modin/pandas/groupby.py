@@ -459,7 +459,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
+    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, axis=0):
         from .dataframe import DataFrame
 
         # Should check for API level errors
@@ -472,7 +472,7 @@ class DataFrameGroupBy(ClassLogger):
                 raise TypeError(
                     f"unsupported operand type for -: got {self._df.dtypes}"
                 )
-        elif isinstance(self._df, DataFrame):
+        elif isinstance(self._df, DataFrame) and axis == 0:
             for col, dtype in self._df.dtypes.items():
                 # can't calculate change on non-numeric columns, so check for
                 # non-numeric columns that are not included in the `by`
@@ -491,7 +491,7 @@ class DataFrameGroupBy(ClassLogger):
                     fill_method=fill_method,
                     limit=limit,
                     freq=freq,
-                    **kwargs,
+                    axis=axis,
                 ),
             )
         )
@@ -1143,7 +1143,7 @@ class DataFrameGroupBy(ClassLogger):
                 raise TypeError(
                     f"unsupported operand type for -: got {self._df.dtypes}"
                 )
-        elif isinstance(self._df, DataFrame):
+        elif isinstance(self._df, DataFrame) and axis == 0:
             for col, dtype in self._df.dtypes.items():
                 # can't calculate diff on non-numeric columns, so check for non-numeric
                 # columns that are not included in the `by`
