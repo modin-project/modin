@@ -459,8 +459,41 @@ class DataFrameGroupBy(ClassLogger):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
+    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(
+                    f"unsupported operand type for -: got {self._df.dtypes}"
+                )
+        elif isinstance(self._df, DataFrame):
+            for col, dtype in self._df.dtypes.items():
+                if (
+                    isinstance(self._by, (Series, DataFrame))
+                    and col not in self._by.columns
+                    and not is_numeric_dtype(dtype)
+                ):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_pct_change,
+                numeric_only=False,
+                agg_kwargs=dict(
+                    periods=periods,
+                    fill_method=fill_method,
+                    limit=limit,
+                    freq=freq,
+                    **kwargs,
+                ),
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(

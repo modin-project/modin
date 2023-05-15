@@ -3174,6 +3174,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             drop=drop,
         )
 
+    def groupby_pct_change(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="pct_change",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
     @doc_utils.doc_groupby_method(
         action="get data types", result="data type", refer_to="dtypes"
     )
