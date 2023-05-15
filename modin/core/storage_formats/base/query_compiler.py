@@ -4392,6 +4392,44 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of DateTime methods
 
+    def first(self, offset: pandas.DateOffset):
+        """
+        Select initial periods of time series data based on a date offset.
+
+        When having a query compiler with dates as index, this function can
+        select the first few rows based on a date offset.
+
+        Parameters
+        ----------
+        offset : pandas.DateOffset
+            The offset length of the data to select.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New compiler containing the selected data.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.first)(self, offset)
+
+    def last(self, offset: pandas.DateOffset):
+        """
+        Select final periods of time series data based on a date offset.
+
+        For a query compiler with a sorted DatetimeIndex, this function
+        selects the last few rows based on a date offset.
+
+        Parameters
+        ----------
+        offset : pandas.DateOffset
+            The offset length of the data to select.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New compiler containing the selected data.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.last)(self, offset)
+
     # Resample methods
 
     # FIXME:
