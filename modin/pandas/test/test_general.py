@@ -759,6 +759,56 @@ def test_qcut(retbins):
 
 
 @pytest.mark.parametrize(
+    "bins, labels",
+    [
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            [
+                "-inf_to_-1000",
+                "-1000_to_0",
+                "0_to_1000",
+                "1000_to_2000",
+                "2000_to_inf",
+            ],
+            id="bin_list_spanning_entire_range_with_custom_labels",
+        ),
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            None,
+            id="bin_list_spanning_entire_range_with_default_labels",
+        ),
+        pytest.param(
+            [-1000, 0, 1000, 2000], None, id="bin_list_not_spanning_entire_range"
+        ),
+        pytest.param(
+            10,
+            [f"custom_label{i}" for i in range(9)],
+            id="int_bin_10_with_custom_labels",
+        ),
+        pytest.param(1, None, id="int_bin_1_with_default_labels"),
+        pytest.param(-1, None, id="int_bin_-1_with_default_labels"),
+        pytest.param(111, None, id="int_bin_111_with_default_labels"),
+    ],
+)
+@pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
+def test_cut(retbins, bins, labels):
+    eval_general(
+        pd,
+        pandas,
+        lambda lib, series: lib.cut(series, retbins=retbins, bins=bins, labels=labels),
+        series=pandas.Series(range(1000)),
+        md_extra_kwargs={"series": pd.Series(range(1000))},
+    )
+
+
+def test_cut_fallback():
+    # Test case for falling back to pandas for cut.
+    pandas_result = pandas.cut(range(5), 4)
+    modin_result = pd.cut(range(5), 4)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
     "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
 )
 def test_to_pandas_indices(data):

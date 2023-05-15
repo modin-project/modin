@@ -3588,6 +3588,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.Series.repeat)(self, repeats=repeats)
 
+    @doc_utils.add_refer_to("cut")
+    def cut(
+        self,
+        **kwargs,
+    ):
+        return SeriesDefault.register(pandas.cut)(
+            self,
+            **kwargs,
+        )
+
     # Indexing
 
     index = property(_get_axis(0), _set_axis(0))

@@ -290,6 +290,42 @@ def qcut(
     return x._qcut(q, **kwargs)
 
 
+@_inherit_docstrings(pandas.cut, apilink="pandas.cut")
+@enable_logging
+def cut(
+    x,
+    bins,
+    right: bool = True,
+    labels=None,
+    retbins: bool = False,
+    precision: int = 3,
+    include_lowest: bool = False,
+    duplicates: str = "raise",
+    ordered: bool = True,
+):
+    if isinstance(x, DataFrame):
+        raise ValueError("Input array must be 1 dimensional")
+    if not isinstance(x, Series):
+        import pandas
+
+        return pandas.cut(
+            x,
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
+        )
+    return Series(
+        query_compiler=x._query_compiler.cut(
+            bins, right, labels, retbins, precision, include_lowest, duplicates, ordered
+        )
+    )
+
+
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
 @enable_logging
 def unique(values):  # noqa: PR01, RT01, D200
