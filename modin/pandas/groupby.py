@@ -299,7 +299,16 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.plot)
 
     def ohlc(self):
-        return self._default_to_pandas(lambda df: df.ohlc())
+        from .dataframe import DataFrame
+        return DataFrame(
+            query_compiler=self._query_compiler.groupby_ohlc(
+                by=self._by,
+                axis=self._axis,
+                groupby_kwargs=self._kwargs,
+                agg_args=[],
+                agg_kwargs={},
+            ),
+        )
 
     def __bytes__(self):
         """

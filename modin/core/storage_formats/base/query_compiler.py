@@ -3452,6 +3452,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             series_groupby=True,
         )
 
+    def groupby_ohlc(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+    ):
+        return DataFrameDefault.register(lambda df: df.ohlc())(self)
+
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")
