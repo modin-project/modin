@@ -1096,8 +1096,31 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def diff(self):
-        return self._default_to_pandas(lambda df: df.diff())
+    def diff(self, periods=1, axis=0):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(f"unsupported operand type for -: got {self._df.dtypes}")
+        elif isinstance(self._df, DataFrame):
+            for col, dtype in self._df.dtypes.items():
+                if col not in self._by.columns and not is_numeric_dtype(dtype):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_diff,
+                agg_kwargs=dict(
+                    periods=periods,
+                    axis=axis,
+                ),
+            )
+        )
 
     def take(self, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
