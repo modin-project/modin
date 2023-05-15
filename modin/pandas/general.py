@@ -505,7 +505,7 @@ def to_datetime(
     """
     Convert argument to datetime.
     """
-    if not isinstance(arg, (DataFrame, Series)):
+    if not hasattr(arg, "_to_datetime"):
         return pandas.to_datetime(
             arg,
             errors=errors,
