@@ -142,6 +142,24 @@ class BasePandasDataset(ClassLogger):
         """
         return issubclass(self._pandas_class, pandas.DataFrame)
 
+    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+        """
+        Return or update a ``DataFrame`` or ``Series`` with given `new_query_compiler`.
+
+        Parameters
+        ----------
+        new_query_compiler : PandasQueryCompiler
+            QueryCompiler to use to manage the data.
+        inplace : bool, default: False
+            Whether or not to perform update or creation inplace.
+
+        Returns
+        -------
+        DataFrame, Series or None
+            None if update was done, ``DataFrame`` or ``Series`` otherwise.
+        """
+        raise NotImplementedError()
+
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -1878,17 +1896,18 @@ class BasePandasDataset(ClassLogger):
         """
         Replace values where the condition is True.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.mask(
+        return self._create_or_update_from_compiler(
+            self._query_compiler.mask(
                 cond,
                 other=other,
-                inplace=inplace,
+                inplace=False,
                 axis=axis,
                 level=level,
                 errors=errors,
                 try_cast=try_cast,
                 squeeze_self=not self._is_dataframe,
-            )
+            ),
+            inplace=inplace,
         )
 
     def max(
@@ -3518,6 +3537,7 @@ class BasePandasDataset(ClassLogger):
                 method=method,
                 axis=axis,
                 limit=limit,
+                inplace=False,
                 limit_direction=limit_direction,
                 limit_area=limit_area,
                 downcast=downcast,
