@@ -485,7 +485,6 @@ class DataFrameGroupBy(ClassLogger):
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_pct_change,
-                numeric_only=False,
                 agg_kwargs=dict(
                     periods=periods,
                     fill_method=fill_method,
