@@ -1454,10 +1454,8 @@ class BasePandasDataset(ClassLogger):
         """
         Provide exponentially weighted (EW) calculations.
         """
-        from .ewm import ExponentialMovingWindow
-
-        return ExponentialMovingWindow(
-            self,
+        return self._default_to_pandas(
+            "ewm",
             com=com,
             span=span,
             halflife=halflife,
