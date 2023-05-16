@@ -3463,7 +3463,9 @@ class BasePandasDataset(ClassLogger):
             axis = self._get_axis_number(axis)
             if level is not None:
                 new_labels = (
-                    pandas.Series(index=self.axes[axis]).tz_convert(tz, level=level).index
+                    pandas.Series(index=self.axes[axis])
+                    .tz_convert(tz, level=level)
+                    .index
                 )
             else:
                 new_labels = self.axes[axis].tz_convert(tz)
