@@ -1893,6 +1893,13 @@ class Series(BasePandasDataset):
             )
         )
 
+    def swaplevel(self, i=-2, j=-1, copy=True):  # noqa: PR01, RT01, D200
+        """
+        Swap levels `i` and `j` in a `MultiIndex`.
+        """
+        obj = self.copy() if copy else self
+        return super(Series, obj).swaplevel(i, j, axis=0)
+
     def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the elements in the given positional indices along an axis.
