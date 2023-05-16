@@ -156,14 +156,18 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 column_types = {}
 
             if parse_dates := kwargs["parse_dates"]:
-                if isinstance(parse_dates, list) and isinstance(
-                    parse_dates[0], (str, int)
+                # Either list of column names or list of column indices is supported.
+                if isinstance(parse_dates, list) and (
+                    all(isinstance(col, str) for col in parse_dates)
+                    or all(isinstance(col, int) for col in parse_dates)
                 ):
                     # Pandas uses datetime64[ns] dtype for dates.
                     timestamp_dt = pa.timestamp("ns")
                     if names and isinstance(parse_dates[0], str):
-                        # If both `names` and column names in `parse_dates` are
-                        # specified, replace the column names with indices.
+                        # The `names` parameter could be used to override the
+                        # column names. If new names are specified in `parse_dates`
+                        # they should be replaced with the real names. Replacing
+                        # with the column indices first.
                         parse_dates = [names.index(name) for name in parse_dates]
                     if isinstance(parse_dates[0], int):
                         # If column indices are specified, load the column names
