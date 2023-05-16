@@ -26,7 +26,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import IndexKeyFunc, Axis
+from pandas._typing import IndexKeyFunc, Axis, IgnoreRaise, Level
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
 
@@ -1233,6 +1233,19 @@ class Series(BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
+    def mask(
+        self,
+        cond,
+        other=np.nan,
+        inplace: bool = False,
+        axis: Axis | None = None,
+        level: Level = None,
+        errors: IgnoreRaise | NoDefault = no_default,
+        try_cast=no_default,
+    ):  # noqa: PR01, RT01, D200
+        # This method exists purely because `errors` has different default value for Series :(
+        return super().mask(cond, other, inplace, axis, level, errors, try_cast)
+
     def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
         """
         Map values of Series according to input correspondence.
@@ -1866,7 +1879,7 @@ class Series(BasePandasDataset):
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
-        return self.__constructor__(self.__query_compiler__.swaplevel(i, j, copy))
+        return self.__constructor__(self._query_compiler.swaplevel(i, j, copy))
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
         """
