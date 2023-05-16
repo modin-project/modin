@@ -1290,7 +1290,40 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        check_join_supported(how)
+        try:
+            check_join_supported(how)
+        except NotImplementedError as err:
+            frames = [self] + other_modin_frames
+            # The outer join is not supported by HDK, however, if all the frames
+            # have a trivial index, we can simply concatenate the columns with arrow.
+            if all(
+                f._index_cols is None
+                # Make sure all the frames have an arrow table in partitions. The
+                # method _execute() is no-op if the frame is already materialized
+                # and always returns None.
+                and (f._execute() or f._has_arrow_table())
+                for f in frames
+            ):
+                tables = [f._partitions[0][0].get() for f in frames]
+                column_names = [c for t in tables for c in t.column_names]
+                # Duplicate column names are not supported
+                if len(column_names) == len(set(column_names)):
+                    max_len = max(len(t) for t in tables)
+                    columns = [c for t in tables for c in t.columns]
+                    # Make all columns of the same length, if required.
+                    for i, col in enumerate(columns):
+                        if len(col) < max_len:
+                            columns[i] = pyarrow.chunked_array(
+                                col.chunks
+                                + [pyarrow.nulls(max_len - len(col), col.type)]
+                            )
+                    return self.from_arrow(
+                        at=pyarrow.table(columns, column_names),
+                        columns=[c for f in frames for c in f.columns],
+                        encode_col_names=False,
+                    )
+            raise err
+
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         new_columns_dtype = self.columns.dtype
@@ -2269,6 +2302,12 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        if (
+            self.columns.identical(new_columns)
+            if isinstance(new_columns, Index)
+            else all(self.columns == new_columns)
+        ):
+            return self
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
             expr = self.ref(old)

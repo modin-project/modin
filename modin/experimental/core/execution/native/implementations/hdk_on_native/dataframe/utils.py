@@ -224,9 +224,7 @@ def check_join_supported(join_type: str):
     None
     """
     if join_type not in ("inner", "left"):
-        raise NotImplementedError(
-            f"{join_type} join is not supported by the HDK engine"
-        )
+        raise NotImplementedError(f"{join_type} join")
 
 
 def check_cols_to_join(what, df, col_names):
