@@ -13,7 +13,10 @@
 
 """Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
 
-from typing import Optional, Union, TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union
+
 import numpy as np
 from pandas._typing import Axes
 
@@ -21,11 +24,11 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
 
 if TYPE_CHECKING:
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
+    )
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframePartition,
     )
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
         PandasOnUnidistDataframePartition,
@@ -40,6 +43,47 @@ else:
     from typing import Any
 
     PartitionUnionType = Any
+
+
+def _ray_from_modin_hack(api_layer_object: DataFrame | Series):
+    """
+    HACK:
+    This is a hack that enables support of soda within the ray.data.from_modin function here: https://docs.ray.io/en/latest/data/api/doc/ray.data.from_modin.html#ray-data-from-modin.
+
+    Parameters
+    ----------
+
+    api_layer_object : DataFrame or Series
+        The API layer object (backed by datawarehouses).
+
+    Returns
+    -------
+
+    A list of Ray.ObjectRef that can be combined into the original ``api_layer_object``
+    """
+
+    import pandas as pd
+    import ray
+    from ray import remote
+
+    from modin.core.storage_formats.pandas.utils import compute_chunksize
+
+    num_cpus = ray.cluster_resources()["CPU"]
+    length = len(api_layer_object)
+    part_size: int = compute_chunksize(length, num_cpus)  # type: ignore
+
+    # Calculate the actual number of partitions.
+    # This might be fewer than length / CPUs because there's a minimum chunk size.
+    num_parts = length // part_size
+
+    @remote
+    def store_range(api_layer_object: DataFrame | Series, part_idx: int):
+        start_idx = part_idx * part_size
+        end_idx = (part_idx + 1) * part_size
+        return pd.DataFrame(api_layer_object.iloc[start_idx:end_idx])
+
+    # Store things into ray.
+    return [store_range.remote(api_layer_object, i) for i in range(num_parts)]
 
 
 def unwrap_partitions(
@@ -78,6 +122,13 @@ def unwrap_partitions(
         )
 
     modin_frame = api_layer_object._query_compiler._modin_frame
+
+    is_modin_distributed = hasattr(modin_frame, "_partition_mgr_cls")
+
+    if not is_modin_distributed and axis == 0:
+        # Directly uses the iloc API to extract data.
+        return _ray_from_modin_hack(api_layer_object=api_layer_object)
+
     modin_frame._propagate_index_objs(None)
     if axis is None:
 
