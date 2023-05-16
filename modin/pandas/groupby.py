@@ -1490,6 +1490,21 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
 
     def _try_get_str_func(self, fn):
+        """
+        Try to convert a groupby aggregation function to a string or list of such.
+
+        Parameters
+        ----------
+        fn : callable, str, or Iterable
+
+        Returns
+        -------
+        str, list
+            If `fn` is a callable, return its name if it's a method of the groupby
+            object, otherwise return `fn` itself. If `fn` is a string, return it.
+            If `fn` is an Iterable, return a list of _try_get_str_func applied to
+            each element of `fn`.
+        """
         if not isinstance(fn, str) and isinstance(fn, Iterable):
             return [self._try_get_str_func(f) for f in fn]
         if fn is np.max:
