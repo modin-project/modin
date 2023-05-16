@@ -42,7 +42,6 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
