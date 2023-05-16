@@ -2256,21 +2256,6 @@ class BasePandasDataset(ClassLogger):
             final_query_compiler, inplace=False if copy is None else not copy
         )
 
-    def reindex_like(
-        self, other, method=None, copy=True, limit=None, tolerance=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return an object with matching indices as `other` object.
-        """
-        return self._default_to_pandas(
-            "reindex_like",
-            other,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
-        )
-
     def rename_axis(
         self, mapper=None, index=None, columns=None, axis=None, copy=True, inplace=False
     ):  # noqa: PR01, RT01, D200
