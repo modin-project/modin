@@ -717,7 +717,7 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._query_compiler.align(
+        left, right = self._query_compiler.align(
             other._query_compiler,
             join=join,
             axis=axis,
@@ -728,6 +728,9 @@ class BasePandasDataset(ClassLogger):
             limit=limit,
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
+        )
+        return self.__constructor__(query_compiler=left), self.__constructor__(
+            query_compiler=right
         )
 
     def all(
@@ -2112,7 +2115,7 @@ class BasePandasDataset(ClassLogger):
                 fill_method=fill_method,
                 limit=limit,
                 freq=freq,
-                #squeeze_self=not self._is_dataframe,
+                squeeze_self=not self._is_dataframe,
                 **kwargs,
             )
         )

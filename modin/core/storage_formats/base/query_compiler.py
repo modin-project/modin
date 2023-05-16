@@ -117,6 +117,29 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
+    def __wrap_in_qc(self, obj):
+        """
+        Wrap `obj` in query compiler.
+
+        Parameters
+        ----------
+        obj : any
+            Object to wrap.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler wrapping the object.
+        """
+        if isinstance(obj, pandas.Series):
+            if obj.name is None:
+                obj.name = MODIN_UNNAMED_SERIES_LABEL
+            obj = obj.to_frame()
+        if isinstance(obj, pandas.DataFrame):
+            return self.from_pandas(obj, type(self._modin_frame))
+        else:
+            return obj
+
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -141,14 +164,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         kwargs = try_cast_to_pandas(kwargs)
 
         result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = MODIN_UNNAMED_SERIES_LABEL
-            result = result.to_frame()
-        if isinstance(result, pandas.DataFrame):
-            return self.from_pandas(result, type(self._modin_frame))
-        else:
-            return result
+        if isinstance(result, (tuple, list)):
+            return [self.__wrap_in_qc(obj) for obj in result]
+        return self.__wrap_in_qc(result)
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for

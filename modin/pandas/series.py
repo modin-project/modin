@@ -1004,7 +1004,9 @@ class Series(BasePandasDataset):
         Encode the object as an enumerated type or categorical variable.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.factorize(sort, na_sentinel, use_na_sentinel)
+            query_compiler=self._query_compiler.factorize(
+                sort, na_sentinel, use_na_sentinel
+            )
         )
 
     def fillna(
@@ -1165,7 +1167,6 @@ class Series(BasePandasDataset):
             verbose=verbose,
             show_counts=show_counts,
         )
-
 
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
