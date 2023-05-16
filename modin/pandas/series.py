@@ -913,8 +913,11 @@ class Series(BasePandasDataset):
         """
         Return Integer division and modulo of series and `other`, element-wise (binary operator `divmod`).
         """
-        return self.__constructor__(
-            self._query_compiler.divmod(other, level, fill_value, axis)
+        division, modulo = self._query_compiler.divmod(
+            other=other, level=level, fill_value=fill_value, axis=axis
+        )
+        return self.__constructor__(query_compiler=division), self.__constructor__(
+            query_compiler=modulo
         )
 
     def dot(self, other):  # noqa: PR01, RT01, D200
@@ -1625,8 +1628,11 @@ class Series(BasePandasDataset):
         """
         Return integer division and modulo of series and `other`, element-wise (binary operator `rdivmod`).
         """
-        return self.__constructor__(
-            self._query_compiler.rdivmod(other, level, fill_value, axis)
+        division, modulo = self._query_compiler.rdivmod(
+            other=other, level=level, fill_value=fill_value, axis=axis
+        )
+        return self.__constructor__(query_compiler=division), self.__constructor__(
+            query_compiler=modulo
         )
 
     def rfloordiv(

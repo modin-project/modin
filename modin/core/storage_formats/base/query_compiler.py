@@ -539,6 +539,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, other=other, **kwargs
         )
 
+    @doc_utils.add_refer_to("Series.divmod")
+    def divmod(self, other, **kwargs):  # noqa: PR02
+        return SeriesDefault.register(pandas.Series.divmod)(self, other=other, **kwargs)
+
     @doc_utils.doc_binary_method(
         operation="greater than or equal comparison", sign=">=", op_type="comparison"
     )
@@ -659,6 +663,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.doc_binary_method(operation="addition", sign="+", self_on_right=True)
     def radd(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.radd)(
+            self, other=other, **kwargs
+        )
+
+    @doc_utils.add_refer_to("Series.rdivmod")
+    def rdivmod(self, other, **kwargs):  # noqa: PR02
+        return SeriesDefault.register(pandas.Series.rdivmod)(
             self, other=other, **kwargs
         )
 
