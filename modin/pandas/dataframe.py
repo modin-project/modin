@@ -2810,11 +2810,6 @@ class DataFrame(BasePandasDataset):
         # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.reindex_like.html
         return self.reindex(
             index=other.index,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
-        ).reindex(
             columns=other.columns,
             method=method,
             copy=copy,
