@@ -1495,6 +1495,32 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
+    @doc_utils.add_refer_to("Series.argsort")
+    def argsort(self, **kwargs):  # noqa: PR02
+        """
+        Return the integer indices that would sort the Series values.
+
+        Override ndarray.argsort. Argsorts the value, omitting NA/null values,
+        and places the result in the same locations as the non-NA values.
+
+        Parameters
+        ----------
+        axis : {0 or 'index'}
+            Unused. Parameter needed for compatibility with DataFrame.
+        kind : {'mergesort', 'quicksort', 'heapsort', 'stable'}, default 'quicksort'
+            Choice of sorting algorithm. See :func:`numpy.sort` for more
+            information. 'mergesort' and 'stable' are the only stable algorithms.
+        order : None
+            Has no effect but is accepted for compatibility with numpy.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column QueryCompiler with positions of values within the
+            sort order with -1 indicating nan values.
+        """
+        return SeriesDefault.register(pandas.Series.argsort)(self, **kwargs)
+
     @doc_utils.add_one_column_warning
     # FIXME: adding refer-to note will create two instances of the "Notes" section,
     # this breaks numpydoc style rules and also crashes the doc-style checker script.

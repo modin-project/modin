@@ -742,7 +742,9 @@ class Series(BasePandasDataset):
         Return the integer indices that would sort the Series values.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.argsort(axis, kind, order)
+            query_compiler=self._query_compiler.argsort(
+                axis=axis, kind=kind, order=order
+            )
         )
 
     def autocorr(self, lag=1):  # noqa: PR01, RT01, D200
