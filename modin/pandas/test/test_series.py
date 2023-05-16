@@ -3652,7 +3652,7 @@ def test_unstack(data):
 
 def test_unstack_error_no_multiindex():
     modin_series = pd.Series([0, 1, 2])
-    with pytest.raises(ValueError, match="index must be a MultiIndex to unstack .*"):
+    with pytest.raises(ValueError, match="index must be a MultiIndex to unstack"):
         modin_series.unstack()
 
 
