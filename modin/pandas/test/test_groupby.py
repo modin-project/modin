@@ -743,6 +743,23 @@ def test_large_row_groupby(is_by_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
     eval_ndim(modin_groupby, pandas_groupby)
     eval_cumsum(modin_groupby, pandas_groupby)
+
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=2),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=-1),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(axis=1),
+    )
+
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -1005,6 +1022,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             pandas_groupby,
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=2),
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=-1),
         )
         eval_cummax(modin_groupby, pandas_groupby)
 
