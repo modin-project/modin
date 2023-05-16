@@ -1022,8 +1022,8 @@ def test_reindex_like():
         [22, 71.6, "medium"],
         [35, 95, "medium"],
     ]
-    orig_columns = ["temp_celsius", "temp_fahrenheit", "windspeed"]
-    orig_index = pd.date_range(start="2014-02-12", end="2014-02-15", freq="D")
+    o_columns = ["temp_celsius", "temp_fahrenheit", "windspeed"]
+    o_index = pd.date_range(start="2014-02-12", end="2014-02-15", freq="D")
     new_data = [[28, "low"], [30, "low"], [35.1, "medium"]]
     new_columns = ["temp_celsius", "windspeed"]
     new_index = pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"])
