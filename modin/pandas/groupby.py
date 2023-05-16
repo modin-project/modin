@@ -192,17 +192,6 @@ class DataFrameGroupBy(ClassLogger):
                     return default_handler
             return attr
 
-    def _try_get_str_func(self, fn):
-        if not isinstance(fn, str) and isinstance(fn, Iterable):
-            return [self._try_get_str_func(f) for f in fn]
-        if fn is np.max:
-            # np.max is called "amax", so it's not a method of the groupby object.
-            return "amax"
-        elif fn is np.min:
-            # np.min is called "amin", so it's not a method of the groupby object.
-            return "amin"
-        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
-
     @property
     def ngroups(self):
         return len(self)
@@ -689,12 +678,6 @@ class DataFrameGroupBy(ClassLogger):
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
-
-            def try_get_str_func(fn):
-                if not isinstance(fn, str) and isinstance(fn, Iterable):
-                    return [try_get_str_func(f) for f in fn]
-                return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
-
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
@@ -722,9 +705,6 @@ class DataFrameGroupBy(ClassLogger):
                     result.columns = new_columns_idx
                     return result
 
-            func_dict = {
-                col: self._try_get_str_func(fn) for col, fn in func_dict.items()
-            }
             if any(isinstance(fn, list) for fn in func_dict.values()):
                 # multicolumn case
                 # putting functions in a `list` allows to achieve multicolumn in each partition
@@ -1508,6 +1488,17 @@ class SeriesGroupBy(DataFrameGroupBy):
                 )
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
+
+    def _try_get_str_func(self, fn):
+        if not isinstance(fn, str) and isinstance(fn, Iterable):
+            return [self._try_get_str_func(f) for f in fn]
+        if fn is np.max:
+            # np.max is called "amax", so it's not a method of the groupby object.
+            return "amax"
+        elif fn is np.min:
+            # np.min is called "amin", so it's not a method of the groupby object.
+            return "amin"
+        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
 
     def value_counts(
         self,
