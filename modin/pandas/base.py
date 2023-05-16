@@ -683,7 +683,7 @@ class BasePandasDataset(ClassLogger):
             return f
         f = getattr(np, func, None)
         if f is not None:
-            return self.apply(f, *args, **kwargs)
+            return self._default_to_pandas("agg", func, *args, **kwargs)
         raise ValueError("{} is an unknown string function".format(func))
 
     def _get_dtypes(self):
