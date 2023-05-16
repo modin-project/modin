@@ -1384,6 +1384,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(conj)(self, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.interpolate")
+    def interpolate(self, **kwargs):
+        return DataFrameDefault.register(pandas.DataFrame.interpolate)(self, **kwargs)
+
     # FIXME:
     #   1. This function takes Modin Series and DataFrames via `values` parameter,
     #      we should avoid leaking of the high-level objects to the query compiler level.
@@ -1912,6 +1916,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             contains the memory usage for the corresponding column.
         """
         return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
+
+    @doc_utils.add_refer_to("DataFrame.sizeof")
+    def sizeof(self):
+        return DataFrameDefault.register(pandas.DataFrame.__sizeof__)(self)
 
     @doc_utils.doc_reduce_agg(
         method="number of unique values",

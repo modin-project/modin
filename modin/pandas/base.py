@@ -3513,17 +3513,17 @@ class BasePandasDataset(ClassLogger):
         downcast=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
-        return self.__constructor__(
+        return self._create_or_update_from_compiler(
             self._query_compiler.interpolate(
-                method,
-                axis,
-                limit,
-                inplace,
-                limit_direction,
-                limit_area,
-                downcast,
+                method=method,
+                axis=axis,
+                limit=limit,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
                 **kwargs,
-            )
+            ),
+            inplace=inplace,
         )
 
     # TODO: uncomment the following lines when #3331 issue will be closed

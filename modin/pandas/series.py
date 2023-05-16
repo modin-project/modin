@@ -1008,10 +1008,11 @@ class Series(BasePandasDataset):
         """
         Encode the object as an enumerated type or categorical variable.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.factorize(
-                sort, na_sentinel, use_na_sentinel
-            )
+        return self._default_to_pandas(
+            pandas.Series.factorize,
+            sort=sort,
+            na_sentinel=na_sentinel,
+            use_na_sentinel=use_na_sentinel,
         )
 
     def fillna(
@@ -1136,10 +1137,18 @@ class Series(BasePandasDataset):
         """
         Draw histogram of the input series using matplotlib.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.series_hist(
-                by, ax, grid, xlabelsize, xrot, ylabelsize, yrot, figsize, bins, **kwds
-            )
+        return self._default_to_pandas(
+            pandas.Series.hist,
+            by=by,
+            ax=ax,
+            grid=grid,
+            xlabelsize=xlabelsize,
+            xrot=xrot,
+            ylabelsize=ylabelsize,
+            yrot=yrot,
+            figsize=figsize,
+            bins=bins,
+            **kwds,
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -1883,12 +1892,6 @@ class Series(BasePandasDataset):
                 **kwargs,
             )
         )
-
-    def swaplevel(self, i=-2, j=-1, copy=True):  # noqa: PR01, RT01, D200
-        """
-        Swap levels `i` and `j` in a `MultiIndex`.
-        """
-        return self.__constructor__(self._query_compiler.swaplevel(i, j, copy))
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
         """
