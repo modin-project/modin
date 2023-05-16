@@ -1509,9 +1509,7 @@ class DataFrame(BasePandasDataset):
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.index.names) > 1
         if not is_multiindex or (
-            is_multiindex
-            and is_list_like(level)
-            and len(level) == self.index.nlevels
+            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.unstack(level, fill_value)
@@ -2034,9 +2032,7 @@ class DataFrame(BasePandasDataset):
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.index.names) > 1
         if not is_multiindex or (
-            is_multiindex
-            and is_list_like(level)
-            and len(level) == self.index.nlevels
+            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)

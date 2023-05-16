@@ -1431,7 +1431,9 @@ class Series(BasePandasDataset):
                 query_compiler=self._query_compiler.unstack(level, fill_value)
             )
         else:
-            raise ValueError(f"index must be a MultiIndex to unstack, {type{obj.index}} was passed")
+            raise ValueError(
+                f"index must be a MultiIndex to unstack, {type(self.index)} was passed"
+            )
 
         return result.droplevel(0, axis=1) if result.columns.nlevels > 1 else result
 
