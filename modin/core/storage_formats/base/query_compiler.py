@@ -3809,9 +3809,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler or np.ndarray or list[np.ndarray]
             Returns the result of pd.cut.
         """
+
+        def squeeze_and_cut(df, bins, **kwargs):
+            # We need this function to ensure we squeeze our internal
+            # representation (a dataframe) to a Series.
+            series = df.squeeze(axis=1)
+            return pandas.cut(series, bins, **kwargs)
+
         # We use `default_to_pandas` here since the type and number of
         # results can change depending on the input arguments.
-        return self.default_to_pandas(pandas.cut, (bins,), kwargs)
+        return self.default_to_pandas(squeeze_and_cut, (bins,), kwargs)
 
     # Indexing
 
