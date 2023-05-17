@@ -136,7 +136,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             if names and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
 
-            @functools.cache
+            @functools.lru_cache(maxsize=None)
             def get_col_names():
                 # Using pandas to read the column names
                 return pandas.read_csv(
