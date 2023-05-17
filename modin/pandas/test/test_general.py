@@ -794,7 +794,10 @@ def test_qcut(retbins):
 def test_cut(retbins, bins, labels):
     # Would use `eval_general` here, but `eval_general` expects the operation
     # to be supported by Modin, and so errors out when we give the defaulting
-    # to pandas UserWarning.
+    # to pandas UserWarning. We could get around this by using
+    # @pytest.mark.filterwarnings("ignore"), but then `eval_general` fails because
+    # sometimes the return type of pd.cut is an np.ndarray, and `eval_general` does
+    # not know how to handle that.
     try:
         pd_result = pandas.cut(
             pandas.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
