@@ -1349,26 +1349,29 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.mask")
-    def mask(self, cond, **kwargs):
-        squeeze_self = kwargs.pop("squeeze_self", False)
+    def mask(self, cond, other, **kwargs):  # noqa: PR01
+        """
+        Replace values where the condition `cond` is True.
 
-        def mask(df, cond, **kwargs):
-            if squeeze_self:
-                df = df.squeeze(axis=1)
-            return df.mask(cond, **kwargs)
-
-        return DataFrameDefault.register(mask)(self, cond, **kwargs)
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with elements replaced with ones from `other` where `cond` is True.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.mask)(
+            self, cond, other, **kwargs
+        )
 
     @doc_utils.add_refer_to("DataFrame.pct_change")
-    def pct_change(self, **kwargs):
-        squeeze_self = kwargs.pop("squeeze_self", False)
+    def pct_change(self, **kwargs):  # noqa: PR01
+        """
+        Percentage change between the current and a prior element.
 
-        def pct_change(df, **kwargs):
-            if squeeze_self:
-                df = df.squeeze(axis=1)
-            return df.pct_change(**kwargs)
-
-        return DataFrameDefault.register(pct_change)(self, **kwargs)
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.DataFrame.pct_change)(self, **kwargs)
 
     @doc_utils.add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):

@@ -1258,8 +1258,8 @@ class Series(BasePandasDataset):
         errors: IgnoreRaise | NoDefault = no_default,
         try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
-        # This method exists purely because `errors` has different default value for Series :(
-        return super().mask(cond, other, inplace, axis, level, errors, try_cast)
+        # This method exists because `errors` has different default value for Series :(
+        return super().mask(cond, other, inplace, axis, level, "raise", try_cast)
 
     def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
         """
@@ -1342,9 +1342,8 @@ class Series(BasePandasDataset):
         Return the largest `n` elements.
         """
         if len(self._query_compiler.columns) == 0:
-            raise NotImplementedError(
-                "Series.nlargest is not implemented for empty Series."
-            )
+            # pandas returns empty series when requested largest/smallest from empty series
+            return self.__constructor__(data=[], dtype=float)
         return Series(
             query_compiler=self._query_compiler.nlargest(
                 n=n, columns=self.name, keep=keep
@@ -1356,9 +1355,8 @@ class Series(BasePandasDataset):
         Return the smallest `n` elements.
         """
         if len(self._query_compiler.columns) == 0:
-            raise NotImplementedError(
-                "Series.nsmallest is not implemented for empty Series."
-            )
+            # pandas returns empty series when requested largest/smallest from empty series
+            return self.__constructor__(data=[], dtype=float)
         return self.__constructor__(
             query_compiler=self._query_compiler.nsmallest(
                 n=n, columns=self.name, keep=keep

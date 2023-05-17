@@ -1905,7 +1905,6 @@ class BasePandasDataset(ClassLogger):
                 level=level,
                 errors=errors,
                 try_cast=try_cast,
-                squeeze_self=not self._is_dataframe,
             ),
             inplace=inplace,
         )
@@ -2136,7 +2135,6 @@ class BasePandasDataset(ClassLogger):
                 fill_method=fill_method,
                 limit=limit,
                 freq=freq,
-                squeeze_self=not self._is_dataframe,
                 **kwargs,
             )
         )
