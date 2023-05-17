@@ -37,6 +37,7 @@ import pyarrow as pa
 
 import pandas
 import pandas._libs.lib as lib
+from pandas.core.dtypes.common import is_list_like
 from pandas.io.common import is_url, get_handle
 
 from modin.utils import _inherit_docstrings
@@ -558,12 +559,13 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             if idx_names is None:  # Trivial index
                 idx_col = pa.array(range(len(df.index)), type=pa.int64())
                 at = at.add_column(0, "", idx_col)
-            if (idx_names := kwargs.get("index_label", None)) in (None, True):
-                idx_names = ["" if n is None else str(n) for n in df.index.names]
+            if (idx_names := kwargs.get("index_label", None)) is None:
+                idx_names = df.index.names
             elif idx_names is False:
                 idx_names = [""] * len(df.index.names)
-            elif isinstance(idx_names, str):
+            elif not is_list_like(idx_names):
                 idx_names = [idx_names]
+            idx_names = ["" if n is None else str(n) for n in idx_names]
             at = at.rename_columns(idx_names + df.columns.tolist())
         elif idx_names is not None:
             at = at.drop(idx_names)
