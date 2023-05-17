@@ -468,6 +468,24 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.add_refer_to("DataFrame.align")
     def align(self, other, **kwargs):
+        """
+        Align two objects on their axes with the specified join method.
+
+        Join method is specified for each axis Index.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+        **kwargs : dict
+            Other arguments for aligning.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Aligned `self`.
+        BaseQueryCompiler
+            Aligned `other`.
+        """
         return DataFrameDefault.register(pandas.DataFrame.align)(
             self, other=other, **kwargs
         )
@@ -540,7 +558,25 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.add_refer_to("Series.divmod")
-    def divmod(self, other, **kwargs):  # noqa: PR02
+    def divmod(self, other, **kwargs):
+        """
+        Return Integer division and modulo of `self` and `other`, element-wise (binary operator divmod).
+
+        Equivalent to divmod(`self`, `other`), but with support to substitute a fill_value for missing data in either one of the inputs.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler or scalar value
+        **kwargs : dict
+            Other arguments for division.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Compiler representing Series with divisor part of division.
+        BaseQueryCompiler
+            Compiler representing Series with modulo part of division.
+        """
         return SeriesDefault.register(pandas.Series.divmod)(self, other=other, **kwargs)
 
     @doc_utils.doc_binary_method(
@@ -667,7 +703,25 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.add_refer_to("Series.rdivmod")
-    def rdivmod(self, other, **kwargs):  # noqa: PR02
+    def rdivmod(self, other, **kwargs):
+        """
+        Return Integer division and modulo of `self` and `other`, element-wise (binary operator rdivmod).
+
+        Equivalent to `other` divmod `self`, but with support to substitute a fill_value for missing data in either one of the inputs.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler or scalar value
+        **kwargs : dict
+            Other arguments for division.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Compiler representing Series with divisor part of division.
+        BaseQueryCompiler
+            Compiler representing Series with modulo part of division.
+        """
         return SeriesDefault.register(pandas.Series.rdivmod)(
             self, other=other, **kwargs
         )
@@ -820,7 +874,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.add_refer_to("DataFrame.asfreq")
-    def asfreq(self, **kwargs):
+    def asfreq(self, **kwargs):  # noqa: PR01
+        """
+        Convert time series to specified frequency.
+
+        Returns the original data conformed to a new index with the specified frequency.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler reindexed to the specified frequency.
+        """
         return DataFrameDefault.register(pandas.DataFrame.asfreq)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.clip")
@@ -1385,7 +1449,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(conj)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.interpolate")
-    def interpolate(self, **kwargs):
+    def interpolate(self, **kwargs):  # noqa: PR01
+        """
+        Fill NaN values using an interpolation method.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Returns the same object type as the caller, interpolated at some or all NaN values.
+        """
         return DataFrameDefault.register(pandas.DataFrame.interpolate)(self, **kwargs)
 
     # FIXME:
@@ -1529,7 +1601,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Choice of sorting algorithm. See :func:`numpy.sort` for more
             information. 'mergesort' and 'stable' are the only stable algorithms.
         order : None
-            Has no effect but is accepted for compatibility with numpy.
+            Has no effect but is accepted for compatibility with NumPy.
+        **kwargs : dict
+            Serves compatibility purposes.
 
         Returns
         -------
@@ -1919,6 +1993,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.add_refer_to("DataFrame.sizeof")
     def sizeof(self):
+        """
+        Compute the total memory usage for `self`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Result that holds either a value or Series of values.
+        """
         return DataFrameDefault.register(pandas.DataFrame.__sizeof__)(self)
 
     @doc_utils.doc_reduce_agg(
