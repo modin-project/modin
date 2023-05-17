@@ -2027,9 +2027,9 @@ class DataFrame(BasePandasDataset):
         Stack the prescribed level(s) from columns to index.
         """
         # This ensures that non-pandas MultiIndex objects are caught.
-        is_multiindex = len(self.index.names) > 1
+        is_multiindex = len(self.columns.names) > 1
         if not is_multiindex or (
-            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
+            is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)
