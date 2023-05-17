@@ -322,8 +322,16 @@ def cut(
             duplicates=duplicates,
             ordered=ordered,
         )
-    return Series(
-        query_compiler=x._query_compiler.cut(
+
+    def _wrap_in_series_object(qc_result):
+        if isinstance(qc_result, type(x._query_compiler)):
+            return Series(query_compiler=qc_result)
+        if isinstance(qc_result, (tuple, list)):
+            return [_wrap_in_series_object(result) for result in qc_result]
+        return qc_result
+
+    return _wrap_in_series_object(
+        x._query_compiler.cut(
             bins,
             right=right,
             labels=labels,

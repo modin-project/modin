@@ -3810,11 +3810,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Returns the result of pd.cut.
         """
 
-        def squeeze_and_cut(df, bins, **kwargs):
+        def squeeze_and_cut(df, *args, **kwargs):
             # We need this function to ensure we squeeze our internal
             # representation (a dataframe) to a Series.
             series = df.squeeze(axis=1)
-            return pandas.cut(series, bins, **kwargs)
+            return pandas.cut(series, *args, **kwargs)
 
         # We use `default_to_pandas` here since the type and number of
         # results can change depending on the input arguments.
