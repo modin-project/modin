@@ -3801,19 +3801,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         ----------
         bins : int, array of ints, or IntervalIndex
             The criteria to bin by.
-        kwargs : dict
+        **kwargs : dict
             The keyword arguments to pass through.
 
         Returns
         -------
-        BaseQueryCompiler
-            New QueryCompiler with
+        BaseQueryCompiler or np.ndarray or list[np.ndarray]
+            Returns the result of pd.cut.
         """
-        return SeriesDefault.register(pandas.cut)(
-            self,
-            bins,
-            **kwargs,
-        )
+        # We use `default_to_pandas` here since the type and number of
+        # results can change depending on the input arguments.
+        return self.default_to_pandas(pandas.cut, (bins,), kwargs)
 
     # Indexing
 
