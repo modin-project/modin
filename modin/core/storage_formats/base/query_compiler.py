@@ -117,6 +117,29 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     for a list of requirements for subclassing this object.
     """
 
+    def __wrap_in_qc(self, obj):
+        """
+        Wrap `obj` in query compiler.
+
+        Parameters
+        ----------
+        obj : any
+            Object to wrap.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Query compiler wrapping the object.
+        """
+        if isinstance(obj, pandas.Series):
+            if obj.name is None:
+                obj.name = MODIN_UNNAMED_SERIES_LABEL
+            obj = obj.to_frame()
+        if isinstance(obj, pandas.DataFrame):
+            return self.from_pandas(obj, type(self._modin_frame))
+        else:
+            return obj
+
     def default_to_pandas(self, pandas_op, *args, **kwargs):
         """
         Do fallback to pandas for the passed function.
@@ -141,14 +164,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         kwargs = try_cast_to_pandas(kwargs)
 
         result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
-        if isinstance(result, pandas.Series):
-            if result.name is None:
-                result.name = MODIN_UNNAMED_SERIES_LABEL
-            result = result.to_frame()
-        if isinstance(result, pandas.DataFrame):
-            return self.from_pandas(result, type(self._modin_frame))
-        else:
-            return result
+        if isinstance(result, (tuple, list)):
+            return [self.__wrap_in_qc(obj) for obj in result]
+        return self.__wrap_in_qc(result)
 
     # Abstract Methods and Fields: Must implement in children classes
     # In some cases, there you may be able to use the same implementation for
@@ -448,6 +466,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
+    @doc_utils.add_refer_to("DataFrame.align")
+    def align(self, other, **kwargs):
+        """
+        Align two objects on their axes with the specified join method.
+
+        Join method is specified for each axis Index.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler
+        **kwargs : dict
+            Other arguments for aligning.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Aligned `self`.
+        BaseQueryCompiler
+            Aligned `other`.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.align)(
+            self, other=other, **kwargs
+        )
+
     @doc_utils.doc_binary_method(operation="addition", sign="+")
     def add(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.add)(self, other=other, **kwargs)
@@ -514,6 +556,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return BinaryDefault.register(pandas.DataFrame.floordiv)(
             self, other=other, **kwargs
         )
+
+    @doc_utils.add_refer_to("Series.divmod")
+    def divmod(self, other, **kwargs):
+        """
+        Return Integer division and modulo of `self` and `other`, element-wise (binary operator divmod).
+
+        Equivalent to divmod(`self`, `other`), but with support to substitute a fill_value for missing data in either one of the inputs.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler or scalar value
+        **kwargs : dict
+            Other arguments for division.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Compiler representing Series with divisor part of division.
+        BaseQueryCompiler
+            Compiler representing Series with modulo part of division.
+        """
+        return SeriesDefault.register(pandas.Series.divmod)(self, other=other, **kwargs)
 
     @doc_utils.doc_binary_method(
         operation="greater than or equal comparison", sign=">=", op_type="comparison"
@@ -635,6 +699,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.doc_binary_method(operation="addition", sign="+", self_on_right=True)
     def radd(self, other, **kwargs):  # noqa: PR02
         return BinaryDefault.register(pandas.DataFrame.radd)(
+            self, other=other, **kwargs
+        )
+
+    @doc_utils.add_refer_to("Series.rdivmod")
+    def rdivmod(self, other, **kwargs):
+        """
+        Return Integer division and modulo of `self` and `other`, element-wise (binary operator rdivmod).
+
+        Equivalent to `other` divmod `self`, but with support to substitute a fill_value for missing data in either one of the inputs.
+
+        Parameters
+        ----------
+        other : BaseQueryCompiler or scalar value
+        **kwargs : dict
+            Other arguments for division.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Compiler representing Series with divisor part of division.
+        BaseQueryCompiler
+            Compiler representing Series with modulo part of division.
+        """
+        return SeriesDefault.register(pandas.Series.rdivmod)(
             self, other=other, **kwargs
         )
 
@@ -784,6 +872,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             squeeze_other=True,
             **kwargs,
         )
+
+    @doc_utils.add_refer_to("DataFrame.asfreq")
+    def asfreq(self, **kwargs):  # noqa: PR01
+        """
+        Convert time series to specified frequency.
+
+        Returns the original data conformed to a new index with the specified frequency.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler reindexed to the specified frequency.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.asfreq)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.clip")
     def clip(self, lower, upper, **kwargs):  # noqa: PR02
@@ -1246,6 +1348,31 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def sum(self, **kwargs):  # noqa: PR02
         return DataFrameDefault.register(pandas.DataFrame.sum)(self, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.mask")
+    def mask(self, cond, other, **kwargs):  # noqa: PR01
+        """
+        Replace values where the condition `cond` is True.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with elements replaced with ones from `other` where `cond` is True.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.mask)(
+            self, cond, other, **kwargs
+        )
+
+    @doc_utils.add_refer_to("DataFrame.pct_change")
+    def pct_change(self, **kwargs):  # noqa: PR01
+        """
+        Percentage change between the current and a prior element.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.DataFrame.pct_change)(self, **kwargs)
+
     @doc_utils.add_refer_to("to_datetime")
     def to_datetime(self, *args, **kwargs):
         """
@@ -1323,6 +1450,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return pandas.DataFrame(np.conj(df))
 
         return DataFrameDefault.register(conj)(self, **kwargs)
+
+    @doc_utils.add_refer_to("DataFrame.interpolate")
+    def interpolate(self, **kwargs):  # noqa: PR01
+        """
+        Fill NaN values using an interpolation method.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Returns the same object type as the caller, interpolated at some or all NaN values.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.interpolate)(self, **kwargs)
 
     # FIXME:
     #   1. This function takes Modin Series and DataFrames via `values` parameter,
@@ -1448,6 +1587,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             QueryCompiler with all `to_replace` values replaced by `value`.
         """
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
+
+    @doc_utils.add_refer_to("Series.argsort")
+    def argsort(self, **kwargs):  # noqa: PR02
+        """
+        Return the integer indices that would sort the Series values.
+
+        Override ndarray.argsort. Argsorts the value, omitting NA/null values,
+        and places the result in the same locations as the non-NA values.
+
+        Parameters
+        ----------
+        axis : {0 or 'index'}
+            Unused. Parameter needed for compatibility with DataFrame.
+        kind : {'mergesort', 'quicksort', 'heapsort', 'stable'}, default 'quicksort'
+            Choice of sorting algorithm. See :func:`numpy.sort` for more
+            information. 'mergesort' and 'stable' are the only stable algorithms.
+        order : None
+            Has no effect but is accepted for compatibility with NumPy.
+        **kwargs : dict
+            Serves compatibility purposes.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            One-column QueryCompiler with positions of values within the
+            sort order with -1 indicating nan values.
+        """
+        return SeriesDefault.register(pandas.Series.argsort)(self, **kwargs)
 
     @doc_utils.add_one_column_warning
     # FIXME: adding refer-to note will create two instances of the "Notes" section,
@@ -1827,6 +1994,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.memory_usage)(self, **kwargs)
 
+    @doc_utils.add_refer_to("DataFrame.sizeof")
+    def sizeof(self):
+        """
+        Compute the total memory usage for `self`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            Result that holds either a value or Series of values.
+        """
+        return DataFrameDefault.register(pandas.DataFrame.__sizeof__)(self)
+
     @doc_utils.doc_reduce_agg(
         method="number of unique values",
         refer_to="nunique",
@@ -1881,25 +2060,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Abstract column/row partitions reduce operations
 
-    # Abstract column/row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # Currently, this means a Pandas Series will be returned, but in the future
-    # we will implement a Distributed Series, and this will be returned
-    # instead.
     @doc_utils.add_refer_to("DataFrame.describe")
-    def describe(self, **kwargs):  # noqa: PR02
+    def describe(
+        self,
+        percentiles: np.ndarray,
+        datetime_is_numeric: bool,
+    ):
         """
         Generate descriptive statistics.
 
         Parameters
         ----------
         percentiles : list-like
-        include : "all" or list of dtypes, optional
-        exclude : list of dtypes, optional
         datetime_is_numeric : bool
-        **kwargs : dict
-            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -1907,9 +2080,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             QueryCompiler object containing the descriptive statistics
             of the underlying data.
         """
-        return DataFrameDefault.register(pandas.DataFrame.describe)(self, **kwargs)
-
-    # END Abstract column/row partitions reduce operations over select indices
+        return DataFrameDefault.register(pandas.DataFrame.describe)(
+            self,
+            percentiles=percentiles,
+            datetime_is_numeric=datetime_is_numeric,
+            include="all",
+        )
 
     # Map across rows/columns
     # These operations require some global knowledge of the full column/row
@@ -3156,6 +3332,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return self.groupby_agg(
             by=by,
             agg_func="fillna",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_diff(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        return self.groupby_agg(
+            by=by,
+            agg_func="diff",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_pct_change(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="pct_change",
             axis=axis,
             groupby_kwargs=groupby_kwargs,
             agg_args=agg_args,

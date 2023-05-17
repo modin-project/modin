@@ -743,6 +743,23 @@ def test_large_row_groupby(is_by_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
     eval_ndim(modin_groupby, pandas_groupby)
     eval_cumsum(modin_groupby, pandas_groupby)
+
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=2),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=-1),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(axis=1),
+    )
+
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -1006,6 +1023,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
         )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=2),
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=-1),
+        )
         eval_cummax(modin_groupby, pandas_groupby)
 
         apply_functions = [lambda df: df.sum(), min]
@@ -1023,7 +1050,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             eval_var(modin_groupby, pandas_groupby)
             eval_skew(modin_groupby, pandas_groupby)
 
-        agg_functions = [lambda df: df.sum(), "min", "max", max, sum]
+        agg_functions = [
+            lambda df: df.sum(),
+            "min",
+            "max",
+            max,
+            sum,
+            np.mean,
+            ["min", "max"],
+            [np.mean, np.std, np.var, np.max, np.min],
+        ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
             eval_aggregate(modin_groupby, pandas_groupby, func)

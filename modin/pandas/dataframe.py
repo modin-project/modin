@@ -1136,32 +1136,6 @@ class DataFrame(BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
-
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `DataFrame` are contained in `values`.
@@ -1379,7 +1353,9 @@ class DataFrame(BasePandasDataset):
                 f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
-        if left_index and right_index:
+        # If we are joining on the index and we are using
+        # default parameters we can map this to a join
+        if left_index and right_index and not indicator:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
@@ -2797,6 +2773,25 @@ class DataFrame(BasePandasDataset):
             return df.style
 
         return self._default_to_pandas(style)
+
+    def reindex_like(
+        self: "DataFrame",
+        other,
+        method=None,
+        copy: bool = True,
+        limit=None,
+        tolerance=None,
+    ) -> "DataFrame":
+        # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
+        # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.reindex_like.html
+        return self.reindex(
+            index=other.index,
+            columns=other.columns,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+        )
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """

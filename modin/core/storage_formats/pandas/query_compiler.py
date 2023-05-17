@@ -1894,24 +1894,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Column/Row partitions reduce operations
 
-    # Column/Row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # This will return a new QueryCompiler object which the front end will handle.
-
-    def describe(self, **kwargs):
+    def describe(
+        self,
+        percentiles: np.ndarray,
+        datetime_is_numeric: bool,
+    ):
         # Use pandas to calculate the correct columns
         empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .describe(**kwargs)
+            .describe(
+                percentiles, datetime_is_numeric=datetime_is_numeric, include="all"
+            )
         )
         new_index = empty_df.index
 
         # Note: `describe` convert timestamp type to object type
         # which results in the loss of two values in index: `first` and `last`
         # for empty DataFrame.
-        datetime_is_numeric = kwargs.get("datetime_is_numeric") or False
         if not any(map(is_numeric_dtype, empty_df.dtypes)) and not datetime_is_numeric:
             for col_name in empty_df.dtypes.index:
                 # if previosly type of `col_name` was datetime or timedelta
@@ -1930,7 +1930,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # we can have cases where certain partitions do not contain any of the
             # object string data leading to an index mismatch between partitions.
             # Thus, we must reindex each partition with the global new_index.
-            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
+            return (
+                df.iloc[:, internal_indices]
+                .describe(
+                    percentiles=percentiles,
+                    datetime_is_numeric=datetime_is_numeric,
+                    include="all",
+                )
+                .reindex(new_index)
+            )
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(

@@ -16,6 +16,7 @@ import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
+from pandas.core.describe import refine_percentiles
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -23,7 +24,6 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
-    pandas_dtype,
     is_integer,
 )
 from pandas.core.indexes.api import ensure_index
@@ -50,6 +50,7 @@ from pandas._typing import (
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
     RandomState,
+    npt,
 )
 import pickle as pkl
 import re
@@ -141,6 +142,24 @@ class BasePandasDataset(ClassLogger):
         bool : Whether this is a dataframe.
         """
         return issubclass(self._pandas_class, pandas.DataFrame)
+
+    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+        """
+        Return or update a ``DataFrame`` or ``Series`` with given `new_query_compiler`.
+
+        Parameters
+        ----------
+        new_query_compiler : PandasQueryCompiler
+            QueryCompiler to use to manage the data.
+        inplace : bool, default: False
+            Whether or not to perform update or creation inplace.
+
+        Returns
+        -------
+        DataFrame, Series or None
+            None if update was done, ``DataFrame`` or ``Series`` otherwise.
+        """
+        raise NotImplementedError()
 
     def _add_sibling(self, sibling):
         """
@@ -717,9 +736,8 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._default_to_pandas(
-            "align",
-            other,
+        left, right = self._query_compiler.align(
+            other._query_compiler,
             join=join,
             axis=axis,
             level=level,
@@ -729,6 +747,9 @@ class BasePandasDataset(ClassLogger):
             limit=limit,
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
+        )
+        return self.__constructor__(query_compiler=left), self.__constructor__(
+            query_compiler=right
         )
 
     def all(
@@ -912,13 +933,14 @@ class BasePandasDataset(ClassLogger):
         """
         Convert time series to specified frequency.
         """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.asfreq(
+                freq=freq,
+                method=method,
+                how=how,
+                normalize=normalize,
+                fill_value=fill_value,
+            )
         )
 
     def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
@@ -1130,6 +1152,8 @@ class BasePandasDataset(ClassLogger):
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
+        # select_dtypes is only implemented on DataFrames, but the numeric_only
+        # flag will always be set to false by the Series frontend
         frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
         if level is not None:
@@ -1208,54 +1232,35 @@ class BasePandasDataset(ClassLogger):
         """
         Generate descriptive statistics.
         """
-        if include is not None and (isinstance(include, np.dtype) or include != "all"):
-            if not is_list_like(include):
-                include = [include]
-            include = [pandas_dtype(i) if i != np.number else i for i in include]
-            if not any(
-                (isinstance(inc, np.dtype) and inc == d)
-                or (
-                    not isinstance(inc, np.dtype)
-                    and inc.__subclasscheck__(getattr(np, d.__str__()))
+        # copied from pandas.core.describe.describe_ndframe
+        percentiles = refine_percentiles(percentiles)
+        data = self
+        if self._is_dataframe:
+            # include/exclude arguments are ignored for Series
+            if (include is None) and (exclude is None):
+                # when some numerics are found, keep only numerics
+                default_include: list[npt.DTypeLike] = [np.number]
+                if datetime_is_numeric:
+                    default_include.append("datetime")
+                data = self.select_dtypes(include=default_include)
+                if len(data.columns) == 0:
+                    data = self
+            elif include == "all":
+                if exclude is not None:
+                    msg = "exclude must be None when include is 'all'"
+                    raise ValueError(msg)
+                data = self
+            else:
+                data = self.select_dtypes(
+                    include=include,
+                    exclude=exclude,
                 )
-                for d in self._get_dtypes()
-                for inc in include
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if exclude is not None:
-            if not is_list_like(exclude):
-                exclude = [exclude]
-            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
-            if all(
-                (isinstance(exc, np.dtype) and exc == d)
-                or (
-                    not isinstance(exc, np.dtype)
-                    and exc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for exc in exclude
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if percentiles is not None:
-            # explicit conversion of `percentiles` to list
-            percentiles = list(percentiles)
-
-            # get them all to be in [0, 1]
-            validate_percentile(percentiles)
-
-            # median should always be included
-            if 0.5 not in percentiles:
-                percentiles.append(0.5)
-            percentiles = np.asarray(percentiles)
-        else:
-            percentiles = np.array([0.25, 0.5, 0.75])
+        if data.empty:
+            # Match pandas error from concatenting empty list of series descriptions.
+            raise ValueError("No objects to concatenate")
         return self.__constructor__(
-            query_compiler=self._query_compiler.describe(
+            query_compiler=data._query_compiler.describe(
                 percentiles=percentiles,
-                include=include,
-                exclude=exclude,
                 datetime_is_numeric=datetime_is_numeric,
             )
         )
@@ -1875,15 +1880,17 @@ class BasePandasDataset(ClassLogger):
         """
         Replace values where the condition is True.
         """
-        return self._default_to_pandas(
-            "mask",
-            cond,
-            other=other,
+        return self._create_or_update_from_compiler(
+            self._query_compiler.mask(
+                cond,
+                other=other,
+                inplace=False,
+                axis=axis,
+                level=level,
+                errors=errors,
+                try_cast=try_cast,
+            ),
             inplace=inplace,
-            axis=axis,
-            level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     def max(
@@ -2097,13 +2104,23 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        return self._default_to_pandas(
-            "pct_change",
-            periods=periods,
-            fill_method=fill_method,
-            limit=limit,
-            freq=freq,
-            **kwargs,
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for /: got {dtype}")
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                **kwargs,
+            )
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -2270,21 +2287,6 @@ class BasePandasDataset(ClassLogger):
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(
             final_query_compiler, inplace=False if copy is None else not copy
-        )
-
-    def reindex_like(
-        self, other, method=None, copy=True, limit=None, tolerance=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return an object with matching indices as `other` object.
-        """
-        return self._default_to_pandas(
-            "reindex_like",
-            other,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
         )
 
     def rename_axis(
@@ -3421,6 +3423,10 @@ class BasePandasDataset(ClassLogger):
             and not self.axes[axis].is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
+
+        if before is not None and after is not None and before > after:
+            raise ValueError(f"Truncate: {after} must be after {before}")
+
         s = slice(*self.axes[axis].slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
@@ -3499,6 +3505,31 @@ class BasePandasDataset(ClassLogger):
                 .index
             )
             return self.set_axis(new_labels, axis, copy=copy)
+
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction: Optional[str] = None,
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self._create_or_update_from_compiler(
+            self._query_compiler.interpolate(
+                method=method,
+                axis=axis,
+                limit=limit,
+                inplace=False,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
+                **kwargs,
+            ),
+            inplace=inplace,
+        )
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
@@ -3968,7 +3999,7 @@ class BasePandasDataset(ClassLogger):
         -------
         int
         """
-        return self._default_to_pandas("__sizeof__")
+        return self._query_compiler.sizeof()
 
     def __str__(self):  # pragma: no cover
         """
