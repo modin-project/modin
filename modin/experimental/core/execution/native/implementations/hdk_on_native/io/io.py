@@ -19,6 +19,7 @@ Module houses ``HdkOnNativeIO`` class.
 
 from csv import Dialect
 from typing import Union, Sequence, Callable, Dict, Tuple
+import functools
 import inspect
 import os
 
@@ -135,16 +136,12 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             if names and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
 
-            column_names = None
-
+            @functools.cache
             def get_col_names():
-                nonlocal column_names
-                if column_names is None:
-                    # Using pandas to read the column names
-                    column_names = pandas.read_csv(
-                        kwargs["filepath_or_buffer"], nrows=0, engine="c"
-                    ).columns.tolist()
-                return column_names
+                # Using pandas to read the column names
+                return pandas.read_csv(
+                    kwargs["filepath_or_buffer"], nrows=0, engine="c"
+                ).columns.tolist()
 
             if dtype := kwargs["dtype"]:
                 if isinstance(dtype, dict):
