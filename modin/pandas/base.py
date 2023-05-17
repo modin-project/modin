@@ -143,6 +143,24 @@ class BasePandasDataset(ClassLogger):
         """
         return issubclass(self._pandas_class, pandas.DataFrame)
 
+    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+        """
+        Return or update a ``DataFrame`` or ``Series`` with given `new_query_compiler`.
+
+        Parameters
+        ----------
+        new_query_compiler : PandasQueryCompiler
+            QueryCompiler to use to manage the data.
+        inplace : bool, default: False
+            Whether or not to perform update or creation inplace.
+
+        Returns
+        -------
+        DataFrame, Series or None
+            None if update was done, ``DataFrame`` or ``Series`` otherwise.
+        """
+        raise NotImplementedError()
+
     def _add_sibling(self, sibling):
         """
         Add a DataFrame or Series object to the list of siblings.
@@ -718,9 +736,8 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._default_to_pandas(
-            "align",
-            other,
+        left, right = self._query_compiler.align(
+            other._query_compiler,
             join=join,
             axis=axis,
             level=level,
@@ -730,6 +747,9 @@ class BasePandasDataset(ClassLogger):
             limit=limit,
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
+        )
+        return self.__constructor__(query_compiler=left), self.__constructor__(
+            query_compiler=right
         )
 
     def all(
@@ -913,13 +933,14 @@ class BasePandasDataset(ClassLogger):
         """
         Convert time series to specified frequency.
         """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.asfreq(
+                freq=freq,
+                method=method,
+                how=how,
+                normalize=normalize,
+                fill_value=fill_value,
+            )
         )
 
     def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
@@ -1859,15 +1880,17 @@ class BasePandasDataset(ClassLogger):
         """
         Replace values where the condition is True.
         """
-        return self._default_to_pandas(
-            "mask",
-            cond,
-            other=other,
+        return self._create_or_update_from_compiler(
+            self._query_compiler.mask(
+                cond,
+                other=other,
+                inplace=False,
+                axis=axis,
+                level=level,
+                errors=errors,
+                try_cast=try_cast,
+            ),
             inplace=inplace,
-            axis=axis,
-            level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     def max(
@@ -2081,13 +2104,23 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        return self._default_to_pandas(
-            "pct_change",
-            periods=periods,
-            fill_method=fill_method,
-            limit=limit,
-            freq=freq,
-            **kwargs,
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for /: got {dtype}")
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                **kwargs,
+            )
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -3459,6 +3492,31 @@ class BasePandasDataset(ClassLogger):
         )
         return self.set_axis(new_labels, axis, copy=copy)
 
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction: Optional[str] = None,
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self._create_or_update_from_compiler(
+            self._query_compiler.interpolate(
+                method=method,
+                axis=axis,
+                limit=limit,
+                inplace=False,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
+                **kwargs,
+            ),
+            inplace=inplace,
+        )
+
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
     #     """
@@ -3927,7 +3985,7 @@ class BasePandasDataset(ClassLogger):
         -------
         int
         """
-        return self._default_to_pandas("__sizeof__")
+        return self._query_compiler.sizeof()
 
     def __str__(self):  # pragma: no cover
         """
