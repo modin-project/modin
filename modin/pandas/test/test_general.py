@@ -792,19 +792,45 @@ def test_qcut(retbins):
 )
 @pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
 def test_cut(retbins, bins, labels):
-    eval_general(
-        pd,
-        pandas,
-        lambda lib, series: lib.cut(series, retbins=retbins, bins=bins, labels=labels),
-        series=pandas.Series(range(1000)),
-        md_extra_kwargs={"series": pd.Series(range(1000))},
-    )
+    # Would use `eval_general` here, but `eval_general` expects the operation
+    # to be supported by Modin, and so errors out when we give the defaulting
+    # to pandas UserWarning.
+    try:
+        pd_result = pandas.cut(
+            pandas.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+        )
+    except Exception as pd_e:
+        with pytest.raises(Exception) as md_e:
+            with warns_that_defaulting_to_pandas():
+                md_result = pd.cut(
+                    pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+                )
+        assert isinstance(
+            md_e.value, type(pd_e)
+        ), f"Got Modin Exception type {type(md_e.value)}, but pandas Exception type {type(pd_e)} was expected"
+    else:
+        with warns_that_defaulting_to_pandas():
+            md_result = pd.cut(
+                pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+            )
+        if not isinstance(pd_result, tuple):
+            df_equals(md_result, pd_result)
+        else:
+            assert isinstance(
+                md_result, tuple
+            ), "Modin returned single value, but pandas returned tuple of values"
+            for pd_res, md_res in zip(pd_result, md_result):
+                if isinstance(pd_res, pandas.Series):
+                    df_equals(pd_res, md_res)
+                else:
+                    np.testing.assert_array_equal(pd_res, md_res)
 
 
 def test_cut_fallback():
     # Test case for falling back to pandas for cut.
     pandas_result = pandas.cut(range(5), 4)
-    modin_result = pd.cut(range(5), 4)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.cut(range(5), 4)
     df_equals(modin_result, pandas_result)
 
 

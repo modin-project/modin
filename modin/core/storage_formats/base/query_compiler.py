@@ -3818,7 +3818,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         # We use `default_to_pandas` here since the type and number of
         # results can change depending on the input arguments.
-        return self.default_to_pandas(squeeze_and_cut, (bins,), kwargs)
+        return self.default_to_pandas(squeeze_and_cut, bins, **kwargs)
 
     # Indexing
 

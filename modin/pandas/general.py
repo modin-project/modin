@@ -327,7 +327,7 @@ def cut(
         if isinstance(qc_result, type(x._query_compiler)):
             return Series(query_compiler=qc_result)
         if isinstance(qc_result, (tuple, list)):
-            return [_wrap_in_series_object(result) for result in qc_result]
+            return tuple([_wrap_in_series_object(result) for result in qc_result])
         return qc_result
 
     return _wrap_in_series_object(
