@@ -459,8 +459,41 @@ class DataFrameGroupBy(ClassLogger):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
+    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, axis=0):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(
+                    f"unsupported operand type for -: got {self._df.dtypes}"
+                )
+        elif isinstance(self._df, DataFrame) and axis == 0:
+            for col, dtype in self._df.dtypes.items():
+                # can't calculate change on non-numeric columns, so check for
+                # non-numeric columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
+                    isinstance(self._by, (Series, DataFrame))
+                    and col in self._by._query_compiler.columns
+                ):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_pct_change,
+                agg_kwargs=dict(
+                    periods=periods,
+                    fill_method=fill_method,
+                    limit=limit,
+                    freq=freq,
+                    axis=axis,
+                ),
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -678,12 +711,6 @@ class DataFrameGroupBy(ClassLogger):
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
-
-            def try_get_str_func(fn):
-                if not isinstance(fn, str) and isinstance(fn, Iterable):
-                    return [try_get_str_func(f) for f in fn]
-                return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
-
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
@@ -711,7 +738,6 @@ class DataFrameGroupBy(ClassLogger):
                     result.columns = new_columns_idx
                     return result
 
-            func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
             if any(isinstance(fn, list) for fn in func_dict.values()):
                 # multicolumn case
                 # putting functions in a `list` allows to achieve multicolumn in each partition
@@ -1096,8 +1122,38 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def diff(self):
-        return self._default_to_pandas(lambda df: df.diff())
+    def diff(self, periods=1, axis=0):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(
+                    f"unsupported operand type for -: got {self._df.dtypes}"
+                )
+        elif isinstance(self._df, DataFrame) and axis == 0:
+            for col, dtype in self._df.dtypes.items():
+                # can't calculate diff on non-numeric columns, so check for non-numeric
+                # columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
+                    isinstance(self._by, (Series, DataFrame))
+                    and col in self._by._query_compiler.columns
+                ):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_diff,
+                agg_kwargs=dict(
+                    periods=periods,
+                    axis=axis,
+                ),
+            )
+        )
 
     def take(self, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
@@ -1496,6 +1552,32 @@ class SeriesGroupBy(DataFrameGroupBy):
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
+    def _try_get_str_func(self, fn):
+        """
+        Try to convert a groupby aggregation function to a string or list of such.
+
+        Parameters
+        ----------
+        fn : callable, str, or Iterable
+
+        Returns
+        -------
+        str, list
+            If `fn` is a callable, return its name if it's a method of the groupby
+            object, otherwise return `fn` itself. If `fn` is a string, return it.
+            If `fn` is an Iterable, return a list of _try_get_str_func applied to
+            each element of `fn`.
+        """
+        if not isinstance(fn, str) and isinstance(fn, Iterable):
+            return [self._try_get_str_func(f) for f in fn]
+        if fn is np.max:
+            # np.max is called "amax", so it's not a method of the groupby object.
+            return "amax"
+        elif fn is np.min:
+            # np.min is called "amin", so it's not a method of the groupby object.
+            return "amin"
+        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
+
     def value_counts(
         self,
         normalize: bool = False,
@@ -1574,7 +1656,7 @@ class SeriesGroupBy(DataFrameGroupBy):
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
             maybe_squeezed = result.squeeze() if self._squeeze else result
-            return maybe_squeezed.set_axis(labels=func, axis=1)
+            return maybe_squeezed.set_axis(labels=self._try_get_str_func(func), axis=1)
         else:
             return super().aggregate(func, *args, **kwargs)
 

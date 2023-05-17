@@ -26,7 +26,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import IndexKeyFunc, Axis
+from pandas._typing import IndexKeyFunc, Axis, IgnoreRaise, Level
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
 
@@ -741,8 +741,10 @@ class Series(BasePandasDataset):
         """
         Return the integer indices that would sort the Series values.
         """
-        return self._default_to_pandas(
-            pandas.Series.argsort, axis=axis, kind=kind, order=order
+        return self.__constructor__(
+            query_compiler=self._query_compiler.argsort(
+                axis=axis, kind=kind, order=order
+            )
         )
 
     def autocorr(self, lag=1):  # noqa: PR01, RT01, D200
@@ -755,8 +757,8 @@ class Series(BasePandasDataset):
         """
         Return boolean Series equivalent to left <= series <= right.
         """
-        return self._default_to_pandas(
-            pandas.Series.between, left, right, inclusive=inclusive
+        return self.__constructor__(
+            query_compiler=self._query_compiler.between(left, right, inclusive)
         )
 
     def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
@@ -842,12 +844,7 @@ class Series(BasePandasDataset):
             return result[0]
 
         return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.Series.corr,
-                other._query_compiler,
-                method=method,
-                min_periods=min_periods,
-            )
+            query_compiler=self._query_compiler.series_corr(other, method, min_periods)
         )
 
     def count(self, level=None):  # noqa: PR01, RT01, D200
@@ -916,8 +913,11 @@ class Series(BasePandasDataset):
         """
         Return Integer division and modulo of series and `other`, element-wise (binary operator `divmod`).
         """
-        return self._default_to_pandas(
-            pandas.Series.divmod, other, level=level, fill_value=fill_value, axis=axis
+        division, modulo = self._query_compiler.divmod(
+            other=other, level=level, fill_value=fill_value, axis=axis
+        )
+        return self.__constructor__(query_compiler=division), self.__constructor__(
+            query_compiler=modulo
         )
 
     def dot(self, other):  # noqa: PR01, RT01, D200
@@ -1182,32 +1182,6 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.Series.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
-
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `Series` are contained in `values`.
@@ -1274,6 +1248,21 @@ class Series(BasePandasDataset):
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
+    def mask(
+        self,
+        cond,
+        other=np.nan,
+        inplace: bool = False,
+        axis: Axis | None = None,
+        level: Level = None,
+        errors: IgnoreRaise | NoDefault = no_default,
+        try_cast=no_default,
+    ):  # noqa: PR01, RT01, D200
+        # This method exists because `errors` has different default value for Series :(
+        return super(Series, self).mask(
+            cond, other, inplace, axis, level, "raise", try_cast
+        )
+
     def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
         """
         Map values of Series according to input correspondence.
@@ -1298,28 +1287,6 @@ class Series(BasePandasDataset):
                 if pandas.isnull(s) is not True or na_action is None
                 else s
             )
-        )
-
-    @_inherit_docstrings(pandas.Series.mask, apilink="pandas.Series.mask")
-    def mask(
-        self,
-        cond,
-        other=np.nan,
-        inplace=False,
-        axis=None,
-        level=None,
-        errors=no_default,
-        try_cast=no_default,
-    ):
-        return self._default_to_pandas(
-            pandas.Series.mask,
-            cond,
-            other=other,
-            inplace=inplace,
-            axis=axis,
-            level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
@@ -1376,14 +1343,26 @@ class Series(BasePandasDataset):
         """
         Return the largest `n` elements.
         """
-        return self._default_to_pandas(pandas.Series.nlargest, n=n, keep=keep)
+        if len(self._query_compiler.columns) == 0:
+            # pandas returns empty series when requested largest/smallest from empty series
+            return self.__constructor__(data=[], dtype=float)
+        return Series(
+            query_compiler=self._query_compiler.nlargest(
+                n=n, columns=self.name, keep=keep
+            )
+        )
 
     def nsmallest(self, n=5, keep="first"):  # noqa: PR01, RT01, D200
         """
         Return the smallest `n` elements.
         """
+        if len(self._query_compiler.columns) == 0:
+            # pandas returns empty series when requested largest/smallest from empty series
+            return self.__constructor__(data=[], dtype=float)
         return self.__constructor__(
-            query_compiler=self._query_compiler.nsmallest(n=n, keep=keep)
+            query_compiler=self._query_compiler.nsmallest(
+                n=n, columns=self.name, keep=keep
+            )
         )
 
     def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
@@ -1551,7 +1530,7 @@ class Series(BasePandasDataset):
         copy = kwargs.pop("copy", True)
         limit = kwargs.pop("limit", None)
         tolerance = kwargs.pop("tolerance", None)
-        fill_value = kwargs.pop("fill_value", None)
+        fill_value = kwargs.pop("fill_value", np.nan)
         if kwargs:
             raise TypeError(
                 "reindex() got an unexpected keyword "
@@ -1658,8 +1637,11 @@ class Series(BasePandasDataset):
         """
         Return integer division and modulo of series and `other`, element-wise (binary operator `rdivmod`).
         """
-        return self._default_to_pandas(
-            pandas.Series.rdivmod, other, level=level, fill_value=fill_value, axis=axis
+        division, modulo = self._query_compiler.rdivmod(
+            other=other, level=level, fill_value=fill_value, axis=axis
+        )
+        return self.__constructor__(query_compiler=division), self.__constructor__(
+            query_compiler=modulo
         )
 
     def rfloordiv(
@@ -1915,7 +1897,8 @@ class Series(BasePandasDataset):
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
-        return self._default_to_pandas("swaplevel", i=i, j=j, copy=copy)
+        obj = self.copy() if copy else self
+        return super(Series, obj).swaplevel(i, j, axis=0)
 
     def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -2243,6 +2226,24 @@ class Series(BasePandasDataset):
         Return a tuple of the shape of the underlying data.
         """
         return (len(self),)
+
+    def reindex_like(
+        self: "Series",
+        other,
+        method=None,
+        copy: bool = True,
+        limit=None,
+        tolerance=None,
+    ) -> "Series":
+        # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
+        # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.Series.reindex_like.html
+        return self.reindex(
+            index=other.index,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+        )
 
     def _to_pandas(self):
         """

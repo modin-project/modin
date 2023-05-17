@@ -1076,6 +1076,12 @@ def test_truncate(data):
         df_equals(modin_result, pandas_result)
 
 
+def test_truncate_before_greater_than_after():
+    df = pd.DataFrame([[1, 2, 3]])
+    with pytest.raises(ValueError, match="Truncate: 1 must be after 2"):
+        df.truncate(before=2, after=1)
+
+
 def test_tshift():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     data = np.random.randint(0, 100, size=(len(idx), 4))
