@@ -1259,7 +1259,9 @@ class Series(BasePandasDataset):
         try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         # This method exists because `errors` has different default value for Series :(
-        return super().mask(cond, other, inplace, axis, level, "raise", try_cast)
+        return super(Series, self).mask(
+            cond, other, inplace, axis, level, "raise", try_cast
+        )
 
     def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
         """
