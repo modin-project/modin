@@ -45,10 +45,12 @@ else:
     PartitionUnionType = Any
 
 
-def _ray_from_modin_hack(api_layer_object: DataFrame | Series):
+def _ray_from_modin_non_partition(api_layer_object: DataFrame | Series):
     """
     HACK:
-    This is a hack that enables support of soda within the ray.data.from_modin function here: https://docs.ray.io/en/latest/data/api/doc/ray.data.from_modin.html#ray-data-from-modin.
+    This is a hack that makes ray.data.from_modin work with modin dataframe not backed by partitions.
+
+    See also: https://docs.ray.io/en/latest/data/api/doc/ray.data.from_modin.html#ray-data-from-modin for ray.data.from_modin's documentation.
 
     Parameters
     ----------
@@ -127,7 +129,7 @@ def unwrap_partitions(
 
     if not is_modin_distributed and axis == 0:
         # Directly uses the iloc API to extract data.
-        return _ray_from_modin_hack(api_layer_object=api_layer_object)
+        return _ray_from_modin_non_partition(api_layer_object=api_layer_object)
 
     modin_frame._propagate_index_objs(None)
     if axis is None:
