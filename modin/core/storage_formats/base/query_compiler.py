@@ -3591,10 +3591,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.add_refer_to("cut")
     def cut(
         self,
+        bins,
         **kwargs,
     ):
+        """
+        Bin values into discrete intervals.
+
+        Parameters
+        ----------
+        bins : int, array of ints, or IntervalIndex
+            The criteria to bin by.
+        kwargs : dict
+            The keyword arguments to pass through.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler with
+        """
         return SeriesDefault.register(pandas.cut)(
             self,
+            bins,
             **kwargs,
         )
 

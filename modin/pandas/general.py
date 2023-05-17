@@ -306,6 +306,9 @@ def cut(
     if isinstance(x, DataFrame):
         raise ValueError("Input array must be 1 dimensional")
     if not isinstance(x, Series):
+        ErrorMessage.default_to_pandas(
+            reason=f"pd.cut is not supported on objects of type {type(x)}"
+        )
         import pandas
 
         return pandas.cut(
@@ -321,7 +324,14 @@ def cut(
         )
     return Series(
         query_compiler=x._query_compiler.cut(
-            bins, right, labels, retbins, precision, include_lowest, duplicates, ordered
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
         )
     )
 
