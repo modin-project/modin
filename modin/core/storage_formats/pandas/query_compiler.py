@@ -1243,13 +1243,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def expanding_cov(self, fold_axis, expanding_args, squeeze_self, *args, **kwargs):
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
         if len(self.columns) > 1:
             # computing covariance for each column requires having the other columns,
             # so we can't parallelize this as a full-column operation
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.expanding(df, *expanding_args).cov(
-                    *args, **kwargs
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
             )
         return Fold.register(
@@ -1258,15 +1280,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 .expanding(*expanding_args)
                 .cov(*args, **kwargs)
             )
-        )(self, fold_axis, expanding_args, *args, **kwargs)
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
 
-    def expanding_corr(self, fold_axis, expanding_args, squeeze_self, *args, **kwargs):
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
         if len(self.columns) > 1:
             # computing correlation for each column requires having the other columns,
             # so we can't parallelize this as a full-column operation
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.expanding(df, *expanding_args).corr(
-                    *args, **kwargs
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
                 )
             )
         return Fold.register(
@@ -1275,7 +1328,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 .expanding(*expanding_args)
                 .corr(*args, **kwargs)
             )
-        )(self, fold_axis, expanding_args, *args, **kwargs)
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
 
     expanding_quantile = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(

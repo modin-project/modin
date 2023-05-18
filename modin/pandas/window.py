@@ -393,17 +393,17 @@ class Expanding(ClassLogger):
         from .dataframe import DataFrame
         from .series import Series
 
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
-
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_cov(
                 self.axis,
                 self.expanding_args,
                 squeeze_self=isinstance(self._dataframe, Series),
-                other=other,
+                squeeze_other=isinstance(other, Series),
+                other=(
+                    other._query_compiler
+                    if isinstance(other, (Series, DataFrame))
+                    else other
+                ),
                 pairwise=pairwise,
                 ddof=ddof,
                 numeric_only=numeric_only,
@@ -415,17 +415,17 @@ class Expanding(ClassLogger):
         from .dataframe import DataFrame
         from .series import Series
 
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        elif isinstance(other, Series):
-            other = other._query_compiler.to_pandas().squeeze()
-
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_corr(
                 self.axis,
                 self.expanding_args,
                 squeeze_self=isinstance(self._dataframe, Series),
-                other=other,
+                squeeze_other=isinstance(other, Series),
+                other=(
+                    other._query_compiler
+                    if isinstance(other, (Series, DataFrame))
+                    else other
+                ),
                 pairwise=pairwise,
                 ddof=ddof,
                 numeric_only=numeric_only,

@@ -5802,7 +5802,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",
         result="median",
-        refer_to="mean",
+        refer_to="median",
         win_type="expanding window",
         params="""
         numeric_only : bool, default: False
@@ -5864,7 +5864,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="corr",
         win_type="expanding window",
         params="""
-        squeeze_self : bool, default: True
+        squeeze_self : bool
+        squeeze_other : bool
         other : pandas.Series or pandas.DataFrame, default: None
         pairwise : bool | None, default: None
         ddof : int, default: 1
@@ -5876,18 +5877,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         fold_axis,
         expanding_args,
         squeeze_self,
+        squeeze_other,
         other=None,
         pairwise=None,
         ddof=1,
         numeric_only=False,
         **kwargs,
     ):
+        other_for_default = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
         return ExpandingDefault.register(
-            pandas.core.window.expanding.Expanding.corr, squeeze_self=squeeze_self
+            pandas.core.window.expanding.Expanding.corr,
+            squeeze_self=squeeze_self,
         )(
             self,
             expanding_args,
-            other=other,
+            other=other_for_default,
             pairwise=pairwise,
             ddof=ddof,
             numeric_only=numeric_only,
@@ -5900,7 +5910,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="cov",
         win_type="expanding window",
         params="""
-        squeeze_self : bool, default: True
+        squeeze_self : bool
+        squeeze_other : bool
         other : pandas.Series or pandas.DataFrame, default: None
         pairwise : bool | None, default: None
         ddof : int, default: 1
@@ -5912,18 +5923,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         fold_axis,
         expanding_args,
         squeeze_self,
+        squeeze_other,
         other=None,
         pairwise=None,
         ddof=1,
         numeric_only=False,
         **kwargs,
     ):
+        other_for_default = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
         return ExpandingDefault.register(
-            pandas.core.window.expanding.Expanding.cov, squeeze_self=squeeze_self
+            pandas.core.window.expanding.Expanding.cov,
+            squeeze_self=squeeze_self,
         )(
             self,
             expanding_args,
-            other=other,
+            other=other_for_default,
             pairwise=pairwise,
             ddof=ddof,
             numeric_only=numeric_only,
