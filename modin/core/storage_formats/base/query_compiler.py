@@ -3246,6 +3246,50 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="compute correlation", result="correlation", refer_to="corr"
+    )
+    def groupby_corr(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="corr",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="compute covariance", result="covariance", refer_to="cov"
+    )
+    def groupby_cov(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        return self.groupby_agg(
+            by=by,
+            agg_func="cov",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="get the number of unique values",
         result="number of unique values",
         refer_to="nunique",
@@ -5888,6 +5932,35 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",
+        result="median",
+        refer_to="median",
+        win_type="expanding window",
+        params="""
+        numeric_only : bool, default: False
+        engine : Optional[str], default: None
+        engine_kwargs : Optional[dict], default: None
+        **kwargs : dict""",
+    )
+    def expanding_median(
+        self,
+        fold_axis,
+        expanding_args,
+        numeric_only=False,
+        engine=None,
+        engine_kwargs=None,
+        **kwargs,
+    ):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.median)(
+            self,
+            expanding_args,
+            numeric_only=numeric_only,
+            engine=engine,
+            engine_kwargs=engine_kwargs,
+            **kwargs,
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
         result="variance",
         refer_to="var",
         win_type="expanding window",
@@ -5898,7 +5971,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def expanding_var(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
         return ExpandingDefault.register(pandas.core.window.expanding.Expanding.var)(
-            self, expanding_args, *args, **kwargs
+            self, expanding_args, ddof=ddof, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5913,7 +5986,99 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def expanding_std(self, fold_axis, expanding_args, ddof=1, *args, **kwargs):
         return ExpandingDefault.register(pandas.core.window.expanding.Expanding.std)(
-            self, expanding_args, *args, **kwargs
+            self, expanding_args, ddof=ddof, *args, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="correlation",
+        refer_to="corr",
+        win_type="expanding window",
+        params="""
+        squeeze_self : bool
+        squeeze_other : bool
+        other : pandas.Series or pandas.DataFrame, default: None
+        pairwise : bool | None, default: None
+        ddof : int, default: 1
+        numeric_only : bool, default: False
+        **kwargs : dict""",
+    )
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_default = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.corr,
+            squeeze_self=squeeze_self,
+        )(
+            self,
+            expanding_args,
+            other=other_for_default,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="sample covariance",
+        refer_to="cov",
+        win_type="expanding window",
+        params="""
+        squeeze_self : bool
+        squeeze_other : bool
+        other : pandas.Series or pandas.DataFrame, default: None
+        pairwise : bool | None, default: None
+        ddof : int, default: 1
+        numeric_only : bool, default: False
+        **kwargs : dict""",
+    )
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_default = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.cov,
+            squeeze_self=squeeze_self,
+        )(
+            self,
+            expanding_args,
+            other=other_for_default,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
         )
 
     @doc_utils.doc_window_method(
@@ -5968,6 +6133,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",
+        result="unbiased skewness",
+        refer_to="skew",
+        win_type="expanding window",
+        params="""
+        numeric_only : bool, default: False
+        **kwargs : dict""",
+    )
+    def expanding_skew(self, fold_axis, expanding_args, numeric_only=False, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.skew)(
+            self, expanding_args, numeric_only=numeric_only, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
+        result="Fisher’s definition of kurtosis without bias",
+        refer_to="kurt",
+        win_type="expanding window",
+        params="""
+        numeric_only : bool, default: False
+        **kwargs : dict""",
+    )
+    def expanding_kurt(self, fold_axis, expanding_args, numeric_only=False, **kwargs):
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.kurt)(
+            self, expanding_args, numeric_only=numeric_only, **kwargs
+        )
+
+    @doc_utils.doc_window_method(
+        window_cls_name="Expanding",
         result="rank",
         refer_to="rank",
         win_type="expanding window",
@@ -5990,7 +6183,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args,
         **kwargs,
     ):
-        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.rank)(
+        return ExpandingDefault.register(pandas.core.window.expanding.Expanding.rank)(
             self,
             expanding_args,
             method=method,

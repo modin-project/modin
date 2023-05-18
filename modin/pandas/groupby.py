@@ -1020,8 +1020,12 @@ class DataFrameGroupBy(ClassLogger):
     def __iter__(self):
         return self._iter.__iter__()
 
-    def cov(self):
-        return self._default_to_pandas(lambda df: df.cov())
+    def cov(self, min_periods=None, ddof=1, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cov,
+            agg_kwargs=dict(min_periods=min_periods, ddof=ddof),
+            numeric_only=numeric_only,
+        )
 
     def transform(self, func, *args, **kwargs):
         return self._check_index_name(
@@ -1035,8 +1039,12 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def corr(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.corr(**kwargs))
+    def corr(self, method="pearson", min_periods=None, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_corr,
+            agg_kwargs=dict(method=method, min_periods=min_periods),
+            numeric_only=numeric_only,
+        )
 
     def fillna(self, *args, **kwargs):
         new_groupby_kwargs = self._kwargs.copy()

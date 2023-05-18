@@ -1219,6 +1219,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
+    expanding_median = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).median(*args, **kwargs)
+        )
+    )
+
     expanding_var = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).var(*args, **kwargs)
@@ -1237,6 +1243,102 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing covariance for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).cov(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .cov(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing correlation for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).corr(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .corr(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
     expanding_quantile = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).quantile(*args, **kwargs)
@@ -1246,6 +1348,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     expanding_sem = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
+    expanding_kurt = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).kurt(*args, **kwargs)
+        )
+    )
+
+    expanding_skew = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).skew(*args, **kwargs)
         )
     )
 
@@ -1988,10 +2102,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return super().corr(method=method, min_periods=min_periods)
 
-    def cov(self, min_periods=None):
-        return self._nancorr(min_periods=min_periods, cov=True)
+    def cov(self, min_periods=None, ddof=1):
+        return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
-    def _nancorr(self, min_periods=1, cov=False):
+    def _nancorr(self, min_periods=1, cov=False, ddof=1):
         """
         Compute either pairwise covariance or pairwise correlation of columns.
 
@@ -2004,6 +2118,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to have a valid result.
         cov : boolean, default: False
             Either covariance or correlation should be computed.
+        ddof : int, default: 1
+            Means Delta Degrees of Freedom. The divisor used in calculations.
 
         Returns
         -------
@@ -2048,7 +2164,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         sumxx = (vx * vx).sum()
                         sumyy = (vy * vy).sum()
 
-                        denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
+                        denom = (nobs - ddof) if cov else np.sqrt(sumxx * sumyy)
                         if denom != 0:
                             result[i, j] = sumxy / denom
                         else:
@@ -3350,6 +3466,54 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result_qc.reset_index(drop=True)
 
         return result_qc
+
+    def groupby_corr(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.corr`")
+        # TODO(https://github.com/modin-project/modin/issues/1323) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="corr",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_cov(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.cov`")
+        # TODO(https://github.com/modin-project/modin/issues/1322) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="cov",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
 
     def groupby_agg(
         self,

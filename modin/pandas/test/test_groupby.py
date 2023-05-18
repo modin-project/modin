@@ -355,8 +355,10 @@ class GetColumn:
         [GetColumn("col1")],  # 20
     ],
 )
-@pytest.mark.parametrize("as_index", [True, False])
-@pytest.mark.parametrize("col1_category", [True, False])
+@pytest.mark.parametrize("as_index", [True, False], ids=lambda v: f"as_index={v}")
+@pytest.mark.parametrize(
+    "col1_category", [True, False], ids=lambda v: f"col1_category={v}"
+)
 def test_simple_row_groupby(by, as_index, col1_category):
     pandas_df = pandas.DataFrame(
         {

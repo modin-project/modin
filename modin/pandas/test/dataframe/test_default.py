@@ -243,8 +243,8 @@ def test_corr(min_periods):
     )
 
 
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-@pytest.mark.parametrize("ddof", [1, 2, 4])
+@pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")
+@pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
 def test_cov(min_periods, ddof):
     # Modin result may slightly differ from pandas result
     # due to floating pointing arithmetic.
