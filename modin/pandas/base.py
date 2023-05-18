@@ -3461,15 +3461,12 @@ class BasePandasDataset(ClassLogger):
         """
         Convert tz-aware axis to target time zone.
         """
-        axis = self._get_axis_number(axis)
-        if level is not None:
-            new_labels = (
-                pandas.Series(index=self.axes[axis]).tz_convert(tz, level=level).index
-            )
-        else:
-            new_labels = self.axes[axis].tz_convert(tz)
-        obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis, copy=copy)
+        return self._create_or_update_from_compiler(
+            self._query_compiler.tz_convert(
+                tz, axis=self._get_axis_number(axis), level=level, copy=True
+            ),
+            inplace=(not copy),
+        )
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
@@ -3477,20 +3474,17 @@ class BasePandasDataset(ClassLogger):
         """
         Localize tz-naive index of a `BasePandasDataset` to target time zone.
         """
-        axis = self._get_axis_number(axis)
-        new_labels = (
-            pandas.Series(index=self.axes[axis])
-            .tz_localize(
+        return self._create_or_update_from_compiler(
+            self._query_compiler.tz_localize(
                 tz,
-                axis=axis,
+                axis=self._get_axis_number(axis),
                 level=level,
-                copy=False,
+                copy=True,
                 ambiguous=ambiguous,
                 nonexistent=nonexistent,
-            )
-            .index
+            ),
+            inplace=(not copy),
         )
-        return self.set_axis(new_labels, axis, copy=copy)
 
     def interpolate(
         self,

@@ -4206,6 +4206,94 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # DateTime methods
 
+    def tz_convert(
+        self,
+        tz,
+        axis=0,
+        level=None,
+        copy=True,
+    ):
+        """
+        Convert tz-aware axis to target time zone.
+
+        Parameters
+        ----------
+        tz : str or tzinfo object or None
+            Target time zone. Passing None will convert to UTC
+            and remove the timezone information.
+        axis : int, default: 0
+            The axis to localize.
+        level : int, str, default: None
+            If axis is a MultiIndex, convert a specific level. Otherwise must be None.
+        copy : bool, default: True
+            Also make a copy of the underlying data.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler with the converted axis.
+        """
+        if level is not None:
+            new_labels = (
+                pandas.Series(index=self.get_axis(axis))
+                .tz_convert(tz, level=level)
+                .index
+            )
+        else:
+            new_labels = self.get_axis(axis).tz_convert(tz)
+        obj = self.copy() if copy else self
+        if axis == 0:
+            obj.index = new_labels
+        else:
+            obj.columns = new_labels
+        return obj
+
+    def tz_localize(
+        self, tz, axis=0, level=None, copy=True, ambiguous="raise", nonexistent="raise"
+    ):
+        """
+        Localize tz-naive index of a Series or DataFrame to target time zone.
+
+        Parameters
+        ----------
+        tz : tzstr or tzinfo or None
+            Time zone to localize. Passing None will remove the time zone
+            information and preserve local time.
+        axis : int, default: 0
+            The axis to localize.
+        level : int, str, default: None
+            If axis is a MultiIndex, localize a specific level. Otherwise must be None.
+        copy : bool, default: True
+            Also make a copy of the underlying data.
+        ambiguous : str, bool-ndarray, NaT, default: "raise"
+            Behaviour on ambiguous times.
+        nonexistent : str, default: "raise"
+            What to do with nonexistent times.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            A new query compiler with the localized axis.
+        """
+        new_labels = (
+            pandas.Series(index=self.get_axis(axis))
+            .tz_localize(
+                tz,
+                axis=axis,
+                level=level,
+                copy=False,
+                ambiguous=ambiguous,
+                nonexistent=nonexistent,
+            )
+            .index
+        )
+        obj = self.copy() if copy else self
+        if axis == 0:
+            obj.index = new_labels
+        else:
+            obj.columns = new_labels
+        return obj
+
     @doc_utils.doc_dt_round(refer_to="ceil")
     def dt_ceil(self, freq, ambiguous="raise", nonexistent="raise"):
         return DateTimeDefault.register(pandas.Series.dt.ceil)(
