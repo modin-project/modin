@@ -3471,7 +3471,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 agg_kwargs=agg_kwargs,
                 series_groupby=True,
             )
-        return self.default_to_pandas(lambda df: df.ohlc())
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.ohlc)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=True,
+        )
 
     # END Manual Partitioning methods
 
