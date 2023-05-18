@@ -300,6 +300,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def ohlc(self):
         from .dataframe import DataFrame
+
         return DataFrame(
             query_compiler=self._query_compiler.groupby_ohlc(
                 by=self._by,
