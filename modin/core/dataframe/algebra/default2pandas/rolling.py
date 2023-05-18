@@ -116,6 +116,8 @@ class ExpandingDefault(DefaultMethod):
         ----------
         func : callable
             Function to execute on an expanding window.
+        squeeze_self : bool, default: False
+            Whether or not to squeeze frame before executing the window function.
         **kwargs : kwargs
             Additional arguments that will be passed to function builder.
 
