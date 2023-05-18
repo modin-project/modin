@@ -759,6 +759,85 @@ def test_qcut(retbins):
 
 
 @pytest.mark.parametrize(
+    "bins, labels",
+    [
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            [
+                "-inf_to_-1000",
+                "-1000_to_0",
+                "0_to_1000",
+                "1000_to_2000",
+                "2000_to_inf",
+            ],
+            id="bin_list_spanning_entire_range_with_custom_labels",
+        ),
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            None,
+            id="bin_list_spanning_entire_range_with_default_labels",
+        ),
+        pytest.param(
+            [-1000, 0, 1000, 2000], None, id="bin_list_not_spanning_entire_range"
+        ),
+        pytest.param(
+            10,
+            [f"custom_label{i}" for i in range(9)],
+            id="int_bin_10_with_custom_labels",
+        ),
+        pytest.param(1, None, id="int_bin_1_with_default_labels"),
+        pytest.param(-1, None, id="int_bin_-1_with_default_labels"),
+        pytest.param(111, None, id="int_bin_111_with_default_labels"),
+    ],
+)
+@pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
+def test_cut(retbins, bins, labels):
+    # Would use `eval_general` here, but `eval_general` expects the operation
+    # to be supported by Modin, and so errors out when we give the defaulting
+    # to pandas UserWarning. We could get around this by using
+    # @pytest.mark.filterwarnings("ignore"), but then `eval_general` fails because
+    # sometimes the return type of pd.cut is an np.ndarray, and `eval_general` does
+    # not know how to handle that.
+    try:
+        pd_result = pandas.cut(
+            pandas.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+        )
+    except Exception as pd_e:
+        with pytest.raises(Exception) as md_e:
+            with warns_that_defaulting_to_pandas():
+                md_result = pd.cut(
+                    pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+                )
+        assert isinstance(
+            md_e.value, type(pd_e)
+        ), f"Got Modin Exception type {type(md_e.value)}, but pandas Exception type {type(pd_e)} was expected"
+    else:
+        with warns_that_defaulting_to_pandas():
+            md_result = pd.cut(
+                pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+            )
+        if not isinstance(pd_result, tuple):
+            df_equals(md_result, pd_result)
+        else:
+            assert isinstance(
+                md_result, tuple
+            ), "Modin returned single value, but pandas returned tuple of values"
+            for pd_res, md_res in zip(pd_result, md_result):
+                if isinstance(pd_res, pandas.Series):
+                    df_equals(pd_res, md_res)
+                else:
+                    np.testing.assert_array_equal(pd_res, md_res)
+
+
+def test_cut_fallback():
+    # Test case for falling back to pandas for cut.
+    pandas_result = pandas.cut(range(5), 4)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.cut(range(5), 4)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
     "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
 )
 def test_to_pandas_indices(data):

@@ -290,6 +290,60 @@ def qcut(
     return x._qcut(q, **kwargs)
 
 
+@_inherit_docstrings(pandas.cut, apilink="pandas.cut")
+@enable_logging
+def cut(
+    x,
+    bins,
+    right: bool = True,
+    labels=None,
+    retbins: bool = False,
+    precision: int = 3,
+    include_lowest: bool = False,
+    duplicates: str = "raise",
+    ordered: bool = True,
+):
+    if isinstance(x, DataFrame):
+        raise ValueError("Input array must be 1 dimensional")
+    if not isinstance(x, Series):
+        ErrorMessage.default_to_pandas(
+            reason=f"pd.cut is not supported on objects of type {type(x)}"
+        )
+        import pandas
+
+        return pandas.cut(
+            x,
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
+        )
+
+    def _wrap_in_series_object(qc_result):
+        if isinstance(qc_result, type(x._query_compiler)):
+            return Series(query_compiler=qc_result)
+        if isinstance(qc_result, (tuple, list)):
+            return tuple([_wrap_in_series_object(result) for result in qc_result])
+        return qc_result
+
+    return _wrap_in_series_object(
+        x._query_compiler.cut(
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
+        )
+    )
+
+
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
 @enable_logging
 def unique(values):  # noqa: PR01, RT01, D200

@@ -3788,6 +3788,38 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.Series.repeat)(self, repeats=repeats)
 
+    @doc_utils.add_refer_to("cut")
+    def cut(
+        self,
+        bins,
+        **kwargs,
+    ):
+        """
+        Bin values into discrete intervals.
+
+        Parameters
+        ----------
+        bins : int, array of ints, or IntervalIndex
+            The criteria to bin by.
+        **kwargs : dict
+            The keyword arguments to pass through.
+
+        Returns
+        -------
+        BaseQueryCompiler or np.ndarray or list[np.ndarray]
+            Returns the result of pd.cut.
+        """
+
+        def squeeze_and_cut(df, *args, **kwargs):
+            # We need this function to ensure we squeeze our internal
+            # representation (a dataframe) to a Series.
+            series = df.squeeze(axis=1)
+            return pandas.cut(series, *args, **kwargs)
+
+        # We use `default_to_pandas` here since the type and number of
+        # results can change depending on the input arguments.
+        return self.default_to_pandas(squeeze_and_cut, bins, **kwargs)
+
     # Indexing
 
     index = property(_get_axis(0), _set_axis(0))
