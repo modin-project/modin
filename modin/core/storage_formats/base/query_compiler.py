@@ -4237,6 +4237,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         self.get_axis(axis).names = names
 
     # DateTime methods
+    def between_time(self, **kwargs):  # noqa: PR01
+        """
+        Select values between particular times of the day (e.g., 9:00-9:30 AM).
+
+        By setting start_time to be later than end_time, you can get the times that are not between the two times.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.DataFrame.between_time)(self, **kwargs)
 
     def tz_convert(
         self,
