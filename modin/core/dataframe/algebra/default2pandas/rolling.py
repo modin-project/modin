@@ -77,7 +77,7 @@ class ExpandingDefault(DefaultMethod):
     OBJECT_TYPE = "Expanding"
 
     @classmethod
-    def _build_expanding(cls, func):
+    def _build_expanding(cls, func, squeeze_self):
         """
         Build function that creates an expanding window and executes `func` on it.
 
@@ -85,6 +85,8 @@ class ExpandingDefault(DefaultMethod):
         ----------
         func : callable
             Function to execute on a expanding window.
+        squeeze_self : bool
+            Whether or not to squeeze frame before executing the window function.
 
         Returns
         -------
@@ -94,6 +96,8 @@ class ExpandingDefault(DefaultMethod):
 
         def fn(df, rolling_args, *args, **kwargs):
             """Create rolling window for the passed frame and execute specified `func` on it."""
+            if squeeze_self:
+                df = df.squeeze(axis=1)
             roller = df.expanding(*rolling_args)
 
             if type(func) == property:
@@ -104,7 +108,7 @@ class ExpandingDefault(DefaultMethod):
         return fn
 
     @classmethod
-    def register(cls, func, **kwargs):
+    def register(cls, func, squeeze_self=False, **kwargs):
         """
         Build function that do fallback to pandas to apply `func` on a expanding window.
 
@@ -122,5 +126,7 @@ class ExpandingDefault(DefaultMethod):
             `func` on an expanding window.
         """
         return super().register(
-            cls._build_expanding(func), fn_name=func.__name__, **kwargs
+            cls._build_expanding(func, squeeze_self=squeeze_self),
+            fn_name=func.__name__,
+            **kwargs
         )

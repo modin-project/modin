@@ -356,6 +356,18 @@ class Expanding(ClassLogger):
             )
         )
 
+    def median(self, numeric_only=False, engine=None, engine_kwargs=None, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_median(
+                self.axis,
+                self.expanding_args,
+                numeric_only=numeric_only,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
+                **kwargs,
+            )
+        )
+
     def var(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_var(
@@ -377,17 +389,66 @@ class Expanding(ClassLogger):
             )
         )
 
-    def sem(self, *args, **kwargs):
+    def cov(self, other=None, pairwise=None, ddof=1, numeric_only=False, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
+        if isinstance(other, DataFrame):
+            other = other._query_compiler.to_pandas()
+        elif isinstance(other, Series):
+            other = other._query_compiler.to_pandas().squeeze()
+
         return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.expanding_sem(
-                self.axis, self.expanding_args, *args, **kwargs
+            query_compiler=self._query_compiler.expanding_cov(
+                self.axis,
+                self.expanding_args,
+                squeeze_self=isinstance(self._dataframe, Series),
+                other=other,
+                pairwise=pairwise,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
             )
         )
 
-    def skew(self, **kwargs):
+    def corr(self, other=None, pairwise=None, ddof=1, numeric_only=False, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
+        if isinstance(other, DataFrame):
+            other = other._query_compiler.to_pandas()
+        elif isinstance(other, Series):
+            other = other._query_compiler.to_pandas().squeeze()
+
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_corr(
+                self.axis,
+                self.expanding_args,
+                squeeze_self=isinstance(self._dataframe, Series),
+                other=other,
+                pairwise=pairwise,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
+    def sem(self, ddof=1, numeric_only=False, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sem(
+                self.axis,
+                self.expanding_args,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                *args,
+                **kwargs,
+            )
+        )
+
+    def skew(self, numeric_only=False, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_skew(
-                self.axis, self.expanding_args, **kwargs
+                self.axis, self.expanding_args, numeric_only=numeric_only, **kwargs
             )
         )
 
