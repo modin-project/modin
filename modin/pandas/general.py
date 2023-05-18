@@ -737,11 +737,11 @@ def wide_to_long(
         )
     return DataFrame(
         query_compiler=df._query_compiler.wide_to_long(
-            stubnames,
-            i,
-            j,
-            sep,
-            suffix,
+            stubnames=stubnames,
+            i=i,
+            j=j,
+            sep=sep,
+            suffix=suffix,
         )
     )
 

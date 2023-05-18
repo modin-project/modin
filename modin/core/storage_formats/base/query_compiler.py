@@ -472,6 +472,28 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return SeriesDefault.register(pandas.Series.to_list)(self)
 
+    @doc_utils.add_refer_to("DataFrame.to_dict")
+    def dataframe_to_dict(self, orient="dict", into=dict):  # noqa: PR01
+        """
+        Convert the DataFrame to a dictionary.
+
+        Returns
+        -------
+        dict or `into` instance
+        """
+        return self.to_pandas().to_dict(orient, into)
+
+    @doc_utils.add_refer_to("Series.to_dict")
+    def series_to_dict(self, into=dict):  # noqa: PR01
+        """
+        Convert the Series to a dictionary.
+
+        Returns
+        -------
+        dict or `into` instance
+        """
+        return self.to_pandas().to_dict(into)
+
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,
@@ -653,6 +675,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Correlation matrix.
         """
         return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
+
+    @doc_utils.add_refer_to("DataFrame.corrwith")
+    def corrwith(self, **kwargs):  # noqa: PR01
+        """
+        Compute pairwise correlation.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.DataFrame.corrwith)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.cov")
     def cov(self, **kwargs):  # noqa: PR02
@@ -986,6 +1019,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
+
+    @doc_utils.add_refer_to("merge_ordered")
+    def merge_ordered(self, right, **kwargs):  # noqa: PR01
+        """
+        Perform a merge for ordered data with optional filling/interpolation.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.merge_ordered)(self, right, **kwargs)
 
     def _get_column_as_pandas_series(self, key):
         """
@@ -2545,6 +2589,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(get_row)(self, key=key)
 
+    def lookup(self, row_labels, col_labels):  # noqa: PR01, RT01, D200
+        """
+        Label-based "fancy indexing" function for ``DataFrame``.
+        """
+        return self.default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
+
     # END Abstract __getitem__ methods
 
     # Abstract insert
@@ -3683,6 +3733,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.unstack)(
             self, level=level, fill_value=fill_value
         )
+
+    @doc_utils.add_refer_to("wide_to_long")
+    def wide_to_long(self, **kwargs):  # noqa: PR01
+        """
+        Unpivot a DataFrame from wide to long format.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.wide_to_long)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.pivot")
     def pivot(self, index, columns, values):
