@@ -1482,10 +1482,10 @@ class DataFrame(BasePandasDataset):
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
-        if not isinstance(self.index, pandas.MultiIndex) or (
-            isinstance(self.index, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.index.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.index.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.unstack(level, fill_value)
@@ -2002,10 +2002,10 @@ class DataFrame(BasePandasDataset):
         """
         Stack the prescribed level(s) from columns to index.
         """
-        if not isinstance(self.columns, pandas.MultiIndex) or (
-            isinstance(self.columns, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.columns.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.columns.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)

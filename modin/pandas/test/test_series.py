@@ -2303,7 +2303,7 @@ def test_loc(data):
     data = np.arange(100)
     modin_series = pd.Series(data, index=index).sort_index()
     pandas_series = pandas.Series(data, index=index).sort_index()
-    # Using 'fmt: skip' below as 'black' and 'flake8' can't agree on how this should be formatted
+
     modin_result = modin_series.loc[
         (slice(None), 1),
     ]  # fmt: skip
@@ -3647,6 +3647,12 @@ def test_unstack(data):
     df_equals(
         modin_series.unstack(level=[0, 1, 2]), pandas_series.unstack(level=[0, 1, 2])
     )
+
+
+def test_unstack_error_no_multiindex():
+    modin_series = pd.Series([0, 1, 2])
+    with pytest.raises(ValueError, match="index must be a MultiIndex to unstack"):
+        modin_series.unstack()
 
 
 @pytest.mark.parametrize(
