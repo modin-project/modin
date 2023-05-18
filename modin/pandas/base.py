@@ -1060,12 +1060,12 @@ class BasePandasDataset(ClassLogger):
         if old_include_arg_used and inclusive is not None:
             raise ValueError(
                 "Deprecated arguments `include_start` and `include_end` "
-                "cannot be passed if `inclusive` has been given."
+                + "cannot be passed if `inclusive` has been given."
             )
         elif old_include_arg_used:
             warnings.warn(
                 "`include_start` and `include_end` are deprecated in "
-                "favour of `inclusive`.",
+                + "favour of `inclusive`.",
                 FutureWarning,
                 stacklevel=2,
             )
