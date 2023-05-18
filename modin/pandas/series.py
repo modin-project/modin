@@ -1916,7 +1916,7 @@ class Series(BasePandasDataset):
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
-        return self.__query_compiler__.series_to_dict(into)
+        return self._query_compiler.series_to_dict(into)
 
     def to_frame(
         self, name: Hashable = no_default
@@ -1939,7 +1939,7 @@ class Series(BasePandasDataset):
         """
         Return a list of the values.
         """
-        return self.__query_compiler__.to_list()
+        return self._query_compiler.to_list()
 
     def to_numpy(
         self, dtype=None, copy=False, na_value=no_default, **kwargs

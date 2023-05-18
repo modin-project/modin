@@ -460,6 +460,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Dataframe exchange protocol
 
+    def to_list(self):
+        """
+        Return a list of the values.
+
+        These are each a scalar type, which is a Python scalar (for str, int, float) or a pandas scalar (for Timestamp/Timedelta/Interval/Period).
+
+        Returns
+        -------
+        list
+        """
+        return SeriesDefault.register(pandas.Series.to_list)(self)
+
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,
@@ -5214,6 +5226,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
 
+    @doc_utils.doc_str_method(refer_to="get_dummies", params="sep : str")
+    def str_get_dummies(self, sep):
+        return StrDefault.register(pandas.Series.str.get_dummies)(self, sep)
+
     @doc_utils.doc_str_method(
         refer_to="index",
         params="""
@@ -5305,6 +5321,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_extract(self, pat, flags=0, expand=True):
         return StrDefault.register(pandas.Series.str.extract)(self, pat, flags, expand)
+
+    @doc_utils.doc_str_method(
+        refer_to="extractall",
+        params="""
+        pat : str
+        flags : int, default: 0""",
+    )
+    def str_extractall(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.extractall)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}"
@@ -5521,6 +5546,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return StrDefault.register(pandas.Series.str.cat)(
             self, others, sep, na_rep, join
         )
+
+    @doc_utils.doc_str_method(
+        refer_to="casefold",
+        params="",
+    )
+    def str_casefold(self):
+        return StrDefault.register(pandas.Series.str.casefold)(self)
 
     # End of Str methods
 
