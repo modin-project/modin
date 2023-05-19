@@ -17,6 +17,7 @@ import pandas
 import numpy as np
 from unittest import mock
 
+from modin.config import StorageFormat
 from modin.config.envvars import Engine, ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -2559,3 +2560,53 @@ def test_skew_corner_cases():
     # https://github.com/modin-project/modin/issues/5545
     modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [171, 137]})
     eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+
+@pytest.mark.parametrize(
+    "method",
+    # test all aggregations from pandas.core.groupby.base.reduction_kernels except
+    # nth and corrwith, both of which require extra arguments.
+    [
+        "all",
+        "any",
+        "count",
+        "first",
+        "idxmax",
+        "idxmin",
+        "last",
+        "max",
+        "mean",
+        "median",
+        "min",
+        "nunique",
+        "prod",
+        "quantile",
+        "sem",
+        "size",
+        "skew",
+        "std",
+        "sum",
+        "var",
+    ],
+)
+@pytest.mark.skipif(
+    StorageFormat.get() != "Pandas",
+    reason="only relevant to pandas execution",
+)
+def test_groupby_agg_with_empty_column_partition_6175(method):
+    df = pd.concat(
+        [
+            pd.DataFrame({"col33": [0, 1], "index": [2, 3]}),
+            pd.DataFrame({"col34": [4, 5]}),
+        ],
+        axis=1,
+    )
+    assert df._query_compiler._modin_frame._partitions.shape == (1, 2)
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: getattr(df.groupby(["col33", "index"]), method)(),
+        # work around https://github.com/modin-project/modin/issues/6016: we don't
+        # expect any exceptions.
+        raising_exceptions=(Exception,),
+    )
