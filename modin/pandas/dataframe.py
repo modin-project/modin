@@ -734,9 +734,11 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise correlation.
         """
+        if not isinstance(other, (Series, DataFrame)):
+            raise TypeError(f"unsupported type: {type(other)}")
         return self.__constructor__(
             query_compiler=self._query_compiler.corrwith(
-                other=other,
+                other=other._query_compiler,
                 axis=axis,
                 drop=drop,
                 method=method,

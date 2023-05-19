@@ -213,7 +213,7 @@ def test_merge_ordered():
         )
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pd.merge_ordered(data_a, data_b, fill_method="ffill", left_by="group")
 
 

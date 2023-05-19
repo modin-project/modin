@@ -123,13 +123,15 @@ def merge_ordered(
     """
     Perform a merge for ordered data with optional filling/interpolation.
     """
-    if not isinstance(left, DataFrame):
-        raise ValueError(
-            "can not merge DataFrame with instance of type {}".format(type(right))
-        )
+    for operand in (left, right):
+        if not isinstance(operand, (Series, DataFrame)):
+            raise TypeError(
+                f"Can only merge Series or DataFrame objects, a {type(operand)} was passed"
+            )
+
     return DataFrame(
         query_compiler=left._query_compiler.merge_ordered(
-            right,
+            right._query_compiler,
             on=on,
             left_on=left_on,
             right_on=right_on,
