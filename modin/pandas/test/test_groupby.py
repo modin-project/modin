@@ -16,7 +16,7 @@ import itertools
 import pandas
 import numpy as np
 from unittest import mock
-
+import datetime
 from modin.config.envvars import Engine, ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -2537,39 +2537,34 @@ def test_skew_corner_cases():
     eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
 
 
-def test_groupby_with_grouper():
+@pytest.mark.parametrize(
+    "by",
+    [
+        pandas.Grouper(key="time_stamp", freq="D"),
+        [pandas.Grouper(key="time_stamp", freq="1M"), "count"],
+    ],
+)
+def test_groupby_with_grouper(by):
     # See https://github.com/modin-project/modin/issues/5091 for more details
     data = {
-        "id": [1, 2],
-        "time_stamp": ["2022-03-24 23:53:09", "2022-03-24 21:53:09"],
-        "count": [5, 5],
-    }
-    modin_df, pandas_df = create_test_dfs(data)
-
-    # modin Grouper is the same as the pandas Grouper objects
-    # test just for one key
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.groupby(pandas.Grouper(key="time_stamp", freq="D").mean()),
-    )
-
-    data = {
-        "Publish date": [
-            pd.Timestamp("2000-01-02"),
-            pd.Timestamp("2000-01-02"),
-            pd.Timestamp("2000-01-09"),
-            pd.Timestamp("2000-01-16"),
+        "id": [i for i in range(200)],
+        "time_stamp": [
+            pd.Timestamp("2000-01-02") + datetime.timedelta(days=x) for x in range(200)
         ],
-        "ID": [0, 1, 1, 3],
-        "Price": [10, 20, 30, 40],
+        "count": [5, 6] * 100,
     }
     modin_df, pandas_df = create_test_dfs(data)
-
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.groupby(
-            [pandas.Grouper(key="Publish date", freq="1M"), "ID"]
-        ).sum(),
+        lambda df: df.groupby(by).mean(),
     )
+
+
+def test_groupby_preserves_by_order():
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1, 1], "col1": [10, 10, 10]})
+
+    modin_res = modin_df.groupby([pd.Series([100, 100, 100]), "col0"]).mean()
+    pandas_res = pandas_df.groupby([pandas.Series([100, 100, 100]), "col0"]).mean()
+
+    df_equals(modin_res, pandas_res)
