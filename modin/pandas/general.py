@@ -123,17 +123,15 @@ def merge_ordered(
     """
     Perform a merge for ordered data with optional filling/interpolation.
     """
-    if not isinstance(left, DataFrame):
-        raise ValueError(
-            "can not merge DataFrame with instance of type {}".format(type(right))
-        )
-    ErrorMessage.default_to_pandas("`merge_ordered`")
-    if isinstance(right, DataFrame):
-        right = to_pandas(right)
+    for operand in (left, right):
+        if not isinstance(operand, (Series, DataFrame)):
+            raise TypeError(
+                f"Can only merge Series or DataFrame objects, a {type(operand)} was passed"
+            )
+
     return DataFrame(
-        pandas.merge_ordered(
-            to_pandas(left),
-            right,
+        query_compiler=left._query_compiler.merge_ordered(
+            right._query_compiler,
             on=on,
             left_on=left_on,
             right_on=right_on,
@@ -739,9 +737,14 @@ def wide_to_long(
         raise ValueError(
             "can not wide_to_long with instance of type {}".format(type(df))
         )
-    ErrorMessage.default_to_pandas("`wide_to_long`")
     return DataFrame(
-        pandas.wide_to_long(to_pandas(df), stubnames, i, j, sep=sep, suffix=suffix)
+        query_compiler=df._query_compiler.wide_to_long(
+            stubnames=stubnames,
+            i=i,
+            j=j,
+            sep=sep,
+            suffix=suffix,
+        )
     )
 
 
