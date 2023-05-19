@@ -3116,7 +3116,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = [by] if by is not None else []
             internal_by = []
             for o in by:
-                if isinstance(o, pandas.Grouper):
+                if isinstance(o, pandas.Grouper) and o.key in self.columns:
                     internal_by.append(o.key)
                 elif hashable(o) and o in self.columns:
                     internal_by.append(o)
