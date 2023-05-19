@@ -3758,6 +3758,35 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             series_groupby=True,
         )
 
+    def groupby_ohlc(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        is_df,
+    ):
+        if not is_df:
+            return self.groupby_agg(
+                by=by,
+                agg_func="ohlc",
+                axis=axis,
+                groupby_kwargs=groupby_kwargs,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                series_groupby=True,
+            )
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.ohlc)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=True,
+        )
+
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")

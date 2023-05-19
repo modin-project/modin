@@ -46,6 +46,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 NPartitions.put(4)
@@ -2385,6 +2386,29 @@ def test_mean_with_datetime(by_func):
 
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
+
+
+def test_groupby_ohlc():
+    pandas_df = pandas.DataFrame(
+        np.random.randint(0, 100, (50, 2)), columns=["stock A", "stock B"]
+    )
+    pandas_df["Date"] = pandas.concat(
+        [pandas.date_range("1/1/2000", periods=10, freq="min").to_series()] * 5
+    ).reset_index(drop=True)
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("Date")["stock A"].ohlc())
+    pandas_multiindex_result = pandas_df.groupby("Date")[["stock A"]].ohlc()
+
+    with warns_that_defaulting_to_pandas():
+        modin_multiindex_result = modin_df.groupby("Date")[["stock A"]].ohlc()
+    df_equals(modin_multiindex_result, pandas_multiindex_result)
+
+    pandas_multiindex_result = pandas_df.groupby("Date")[["stock A", "stock B"]].ohlc()
+    with warns_that_defaulting_to_pandas():
+        modin_multiindex_result = modin_df.groupby("Date")[
+            ["stock A", "stock B"]
+        ].ohlc()
+    df_equals(modin_multiindex_result, pandas_multiindex_result)
 
 
 def test_groupby_mad_warn():
