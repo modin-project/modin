@@ -54,6 +54,7 @@ from pandas._typing import (
 )
 import pickle as pkl
 import re
+from types import SimpleNamespace
 from typing import Optional, Union, Sequence, Hashable
 import warnings
 
@@ -3743,8 +3744,10 @@ class BasePandasDataset(ClassLogger):
         if isinstance(key, slice) or (
             isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
         ):
+            # use convert_to_index_sliceable without creating a pandas.DataFrame because
+            # of https://github.com/modin-project/modin/issues/6151
             indexer = convert_to_index_sliceable(
-                pandas.DataFrame(index=self.index), key
+                SimpleNamespace(index=self.index, columns=pandas.Index([])), key
             )
         if indexer is not None:
             return self._getitem_slice(indexer)
@@ -3850,7 +3853,11 @@ class BasePandasDataset(ClassLogger):
         value : object
             Value to assing to the rows.
         """
-        indexer = convert_to_index_sliceable(pandas.DataFrame(index=self.index), key)
+        # use convert_to_index_sliceable without creating a pandas.DataFrame because of
+        # https://github.com/modin-project/modin/issues/6151
+        indexer = convert_to_index_sliceable(
+            SimpleNamespace(index=self.index, columns=pandas.Index([])), key
+        )
         self.iloc[indexer] = value
 
     def _getitem_slice(self, key: slice):
