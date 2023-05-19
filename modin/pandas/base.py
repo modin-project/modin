@@ -1296,6 +1296,15 @@ class BasePandasDataset(ClassLogger):
         """
         First discrete difference of element.
         """
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for -: got {dtype}")
+
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.diff(
