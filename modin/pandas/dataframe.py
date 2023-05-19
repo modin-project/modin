@@ -1485,7 +1485,12 @@ class DataFrame(BasePandasDataset):
         # if values is not specified, it should be the remaining columns not in
         # index or columns
         if values is None:
-            values = [c for c in self.columns if c not in index and c not in columns]
+            values = list(self.columns)
+            if index:
+                values = [v for v in values if v not in index]
+            if columns:
+                values = [v for v in values if v not in columns]
+
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
