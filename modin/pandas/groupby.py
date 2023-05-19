@@ -573,7 +573,13 @@ class DataFrameGroupBy(ClassLogger):
         internal_by = tuple()
         if self._drop:
             if is_list_like(self._by):
-                internal_by = tuple(by for by in self._by if isinstance(by, str))
+                internal_by_list = []
+                for by in self._by:
+                    if isinstance(by, str):
+                        internal_by_list.append(by)
+                    elif isinstance(by, pandas.Grouper):
+                        internal_by_list.append(by.key)
+                internal_by = tuple(internal_by_list)
             else:
                 ErrorMessage.catch_bugs_and_request_email(
                     failure_condition=not isinstance(self._by, BaseQueryCompiler),

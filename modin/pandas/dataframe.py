@@ -482,29 +482,34 @@ class DataFrame(BasePandasDataset):
                 (
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
+                    or (isinstance(o, pandas.Grouper) and o.key in self)
                     or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
                 for o in by
             ):
-                # We want to split 'by's into those that belongs to the self (internal_by)
-                # and those that doesn't (external_by)
-                internal_by, external_by = [], []
+                has_external = False
+                processed_by = []
 
                 for current_by in by:
-                    if hashable(current_by):
-                        internal_by.append(current_by)
+                    if isinstance(current_by, pandas.Grouper):
+                        processed_by.append(current_by)
+                        has_external = True
+                    elif hashable(current_by):
+                        processed_by.append(current_by)
                     elif isinstance(current_by, Series):
                         if current_by._parent is self:
-                            internal_by.append(current_by.name)
+                            processed_by.append(current_by.name)
                         else:
-                            external_by.append(current_by._query_compiler)
+                            processed_by.append(current_by._query_compiler)
+                            has_external = True
                     else:
-                        external_by.append(current_by)
+                        has_external = True
+                        processed_by.append(current_by)
 
-                by = internal_by + external_by
+                by = processed_by
 
-                if len(external_by) == 0:
-                    by = self[internal_by]._query_compiler
+                if not has_external:
+                    by = self[processed_by]._query_compiler
 
                 drop = True
             else:

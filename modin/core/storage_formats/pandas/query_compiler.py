@@ -3114,7 +3114,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
-            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_by = []
+            for o in by:
+                if isinstance(o, pandas.Grouper):
+                    internal_by.append(o.key)
+                elif hashable(o) and o in self.columns:
+                    internal_by.append(o)
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
             )
