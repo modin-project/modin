@@ -2540,19 +2540,22 @@ def test_skew_corner_cases():
 @pytest.mark.parametrize(
     "by",
     [
-        pandas.Grouper(key="time_stamp", freq="D"),
+        pandas.Grouper(key="time_stamp", freq="3D"),
         [pandas.Grouper(key="time_stamp", freq="1M"), "count"],
     ],
 )
 def test_groupby_with_grouper(by):
     # See https://github.com/modin-project/modin/issues/5091 for more details
+    # Generate larger data so that it can handle partitioning cases
     data = {
         "id": [i for i in range(200)],
         "time_stamp": [
             pd.Timestamp("2000-01-02") + datetime.timedelta(days=x) for x in range(200)
         ],
-        "count": [5, 6] * 100,
     }
+    for i in range(200):
+        data[f"count_{i}"] = [i, i + 1] * 100
+
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(
         modin_df,
