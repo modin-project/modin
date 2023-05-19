@@ -580,10 +580,12 @@ class DataFrameGroupBy(ClassLogger):
                     elif isinstance(by, pandas.Grouper):
                         internal_by_list.append(by.key)
                 internal_by = tuple(internal_by_list)
+            elif isinstance(self._by, pandas.Grouper):
+                internal_by = tuple([self._by.key])
             else:
                 ErrorMessage.catch_bugs_and_request_email(
                     failure_condition=not isinstance(self._by, BaseQueryCompiler),
-                    extra_log=f"When 'drop' is True, 'by' must be either list-like or a QueryCompiler, met: {type(self._by)}.",
+                    extra_log=f"When 'drop' is True, 'by' must be either list-like, Grouper, or a QueryCompiler, met: {type(self._by)}.",
                 )
                 internal_by = tuple(self._by.columns)
 

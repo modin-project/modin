@@ -2535,3 +2535,41 @@ def test_skew_corner_cases():
     # https://github.com/modin-project/modin/issues/5545
     modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [171, 137]})
     eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+
+def test_groupby_with_grouper():
+    # See https://github.com/modin-project/modin/issues/5091 for more details
+    data = {
+        "id": [1, 2],
+        "time_stamp": ["2022-03-24 23:53:09", "2022-03-24 21:53:09"],
+        "count": [5, 5],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+
+    # modin Grouper is the same as the pandas Grouper objects
+    # test just for one key
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(pandas.Grouper(key="time_stamp", freq="D").mean()),
+    )
+
+    data = {
+        "Publish date": [
+            pd.Timestamp("2000-01-02"),
+            pd.Timestamp("2000-01-02"),
+            pd.Timestamp("2000-01-09"),
+            pd.Timestamp("2000-01-16"),
+        ],
+        "ID": [0, 1, 1, 3],
+        "Price": [10, 20, 30, 40],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(
+            [pandas.Grouper(key="Publish date", freq="1M"), "ID"]
+        ).sum(),
+    )

@@ -476,6 +476,8 @@ class DataFrame(BasePandasDataset):
             drop = by._parent is self
             idx_name = by.name
             by = by._query_compiler
+        elif isinstance(by, pandas.Grouper):
+            drop = by.key in self
         elif is_list_like(by):
             # fastpath for multi column groupby
             if axis == 0 and all(
