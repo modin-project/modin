@@ -40,7 +40,7 @@ from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
 from .accessor import CachedAccessor, SparseAccessor
-from .series_utils import CategoryMethods, StringMethods
+from .series_utils import CategoryMethods, StringMethods, DatetimeProperties
 
 
 if TYPE_CHECKING:
@@ -1820,6 +1820,7 @@ class Series(BasePandasDataset):
     cat = CachedAccessor("cat", CategoryMethods)
     sparse = CachedAccessor("sparse", SparseAccessor)
     str = CachedAccessor("str", StringMethods)
+    dt = CachedAccessor("dt", DatetimeProperties)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -2143,15 +2144,6 @@ class Series(BasePandasDataset):
         Return a list of the row axis labels.
         """
         return [self.index]
-
-    @property
-    def dt(self):  # noqa: RT01, D200
-        """
-        Accessor object for datetimelike properties of the Series values.
-        """
-        from .series_utils import DatetimeProperties
-
-        return DatetimeProperties(self)
 
     @property
     def dtype(self):  # noqa: RT01, D200
