@@ -1126,7 +1126,7 @@ class DataFrameGroupBy(ClassLogger):
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_quantile,
                 numeric_only=True,
-                agg_kwargs=dict(q=q, interpolation=interpolation),
+                agg_kwargs=dict(q=q, interpolation=interpolation, numeric_only=True),
             )
         )
 
