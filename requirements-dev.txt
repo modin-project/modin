@@ -3,7 +3,7 @@ numpy>=1.18.5
 dask[complete]>=2.22.0
 distributed>=2.22.0
 ray[default]>=1.13.0
-pyarrow
+pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
 psutil
 fsspec
 xarray

@@ -60,6 +60,7 @@ def test_top_level_api_equality():
         "warnings",
         "os",
         "series_utils",
+        "window",
     ]
 
     assert not len(
@@ -185,7 +186,7 @@ def test_series_str_api_equality():
 
 
 def test_series_dt_api_equality():
-    modin_dir = [obj for obj in dir(pd.Series().dt) if obj[0] != "_"]
+    modin_dir = [obj for obj in dir(pd.Series.dt) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.Series.dt) if obj[0] != "_"]
 
     missing_from_modin = set(pandas_dir) - set(modin_dir)

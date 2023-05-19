@@ -124,13 +124,35 @@ def test_mixed_dtypes_groupby(as_index):
             pandas_groupby = pandas_df.set_index(by[0]).groupby(
                 by=by[-1], as_index=as_index
             )
+            # difference in behaviour between .groupby().ffill() and
+            # .groupby.fillna(method='ffill') on duplicated indices
+            # caused by https://github.com/pandas-dev/pandas/issues/43412
+            # is hurting the tests, for now sort the frames
+            md_sorted_grpby = (
+                modin_df.set_index(by[0])
+                .sort_index()
+                .groupby(by=by[0], as_index=as_index)
+            )
+            pd_sorted_grpby = (
+                pandas_df.set_index(by[0])
+                .sort_index()
+                .groupby(by=by[0], as_index=as_index)
+            )
         else:
             modin_groupby = modin_df.groupby(by=by[0], as_index=as_index)
             pandas_groupby = pandas_df.groupby(by=by[-1], as_index=as_index)
+            md_sorted_grpby, pd_sorted_grpby = modin_groupby, pandas_groupby
 
         modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
         eval_ngroups(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
+        eval_general(
+            md_sorted_grpby,
+            pd_sorted_grpby,
+            lambda df: df.ffill(),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -162,10 +184,31 @@ def test_mixed_dtypes_groupby(as_index):
             eval_apply(modin_groupby, pandas_groupby, func)
 
         eval_dtypes(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.backfill())
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.first(),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
+        eval_general(
+            md_sorted_grpby,
+            pd_sorted_grpby,
+            lambda df: df.backfill(),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
         eval_cummin(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
+        eval_general(
+            md_sorted_grpby,
+            pd_sorted_grpby,
+            lambda df: df.bfill(),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
         eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
         eval_prod(modin_groupby, pandas_groupby)
         if as_index:
@@ -203,11 +246,21 @@ def test_mixed_dtypes_groupby(as_index):
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
-        eval_ngroup(modin_groupby, pandas_groupby)
+        if not ExperimentalGroupbyImpl.get():
+            # `.group` fails with experimental groupby
+            # https://github.com/modin-project/modin/issues/6083
+            eval_ngroup(modin_groupby, pandas_groupby)
         eval_nunique(modin_groupby, pandas_groupby)
         eval_value_counts(modin_groupby, pandas_groupby)
         eval_median(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.head(n),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
         eval_cumprod(modin_groupby, pandas_groupby)
         eval_general(
             modin_groupby,
@@ -232,7 +285,14 @@ def test_mixed_dtypes_groupby(as_index):
         )
         eval_fillna(modin_groupby, pandas_groupby)
         eval_count(modin_groupby, pandas_groupby)
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.tail(n),
+            comparator=lambda *dfs: df_equals(
+                *sort_index_if_experimental_groupby(*dfs)
+            ),
+        )
         eval_quantile(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
         eval___getattr__(modin_groupby, pandas_groupby, "col2")
@@ -295,8 +355,10 @@ class GetColumn:
         [GetColumn("col1")],  # 20
     ],
 )
-@pytest.mark.parametrize("as_index", [True, False])
-@pytest.mark.parametrize("col1_category", [True, False])
+@pytest.mark.parametrize("as_index", [True, False], ids=lambda v: f"as_index={v}")
+@pytest.mark.parametrize(
+    "col1_category", [True, False], ids=lambda v: f"col1_category={v}"
+)
 def test_simple_row_groupby(by, as_index, col1_category):
     pandas_df = pandas.DataFrame(
         {
@@ -334,6 +396,19 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
+    eval_general(modin_groupby, pandas_groupby, lambda df: df.pad())
+    if as_index:
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.nth(0))
+    else:
+        # FIXME: df.groupby(as_index=False).nth() does not produce correct index in Modin,
+        #        it should maintain values from df.index, not create a new one or re-order it;
+        #        it also produces completely wrong result for multi-column `by` :(
+        if not isinstance(pandas_by, list) or len(pandas_by) <= 1:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda df: df.nth(0).sort_values("col1").reset_index(drop=True),
+            )
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -351,6 +426,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax(axis=0))
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin(axis=0))
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
 
     eval_general(
         modin_groupby,
@@ -669,6 +745,23 @@ def test_large_row_groupby(is_by_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
     eval_ndim(modin_groupby, pandas_groupby)
     eval_cumsum(modin_groupby, pandas_groupby)
+
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=2),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(periods=-1),
+    )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.diff(axis=1),
+    )
+
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -932,6 +1025,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
         )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=2),
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.diff(periods=-1),
+        )
         eval_cummax(modin_groupby, pandas_groupby)
 
         apply_functions = [lambda df: df.sum(), min]
@@ -949,7 +1052,16 @@ def test_series_groupby(by, as_index_series_or_dataframe):
             eval_var(modin_groupby, pandas_groupby)
             eval_skew(modin_groupby, pandas_groupby)
 
-        agg_functions = [lambda df: df.sum(), "min", "max", max, sum]
+        agg_functions = [
+            lambda df: df.sum(),
+            "min",
+            "max",
+            max,
+            sum,
+            np.mean,
+            ["min", "max"],
+            [np.mean, np.std, np.var, np.max, np.min],
+        ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
             eval_aggregate(modin_groupby, pandas_groupby, func)
@@ -1253,6 +1365,12 @@ def eval___getitem__(md_grp, pd_grp, item):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
+    if ExperimentalGroupbyImpl.get():
+        # `.get_group()` doesn't work correctly with experimental groupby:
+        # https://github.com/modin-project/modin/issues/6093
+        return
+    for name in pandas_groupby.groups:
+        df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
 def eval_shift(modin_groupby, pandas_groupby):

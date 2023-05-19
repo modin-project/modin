@@ -535,6 +535,7 @@ doc_str_method = partial(
 
 
 def doc_window_method(
+    window_cls_name,
     result,
     refer_to,
     action=None,
@@ -543,10 +544,12 @@ def doc_window_method(
     build_rules="aggregation",
 ):
     """
-    Build decorator which adds docstring for the window method.
+    Build decorator which adds docstring for a window method.
 
     Parameters
     ----------
+    window_cls_name : str
+        The Window class the method is on.
     result : str
         The result of the method.
     refer_to : str
@@ -596,7 +599,12 @@ def doc_window_method(
     }
     if action is None:
         action = f"compute {result}"
-    window_args_name = "rolling_args" if win_type == "rolling window" else "window_args"
+    if win_type == "rolling window":
+        window_args_name = "rolling_args"
+    elif win_type == "expanding window":
+        window_args_name = "expanding_args"
+    else:
+        window_args_name = "window_args"
 
     # We need that `params` value ended with new line to have
     # an empty line between "parameters" and "return" sections
@@ -613,7 +621,7 @@ def doc_window_method(
         win_type=win_type,
         extra_params=params,
         build_rules=doc_build_rules.get(build_rules, build_rules),
-        refer_to=f"Rolling.{refer_to}",
+        refer_to=f"{window_cls_name}.{refer_to}",
         window_args_name=window_args_name,
     )
 

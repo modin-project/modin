@@ -52,13 +52,15 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             import_optional_dependency(
                 "pyarrow", "pyarrow is required to read feather files."
             )
-            from pyarrow.feather import read_feather
+            from pyarrow import ipc
 
             with OpenFile(
                 path,
                 **(kwargs.get("storage_options", None) or {}),
             ) as file:
-                df = read_feather(file)
-            # pyarrow.feather.read_feather doesn't support columns as pandas.Index
-            columns = list(df.columns)
+                # Opens the file to extract its metadata
+                reader = ipc.open_file(file)
+            # TODO: pyarrow's schema contains much more metadata than just column names, it also
+            # has dtypes and index information that we could use when building a dataframe
+            columns = reader.schema.names
         return cls.build_query_compiler(path, columns, use_threads=False)
