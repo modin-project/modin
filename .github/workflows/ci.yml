@@ -1,6 +1,6 @@
 name: ci
 on:
-  push:
+  pull_request:
     paths:
       # NOTE: keep these paths in sync with the paths that trigger the
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
