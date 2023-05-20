@@ -1,8 +1,6 @@
 name: push-to-master
 on:
-  push:
-    branches:
-      - master
+  pull_request
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
@@ -51,7 +49,8 @@ jobs:
           use-only-tar-bz2: false
       - name: install Ray nightly build
         # Use --force-reinstall to always reinstall ray and its dependencies.
-        run: pip install --force-reinstall https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+        # botocore isn't compatible with urllib3>=2; see #6094 for details
+        run: pip install --force-reinstall "urllib3<2" https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
       - name: Conda environment
         run: |
           conda info
