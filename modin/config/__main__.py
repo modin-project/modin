@@ -45,6 +45,11 @@ def export_config_help(filename: str) -> None:
         Name of the file to export configs data.
     """
     configs_data = []
+    default_values = dict(
+        RayRedisPassword="random string",
+        CpuCount="multiprocessing.cpu_count()",
+        NPartitions="equals to MODIN_CPUS env",
+    )
     for objname in sorted(globals()):
         obj = globals()[objname]
         if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
@@ -54,8 +59,8 @@ def export_config_help(filename: str) -> None:
                     obj, "varname", "not backed by environment"
                 ),
                 "Default Value": obj._get_default()
-                if obj.__name__ != "RayRedisPassword"
-                else "random string",
+                if obj.__name__ not in default_values
+                else default_values[obj.__name__],
                 # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
                 "Description": dedent(obj.__doc__ or "").replace(
                     "Notes\n-----", "Notes:\n"
