@@ -363,9 +363,7 @@ class Resampler(ClassLogger):
         from .series import Series
 
         output_series = Series(
-            query_compiler=self._query_compiler.resample_size(
-                self.resample_kwargs
-            )
+            query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
         )
         if not isinstance(self._dataframe, Series):
             # If input is a DataFrame, rename output Series to None
