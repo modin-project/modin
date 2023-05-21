@@ -352,19 +352,19 @@ class Resampler(ClassLogger):
                 )
             )
 
-    def prod(self, _method="prod", *args, **kwargs):
+    def prod(self, min_count=0, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_prod(
-                self.resample_kwargs, *args, **kwargs
+                self.resample_kwargs, min_count=min_count, *args, **kwargs
             )
         )
 
-    def size(self, _method="size"):
+    def size(self):
         from .series import Series
 
         output_series = Series(
             query_compiler=self._query_compiler.resample_size(
-                self.resample_kwargs, None, None
+                self.resample_kwargs
             )
         )
         if not isinstance(self._dataframe, Series):
@@ -388,10 +388,10 @@ class Resampler(ClassLogger):
             )
         )
 
-    def sum(self, _method="sum", *args, **kwargs):
+    def sum(self, min_count=0, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.resample_sum(
-                self.resample_kwargs, *args, **kwargs
+                self.resample_kwargs, min_count=min_count, *args, **kwargs
             )
         )
 
