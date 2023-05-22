@@ -1439,10 +1439,10 @@ class BasePandasDataset(ClassLogger):
                     drop_labels = [(level, "")]
                 result = result.reset_index().drop(columns=drop_labels)
             else:
-                new_axis = self.axes[axis].droplevel(level)
                 result = result.reset_index().drop(columns=level)
             result = result.set_index(index_columns)
         else:
+            new_axis = self.axes[axis].droplevel(level)
             result.columns = new_axis
         return result
 
