@@ -623,7 +623,7 @@ class TestCategoricalProxyDtype:
 
         Returns
         -------
-        (LazyProxyCategoricalDtype, pandas.CategoricalDtype)
+        (LazyProxyCategoricalDtype, pandas.CategoricalDtype, modin.pandas.DataFrame)
         """
         nchunks = 3
         pandas_df = pandas.DataFrame({"a": [1, 1, 2, 2, 3, 2], "b": [1, 2, 3, 4, 5, 6]})
@@ -638,7 +638,7 @@ class TestCategoricalProxyDtype:
             assert df._query_compiler._modin_frame._partitions.shape == (nchunks, 1)
 
             df = df.astype({"a": "category"})
-            return df.dtypes["a"], original_dtype
+            return df.dtypes["a"], original_dtype, df
         elif StorageFormat.get() == "Hdk":
             import pyarrow as pa
             from modin.pandas.utils import from_arrow
@@ -652,13 +652,13 @@ class TestCategoricalProxyDtype:
             assert len(at.column(0).chunks) == nchunks
 
             df = from_arrow(at)
-            return df.dtypes["a"], original_dtype
+            return df.dtypes["a"], original_dtype, df
         else:
             raise NotImplementedError()
 
     def test_update_proxy(self):
         """Verify that ``LazyProxyCategoricalDtype._update_proxy`` method works as expected."""
-        lazy_proxy, _ = self._get_lazy_proxy()
+        lazy_proxy, _, _ = self._get_lazy_proxy()
         new_parent = pd.DataFrame({"a": [10, 20, 30]})._query_compiler._modin_frame
 
         assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
@@ -691,9 +691,45 @@ class TestCategoricalProxyDtype:
             == pandas.CategoricalDtype
         )
 
+    def test_update_proxy_implicit(self):
+        """
+        Verify that a lazy proxy correctly updates its parent when passed from one parent to another.
+        """
+        lazy_proxy, _, parent = self._get_lazy_proxy()
+        parent_frame = parent._query_compiler._modin_frame
+
+        if StorageFormat.get() == "Pandas":
+            assert lazy_proxy._parent is parent_frame
+        elif StorageFormat.get() == "Hdk":
+            arrow_table = parent_frame._partitions[0, 0].get()
+            assert lazy_proxy._parent is arrow_table
+        else:
+            raise NotImplementedError(
+                f"The test is not implemented for {StorageFormat.get()} storage format"
+            )
+
+        # Making a copy of the dataframe, the new proxy should now start pointing to the new parent
+        new_parent = parent.copy()
+        new_parent_frame = new_parent._query_compiler._modin_frame
+        new_lazy_proxy = new_parent_frame.dtypes[lazy_proxy._column_name]
+
+        if StorageFormat.get() == "Pandas":
+            # Make sure that the old proxy still pointing to the old parent
+            assert lazy_proxy._parent is parent_frame
+            assert new_lazy_proxy._parent is new_parent_frame
+        elif StorageFormat.get() == "Hdk":
+            new_arrow_table = new_parent_frame._partitions[0, 0].get()
+            # Make sure that the old proxy still pointing to the old parent
+            assert lazy_proxy._parent is arrow_table
+            assert new_lazy_proxy._parent is new_arrow_table
+        else:
+            raise NotImplementedError(
+                f"The test is not implemented for {StorageFormat.get()} storage format"
+            )
+
     def test_if_proxy_lazy(self):
         """Verify that proxy is able to pass simple comparison checks without triggering materialization."""
-        lazy_proxy, actual_dtype = self._get_lazy_proxy()
+        lazy_proxy, actual_dtype, _ = self._get_lazy_proxy()
 
         assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
         assert not lazy_proxy._is_materialized
@@ -716,7 +752,7 @@ class TestCategoricalProxyDtype:
 
     def test_proxy_as_dtype(self):
         """Verify that proxy can be used as an actual dtype."""
-        lazy_proxy, actual_dtype = self._get_lazy_proxy()
+        lazy_proxy, actual_dtype, _ = self._get_lazy_proxy()
 
         assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
         assert not lazy_proxy._is_materialized
@@ -730,7 +766,7 @@ class TestCategoricalProxyDtype:
 
     def test_proxy_with_pandas_constructor(self):
         """Verify that users still can use pandas' constructor using `type(cat)(...)` notation."""
-        lazy_proxy, _ = self._get_lazy_proxy()
+        lazy_proxy, _, _ = self._get_lazy_proxy()
         assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
 
         new_cat_values = pandas.Index([3, 4, 5])

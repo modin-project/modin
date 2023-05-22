@@ -31,7 +31,7 @@ from .utils import (
     build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
-from modin.core.dataframe.pandas.metadata import ModinDtypes, LazyProxyCategoricalDtype
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
@@ -43,7 +43,7 @@ from pandas.core.dtypes.common import (
 )
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
@@ -419,27 +419,13 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         return [expr._dtype for expr in exprs.values()]
 
-    def set_dtypes_cache(self, dtypes):
-        """
-        Set dtypes cache.
-
-        Parameters
-        ----------
-        dtypes : pandas.Series, ModinDtypes or callable
-        """
-        if self._has_arrow_table():
-            assert self._partitions.size == 1
-            table = self._partitions[0][0].get()
-            if isinstance(dtypes, pd.Series) or (
-                isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
-            ):
-                for key, value in dtypes.items():
-                    if isinstance(value, LazyProxyCategoricalDtype):
-                        dtypes[key] = value._update_proxy(table, key)
-        if isinstance(dtypes, ModinDtypes) or dtypes is None:
-            self._dtypes = dtypes
-        else:
-            self._dtypes = ModinDtypes(dtypes)
+    @_inherit_docstrings(PandasDataframe._maybe_update_proxies)
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        if new_parent is not None:
+            super()._maybe_update_proxies(dtypes, new_parent)
+        elif self._has_arrow_table():
+            table = self._partitions[0, 0].get()
+            super()._maybe_update_proxies(dtypes, new_parent=table)
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """

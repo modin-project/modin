@@ -254,6 +254,25 @@ class PandasDataframe(ClassLogger):
             dtypes_cache = self._dtypes.copy()
         return dtypes_cache
 
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        """
+        Update lazy proxies stored inside of `dtypes` with a new parent inplace.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes or callable
+        new_parent : object, optional
+            A new parent to link the proxies to. If not specified
+            will consider the `self` to be a new parent.
+        """
+        new_parent = new_parent or self
+        if isinstance(dtypes, pandas.Series) or (
+            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
+        ):
+            for key, value in dtypes.items():
+                if isinstance(value, LazyProxyCategoricalDtype):
+                    dtypes[key] = value._update_proxy(new_parent, column_name=key)
+
     def set_dtypes_cache(self, dtypes):
         """
         Set dtypes cache.
@@ -262,12 +281,7 @@ class PandasDataframe(ClassLogger):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
-        if isinstance(dtypes, pandas.Series) or (
-            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
-        ):
-            for key, value in dtypes.items():
-                if isinstance(value, LazyProxyCategoricalDtype):
-                    dtypes[key] = value._update_proxy(self, column_name=key)
+        self._maybe_update_proxies(dtypes)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:

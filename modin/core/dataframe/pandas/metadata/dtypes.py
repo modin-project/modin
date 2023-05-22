@@ -199,9 +199,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         elif parent is self._parent and column_name == self._column_name:
             return self
         else:
-            return LazyProxyCategoricalDtype._build_proxy(
-                parent, column_name, self._materializer
-            )
+            return self._build_proxy(parent, column_name, self._materializer)
 
     @classmethod
     def _build_proxy(cls, parent, column_name, materializer):
@@ -283,7 +281,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         """Materialize actual categorical values."""
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=self._parent is None,
-            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
+            extra_log="attempted to materialize categories with parent being 'None'",
         )
         categoricals = self._materializer(self._parent, self._column_name)
         self._categories = categoricals.categories
