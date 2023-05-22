@@ -18,11 +18,13 @@ import modin.pandas as pd
 
 from .utils import (
     df_equals,
+    test_data,
     test_data_values,
     test_data_keys,
     eval_general,
     create_test_dfs,
 )
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -47,10 +49,16 @@ def create_test_series(vals):
         ("count", {}),
         ("sum", {}),
         ("mean", {}),
+        ("median", {}),
+        ("skew", {}),
+        ("kurt", {}),
         ("var", {"ddof": 0}),
         ("std", {"ddof": 0}),
         ("min", {}),
         ("max", {}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("quantile", {"q": 0.1}),
     ],
 )
 def test_dataframe(data, min_periods, axis, method, kwargs):
@@ -60,6 +68,33 @@ def test_dataframe(data, min_periods, axis, method, kwargs):
             df.expanding(min_periods=min_periods, center=True, axis=axis), method
         )(**kwargs)
     )
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("method", ["corr", "cov"])
+def test_dataframe_corr_cov(data, min_periods, axis, method):
+    with warns_that_defaulting_to_pandas():
+        eval_general(
+            *create_test_dfs(data),
+            lambda df: getattr(
+                df.expanding(min_periods=min_periods, center=True, axis=axis), method
+            )()
+        )
+
+
+@pytest.mark.parametrize("method", ["corr", "cov"])
+def test_dataframe_corr_cov_with_self(method):
+    mdf, pdf = create_test_dfs(test_data["float_nan_data"])
+    with warns_that_defaulting_to_pandas():
+        eval_general(
+            mdf,
+            pdf,
+            lambda df, other: getattr(df.expanding(), method)(other=other),
+            other=pdf,
+            md_extra_kwargs={"other": mdf},
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -93,10 +128,18 @@ def test_dataframe_agg(data, min_periods):
         ("count", {}),
         ("sum", {}),
         ("mean", {}),
+        ("median", {}),
+        ("skew", {}),
+        ("kurt", {}),
+        ("corr", {}),
+        ("cov", {}),
         ("var", {"ddof": 0}),
         ("std", {"ddof": 0}),
         ("min", {}),
         ("max", {}),
+        ("rank", {}),
+        ("sem", {"ddof": 0}),
+        ("quantile", {"q": 0.1}),
     ],
 )
 def test_series(data, min_periods, method, kwargs):
@@ -125,4 +168,16 @@ def test_series_agg(data, min_periods):
     df_equals(
         pandas_expanded.aggregate([np.sum, np.mean]),
         modin_expanded.aggregate([np.sum, np.mean]),
+    )
+
+
+@pytest.mark.parametrize("method", ["corr", "cov"])
+def test_series_corr_cov_with_self(method):
+    mdf, pdf = create_test_series(test_data["float_nan_data"])
+    eval_general(
+        mdf,
+        pdf,
+        lambda df, other: getattr(df.expanding(), method)(other=other),
+        other=pdf,
+        md_extra_kwargs={"other": mdf},
     )

@@ -92,6 +92,17 @@ def test_diff(axis, periods):
     )
 
 
+def test_diff_error_handling():
+    df = pd.DataFrame([["a", "b", "c"]], columns=["col 0", "col 1", "col 2"])
+    with pytest.raises(
+        ValueError, match="periods must be an int. got <class 'str'> instead"
+    ):
+        df.diff(axis=0, periods="1")
+
+    with pytest.raises(TypeError, match="unsupported operand type for -: got object"):
+        df.diff()
+
+
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 def test_diff_transposed(axis):
     eval_general(

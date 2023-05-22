@@ -1654,8 +1654,7 @@ def test___abs__(request, data):
 
 def test___round__():
     data = test_data_values[0]
-    with warns_that_defaulting_to_pandas():
-        pd.DataFrame(data).__round__()
+    eval_general(pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.__round__())
 
 
 @pytest.mark.parametrize(

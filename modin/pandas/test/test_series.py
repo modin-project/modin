@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from __future__ import annotations
+
 import pytest
 import numpy as np
 import json
@@ -24,7 +26,6 @@ from numpy.testing import assert_array_equal
 
 from modin.utils import get_current_execution
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-import sys
 
 from modin.utils import to_pandas
 from .utils import (
@@ -2302,7 +2303,6 @@ def test_loc(data):
     data = np.arange(100)
     modin_series = pd.Series(data, index=index).sort_index()
     pandas_series = pandas.Series(data, index=index).sort_index()
-    # Using 'fmt: skip' below as 'black' and 'flake8' can't agree on how this should be formatted
     modin_result = modin_series.loc[
         (slice(None), 1),
     ]  # fmt: skip
@@ -2763,26 +2763,25 @@ def test_reindex(data):
 
 
 def test_reindex_like():
-    df1 = pd.DataFrame(
-        [
-            [24.3, 75.7, "high"],
-            [31, 87.8, "high"],
-            [22, 71.6, "medium"],
-            [35, 95, "medium"],
-        ],
-        columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
-        index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
-    )
-    df2 = pd.DataFrame(
-        [[28, "low"], [30, "low"], [35.1, "medium"]],
-        columns=["temp_celsius", "windspeed"],
-        index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
-    )
+    o_data = [
+        [24.3, 75.7, "high"],
+        [31, 87.8, "high"],
+        [22, 71.6, "medium"],
+        [35, 95, "medium"],
+    ]
+    o_columns = ["temp_celsius", "temp_fahrenheit", "windspeed"]
+    o_index = pd.date_range(start="2014-02-12", end="2014-02-15", freq="D")
+    new_data = [[28, "low"], [30, "low"], [35.1, "medium"]]
+    new_columns = ["temp_celsius", "windspeed"]
+    new_index = pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"])
+    modin_df1 = pd.DataFrame(o_data, columns=o_columns, index=o_index)
+    modin_df2 = pd.DataFrame(new_data, columns=new_columns, index=new_index)
+    modin_result = modin_df2["windspeed"].reindex_like(modin_df1["windspeed"])
 
-    series1 = df1["windspeed"]
-    series2 = df2["windspeed"]
-    with warns_that_defaulting_to_pandas():
-        series2.reindex_like(series1)
+    pandas_df1 = pandas.DataFrame(o_data, columns=o_columns, index=o_index)
+    pandas_df2 = pandas.DataFrame(new_data, columns=new_columns, index=new_index)
+    pandas_result = pandas_df2["windspeed"].reindex_like(pandas_df1["windspeed"])
+    df_equals(modin_result, pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3649,6 +3648,12 @@ def test_unstack(data):
     )
 
 
+def test_unstack_error_no_multiindex():
+    modin_series = pd.Series([0, 1, 2])
+    with pytest.raises(ValueError, match="index must be a MultiIndex to unstack"):
+        modin_series.unstack()
+
+
 @pytest.mark.parametrize(
     "data, other_data",
     [([1, 2, 3], [4, 5, 6]), ([1, 2, 3], [4, 5, 6, 7, 8]), ([1, 2, 3], [4, np.nan, 6])],
@@ -3851,20 +3856,14 @@ def test_str___getitem__(data, key):
 
 
 # Test str operations
-def test_str_cat():
+@pytest.mark.parametrize(
+    "others",
+    [["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN], None],
+    ids=["list", "None"],
+)
+def test_str_cat(others):
     data = ["abC|DeF,Hik", "gSaf,qWer|Gre", "asd3,4sad|", np.NaN]
-    modin_series, pandas_series = create_test_series(data)
-    others = data
-
-    with warns_that_defaulting_to_pandas():
-        # We are only testing that this defaults to pandas, so we will just check for
-        # the warning
-        modin_series.str.cat(others)
-
-    with warns_that_defaulting_to_pandas():
-        # We are only testing that this defaults to pandas, so we will just check for
-        # the warning
-        modin_series.str.cat(None)
+    eval_general(*create_test_series(data), lambda s: s.str.cat(others=others))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3872,24 +3871,10 @@ def test_str_cat():
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_split(data, pat, n, expand):
-    # Empty pattern not supported on Python 3.7+
-    if sys.version_info[0] == 3 and sys.version_info[1] >= 7 and pat == "":
-        return
-
-    modin_series, pandas_series = create_test_series(data)
-
-    if n >= -1:
-        if expand and pat:
-            with warns_that_defaulting_to_pandas():
-                # We are only testing that this defaults to pandas, so we will just check for
-                # the warning
-                modin_series.str.split(pat, n=n, expand=expand)
-        elif not expand:
-            eval_general(
-                modin_series,
-                pandas_series,
-                lambda series: series.str.split(pat, n=n, expand=expand),
-            )
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.split(pat, n=n, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -3897,20 +3882,10 @@ def test_str_split(data, pat, n, expand):
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
 def test_str_rsplit(data, pat, n, expand):
-    modin_series, pandas_series = create_test_series(data)
-
-    if n >= -1:
-        if expand and pat:
-            with warns_that_defaulting_to_pandas():
-                # We are only testing that this defaults to pandas, so we will just check for
-                # the warning
-                modin_series.str.rsplit(pat, n=n, expand=expand)
-        elif not expand:
-            eval_general(
-                modin_series,
-                pandas_series,
-                lambda series: series.str.rsplit(pat, n=n, expand=expand),
-            )
+    eval_general(
+        *create_test_series(data),
+        lambda series: series.str.rsplit(pat, n=n, expand=expand),
+    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4506,14 +4481,44 @@ def test_casefold(data):
     eval_general(modin_series, pandas_series, lambda series: series.str.casefold())
 
 
-@pytest.mark.parametrize("encoding_type", encoding_types)
-@pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-def test_encode(data, encoding_type):
-    modin_series, pandas_series = create_test_series(data)
+@pytest.fixture
+def str_encode_decode_test_data() -> list[str]:
+    return [
+        "abC|DeF,Hik",
+        "234,3245.67",
+        "gSaf,qWer|Gre",
+        "asd3,4sad|",
+        np.NaN,
+        None,
+        # add a string that we can't encode in ascii, and whose utf-8 encoding
+        # we cannot decode in ascii
+        "ക",
+    ]
+
+
+@pytest.mark.parametrize("encoding", encoding_types)
+@pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
+def test_str_encode(encoding, errors, str_encode_decode_test_data):
     eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: series.str.encode(encoding=encoding_type),
+        *create_test_series(str_encode_decode_test_data),
+        lambda s: s.str.encode(encoding, errors=errors),
+    )
+
+
+@pytest.mark.parametrize(
+    "encoding",
+    encoding_types,
+)
+@pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
+def test_str_decode(encoding, errors, str_encode_decode_test_data):
+    eval_general(
+        *create_test_series(
+            [
+                s.encode("utf-8") if isinstance(s, str) else s
+                for s in str_encode_decode_test_data
+            ]
+        ),
+        lambda s: s.str.decode(encoding, errors=errors),
     )
 
 

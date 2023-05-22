@@ -159,7 +159,9 @@ class PandasOnUnidistIO(UnidistIO):
             path_or_buf = csv_kwargs["path_or_buf"]
             is_binary = "b" in csv_kwargs["mode"]
             csv_kwargs["path_or_buf"] = io.BytesIO() if is_binary else io.StringIO()
+            storage_options = csv_kwargs.pop("storage_options", None)
             df.to_csv(**csv_kwargs)
+            csv_kwargs.update({"storage_options": storage_options})
             content = csv_kwargs["path_or_buf"].getvalue()
             csv_kwargs["path_or_buf"].close()
 

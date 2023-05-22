@@ -243,8 +243,8 @@ def test_corr(min_periods):
     )
 
 
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-@pytest.mark.parametrize("ddof", [1, 2, 4])
+@pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")
+@pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
 def test_cov(min_periods, ddof):
     # Modin result may slightly differ from pandas result
     # due to floating pointing arithmetic.
@@ -1074,6 +1074,12 @@ def test_truncate(data):
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
         df_equals(modin_result, pandas_result)
+
+
+def test_truncate_before_greater_than_after():
+    df = pd.DataFrame([[1, 2, 3]])
+    with pytest.raises(ValueError, match="Truncate: 1 must be after 2"):
+        df.truncate(before=2, after=1)
 
 
 def test_tshift():
