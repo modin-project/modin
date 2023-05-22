@@ -58,9 +58,7 @@ def export_config_help(filename: str) -> None:
                 "Env. Variable Name": getattr(
                     obj, "varname", "not backed by environment"
                 ),
-                "Default Value": obj._get_default()
-                if obj.__name__ not in default_values
-                else default_values[obj.__name__],
+                "Default Value": default_values.get(obj.__name__, obj._get_default()),
                 # `Notes` `-` underlining can't be correctly parsed inside csv table by sphinx
                 "Description": dedent(obj.__doc__ or "").replace(
                     "Notes\n-----", "Notes:\n"
