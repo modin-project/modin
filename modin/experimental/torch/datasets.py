@@ -14,8 +14,6 @@ from modin.pandas import Series as ModinSeries
 class ModinIterableDataset(IterableDataset):
     """
     PandasIterableDataset is responsible for converting a pandas/modin dataframe into a torch-compatible dataset.
-
-    The optional with_index option determines if index would be part of the output. Default is no.
     """
 
     def __init__(
