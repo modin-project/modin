@@ -566,11 +566,19 @@ class DataFrameGroupBy(ClassLogger):
         internal_by = tuple()
         if self._drop:
             if is_list_like(self._by):
-                internal_by = tuple(by for by in self._by if isinstance(by, str))
+                internal_by_list = []
+                for by in self._by:
+                    if isinstance(by, str):
+                        internal_by_list.append(by)
+                    elif isinstance(by, pandas.Grouper):
+                        internal_by_list.append(by.key)
+                internal_by = tuple(internal_by_list)
+            elif isinstance(self._by, pandas.Grouper):
+                internal_by = tuple([self._by.key])
             else:
                 ErrorMessage.catch_bugs_and_request_email(
                     failure_condition=not isinstance(self._by, BaseQueryCompiler),
-                    extra_log=f"When 'drop' is True, 'by' must be either list-like or a QueryCompiler, met: {type(self._by)}.",
+                    extra_log=f"When 'drop' is True, 'by' must be either list-like, Grouper, or a QueryCompiler, met: {type(self._by)}.",
                 )
                 internal_by = tuple(self._by.columns)
 
@@ -632,8 +640,14 @@ class DataFrameGroupBy(ClassLogger):
                         + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = internal_by.union(key)
-            key = [col for col in self._df.columns if col in cols_to_grab]
+            # We need to maintain order of the columns in key, using a set doesn't
+            # maintain order.
+            # We use dictionaries since they maintain insertion order as of 3.7,
+            # and its faster to call dict.update than it is to loop through `key`
+            # and select only the elements which aren't in `cols_to_grab`.
+            cols_to_grab = dict.fromkeys(self._internal_by)
+            cols_to_grab.update(dict.fromkeys(key))
+            key = [col for col in cols_to_grab.keys() if col in self._df.columns]
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
@@ -1092,9 +1106,18 @@ class DataFrameGroupBy(ClassLogger):
     def hist(self):
         return self._default_to_pandas(lambda df: df.hist())
 
-    def quantile(self, q=0.5, interpolation="linear"):
-        # TODO: pandas 1.5 now supports numeric_only as an argument
+    def quantile(self, q=0.5, interpolation="linear", numeric_only=False):
         # TODO: handle list-like cases properly
+        # We normally handle `numeric_only` by masking non-numeric columns; however
+        # pandas errors out if there are only non-numeric columns and `numeric_only=True`
+        # for groupby.quantile.
+        if numeric_only:
+            if all(
+                [not is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes]
+            ):
+                raise TypeError(
+                    f"'quantile' cannot be performed against '{self._query_compiler.dtypes[0]}' dtypes!"
+                )
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
@@ -1103,7 +1126,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_quantile,
-                numeric_only=False,
+                numeric_only=numeric_only,
                 agg_kwargs=dict(q=q, interpolation=interpolation),
             )
         )

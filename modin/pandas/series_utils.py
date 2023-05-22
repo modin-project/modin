@@ -209,7 +209,7 @@ class StringMethods(ClassLogger):
             )
         )
 
-    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
+    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=False):
         if not (isinstance(repl, str) or callable(repl)):
             raise TypeError("repl must be a string or callable")
         return self._Series(

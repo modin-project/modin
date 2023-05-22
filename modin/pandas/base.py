@@ -1224,11 +1224,18 @@ class BasePandasDataset(ClassLogger):
         """
         First discrete difference of element.
         """
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for -: got {dtype}")
+
         axis = self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.diff(
-                fold_axis=axis, axis=axis, periods=periods
-            )
+            query_compiler=self._query_compiler.diff(axis=axis, periods=periods)
         )
 
     def drop(
@@ -1350,12 +1357,33 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with requested index / column level(s) removed.
         """
         axis = self._get_axis_number(axis)
-        new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
         if axis == 0:
-            result.index = new_axis
+            index_columns = result.index.names.copy()
+            if is_integer(level):
+                level = index_columns[level]
+            elif is_list_like(level):
+                level = [
+                    index_columns[lev] if is_integer(lev) else lev for lev in level
+                ]
+            if is_list_like(level):
+                for lev in level:
+                    index_columns.remove(lev)
+            else:
+                index_columns.remove(level)
+            if len(result.columns.names) > 1:
+                # In this case, we are dealing with a MultiIndex column, so we need to
+                # be careful when dropping the additional index column.
+                if is_list_like(level):
+                    drop_labels = [(lev, "") for lev in level]
+                else:
+                    drop_labels = [(level, "")]
+                result = result.reset_index().drop(columns=drop_labels)
+            else:
+                result = result.reset_index().drop(columns=level)
+            result = result.set_index(index_columns)
         else:
-            result.columns = new_axis
+            result.columns = self.columns.droplevel(level)
         return result
 
     def drop_duplicates(
@@ -2653,73 +2681,12 @@ class BasePandasDataset(ClassLogger):
         if periods == 0:
             # Check obvious case first
             return self.copy()
-
-        empty_frame = False
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                fill_index = self.index
-                empty_frame = True
-            else:
-                fill_index = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-        else:
-            fill_index = self.index
-        from .dataframe import DataFrame
-
-        fill_columns = None
-        if isinstance(self, DataFrame):
-            if axis == "columns" or axis == 1:
-                if abs(periods) >= len(self.columns):
-                    fill_columns = self.columns
-                    empty_frame = True
-                else:
-                    fill_columns = pandas.RangeIndex(start=0, stop=abs(periods), step=1)
-            else:
-                fill_columns = self.columns
-
-        filled_df = (
-            self.__constructor__(index=fill_index, columns=fill_columns)
-            if isinstance(self, DataFrame)
-            else self.__constructor__(index=fill_index, name=self.name)
+        return self._create_or_update_from_compiler(
+            new_query_compiler=self._query_compiler.shift(
+                periods, freq, axis, fill_value
+            ),
+            inplace=False,
         )
-        if fill_value is not None:
-            filled_df.fillna(fill_value, inplace=True)
-
-        if empty_frame:
-            return filled_df
-
-        if freq is None:
-            if axis == "index" or axis == 0:
-                new_frame = (
-                    pd.concat([filled_df, self.iloc[:-periods]], ignore_index=True)
-                    if periods > 0
-                    else pd.concat([self.iloc[-periods:], filled_df], ignore_index=True)
-                )
-                new_frame.index = self.index.copy()
-                if isinstance(self, DataFrame):
-                    new_frame.columns = self.columns.copy()
-                return new_frame
-            else:
-                if not isinstance(self, DataFrame):
-                    raise ValueError(
-                        f"No axis named {axis} for object type {type(self)}"
-                    )
-                res_columns = self.columns
-                from .general import concat
-
-                if periods > 0:
-                    dropped_df = self.drop(self.columns[-periods:], axis="columns")
-                    new_frame = concat([filled_df, dropped_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
-                else:
-                    dropped_df = self.drop(self.columns[:-periods], axis="columns")
-                    new_frame = concat([dropped_df, filled_df], axis="columns")
-                    new_frame.columns = res_columns
-                    return new_frame
-        else:
-            axis = self._get_axis_number(axis)
-            new_labels = self.axes[axis].shift(periods, freq=freq)
-            return self.set_axis(new_labels, axis=axis)
 
     def skew(
         self,
