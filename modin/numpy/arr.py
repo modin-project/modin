@@ -225,7 +225,7 @@ class array(object):
         # we want to do a simple broadcast where we only consider position, as numpy would, rather
         # than pair columns with the same name and multiply them.)
         self._query_compiler = self._query_compiler.reset_index(drop=True)
-        self._query_compiler.columns = list(range(len(self._query_compiler.columns)))
+        self._query_compiler.columns = range(len(self._query_compiler.columns))
         new_dtype = new_dtype if dtype is None else dtype
         cols_with_wrong_dtype = self._query_compiler.dtypes != new_dtype
         if cols_with_wrong_dtype.any():
@@ -2476,7 +2476,7 @@ class array(object):
             .reset_index(drop=True)
             .concat(1, qcs, ignore_index=True)
         )
-        new_query_compiler.columns = list(range(len(new_query_compiler.columns)))
+        new_query_compiler.columns = range(len(new_query_compiler.columns))
         new_query_compiler = new_query_compiler.transpose()
         new_ndim = 1
         return array(_query_compiler=new_query_compiler, _ndim=new_ndim)
