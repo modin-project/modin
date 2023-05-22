@@ -18,7 +18,7 @@ import pandas
 from pandas.core.apply import reconstruct_func
 from pandas.errors import SpecificationError
 import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -135,6 +135,19 @@ class DataFrameGroupBy(ClassLogger):
         }
         self._kwargs.update(kwargs)
 
+    def __override(self, **kwargs):
+        new_kw = dict(
+            df=self._df,
+            by=self._by,
+            axis=self._axis,
+            squeeze=self._squeeze,
+            idx_name=self._idx_name,
+            drop=self._drop,
+            **self._kwargs,
+        )
+        new_kw.update(kwargs)
+        return type(self)(**new_kw)
+
     def __getattr__(self, key):
         """
         Alter regular attribute access, looks up the name in the columns.
@@ -209,10 +222,19 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self._default_to_pandas(lambda df: df.ffill(limit=limit))
+        ErrorMessage.single_warning(
+            ".ffill() is implemented using .fillna() in Modin, "
+            + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
+            + "on dataframes with duplicated indices"
+        )
+        return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1):
-        return self._default_to_pandas(lambda df: df.sem(ddof=ddof))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_sem,
+            agg_kwargs=dict(ddof=ddof),
+            numeric_only=True,
+        )
 
     def sample(self, n=None, frac=None, replace=False, weights=None, random_state=None):
         return self._default_to_pandas(
@@ -267,7 +289,18 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.plot)
 
     def ohlc(self):
-        return self._default_to_pandas(lambda df: df.ohlc())
+        from .dataframe import DataFrame
+
+        return DataFrame(
+            query_compiler=self._query_compiler.groupby_ohlc(
+                by=self._by,
+                axis=self._axis,
+                groupby_kwargs=self._kwargs,
+                agg_args=[],
+                agg_kwargs={},
+                is_df=isinstance(self._df, DataFrame),
+            ),
+        )
 
     def __bytes__(self):
         """
@@ -303,8 +336,12 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def idxmax(self):
-        return self._default_to_pandas(lambda df: df.idxmax())
+    def idxmax(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmax,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     @property
     def ndim(self):
@@ -377,7 +414,28 @@ class DataFrameGroupBy(ClassLogger):
         return result
 
     def nth(self, n, dropna=None):
-        return self._default_to_pandas(lambda df: df.nth(n, dropna=dropna))
+        # TODO: what we really should do is create a GroupByNthSelector to mimic
+        # pandas behavior and then implement some of these methods there.
+        # Adapted error checking from pandas
+        if dropna:
+            if not is_integer(n):
+                raise ValueError("dropna option only supported for an integer argument")
+
+            if dropna not in ("any", "all"):
+                # Note: when agg-ing picker doesn't raise this, just returns NaN
+                raise ValueError(
+                    "For a DataFrame or Series groupby.nth, dropna must be "
+                    + "either None, 'any' or 'all', "
+                    + f"(was passed {dropna})."
+                )
+
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nth,
+                numeric_only=False,
+                agg_kwargs=dict(n=n, dropna=dropna),
+            )
+        )
 
     def cumsum(self, axis=0, *args, numeric_only=False, **kwargs):
         return self._check_index_name(
@@ -402,8 +460,41 @@ class DataFrameGroupBy(ClassLogger):
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.pct_change(*args, **kwargs))
+    def pct_change(self, periods=1, fill_method="pad", limit=None, freq=None, axis=0):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(
+                    f"unsupported operand type for -: got {self._df.dtypes}"
+                )
+        elif isinstance(self._df, DataFrame) and axis == 0:
+            for col, dtype in self._df.dtypes.items():
+                # can't calculate change on non-numeric columns, so check for
+                # non-numeric columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
+                    isinstance(self._by, (Series, DataFrame))
+                    and col in self._by._query_compiler.columns
+                ):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_pct_change,
+                agg_kwargs=dict(
+                    periods=periods,
+                    fill_method=fill_method,
+                    limit=limit,
+                    freq=freq,
+                    axis=axis,
+                ),
+            )
+        )
 
     def filter(self, func, dropna=True, *args, **kwargs):
         return self._default_to_pandas(
@@ -447,7 +538,11 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def first(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.first(**kwargs))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_first,
+            agg_kwargs=dict(**kwargs),
+            numeric_only=False,
+        )
 
     _internal_by_cache = no_default
 
@@ -566,10 +661,19 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def bfill(self, limit=None):
-        return self._default_to_pandas(lambda df: df.bfill(limit=limit))
+        ErrorMessage.single_warning(
+            ".bfill() is implemented using .fillna() in Modin, "
+            + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
+            + "on dataframes with duplicated indices"
+        )
+        return self.fillna(limit=limit, method="bfill")
 
-    def idxmin(self):
-        return self._default_to_pandas(lambda df: df.idxmin())
+    def idxmin(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmin,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     def prod(self, numeric_only=False, min_count=0):
         return self._wrap_aggregation(
@@ -600,12 +704,6 @@ class DataFrameGroupBy(ClassLogger):
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
-
-            def try_get_str_func(fn):
-                if not isinstance(fn, str) and isinstance(fn, Iterable):
-                    return [try_get_str_func(f) for f in fn]
-                return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
-
             relabeling_required, func_dict, new_columns, order = reconstruct_func(
                 func, **kwargs
             )
@@ -633,7 +731,6 @@ class DataFrameGroupBy(ClassLogger):
                     result.columns = new_columns_idx
                     return result
 
-            func_dict = {col: try_get_str_func(fn) for col, fn in func_dict.items()}
             if any(isinstance(fn, list) for fn in func_dict.values()):
                 # multicolumn case
                 # putting functions in a `list` allows to achieve multicolumn in each partition
@@ -664,10 +761,16 @@ class DataFrameGroupBy(ClassLogger):
                 kwargs = {}
             func = func_dict
         elif is_list_like(func):
-            return self._default_to_pandas(
-                lambda df, *args, **kwargs: df.aggregate(func, *args, **kwargs),
-                *args,
-                **kwargs,
+            # for list-list aggregation pandas always puts
+            # groups as index in the result, ignoring as_index,
+            # so we have to reset it to default value
+            return self.__override(as_index=True)._wrap_aggregation(
+                qc_method=type(self._query_compiler).groupby_agg,
+                numeric_only=False,
+                agg_func=func,
+                agg_args=args,
+                agg_kwargs=kwargs,
+                how="axis_wise",
             )
         elif callable(func):
             return self._check_index(
@@ -700,7 +803,11 @@ class DataFrameGroupBy(ClassLogger):
     agg = aggregate
 
     def last(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.last(**kwargs))
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_last,
+            agg_kwargs=dict(**kwargs),
+            numeric_only=False,
+        )
 
     def rank(self, **kwargs):
         result = self._wrap_aggregation(
@@ -731,7 +838,17 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        return self._default_to_pandas(lambda df: df.get_group(name, obj=obj))
+        work_object = self.__override(
+            df=obj if obj is not None else self._df, as_index=True
+        )
+
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                qc_method=type(work_object._query_compiler).groupby_get_group,
+                numeric_only=False,
+                agg_kwargs=dict(name=name),
+            )
+        )
 
     def __len__(self):
         return len(self.indices)
@@ -818,7 +935,17 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def ngroup(self, ascending=True):
-        return self._default_to_pandas(lambda df: df.ngroup(ascending))
+        result = self._wrap_aggregation(
+            type(self._query_compiler).groupby_ngroup,
+            numeric_only=False,
+            agg_kwargs=dict(ascending=ascending),
+        )
+        if not isinstance(result, Series):
+            # The result should always be a Series with name None and type int64
+            result = result.squeeze(axis=1)
+        # TODO: this might not hold in the future
+        result.name = None
+        return result
 
     def nunique(self, dropna=True):
         return self._check_index(
@@ -841,7 +968,16 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def head(self, n=5):
-        return self._default_to_pandas(lambda df: df.head(n))
+        # groupby().head()/.tail() ignore as_index, so override it to True
+        work_object = self.__override(as_index=True)
+
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                type(work_object._query_compiler).groupby_head,
+                agg_kwargs=dict(n=n),
+                numeric_only=False,
+            )
+        )
 
     def cumprod(self, axis=0, *args, numeric_only=False, **kwargs):
         return self._check_index_name(
@@ -856,8 +992,12 @@ class DataFrameGroupBy(ClassLogger):
     def __iter__(self):
         return self._iter.__iter__()
 
-    def cov(self):
-        return self._default_to_pandas(lambda df: df.cov())
+    def cov(self, min_periods=None, ddof=1, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cov,
+            agg_kwargs=dict(min_periods=min_periods, ddof=ddof),
+            numeric_only=numeric_only,
+        )
 
     def transform(self, func, *args, **kwargs):
         return self._check_index_name(
@@ -871,8 +1011,12 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def corr(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.corr(**kwargs))
+    def corr(self, method="pearson", min_periods=None, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_corr,
+            agg_kwargs=dict(method=method, min_periods=min_periods),
+            numeric_only=numeric_only,
+        )
 
     def fillna(self, *args, **kwargs):
         new_groupby_kwargs = self._kwargs.copy()
@@ -908,13 +1052,27 @@ class DataFrameGroupBy(ClassLogger):
         return com.pipe(self, func, *args, **kwargs)
 
     def cumcount(self, ascending=True):
-        result = self._default_to_pandas(lambda df: df.cumcount(ascending=ascending))
-        # pandas does not name the index on cumcount
-        result._query_compiler.set_index_name(None)
+        result = self._wrap_aggregation(
+            type(self._query_compiler).groupby_cumcount,
+            numeric_only=False,
+            agg_kwargs=dict(ascending=ascending),
+        )
+        if not isinstance(result, Series):
+            # The result should always be a Series with name None and type int64
+            result = result.squeeze(axis=1)
+            result.name = None
         return result
 
     def tail(self, n=5):
-        return self._default_to_pandas(lambda df: df.tail(n))
+        # groupby().head()/.tail() ignore as_index, so override it to True
+        work_object = self.__override(as_index=True)
+        return work_object._check_index(
+            work_object._wrap_aggregation(
+                type(work_object._query_compiler).groupby_tail,
+                agg_kwargs=dict(n=n),
+                numeric_only=False,
+            )
+        )
 
     # expanding and rolling are unique cases and need to likely be handled
     # separately. They do not appear to be commonly used.
@@ -928,6 +1086,8 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.hist())
 
     def quantile(self, q=0.5, interpolation="linear"):
+        # TODO: pandas 1.5 now supports numeric_only as an argument
+        # TODO: handle list-like cases properly
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
@@ -941,8 +1101,38 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def diff(self):
-        return self._default_to_pandas(lambda df: df.diff())
+    def diff(self, periods=1, axis=0):
+        from .dataframe import DataFrame
+
+        # Should check for API level errors
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise TypeError(f"periods must be an int. got {type(periods)} instead")
+
+        if isinstance(self._df, Series):
+            if not is_numeric_dtype(self._df.dtypes):
+                raise TypeError(
+                    f"unsupported operand type for -: got {self._df.dtypes}"
+                )
+        elif isinstance(self._df, DataFrame) and axis == 0:
+            for col, dtype in self._df.dtypes.items():
+                # can't calculate diff on non-numeric columns, so check for non-numeric
+                # columns that are not included in the `by`
+                if not is_numeric_dtype(dtype) and not (
+                    isinstance(self._by, (Series, DataFrame))
+                    and col in self._by._query_compiler.columns
+                ):
+                    raise TypeError(f"unsupported operand type for -: got {dtype}")
+
+        return self._check_index_name(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_diff,
+                agg_kwargs=dict(
+                    periods=periods,
+                    axis=axis,
+                ),
+            )
+        )
 
     def take(self, *args, **kwargs):
         return self._default_to_pandas(lambda df: df.take(*args, **kwargs))
@@ -1328,6 +1518,32 @@ class SeriesGroupBy(DataFrameGroupBy):
                 for k in (sorted(group_ids) if self._sort else group_ids)
             )
 
+    def _try_get_str_func(self, fn):
+        """
+        Try to convert a groupby aggregation function to a string or list of such.
+
+        Parameters
+        ----------
+        fn : callable, str, or Iterable
+
+        Returns
+        -------
+        str, list
+            If `fn` is a callable, return its name if it's a method of the groupby
+            object, otherwise return `fn` itself. If `fn` is a string, return it.
+            If `fn` is an Iterable, return a list of _try_get_str_func applied to
+            each element of `fn`.
+        """
+        if not isinstance(fn, str) and isinstance(fn, Iterable):
+            return [self._try_get_str_func(f) for f in fn]
+        if fn is np.max:
+            # np.max is called "amax", so it's not a method of the groupby object.
+            return "amax"
+        elif fn is np.min:
+            # np.min is called "amin", so it's not a method of the groupby object.
+            return "amin"
+        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
+
     def value_counts(
         self,
         normalize: bool = False,
@@ -1354,18 +1570,63 @@ class SeriesGroupBy(DataFrameGroupBy):
     def is_monotonic_increasing(self):
         return self._default_to_pandas(lambda ser: ser.is_monotonic_increasing)
 
-    def nlargest(self, n: int = 5, keep: str = "first") -> Series:
-        return self._default_to_pandas(lambda ser: ser.nlargest(n=n, keep=keep))
-
-    def nsmallest(self, n: int = 5, keep: str = "first") -> Series:
-        return self._default_to_pandas(lambda ser: ser.nsmallest(n=n, keep=keep))
-
-    def unique(self):
-        return self._default_to_pandas(lambda ser: ser.unique())
-
     @property
     def dtype(self):
         return self._default_to_pandas(lambda ser: ser.dtype)
+
+    def unique(self):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_unique,
+                numeric_only=False,
+            )
+        )
+
+    def nlargest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nlargest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
+
+    def nsmallest(self, n=5, keep="first"):
+        return self._check_index(
+            self._wrap_aggregation(
+                type(self._query_compiler).groupby_nsmallest,
+                agg_kwargs=dict(n=n, keep=keep),
+                numeric_only=True,
+            )
+        )
+
+    def aggregate(self, func=None, *args, **kwargs):
+        if isinstance(func, dict):
+            raise SpecificationError("nested renamer is not supported")
+        elif is_list_like(func):
+            from .dataframe import DataFrame
+
+            result = DataFrame(
+                query_compiler=self._query_compiler.groupby_agg(
+                    by=self._by,
+                    agg_func=func,
+                    axis=self._axis,
+                    groupby_kwargs=self._kwargs,
+                    agg_args=args,
+                    agg_kwargs=kwargs,
+                )
+            )
+            # query compiler always gives result a multiindex on the axis with the
+            # function names, but series always gets a regular index on the columns
+            # because there is no need to identify which original column's aggregation
+            # the new column represents. alternatively we could give the query compiler
+            # a hint that it's for a series, not a dataframe.
+            maybe_squeezed = result.squeeze() if self._squeeze else result
+            return maybe_squeezed.set_axis(labels=self._try_get_str_func(func), axis=1)
+        else:
+            return super().aggregate(func, *args, **kwargs)
+
+    agg = aggregate
 
 
 if IsExperimental.get():

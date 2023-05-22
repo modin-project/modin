@@ -10,13 +10,13 @@
 # the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
-
 """Implement DataFrame/Series public API as pandas does."""
 from __future__ import annotations
 import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
+from pandas.core.methods.describe import refine_percentiles
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -24,7 +24,6 @@ from pandas.core.dtypes.common import (
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
-    pandas_dtype,
     is_integer,
 )
 from pandas.core.indexes.api import ensure_index
@@ -35,9 +34,10 @@ from pandas.util._validators import (
     validate_percentile,
     validate_bool_kwarg,
     validate_ascending,
+    validate_inclusive,
 )
-from pandas._libs.lib import NoDefault
-from pandas._libs.lib import no_default
+from pandas._libs.lib import no_default, NoDefault
+from pandas._libs.tslibs import to_offset
 from pandas._typing import (
     IndexKeyFunc,
     StorageOptions,
@@ -49,6 +49,7 @@ from pandas._typing import (
     TimestampConvertibleTypes,
     RandomState,
     DtypeBackend,
+    npt,
 )
 import pickle as pkl
 import re
@@ -140,6 +141,24 @@ class BasePandasDataset(ClassLogger):
         bool : Whether this is a dataframe.
         """
         return issubclass(self._pandas_class, pandas.DataFrame)
+
+    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+        """
+        Return or update a ``DataFrame`` or ``Series`` with given `new_query_compiler`.
+
+        Parameters
+        ----------
+        new_query_compiler : PandasQueryCompiler
+            QueryCompiler to use to manage the data.
+        inplace : bool, default: False
+            Whether or not to perform update or creation inplace.
+
+        Returns
+        -------
+        DataFrame, Series or None
+            None if update was done, ``DataFrame`` or ``Series`` otherwise.
+        """
+        raise NotImplementedError()
 
     def _add_sibling(self, sibling):
         """
@@ -720,9 +739,8 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
-        return self._default_to_pandas(
-            "align",
-            other,
+        left, right = self._query_compiler.align(
+            other._query_compiler,
             join=join,
             axis=axis,
             level=level,
@@ -732,6 +750,9 @@ class BasePandasDataset(ClassLogger):
             limit=limit,
             fill_axis=fill_axis,
             broadcast_axis=broadcast_axis,
+        )
+        return self.__constructor__(query_compiler=left), self.__constructor__(
+            query_compiler=right
         )
 
     def all(
@@ -879,13 +900,14 @@ class BasePandasDataset(ClassLogger):
         """
         Convert time series to specified frequency.
         """
-        return self._default_to_pandas(
-            "asfreq",
-            freq,
-            method=method,
-            how=how,
-            normalize=normalize,
-            fill_value=fill_value,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.asfreq(
+                freq=freq,
+                method=method,
+                how=how,
+                normalize=normalize,
+                fill_value=fill_value,
+            )
         )
 
     def asof(self, where, subset=None):  # noqa: PR01, RT01, D200
@@ -981,10 +1003,12 @@ class BasePandasDataset(ClassLogger):
         """
         Select values at particular time of day (e.g., 9:30AM).
         """
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = pandas.Series(index=idx).at_time(time, asof=asof).index
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
+        if asof:
+            # pandas raises NotImplementedError for asof=True, so we do, too.
+            raise NotImplementedError("'asof' argument is not supported")
+        return self.between_time(
+            start_time=time, end_time=time, inclusive="both", axis=axis
+        )
 
     @_inherit_docstrings(
         pandas.DataFrame.between_time, apilink="pandas.DataFrame.between_time"
@@ -996,18 +1020,16 @@ class BasePandasDataset(ClassLogger):
         inclusive="both",
         axis=None,
     ):  # noqa: PR01, RT01, D200
-        axis = self._get_axis_number(axis)
-        idx = self.index if axis == 0 else self.columns
-        indexer = (
-            pandas.Series(index=idx)
-            .between_time(
-                start_time,
-                end_time,
-                inclusive=inclusive,
+        left_inclusive, right_inclusive = validate_inclusive(inclusive)
+        return self._create_or_update_from_compiler(
+            self._query_compiler.between_time(
+                start_time=pandas.core.tools.times.to_time(start_time),
+                end_time=pandas.core.tools.times.to_time(end_time),
+                include_start=left_inclusive,
+                include_end=right_inclusive,
+                axis=self._get_axis_number(axis),
             )
-            .index
         )
-        return self.loc[indexer] if axis == 0 else self.loc[:, indexer]
 
     def bfill(
         self, axis=None, inplace=False, limit=None, downcast=None
@@ -1095,6 +1117,8 @@ class BasePandasDataset(ClassLogger):
         Count non-NA cells for `BasePandasDataset`.
         """
         axis = self._get_axis_number(axis)
+        # select_dtypes is only implemented on DataFrames, but the numeric_only
+        # flag will always be set to false by the Series frontend
         frame = self.select_dtypes([np.number, np.bool_]) if numeric_only else self
 
         return frame._reduce_dimension(
@@ -1170,51 +1194,32 @@ class BasePandasDataset(ClassLogger):
         """
         Generate descriptive statistics.
         """
-        if include is not None and (isinstance(include, np.dtype) or include != "all"):
-            if not is_list_like(include):
-                include = [include]
-            include = [pandas_dtype(i) if i != np.number else i for i in include]
-            if not any(
-                (isinstance(inc, np.dtype) and inc == d)
-                or (
-                    not isinstance(inc, np.dtype)
-                    and inc.__subclasscheck__(getattr(np, d.__str__()))
+        # copied from pandas.core.describe.describe_ndframe
+        percentiles = refine_percentiles(percentiles)
+        data = self
+        if self._is_dataframe:
+            # include/exclude arguments are ignored for Series
+            if (include is None) and (exclude is None):
+                # when some numerics are found, keep only numerics
+                default_include: list[npt.DTypeLike] = [np.number]
+                data = self.select_dtypes(include=default_include)
+                if len(data.columns) == 0:
+                    data = self
+            elif include == "all":
+                if exclude is not None:
+                    msg = "exclude must be None when include is 'all'"
+                    raise ValueError(msg)
+                data = self
+            else:
+                data = self.select_dtypes(
+                    include=include,
+                    exclude=exclude,
                 )
-                for d in self._get_dtypes()
-                for inc in include
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if exclude is not None:
-            if not is_list_like(exclude):
-                exclude = [exclude]
-            exclude = [pandas_dtype(e) if e != np.number else e for e in exclude]
-            if all(
-                (isinstance(exc, np.dtype) and exc == d)
-                or (
-                    not isinstance(exc, np.dtype)
-                    and exc.__subclasscheck__(getattr(np, d.__str__()))
-                )
-                for d in self._get_dtypes()
-                for exc in exclude
-            ):
-                # This is the error that pandas throws.
-                raise ValueError("No objects to concatenate")
-        if percentiles is not None:
-            # explicit conversion of `percentiles` to list
-            percentiles = list(percentiles)
-
-            # get them all to be in [0, 1]
-            validate_percentile(percentiles)
-
-            # median should always be included
-            if 0.5 not in percentiles:
-                percentiles.append(0.5)
-            percentiles = np.asarray(percentiles)
-        else:
-            percentiles = np.array([0.25, 0.5, 0.75])
+        if data.empty:
+            # Match pandas error from concatenting empty list of series descriptions.
+            raise ValueError("No objects to concatenate")
         return self.__constructor__(
-            query_compiler=self._query_compiler.describe(
+            query_compiler=data._query_compiler.describe(
                 percentiles=percentiles,
                 include=include,
                 exclude=exclude,
@@ -1439,8 +1444,10 @@ class BasePandasDataset(ClassLogger):
         """
         Provide expanding window calculations.
         """
-        return self._default_to_pandas(
-            "expanding",
+        from .window import Expanding
+
+        return Expanding(
+            self,
             min_periods=min_periods,
             axis=axis,
             method=method,
@@ -1593,7 +1600,9 @@ class BasePandasDataset(ClassLogger):
         """
         Select initial periods of time series data based on a date offset.
         """
-        return self.loc[pandas.Series(index=self.index).first(offset).index]
+        return self._create_or_update_from_compiler(
+            self._query_compiler.first(offset=to_offset(offset))
+        )
 
     def first_valid_index(self):  # noqa: RT01, D200
         """
@@ -1761,7 +1770,9 @@ class BasePandasDataset(ClassLogger):
         """
         Select final periods of time series data based on a date offset.
         """
-        return self.loc[pandas.Series(index=self.index).last(offset).index]
+        return self._create_or_update_from_compiler(
+            self._query_compiler.last(offset=to_offset(offset))
+        )
 
     def last_valid_index(self):  # noqa: RT01, D200
         """
@@ -1802,13 +1813,15 @@ class BasePandasDataset(ClassLogger):
         """
         Replace values where the condition is True.
         """
-        return self._default_to_pandas(
-            "mask",
-            cond,
-            other=other,
+        return self._create_or_update_from_compiler(
+            self._query_compiler.mask(
+                cond,
+                other=other,
+                inplace=False,
+                axis=axis,
+                level=level,
+            ),
             inplace=inplace,
-            axis=axis,
-            level=level,
         )
 
     def max(
@@ -1981,13 +1994,23 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        return self._default_to_pandas(
-            "pct_change",
-            periods=periods,
-            fill_method=fill_method,
-            limit=limit,
-            freq=freq,
-            **kwargs,
+        # Attempting to match pandas error behavior here
+        if not isinstance(periods, int):
+            raise ValueError(f"periods must be an int. got {type(periods)} instead")
+
+        # Attempting to match pandas error behavior here
+        for dtype in self._get_dtypes():
+            if not is_numeric_dtype(dtype):
+                raise TypeError(f"unsupported operand type for /: got {dtype}")
+
+        return self.__constructor__(
+            query_compiler=self._query_compiler.pct_change(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                **kwargs,
+            )
         )
 
     def pipe(self, func, *args, **kwargs):  # noqa: PR01, RT01, D200
@@ -2154,21 +2177,6 @@ class BasePandasDataset(ClassLogger):
             final_query_compiler = new_query_compiler
         return self._create_or_update_from_compiler(
             final_query_compiler, inplace=False if copy is None else not copy
-        )
-
-    def reindex_like(
-        self, other, method=None, copy=None, limit=None, tolerance=None
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return an object with matching indices as `other` object.
-        """
-        return self._default_to_pandas(
-            "reindex_like",
-            other,
-            method=method,
-            copy=copy,
-            limit=limit,
-            tolerance=tolerance,
         )
 
     def rename_axis(
@@ -2969,8 +2977,12 @@ class BasePandasDataset(ClassLogger):
             storage_options=storage_options,
         )
 
-    def to_dict(self, orient="dict", into=dict, index=True):  # pragma: no cover
-        return self._default_to_pandas("to_dict", orient=orient, into=into, index=index)
+    def to_dict(self, orient="dict", into=dict, index=True):
+        if not index:
+            return self._default_to_pandas(
+                "to_dict", orient=orient, into=into, index=index
+            )
+        return self._query_compiler.dataframe_to_dict(orient, into)
 
     def to_hdf(
         self, path_or_buf, key, format="table", **kwargs
@@ -3267,6 +3279,10 @@ class BasePandasDataset(ClassLogger):
             and not self.axes[axis].is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
+
+        if before is not None and after is not None and before > after:
+            raise ValueError(f"Truncate: {after} must be after {before}")
+
         s = slice(*self.axes[axis].slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
@@ -3295,15 +3311,12 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        axis = self._get_axis_number(axis)
-        if level is not None:
-            new_labels = (
-                pandas.Series(index=self.axes[axis]).tz_convert(tz, level=level).index
-            )
-        else:
-            new_labels = self.axes[axis].tz_convert(tz)
-        obj = self.copy() if copy else self
-        return obj.set_axis(new_labels, axis=axis, copy=copy)
+        return self._create_or_update_from_compiler(
+            self._query_compiler.tz_convert(
+                tz, axis=self._get_axis_number(axis), level=level, copy=copy
+            ),
+            inplace=(not copy),
+        )
 
     def tz_localize(
         self, tz, axis=0, level=None, copy=None, ambiguous="raise", nonexistent="raise"
@@ -3313,20 +3326,42 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        axis = self._get_axis_number(axis)
-        new_labels = (
-            pandas.Series(index=self.axes[axis])
-            .tz_localize(
+        return self._create_or_update_from_compiler(
+            self._query_compiler.tz_localize(
                 tz,
-                axis=axis,
+                axis=self._get_axis_number(axis),
                 level=level,
-                copy=False,
+                copy=copy,
                 ambiguous=ambiguous,
                 nonexistent=nonexistent,
-            )
-            .index
+            ),
+            inplace=(not copy),
         )
-        return self.set_axis(new_labels, axis=axis, copy=copy)
+
+    def interpolate(
+        self,
+        method="linear",
+        axis=0,
+        limit=None,
+        inplace=False,
+        limit_direction: Optional[str] = None,
+        limit_area=None,
+        downcast=None,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        return self._create_or_update_from_compiler(
+            self._query_compiler.interpolate(
+                method=method,
+                axis=axis,
+                limit=limit,
+                inplace=False,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
+                **kwargs,
+            ),
+            inplace=inplace,
+        )
 
     # TODO: uncomment the following lines when #3331 issue will be closed
     # @prepend_to_notes(
@@ -3507,7 +3542,9 @@ class BasePandasDataset(ClassLogger):
         # see if we can slice the rows
         # This lets us reuse code in pandas to error check
         indexer = None
-        if isinstance(key, slice):
+        if isinstance(key, slice) or (
+            isinstance(key, str) and (not self._is_dataframe or key not in self.columns)
+        ):
             indexer = self.index._convert_slice_indexer(key, kind="getitem")
         if indexer is not None:
             return self._getitem_slice(indexer)
@@ -3769,7 +3806,7 @@ class BasePandasDataset(ClassLogger):
         -------
         int
         """
-        return self._default_to_pandas("__sizeof__")
+        return self._query_compiler.sizeof()
 
     def __str__(self):  # pragma: no cover
         """

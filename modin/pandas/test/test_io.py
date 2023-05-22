@@ -500,15 +500,6 @@ class TestCsv:
         dayfirst,
         cache_dates,
     ):
-        if (
-            StorageFormat.get() == "Hdk"
-            and isinstance(parse_dates, list)
-            and ("col4" in parse_dates or 3 in parse_dates)
-        ):
-            pytest.xfail(
-                "In some cases read_csv with `parse_dates` with HDK storage format outputs incorrect result - issue #3081"
-            )
-
         raising_exceptions = io_ops_bad_exc  # default value
         if isinstance(parse_dates, dict) and callable(date_parser):
             # In this case raised TypeError: <lambda>() takes 1 positional argument but 2 were given
@@ -528,6 +519,21 @@ class TestCsv:
             dayfirst=dayfirst,
             cache_dates=cache_dates,
         )
+
+    @pytest.mark.parametrize("date", ["2023-01-01 00:00:01.000000000", "2023"])
+    @pytest.mark.parametrize("dtype", [None, "str", {"id": "int64"}])
+    @pytest.mark.parametrize("parse_dates", [None, [], ["date"], [1]])
+    def test_read_csv_dtype_parse_dates(self, date, dtype, parse_dates):
+        with ensure_clean(".csv") as filename:
+            with open(filename, "w") as file:
+                file.write(f"id,date\n1,{date}")
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=filename,
+                dtype=dtype,
+                parse_dates=parse_dates,
+            )
 
     # Iteration tests
     @pytest.mark.parametrize("iterator", [True, False])

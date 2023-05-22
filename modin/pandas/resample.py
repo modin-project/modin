@@ -133,8 +133,11 @@ class Resampler(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        group = self.__groups.get_group(name)
-        return group if self.axis == 0 else group.T
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_get_group(
+                self.resample_kwargs, name, obj
+            )
+        )
 
     def apply(self, func, *args, **kwargs):
         func = cast_function_modin2pandas(func)
@@ -200,18 +203,10 @@ class Resampler(ClassLogger):
         )
 
     def ffill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_ffill(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.fillna(method="ffill", limit=limit)
 
     def bfill(self, limit=None):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.resample_bfill(
-                self.resample_kwargs, limit
-            )
-        )
+        return self.fillna(method="bfill", limit=limit)
 
     def nearest(self, limit=None):
         return self._dataframe.__constructor__(
@@ -347,15 +342,22 @@ class Resampler(ClassLogger):
             )
 
     def prod(self, min_count=0, *args, **kwargs):
-        prod = self.__groups.prod(min_count=min_count, *args, **kwargs)
-        return prod if self.axis == 0 else prod.T
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_prod(
+                self.resample_kwargs, min_count=min_count, *args, **kwargs
+            )
+        )
 
     def size(self):
         from .series import Series
 
-        return Series(
+        output_series = Series(
             query_compiler=self._query_compiler.resample_size(self.resample_kwargs)
         )
+        if not isinstance(self._dataframe, Series):
+            # If input is a DataFrame, rename output Series to None
+            return output_series.rename(None)
+        return output_series
 
     def sem(self, *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -374,8 +376,11 @@ class Resampler(ClassLogger):
         )
 
     def sum(self, min_count=0, *args, **kwargs):
-        _sum = self.__groups.sum(min_count=min_count, *args, **kwargs)
-        return _sum if self.axis == 0 else _sum.T
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.resample_sum(
+                self.resample_kwargs, min_count=min_count, *args, **kwargs
+            )
+        )
 
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
