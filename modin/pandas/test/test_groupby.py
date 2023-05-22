@@ -1327,12 +1327,12 @@ def eval_pipe(modin_groupby, pandas_groupby, func):
 
 def eval_quantile(modin_groupby, pandas_groupby):
     try:
-        pandas_result = pandas_groupby.quantile(q=0.4)
+        pandas_result = pandas_groupby.quantile(q=0.4, numeric_only=True)
     except Exception as err:
         with pytest.raises(type(err)):
-            modin_groupby.quantile(q=0.4)
+            modin_groupby.quantile(q=0.4, numeric_only=True)
     else:
-        df_equals(modin_groupby.quantile(q=0.4), pandas_result)
+        df_equals(modin_groupby.quantile(q=0.4, numeric_only=True), pandas_result)
 
 
 def eval___getattr__(modin_groupby, pandas_groupby, item):
@@ -1781,27 +1781,11 @@ def test_agg_4604():
     "operation",
     [
         "quantile",
-        pytest.param(
-            "mean",
-            marks=pytest.mark.xfail(
-                condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
-                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
-                + "Remove this after the transition to pandas 2.0",
-            ),
-        ),
+        "mean",
         pytest.param(
             "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
         ),
-        pytest.param(
-            "median",
-            marks=pytest.mark.xfail(
-                condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
-                reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
-                + "Remove this after the transition to pandas 2.0",
-            ),
-        ),
+        "median",
         "unique",
         "cumprod",
     ],
@@ -2407,7 +2391,7 @@ def test_groupby_sort(sort, is_categorical_by):
     pd_grp = pd_df.groupby("key_col", sort=sort)
 
     modin_groupby_equals_pandas(md_grp, pd_grp)
-    eval_general(md_grp, pd_grp, lambda grp: grp.sum())
+    eval_general(md_grp, pd_grp, lambda grp: grp.sum(numeric_only=True))
     eval_general(md_grp, pd_grp, lambda grp: grp.size())
     eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
     eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
