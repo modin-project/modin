@@ -91,17 +91,16 @@ def to_dataloader(
 
     Parameters
     ----------
-
-    batch_size: int = 1
+    batch_size : int, default: 1
         Batch size that dataloader uses.
 
-    with_index: bool = False
-        Whether to include the index object with the result (like iterrows). Default is no.
+    with_index : bool, default: False
+	If true, include the index object with the resulting iterable, similar to `DataFrame.iterrows`.
 
     Returns
     -------
-
-    The desired dataloader.
+    DataLoader
+        DataLoader object backed by desired data.
     """
 
     dataset = ModinIterableDataset(df=df, with_index=with_index)
