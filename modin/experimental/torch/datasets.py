@@ -26,12 +26,11 @@ class ModinIterableDataset(IterableDataset):
         """
         Parameters
         ----------
+        df : DataFrame | ModinDataFrame
+            DataFrame-like object from which the iterable will draw data.
 
-        df: DataFrame
-            Anything that looks like a pandas dataframe. The data inside would be served row by row.
-
-        with_index: bool = False
-            Whether to include the index object with the result (like iterrows). Default is no.
+        with_index : bool, default: False
+            If true, include the index object with the resulting iterable, similar to `DataFrame.iterrows`.
         """
 
         super().__init__()
