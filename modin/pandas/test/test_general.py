@@ -544,6 +544,21 @@ def test_pivot():
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
 
+def test_pivot_values_is_none():
+    test_df = pd.DataFrame(
+        {
+            "foo": ["one", "one", "one", "two", "two", "two"],
+            "bar": ["A", "B", "C", "A", "B", "C"],
+            "baz": [1, 2, 3, 4, 5, 6],
+            "zoo": ["x", "y", "z", "q", "w", "t"],
+        }
+    )
+    pandas_test_df = test_df._to_pandas()
+    modin_df = pd.pivot(test_df, index="foo", columns="bar")
+    pandas_df = pandas.pivot(pandas_test_df, index="foo", columns="bar")
+    df_equals(modin_df, pandas_df)
+
+
 def test_pivot_table():
     test_df = pd.DataFrame(
         {
