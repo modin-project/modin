@@ -1122,10 +1122,12 @@ class DataFrameGroupBy(ClassLogger):
         # pandas errors out if there are only non-numeric columns and `numeric_only=True`
         # for groupby.quantile.
         if numeric_only:
-            if all([not is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes]):
-                    raise TypeError(
-                        f"'quantile' cannot be performed against '{self._query_compiler.dtypes[0]}' dtypes!"
-                    )
+            if all(
+                [not is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes]
+            ):
+                raise TypeError(
+                    f"'quantile' cannot be performed against '{self._query_compiler.dtypes[0]}' dtypes!"
+                )
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
