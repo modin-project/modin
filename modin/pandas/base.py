@@ -1442,8 +1442,7 @@ class BasePandasDataset(ClassLogger):
                 result = result.reset_index().drop(columns=level)
             result = result.set_index(index_columns)
         else:
-            new_axis = self.axes[axis].droplevel(level)
-            result.columns = new_axis
+            result.columns = self.columns.droplevel(level)
         return result
 
     def drop_duplicates(
