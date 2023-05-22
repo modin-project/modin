@@ -3532,12 +3532,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # computations. So we apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.
         if len(self.columns) == 0 or len(self.index) == 0:
-            # If we're falling back to defaulting on pandas, but `numeric_only` is `True`,
-            # we need to error here.
-            if agg_kwargs.get("numeric_only", False):
-                raise TypeError(
-                    f"'{agg_func}' cannot be performed against 'object' dtypes!"
-                )
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
