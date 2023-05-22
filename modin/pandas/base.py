@@ -1416,12 +1416,33 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with requested index / column level(s) removed.
         """
         axis = self._get_axis_number(axis)
-        new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
         if axis == 0:
-            result.index = new_axis
+            index_columns = result.index.names.copy()
+            if is_integer(level):
+                level = index_columns[level]
+            elif is_list_like(level):
+                level = [
+                    index_columns[lev] if is_integer(lev) else lev for lev in level
+                ]
+            if is_list_like(level):
+                for lev in level:
+                    index_columns.remove(lev)
+            else:
+                index_columns.remove(level)
+            if len(result.columns.names) > 1:
+                # In this case, we are dealing with a MultiIndex column, so we need to
+                # be careful when dropping the additional index column.
+                if is_list_like(level):
+                    drop_labels = [(lev, "") for lev in level]
+                else:
+                    drop_labels = [(level, "")]
+                result = result.reset_index().drop(columns=drop_labels)
+            else:
+                result = result.reset_index().drop(columns=level)
+            result = result.set_index(index_columns)
         else:
-            result.columns = new_axis
+            result.columns = self.columns.droplevel(level)
         return result
 
     def drop_duplicates(
