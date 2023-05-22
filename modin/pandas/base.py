@@ -1416,7 +1416,6 @@ class BasePandasDataset(ClassLogger):
         Return `BasePandasDataset` with requested index / column level(s) removed.
         """
         axis = self._get_axis_number(axis)
-        new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
         if axis == 0:
             index_columns = result.index.names.copy()
@@ -1440,6 +1439,7 @@ class BasePandasDataset(ClassLogger):
                     drop_labels = [(level, "")]
                 result = result.reset_index().drop(columns=drop_labels)
             else:
+                new_axis = self.axes[axis].droplevel(level)
                 result = result.reset_index().drop(columns=level)
             result = result.set_index(index_columns)
         else:
