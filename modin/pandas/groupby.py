@@ -350,8 +350,12 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def idxmax(self):
-        return self._default_to_pandas(lambda df: df.idxmax())
+    def idxmax(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmax,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     @property
     def ndim(self):
@@ -690,8 +694,12 @@ class DataFrameGroupBy(ClassLogger):
         )
         return self.fillna(limit=limit, method="bfill")
 
-    def idxmin(self):
-        return self._default_to_pandas(lambda df: df.idxmin())
+    def idxmin(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmin,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     def prod(self, numeric_only=None, min_count=0):
         return self._wrap_aggregation(
