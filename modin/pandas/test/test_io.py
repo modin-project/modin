@@ -1150,7 +1150,6 @@ class TestCsv:
     @pytest.mark.parametrize("index", [True, False, "New index"])
     @pytest.mark.parametrize("index_label", [None, False, "New index"])
     @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
-    @pytest.mark.parametrize("chunksize", [None, NROWS / 10])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -1166,7 +1165,6 @@ class TestCsv:
         index,
         index_label,
         columns,
-        chunksize,
     ):
         pandas_df = generate_dataframe(idx_name=idx_name)
         modin_df = pd.DataFrame(pandas_df)
