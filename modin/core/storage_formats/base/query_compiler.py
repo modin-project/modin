@@ -2165,14 +2165,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.diff")
-    def diff(self, fold_axis, **kwargs):  # noqa: PR02
+    def diff(self, **kwargs):  # noqa: PR02
         """
         First discrete difference of element.
 
         Parameters
         ----------
         periods : int
-        fold_axis : {0, 1}
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
@@ -2843,6 +2842,42 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop=False,
     ):
         return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.any)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get the index of the minimum value",
+        result="index of minimum value",
+        refer_to="idxmin",
+    )
+    def groupby_idxmin(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.idxmin)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get the index of the maximum value",
+        result="index of maximum value",
+        refer_to="idxmax",
+    )
+    def groupby_idxmax(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.idxmax)(
             self,
             by=by,
             axis=axis,
@@ -3756,6 +3791,35 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             agg_kwargs=agg_kwargs,
             drop=drop,
             series_groupby=True,
+        )
+
+    def groupby_ohlc(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        is_df,
+    ):
+        if not is_df:
+            return self.groupby_agg(
+                by=by,
+                agg_func="ohlc",
+                axis=axis,
+                groupby_kwargs=groupby_kwargs,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                series_groupby=True,
+            )
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.ohlc)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=True,
         )
 
     # END Manual Partitioning methods

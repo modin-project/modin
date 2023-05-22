@@ -299,7 +299,18 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.plot)
 
     def ohlc(self):
-        return self._default_to_pandas(lambda df: df.ohlc())
+        from .dataframe import DataFrame
+
+        return DataFrame(
+            query_compiler=self._query_compiler.groupby_ohlc(
+                by=self._by,
+                axis=self._axis,
+                groupby_kwargs=self._kwargs,
+                agg_args=[],
+                agg_kwargs={},
+                is_df=isinstance(self._df, DataFrame),
+            ),
+        )
 
     def __bytes__(self):
         """
@@ -339,8 +350,12 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def idxmax(self):
-        return self._default_to_pandas(lambda df: df.idxmax())
+    def idxmax(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmax,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     @property
     def ndim(self):
@@ -648,8 +663,14 @@ class DataFrameGroupBy(ClassLogger):
                         + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = internal_by.union(key)
-            key = [col for col in self._df.columns if col in cols_to_grab]
+            # We need to maintain order of the columns in key, using a set doesn't
+            # maintain order.
+            # We use dictionaries since they maintain insertion order as of 3.7,
+            # and its faster to call dict.update than it is to loop through `key`
+            # and select only the elements which aren't in `cols_to_grab`.
+            cols_to_grab = dict.fromkeys(self._internal_by)
+            cols_to_grab.update(dict.fromkeys(key))
+            key = [col for col in cols_to_grab.keys() if col in self._df.columns]
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
@@ -687,8 +708,12 @@ class DataFrameGroupBy(ClassLogger):
         )
         return self.fillna(limit=limit, method="bfill")
 
-    def idxmin(self):
-        return self._default_to_pandas(lambda df: df.idxmin())
+    def idxmin(self, axis=0, skipna=True, numeric_only=True):
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_idxmin,
+            agg_kwargs=dict(axis=axis, skipna=skipna),
+            numeric_only=numeric_only,
+        )
 
     def prod(self, numeric_only=None, min_count=0):
         return self._wrap_aggregation(
