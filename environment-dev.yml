@@ -12,7 +12,7 @@ dependencies:
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
-  - xarray
+  # - xarray
   - Jinja2
   - scipy
   - pip
