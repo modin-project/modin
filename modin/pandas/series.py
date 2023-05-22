@@ -1942,7 +1942,9 @@ class Series(BasePandasDataset):
         """
         Return a list of the values.
         """
-        return self._query_compiler.to_list()
+        return list(
+            self.__constructor__(query_compiler=self._query_compiler.to_list()).values
+        )
 
     def to_numpy(
         self, dtype=None, copy=False, na_value=no_default, **kwargs
