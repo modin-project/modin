@@ -460,6 +460,40 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # END Dataframe exchange protocol
 
+    def to_list(self):
+        """
+        Return a list of the values.
+
+        These are each a scalar type, which is a Python scalar (for str, int, float) or a pandas scalar (for Timestamp/Timedelta/Interval/Period).
+
+        Returns
+        -------
+        list
+        """
+        return SeriesDefault.register(pandas.Series.to_list)(self)
+
+    @doc_utils.add_refer_to("DataFrame.to_dict")
+    def dataframe_to_dict(self, orient="dict", into=dict):  # noqa: PR01
+        """
+        Convert the DataFrame to a dictionary.
+
+        Returns
+        -------
+        dict or `into` instance
+        """
+        return self.to_pandas().to_dict(orient, into)
+
+    @doc_utils.add_refer_to("Series.to_dict")
+    def series_to_dict(self, into=dict):  # noqa: PR01
+        """
+        Convert the Series to a dictionary.
+
+        Returns
+        -------
+        dict or `into` instance
+        """
+        return self.to_pandas().to_dict(into)
+
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the
     # data if the index objects don't match. An outer join + op is performed,
@@ -641,6 +675,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Correlation matrix.
         """
         return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
+
+    @doc_utils.add_refer_to("DataFrame.corrwith")
+    def corrwith(self, **kwargs):  # noqa: PR01
+        """
+        Compute pairwise correlation.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.DataFrame.corrwith)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.cov")
     def cov(self, **kwargs):  # noqa: PR02
@@ -974,6 +1019,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.merge)(
             self, right=right, **kwargs
         )
+
+    @doc_utils.add_refer_to("merge_ordered")
+    def merge_ordered(self, right, **kwargs):  # noqa: PR01
+        """
+        Perform a merge for ordered data with optional filling/interpolation.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.merge_ordered)(self, right, **kwargs)
 
     def _get_column_as_pandas_series(self, key):
         """
@@ -2533,6 +2589,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(get_row)(self, key=key)
 
+    def lookup(self, row_labels, col_labels):  # noqa: PR01, RT01, D200
+        """
+        Label-based "fancy indexing" function for ``DataFrame``.
+        """
+        return self.default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
+
     # END Abstract __getitem__ methods
 
     # Abstract insert
@@ -3696,6 +3758,35 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             series_groupby=True,
         )
 
+    def groupby_ohlc(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        is_df,
+    ):
+        if not is_df:
+            return self.groupby_agg(
+                by=by,
+                agg_func="ohlc",
+                axis=axis,
+                groupby_kwargs=groupby_kwargs,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                series_groupby=True,
+            )
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.ohlc)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=True,
+        )
+
     # END Manual Partitioning methods
 
     @doc_utils.add_refer_to("DataFrame.unstack")
@@ -3715,6 +3806,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.unstack)(
             self, level=level, fill_value=fill_value
         )
+
+    @doc_utils.add_refer_to("wide_to_long")
+    def wide_to_long(self, **kwargs):  # noqa: PR01
+        """
+        Unpivot a DataFrame from wide to long format.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return DataFrameDefault.register(pandas.wide_to_long)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.pivot")
     def pivot(self, index, columns, values):
@@ -5269,6 +5371,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def str_get(self, i):
         return StrDefault.register(pandas.Series.str.get)(self, i)
 
+    @doc_utils.doc_str_method(refer_to="get_dummies", params="sep : str")
+    def str_get_dummies(self, sep):
+        return StrDefault.register(pandas.Series.str.get_dummies)(self, sep)
+
     @doc_utils.doc_str_method(
         refer_to="index",
         params="""
@@ -5360,6 +5466,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     )
     def str_extract(self, pat, flags=0, expand=True):
         return StrDefault.register(pandas.Series.str.extract)(self, pat, flags, expand)
+
+    @doc_utils.doc_str_method(
+        refer_to="extractall",
+        params="""
+        pat : str
+        flags : int, default: 0""",
+    )
+    def str_extractall(self, pat, flags=0):
+        return StrDefault.register(pandas.Series.str.extractall)(self, pat, flags)
 
     @doc_utils.doc_str_method(
         refer_to="normalize", params="form : {'NFC', 'NFKC', 'NFD', 'NFKD'}"
@@ -5576,6 +5691,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return StrDefault.register(pandas.Series.str.cat)(
             self, others, sep, na_rep, join
         )
+
+    @doc_utils.doc_str_method(
+        refer_to="casefold",
+        params="",
+    )
+    def str_casefold(self):
+        return StrDefault.register(pandas.Series.str.casefold)(self)
 
     # End of Str methods
 

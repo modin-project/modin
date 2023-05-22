@@ -17,6 +17,7 @@ import pandas
 import numpy as np
 from unittest import mock
 
+from modin.config import StorageFormat
 from modin.config.envvars import Engine, ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -46,6 +47,7 @@ from .utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 
 NPartitions.put(4)
@@ -2398,6 +2400,29 @@ def test_mean_with_datetime(by_func):
     eval_general(modin_df, pandas_df, lambda df: df.groupby(by=by_func(df)).mean())
 
 
+def test_groupby_ohlc():
+    pandas_df = pandas.DataFrame(
+        np.random.randint(0, 100, (50, 2)), columns=["stock A", "stock B"]
+    )
+    pandas_df["Date"] = pandas.concat(
+        [pandas.date_range("1/1/2000", periods=10, freq="min").to_series()] * 5
+    ).reset_index(drop=True)
+    modin_df = pd.DataFrame(pandas_df)
+    eval_general(modin_df, pandas_df, lambda df: df.groupby("Date")["stock A"].ohlc())
+    pandas_multiindex_result = pandas_df.groupby("Date")[["stock A"]].ohlc()
+
+    with warns_that_defaulting_to_pandas():
+        modin_multiindex_result = modin_df.groupby("Date")[["stock A"]].ohlc()
+    df_equals(modin_multiindex_result, pandas_multiindex_result)
+
+    pandas_multiindex_result = pandas_df.groupby("Date")[["stock A", "stock B"]].ohlc()
+    with warns_that_defaulting_to_pandas():
+        modin_multiindex_result = modin_df.groupby("Date")[
+            ["stock A", "stock B"]
+        ].ohlc()
+    df_equals(modin_multiindex_result, pandas_multiindex_result)
+
+
 def test_groupby_mad_warn():
     modin_df, pandas_df = create_test_dfs(test_groupby_data)
     md_grp = modin_df.groupby(by=modin_df.columns[0])
@@ -2546,3 +2571,53 @@ def test_skew_corner_cases():
     # https://github.com/modin-project/modin/issues/5545
     modin_df, pandas_df = create_test_dfs({"col0": [1, 1], "col1": [171, 137]})
     eval_general(modin_df, pandas_df, lambda df: df.groupby("col0").skew())
+
+
+@pytest.mark.parametrize(
+    "method",
+    # test all aggregations from pandas.core.groupby.base.reduction_kernels except
+    # nth and corrwith, both of which require extra arguments.
+    [
+        "all",
+        "any",
+        "count",
+        "first",
+        "idxmax",
+        "idxmin",
+        "last",
+        "max",
+        "mean",
+        "median",
+        "min",
+        "nunique",
+        "prod",
+        "quantile",
+        "sem",
+        "size",
+        "skew",
+        "std",
+        "sum",
+        "var",
+    ],
+)
+@pytest.mark.skipif(
+    StorageFormat.get() != "Pandas",
+    reason="only relevant to pandas execution",
+)
+def test_groupby_agg_with_empty_column_partition_6175(method):
+    df = pd.concat(
+        [
+            pd.DataFrame({"col33": [0, 1], "index": [2, 3]}),
+            pd.DataFrame({"col34": [4, 5]}),
+        ],
+        axis=1,
+    )
+    assert df._query_compiler._modin_frame._partitions.shape == (1, 2)
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: getattr(df.groupby(["col33", "index"]), method)(),
+        # work around https://github.com/modin-project/modin/issues/6016: we don't
+        # expect any exceptions.
+        raising_exceptions=(Exception,),
+    )

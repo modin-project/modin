@@ -734,15 +734,16 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise correlation.
         """
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        return self._default_to_pandas(
-            pandas.DataFrame.corrwith,
-            other,
-            axis=axis,
-            drop=drop,
-            method=method,
-            numeric_only=numeric_only,
+        if not isinstance(other, (Series, DataFrame)):
+            raise TypeError(f"unsupported type: {type(other)}")
+        return self.__constructor__(
+            query_compiler=self._query_compiler.corrwith(
+                other=other._query_compiler,
+                axis=axis,
+                drop=drop,
+                method=method,
+                numeric_only=numeric_only,
+            )
         )
 
     def cov(
@@ -1266,7 +1267,7 @@ class DataFrame(BasePandasDataset):
         """
         Label-based "fancy indexing" function for ``DataFrame``.
         """
-        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
+        return self.__constructor__(self._query_compiler.lookup(row_labels, col_labels))
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
@@ -2667,7 +2668,7 @@ class DataFrame(BasePandasDataset):
         -------
         DataFrame
         """
-        return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
+        return self.round(decimals)
 
     def __delitem__(self, key):
         """
