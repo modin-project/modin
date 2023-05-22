@@ -1453,15 +1453,12 @@ def test_groupby_on_index_values_with_loop():
         df_equals(modin_dict[k], pandas_dict[k])
 
 
-def test_groupby_getitem_preserves_key_order():
-    a = np.tile(["a", "b", "c", "d", "e"], (1, 10))
-    np.random.shuffle(a[0])
-    df = pd.DataFrame(
-        np.hstack((a.T, np.random.randint(0, 100, (50, 2)))),
-        columns=["col 1", "col 2", "col 3"],
+def test_groupby_getitem_preserves_key_order_issue_6154():
+    modin_df = pd.DataFrame(test_data["int_data"])
+    pandas_df = pandas.DataFrame(test_data["int_data"])
+    eval_general(
+        modin_df, pandas_df, lambda df: df.groupby("col 1")[["col 3", "col 2"]].count()
     )
-    groupby_df_indexed = df.groupby("col 1")[["col 3", "col 2"]]._df
-    df_equals(df[["col 1", "col 3", "col 2"]], groupby_df_indexed)
 
 
 @pytest.mark.parametrize(
