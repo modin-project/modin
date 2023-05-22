@@ -1216,11 +1216,7 @@ class BasePandasDataset(ClassLogger):
             # Match pandas error from concatenting empty list of series descriptions.
             raise ValueError("No objects to concatenate")
         return self.__constructor__(
-            query_compiler=data._query_compiler.describe(
-                percentiles=percentiles,
-                include=include,
-                exclude=exclude,
-            )
+            query_compiler=data._query_compiler.describe(percentiles=percentiles)
         )
 
     def diff(self, periods=1, axis=0):  # noqa: PR01, RT01, D200

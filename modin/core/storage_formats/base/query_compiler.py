@@ -2129,18 +2129,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # END Abstract column/row partitions reduce operations
 
     @doc_utils.add_refer_to("DataFrame.describe")
-    def describe(
-        self,
-        percentiles: np.ndarray,
-        datetime_is_numeric: bool,
-    ):
+    def describe(self, percentiles: np.ndarray):
         """
         Generate descriptive statistics.
 
         Parameters
         ----------
         percentiles : list-like
-        datetime_is_numeric : bool
 
         Returns
         -------
@@ -2151,8 +2146,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.describe)(
             self,
             percentiles=percentiles,
-            datetime_is_numeric=datetime_is_numeric,
-            include="all",
         )
 
     # Map across rows/columns
@@ -4615,11 +4608,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
     @doc_utils.add_refer_to("Series.dt.unit")
-    def dt_unit(self):
+    def dt_unit(self):  # noqa: RT01
         return DateTimeDefault.register(pandas.Series.dt.unit)(self)
 
     @doc_utils.add_refer_to("Series.dt.as_unit")
-    def dt_as_unit(self, *args, **kwargs):
+    def dt_as_unit(self, *args, **kwargs):  # noqa: PR01, RT01
         return DateTimeDefault.register(pandas.Series.dt.as_unit)(self, *args, **kwargs)
 
     @doc_utils.doc_dt_timestamp(

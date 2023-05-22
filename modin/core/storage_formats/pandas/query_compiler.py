@@ -1999,18 +1999,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Column/Row partitions reduce operations
 
-    def describe(
-        self,
-        percentiles: np.ndarray,
-        datetime_is_numeric: bool,
-    ):
+    def describe(self, percentiles: np.ndarray):
         # Use pandas to calculate the correct columns
         empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .describe(
-                percentiles, datetime_is_numeric=datetime_is_numeric, include="all"
-            )
+            .describe(percentiles, include="all")
         )
         new_index = empty_df.index
 
@@ -2025,11 +2019,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # Thus, we must reindex each partition with the global new_index.
             return (
                 df.iloc[:, internal_indices]
-                .describe(
-                    percentiles=percentiles,
-                    datetime_is_numeric=datetime_is_numeric,
-                    include="all",
-                )
+                .describe(percentiles=percentiles, include="all")
                 .reindex(new_index)
             )
 
