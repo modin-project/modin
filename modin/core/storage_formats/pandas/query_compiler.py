@@ -2075,7 +2075,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     cummin = Fold.register(pandas.DataFrame.cummin)
     cumsum = Fold.register(pandas.DataFrame.cumsum)
     cumprod = Fold.register(pandas.DataFrame.cumprod)
-    diff = Fold.register(pandas.DataFrame.diff)
+    _diff = Fold.register(pandas.DataFrame.diff)
+
+    def diff(self, axis, periods):
+        return self._diff(fold_axis=axis, axis=axis, periods=periods)
 
     def clip(self, lower, upper, **kwargs):
         if isinstance(lower, BaseQueryCompiler):

@@ -2165,14 +2165,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.cumprod)(self, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.diff")
-    def diff(self, fold_axis, **kwargs):  # noqa: PR02
+    def diff(self, **kwargs):  # noqa: PR02
         """
         First discrete difference of element.
 
         Parameters
         ----------
         periods : int
-        fold_axis : {0, 1}
         **kwargs : dict
             Serves the compatibility purpose. Does not affect the result.
 
