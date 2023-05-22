@@ -4293,6 +4293,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.between_time)(self, **kwargs)
 
+    def shift(
+        self,
+        periods,
+        freq,
+        axis,
+        fill_value,
+    ):
+        return DataFrameDefault.register(pandas.DataFrame.shift)(self, periods, freq, axis, fill_value)
+
     def tz_convert(
         self,
         tz,
