@@ -544,6 +544,19 @@ def test_pivot():
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
 
+def test_pivot_values_is_none():
+    test_df = pd.DataFrame(
+        {
+            "foo": ["one", "one", "one", "two", "two", "two"],
+            "bar": ["A", "B", "C", "A", "B", "C"],
+            "baz": [1, 2, 3, 4, 5, 6],
+            "zoo": ["x", "y", "z", "q", "w", "t"],
+        }
+    )
+    df = pd.pivot(test_df, index="foo", columns="bar")
+    assert isinstance(df, pd.DataFrame)
+
+
 def test_pivot_table():
     test_df = pd.DataFrame(
         {

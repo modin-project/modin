@@ -1483,6 +1483,15 @@ class DataFrame(BasePandasDataset):
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
+        # if values is not specified, it should be the remaining columns not in
+        # index or columns
+        if values is None:
+            values = list(self.columns)
+            if index:
+                values = [v for v in values if v not in index]
+            if columns:
+                values = [v for v in values if v not in columns]
+
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
