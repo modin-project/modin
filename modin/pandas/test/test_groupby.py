@@ -384,7 +384,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.pad())
     if as_index:
         eval_general(modin_groupby, pandas_groupby, lambda df: df.nth(0))
     else:

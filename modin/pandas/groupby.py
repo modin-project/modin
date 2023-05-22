@@ -199,7 +199,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def skew(self, axis=no_default, skipna=True, numeric_only=False, **kwargs):
         # default behaviour for aggregations; for the reference see
-        # `_op_via_apply` func in pandas==2.0.0
+        # `_op_via_apply` func in pandas==2.0.1
         if axis is None or axis is no_default:
             axis = self._axis
 
@@ -228,11 +228,11 @@ class DataFrameGroupBy(ClassLogger):
         )
         return self.fillna(limit=limit, method="ffill")
 
-    def sem(self, ddof=1):
+    def sem(self, ddof=1, numeric_only=False):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_sem,
             agg_kwargs=dict(ddof=ddof),
-            numeric_only=True,
+            numeric_only=numeric_only,
         )
 
     def sample(self, n=None, frac=None, replace=False, weights=None, random_state=None):
