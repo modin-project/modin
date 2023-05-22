@@ -1431,7 +1431,17 @@ class BasePandasDataset(ClassLogger):
                     index_columns.remove(lev)
             else:
                 index_columns.remove(level)
-            result = result.reset_index().drop(columns=level).set_index(index_columns)
+            if len(result.columns.names) > 1:
+                # In this case, we are dealing with a MultiIndex column, so we need to
+                # be careful when dropping the additional index column.
+                if is_list_like(level):
+                    drop_labels = [(lev, "") for lev in level]
+                else:
+                    drop_labels = [(level, "")]
+                result = result.reset_index().drop(columns=drop_labels)
+            else:
+                result = result.reset_index().drop(columns=level)
+            result = result.set_index(index_columns)
         else:
             result.columns = new_axis
         return result
