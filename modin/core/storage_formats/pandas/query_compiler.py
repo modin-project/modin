@@ -2077,7 +2077,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     cumprod = Fold.register(pandas.DataFrame.cumprod)
     _diff = Fold.register(pandas.DataFrame.diff)
 
-    def diff(self, df, axis, periods):
+    def diff(self, axis, periods):
         return self._diff(fold_axis=axis, axis=axis, periods=periods)
 
     def clip(self, lower, upper, **kwargs):
