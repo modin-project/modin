@@ -1419,7 +1419,19 @@ class BasePandasDataset(ClassLogger):
         new_axis = self.axes[axis].droplevel(level)
         result = self.copy()
         if axis == 0:
-            result.index = new_axis
+            index_columns = result.index.names.copy()
+            if is_integer(level):
+                level = index_columns[level]
+            elif is_list_like(level):
+                level = [
+                    index_columns[lev] if is_integer(lev) else lev for lev in level
+                ]
+            if is_list_like(level):
+                for lev in level:
+                    index_columns.remove(lev)
+            else:
+                index_columns.remove(level)
+            result = result.reset_index().drop(columns=level).set_index(index_columns)
         else:
             result.columns = new_axis
         return result
