@@ -229,6 +229,8 @@ class array(object):
             self._query_compiler = self._query_compiler.reset_index(drop=True)
             self._query_compiler.columns = range(len(self._query_compiler.columns))
         new_dtype = new_dtype if dtype is None else dtype
+        if isinstance(new_dtype, pandas.Float64Dtype):
+            new_dtype = numpy.float64
         cols_with_wrong_dtype = self._query_compiler.dtypes != new_dtype
         if cols_with_wrong_dtype.any():
             self._query_compiler = self._query_compiler.astype(
