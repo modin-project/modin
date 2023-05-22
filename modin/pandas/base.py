@@ -3491,7 +3491,7 @@ class BasePandasDataset(ClassLogger):
         """
         return self._create_or_update_from_compiler(
             self._query_compiler.tz_convert(
-                tz, axis=self._get_axis_number(axis), level=level, copy=True
+                tz, axis=self._get_axis_number(axis), level=level, copy=copy
             ),
             inplace=(not copy),
         )
@@ -3507,7 +3507,7 @@ class BasePandasDataset(ClassLogger):
                 tz,
                 axis=self._get_axis_number(axis),
                 level=level,
-                copy=True,
+                copy=copy,
                 ambiguous=ambiguous,
                 nonexistent=nonexistent,
             ),
