@@ -1139,9 +1139,20 @@ class DataFrameGroupBy(ClassLogger):
     def hist(self):
         return self._default_to_pandas(lambda df: df.hist())
 
-    def quantile(self, q=0.5, interpolation="linear"):
-        # TODO: pandas 1.5 now supports numeric_only as an argument
+    def quantile(self, q=0.5, interpolation="linear", numeric_only=no_default):
         # TODO: handle list-like cases properly
+        if numeric_only is no_default:
+            numeric_only = True
+        # We normally handle `numeric_only` by masking non-numeric columns; however
+        # pandas errors out if there are only non-numeric columns and `numeric_only=True`
+        # for groupby.quantile.
+        if numeric_only:
+            if all(
+                [not is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes]
+            ):
+                raise TypeError(
+                    f"'quantile' cannot be performed against '{self._query_compiler.dtypes[0]}' dtypes!"
+                )
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
@@ -1150,7 +1161,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_quantile,
-                numeric_only=False,
+                numeric_only=numeric_only,
                 agg_kwargs=dict(q=q, interpolation=interpolation),
             )
         )
