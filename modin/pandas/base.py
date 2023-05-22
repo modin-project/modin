@@ -1199,6 +1199,7 @@ class BasePandasDataset(ClassLogger):
             if (include is None) and (exclude is None):
                 # when some numerics are found, keep only numerics
                 default_include: list[npt.DTypeLike] = [np.number]
+                default_include.append("datetime")
                 data = self.select_dtypes(include=default_include)
                 if len(data.columns) == 0:
                     data = self

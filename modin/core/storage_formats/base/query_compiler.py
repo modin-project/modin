@@ -2146,6 +2146,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.describe)(
             self,
             percentiles=percentiles,
+            include="all",
         )
 
     # Map across rows/columns
