@@ -1307,9 +1307,7 @@ class BasePandasDataset(ClassLogger):
 
         axis = self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.diff(
-                fold_axis=axis, axis=axis, periods=periods
-            )
+            query_compiler=self._query_compiler.diff(axis=axis, periods=periods)
         )
 
     def drop(
