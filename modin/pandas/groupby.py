@@ -140,7 +140,6 @@ class DataFrameGroupBy(ClassLogger):
             df=self._df,
             by=self._by,
             axis=self._axis,
-            squeeze=self._squeeze,
             idx_name=self._idx_name,
             drop=self._drop,
             **self._kwargs,
@@ -1621,8 +1620,7 @@ class SeriesGroupBy(DataFrameGroupBy):
             # because there is no need to identify which original column's aggregation
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
-            maybe_squeezed = result.squeeze() if self._squeeze else result
-            return maybe_squeezed.set_axis(labels=self._try_get_str_func(func), axis=1)
+            return result.set_axis(labels=self._try_get_str_func(func), axis=1)
         else:
             return super().aggregate(func, *args, **kwargs)
 
