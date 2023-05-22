@@ -335,7 +335,11 @@ class DataFrameGroupBy(ClassLogger):
             agg_kwargs=dict(min_count=min_count),
         )
 
-    def idxmax(self, axis=0, skipna=True, numeric_only=True):
+    def idxmax(self, axis=None, skipna=True, numeric_only=False):
+        # default behaviour for aggregations; for the reference see
+        # `_op_via_apply` func in pandas==2.0.1
+        if axis is None:
+            axis = self._axis
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmax,
             agg_kwargs=dict(axis=axis, skipna=skipna),
@@ -667,7 +671,11 @@ class DataFrameGroupBy(ClassLogger):
         )
         return self.fillna(limit=limit, method="bfill")
 
-    def idxmin(self, axis=0, skipna=True, numeric_only=True):
+    def idxmin(self, axis=None, skipna=True, numeric_only=False):
+        # default behaviour for aggregations; for the reference see
+        # `_op_via_apply` func in pandas==2.0.1
+        if axis is None:
+            axis = self._axis
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmin,
             agg_kwargs=dict(axis=axis, skipna=skipna),

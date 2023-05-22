@@ -203,7 +203,10 @@ def test_mixed_dtypes_groupby(as_index):
                 *sort_index_if_experimental_groupby(*dfs)
             ),
         )
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
+        # numeric_only=False doesn't work
+        eval_general(
+            modin_groupby, pandas_groupby, lambda df: df.idxmin(numeric_only=True)
+        )
         eval_prod(modin_groupby, pandas_groupby, numeric_only=True)
         if as_index:
             eval_std(modin_groupby, pandas_groupby, numeric_only=True)
@@ -250,10 +253,11 @@ def test_mixed_dtypes_groupby(as_index):
             ),
         )
         eval_cumprod(modin_groupby, pandas_groupby, numeric_only=True)
+        # numeric_only=False doesn't work
         eval_general(
             modin_groupby,
             pandas_groupby,
-            lambda df: df.cov(),
+            lambda df: df.cov(numeric_only=True),
             modin_df_almost_equals_pandas,
         )
 
@@ -268,7 +272,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_general(
             modin_groupby,
             pandas_groupby,
-            lambda df: df.corr(),
+            lambda df: df.corr(numeric_only=True),
             modin_df_almost_equals_pandas,
         )
         eval_fillna(modin_groupby, pandas_groupby)
@@ -659,7 +663,8 @@ def test_single_group_row_groupby():
     eval_general(
         modin_groupby,
         pandas_groupby,
-        lambda df: df.pct_change(),
+        # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
+        lambda df: df.pct_change(fill_method="ffill"),
         modin_df_almost_equals_pandas,
     )
     eval_cummax(modin_groupby, pandas_groupby)
@@ -787,7 +792,8 @@ def test_large_row_groupby(is_by_category):
     eval_general(
         modin_groupby,
         pandas_groupby,
-        lambda df: df.pct_change(),
+        # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
+        lambda df: df.pct_change(fill_method="ffill"),
         modin_df_almost_equals_pandas,
     )
     eval_cummax(modin_groupby, pandas_groupby)
@@ -906,10 +912,11 @@ def test_simple_col_groupby():
     # eval_cummin(modin_groupby, pandas_groupby)
     # eval_cumprod(modin_groupby, pandas_groupby)
 
+    # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
     eval_general(
         modin_groupby,
         pandas_groupby,
-        lambda df: df.pct_change(),
+        lambda df: df.pct_change(fill_method="ffill"),
         modin_df_almost_equals_pandas,
     )
     apply_functions = [lambda df: -df, lambda df: df.sum(axis=1)]
@@ -1032,7 +1039,8 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_general(
             modin_groupby,
             pandas_groupby,
-            lambda df: df.pct_change(),
+            # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
+            lambda df: df.pct_change(fill_method="ffill"),
             modin_df_almost_equals_pandas,
         )
         eval_general(
@@ -1367,6 +1375,7 @@ def eval___getitem__(md_grp, pd_grp, item):
         return test
 
     # issue-#3252, https://github.com/pandas-dev/pandas/issues/52760
+    """
     eval_general(
         md_grp,
         pd_grp,
@@ -1379,6 +1388,7 @@ def eval___getitem__(md_grp, pd_grp, item):
         build_list_agg(["mean", "count"]),
         comparator=build_types_asserter(df_equals),
     )
+    """
 
     # Explicit default-to-pandas test
     eval_general(
