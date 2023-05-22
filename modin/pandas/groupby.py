@@ -655,8 +655,14 @@ class DataFrameGroupBy(ClassLogger):
                         + "df.groupby(df['by_column'].copy())['by_column']"
                     ),
                 )
-            cols_to_grab = internal_by.union(key)
-            key = [col for col in self._df.columns if col in cols_to_grab]
+            # We need to maintain order of the columns in key, using a set doesn't
+            # maintain order.
+            # We use dictionaries since they maintain insertion order as of 3.7,
+            # and its faster to call dict.update than it is to loop through `key`
+            # and select only the elements which aren't in `cols_to_grab`.
+            cols_to_grab = dict.fromkeys(self._internal_by)
+            cols_to_grab.update(dict.fromkeys(key))
+            key = [col for col in cols_to_grab.keys() if col in self._df.columns]
             return DataFrameGroupBy(
                 self._df[key],
                 drop=self._drop,
