@@ -2853,6 +2853,42 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     @doc_utils.doc_groupby_method(
+        action="get the index of the minimum value",
+        result="index of minimum value",
+        refer_to="idxmin",
+    )
+    def groupby_idxmin(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.idxmin)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
+        action="get the index of the maximum value",
+        result="index of maximum value",
+        refer_to="idxmax",
+    )
+    def groupby_idxmax(
+        self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False
+    ):
+        return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.idxmax)(
+            self,
+            by=by,
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    @doc_utils.doc_groupby_method(
         action="get the minimum value", result="minimum value", refer_to="min"
     )
     def groupby_min(
