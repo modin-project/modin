@@ -1020,13 +1020,11 @@ class BasePandasDataset(ClassLogger):
         inclusive="both",
         axis=None,
     ):  # noqa: PR01, RT01, D200
-        left_inclusive, right_inclusive = validate_inclusive(inclusive)
         return self._create_or_update_from_compiler(
             self._query_compiler.between_time(
                 start_time=pandas.core.tools.times.to_time(start_time),
                 end_time=pandas.core.tools.times.to_time(end_time),
-                include_start=left_inclusive,
-                include_end=right_inclusive,
+                inclusive=inclusive,
                 axis=self._get_axis_number(axis),
             )
         )
