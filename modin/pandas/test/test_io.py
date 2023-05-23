@@ -1142,10 +1142,6 @@ class TestCsv:
             filepath_or_buffer="/some/wrong/path.csv",
         )
 
-    @pytest.mark.skipif(
-        Engine.get() == "Ray" and sys.platform.startswith("win"),
-        reason="https://github.com/modin-project/modin/issues/6171",
-    )
     @pytest.mark.parametrize("extension", [None, "csv", "csv.gz"])
     @pytest.mark.parametrize("sep", [" "])
     @pytest.mark.parametrize("header", [False, True, "sfx-"])
