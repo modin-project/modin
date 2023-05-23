@@ -351,6 +351,7 @@ def read_gbq(
 @enable_logging
 def read_html(
     io,
+    *,
     match: str | Pattern = ".+",
     flavor: str | None = None,
     header: int | Sequence[int] | None = None,
@@ -375,7 +376,8 @@ def read_html(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_html(**kwargs))
+    qcs = FactoryDispatcher.read_html(**kwargs)
+    return [DataFrame(query_compiler=qc) for qc in qcs]
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
