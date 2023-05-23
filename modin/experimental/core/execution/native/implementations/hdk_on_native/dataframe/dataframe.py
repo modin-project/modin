@@ -22,15 +22,16 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
 from .utils import (
-    LazyProxyCategoricalDtype,
     ColNameCodec,
     arrow_to_pandas,
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
     get_common_arrow_type,
+    build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
@@ -42,7 +43,7 @@ from pandas.core.dtypes.common import (
 )
 from modin.error_message import ErrorMessage
 from modin.pandas.indexing import is_range_like
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.dataframe.base.dataframe.utils import join_columns
 import pandas as pd
@@ -234,13 +235,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         if partitions is not None:
             self._filter_empties()
 
-        if self._has_arrow_table() and self._partitions.size > 0:
-            assert self._partitions.size == 1
-            table = self._partitions[0][0].get()
-            for i, t in enumerate(dtypes):
-                if isinstance(t, LazyProxyCategoricalDtype):
-                    dtypes[i] = t._new(table, table.column_names[i])
-
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
 
@@ -406,7 +400,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         if self._partitions is None or not isinstance(self._op, FrameNode):
             return False
-        return all(p.arrow_table is not None for p in self._partitions.flatten())
+        return self._partitions.size > 0 and all(
+            p.arrow_table is not None for p in self._partitions.flatten()
+        )
 
     def _dtypes_for_exprs(self, exprs):
         """
@@ -422,6 +418,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         list of dtype
         """
         return [expr._dtype for expr in exprs.values()]
+
+    @_inherit_docstrings(PandasDataframe._maybe_update_proxies)
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        if new_parent is not None:
+            super()._maybe_update_proxies(dtypes, new_parent)
+        elif self._has_arrow_table():
+            table = self._partitions[0, 0].get()
+            super()._maybe_update_proxies(dtypes, new_parent=table)
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """
@@ -2866,7 +2870,13 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         for col in at.columns:
             if pyarrow.types.is_dictionary(col.type):
-                new_dtypes.append(LazyProxyCategoricalDtype(at, col._name))
+                new_dtypes.append(
+                    LazyProxyCategoricalDtype._build_proxy(
+                        parent=at,
+                        column_name=col._name,
+                        materializer=build_categorical_from_at,
+                    )
+                )
             else:
                 new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 

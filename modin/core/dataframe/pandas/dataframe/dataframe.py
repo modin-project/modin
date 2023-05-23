@@ -42,7 +42,11 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     build_sort_functions,
     lazy_metadata_decorator,
 )
-from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex
+from modin.core.dataframe.pandas.metadata import (
+    ModinDtypes,
+    ModinIndex,
+    LazyProxyCategoricalDtype,
+)
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -250,6 +254,25 @@ class PandasDataframe(ClassLogger):
             dtypes_cache = self._dtypes.copy()
         return dtypes_cache
 
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        """
+        Update lazy proxies stored inside of `dtypes` with a new parent inplace.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes or callable
+        new_parent : object, optional
+            A new parent to link the proxies to. If not specified
+            will consider the `self` to be a new parent.
+        """
+        new_parent = new_parent or self
+        if isinstance(dtypes, pandas.Series) or (
+            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
+        ):
+            for key, value in dtypes.items():
+                if isinstance(value, LazyProxyCategoricalDtype):
+                    dtypes[key] = value._update_proxy(new_parent, column_name=key)
+
     def set_dtypes_cache(self, dtypes):
         """
         Set dtypes cache.
@@ -258,6 +281,7 @@ class PandasDataframe(ClassLogger):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
+        self._maybe_update_proxies(dtypes)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
@@ -280,9 +304,15 @@ class PandasDataframe(ClassLogger):
             self.set_dtypes_cache(dtypes)
         return dtypes
 
-    def _compute_dtypes(self):
+    def _compute_dtypes(self, columns=None):
         """
-        Compute the data types via TreeReduce pattern.
+        Compute the data types via TreeReduce pattern for the specified columns.
+
+        Parameters
+        ----------
+        columns : list-like, default: None
+            Columns to compute dtypes for. If not specified compute dtypes
+            for all the columns in the dataframe.
 
         Returns
         -------
@@ -293,10 +323,17 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
+        if columns is not None:
+            # Sorting positions to request columns in the order they're stored (it's more efficient)
+            numeric_indices = sorted(self.columns.get_indexer_for(columns))
+            obj = self._take_2d_positional(col_positions=numeric_indices)
+        else:
+            obj = self
+
         # For now we will use a pandas Series for the dtypes.
-        if len(self.columns) > 0:
+        if len(obj.columns) > 0:
             dtypes = (
-                self.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
+                obj.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
                 .to_pandas()
                 .iloc[0]
             )
@@ -1350,8 +1387,14 @@ class PandasDataframe(ClassLogger):
                     new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
                 elif isinstance(new_dtype, str) and new_dtype == "category":
-                    new_dtypes = None
-                    break
+                    new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
+                        # Actual parent will substitute `None` at `.set_dtypes_cache`
+                        parent=None,
+                        column_name=column,
+                        materializer=lambda parent, column: parent._compute_dtypes(
+                            columns=[column]
+                        )[column],
+                    )
                 else:
                     new_dtypes[column] = new_dtype
 
