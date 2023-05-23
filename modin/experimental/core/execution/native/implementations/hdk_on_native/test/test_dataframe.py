@@ -971,7 +971,10 @@ class TestGroupby:
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         def taxi_q3(df, as_index, **kwargs):
-            return df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
+            # TODO: remove 'astype' temp fix
+            return df.groupby(
+                ["b", df["c"].dt.year.astype("int32")], as_index=as_index
+            ).size()
 
         run_and_compare(taxi_q3, data=self.taxi_data, as_index=as_index)
 
