@@ -2094,16 +2094,233 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def corr(self, method="pearson", min_periods=1):
-        if method == "pearson":
-            numeric_self = self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
+    def corr(self, method, min_periods: int = 1):
+        if method != "pearson":
+            return super().corr(
+                method=method, min_periods=min_periods, numeric_only=True
             )
-            return numeric_self._nancorr(min_periods=min_periods)
+
+        def map(df: pandas.DataFrame):
+            # In this kernel we compute all the required components to compute
+            # the correlation matrix at the reduce phase, the required components are:
+            #   1. Matrix holding sums of pairwise multiplications between all columns
+            #      defined as M[col1, col2] = sum(col1[i] * col2[i] for i in range(col_len))
+            #   2. Sum for each column (special case if there are NaN values)
+            #   3. Sum of squares for each column (special case if there are NaN values)
+            #   4. Number of values in each column (special case if there are NaN values)
+            #
+            # It's more convenient to use a numpy array here as it appears to perform
+            # much faster in for-loops which this kernel function has plenty of
+            df = df.select_dtypes(include="number")
+            raw_df = df.to_numpy().T
+            validity_mask = ~np.isfinite(raw_df)
+            has_nans = validity_mask.sum() != 0
+
+            if has_nans:
+                if not raw_df.flags.writeable:
+                    # making a copy if the buffer is read-only
+                    raw_df = raw_df.copy()
+                # Replacing all NaNs with zeros so we can use much
+                # faster `np.sum()` instead of slow `np.nansum()`
+                np.putmask(raw_df, validity_mask, values=0)
+
+            cols = df.columns
+            # In this for-loop we compute a sum of pairwise multiplications between all columns
+            # result:
+            #   col1: [sum(col1 * col2), sum(col1 * col3), ... sum(col1 * colN)]
+            #   col2: [sum(col2 * col3), sum(col2 * col4), ... sum(col2 * colN)]
+            #   ...
+            sum_of_pairwise_mul = {}
+            for i, col in enumerate(cols):
+                sum_of_pairwise_mul[col] = pandas.Series(
+                    np.sum(raw_df[i] * raw_df[(i + 1) :], axis=1), index=cols[i + 1 :]
+                )
+
+            # The dictionary holds an upper triangular matrix, converting it
+            # to a complete symmetrical matrix.
+            # TODO: is there a way to save space and continue with a triangular matrix?
+            sum_of_pairwise_mul = pandas.concat(sum_of_pairwise_mul, axis=1)
+            sum_of_pairwise_mul = sum_of_pairwise_mul.reindex(df.columns).reindex(
+                df.columns, axis=1
+            )
+            sum_of_pairwise_mul.update(sum_of_pairwise_mul.T)
+            np.fill_diagonal(sum_of_pairwise_mul.values, 1.0)
+
+            if not has_nans:
+                sums = df.sum()
+                sums_of_squares = (df**2).sum()
+                count = pandas.Series(
+                    np.repeat(len(df), len(df.columns)), index=df.columns, copy=False
+                )
+            else:
+                # Unfortunately, in case of NaN values we forced to compute multiple sums/square sums/counts
+                # for each column because we have to exclude values at positions of NaN values in each other
+                # column individually.
+                # Imagine we have a dataframe like this:
+                #   col1: 1, 2  , 3  , 4
+                #   col2: 2, NaN, 3  , 4
+                #   col3: 4, 5  , NaN, 7
+                # In this case we would need to compute 2 different sums/square sums/count for 'col1':
+                #   - The first one excluding the values at the NaN possitions of 'col2' (1 + 3 + 4)
+                #   - And the second one excluding the values at the NaN positions of 'col3' (1 + 2 + 4)
+                # and then also do the same for the rest columns. At the end this should form a matrix
+                # of pairwise sums/square sums/counts:
+                #   sums[col1, col2] = sum(col1[i] for i in non_NA_indices_of_col2)
+                #   sums[col2, col1] = sum(col2[i] for i in non_NA_indices_of_col1)
+                #   ...
+                # Note that sums[col1, col2] != sums[col2, col1]
+                sums = {}
+                sums_of_squares = {}
+                count = {}
+
+                # TODO: is it possible to get rid of this for-loop somehow?
+                for i, col in enumerate(cols):
+                    # Here we're taking each column, resizing it to the original frame's shape to compute
+                    # aggregations for each other column and then excluding NaN values by setting zeros
+                    # using the validity mask:
+                    #  col1: 1, 2  , 3  , 4   df[i].resize()  col1: 1, 2, 3, 4  putmask()  col1: 1, 2, 3, 4
+                    #  col2: 2, NaN, 3  , 4   ------------->  col1: 1, 2, 3, 4  -------->  col1: 1, 0, 3, 4
+                    #  col3: 4, 5  , NaN, 7                   col1: 1, 2, 3, 4             col1: 1, 2, 0, 4
+                    col_vals = np.resize(raw_df[i], raw_df.shape)
+                    np.putmask(col_vals, validity_mask, values=0)
+
+                    sums[col] = pandas.Series(
+                        np.sum(col_vals, axis=1), index=cols, copy=False
+                    )
+                    sums_of_squares[col] = pandas.Series(
+                        np.sum(col_vals**2, axis=1), index=cols, copy=False
+                    )
+                    count[col] = pandas.Series(
+                        validity_mask.shape[1]
+                        - np.count_nonzero(validity_mask | validity_mask[i], axis=1),
+                        index=cols,
+                        copy=False,
+                    )
+
+                sums = pandas.concat(sums, axis=1, copy=False)
+                sums_of_squares = pandas.concat(sums_of_squares, axis=1, copy=False)
+                count = pandas.concat(count, axis=1, copy=False)
+
+            aggregations = pandas.concat(
+                [sum_of_pairwise_mul, sums, sums_of_squares, count],
+                copy=False,
+                axis=1,
+                keys=["mul", "sum", "pow2_sum", "count"],
+            )
+
+            return aggregations
+
+        def reduce(df: pandas.DataFrame, min_periods: int):
+            # The `df` here accumulates the aggregation results retrieved from each row partition
+            # and combined together along the rows axis, so the `df` looks something like this:
+            #   mul  sums  pow2_sums
+            # a .    .     .
+            # b .    .     .            <--- part1 result
+            # c .    .     .
+            # ---------------------------
+            # a .    .     .
+            # b .    .     .            <--- part2 result
+            # c .    .     .
+            # ---------------------------
+            # ...
+            # So to get the total result we have to group on the index and sum the values
+            total_agg = df.groupby(level=0).sum()
+
+            sum_of_pairwise_mul = total_agg["mul"]
+            sums = total_agg["sum"]
+            sums_of_squares = total_agg["pow2_sum"]
+            count = total_agg["count"]
+
+            cols = sum_of_pairwise_mul.columns
+            # If there were NaNs in the original dataframe then have computed a matrix
+            # of sums/square sums/counts at the Map phase, meaning that we now have multiple
+            # columns in `sums`.
+            has_nans = len(sums.columns) > 1
+            if not has_nans:
+                # 'count' is the same for all columns in a non-NaN case, so converting
+                # it to scalar for faster binary operations
+                count = count.iloc[0, 0]
+                if count < min_periods:
+                    # Fast-path for too small data
+                    return pandas.DataFrame(index=cols, columns=cols, dtype="float")
+
+                # Converting frame to a Series for more convenient handling
+                sums = sums.squeeze(axis=1)
+                sums_of_squares = sums_of_squares.squeeze(axis=1)
+
+            means = sums / count
+            std = np.sqrt(sums_of_squares - 2 * means * sums + count * (means**2))
+            res = pandas.DataFrame(index=cols, columns=cols, dtype="float")
+            # The 'is_nans' condition was moved out of the loop, so the loops themselves
+            # work faster as not being slowed by extra conditions in them
+            if has_nans:
+                for col_idx, i in enumerate(cols):
+                    mul_row = sum_of_pairwise_mul.loc[i]
+                    mean_row = means.loc[i]
+                    sum_row = sums.loc[i]
+                    count_row = count.loc[i]
+                    std_row = std.loc[i]
+
+                    if count_row[i] >= min_periods:
+                        res.loc[i, i] = 1.0
+
+                    for j in cols[col_idx + 1 :]:
+                        if count_row.loc[j] < min_periods:
+                            # Leave the value to be NaN
+                            continue
+                        top = (
+                            mul_row.loc[j]
+                            - means.loc[j, i] * sum_row.loc[j]
+                            - mean_row.loc[j] * sums.loc[j, i]
+                            + count_row.loc[j] * mean_row.loc[j] * means.loc[j, i]
+                        )
+                        down = std_row.loc[j] * std.loc[j, i]
+                        corr_ij = top / down
+                        res.loc[i, j] = corr_ij
+                        res.loc[j, i] = corr_ij
+            else:
+                for col_idx, i in enumerate(cols):
+                    mul_row = sum_of_pairwise_mul.loc[i]
+                    mean_row = means.loc[i]
+                    sum_row = sums.loc[i]
+                    std_row = std.loc[i]
+
+                    res.loc[i, i] = 1.0
+                    for j in cols[col_idx + 1 :]:
+                        top = (
+                            mul_row.loc[j]
+                            - means.loc[j] * sum_row
+                            - mean_row * sums.loc[j]
+                            + count * mean_row * means.loc[j]
+                        )
+                        down = std_row * std.loc[j]
+                        corr_ij = top / down
+                        res.loc[i, j] = corr_ij
+                        res.loc[j, i] = corr_ij
+            return res
+
+        if self._modin_frame.has_materialized_dtypes:
+            old_dtypes = self._modin_frame.dtypes
+
+            new_columns = old_dtypes[old_dtypes.map(is_numeric_dtype)].index
+            new_index = new_columns.copy()
+            new_dtypes = pandas.Series(
+                np.repeat(np.dtype("float"), len(new_columns)), index=new_columns
+            )
         else:
-            return super().corr(method=method, min_periods=min_periods)
+            new_index, new_columns, new_dtypes = None, None, None
+
+        reduced = self._modin_frame.apply_full_axis(axis=1, func=map)
+        # The 'reduced' dataset has the shape either (num_cols, num_cols + 3) for a non-NaN case
+        # or (num_cols, num_cols * 4) for a NaN case, so it's acceptable to call `.combine_and_apply()`
+        # here as the number of cols is usually quite small
+        result = reduced.combine_and_apply(
+            lambda df: reduce(df, min_periods=min_periods),
+            new_index=new_index,
+            new_columns=new_columns,
+            new_dtypes=new_dtypes,
+        )
+        return self.__constructor__(result)
 
     def cov(self, min_periods=None, ddof=1):
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)

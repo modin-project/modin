@@ -2133,6 +2133,51 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
+    def combine_and_apply(
+        self, func, new_index=None, new_columns=None, new_dtypes=None
+    ):
+        """
+        Combine all partitions into a single big one and apply the passed function to it.
+
+        Use this method with care as it collects all the data on the same worker,
+        it's only recommended to use this method on small or reduced datasets.
+
+        Parameters
+        ----------
+        func : callable(pandas.DataFrame) -> pandas.DataFrame
+            A function to apply to the combined partition.
+        new_index : sequence, optional
+            Index of the result.
+        new_columns : sequence, optional
+            Columns of the result.
+        new_dtypes : dict-like, optional
+            Dtypes of the result.
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        if self._partitions.shape[1] > 1:
+            new_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
+            new_partitions = np.array([[partition] for partition in new_partitions])
+            modin_frame = self.__constructor__(
+                new_partitions,
+                self.copy_index_cache(),
+                self.copy_columns_cache(),
+                self._row_lengths_cache,
+                [len(self.columns)] if self.has_materialized_columns else None,
+                self.copy_dtypes_cache(),
+            )
+        else:
+            modin_frame = self
+        return modin_frame.apply_full_axis(
+            axis=0,
+            func=func,
+            new_index=new_index,
+            new_columns=new_columns,
+            dtypes=new_dtypes,
+        )
+
     def _apply_func_to_range_partitioning(
         self, key_column, func, ascending=True, **kwargs
     ):
@@ -2176,26 +2221,7 @@ class PandasDataframe(ClassLogger):
 
             ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
             if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
-                modin_frame = self
-                if self._partitions.shape[1] != 1:
-                    # In this case, we have more than one column partition, so we first need
-                    # to create row-wise partitions with all of the columns, so we don't have
-                    # a KeyError when sorting. This method can be slow if we have very very
-                    # many columns.
-                    new_partitions = self._partition_mgr_cls.row_partitions(
-                        self._partitions
-                    )
-                    new_partitions = np.array(
-                        [[partition] for partition in new_partitions]
-                    )
-                    modin_frame = self.__constructor__(
-                        new_partitions,
-                        *self.axes,
-                        self._row_lengths_cache,
-                        [len(self.columns)],
-                        self.dtypes,
-                    )
-                return modin_frame.apply_full_axis(axis=0, func=func)
+                return self.combine_and_apply(func=func)
 
         if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
