@@ -53,6 +53,7 @@ if TYPE_CHECKING:
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.config import Engine
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -2157,6 +2158,11 @@ class PandasDataframe(ClassLogger):
         -------
         PandasDataframe
         """
+        # FIXME: virtual partitions are not supported in Python engine,
+        # we should fix this ASAP: https://github.com/modin-project/modin/issues/5916
+        if Engine.get() == "Python":
+            return self.from_pandas(func(self.to_pandas()))
+
         if self._partitions.shape[1] > 1:
             new_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
             new_partitions = np.array([[partition] for partition in new_partitions])
