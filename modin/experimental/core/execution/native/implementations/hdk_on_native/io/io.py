@@ -600,6 +600,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             pa.csv.write_csv(at, out, write_opts)
             return out.getvalue().to_pybytes().decode()
 
+        # Pyarrow fails to write in text mode.
         mode = kwargs.get("mode", "w").replace("t", "")
         if "b" not in mode:
             mode += "b"
