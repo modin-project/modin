@@ -492,8 +492,7 @@ class DataFrameGroupBy(ClassLogger):
                 # can't calculate change on non-numeric columns, so check for
                 # non-numeric columns that are not included in the `by`
                 if not is_numeric_dtype(dtype) and not (
-                    isinstance(self._by, BaseQueryCompiler)
-                    and col in self._by.columns
+                    isinstance(self._by, BaseQueryCompiler) and col in self._by.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 
@@ -1192,8 +1191,7 @@ class DataFrameGroupBy(ClassLogger):
                 # can't calculate diff on non-numeric columns, so check for non-numeric
                 # columns that are not included in the `by`
                 if not is_numeric_dtype(dtype) and not (
-                    isinstance(self._by, BaseQueryCompiler)
-                    and col in self._by.columns
+                    isinstance(self._by, BaseQueryCompiler) and col in self._by.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 

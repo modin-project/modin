@@ -2662,10 +2662,12 @@ def test_groupby_agg_with_empty_column_partition_6175(method):
 
 
 def test_groupby_pct_change_diff_6194():
-    df = pd.DataFrame({
-        "by": ["a", "b", "c", "a", "c"],
-        "value": [1, 2, 4, 5, 1],
-    })
+    df = pd.DataFrame(
+        {
+            "by": ["a", "b", "c", "a", "c"],
+            "value": [1, 2, 4, 5, 1],
+        }
+    )
     # These methods should not crash
     eval_general(
         df,
