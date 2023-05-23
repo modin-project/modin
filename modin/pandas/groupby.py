@@ -1108,16 +1108,6 @@ class DataFrameGroupBy(ClassLogger):
 
     def quantile(self, q=0.5, interpolation="linear", numeric_only=False):
         # TODO: handle list-like cases properly
-        # We normally handle `numeric_only` by masking non-numeric columns; however
-        # pandas errors out if there are only non-numeric columns and `numeric_only=True`
-        # for groupby.quantile.
-        if numeric_only:
-            if all(
-                [not is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes]
-            ):
-                raise TypeError(
-                    f"'quantile' cannot be performed against '{self._query_compiler.dtypes[0]}' dtypes!"
-                )
         if is_list_like(q):
             return self._default_to_pandas(
                 lambda df: df.quantile(q=q, interpolation=interpolation)
@@ -1375,14 +1365,7 @@ class DataFrameGroupBy(ClassLogger):
             mask_cols = [
                 col
                 for col, dtype in self._query_compiler.dtypes.items()
-                if (
-                    is_numeric_dtype(dtype)
-                    or (
-                        isinstance(dtype, pandas.CategoricalDtype)
-                        and is_numeric_dtype(dtype.categories.dtype)
-                    )
-                    or col in by_cols
-                )
+                if (is_numeric_dtype(dtype) or col in by_cols)
             ]
             groupby_qc = self._query_compiler.getitem_column_array(mask_cols)
         else:
