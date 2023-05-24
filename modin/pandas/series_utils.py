@@ -18,8 +18,10 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
 from typing import TYPE_CHECKING
 import re
+
 import numpy as np
 import pandas
+import pandas._libs.lib as lib
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 
@@ -60,12 +62,12 @@ class CategoryMethods(ClassLogger):
     def codes(self):
         return self._Series(query_compiler=self._query_compiler.cat_codes())
 
-    def rename_categories(self, new_categories, inplace=False):
+    def rename_categories(self, new_categories, inplace=lib.no_default):
         return self._default_to_pandas(
             pandas.Series.cat.rename_categories, new_categories, inplace=inplace
         )
 
-    def reorder_categories(self, new_categories, ordered=None, inplace=False):
+    def reorder_categories(self, new_categories, ordered=None, inplace=lib.no_default):
         return self._default_to_pandas(
             pandas.Series.cat.reorder_categories,
             new_categories,
@@ -73,22 +75,24 @@ class CategoryMethods(ClassLogger):
             inplace=inplace,
         )
 
-    def add_categories(self, new_categories, inplace=False):
+    def add_categories(self, new_categories, inplace=lib.no_default):
         return self._default_to_pandas(
             pandas.Series.cat.add_categories, new_categories, inplace=inplace
         )
 
-    def remove_categories(self, removals, inplace=False):
+    def remove_categories(self, removals, inplace=lib.no_default):
         return self._default_to_pandas(
             pandas.Series.cat.remove_categories, removals, inplace=inplace
         )
 
-    def remove_unused_categories(self, inplace=False):
+    def remove_unused_categories(self, inplace=lib.no_default):
         return self._default_to_pandas(
             pandas.Series.cat.remove_unused_categories, inplace=inplace
         )
 
-    def set_categories(self, new_categories, ordered=None, rename=False, inplace=False):
+    def set_categories(
+        self, new_categories, ordered=None, rename=False, inplace=lib.no_default
+    ):
         return self._default_to_pandas(
             pandas.Series.cat.set_categories,
             new_categories,
@@ -97,10 +101,10 @@ class CategoryMethods(ClassLogger):
             inplace=inplace,
         )
 
-    def as_ordered(self, inplace=False):
+    def as_ordered(self, inplace=lib.no_default):
         return self._default_to_pandas(pandas.Series.cat.as_ordered, inplace=inplace)
 
-    def as_unordered(self, inplace=False):
+    def as_unordered(self, inplace=lib.no_default):
         return self._default_to_pandas(pandas.Series.cat.as_unordered, inplace=inplace)
 
     def _default_to_pandas(self, op, *args, **kwargs):
