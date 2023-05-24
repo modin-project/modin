@@ -470,14 +470,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -------
         list
         """
-
-        def to_list_series(ser):
-            # we need a wrapper as defaulter internals would transform anything
-            # but Series or DataFrame into them following some implicit rules,
-            # and might do so wrong
-            return pandas.Series(ser.to_list())
-
-        return SeriesDefault.register(to_list_series)(self)
+        return SeriesDefault.register(pandas.Series.to_list)(self)
 
     @doc_utils.add_refer_to("DataFrame.to_dict")
     def dataframe_to_dict(self, orient="dict", into=dict):  # noqa: PR01
