@@ -3360,12 +3360,12 @@ class BasePandasDataset(ClassLogger):
         new_query_compiler = self._query_compiler
         # writing the index to the database by inserting it to the DF
         if index:
-            if not index_label:
-                index_label = "index"
             new_query_compiler = new_query_compiler.reset_index()
-            if new_query_compiler.columns[0] != index_label:
-                new_query_compiler.columns = [index_label] + list(
-                    new_query_compiler.columns[1:]
+            if index_label is not None:
+                if not is_list_like(index_label):
+                    index_label = [index_label]
+                new_query_compiler.columns = list(index_label) + list(
+                    new_query_compiler.columns[len(index_label):]
                 )
             # so pandas._to_sql will not write the index to the database as well
             index = False
