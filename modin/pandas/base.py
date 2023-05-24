@@ -3365,7 +3365,7 @@ class BasePandasDataset(ClassLogger):
                 if not is_list_like(index_label):
                     index_label = [index_label]
                 new_query_compiler.columns = list(index_label) + list(
-                    new_query_compiler.columns[len(index_label):]
+                    new_query_compiler.columns[len(index_label) :]
                 )
             # so pandas._to_sql will not write the index to the database as well
             index = False
