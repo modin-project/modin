@@ -747,8 +747,16 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
-        kwargs["engine"] = engine
-        kwargs["engine_kwargs"] = engine_kwargs
+        if engine is not None and engine_kwargs is not None:
+            return self._default_to_pandas(
+                lambda df: df.aggregate(
+                    func=func,
+                    *args,
+                    engine=engine,
+                    engine_kwargs=engine_kwargs,
+                    **kwargs,
+                )
+            )
         if self._axis != 0:
             # This is not implemented in pandas,
             # so we throw a different message
@@ -1437,7 +1445,7 @@ class DataFrameGroupBy(ClassLogger):
         agg_args = tuple() if agg_args is None else agg_args
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
-        if numeric_only is None:
+        if numeric_only is None or numeric_only is no_default:
             # pandas behavior: if `numeric_only` wasn't explicitly specified then
             # the parameter is considered to be `False` if there are no numeric types
             # in the frame and `True` otherwise.
@@ -1711,11 +1719,10 @@ class SeriesGroupBy(DataFrameGroupBy):
         )
 
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
-        kwargs["engine"] = engine
-        kwargs["engine_kwargs"] = engine_kwargs
-        if isinstance(func, dict):
+        engine_default = engine is None and engine_kwargs is None
+        if isinstance(func, dict) and engine_default:
             raise SpecificationError("nested renamer is not supported")
-        elif is_list_like(func):
+        elif is_list_like(func) and engine_default:
             from .dataframe import DataFrame
 
             result = DataFrame(
