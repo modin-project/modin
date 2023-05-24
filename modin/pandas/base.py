@@ -3362,7 +3362,11 @@ class BasePandasDataset(ClassLogger):
         if index:
             if not index_label:
                 index_label = "index"
-            new_query_compiler = new_query_compiler.insert(0, index_label, self.index)
+            new_query_compiler = new_query_compiler.reset_index()
+            if new_query_compiler.columns[0] != index_label:
+                new_query_compiler.columns = [index_label] + list(
+                    new_query_compiler.columns[1:]
+                )
             # so pandas._to_sql will not write the index to the database as well
             index = False
 
