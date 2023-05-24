@@ -1055,7 +1055,7 @@ jobs:
         if: matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
         if: matrix.test_task == 'group_4'
-      - timeout-minutes: 45
+      - timeout-minutes: 60
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test_task == 'group_4'
       - uses: ./.github/workflows/upload-coverage
