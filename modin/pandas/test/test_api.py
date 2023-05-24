@@ -197,6 +197,7 @@ def test_series_dt_api_equality():
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
+    assert_parameters_eq((pandas.Series.dt, pd.Series.dt), modin_dir, [])
 
 
 def test_series_cat_api_equality():
