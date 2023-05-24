@@ -2300,7 +2300,6 @@ class TestSql:
 
 
 class TestHtml:
-    @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
 
