@@ -228,6 +228,15 @@ def test_to_frame(data):
     df_equals(modin_series.to_frame(name="miao"), pandas_series.to_frame(name="miao"))
 
 
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_to_list(data):
+    modin_series, pandas_series = create_test_series(data)
+    pd_res = pandas_series.to_list()
+    md_res = modin_series.to_list()
+    assert type(pd_res) == type(md_res)
+    assert np.array_equal(pd_res, md_res, equal_nan=True)
+
+
 def test_accessing_index_element_as_property():
     s = pd.Series([10, 20, 30], index=["a", "b", "c"])
     assert s.b == 20
