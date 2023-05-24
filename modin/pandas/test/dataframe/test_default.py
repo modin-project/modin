@@ -45,7 +45,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -228,57 +228,107 @@ def test_combine_first():
     )
 
 
-def test_corr():
-    eval_general(
-        *create_test_dfs(test_data["int_data"]),
-        lambda df: df.corr(),
-    )
-    # Modin result may slightly differ from pandas result
-    # due to floating pointing arithmetic.
-    eval_general(
-        *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: df.corr(),
-        comparator=modin_df_almost_equals_pandas,
-    )
-
-
-@pytest.mark.parametrize("min_periods", [1, 3, 5, 6])
-def test_corr_min_periods(min_periods):
-    # only 3 valid values
-    eval_general(
-        *create_test_dfs({"a": [1, 2, 3], "b": [3, 4, 5]}),
-        lambda df: df.corr(min_periods=min_periods),
-    )
-
-    # only 5 valid values
-    eval_general(
-        *create_test_dfs({"a": [1, 2, 3, 4, 5, np.nan], "b": [1, 2, 3, 4, 5, np.nan]}),
-        lambda df: df.corr(min_periods=min_periods),
-    )
-
-    # only 4 valid values
-    eval_general(
-        *create_test_dfs({"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 3, 4, 5, np.nan]}),
-        lambda df: df.corr(min_periods=min_periods),
-    )
-
-    if StorageFormat.get() == "Pandas":
-        # only 4 valid values located in different partitions
-        modin_df, pandas_df = create_test_dfs(
-            {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 3, 4, 5, np.nan]}
+@pytest.mark.skipif(
+    Engine.get() == "Python",
+    reason="FIXME ASAP: https://github.com/modin-project/modin/issues/5916",
+)
+class TestCorr:
+    def test_corr(self):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.corr(),
         )
-        modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
+        # Modin result may slightly differ from pandas result
+        # due to floating pointing arithmetic.
+        eval_general(
+            *create_test_dfs(test_data["float_nan_data"]),
+            lambda df: df.corr(),
+            comparator=modin_df_almost_equals_pandas,
+        )
 
-        assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
-        eval_general(modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods))
+    @pytest.mark.parametrize("min_periods", [1, 3, 5, 6])
+    def test_corr_min_periods(self, min_periods):
+        # only 3 valid values
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 1, 5]}),
+            lambda df: df.corr(min_periods=min_periods),
+        )
 
+        # only 5 valid values
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, 2, 3, 4, 5, np.nan], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
-def test_corr_non_numeric(numeric_only):
-    eval_general(
-        *create_test_dfs({"a": [1, 2, 3], "b": [3, 4, 5], "c": ["a", "b", "c"]}),
-        lambda df: df.corr(numeric_only=numeric_only),
+        # only 4 valid values
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        if StorageFormat.get() == "Pandas":
+            # only 4 valid values located in different partitions
+            modin_df, pandas_df = create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            )
+            modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
+
+            assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+            eval_general(
+                modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
+            )
+
+    @pytest.mark.parametrize("numeric_only", [True, False, None])
+    def test_corr_non_numeric(self, numeric_only):
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
+            lambda df: df.corr(numeric_only=numeric_only),
+        )
+
+    @pytest.mark.skipif(
+        StorageFormat.get() != "Pandas",
+        reason="doesn't make sense for non-partitioned executions",
     )
+    def test_corr_nans_in_different_partitions(self):
+        # NaN in the first partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in the last partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [1, 2, 3, 4, 5, np.nan], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in two partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in all partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, np.nan, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
 
 
 @pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")

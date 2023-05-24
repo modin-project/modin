@@ -2112,9 +2112,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # It's more convenient to use a numpy array here as it appears to perform
             # much faster in for-loops which this kernel function has plenty of
             df = df.select_dtypes(include="number")
-            raw_df = df.to_numpy().T
-            validity_mask = ~np.isfinite(raw_df)
-            has_nans = validity_mask.sum() != 0
+            raw_df = df.values.T
+            nan_mask = np.isnan(raw_df)
+            has_nans = nan_mask.sum() != 0
 
             if has_nans:
                 if not raw_df.flags.writeable:
@@ -2122,7 +2122,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     raw_df = raw_df.copy()
                 # Replacing all NaNs with zeros so we can use much
                 # faster `np.sum()` instead of slow `np.nansum()`
-                np.putmask(raw_df, validity_mask, values=0)
+                np.putmask(raw_df, nan_mask, values=0)
 
             cols = df.columns
             # In this for-loop we compute a sum of pairwise multiplications between all columns
@@ -2147,11 +2147,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             np.fill_diagonal(sum_of_pairwise_mul.values, 1.0)
 
             if not has_nans:
-                sums = df.sum()
-                sums_of_squares = (df**2).sum()
+                sums = df.sum().rename(MODIN_UNNAMED_SERIES_LABEL)
+                sums_of_squares = (df**2).sum().rename(MODIN_UNNAMED_SERIES_LABEL)
                 count = pandas.Series(
                     np.repeat(len(df), len(df.columns)), index=df.columns, copy=False
-                )
+                ).rename(MODIN_UNNAMED_SERIES_LABEL)
             else:
                 # Unfortunately, in case of NaN values we forced to compute multiple sums/square sums/counts
                 # for each column because we have to exclude values at positions of NaN values in each other
@@ -2182,7 +2182,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     #  col2: 2, NaN, 3  , 4   ------------->  col1: 1, 2, 3, 4  -------->  col1: 1, 0, 3, 4
                     #  col3: 4, 5  , NaN, 7                   col1: 1, 2, 3, 4             col1: 1, 2, 0, 4
                     col_vals = np.resize(raw_df[i], raw_df.shape)
-                    np.putmask(col_vals, validity_mask, values=0)
+                    np.putmask(col_vals, nan_mask, values=0)
 
                     sums[col] = pandas.Series(
                         np.sum(col_vals, axis=1), index=cols, copy=False
@@ -2191,8 +2191,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         np.sum(col_vals**2, axis=1), index=cols, copy=False
                     )
                     count[col] = pandas.Series(
-                        validity_mask.shape[1]
-                        - np.count_nonzero(validity_mask | validity_mask[i], axis=1),
+                        nan_mask.shape[1]
+                        - np.count_nonzero(nan_mask | nan_mask[i], axis=1),
                         index=cols,
                         copy=False,
                     )
@@ -2225,6 +2225,101 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # ...
             # So to get the total result we have to group on the index and sum the values
             total_agg = df.groupby(level=0).sum()
+
+            # Here we try to align the results between partitions that had and didn't have NaNs.
+            # At the result of the Map phase, partitions with and without NaNs would produce
+            # different results:
+            #   - Partitions with NaNs produce a matrix of pairwise sums/square sums/counts
+            #   - And parts without NaNs produce regular one-column sums/square sums/counts
+            #
+            # As the result, `total_agg` will be something like this:
+            #    mul  | sum   pow2_sum  count | sum          pow2_sum     count
+            #    a  b | a  b  a  b      a  b  | __reduced__  __reduced__  __reduced__
+            # a  .  . | .  .  .  .      .  .  | .            .            .
+            # b  .  . | .  .  .  .      .  .  | .            .            .
+            # --------|-----------------------|----------------------------------------
+            #           ^-- these are results   ^-- and these are results for
+            #           for partitions that     partitions that didn't have NaNs
+            #           had NaNs
+            # So, to get an actual total result of these aggregations, we have to additionally
+            # sum the results from non-NaN and NaN partitions.
+            #
+            # Here we sample the 'sum' columns to check whether we had mixed NaNs and
+            # non-NaNs partitions, if it's not the case we can skip the described step:
+            nsums = total_agg.columns.get_locs(["sum"])
+            if (
+                len(nsums) > 1
+                and ("sum", MODIN_UNNAMED_SERIES_LABEL) in total_agg.columns
+            ):
+                cols = total_agg.columns
+
+                # Finding column positions for aggregational columns
+                all_agg_idxs = np.where(
+                    cols.get_loc("sum")
+                    | cols.get_loc("pow2_sum")
+                    | cols.get_loc("count")
+                )[0]
+                # Finding column positions for aggregational columns that store
+                # results of non-NaN partitions
+                non_na_agg_idxs = cols.get_indexer_for(
+                    pandas.Index(
+                        [
+                            ("sum", MODIN_UNNAMED_SERIES_LABEL),
+                            ("pow2_sum", MODIN_UNNAMED_SERIES_LABEL),
+                            ("count", MODIN_UNNAMED_SERIES_LABEL),
+                        ]
+                    )
+                )
+                # Finding column positions for aggregational columns that store
+                # results of NaN partitions by deducting non-NaN indices from all indices
+                na_agg_idxs = np.setdiff1d(
+                    all_agg_idxs, non_na_agg_idxs, assume_unique=True
+                )
+
+                # Using `.values` here so we can ignore the indices (it's really hard
+                # to arrange them for pandas to properly perform the summation)
+                parts_with_nans = total_agg.values[:, na_agg_idxs]
+                parts_without_nans = (
+                    total_agg.values[:, non_na_agg_idxs]
+                    # Before doing the summation we have to align the shapes
+                    # Imagine that we have 'parts_with_nans' like:
+                    #    sum   pow2_sum  count
+                    #    a  b  a  b      a  b
+                    # a  1  2  3  4      5  6
+                    # b  1  2  3  4      5  6
+                    #
+                    # And the 'parts_without_nans' like:
+                    #    sum  pow2_sum  count
+                    # a  1    3         5
+                    # b  2    4         6
+                    #
+                    # Here we want to sum them in an order so the digit matches (1 + 1), (2 + 2), ...
+                    # For that we first have to repeat the values in 'parts_without_nans':
+                    #  parts_without_nans.repeat(parts_with_nans.shape[0]):
+                    #    sum  pow2_sum  count
+                    # a  1    3         5
+                    # b  1    3         5
+                    # a  2    4         6
+                    # b  2    4         6
+                    #
+                    # And then reshape it using the "Fortran" order:
+                    #  parts_without_nans.reshape(parts_with_nans.shape, order="F"):
+                    #    sum   pow2_sum  count
+                    #    a  b  a  b      a  b
+                    # a  1  2  3  4      5  6
+                    # b  1  2  3  4      5  6
+                    # After that the shapes & orders are aligned and we can perform the summation
+                    .repeat(repeats=len(parts_with_nans), axis=0).reshape(
+                        parts_with_nans.shape, order="F"
+                    )
+                )
+                replace_values = parts_with_nans + parts_without_nans
+
+                if not total_agg.values.flags.writeable:
+                    # making a copy if the buffer is read-only as
+                    # we will need to modify `total_agg` inplace
+                    total_agg = total_agg.copy()
+                total_agg.values[:, na_agg_idxs] = replace_values
 
             sum_of_pairwise_mul = total_agg["mul"]
             sums = total_agg["sum"]
