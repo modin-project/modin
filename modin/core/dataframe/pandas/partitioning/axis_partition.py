@@ -19,6 +19,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from .partition import PandasDataframePartition
 
 
 class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
@@ -27,6 +28,39 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     Because much of the code is similar, this allows us to reuse this code.
     """
+
+    def __init__(
+        self,
+        list_of_partitions,
+        get_ip=False,
+        full_axis=True,
+        call_queue=None,
+        length=None,
+        width=None,
+    ):
+        if isinstance(list_of_partitions, PandasDataframePartition):
+            list_of_partitions = [list_of_partitions]
+        self.full_axis = full_axis
+        self.call_queue = call_queue or []
+        self._length_cache = length
+        self._width_cache = width
+        # Check that all virtual partition axes are the same in `list_of_partitions`
+        # We should never have mismatching axis in the current implementation. We add this
+        # defensive assertion to ensure that undefined behavior does not happen.
+        assert (
+            len(
+                set(
+                    obj.axis
+                    for obj in list_of_partitions
+                    if isinstance(obj, PandasDataframeAxisPartition)
+                )
+            )
+            <= 1
+        )
+        self._list_of_constituent_partitions = list_of_partitions
+        # Defer computing _list_of_block_partitions because we might need to
+        # drain call queues for that.
+        self._list_of_block_partitions = None
 
     @property
     def list_of_blocks(self):
@@ -43,6 +77,99 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         return [
             partition.list_of_blocks[0] for partition in self.list_of_block_partitions
         ]
+
+    @property
+    def list_of_block_partitions(self) -> list:
+        """
+        Get the list of block partitions that compose this partition.
+
+        Returns
+        -------
+        List
+            A list of ``PandasDataframeAxisPartition``.
+        """
+        if self._list_of_block_partitions is not None:
+            return self._list_of_block_partitions
+        self._list_of_block_partitions = []
+        # Extract block partitions from the block and virtual partitions that
+        # constitute this partition.
+        for partition in self._list_of_constituent_partitions:
+            if isinstance(partition, PandasDataframeAxisPartition):
+                if partition.axis == self.axis:
+                    # We are building a virtual partition out of another
+                    # virtual partition `partition` that contains its own list
+                    # of block partitions, partition.list_of_block_partitions.
+                    # `partition` may have its own call queue, which has to be
+                    # applied to the entire `partition` before we execute any
+                    # further operations on its block parittions.
+                    partition.drain_call_queue()
+                    self._list_of_block_partitions.extend(
+                        partition.list_of_block_partitions
+                    )
+                else:
+                    # If this virtual partition is made of virtual partitions
+                    # for the other axes, squeeze such partitions into a single
+                    # block so that this partition only holds a one-dimensional
+                    # list of blocks. We could change this implementation to
+                    # hold a 2-d list of blocks, but that would complicate the
+                    # code quite a bit.
+                    self._list_of_block_partitions.append(
+                        partition.force_materialization().list_of_block_partitions[0]
+                    )
+            else:
+                self._list_of_block_partitions.append(partition)
+        return self._list_of_block_partitions
+
+    @classmethod
+    def _get_drain_func(cls):  # noqa: GL08
+        return PandasDataframeAxisPartition.drain
+
+    def drain_call_queue(self, num_splits=None):
+        """
+        Execute all operations stored in this partition's call queue.
+
+        Parameters
+        ----------
+        num_splits : int, default: None
+            The number of times to split the result object.
+        """
+        if len(self.call_queue) == 0:
+            # this implicitly calls `drain_call_queue` for block partitions,
+            # which might have deferred call queues
+            _ = self.list_of_blocks
+            return
+        call_queue = self.call_queue
+        try:
+            # Clearing the queue before calling `.apply()` so it won't try to drain it repeatedly
+            self.call_queue = []
+            drained = self.apply(
+                self._get_drain_func(), num_splits=num_splits, call_queue=call_queue
+            )
+        except Exception as e:
+            # Restoring the call queue in case of an exception as it most likely wasn't drained
+            self.call_queue = call_queue
+            raise e
+        if not isinstance(drained, list):
+            drained = [drained]
+        self._list_of_block_partitions = drained
+
+    def force_materialization(self, get_ip=False):
+        """
+        Materialize partitions into a single partition.
+
+        Parameters
+        ----------
+        get_ip : bool, default: False
+            Whether to get node ip address to a single partition or not.
+
+        Returns
+        -------
+        PandasDataframeAxisPartition
+            An axis partition containing only a single materialized partition.
+        """
+        materialized = super().force_materialization(get_ip=get_ip)
+        self._list_of_block_partitions = materialized.list_of_block_partitions
+        return materialized
 
     def apply(
         self,
@@ -88,6 +215,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list
             A list of `PandasDataframePartition` objects.
         """
+        if not self.full_axis:
+            # If this is not a full axis partition, it already contains a subset of
+            # the full axis, so we shouldn't split the result further.
+            num_splits = 1
+        if len(self.call_queue) > 0:
+            self.drain_call_queue()
+
         if num_splits is None:
             num_splits = len(self.list_of_blocks)
 
@@ -120,7 +254,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     ),
                 )
             )
-        return self._wrap_partitions(
+        result = self._wrap_partitions(
             self.deploy_axis_func(
                 self.axis,
                 func,
@@ -133,6 +267,11 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 lengths=lengths,
             )
         )
+        if self.full_axis:
+            return result
+        else:
+            # If this is not a full axis partition, just take out the single split in the result.
+            return result[0]
 
     def split(
         self, split_func, num_splits, f_args=None, f_kwargs=None, extract_metadata=False
@@ -360,3 +499,125 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         for func, args, kwargs in call_queue:
             df = func(df, *args, **kwargs)
         return df
+
+    def mask(self, row_indices, col_indices):
+        """
+        Create (synchronously) a mask that extracts the indices provided.
+
+        Parameters
+        ----------
+        row_indices : list-like, slice or label
+            The row labels for the rows to extract.
+        col_indices : list-like, slice or label
+            The column labels for the columns to extract.
+
+        Returns
+        -------
+        PandasOnRayDataframeVirtualPartition
+            A new ``PandasOnRayDataframeVirtualPartition`` object,
+            materialized.
+        """
+        return (
+            self.force_materialization()
+            .list_of_block_partitions[0]
+            .mask(row_indices, col_indices)
+        )
+
+    def to_pandas(self):
+        """
+        Convert the data in this partition to a ``pandas.DataFrame``.
+
+        Returns
+        -------
+        pandas DataFrame.
+        """
+        return self.force_materialization().list_of_block_partitions[0].to_pandas()
+
+    def to_numpy(self):
+        """
+        Convert the data in this partition to a ``numpy.array``.
+
+        Returns
+        -------
+        NumPy array.
+        """
+        return self.force_materialization().list_of_block_partitions[0].to_numpy()
+
+    _length_cache = None
+
+    def length(self):
+        """
+        Get the length of this partition.
+
+        Returns
+        -------
+        int
+            The length of the partition.
+        """
+        if self._length_cache is None:
+            if self.axis == 0:
+                self._length_cache = sum(
+                    obj.length() for obj in self.list_of_block_partitions
+                )
+            else:
+                self._length_cache = self.list_of_block_partitions[0].length()
+        return self._length_cache
+
+    _width_cache = None
+
+    def width(self):
+        """
+        Get the width of this partition.
+
+        Returns
+        -------
+        int
+            The width of the partition.
+        """
+        if self._width_cache is None:
+            if self.axis == 1:
+                self._width_cache = sum(
+                    obj.width() for obj in self.list_of_block_partitions
+                )
+            else:
+                self._width_cache = self.list_of_block_partitions[0].width()
+        return self._width_cache
+
+    def wait(self):
+        """Wait completing computations on the object wrapped by the partition."""
+        pass
+
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
+        """
+        Add a function to the call queue.
+
+        Parameters
+        ----------
+        func : callable or ray.ObjectRef
+            Function to be added to the call queue.
+        *args : iterable
+            Additional positional arguments to be passed in `func`.
+        length : ray.ObjectRef or int, optional
+            Length, or reference to it, of wrapped ``pandas.DataFrame``.
+        width : ray.ObjectRef or int, optional
+            Width, or reference to it, of wrapped ``pandas.DataFrame``.
+        **kwargs : dict
+            Additional keyword arguments to be passed in `func`.
+
+        Returns
+        -------
+        PandasOnRayDataframeVirtualPartition
+            A new ``PandasOnRayDataframeVirtualPartition`` object.
+
+        Notes
+        -----
+        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
+        handle it correctly either way. The keyword arguments are sent as a dictionary.
+        """
+        return type(self)(
+            self.list_of_block_partitions,
+            full_axis=self.full_axis,
+            call_queue=self.call_queue + [[func, args, kwargs]],
+            length=length,
+            width=width,
+        )
