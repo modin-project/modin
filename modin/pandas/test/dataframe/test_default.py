@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import sys
 import pytest
 import numpy as np
 import pandas
@@ -71,7 +72,13 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("interpolate", None),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        # ("to_xarray", None),
+        pytest.param(
+            ("to_xarray", None),
+            marks=pytest.mark.skipif(
+                condition=sys.version_info < (3, 9),
+                reason="xarray doesn't support pandas>=2.0 for python 3.8",
+            ),
+        ),
         ("flags", None),
         ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],

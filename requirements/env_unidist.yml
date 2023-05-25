@@ -7,6 +7,7 @@ dependencies:
   - numpy>=1.18.5
   - pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
   - fsspec
+  # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
   - Jinja2
   - scipy
