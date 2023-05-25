@@ -72,19 +72,15 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("interpolate", None),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        pytest.param(
-            ("to_xarray", None),
-            marks=pytest.mark.skipif(
-                condition=sys.version_info < (3, 9),
-                reason="xarray doesn't support pandas>=2.0 for python 3.8",
-            ),
-        ),
+        ("to_xarray", None),
         ("flags", None),
         ("set_flags", lambda df: {"allows_duplicate_labels": False}),
     ],
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
+    if op == "to_xarray" and sys.version_info < (3, 9):
+        pytest.skip("xarray doesn't support pandas>=2.0 for python 3.8")
     with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:
