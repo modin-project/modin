@@ -115,6 +115,21 @@ _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasData
 
 
 def _get_repr_axis_label_indexer(labels, num_for_repr):
+    """
+    Get the indexer for the given axis labels to be used for the repr.
+
+    Parameters
+    ----------
+    labels : pandas.Index
+        The axis labels.
+    num_for_repr : int
+        The number of elements to display.
+
+    Returns
+    -------
+    slice or list
+        The indexer to use for the repr.
+    """
     if len(labels) <= num_for_repr:
         return slice(None)
     # At this point, the entire axis has len(labels) elements, and num_for_repr <
@@ -132,17 +147,17 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
         # If num_for_repr is even, take an extra element from the front.
         # The total number of elements we are selecting is (num_for_repr // 2) * 2 + 1
         # = num_for_repr + 1
-        initial_repr_num = num_for_repr // 2 + 1
-        final_repr_num = num_for_repr // 2
+        front_repr_num = num_for_repr // 2 + 1
+        back_repr_num = num_for_repr // 2
     else:
         # If num_for_repr is odd, take an extra element from both the front and the
         # back. The total number of elements we are selecting is
         # (num_for_repr // 2) * 2 + 1 + 1 = num_for_repr + 1
-        initial_repr_num = num_for_repr // 2 + 1
-        final_repr_num = num_for_repr // 2 + 1
+        front_repr_num = num_for_repr // 2 + 1
+        back_repr_num = num_for_repr // 2 + 1
     all_positions = range(len(labels))
-    return list(all_positions[:initial_repr_num]) + (
-        [] if final_repr_num == 0 else list(all_positions[-final_repr_num:])
+    return list(all_positions[:front_repr_num]) + (
+        [] if back_repr_num == 0 else list(all_positions[-back_repr_num:])
     )
 
 
