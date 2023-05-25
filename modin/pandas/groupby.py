@@ -1023,9 +1023,9 @@ class DataFrameGroupBy(ClassLogger):
                 ax=ax,
                 figsize=figsize,
                 layout=layout,
-                sharex=False,
-                sharey=True,
-                backend=None,
+                sharex=sharex,
+                sharey=sharey,
+                backend=backend,
                 **kwargs,
             )
         )
