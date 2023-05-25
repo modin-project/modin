@@ -566,9 +566,9 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
-    def _get_axis_name(cls, axis):
-        axis_number = cls._get_axis_number(axis)
-        return cls._AXIS_ORDERS[axis_number]
+    def _get_axis_name(self, axis):
+        axis_number = self._get_axis_number(axis)
+        return self._AXIS_ORDERS[axis_number]
 
     @pandas.util.cache_readonly
     def __constructor__(self):
