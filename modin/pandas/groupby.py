@@ -279,10 +279,25 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def mean(self, numeric_only=no_default, engine="cython", engine_kwargs=None):
+        def _resolve_numeric_only(how: str, numeric_only, axis):
+            # partially copied from pandas
+            if numeric_only is no_default:
+                # i.e. not explicitly passed by user
+                if self._df.ndim == 2:
+                    # i.e. DataFrameGroupBy
+                    numeric_only = axis != 1
+                else:
+                    numeric_only = False
+
+        numeric_only = _resolve_numeric_only("mean", numeric_only, axis=0)
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
-                agg_kwargs=dict(engine=engine, engine_kwargs=engine_kwargs),
+                agg_kwargs=dict(
+                    numeric_only=numeric_only,
+                    engine=engine,
+                    engine_kwargs=engine_kwargs,
+                ),
                 numeric_only=numeric_only,
             )
         )
