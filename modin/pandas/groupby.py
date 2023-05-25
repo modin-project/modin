@@ -288,6 +288,7 @@ class DataFrameGroupBy(ClassLogger):
                     numeric_only = axis != 1
                 else:
                     numeric_only = False
+            return numeric_only
 
         numeric_only = _resolve_numeric_only("mean", numeric_only, axis=0)
         return self._check_index(
