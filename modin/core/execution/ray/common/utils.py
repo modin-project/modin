@@ -249,7 +249,7 @@ def _get_object_store_memory() -> Optional[int]:
     return object_store_memory
 
 
-def deserialize(obj):
+def deserialize(obj):  # pragma: no cover
     """
     Deserialize a Ray object.
 

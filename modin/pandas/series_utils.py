@@ -18,6 +18,7 @@ Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
 from typing import TYPE_CHECKING
 import re
+
 import numpy as np
 import pandas
 from modin.logging import ClassLogger
@@ -61,9 +62,7 @@ class CategoryMethods(ClassLogger):
         return self._Series(query_compiler=self._query_compiler.cat_codes())
 
     def rename_categories(self, new_categories):
-        return self._default_to_pandas(
-            pandas.Series.cat.rename_categories, new_categories
-        )
+        return self._default_to_pandas(pandas.Series.cat.rename_categories)
 
     def reorder_categories(self, new_categories, ordered=None):
         return self._default_to_pandas(
@@ -89,11 +88,11 @@ class CategoryMethods(ClassLogger):
             rename=rename,
         )
 
-    def as_ordered(self, *args, **kwargs):
-        return self._default_to_pandas(pandas.Series.cat.as_ordered, *args, **kwargs)
+    def as_ordered(self):
+        return self._default_to_pandas(pandas.Series.cat.as_ordered)
 
-    def as_unordered(self, *args, **kwargs):
-        return self._default_to_pandas(pandas.Series.cat.as_unordered, *args, **kwargs)
+    def as_unordered(self):
+        return self._default_to_pandas(pandas.Series.cat.as_unordered)
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """
