@@ -256,8 +256,6 @@ class BaseIO:
             displayed_only=displayed_only,
             **kwargs,
         )
-        if isinstance(result, (pandas.DataFrame, pandas.Series)):
-            return (cls.from_pandas(result),)
         return (cls.from_pandas(df) for df in result)
 
     @classmethod
