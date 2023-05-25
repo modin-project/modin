@@ -2682,10 +2682,11 @@ def test_groupby_pct_change_diff_6194():
         }
     )
     # These methods should not crash
+    # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
     eval_general(
         df,
         df._to_pandas(),
-        lambda df: df.groupby(by="by").pct_change(),
+        lambda df: df.groupby(by="by").pct_change(fill_method="ffill"),
     )
     eval_general(
         df,
