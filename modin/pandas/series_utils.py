@@ -62,7 +62,9 @@ class CategoryMethods(ClassLogger):
         return self._Series(query_compiler=self._query_compiler.cat_codes())
 
     def rename_categories(self, new_categories):
-        return self._default_to_pandas(pandas.Series.cat.rename_categories)
+        return self._default_to_pandas(
+            pandas.Series.cat.rename_categories, new_categories
+        )
 
     def reorder_categories(self, new_categories, ordered=None):
         return self._default_to_pandas(
