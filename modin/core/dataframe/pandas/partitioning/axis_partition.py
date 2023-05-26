@@ -27,6 +27,23 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     An abstract class is created to simplify and consolidate the code for axis partition that run pandas.
 
     Because much of the code is similar, this allows us to reuse this code.
+
+    Parameters
+    ----------
+    list_of_partitions : Union[list, PandasDataframePartition]
+        List of ``PandasDataframePartition`` and
+        ``PandasDataframeAxisPartition`` objects, or a single
+        ``PandasDataframePartition``.
+    get_ip : bool, default: False
+        Whether to get node IP addresses to conforming partitions or not.
+    full_axis : bool, default: True
+        Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : the future's type or int, optional
+        Length, or reference to length, of wrapped ``pandas.DataFrame``.
+    width : the future's type or int, optional
+        Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
 
     def __init__(

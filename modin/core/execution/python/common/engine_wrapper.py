@@ -71,7 +71,7 @@ class PythonWrapper:
         Parameters
         ----------
         data : object
-        kwargs : dict
+        **kwargs : dict
 
         Returns
         -------
