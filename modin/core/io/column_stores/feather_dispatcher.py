@@ -65,7 +65,7 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             index_cols = frozenset(
                 col
                 for col in reader.schema.pandas_metadata["index_columns"]
-                # 'index_columns' field may also contain dictionary fileds describing actual
+                # 'index_columns' field may also contain dictionary fields describing actual
                 # RangeIndices, so we're only filtering here for string column names
                 if isinstance(col, str)
             )
