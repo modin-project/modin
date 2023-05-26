@@ -2312,6 +2312,10 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython" or StorageFormat.get() == "Hdk",
+    reason="The test only make sense for partitioned executions",
+)
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
