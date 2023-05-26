@@ -2634,6 +2634,18 @@ class TestFeather:
             extension="feather",
         )
 
+    def test_read_feather_with_index_metadata(self, tmp_path):
+        # see: https://github.com/modin-project/modin/issues/6212
+        df = pandas.DataFrame({"a": [1, 2, 3]}, index=[0, 1, 2])
+        assert not isinstance(df.index, pandas.RangeIndex)
+
+        path = get_unique_filename(extension=".feather", data_dir=tmp_path)
+        df.to_feather(path)
+        eval_io(
+            fn_name="read_feather",
+            path=path,
+        )
+
 
 class TestClipboard:
     @pytest.mark.skip(reason="No clipboard in CI")
