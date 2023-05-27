@@ -1823,16 +1823,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return self.old_rolling_cov(axis, rolling_args, other, pairwise, ddof, **kwargs)    
 
     def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
-        """
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis,
-            lambda df: pandas.DataFrame(
-                df.rolling(**rolling_kwargs).aggregate(func=func, *args, **kwargs)
-            ),
-            new_index=self.index,
-        )
-        return self.__constructor__(new_modin_frame)
-        """
         center = rolling_args[2]
         window = rolling_args[0]
         if not center and isinstance(window, int):
