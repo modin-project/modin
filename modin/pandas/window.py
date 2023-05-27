@@ -164,7 +164,7 @@ class Rolling(ClassLogger):
     def sem(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_sem(
-                self.axis, self.rolling_args, *args, **kwargs
+                axis=self.axis, window=self.window, rolling_args=self.rolling_args, *args, **kwargs
             )
         )
 

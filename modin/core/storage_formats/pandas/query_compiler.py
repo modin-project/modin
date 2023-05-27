@@ -1483,6 +1483,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def rolling_sem(self, axis, window, rolling_args, *args, **kwargs):
         center = rolling_args[2]
+        window = rolling_args[0]
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
