@@ -64,8 +64,6 @@ elif Engine.get() == "Python":
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
         PandasOnPythonDataframeRowPartition,
-    )
-    from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframePartition,
     )
     from modin.core.execution.python.common import PythonWrapper
