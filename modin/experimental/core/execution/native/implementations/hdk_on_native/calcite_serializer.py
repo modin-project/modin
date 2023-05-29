@@ -189,7 +189,10 @@ class CalciteSerializer:
         res = {}
         for k, v in obj.__dict__.items():
             if k[0] != "_":
-                res[k] = self.serialize_item(v)
+                if k == "op" and isinstance(obj, OpExpr) and v == "//":
+                    res[k] = "/"
+                else:
+                    res[k] = self.serialize_item(v)
         return res
 
     def serialize_typed_obj(self, obj):

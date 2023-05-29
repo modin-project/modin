@@ -604,6 +604,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             shape_hint=self._shape_hint,
         )
 
+    def isna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=False))
+
+    def notna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=True))
+
+    def invert(self):
+        return self.__constructor__(self._modin_frame.invert())
+
     def dt_year(self):
         return self.__constructor__(
             self._modin_frame.dt_extract("year"), self._shape_hint
@@ -665,6 +674,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
+
+    def pow(self, other, **kwargs):
+        return self._bin_op(other, "pow", **kwargs)
 
     def mod(self, other, **kwargs):
         def check_int(obj):

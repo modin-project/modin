@@ -221,6 +221,9 @@ class TestCSV:
             with ForceHdkImport(exp):
                 exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
+            # The arrow table contains empty strings, when reading as category.
+            assert all(v == "" for v in exp["c"])
+            exp["c"] = None
 
         df_equals(ref, exp)
 
@@ -697,7 +700,11 @@ class TestConcat:
             return df_equals(df1, df2)
 
         run_and_compare(
-            concat, data=self.data, data2=self.data2, comparator=sort_comparator
+            concat,
+            data=self.data,
+            data2=self.data2,
+            comparator=sort_comparator,
+            allow_subqueries=True,
         )
 
     def test_concat_agg(self):
@@ -1866,6 +1873,43 @@ class TestBinaryOp:
             run_and_compare(
                 test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
             )
+
+    @pytest.mark.parametrize("force_hdk", [False, True])
+    def test_arithmetic_ops(self, force_hdk):
+        def compute(df, operation, **kwargs):
+            df = getattr(df, operation)(3)
+            return df
+
+        for op in (
+            "__add__",
+            "__sub__",
+            "__mul__",
+            "__pow__",
+            "__truediv__",
+            "__floordiv__",
+        ):
+            run_and_compare(
+                compute,
+                {"A": [1, 2, 3, 4, 5]},
+                operation=op,
+                force_hdk_execute=force_hdk,
+            )
+
+    @pytest.mark.parametrize(
+        "force_hdk",
+        [
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.xfail(reason="Invert is not yet supported by HDK"),
+            ),
+        ],
+    )
+    def test_invert_op(self, force_hdk):
+        def invert(df, **kwargs):
+            return ~df
+
+        run_and_compare(invert, {"A": [1, 2, 3, 4, 5]}, force_hdk_execute=force_hdk)
 
 
 class TestDateTime:
