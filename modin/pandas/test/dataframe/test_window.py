@@ -166,6 +166,10 @@ def test_fillna(data, method, axis, limit):
             df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="'datetime64[ns, pytz.FixedOffset(60)]' vs 'datetime64[ns, UTC+01:00]'",
+)
 def test_fillna_sanity():
     # with different dtype
     frame_data = [

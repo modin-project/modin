@@ -836,6 +836,7 @@ class DataFrame(BasePandasDataset):
     def fillna(
         self,
         value=None,
+        *,
         method=None,
         axis=None,
         inplace=False,
