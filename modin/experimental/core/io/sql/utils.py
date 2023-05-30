@@ -17,6 +17,7 @@ from collections import OrderedDict
 
 from sqlalchemy import MetaData, Table, create_engine, inspect
 import pandas
+import pandas._libs.lib as lib
 
 from modin.core.storage_formats.pandas.parsers import _split_result_for_readers
 
@@ -285,7 +286,9 @@ def read_sql_with_offset(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):  # pragma: no cover
+    dtype_backend=lib.no_default,
+    dtype=None,
+):  # pragma: no cover, # noqa: MD01
     """
     Read a chunk of SQL query or table into a pandas DataFrame.
 
@@ -330,6 +333,13 @@ def read_sql_with_offset(
     chunksize : int, optional
         If specified, return an iterator where `chunksize` is the number of rows
         to include in each chunk.
+    dtype_backend : {"numpy_nullable", "pyarrow"}, defaults to NumPy backed DataFrames
+        Which dtype_backend to use, e.g. whether a DataFrame should have NumPy arrays,
+        nullable dtypes are used for all dtypes that have a nullable implementation when
+        "numpy_nullable" is set, PyArrow is used for all dtypes if "pyarrow" is set.
+        The dtype_backends are still experimential.
+    dtype : Type name or dict of columns
+        Data type for data or columns. E.g. np.float64 or {'a': np.float64, 'b': np.int32, 'c': 'Int64'}. The argument is ignored if a table is passed instead of a query.
 
     Returns
     -------
@@ -346,6 +356,8 @@ def read_sql_with_offset(
         parse_dates=parse_dates,
         columns=columns,
         chunksize=chunksize,
+        dtype_backend=dtype_backend,
+        dtype=dtype,
     )
     index = len(pandas_df)
     return _split_result_for_readers(1, num_splits, pandas_df) + [index]
