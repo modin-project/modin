@@ -1789,7 +1789,7 @@ class BasePandasDataset(ClassLogger):
         """
         Attempt to infer better dtypes for object columns.
         """
-        return self._query_compiler.infer_objects()
+        return self.__constructor__(query_compiler=self._query_compiler.infer_objects())
 
     def convert_dtypes(
         self,
