@@ -36,6 +36,8 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend=lib.no_default,
+    dtype=None,
     partition_column: Optional[str] = None,
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,

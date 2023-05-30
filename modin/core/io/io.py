@@ -451,6 +451,8 @@ class BaseIO:
             parse_dates=parse_dates,
             columns=columns,
             chunksize=chunksize,
+            dtype_backend=dtype_backend,
+            dtype=dtype,
         )
 
         if isinstance(result, (pandas.DataFrame, pandas.Series)):
