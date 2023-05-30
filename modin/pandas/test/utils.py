@@ -1373,7 +1373,7 @@ def _make_csv_file(filenames):
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=None,
+        lineterminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -1412,6 +1412,7 @@ def _make_csv_file(filenames):
                 compression=compression,
                 index=False,
                 decimal=decimal_separator if decimal_separator else ".",
+                lineterminator=lineterminator,
                 quoting=quoting,
                 quotechar=quotechar,
                 doublequote=doublequote,
@@ -1421,7 +1422,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "lineterminator": lineterminator if lineterminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }

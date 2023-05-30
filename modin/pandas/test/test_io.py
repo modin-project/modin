@@ -716,7 +716,7 @@ class TestCsv:
                     thousands_separator=thousands,
                     decimal_separator=decimal,
                     escapechar=escapechar,
-                    line_terminator=lineterminator,
+                    lineterminator=lineterminator,
                 )
 
             if (
