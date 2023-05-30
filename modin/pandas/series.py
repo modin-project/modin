@@ -1416,7 +1416,7 @@ class Series(BasePandasDataset):
         index=None,
         *,
         axis=None,
-        copy=True,
+        copy=None,
         inplace=False,
         level=None,
         errors="ignore",

@@ -199,7 +199,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def skew(self, axis=no_default, skipna=True, numeric_only=False, **kwargs):
         # default behaviour for aggregations; for the reference see
-        # `_op_via_apply` func in pandas==2.0.1
+        # `_op_via_apply` func in pandas==2.0.2
         if axis is None or axis is no_default:
             axis = self._axis
 
@@ -372,7 +372,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def idxmax(self, axis=None, skipna=True, numeric_only=False):
         # default behaviour for aggregations; for the reference see
-        # `_op_via_apply` func in pandas==2.0.1
+        # `_op_via_apply` func in pandas==2.0.2
         if axis is None:
             axis = self._axis
         return self._wrap_aggregation(
@@ -383,7 +383,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def idxmin(self, axis=None, skipna=True, numeric_only=False):
         # default behaviour for aggregations; for the reference see
-        # `_op_via_apply` func in pandas==2.0.1
+        # `_op_via_apply` func in pandas==2.0.2
         if axis is None:
             axis = self._axis
         return self._wrap_aggregation(
@@ -1133,7 +1133,7 @@ class DataFrameGroupBy(ClassLogger):
         downcast=None,
     ):
         # default behaviour for aggregations; for the reference see
-        # `_op_via_apply` func in pandas==2.0.1
+        # `_op_via_apply` func in pandas==2.0.2
         if axis is None or axis is no_default:
             axis = self._axis
 
