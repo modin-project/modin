@@ -233,16 +233,17 @@ def test_combine_first():
     reason="FIXME ASAP: https://github.com/modin-project/modin/issues/5916",
 )
 class TestCorr:
-    def test_corr(self):
+    @pytest.mark.parametrize("method", ["pearson", "kendall", "spearman"])
+    def test_corr(self, method):
         eval_general(
             *create_test_dfs(test_data["int_data"]),
-            lambda df: df.corr(),
+            lambda df: df.corr(method=method),
         )
         # Modin result may slightly differ from pandas result
         # due to floating pointing arithmetic.
         eval_general(
             *create_test_dfs(test_data["float_nan_data"]),
-            lambda df: df.corr(),
+            lambda df: df.corr(method=method),
             comparator=modin_df_almost_equals_pandas,
         )
 

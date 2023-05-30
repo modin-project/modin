@@ -51,7 +51,7 @@ class CorrCovBuilder:
             qc: "PandasQueryCompiler", method: str, min_periods: int = 1
         ) -> "PandasQueryCompiler":
             if method != "pearson":
-                return super().corr(
+                return super(type(qc), qc).corr(
                     method=method, min_periods=min_periods, numeric_only=True
                 )
 
