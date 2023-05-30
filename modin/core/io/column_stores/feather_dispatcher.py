@@ -62,5 +62,13 @@ class FeatherDispatcher(ColumnStoreDispatcher):
                 reader = ipc.open_file(file)
             # TODO: pyarrow's schema contains much more metadata than just column names, it also
             # has dtypes and index information that we could use when building a dataframe
-            columns = reader.schema.names
+            index_cols = frozenset(
+                col
+                for col in reader.schema.pandas_metadata["index_columns"]
+                # 'index_columns' field may also contain dictionary fields describing actual
+                # RangeIndices, so we're only filtering here for string column names
+                if isinstance(col, str)
+            )
+            # Filtering out the columns that describe the frame's index
+            columns = [col for col in reader.schema.names if col not in index_cols]
         return cls.build_query_compiler(path, columns, use_threads=False)

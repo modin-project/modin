@@ -111,6 +111,53 @@ _DEFAULT_BEHAVIOUR = {
 _doc_binary_op_kwargs = {"returns": "BasePandasDataset", "left": "BasePandasDataset"}
 
 
+def _get_repr_axis_label_indexer(labels, num_for_repr):
+    """
+    Get the indexer for the given axis labels to be used for the repr.
+
+    Parameters
+    ----------
+    labels : pandas.Index
+        The axis labels.
+    num_for_repr : int
+        The number of elements to display.
+
+    Returns
+    -------
+    slice or list
+        The indexer to use for the repr.
+    """
+    if len(labels) <= num_for_repr:
+        return slice(None)
+    # At this point, the entire axis has len(labels) elements, and num_for_repr <
+    # len(labels). We want to select a pandas subframe containing elements such that:
+    #   - the repr of the pandas subframe will be the same as the repr of the entire
+    #     frame.
+    #   - the pandas repr will not be able to show all the elements and will put an
+    #      ellipsis in the middle
+    #
+    # We accomplish this by selecting some elements from the front and some from the
+    # back, with the front having at most 1 element more than the back. The total
+    # number of elements will be num_for_repr + 1.
+
+    if num_for_repr % 2 == 0:
+        # If num_for_repr is even, take an extra element from the front.
+        # The total number of elements we are selecting is (num_for_repr // 2) * 2 + 1
+        # = num_for_repr + 1
+        front_repr_num = num_for_repr // 2 + 1
+        back_repr_num = num_for_repr // 2
+    else:
+        # If num_for_repr is odd, take an extra element from both the front and the
+        # back. The total number of elements we are selecting is
+        # (num_for_repr // 2) * 2 + 1 + 1 = num_for_repr + 1
+        front_repr_num = num_for_repr // 2 + 1
+        back_repr_num = num_for_repr // 2 + 1
+    all_positions = range(len(labels))
+    return list(all_positions[:front_repr_num]) + (
+        [] if back_repr_num == 0 else list(all_positions[-back_repr_num:])
+    )
+
+
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
 class BasePandasDataset(ClassLogger):
     """
@@ -204,43 +251,9 @@ class BasePandasDataset(ClassLogger):
                 index=self.index,
                 columns=self.columns if self._is_dataframe else None,
             )
-        if len(self.index) <= num_rows:
-            row_indexer = slice(None)
-        else:
-            # Add one here so that pandas automatically adds the dots
-            # It turns out to be faster to extract 2 extra rows and columns than to
-            # build the dots ourselves.
-            num_rows_for_head = num_rows // 2 + 1
-            num_rows_for_tail = (
-                num_rows_for_head
-                if len(self.index) > num_rows
-                else len(self.index) - num_rows_for_head
-                if len(self.index) - num_rows_for_head >= 0
-                else None
-            )
-            row_indexer = list(range(len(self.index))[:num_rows_for_head]) + (
-                list(range(len(self.index))[-num_rows_for_tail:])
-                if num_rows_for_tail is not None
-                else []
-            )
+        row_indexer = _get_repr_axis_label_indexer(self.index, num_rows)
         if self._is_dataframe:
-            if len(self.columns) <= num_cols:
-                col_indexer = slice(None)
-            else:
-                num_cols_for_front = num_cols // 2 + 1
-                num_cols_for_back = (
-                    num_cols_for_front
-                    if len(self.columns) > num_cols
-                    else len(self.columns) - num_cols_for_front
-                    if len(self.columns) - num_cols_for_front >= 0
-                    else None
-                )
-                col_indexer = list(range(len(self.columns))[:num_cols_for_front]) + (
-                    list(range(len(self.columns))[-num_cols_for_back:])
-                    if num_cols_for_back is not None
-                    else []
-                )
-            indexer = row_indexer, col_indexer
+            indexer = row_indexer, _get_repr_axis_label_indexer(self.columns, num_cols)
         else:
             indexer = row_indexer
         return self.iloc[indexer]._query_compiler.to_pandas()
