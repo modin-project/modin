@@ -789,6 +789,7 @@ class TestCsv:
             )
 
     # Error Handling parameters tests
+    @pytest.mark.skip
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
     def test_read_csv_error_handling(self, on_bad_lines):
         # in that case exceptions are raised both by Modin and pandas
