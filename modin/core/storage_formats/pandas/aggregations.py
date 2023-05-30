@@ -209,6 +209,7 @@ class _CorrCovKernels:
 
         return aggregations
 
+    @staticmethod
     def _compute_non_nan_aggs(
         df: pandas.DataFrame,
     ) -> Tuple[pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]:
@@ -233,6 +234,7 @@ class _CorrCovKernels:
         ).rename(MODIN_UNNAMED_SERIES_LABEL)
         return sums, sums_of_squares, count
 
+    @staticmethod
     def _compute_nan_aggs(
         raw_df: np.ndarray, cols: pandas.Index, nan_mask: np.ndarray
     ) -> Tuple[pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]:
@@ -379,6 +381,7 @@ class _CorrCovKernels:
                 sum_of_pairwise_mul, means, sums, count, std, cols
             )
 
+    @staticmethod
     def _maybe_combine_nan_and_non_nan_aggs(
         total_agg: pandas.DataFrame,
     ) -> pandas.DataFrame:
@@ -490,6 +493,7 @@ class _CorrCovKernels:
 
         return total_agg
 
+    @staticmethod
     def _build_corr_table_nan(
         sum_of_pairwise_mul: pandas.DataFrame,
         means: pandas.DataFrame,
@@ -546,6 +550,7 @@ class _CorrCovKernels:
 
         return res
 
+    @staticmethod
     def _build_corr_table_non_nan(
         sum_of_pairwise_mul: pandas.DataFrame,
         means: pandas.Series,
