@@ -1828,7 +1828,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, dtype=col_dtypes, errors=errors
         )
 
-    def infer_objects(self, copy=None):
+    def infer_objects(self):
         """
         Attempt to infer better dtypes for object columns.
 
@@ -1836,17 +1836,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         and unconvertible columns unchanged. The inference rules are the same
         as during normal Series/DataFrame construction.
 
-        Parameters
-        ----------
-        copy : bool, optional
-            Whether to make a copy for non-object or non-inferrable columns or Series.
-
         Returns
         -------
         BaseQueryCompiler
             New query compiler with udpated dtypes.
         """
-        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self, copy)
+        return DataFrameDefault.register(pandas.DataFrame.infer_objects)(self)
 
     def convert_dtypes(
         self,

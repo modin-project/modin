@@ -3466,7 +3466,7 @@ class PandasDataframe(ClassLogger):
         passed to the groupby may be at most the number of rows in the group, and
         may be as small as a single row.
 
-        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+        Unlike the pandas API, an intermediate `GROUP BY` object is not present in this
         algebra implementation.
         """
         axis = Axis(axis)

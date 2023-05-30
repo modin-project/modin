@@ -1722,9 +1722,10 @@ class BasePandasDataset(ClassLogger):
         """
         Attempt to infer better dtypes for object columns.
         """
-        if copy is None:
-            copy = True
-        return self._query_compiler.infer_objects(copy)
+        new_query_compiler = self._query_compiler.infer_objects()
+        return self._create_or_update_from_compiler(
+            new_query_compiler, inplace=False if copy is None else not copy
+        )
 
     def convert_dtypes(
         self,
