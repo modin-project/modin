@@ -222,6 +222,7 @@ class BaseIO:
     def read_html(
         cls,
         io,
+        *,
         match=".+",
         flavor=None,
         header=None,
@@ -379,6 +380,7 @@ class BaseIO:
     def read_sas(
         cls,
         filepath_or_buffer,
+        *,
         format=None,
         index=None,
         encoding=None,
@@ -467,7 +469,14 @@ class BaseIO:
         returns=_doc_returns_qc_or_parser,
     )
     def read_fwf(
-        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+        cls,
+        filepath_or_buffer,
+        *,
+        colspecs="infer",
+        widths=None,
+        infer_nrows=100,
+        dtype_backend=no_default,
+        **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
         pd_obj = pandas.read_fwf(
@@ -475,6 +484,7 @@ class BaseIO:
             colspecs=colspecs,
             widths=widths,
             infer_nrows=infer_nrows,
+            dtype_backend=dtype_backend,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):

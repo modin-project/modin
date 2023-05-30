@@ -409,6 +409,7 @@ def value_counts(
 @enable_logging
 def concat(
     objs: "Iterable[DataFrame | Series] | Mapping[Hashable, DataFrame | Series]",
+    *,
     axis=0,
     join="outer",
     ignore_index: bool = False,

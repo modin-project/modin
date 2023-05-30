@@ -85,6 +85,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "infer_datetime_format",
         "keep_date_col",
         "date_parser",
+        "date_format",
         "dayfirst",
         "cache_dates",
         "iterator",

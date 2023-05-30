@@ -103,6 +103,7 @@ def _read(**kwargs):
 @enable_logging
 def read_xml(
     path_or_buffer: FilePath | ReadBuffer[bytes] | ReadBuffer[str],
+    *,
     xpath: str = "./*",
     namespaces: dict[str, str] | None = None,
     elems_only: bool = False,
@@ -128,6 +129,7 @@ def read_xml(
 @enable_logging
 def read_csv(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    *,
     sep: str | None | NoDefault = no_default,
     delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
@@ -198,6 +200,7 @@ def read_csv(
 @enable_logging
 def read_table(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    *,
     sep: str | None | NoDefault = no_default,
     delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
@@ -493,6 +496,7 @@ def read_feather(
 @enable_logging
 def read_stata(
     filepath_or_buffer,
+    *,
     convert_dates: bool = True,
     convert_categoricals: bool = True,
     index_col: str | None = None,
@@ -516,6 +520,7 @@ def read_stata(
 @enable_logging
 def read_sas(
     filepath_or_buffer,
+    *,
     format: str | None = None,
     index: Hashable | None = None,
     encoding: str | None = None,
@@ -589,6 +594,7 @@ def read_sql(
 @enable_logging
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    *,
     colspecs="infer",
     widths=None,
     infer_nrows=100,
