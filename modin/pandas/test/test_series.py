@@ -78,6 +78,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
+    assert_dtypes_equal,
 )
 from modin.config import NPartitions, StorageFormat
 
@@ -3747,7 +3748,11 @@ def test_value_counts_categorical():
         # The order of HDK categories is different from Pandas
         # and, thus, index comparison fails.
         def comparator(df1, df2):
-            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+            # Perform our own non-strict version of dtypes equality check
+            assert_dtypes_equal(df1, df2)
+            assert_series_equal(
+                df1._to_pandas(), df2, check_index=False, check_dtype=False
+            )
 
     else:
         comparator = df_equals

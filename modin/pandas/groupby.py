@@ -1014,7 +1014,7 @@ class DataFrameGroupBy(ClassLogger):
             result.name = self._df.name
         else:
             result.name = None
-        return result.fillna(0)
+        return result
 
     def sum(
         self, numeric_only=no_default, min_count=0, engine=None, engine_kwargs=None
@@ -1185,14 +1185,10 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def count(self):
-        result = self._wrap_aggregation(
+        return self._wrap_aggregation(
             type(self._query_compiler).groupby_count,
             numeric_only=False,
         )
-        # pandas do it in case of Series
-        if isinstance(result, Series):
-            result = result.fillna(0)
-        return result
 
     def pipe(self, func, *args, **kwargs):
         return com.pipe(self, func, *args, **kwargs)
