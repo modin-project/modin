@@ -45,7 +45,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat, Engine
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -228,10 +228,6 @@ def test_combine_first():
     )
 
 
-@pytest.mark.skipif(
-    Engine.get() == "Python",
-    reason="FIXME ASAP: https://github.com/modin-project/modin/issues/5916",
-)
 class TestCorr:
     @pytest.mark.parametrize("method", ["pearson", "kendall", "spearman"])
     def test_corr(self, method):
