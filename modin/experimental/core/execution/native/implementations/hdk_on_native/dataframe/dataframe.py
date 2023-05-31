@@ -1647,10 +1647,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         exprs[col_name] = build_if_then_else(
             col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
+        dtypes = [expr._dtype for expr in exprs.values()]
 
         return self.__constructor__(
             columns=Index([col_name]),
-            dtypes=pd.Series(self._dtypes[0], index=Index([col_name])),
+            dtypes=pd.Series(dtypes, index=Index(exprs.keys())),
             op=TransformNode(self, exprs),
             index=self._index_cache,
             index_cols=self._index_cols,
