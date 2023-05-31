@@ -16,9 +16,10 @@ import itertools
 import pandas
 import numpy as np
 from unittest import mock
+import datetime
 
 from modin.config import StorageFormat
-from modin.config.envvars import Engine, ExperimentalGroupbyImpl
+from modin.config.envvars import ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -1453,6 +1454,18 @@ def test_groupby_on_index_values_with_loop():
         df_equals(modin_dict[k], pandas_dict[k])
 
 
+def test_groupby_getitem_preserves_key_order_issue_6154():
+    a = np.tile(["a", "b", "c", "d", "e"], (1, 10))
+    np.random.shuffle(a[0])
+    df = pd.DataFrame(
+        np.hstack((a.T, np.arange(100).reshape((50, 2)))),
+        columns=["col 1", "col 2", "col 3"],
+    )
+    eval_general(
+        df, df._to_pandas(), lambda df: df.groupby("col 1")[["col 3", "col 2"]].count()
+    )
+
+
 @pytest.mark.parametrize(
     "groupby_kwargs",
     [
@@ -1734,7 +1747,7 @@ def test_agg_4604():
             "mean",
             marks=pytest.mark.xfail(
                 condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                and get_current_execution() != "BaseOnPython",
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
@@ -1746,7 +1759,7 @@ def test_agg_4604():
             "median",
             marks=pytest.mark.xfail(
                 condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                and get_current_execution() != "BaseOnPython",
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
@@ -2301,6 +2314,10 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython" or StorageFormat.get() == "Hdk",
+    reason="The test only make sense for partitioned executions",
+)
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
@@ -2310,17 +2327,10 @@ def test_groupby_with_virtual_partitions():
     big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
 
     # Check that the constructed Modin DataFrame has virtual partitions when
-    # using Ray or Dask, and doesn't when using another execution engines.
-    if Engine.get() in ["Ray", "Dask", "Unidist"]:
-        assert issubclass(
-            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
-            PandasDataframeAxisPartition,
-        )
-    else:
-        assert not issubclass(
-            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
-            PandasDataframeAxisPartition,
-        )
+    assert issubclass(
+        type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
+        PandasDataframeAxisPartition,
+    )
     eval_general(
         big_modin_df, big_pandas_df, lambda df: df.groupby(df.columns[0]).count()
     )
@@ -2563,6 +2573,42 @@ def test_skew_corner_cases():
 
 
 @pytest.mark.parametrize(
+    "by",
+    [
+        pandas.Grouper(key="time_stamp", freq="3D"),
+        [pandas.Grouper(key="time_stamp", freq="1M"), "count"],
+    ],
+)
+def test_groupby_with_grouper(by):
+    # See https://github.com/modin-project/modin/issues/5091 for more details
+    # Generate larger data so that it can handle partitioning cases
+    data = {
+        "id": [i for i in range(200)],
+        "time_stamp": [
+            pd.Timestamp("2000-01-02") + datetime.timedelta(days=x) for x in range(200)
+        ],
+    }
+    for i in range(200):
+        data[f"count_{i}"] = [i, i + 1] * 100
+
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(by).mean(),
+    )
+
+
+def test_groupby_preserves_by_order():
+    modin_df, pandas_df = create_test_dfs({"col0": [1, 1, 1], "col1": [10, 10, 10]})
+
+    modin_res = modin_df.groupby([pd.Series([100, 100, 100]), "col0"]).mean()
+    pandas_res = pandas_df.groupby([pandas.Series([100, 100, 100]), "col0"]).mean()
+
+    df_equals(modin_res, pandas_res)
+
+
+@pytest.mark.parametrize(
     "method",
     # test all aggregations from pandas.core.groupby.base.reduction_kernels except
     # nth and corrwith, both of which require extra arguments.
@@ -2609,4 +2655,24 @@ def test_groupby_agg_with_empty_column_partition_6175(method):
         # work around https://github.com/modin-project/modin/issues/6016: we don't
         # expect any exceptions.
         raising_exceptions=(Exception,),
+    )
+
+
+def test_groupby_pct_change_diff_6194():
+    df = pd.DataFrame(
+        {
+            "by": ["a", "b", "c", "a", "c"],
+            "value": [1, 2, 4, 5, 1],
+        }
+    )
+    # These methods should not crash
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby(by="by").pct_change(),
+    )
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby(by="by").diff(),
     )

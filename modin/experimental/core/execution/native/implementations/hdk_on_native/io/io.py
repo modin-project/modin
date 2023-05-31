@@ -38,7 +38,8 @@ import pyarrow as pa
 
 import pandas
 import pandas._libs.lib as lib
-from pandas.io.common import is_url
+from pandas.core.dtypes.common import is_list_like
+from pandas.io.common import is_url, get_handle
 
 from modin.utils import _inherit_docstrings
 
@@ -552,6 +553,109 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
 
         if on_bad_lines not in ["error", "warn", "skip", None]:
             raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines.")
+
+    @classmethod
+    @_inherit_docstrings(BaseIO.to_csv, apilink="pandas.to_csv")
+    def to_csv(cls, qc, **kwargs):
+        df = qc._modin_frame
+        write_opts = pa.csv.WriteOptions(include_header=True, delimiter=",")
+        for key, value in kwargs.items():
+            if value is None:
+                pass
+            elif key == "sep":
+                write_opts.delimiter = value
+            elif key == "chunksize":
+                write_opts.batch_size = value
+            elif not (
+                (key == "na_rep" and len(value) == 0)
+                or (key == "decimal" and value == ".")
+                or (key == "quotechar" and value == '"')
+                or (key == "doublequote" and value is True)
+                or (key == "encoding" and value == "utf-8")
+                or (key == "lineterminator" and value == os.linesep)
+                or key
+                in (
+                    "path_or_buf",
+                    "columns",
+                    "header",
+                    "index",
+                    "index_label",
+                    "mode",
+                    "compression",
+                    "errors",
+                    "storage_options",
+                )
+            ):
+                ErrorMessage.default_to_pandas(f"Argument {key}={value}")
+                return df.to_pandas().to_csv(**kwargs)
+
+        df._execute()
+        at = df._partitions[0][0].get()
+        if not isinstance(at, pa.Table):
+            return df.to_pandas().to_csv(**kwargs)
+        idx_names = df._index_cols
+
+        if kwargs.get("index", True):
+            if idx_names is None:  # Trivial index
+                idx_col = pa.array(range(len(df.index)), type=pa.int64())
+                at = at.add_column(0, "", idx_col)
+            if (idx_names := kwargs.get("index_label", None)) is None:
+                idx_names = df.index.names
+            elif idx_names is False:
+                idx_names = [""] * len(df.index.names)
+            elif not is_list_like(idx_names):
+                idx_names = [idx_names]
+            idx_names = ["" if n is None else str(n) for n in idx_names]
+            at = at.rename_columns(idx_names + df.columns.tolist())
+        elif idx_names is not None:
+            at = at.drop(idx_names)
+            at = at.rename_columns(df.columns.tolist())
+            idx_names = None
+        else:
+            at = at.rename_columns(df.columns.tolist())
+
+        if (value := kwargs.get("columns", None)) is not None:
+            if idx_names is not None:
+                value = idx_names + value
+            at = at.select(value)
+
+        if (value := kwargs.get("header", None)) is False:
+            write_opts.include_header = False
+        elif isinstance(value, list):
+            if idx_names is not None:
+                value = idx_names + value
+            at = at.rename_columns(value)
+
+        def write_header(out):
+            # Using pandas to write the header, because pyarrow
+            # writes column names enclosed in double quotes.
+            if write_opts.include_header:
+                pdf = pandas.DataFrame(columns=at.column_names)
+                pdf.to_csv(out, sep=write_opts.delimiter, index=False)
+                write_opts.include_header = False
+
+        if (path_or_buf := kwargs.get("path_or_buf", None)) is None:
+            out = pa.BufferOutputStream()
+            write_header(out)
+            pa.csv.write_csv(at, out, write_opts)
+            return out.getvalue().to_pybytes().decode()
+
+        # Pyarrow fails to write in text mode.
+        mode = kwargs.get("mode", "w").replace("t", "")
+        if "b" not in mode:
+            mode += "b"
+
+        with get_handle(
+            path_or_buf=path_or_buf,
+            mode=mode,
+            errors=kwargs.get("errors", "strict"),
+            compression=kwargs.get("compression", "infer"),
+            storage_options=kwargs.get("storage_options", None),
+            is_text=False,
+        ) as handles:
+            out = handles.handle
+            write_header(out)
+            pa.csv.write_csv(at, out, write_opts)
 
     @classmethod
     @_inherit_docstrings(BaseIO.read_sql, apilink="pandas.read_sql")

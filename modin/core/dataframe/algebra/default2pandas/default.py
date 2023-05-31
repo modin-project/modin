@@ -126,6 +126,7 @@ class DefaultMethod(Operator):
                 and func not in ("align", pandas.DataFrame.align)
                 and func not in ("divmod", pandas.Series.divmod)
                 and func not in ("rdivmod", pandas.Series.rdivmod)
+                and func not in ("to_list", pandas.Series.to_list)
             ):
                 # When applying a DatetimeProperties or TimedeltaProperties function,
                 # if we don't specify the dtype for the DataFrame, the frame might

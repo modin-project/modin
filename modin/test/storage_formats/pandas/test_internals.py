@@ -60,6 +60,24 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+elif Engine.get() == "Python":
+    from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
+        PandasOnPythonDataframeColumnPartition,
+        PandasOnPythonDataframeRowPartition,
+        PandasOnPythonDataframePartition,
+    )
+    from modin.core.execution.python.common import PythonWrapper
+
+    def put(x):
+        return PythonWrapper.put(x, hash=False)
+
+    block_partition_class = PandasOnPythonDataframePartition
+    virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
+    virtual_row_partition_class = PandasOnPythonDataframeRowPartition
+else:
+    raise NotImplementedError(
+        f"These test suites are not implemented for the '{Engine.get()}' engine"
+    )
 
 
 def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
@@ -241,10 +259,6 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason="Rebalancing partitions is only supported for Dask and Ray engines",
-)
 @pytest.mark.parametrize(
     "test_type",
     [
@@ -357,10 +371,6 @@ def test_rebalance_partitions(test_type, set_num_partitions):
     ), "Partitions are not block partitioned after element-wise apply."
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "axis,virtual_partition_class",
     ((0, virtual_column_partition_class), (1, virtual_row_partition_class)),
@@ -475,10 +485,6 @@ class TestDrainVirtualPartitionCallQueue:
         )
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "virtual_partition_class",
     (virtual_column_partition_class, virtual_row_partition_class),

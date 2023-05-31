@@ -393,28 +393,12 @@ def read_html(
     """
     Read HTML tables into a ``DataFrame`` object.
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
-        query_compiler=FactoryDispatcher.read_html(
-            io,
-            match=match,
-            flavor=flavor,
-            header=header,
-            index_col=index_col,
-            skiprows=skiprows,
-            attrs=attrs,
-            parse_dates=parse_dates,
-            thousands=thousands,
-            encoding=encoding,
-            decimal=decimal,
-            converters=converters,
-            na_values=na_values,
-            keep_default_na=keep_default_na,
-            displayed_only=displayed_only,
-            extract_links=extract_links,
-        )
-    )
+    qcs = FactoryDispatcher.read_html(**kwargs)
+    return [DataFrame(query_compiler=qc) for qc in qcs]
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")

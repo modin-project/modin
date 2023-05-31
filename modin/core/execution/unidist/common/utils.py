@@ -51,7 +51,7 @@ def initialize_unidist():
     modin_cfg.NPartitions._put(num_cpus)
 
 
-def deserialize(obj):
+def deserialize(obj):  # pragma: no cover
     """
     Deserialize a unidist object.
 

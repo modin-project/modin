@@ -20,6 +20,7 @@ from modin.pandas.test.utils import (
     df_equals,
 )
 from modin.config import NPartitions
+import modin.pandas as pd
 
 NPartitions.put(4)
 
@@ -93,3 +94,18 @@ def test_insert_item(axis, item_length, loc, replace):
         # https://github.com/modin-project/modin/issues/5974
         check_dtypes=axis != 0,
     )
+
+
+@pytest.mark.parametrize("num_rows", list(range(1, 5)), ids=lambda x: f"num_rows={x}")
+@pytest.mark.parametrize("num_cols", list(range(1, 5)), ids=lambda x: f"num_cols={x}")
+def test_repr_size_issue_6104(num_rows, num_cols):
+    # this tests an edge case where we used to select exactly num_cols / 2 + 1 columns
+    # from both the front and the back of the dataframe, but the dataframe is such a
+    # length that the front and back columns overlap at one column. The result is that
+    # we convert one column twice to pandas, although we would never see the duplicate
+    # column in the output because pandas would also only represent the num_cols / 2
+    # columns from the front and back.
+    df = pd.DataFrame([list(range(4)) for _ in range(4)])
+    pandas_repr_df = df._build_repr_df(num_rows, num_cols)
+    assert pandas_repr_df.columns.is_unique
+    assert pandas_repr_df.index.is_unique

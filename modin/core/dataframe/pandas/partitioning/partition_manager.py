@@ -27,7 +27,7 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
+from modin.config import NPartitions, ProgressBar, BenchmarkMode
 from modin.logging import ClassLogger
 
 import os
@@ -1438,120 +1438,112 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         list[int] or None
             Row lengths if possible to compute it.
         """
+        # We rebalance when the ratio of the number of existing partitions to
+        # the ideal number of partitions is larger than this threshold. The
+        # threshold is a heuristic that may need to be tuned for performance.
+        max_excess_of_num_partitions = 1.5
+        num_existing_partitions = partitions.shape[0]
+        ideal_num_new_partitions = NPartitions.get()
         if (
-            Engine.get() in ["Ray", "Dask", "Unidist"]
-            and StorageFormat.get() == "Pandas"
+            num_existing_partitions
+            <= ideal_num_new_partitions * max_excess_of_num_partitions
         ):
-            # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
-            # We rebalance when the ratio of the number of existing partitions to
-            # the ideal number of partitions is larger than this threshold. The
-            # threshold is a heuristic that may need to be tuned for performance.
-            max_excess_of_num_partitions = 1.5
-            num_existing_partitions = partitions.shape[0]
-            ideal_num_new_partitions = NPartitions.get()
-            if (
-                num_existing_partitions
-                <= ideal_num_new_partitions * max_excess_of_num_partitions
-            ):
-                return partitions, None
-            # If any partition has an unknown length, give each axis partition
-            # roughly the same number of row partitions. We use `_length_cache` here
-            # to avoid materializing any unmaterialized lengths.
-            if any(
-                partition._length_cache is None
-                for row in partitions
-                for partition in row
-            ):
-                # We need each partition to go into an axis partition, but the
-                # number of axis partitions may not evenly divide the number of
-                # partitions.
-                chunk_size = compute_chunksize(
-                    num_existing_partitions, ideal_num_new_partitions, min_block_size=1
-                )
-                new_partitions = np.array(
-                    [
-                        cls.column_partitions(
-                            partitions[i : i + chunk_size],
-                            full_axis=False,
-                        )
-                        for i in range(
-                            0,
-                            num_existing_partitions,
-                            chunk_size,
-                        )
-                    ]
-                )
-                return new_partitions, None
-
-            # If we know the number of rows in every partition, then we should try
-            # instead to give each new partition roughly the same number of rows.
-            new_partitions = []
-            # `start` is the index of the first existing partition that we want to
-            # put into the current new partition.
-            start = 0
-            total_rows = sum(part.length() for part in partitions[:, 0])
-            ideal_partition_size = compute_chunksize(
-                total_rows, ideal_num_new_partitions, min_block_size=1
+            return partitions, None
+        # If any partition has an unknown length, give each axis partition
+        # roughly the same number of row partitions. We use `_length_cache` here
+        # to avoid materializing any unmaterialized lengths.
+        if any(
+            partition._length_cache is None for row in partitions for partition in row
+        ):
+            # We need each partition to go into an axis partition, but the
+            # number of axis partitions may not evenly divide the number of
+            # partitions.
+            chunk_size = compute_chunksize(
+                num_existing_partitions, ideal_num_new_partitions, min_block_size=1
             )
-            for _ in range(ideal_num_new_partitions):
-                # We might pick up old partitions too quickly and exhaust all of them.
-                if start >= len(partitions):
-                    break
-                # `stop` is the index of the last existing partition so far that we
-                # want to put into the current new partition.
-                stop = start
-                partition_size = partitions[start][0].length()
-                # Add existing partitions into the current new partition until the
-                # number of rows in the new partition hits `ideal_partition_size`.
-                while stop < len(partitions) and partition_size < ideal_partition_size:
-                    stop += 1
-                    if stop < len(partitions):
-                        partition_size += partitions[stop][0].length()
-                # If the new partition is larger than we want, split the last
-                # current partition that it contains into two partitions, where
-                # the first partition has just enough rows to make the current
-                # new partition have length `ideal_partition_size`, and the second
-                # partition has the remainder.
-                if partition_size > ideal_partition_size * max_excess_of_num_partitions:
-                    prev_length = sum(row[0].length() for row in partitions[start:stop])
-                    new_last_partition_size = ideal_partition_size - prev_length
-                    partitions = np.insert(
-                        partitions,
-                        stop + 1,
-                        [
-                            obj.mask(slice(new_last_partition_size, None), slice(None))
-                            for obj in partitions[stop]
-                        ],
-                        0,
+            new_partitions = np.array(
+                [
+                    cls.column_partitions(
+                        partitions[i : i + chunk_size],
+                        full_axis=False,
                     )
-                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
-                    for obj in partitions[stop + 1]:
-                        obj._length_cache = partition_size - (
-                            prev_length + new_last_partition_size
-                        )
+                    for i in range(
+                        0,
+                        num_existing_partitions,
+                        chunk_size,
+                    )
+                ]
+            )
+            return new_partitions, None
 
-                    partitions[stop, :] = [
-                        obj.mask(slice(None, new_last_partition_size), slice(None))
+        # If we know the number of rows in every partition, then we should try
+        # instead to give each new partition roughly the same number of rows.
+        new_partitions = []
+        # `start` is the index of the first existing partition that we want to
+        # put into the current new partition.
+        start = 0
+        total_rows = sum(part.length() for part in partitions[:, 0])
+        ideal_partition_size = compute_chunksize(
+            total_rows, ideal_num_new_partitions, min_block_size=1
+        )
+        for _ in range(ideal_num_new_partitions):
+            # We might pick up old partitions too quickly and exhaust all of them.
+            if start >= len(partitions):
+                break
+            # `stop` is the index of the last existing partition so far that we
+            # want to put into the current new partition.
+            stop = start
+            partition_size = partitions[start][0].length()
+            # Add existing partitions into the current new partition until the
+            # number of rows in the new partition hits `ideal_partition_size`.
+            while stop < len(partitions) and partition_size < ideal_partition_size:
+                stop += 1
+                if stop < len(partitions):
+                    partition_size += partitions[stop][0].length()
+            # If the new partition is larger than we want, split the last
+            # current partition that it contains into two partitions, where
+            # the first partition has just enough rows to make the current
+            # new partition have length `ideal_partition_size`, and the second
+            # partition has the remainder.
+            if partition_size > ideal_partition_size * max_excess_of_num_partitions:
+                prev_length = sum(row[0].length() for row in partitions[start:stop])
+                new_last_partition_size = ideal_partition_size - prev_length
+                partitions = np.insert(
+                    partitions,
+                    stop + 1,
+                    [
+                        obj.mask(slice(new_last_partition_size, None), slice(None))
                         for obj in partitions[stop]
-                    ]
-                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
-                    for obj in partitions[stop]:
-                        obj._length_cache = new_last_partition_size
-
-                # The new virtual partitions are not `full_axis`, even if they
-                # happen to span all rows in the dataframe, because they are
-                # meant to be the final partitions of the dataframe. They've
-                # already been split up correctly along axis 0, but using the
-                # default full_axis=True would cause partition.apply() to split
-                # its result along axis 0.
-                new_partitions.append(
-                    cls.column_partitions(partitions[start : stop + 1], full_axis=False)
+                    ],
+                    0,
                 )
-                start = stop + 1
-            new_partitions = np.array(new_partitions)
-            lengths = [part.length() for part in new_partitions[:, 0]]
-            return new_partitions, lengths
-        return partitions, None
+                # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                for obj in partitions[stop + 1]:
+                    obj._length_cache = partition_size - (
+                        prev_length + new_last_partition_size
+                    )
+
+                partitions[stop, :] = [
+                    obj.mask(slice(None, new_last_partition_size), slice(None))
+                    for obj in partitions[stop]
+                ]
+                # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                for obj in partitions[stop]:
+                    obj._length_cache = new_last_partition_size
+
+            # The new virtual partitions are not `full_axis`, even if they
+            # happen to span all rows in the dataframe, because they are
+            # meant to be the final partitions of the dataframe. They've
+            # already been split up correctly along axis 0, but using the
+            # default full_axis=True would cause partition.apply() to split
+            # its result along axis 0.
+            new_partitions.append(
+                cls.column_partitions(partitions[start : stop + 1], full_axis=False)
+            )
+            start = stop + 1
+        new_partitions = np.array(new_partitions)
+        lengths = [part.length() for part in new_partitions[:, 0]]
+        return new_partitions, lengths
 
     @classmethod
     def shuffle_partitions(

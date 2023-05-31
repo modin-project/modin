@@ -303,7 +303,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
 
 
 @unidist.remote(num_returns=2)
-def _get_index_and_columns_size(df):
+def _get_index_and_columns_size(df):  # pragma: no cover
     """
     Get the number of rows and columns of a pandas DataFrame.
 
