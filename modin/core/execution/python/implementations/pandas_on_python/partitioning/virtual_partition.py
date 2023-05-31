@@ -30,10 +30,10 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_partitions : Union[list, PandasOnRayDataframePartition]
-        List of ``PandasOnRayDataframePartition`` and
-        ``PandasOnRayDataframeVirtualPartition`` objects, or a single
-        ``PandasOnRayDataframePartition``.
+    list_of_partitions : Union[list, PandasOnPythonDataframePartition]
+        List of ``PandasOnPythonDataframePartition`` and
+        ``PandasOnPythonDataframeVirtualPartition`` objects, or a single
+        ``PandasOnPythonDataframePartition``.
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True

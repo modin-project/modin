@@ -103,7 +103,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         Returns
         -------
         List
-            A list of ``PandasDataframeAxisPartition``.
+            A list of ``PandasDataframePartition``.
         """
         if self._list_of_block_partitions is not None:
             return self._list_of_block_partitions
@@ -162,10 +162,10 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             drained = self.apply(
                 self._get_drain_func(), num_splits=num_splits, call_queue=call_queue
             )
-        except Exception as e:
+        except Exception:
             # Restoring the call queue in case of an exception as it most likely wasn't drained
             self.call_queue = call_queue
-            raise e
+            raise
         if not isinstance(drained, list):
             drained = [drained]
         self._list_of_block_partitions = drained
@@ -530,9 +530,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         Returns
         -------
-        PandasOnRayDataframeVirtualPartition
-            A new ``PandasOnRayDataframeVirtualPartition`` object,
-            materialized.
+        PandasDataframeAxisPartition
+            A new ``PandasDataframeAxisPartition`` object, materialized.
         """
         return (
             self.force_materialization()
@@ -623,8 +622,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         Returns
         -------
-        PandasOnRayDataframeVirtualPartition
-            A new ``PandasOnRayDataframeVirtualPartition`` object.
+        PandasDataframeAxisPartition
+            A new ``PandasDataframeAxisPartition`` object.
 
         Notes
         -----
