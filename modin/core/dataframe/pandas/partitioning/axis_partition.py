@@ -37,7 +37,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
     get_ip : bool, default: False
         Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
+        Whether or not the axis partition encompasses the whole axis.
     call_queue : list, optional
         A list of tuples (callable, args, kwargs) that contains deferred calls.
     length : the future's type or int, optional
@@ -61,7 +61,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         self.call_queue = call_queue or []
         self._length_cache = length
         self._width_cache = width
-        # Check that all virtual partition axes are the same in `list_of_partitions`
+        # Check that all axis partition axes are the same in `list_of_partitions`
         # We should never have mismatching axis in the current implementation. We add this
         # defensive assertion to ensure that undefined behavior does not happen.
         assert (
@@ -108,13 +108,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         if self._list_of_block_partitions is not None:
             return self._list_of_block_partitions
         self._list_of_block_partitions = []
-        # Extract block partitions from the block and virtual partitions that
+        # Extract block partitions from the block and axis partitions that
         # constitute this partition.
         for partition in self._list_of_constituent_partitions:
             if isinstance(partition, PandasDataframeAxisPartition):
                 if partition.axis == self.axis:
-                    # We are building a virtual partition out of another
-                    # virtual partition `partition` that contains its own list
+                    # We are building an axis partition out of another
+                    # axis partition `partition` that contains its own list
                     # of block partitions, partition.list_of_block_partitions.
                     # `partition` may have its own call queue, which has to be
                     # applied to the entire `partition` before we execute any
@@ -124,7 +124,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                         partition.list_of_block_partitions
                     )
                 else:
-                    # If this virtual partition is made of virtual partitions
+                    # If this axis partition is made of axis partitions
                     # for the other axes, squeeze such partitions into a single
                     # block so that this partition only holds a one-dimensional
                     # list of blocks. We could change this implementation to
@@ -609,13 +609,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         Parameters
         ----------
-        func : callable or ray.ObjectRef
+        func : callable or a future type
             Function to be added to the call queue.
         *args : iterable
             Additional positional arguments to be passed in `func`.
-        length : ray.ObjectRef or int, optional
+        length : A future type or int, optional
             Length, or reference to it, of wrapped ``pandas.DataFrame``.
-        width : ray.ObjectRef or int, optional
+        width : A future type or int, optional
             Width, or reference to it, of wrapped ``pandas.DataFrame``.
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
@@ -624,11 +624,6 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         -------
         PandasDataframeAxisPartition
             A new ``PandasDataframeAxisPartition`` object.
-
-        Notes
-        -----
-        It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
-        handle it correctly either way. The keyword arguments are sent as a dictionary.
         """
         return type(self)(
             self.list_of_block_partitions,
