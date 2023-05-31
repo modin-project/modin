@@ -2227,6 +2227,8 @@ class PandasDataframe(ClassLogger):
 
             ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
             if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+                # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
+                # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
         if self.dtypes[key_column] == object:

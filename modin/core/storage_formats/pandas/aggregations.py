@@ -174,26 +174,14 @@ class _CorrCovKernels:
             np.putmask(raw_df, nan_mask, values=0)
 
         cols = df.columns
-        # In this for-loop we compute a sum of pairwise multiplications between all columns
+        # Here we compute a sum of pairwise multiplications between all columns
         # result:
         #   col1: [sum(col1 * col2), sum(col1 * col3), ... sum(col1 * colN)]
         #   col2: [sum(col2 * col3), sum(col2 * col4), ... sum(col2 * colN)]
         #   ...
-        sum_of_pairwise_mul = {}
-        for i, col in enumerate(cols):
-            sum_of_pairwise_mul[col] = pandas.Series(
-                np.sum(raw_df[i] * raw_df[(i + 1) :], axis=1), index=cols[i + 1 :]
-            )
-
-        # The dictionary holds an upper triangular matrix, converting it
-        # to a complete symmetrical matrix.
-        # TODO: is there a way to save space and continue with a triangular matrix?
-        sum_of_pairwise_mul = pandas.concat(sum_of_pairwise_mul, axis=1)
-        sum_of_pairwise_mul = sum_of_pairwise_mul.reindex(df.columns).reindex(
-            df.columns, axis=1
+        sum_of_pairwise_mul = pandas.DataFrame(
+            np.dot(raw_df, raw_df.T), index=cols, columns=cols, copy=False
         )
-        sum_of_pairwise_mul.update(sum_of_pairwise_mul.T)
-        np.fill_diagonal(sum_of_pairwise_mul.values, 1.0)
 
         if has_nans:
             sums, sums_of_squares, count = cls._compute_nan_aggs(raw_df, cols, nan_mask)
