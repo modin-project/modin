@@ -11,20 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe classes related to its partitioning and optimized for pandas on Python execution."""
+"""Modin's functionality related to Python execution engine."""
 
-from .partition import PandasOnPythonDataframePartition
-from .partition_manager import PandasOnPythonDataframePartitionManager
-from .virtual_partition import (
-    PandasOnPythonDataframeAxisPartition,
-    PandasOnPythonDataframeColumnPartition,
-    PandasOnPythonDataframeRowPartition,
-)
+from .engine_wrapper import PythonWrapper
 
-__all__ = [
-    "PandasOnPythonDataframePartition",
-    "PandasOnPythonDataframePartitionManager",
-    "PandasOnPythonDataframeAxisPartition",
-    "PandasOnPythonDataframeColumnPartition",
-    "PandasOnPythonDataframeRowPartition",
-]
+__all__ = ["PythonWrapper"]

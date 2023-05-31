@@ -19,7 +19,7 @@ from unittest import mock
 import datetime
 
 from modin.config import StorageFormat
-from modin.config.envvars import Engine, ExperimentalGroupbyImpl
+from modin.config.envvars import ExperimentalGroupbyImpl
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -1747,7 +1747,7 @@ def test_agg_4604():
             "mean",
             marks=pytest.mark.xfail(
                 condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                and get_current_execution() != "BaseOnPython",
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
@@ -1759,7 +1759,7 @@ def test_agg_4604():
             "median",
             marks=pytest.mark.xfail(
                 condition=ExperimentalGroupbyImpl.get()
-                and Engine.get() in ("Dask", "Ray", "Unidist"),
+                and get_current_execution() != "BaseOnPython",
                 reason="There's a bug in pandas making this test to fail that's been fixed in 2.0;"
                 + "Remove this after the transition to pandas 2.0",
             ),
@@ -2314,6 +2314,10 @@ def test_validate_by():
     compare(reference_by, result_by)
 
 
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython" or StorageFormat.get() == "Hdk",
+    reason="The test only make sense for partitioned executions",
+)
 def test_groupby_with_virtual_partitions():
     # from https://github.com/modin-project/modin/issues/4464
     modin_df, pandas_df = create_test_dfs(test_data["int_data"])
@@ -2323,17 +2327,10 @@ def test_groupby_with_virtual_partitions():
     big_pandas_df = pandas.concat([pandas_df for _ in range(5)])
 
     # Check that the constructed Modin DataFrame has virtual partitions when
-    # using Ray or Dask, and doesn't when using another execution engines.
-    if Engine.get() in ["Ray", "Dask", "Unidist"]:
-        assert issubclass(
-            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
-            PandasDataframeAxisPartition,
-        )
-    else:
-        assert not issubclass(
-            type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
-            PandasDataframeAxisPartition,
-        )
+    assert issubclass(
+        type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
+        PandasDataframeAxisPartition,
+    )
     eval_general(
         big_modin_df, big_pandas_df, lambda df: df.groupby(df.columns[0]).count()
     )

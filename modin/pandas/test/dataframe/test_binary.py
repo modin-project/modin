@@ -30,7 +30,7 @@ from modin.pandas.test.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -182,7 +182,7 @@ def test_comparison(data, op, other):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    StorageFormat.get() != "Pandas",
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.parametrize(
