@@ -1232,6 +1232,23 @@ def test_rename_bug():
     df_equals(modin_df, df)
 
 
+def test_index_to_datetime_using_set_index():
+    data = {"YEAR": ["1992", "1993", "1994"], "ALIENS": [1, 99, 1]}
+    modin_df_years = pd.DataFrame(data=data)
+    df_years = pandas.DataFrame(data=data)
+    modin_df_years = modin_df_years.set_index("YEAR")
+    df_years = df_years.set_index("YEAR")
+    modin_datetime_index = pd.to_datetime(modin_df_years.index, format="%Y")
+    pandas_datetime_index = pandas.to_datetime(df_years.index)
+
+    modin_df_years.index = modin_datetime_index
+    df_years.index = pandas_datetime_index
+
+    modin_df_years.set_index(modin_datetime_index)
+    df_years.set_index(pandas_datetime_index)
+    df_equals(modin_df_years, df_years)
+
+
 def test_rename_axis():
     data = {"num_legs": [4, 4, 2], "num_arms": [0, 0, 2]}
     index = ["dog", "cat", "monkey"]
