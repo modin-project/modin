@@ -1369,6 +1369,11 @@ class PandasDataframe(ClassLogger):
         columns = col_dtypes.keys()
         # Create Series for the updated dtypes
         new_dtypes = self.dtypes.copy()
+        # When casting to "category" we have to make up the whole axis partition
+        # to get the properly encoded table of categories. Every block partition
+        # will store the encoded table. That can lead to higher memory footprint.
+        # TODO: Revisit if this hurts users.
+        use_full_axis_cast = False
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
             if (
@@ -1395,6 +1400,7 @@ class PandasDataframe(ClassLogger):
                             columns=[column]
                         )[column],
                     )
+                    use_full_axis_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
@@ -1404,9 +1410,14 @@ class PandasDataframe(ClassLogger):
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
-        new_frame = self._partition_mgr_cls.map_partitions(
-            self._partitions, astype_builder
-        )
+        if use_full_axis_cast:
+            new_frame = self._partition_mgr_cls.map_axis_partitions(
+                0, self._partitions, astype_builder, keep_partitioning=True
+            )
+        else:
+            new_frame = self._partition_mgr_cls.map_partitions(
+                self._partitions, astype_builder
+            )
         return self.__constructor__(
             new_frame,
             self.copy_index_cache(),

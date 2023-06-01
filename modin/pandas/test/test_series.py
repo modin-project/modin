@@ -80,6 +80,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
+    assert_dtypes_equal,
 )
 from modin.config import NPartitions, StorageFormat
 
@@ -1148,6 +1149,35 @@ def test_astype_categorical(data):
     pandas_result = pandas_df.astype("category")
     df_equals(modin_result, pandas_result)
     assert modin_result.dtype == pandas_result.dtype
+
+
+@pytest.mark.parametrize("data", [["a", "a", "b", "c", "c", "d", "b", "d"]])
+@pytest.mark.parametrize(
+    "set_min_partition_size",
+    [2, 4],
+    ids=["four_partitions", "two_partitions"],
+    indirect=True,
+)
+def test_astype_categorical_issue5722(data, set_min_partition_size):
+    modin_series, pandas_series = create_test_series(data)
+
+    modin_result = modin_series.astype("category")
+    pandas_result = pandas_series.astype("category")
+    df_equals(modin_result, pandas_result)
+    assert modin_result.dtype == pandas_result.dtype
+
+    pandas_result1, pandas_result2 = pandas_result.iloc[:4], pandas_result.iloc[4:]
+    modin_result1, modin_result2 = modin_result.iloc[:4], modin_result.iloc[4:]
+
+    # check categories
+    assert pandas_result1.cat.categories.equals(pandas_result2.cat.categories)
+    assert modin_result1.cat.categories.equals(modin_result2.cat.categories)
+    assert pandas_result1.cat.categories.equals(modin_result1.cat.categories)
+    assert pandas_result2.cat.categories.equals(modin_result2.cat.categories)
+
+    # check codes
+    assert_array_equal(pandas_result1.cat.codes.values, modin_result1.cat.codes.values)
+    assert_array_equal(pandas_result2.cat.codes.values, modin_result2.cat.codes.values)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3680,7 +3710,11 @@ def test_value_counts_categorical():
         # The order of HDK categories is different from Pandas
         # and, thus, index comparison fails.
         def comparator(df1, df2):
-            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+            # Perform our own non-strict version of dtypes equality check
+            assert_dtypes_equal(df1, df2)
+            assert_series_equal(
+                df1._to_pandas(), df2, check_index=False, check_dtype=False
+            )
 
     else:
         comparator = df_equals

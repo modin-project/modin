@@ -1485,6 +1485,12 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_pandas_index(self, engine):
+        if (
+            version.parse(pa.__version__) >= version.parse("12.0.0")
+            and version.parse(pd.__version__) < version.parse("2.0.0")
+            and engine == "pyarrow"
+        ):
+            pytest.xfail("incompatible versions; see #6072")
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         pandas_df = pandas.DataFrame(
             {

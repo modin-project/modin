@@ -1871,7 +1871,11 @@ class DataFrame(BasePandasDataset):
             else:
                 if not found:
                     missing.append(col)
-        if missing:
+        # If the missing column is a "primitive", return the errors.
+        # Otherwise we let the query compiler figure out what to do with
+        # the keys
+        if missing and not hasattr(missing[0], "__dict__"):
+            # The keys are a primitive type
             raise KeyError(f"None of {missing} are in the columns")
 
         new_query_compiler = self._query_compiler.set_index_from_columns(
