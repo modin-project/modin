@@ -1939,8 +1939,7 @@ class PandasDataframe(ClassLogger):
             type, and this allows us to avoid (re)computing it.
         new_columns : pandas.Index, optional
             New column labels of the result, its length has to be identical
-            to the older columns. If not specified, new columns will be computed
-            on demand.
+            to the older columns. If not specified, old column labels are preserved.
 
         Returns
         -------
