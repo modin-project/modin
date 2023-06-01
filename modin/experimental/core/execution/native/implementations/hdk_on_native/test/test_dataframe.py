@@ -2023,6 +2023,7 @@ class TestDateTime:
 
         run_and_compare(dt_hour, data=self.datetime_data)
 
+    @pytest.mark.xfail(reason="https://github.com/intel-ai/hdk/pull/457")
     @pytest.mark.parametrize("cast", [True, False])
     @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())
     def test_dt_serialization(self, cast, unit):

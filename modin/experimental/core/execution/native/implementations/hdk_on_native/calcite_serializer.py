@@ -83,12 +83,6 @@ class CalciteSerializer:
     }
 
     _TIMESTAMP_PRECISION = {
-        "Y": 0,
-        "M": 0,
-        "W": 0,
-        "D": 0,
-        "h": 0,
-        "m": 0,
         "s": 0,
         "ms": 3,
         "us": 6,
