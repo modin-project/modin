@@ -1502,8 +1502,7 @@ class DataFrame(BasePandasDataset):
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
-            # potential place to remove
-            and numeric_only is None
+            and numeric_only is False
             and min_count > len(axis_to_apply)
         ):
             new_index = self.columns if not axis else self.index
@@ -1954,8 +1953,7 @@ class DataFrame(BasePandasDataset):
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
-            # potential place to remove
-            and numeric_only is None
+            and numeric_only is False
             and min_count > len(axis_to_apply)
         ):
             new_index = self.columns if not axis else self.index
