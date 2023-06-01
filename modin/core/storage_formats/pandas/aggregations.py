@@ -545,7 +545,7 @@ class _CorrCovKernels:
         sum_of_pairwise_mul: pandas.DataFrame,
         means: pandas.Series,
         sums: pandas.Series,
-        count: pandas.Series,
+        count: int,
         std: pandas.Series,
         cols: pandas.Index,
     ) -> pandas.DataFrame:
@@ -557,7 +557,7 @@ class _CorrCovKernels:
         sum_of_pairwise_mul : pandas.DataFrame
         means : pandas.Series
         sums : pandas.Series
-        count : pandas.Series
+        count : int
         std : pandas.Series
         cols : pandas.Index
 
