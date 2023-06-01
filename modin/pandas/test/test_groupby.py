@@ -888,9 +888,7 @@ def test_simple_col_groupby():
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
-    # TODO: default axis value in that case - `1` that inherited from groupby call
-    # however axis=1 parameter isn't support on BaseOnPython.
-    eval_skew(modin_groupby, pandas_groupby, axis=0)
+    eval_skew(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.ffill())
     eval_general(
         modin_groupby,
@@ -1154,10 +1152,8 @@ def eval_ngroups(modin_groupby, pandas_groupby):
     assert modin_groupby.ngroups == pandas_groupby.ngroups
 
 
-def eval_skew(modin_groupby, pandas_groupby, numeric_only=False, axis=None):
+def eval_skew(modin_groupby, pandas_groupby, numeric_only=False):
     kwargs = dict(numeric_only=numeric_only)
-    if axis is not None:
-        kwargs["axis"] = axis
     modin_df_almost_equals_pandas(
         modin_groupby.skew(**kwargs),
         pandas_groupby.skew(**kwargs),

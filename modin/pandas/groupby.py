@@ -203,11 +203,7 @@ class DataFrameGroupBy(ClassLogger):
         if axis is None or axis is no_default:
             axis = self._axis
 
-        # `groupby_skew` can't handle `axis`, `skipna` parameters
-        # that should be added into `agg_kwargs`;
-        # looks like an implicit supported combination of parameters in the
-        # previous implementation: axis == 1, skipna==True
-        if axis != 1 or not skipna:
+        if axis != 0 or not skipna:
             return self._default_to_pandas(
                 lambda df: df.skew(
                     axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
