@@ -579,10 +579,6 @@ class BasePandasDataset(ClassLogger):
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
-    def _get_axis_name(self, axis):
-        axis_number = self._get_axis_number(axis)
-        return self._AXIS_ORDERS[axis_number]
-
     @pandas.util.cache_readonly
     def __constructor__(self):
         """
@@ -1282,7 +1278,7 @@ class BasePandasDataset(ClassLogger):
         if labels is not None:
             if index is not None or columns is not None:
                 raise ValueError("Cannot specify both 'labels' and 'index'/'columns'")
-            axis_name = self._get_axis_name(axis)
+            axis_name = pandas.DataFrame._get_axis_name(axis)
             axes = {axis_name: labels}
         elif index is not None or columns is not None:
             axes = {"index": index}
@@ -1926,7 +1922,6 @@ class BasePandasDataset(ClassLogger):
             numpy_compat.function.validate_stat_func((), kwargs, fname=op_name)
 
         if not numeric_only:
-            # fix for 'test_reduce_specific'
             self._validate_dtypes(numeric_only=True)
 
         data = self._get_numeric_data(axis) if numeric_only else self
@@ -2251,8 +2246,8 @@ class BasePandasDataset(ClassLogger):
             # Use new behavior.  Means that index and/or columns is specified
             result = self if inplace else self.copy(deep=copy)
 
-            for axis in range(self._AXIS_LEN):
-                v = axes.get(self._get_axis_name(axis))
+            for axis in range(self.ndim):
+                v = axes.get(pandas.DataFrame._get_axis_name(axis))
                 if v is no_default:
                     continue
                 non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
