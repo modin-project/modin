@@ -1239,7 +1239,7 @@ def test_index_to_datetime_using_set_index():
     modin_df_years = modin_df_years.set_index("YEAR")
     df_years = df_years.set_index("YEAR")
     modin_datetime_index = pd.to_datetime(modin_df_years.index, format="%Y")
-    pandas_datetime_index = pandas.to_datetime(df_years.index)
+    pandas_datetime_index = pandas.to_datetime(df_years.index, format="%Y")
 
     modin_df_years.index = modin_datetime_index
     df_years.index = pandas_datetime_index
