@@ -677,19 +677,21 @@ def test_add_does_not_change_original_series_name():
     df_equals(s2, original_s2)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_prefix(data):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.add_prefix("PREFIX_ADD_"), pandas_series.add_prefix("PREFIX_ADD_")
+def test_add_prefix(data, axis):
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.add_prefix("PREFIX_ADD_", axis=axis),
     )
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_suffix(data):
-    modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.add_suffix("SUFFIX_ADD_"), pandas_series.add_suffix("SUFFIX_ADD_")
+def test_add_suffix(data, axis):
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.add_suffix("SUFFIX_ADD_", axis=axis),
     )
 
 

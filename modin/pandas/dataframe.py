@@ -357,16 +357,18 @@ class DataFrame(BasePandasDataset):
         """
         Prefix labels with string `prefix`.
         """
+        axis = 1 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix, axis or 1)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis)
         )
 
     def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
+        axis = 1 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix, axis or 1)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):

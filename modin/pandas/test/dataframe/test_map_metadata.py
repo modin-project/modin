@@ -196,18 +196,32 @@ def test_abs(request, data):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_prefix(data):
+def test_add_prefix(data, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     test_prefix = "TEST"
-    new_modin_df = modin_df.add_prefix(test_prefix)
-    new_pandas_df = pandas_df.add_prefix(test_prefix)
+    new_modin_df = modin_df.add_prefix(test_prefix, axis=axis)
+    new_pandas_df = pandas_df.add_prefix(test_prefix, axis=axis)
     df_equals(new_modin_df.columns, new_pandas_df.columns)
     # TODO(https://github.com/modin-project/modin/issues/3804):
     # make df_equals always check dtypes.
     df_equals(new_modin_df.dtypes, new_pandas_df.dtypes)
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add_suffix(data, axis):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    test_suffix = "TEST"
+    new_modin_df = modin_df.add_suffix(test_suffix, axis=axis)
+    new_pandas_df = pandas_df.add_suffix(test_suffix, axis=axis)
+
+    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -240,18 +254,6 @@ def test_applymap_numeric(request, data, testfunc):
         else:
             modin_result = modin_df.applymap(testfunc)
             df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_suffix(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    test_suffix = "TEST"
-    new_modin_df = modin_df.add_suffix(test_suffix)
-    new_pandas_df = pandas_df.add_suffix(test_suffix)
-
-    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

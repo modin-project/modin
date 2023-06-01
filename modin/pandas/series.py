@@ -528,16 +528,18 @@ class Series(BasePandasDataset):
         """
         Prefix labels with string `prefix`.
         """
+        axis = 0 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix, axis=axis or 0)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis=axis)
         )
 
     def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
+        axis = 0 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix, axis=axis or 0)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis=axis)
         )
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
