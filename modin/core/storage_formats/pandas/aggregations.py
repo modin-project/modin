@@ -200,7 +200,7 @@ class _CorrCovKernels:
     @staticmethod
     def _compute_non_nan_aggs(
         df: pandas.DataFrame,
-    ) -> Tuple[pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]:
+    ) -> Tuple[pandas.Series, pandas.Series, pandas.Series]:
         """
         Compute sums, sums of square and the number of observations for a partition assuming there are no NaN values in it.
 
@@ -211,8 +211,8 @@ class _CorrCovKernels:
 
         Returns
         -------
-        Tuple[sums: pandas.DataFrame, sums_of_squares: pandas.DataFrame, count: pandas.DataFrame]
-            A tuple storing DataFrames where each of them holds the result for
+        Tuple[sums: pandas.Series, sums_of_squares: pandas.Series, count: pandas.Series]
+            A tuple storing Series where each of them holds the result for
             one of the described aggregations.
         """
         sums = df.sum().rename(MODIN_UNNAMED_SERIES_LABEL)
@@ -267,11 +267,13 @@ class _CorrCovKernels:
         # TODO: is it possible to get rid of this for-loop somehow?
         for i, col in enumerate(cols):
             # Here we're taking each column, resizing it to the original frame's shape to compute
-            # aggregations for each other column and then excluding NaN values by setting zeros
-            # using the validity mask:
+            # aggregations for each other column and then excluding values at those positions where
+            # other columns had NaN values by setting zeros using the validity mask:
             #  col1: 1, 2  , 3  , 4   df[i].resize()  col1: 1, 2, 3, 4  putmask()  col1: 1, 2, 3, 4
             #  col2: 2, NaN, 3  , 4   ------------->  col1: 1, 2, 3, 4  -------->  col1: 1, 0, 3, 4
             #  col3: 4, 5  , NaN, 7                   col1: 1, 2, 3, 4             col1: 1, 2, 0, 4
+            # Note that 'NaN' values in this diagram are just for the sake of visibility, in reality
+            # they were already replaced by zeroes at the beginning of the 'map' phase.
             col_vals = np.resize(raw_df[i], raw_df.shape)
             np.putmask(col_vals, nan_mask, values=0)
 
