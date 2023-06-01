@@ -296,7 +296,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                                 if frame.has_materialized_index
                                 else [None]
                             )
-                            idx_names = frame._mangle_index_names(idx_names)
+                            idx_names = ColNameCodec.mangle_index_names(idx_names)
                             obj = pyarrow.table(
                                 {n: [] for n in idx_names},
                                 schema=pyarrow.schema(
