@@ -1922,8 +1922,6 @@ class Series(BasePandasDataset):
             ascending=ascending,
             dropna=dropna,
         )
-        # https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html#value-counts-sets-the-resulting-name-to-count
-        counted_values.name = "proportion" if normalize else "count"
         return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200
