@@ -125,11 +125,7 @@ class BaseIO:
     )
     def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(
-            pandas.read_parquet(
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_parquet(**kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")

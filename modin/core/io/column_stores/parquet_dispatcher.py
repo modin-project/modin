@@ -23,6 +23,7 @@ from fsspec.spec import AbstractBufferedFile
 import numpy as np
 from pandas.io.common import stringify_path
 import pandas
+import pandas._libs.lib as lib
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -589,7 +590,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return cls.query_compiler_cls(frame)
 
     @classmethod
-    def _read(cls, path, engine, columns, **kwargs):
+    def _read(cls, path, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs):
         """
         Load a parquet object from the file path, returning a query compiler.
 
@@ -601,6 +602,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
+        use_nullable_dtypes : bool
+        dtype_backend : {"numpy_nullable", "pyarrow"}, defaults to NumPy backed DataFrames
         **kwargs : dict
             Keyword arguments.
 
@@ -614,14 +617,17 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        if any(
-            arg not in ("storage_options", "use_nullable_dtypes", "dtype_backend")
-            for arg in kwargs
+        if (
+            any(arg not in ("storage_options",) for arg in kwargs)
+            or use_nullable_dtypes != lib.no_default
+            or dtype_backend != lib.no_default
         ):
             return cls.single_worker_read(
                 path,
                 engine=engine,
                 columns=columns,
+                use_nullable_dtypes=use_nullable_dtypes,
+                dtype_backend=dtype_backend,
                 reason="Parquet options that are not currently supported",
                 **kwargs,
             )

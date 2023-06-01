@@ -1392,6 +1392,25 @@ class TestParquet:
                 columns=columns,
             )
 
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_read_parquet_dtype_backend(self, engine, make_parquet_file, dtype_backend):
+        with ensure_clean(".parquet") as unique_filename:
+            make_parquet_file(filename=unique_filename, row_group_size=100)
+
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                dtype_backend=dtype_backend,
+            )
+
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
         if engine == "fastparquet" and os.name == "nt":
             pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
