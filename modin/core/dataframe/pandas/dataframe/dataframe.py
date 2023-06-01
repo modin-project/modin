@@ -1920,7 +1920,12 @@ class PandasDataframe(ClassLogger):
         return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
     @lazy_metadata_decorator(apply_axis=None)
-    def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
+    def map(
+        self,
+        func: Callable,
+        dtypes: Optional[str] = None,
+        new_columns: Optional[pandas.Index] = None,
+    ) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
@@ -1932,6 +1937,10 @@ class PandasDataframe(ClassLogger):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+        new_columns : pandas.Index, optional
+            New column labels of the result, its length has to be identical
+            to the older columns. If not specified, new columns will be computed
+            on demand.
 
         Returns
         -------
@@ -1939,16 +1948,25 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
+        if new_columns is not None and self.has_materialized_columns:
+            assert len(new_columns) == len(
+                self.columns
+            ), "New column's length must be identical to the previous columns"
+        elif new_columns is None:
+            new_columns = self.copy_columns_cache()
         if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None and not isinstance(dtypes, pandas.Series):
+            if isinstance(new_columns, ModinIndex):
+                # Materializing lazy columns in order to build dtype's index
+                new_columns = new_columns.get(return_lengths=False)
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(self.columns), index=self.columns
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         return self.__constructor__(
             new_partitions,
             self.copy_index_cache(),
-            self.copy_columns_cache(),
+            new_columns,
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
