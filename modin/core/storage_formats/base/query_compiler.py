@@ -193,12 +193,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New query compiler with updated labels.
         """
-        if axis:
-            return DataFrameDefault.register(pandas.DataFrame.add_prefix)(
-                self, prefix=prefix
-            )
-        else:
-            return SeriesDefault.register(pandas.Series.add_prefix)(self, prefix=prefix)
+        return DataFrameDefault.register(pandas.DataFrame.add_prefix)(
+            self, prefix=prefix, axis=axis
+        )
 
     def add_suffix(self, suffix, axis=1):
         """
@@ -216,12 +213,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New query compiler with updated labels.
         """
-        if axis:
-            return DataFrameDefault.register(pandas.DataFrame.add_suffix)(
-                self, suffix=suffix
-            )
-        else:
-            return SeriesDefault.register(pandas.Series.add_suffix)(self, suffix=suffix)
+        return DataFrameDefault.register(pandas.DataFrame.add_suffix)(
+            self, suffix=suffix, axis=axis
+        )
 
     # END Metadata modification abstract methods
 
