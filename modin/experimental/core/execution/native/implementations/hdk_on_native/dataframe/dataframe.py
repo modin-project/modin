@@ -1227,7 +1227,9 @@ class HdkOnNativeDataframe(PandasDataframe):
                     if not frame._has_arrow_table():
                         frame._execute()
                     if not frame._has_arrow_table():
-                        raise NotImplementedError("PyArrow tables concatenation")
+                        raise NotImplementedError(
+                            "PyArrow tables concatenation without any PyArrow table"
+                        )
                     self.table = frame._partitions[0][0].arrow_table
                 else:
                     self.table = frame_to_table[frame]
@@ -2159,7 +2161,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                 result = frame()
             elif isinstance(frame._op, FrameNode):
                 if frame._partitions.size == 0:
-                    result = pyarrow.Table.from_pandas(pd.DataFrame({}))
+                    result = pyarrow.Table.from_pandas(
+                        pd.DataFrame(
+                            index=frame._index_cache, columns=frame._columns_cache
+                        )
+                    )
                 else:
                     assert frame._partitions.size == 1
                     result = frame._partitions[0][0].get()
