@@ -555,10 +555,10 @@ class _CorrCovKernels:
         Parameters
         ----------
         sum_of_pairwise_mul : pandas.DataFrame
-        means : pandas.DataFrame
-        sums : pandas.DataFrame
-        count : pandas.DataFrame
-        std : pandas.DataFrame
+        means : pandas.Series
+        sums : pandas.Series
+        count : pandas.Series
+        std : pandas.Series
         cols : pandas.Index
 
         Returns
