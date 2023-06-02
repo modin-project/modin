@@ -1159,13 +1159,13 @@ def get_unique_filename(
         name of the test for which the unique file name is needed.
     kwargs: list of ints
         Unique combiantion of test parameters for creation of unique name.
-    extension: str
+    extension: str, default: "csv"
         Extension of unique file.
     data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.
-    debug_mode: bool
+    debug_mode: bool, default: False
         Get unique filename containing kwargs values.
         Otherwise kwargs values will be replaced with hash equivalent.
 

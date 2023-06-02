@@ -2239,6 +2239,33 @@ class TestSql:
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_sql_dtype_backend(self, tmp_path, make_sql_connection, dtype_backend):
+        filename = get_unique_filename(extension="db")
+
+        table = "test_read_sql"
+        conn = make_sql_connection(tmp_path / filename, table)
+        query = f"select * from {table}"
+
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=conn,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
     @pytest.mark.skipif(
         not TestReadFromSqlServer.get(),
         reason="Skip the test when the test SQL server is not set up.",
