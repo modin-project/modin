@@ -2229,6 +2229,7 @@ class TestSql:
             con=sqlalchemy_connection,
         )
 
+        old_sql_engine = ReadSqlEngine.get()
         ReadSqlEngine.put(read_sql_engine)
         if ReadSqlEngine.get() == "Connectorx":
             modin_df = pd.read_sql(sql=query, con=conn)
@@ -2236,6 +2237,7 @@ class TestSql:
             modin_df = pd.read_sql(
                 sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
             )
+        ReadSqlEngine.put(old_sql_engine)
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
@@ -2249,7 +2251,7 @@ class TestSql:
     def test_read_sql_dtype_backend(self, tmp_path, make_sql_connection, dtype_backend):
         filename = get_unique_filename(extension="db")
 
-        table = "test_read_sql"
+        table = "test_read_sql_dtype_backend"
         conn = make_sql_connection(tmp_path / filename, table)
         query = f"select * from {table}"
 
