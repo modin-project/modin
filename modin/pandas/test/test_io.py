@@ -2677,6 +2677,26 @@ class TestFeather:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_feather_dtype_backend(self, make_feather_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_feather",
+            # read_feather kwargs
+            path=make_feather_file(),
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
