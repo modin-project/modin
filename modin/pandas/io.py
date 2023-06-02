@@ -406,6 +406,7 @@ def read_clipboard(
 def read_excel(
     io,
     sheet_name: str | int | list[IntStrT] | None = 0,
+    *,
     header: int | Sequence[int] | None = 0,
     names: list[str] | None = None,
     index_col: int | Sequence[int] | None = None,
