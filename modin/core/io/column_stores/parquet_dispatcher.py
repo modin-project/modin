@@ -603,7 +603,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         columns : list
             If not None, only these columns will be read from the file.
         use_nullable_dtypes : bool
-        dtype_backend : {"numpy_nullable", "pyarrow"}, defaults to NumPy backed DataFrames
+        dtype_backend : {"numpy_nullable", "pyarrow"}
         **kwargs : dict
             Keyword arguments.
 
@@ -636,7 +636,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
             # files in parallel.
             compilers: list[cls.query_compiler_cls] = [
-                cls._read(p, engine, columns, **kwargs) for p in path
+                cls._read(
+                    p, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs
+                )
+                for p in path
             ]
             return compilers[0].concat(axis=0, other=compilers[1:], ignore_index=True)
         if isinstance(path, str):
@@ -669,6 +672,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     path,
                     engine=engine,
                     columns=columns,
+                    use_nullable_dtypes=use_nullable_dtypes,
+                    dtype_backend=dtype_backend,
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs,
                 )
