@@ -39,8 +39,8 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
-from collections import OrderedDict
 import collections
+from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
 import numpy as np
@@ -248,6 +248,7 @@ class PandasParser(ClassLogger):
 
         combined_part_dtypes = pandas.concat(partitions_dtypes, axis=1)
         frame_dtypes = combined_part_dtypes.iloc[:, 0]
+        frame_dtypes.name = None
 
         if not combined_part_dtypes.eq(frame_dtypes, axis=0).all(axis=None):
             ErrorMessage.missmatch_with_pandas(

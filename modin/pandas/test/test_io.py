@@ -296,6 +296,25 @@ class TestCsv:
                 thousands=thousands,
             )
 
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_csv_dtype_backend(self, make_csv_file, dtype_backend):
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(filename=unique_filename)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                dtype_backend=dtype_backend,
+                comparator=comparator,
+            )
+
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
@@ -1403,12 +1422,17 @@ class TestParquet:
         with ensure_clean(".parquet") as unique_filename:
             make_parquet_file(filename=unique_filename, row_group_size=100)
 
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
             eval_io(
                 fn_name="read_parquet",
                 # read_parquet kwargs
                 engine=engine,
                 path=unique_filename,
                 dtype_backend=dtype_backend,
+                comparator=comparator,
             )
 
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
