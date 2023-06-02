@@ -1805,6 +1805,23 @@ class TestJson:
         )
 
     @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_json_dtype_backend(self, make_json_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_json",
+            # read_json kwargs
+            path_or_buf=make_json_file(lines=True),
+            lines=True,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
+    @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
