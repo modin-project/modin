@@ -1901,6 +1901,23 @@ class TestExcel:
         )
 
     @check_file_leaks
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_excel_dtype_backend(self, make_excel_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_excel",
+            # read_csv kwargs
+            io=make_excel_file(),
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
+    @check_file_leaks
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
@@ -2378,6 +2395,25 @@ class TestFwf:
             filepath_or_buffer=make_fwf_file(fwf_data=fwf_data),
             usecols=usecols,
         )
+
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_fwf_dtype_backend(self, make_fwf_file, dtype_backend):
+        with ensure_clean(".fwf") as unique_filename:
+            make_fwf_file(filename=unique_filename)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_fwf",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                dtype_backend=dtype_backend,
+                comparator=comparator,
+            )
 
     def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = make_fwf_file()
