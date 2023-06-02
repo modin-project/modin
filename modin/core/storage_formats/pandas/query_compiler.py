@@ -1389,18 +1389,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def window_mean(self, axis, window_args, *args, **kwargs):
+    def window_mean(self, fold_axis, window_args, *args, **kwargs):
         center = window_args[2]
         window = window_args[0]
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis=axis, window_size=window,
+                    fold_axis, window_size=window,
                     reduce_fn=lambda df : df.rolling(*window_args).mean(*args, **kwargs)
                 )
             )
         else:
-            return self.old_window_mean(axis, window_args, *args, **kwargs)    
+            return self.old_window_mean(fold_axis, window_args, *args, **kwargs)    
 
     old_window_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
