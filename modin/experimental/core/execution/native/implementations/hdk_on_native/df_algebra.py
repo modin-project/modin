@@ -721,6 +721,12 @@ class UnionNode(DFAlgNode):
     ----------
     frames : list of DFAlgNode
         Input frames.
+    join : str
+        Either outer or inner.
+    sort : bool
+        Sort columns.
+    ignore_index : bool
+        Ignore index columns.
 
     Attributes
     ----------
@@ -728,8 +734,11 @@ class UnionNode(DFAlgNode):
         Input frames.
     """
 
-    def __init__(self, frames):
+    def __init__(self, frames, join, sort, ignore_index):
         self.input = frames
+        self.join = join
+        self.sort = sort
+        self.ignore_index = ignore_index
 
     def copy(self):
         """
