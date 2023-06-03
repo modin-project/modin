@@ -1798,8 +1798,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window,
-                    lambda df: df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
                 )
             )
         else:

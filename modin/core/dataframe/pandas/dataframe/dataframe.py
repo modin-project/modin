@@ -1979,13 +1979,14 @@ class PandasDataframe(ClassLogger):
         
         axis = Axis(axis)
 
+        # applies reduction function over entire virtual partition
         def window_function_complete(virtual_partition):
             virtual_partition_copy = virtual_partition.copy()
             window_result = reduce_fn(virtual_partition_copy)
             return window_result
 
+        # applies reduction function over one window of virtual partition
         def window_function_partition(virtual_partition):
-            
             virtual_partition_copy = virtual_partition.copy()
             window_result = reduce_fn(virtual_partition_copy)
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
@@ -2000,8 +2001,8 @@ class PandasDataframe(ClassLogger):
             # partitions to join in virtual partition
             parts_to_join = [starting_part] if (axis == Axis.ROW_WISE) else [[partition[0]] for partition in starting_part]
 
+            # used to determine if window continues into next partition or if we can create virtual partition
             last_window_span = window_size - 1
-
             k = i + 1
 
             while (last_window_span > 0 and k < num_parts):
@@ -2036,6 +2037,7 @@ class PandasDataframe(ClassLogger):
             else:
                 reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
                 
+            # append reduction result to results array
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
             else:
