@@ -626,7 +626,8 @@ class DatetimeProperties(ClassLogger):
 
     @property
     def unit(self):
-        return self._Series(query_compiler=self._query_compiler.dt_unit())
+        # use `iloc[0]` to return scalar
+        return self._Series(query_compiler=self._query_compiler.dt_unit()).iloc[0]
 
     def as_unit(self, *args, **kwargs):
         return self._Series(

@@ -562,7 +562,12 @@ class BaseIO:
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_spss`")
         return cls.from_pandas(
-            pandas.read_spss(path, usecols, convert_categoricals, dtype_backend)
+            pandas.read_spss(
+                path,
+                usecols=usecols,
+                convert_categoricals=convert_categoricals,
+                dtype_backend=dtype_backend,
+            )
         )
 
     @classmethod

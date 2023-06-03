@@ -868,7 +868,6 @@ class TextFileDispatcher(FileDispatcher):
             Partitions rows lengths.
         """
         index_objs = cls.materialize(index_ids)
-
         if len(index_objs) == 0 or all((isinstance(obj, int) for obj in index_objs)):
             row_lengths = index_objs
             new_index = pandas.RangeIndex(sum(index_objs))
