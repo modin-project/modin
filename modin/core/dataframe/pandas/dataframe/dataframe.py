@@ -1987,9 +1987,7 @@ class PandasDataframe(ClassLogger):
         def window_function_partition(virtual_partition):
             
             virtual_partition_copy = virtual_partition.copy()
-            #print(virtual_partition_copy.to_pandas())
             window_result = reduce_fn(virtual_partition_copy)
-            #breakpoint()
             return window_result.iloc[:, window_size - 1 : ] if axis == Axis.COL_WISE else window_result.iloc[window_size - 1: , :]
 
         num_parts = len(self._partitions[0]) if axis == Axis.COL_WISE else len(self._partitions)
@@ -2000,10 +1998,7 @@ class PandasDataframe(ClassLogger):
             starting_part = self._partitions[:, [i]] if axis == Axis.COL_WISE else self._partitions[i]
 
             # partitions to join in virtual partition
-            parts_to_join = [starting_part] if (axis == Axis.ROW_WISE) else [[partition[0]] for partition in starting_part] 
-
-            #for part in parts_to_join:
-                #print(part.to_pandas())
+            parts_to_join = [starting_part] if (axis == Axis.ROW_WISE) else [[partition[0]] for partition in starting_part]
 
             last_window_span = window_size - 1
 
@@ -2019,12 +2014,9 @@ class PandasDataframe(ClassLogger):
                         masked_new_parts = [[part[0].mask(row_labels = slice(None), col_labels = slice(0, last_window_span))] for part in new_parts]
                         for x, r in enumerate(parts_to_join):
                             r.append(masked_new_parts[x][0])
-                            #print(masked_new_parts[x][0].to_pandas())
                     else:
                         masked_new_parts = np.array([part.mask(row_labels = slice(0, last_window_span), col_labels=slice(None)) for part in new_parts])
                         parts_to_join.append(masked_new_parts)
-                        #for part in masked_new_parts:
-                            #print(part.to_pandas())
                     break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
@@ -2034,10 +2026,7 @@ class PandasDataframe(ClassLogger):
                     else:
                         parts_to_join.append(new_parts)
                     last_window_span -= part_len
-                    k += 1
-
-            #for part in parts_to_join:
-                #print(part.to_pandas())        
+                    k += 1    
 
             # create virtual partition and perform window operation
             virtual_partitions = self._partition_mgr_cls.row_partitions(np.array(parts_to_join), full_axis = False) if axis == Axis.COL_WISE else self._partition_mgr_cls.column_partitions(np.array(parts_to_join), full_axis=False)
@@ -2045,10 +2034,7 @@ class PandasDataframe(ClassLogger):
             if i == 0:
                 reduce_result = [virtual_partition.apply(window_function_complete) for virtual_partition in virtual_partitions]
             else:
-                reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]   
-
-            #for result in reduce_result:
-                #print(result.to_pandas())
+                reduce_result = [virtual_partition.apply(window_function_partition) for virtual_partition in virtual_partitions]
                 
             if axis == Axis.ROW_WISE:
                 results.append(reduce_result)
@@ -2068,31 +2054,7 @@ class PandasDataframe(ClassLogger):
             None,
             None,
             result_schema
-        )                    
-
-        """
-        # NAIVE VERSION
-        # axis could also be passed in as an integer, so convert to Axis enum so that axis var
-        # is always an enum in our code
-        axis = Axis(axis)
-
-        def window_function(df):
-            return df.rolling(window=window_size, axis=axis.value).sum() # hardcode a reduction function for now      
-
-        # need to pass in axis.value instead of just axis because map_axis_partitions takes in an integer
-        new_partitions = self._partition_mgr_cls.map_axis_partitions(
-            axis.value, self._partitions, window_function
         )
-
-        return self.__constructor__(
-            new_partitions,
-            self.index,
-            self.columns,
-            self._row_lengths,
-            self._column_widths,
-            result_schema
-        )
-        """
     
 
     @lazy_metadata_decorator(apply_axis="both")

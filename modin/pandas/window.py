@@ -51,7 +51,6 @@ class Window(ClassLogger):
             method,
         ]
         self.axis = axis
-        self.window=window
 
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -116,7 +115,6 @@ class Rolling(ClassLogger):
             method,
         ]
         self.axis = axis
-        self.window = window
 
     def count(self, *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -244,7 +242,6 @@ class Rolling(ClassLogger):
                 kwargs,
             )
         )
-
 
     def aggregate(
         self,
