@@ -2827,12 +2827,15 @@ class TestSpss:
     # In case of defaulting to pandas, it's enough
     # to check that the parameters are passed to pandas.
     def test_read_spss(self):
-        test_args = ("fake_path", ["A"], False, lib.no_default)
+        test_args = ("fake_path",)
+        test_kwargs = dict(
+            usecols=["A"], convert_categoricals=False, dtype_backend=lib.no_default
+        )
         with mock.patch(
             "pandas.read_spss", return_value=pandas.DataFrame([])
         ) as read_spss:
-            pd.read_spss(*test_args)
-        read_spss.assert_called_once_with(*test_args)
+            pd.read_spss(*test_args, **test_kwargs)
+        read_spss.assert_called_once_with(*test_args, **test_kwargs)
 
 
 def test_json_normalize():
