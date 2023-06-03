@@ -52,7 +52,6 @@ class Window(ClassLogger):
             "method": method,
         }
         self.axis = axis
-        self.window=window
 
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
@@ -117,7 +116,6 @@ class Rolling(ClassLogger):
             "method": method,
         }
         self.axis = axis
-        self.window = window
 
     def _call_qc_method(self, method_name, *args, **kwargs):
         """
@@ -287,7 +285,6 @@ class Rolling(ClassLogger):
                 kwargs,
             )
         )
-
 
     def aggregate(
         self,
