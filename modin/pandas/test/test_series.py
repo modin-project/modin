@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 import pytest
+import unittest.mock as mock
 import numpy as np
 import json
 import pandas
@@ -3461,6 +3462,16 @@ def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
     with warns_that_defaulting_to_pandas():
         modin_series.to_xarray()
+
+
+def test_to_xarray_mock():
+    modin_series = pd.Series([])
+
+    with mock.patch("pandas.Series.to_xarray") as to_xarray:
+        modin_series.to_xarray()
+    to_xarray.assert_called_once()
+    assert len(to_xarray.call_args[0]) == 1
+    df_equals(modin_series, to_xarray.call_args[0][0])
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
