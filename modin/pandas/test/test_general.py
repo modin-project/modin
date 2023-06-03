@@ -543,6 +543,16 @@ def test_pivot():
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
+    df_equals(
+        pd.pivot(test_df, columns="bar"),
+        pandas.pivot(test_df._to_pandas(), columns="bar"),
+    )
+
+    df_equals(
+        pd.pivot(test_df, index="foo", columns="bar"),
+        pandas.pivot(test_df._to_pandas(), index="foo", columns="bar"),
+    )
+
 
 def test_pivot_values_is_none():
     test_df = pd.DataFrame(
