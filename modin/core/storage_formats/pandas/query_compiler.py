@@ -1395,7 +1395,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*window_args).mean(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*window_args).mean(*args, **kwargs)
                 )
             )
         else:
@@ -1413,7 +1413,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*window_args).sum(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*window_args).sum(*args, **kwargs)
                 )
             )
         else:
@@ -1431,7 +1431,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*window_args).var(ddof=ddof, *args, **kwargs)
+                    axis, window, lambda df: df.rolling(*window_args).var(ddof=ddof, *args, **kwargs)
                 )
             )
         else:
@@ -1449,7 +1449,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*window_args).std(ddof=ddof, *args, **kwargs)
+                    axis, window, lambda df: df.rolling(*window_args).std(ddof=ddof, *args, **kwargs)
                 )
             )
         else:
@@ -1465,7 +1465,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).count()
+                    axis, window, lambda df: df.rolling(*rolling_args).count()
                 )
             )
         else:
@@ -1483,7 +1483,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).sum(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).sum(*args, **kwargs)
                 )
             )
         else:
@@ -1501,7 +1501,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).sum(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).sum(*args, **kwargs)
                 )
             )
         else:
@@ -1519,7 +1519,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).mean(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).mean(*args, **kwargs)
                 )
             )
         else:
@@ -1537,7 +1537,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).median(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).median(**kwargs)
                 )
             )
         else:
@@ -1555,7 +1555,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
                 )
             )
         else:
@@ -1573,7 +1573,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
                 )
             )
         else:
@@ -1591,7 +1591,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).min(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).min(*args, **kwargs)
                 )
             )
         else:
@@ -1609,7 +1609,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).max(*args, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).max(*args, **kwargs)
                 )
             )
         else:
@@ -1627,7 +1627,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).skew(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).skew(**kwargs)
                 )
             )
         else:
@@ -1645,7 +1645,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).kurt(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).kurt(**kwargs)
                 )
             )
         else:
@@ -1671,7 +1671,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis, window,
-                    lambda df : 
+                    lambda df:
                         df.rolling(*rolling_args).apply(
                             func=func,
                             raw=raw,
@@ -1714,7 +1714,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis, window,
-                    lambda df : df.rolling(*rolling_args).rank(
+                    lambda df: df.rolling(*rolling_args).rank(
                         method=method,
                         ascending=ascending,
                         pct=pct,
@@ -1740,7 +1740,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if not center and isinstance(window, int):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df : df.rolling(*rolling_args).quantile(quantile=quantile, interpolation=interpolation, **kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_args).quantile(quantile=quantile, interpolation=interpolation, **kwargs)
                 )
             )
         else:
@@ -1768,7 +1768,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return self.__constructor__(
                     self._modin_frame.window(
                         axis, window,
-                        lambda df : df.rolling(*rolling_args).corr(
+                        lambda df: df.rolling(*rolling_args).corr(
                             other=other, pairwise=pairwise, *args, **kwargs
                         )
                     )
@@ -1798,7 +1798,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return self.__constructor__(
                     self._modin_frame.window(
                         axis, window,
-                        lambda df : df.rolling(*rolling_args).cov(
+                        lambda df: df.rolling(*rolling_args).cov(
                             other=other, pairwise=pairwise, **kwargs
                         )
                     )
@@ -1813,7 +1813,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis, window,
-                    lambda df : df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+                    lambda df: df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
                 )
             )
         else:
