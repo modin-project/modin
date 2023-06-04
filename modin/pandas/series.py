@@ -2066,8 +2066,6 @@ class Series(BasePandasDataset):
         limit=None,
         tolerance=None,
     ) -> "Series":
-        if copy is None:
-            copy = True
         # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
         # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.Series.reindex_like.html
         return self.reindex(
