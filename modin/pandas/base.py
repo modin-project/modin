@@ -1038,7 +1038,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def bfill(
-        self, axis=None, inplace=False, limit=None, downcast=None
+        self, *, axis=None, inplace=False, limit=None, downcast=None
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
@@ -1485,7 +1485,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def ffill(
-        self, axis=None, inplace=False, limit=None, downcast=None
+        self, *, axis=None, inplace=False, limit=None, downcast=None
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
@@ -2711,6 +2711,7 @@ class BasePandasDataset(ClassLogger):
 
     def sort_index(
         self,
+        *,
         axis=0,
         level=None,
         ascending=True,
@@ -2747,6 +2748,7 @@ class BasePandasDataset(ClassLogger):
     def sort_values(
         self,
         by,
+        *,
         axis=0,
         ascending=True,
         inplace: bool = False,
@@ -3315,6 +3317,7 @@ class BasePandasDataset(ClassLogger):
     def interpolate(
         self,
         method="linear",
+        *,
         axis=0,
         limit=None,
         inplace=False,

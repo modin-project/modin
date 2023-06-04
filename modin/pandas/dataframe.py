@@ -1613,6 +1613,7 @@ class DataFrame(BasePandasDataset):
     def reindex(
         self,
         labels=None,
+        *,
         index=None,
         columns=None,
         axis=None,
@@ -1823,7 +1824,7 @@ class DataFrame(BasePandasDataset):
         return self._default_to_pandas("__array_wrap__", result, context=context)
 
     def set_index(
-        self, keys, drop=True, append=False, inplace=False, verify_integrity=False
+        self, keys, *, drop=True, append=False, inplace=False, verify_integrity=False
     ):  # noqa: PR01, RT01, D200
         """
         Set the ``DataFrame`` index using existing columns.
@@ -2136,6 +2137,7 @@ class DataFrame(BasePandasDataset):
     def to_stata(
         self,
         path: FilePath | WriteBuffer[bytes],
+        *,
         convert_dates: dict[Hashable, str] | None = None,
         write_index: bool = True,
         byteorder: str | None = None,
@@ -2146,7 +2148,6 @@ class DataFrame(BasePandasDataset):
         convert_strl: Sequence[Hashable] | None = None,
         compression: CompressionOptions = "infer",
         storage_options: StorageOptions = None,
-        *,
         value_labels: dict[Hashable, dict[float | int, str]] | None = None,
     ):
         return self._default_to_pandas(

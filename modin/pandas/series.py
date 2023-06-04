@@ -1644,6 +1644,7 @@ class Series(BasePandasDataset):
 
     def sort_values(
         self,
+        *,
         axis=0,
         ascending=True,
         inplace=False,
