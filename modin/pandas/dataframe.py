@@ -167,9 +167,11 @@ class DataFrame(BasePandasDataset):
             if columns is not None and not isinstance(columns, pandas.Index):
                 columns = pandas.Index(columns)
             if columns is not None:
-                self = self.set_axis(columns, axis=1, copy=False)
+                obj_with_new_columns = self.set_axis(columns, axis=1, copy=False)
+                self._query_compiler = obj_with_new_columns._query_compiler
             if index is not None:
-                self = self.set_axis(index, axis=0, copy=False)
+                obj_with_new_index = self.set_axis(index, axis=0, copy=False)
+                self._query_compiler = obj_with_new_index._query_compiler
             if dtype is not None:
                 casted_obj = self.astype(dtype, copy=False)
                 self._query_compiler = casted_obj._query_compiler
