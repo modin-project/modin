@@ -1839,8 +1839,8 @@ class BasePandasDataset(ClassLogger):
         other=no_default,
         *,
         inplace: bool = False,
-        axis: Axis = None,
-        level: Level = None,
+        axis: Optional[Axis] = None,
+        level: Optional[Level] = None,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is True.
