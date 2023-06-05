@@ -2647,7 +2647,7 @@ class DataFrame(BasePandasDataset):
         self: "DataFrame",
         other,
         method=None,
-        copy: bool = None,
+        copy: Optional[bool] = None,
         limit=None,
         tolerance=None,
     ) -> "DataFrame":

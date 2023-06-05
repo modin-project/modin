@@ -1393,7 +1393,7 @@ class Series(BasePandasDataset):
         *,
         axis: Axis = None,
         method: str = None,
-        copy: bool = None,
+        copy: Optional[bool] = None,
         level=None,
         fill_value=None,
         limit: int = None,
@@ -2063,7 +2063,7 @@ class Series(BasePandasDataset):
         self: "Series",
         other,
         method=None,
-        copy: bool = None,
+        copy: Optional[bool] = None,
         limit=None,
         tolerance=None,
     ) -> "Series":

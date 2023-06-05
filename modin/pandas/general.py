@@ -414,7 +414,7 @@ def concat(
     names=None,
     verify_integrity: bool = False,
     sort: bool = False,
-    copy: bool = None,
+    copy: Optional[bool] = None,
 ) -> "DataFrame | Series":  # noqa: PR01, RT01, D200
     """
     Concatenate Modin objects along a particular axis.
