@@ -77,7 +77,7 @@ _DEFAULT_BEHAVIOUR = {
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
 class DataFrameGroupBy(ClassLogger):
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
-    _return_tuple_when_iterating = None
+    _return_tuple_when_iterating = False
 
     def __init__(
         self,
@@ -103,7 +103,7 @@ class DataFrameGroupBy(ClassLogger):
         # the keys that are returned by iterating over the resulting DataFrameGroupBy
         # object will now be tuples of length one (pandas#GH47761)
         self._return_tuple_when_iterating = kwargs.pop(
-            "return_tuple_when_iterating", None
+            "return_tuple_when_iterating", False
         )
 
         if (
