@@ -602,8 +602,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
-        use_nullable_dtypes : bool
-        dtype_backend : {"numpy_nullable", "pyarrow"}
+        use_nullable_dtypes : Union[bool, lib.NoDefault]
+        dtype_backend : {"numpy_nullable", "pyarrow", lib.no_default}
         **kwargs : dict
             Keyword arguments.
 
