@@ -544,7 +544,7 @@ def test_pivot():
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
     if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
-        # Failed for some reason on 'BaseOnPython' and 'HDK'
+        # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
         df_equals(
             pd.pivot(test_df, columns="bar"),
             pandas.pivot(test_df._to_pandas(), columns="bar"),
