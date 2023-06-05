@@ -42,7 +42,7 @@ def read_sql(
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
     max_sessions: Optional[int] = None,
-) -> Union[DataFrame, Iterator[DataFrame]]:  # noqa: MD01
+) -> Union[DataFrame, Iterator[DataFrame]]:
     """
     General documentation is available in `modin.pandas.read_sql`.
 
@@ -87,12 +87,12 @@ def read_sql(
     chunksize : int, optional
         If specified, return an iterator where `chunksize` is the
         number of rows to include in each chunk.
-    dtype_backend : {"numpy_nullable", "pyarrow"}, defaults to NumPy backed DataFrames
+    dtype_backend : {"numpy_nullable", "pyarrow"}, default: NumPy backed DataFrames
         Which dtype_backend to use, e.g. whether a DataFrame should have NumPy arrays,
         nullable dtypes are used for all dtypes that have a nullable implementation when
         "numpy_nullable" is set, PyArrow is used for all dtypes if "pyarrow" is set.
         The dtype_backends are still experimential.
-    dtype : Type name or dict of columns
+    dtype : Type name or dict of columns, optional
         Data type for data or columns. E.g. np.float64 or {'a': np.float64, 'b': np.int32, 'c': 'Int64'}. The argument is ignored if a table is passed instead of a query.
     partition_column : str, optional
         Column used to share the data between the workers (MUST be a INTEGER column).
