@@ -467,7 +467,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return SeriesDefault.register(pandas.Series.to_list)(self)
 
     @doc_utils.add_refer_to("DataFrame.to_dict")
-    def dataframe_to_dict(self, orient="dict", into=dict):  # noqa: PR01
+    def dataframe_to_dict(self, orient="dict", into=dict, index=True):  # noqa: PR01
         """
         Convert the DataFrame to a dictionary.
 
@@ -475,7 +475,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -------
         dict or `into` instance
         """
-        return self.to_pandas().to_dict(orient, into)
+        return self.to_pandas().to_dict(orient, into, index)
 
     @doc_utils.add_refer_to("Series.to_dict")
     def series_to_dict(self, into=dict):  # noqa: PR01

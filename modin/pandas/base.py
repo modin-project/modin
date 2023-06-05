@@ -2950,11 +2950,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def to_dict(self, orient="dict", into=dict, index=True):
-        if not index:
-            return self._default_to_pandas(
-                "to_dict", orient=orient, into=into, index=index
-            )
-        return self._query_compiler.dataframe_to_dict(orient, into)
+        return self._query_compiler.dataframe_to_dict(orient, into, index)
 
     def to_hdf(
         self, path_or_buf, key, format="table", **kwargs
