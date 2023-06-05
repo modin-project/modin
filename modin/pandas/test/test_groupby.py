@@ -1153,10 +1153,9 @@ def eval_ngroups(modin_groupby, pandas_groupby):
 
 
 def eval_skew(modin_groupby, pandas_groupby, numeric_only=False):
-    kwargs = dict(numeric_only=numeric_only)
     modin_df_almost_equals_pandas(
-        modin_groupby.skew(**kwargs),
-        pandas_groupby.skew(**kwargs),
+        modin_groupby.skew(numeric_only=numeric_only),
+        pandas_groupby.skew(numeric_only=numeric_only),
     )
 
 
