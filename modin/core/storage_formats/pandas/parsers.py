@@ -39,7 +39,8 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
-from collections import abc, OrderedDict
+import os
+from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
 import numpy as np
@@ -781,9 +782,7 @@ engine : str
         storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path or path-like object
-        if not isinstance(files_for_parser, abc.Iterable) or isinstance(
-            files_for_parser, str
-        ):
+        if isinstance(files_for_parser, (str, os.PathLike)):
             return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
 
         for file_for_parser in files_for_parser:
