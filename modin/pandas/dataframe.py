@@ -445,7 +445,7 @@ class DataFrame(BasePandasDataset):
         # groupby takes place.
         drop = False
 
-        return_tuple_when_iterating = None
+        return_tuple_when_iterating = False
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
