@@ -3120,6 +3120,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop=False,
     ):
         if axis == 1:
+            # To avoid `ValueError: Operation skew does not support axis=1` due to the
+            # difference in the behavior of `groupby(...).skew(axis=1)` and
+            # `groupby(...).agg("skew", axis=1)`.
             return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.skew)(
                 self,
                 by=by,
@@ -3129,7 +3132,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 agg_kwargs=agg_kwargs,
                 drop=drop,
             )
-        # ValueError: Operation skew does not support axis=1
         return self.groupby_agg(
             by=by,
             agg_func="skew",

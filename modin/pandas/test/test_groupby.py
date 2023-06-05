@@ -1342,20 +1342,18 @@ def eval___getitem__(md_grp, pd_grp, item):
         return test
 
     # issue-#3252, https://github.com/pandas-dev/pandas/issues/52760
-    """
-    eval_general(
-        md_grp,
-        pd_grp,
-        build_list_agg(["mean"]),
-        comparator=build_types_asserter(df_equals),
-    )
-    eval_general(
-        md_grp,
-        pd_grp,
-        build_list_agg(["mean", "count"]),
-        comparator=build_types_asserter(df_equals),
-    )
-    """
+    # eval_general(
+    #    md_grp,
+    #    pd_grp,
+    #    build_list_agg(["mean"]),
+    #    comparator=build_types_asserter(df_equals),
+    # )
+    # eval_general(
+    #    md_grp,
+    #    pd_grp,
+    #    build_list_agg(["mean", "count"]),
+    #    comparator=build_types_asserter(df_equals),
+    # )
 
     # Explicit default-to-pandas test
     eval_general(
