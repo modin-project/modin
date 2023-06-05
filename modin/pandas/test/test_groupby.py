@@ -407,14 +407,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         lambda df: df.sem(),
         modin_df_almost_equals_pandas,
     )
-    # TypeError: 'Categorical' with dtype category does not support reduction 'mean'
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.mean(),
-        modin_df_almost_equals_pandas,
-    )
-
+    eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
@@ -437,17 +430,12 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     apply_functions = [
-        lambda df: df.sum(),
+        lambda df: df.sum(numeric_only=True),
         lambda df: pandas.Series([1, 2, 3, 4], name="result"),
         min,
     ]
     for func in apply_functions:
-        # TypeError: 'Categorical' with dtype category does not support reduction 'sum'
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda grp: grp.apply(func),
-        )
+        eval_apply(modin_groupby, pandas_groupby, func)
 
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
@@ -462,21 +450,8 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     if as_index:
         eval_std(modin_groupby, pandas_groupby)
-        # TypeError: 'Categorical' with dtype category does not support reduction 'var'
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda df: df.var(),
-            modin_df_almost_equals_pandas,
-        )
-
-        # TypeError: 'Categorical' with dtype category does not support reduction 'skew'
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda df: df.skew(),
-            modin_df_almost_equals_pandas,
-        )
+        eval_var(modin_groupby, pandas_groupby, numeric_only=True)
+        eval_skew(modin_groupby, pandas_groupby, numeric_only=True)
 
     agg_functions = [
         lambda df: df.sum(),
@@ -664,8 +639,7 @@ def test_single_group_row_groupby():
     eval_general(
         modin_groupby,
         pandas_groupby,
-        # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
-        lambda df: df.pct_change(fill_method="ffill"),
+        lambda df: df.pct_change(),
         modin_df_almost_equals_pandas,
     )
     eval_cummax(modin_groupby, pandas_groupby)
@@ -793,8 +767,7 @@ def test_large_row_groupby(is_by_category):
     eval_general(
         modin_groupby,
         pandas_groupby,
-        # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
-        lambda df: df.pct_change(fill_method="ffill"),
+        lambda df: df.pct_change(),
         modin_df_almost_equals_pandas,
     )
     eval_cummax(modin_groupby, pandas_groupby)
@@ -911,11 +884,10 @@ def test_simple_col_groupby():
     # eval_cummin(modin_groupby, pandas_groupby)
     # eval_cumprod(modin_groupby, pandas_groupby)
 
-    # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
     eval_general(
         modin_groupby,
         pandas_groupby,
-        lambda df: df.pct_change(fill_method="ffill"),
+        lambda df: df.pct_change(),
         modin_df_almost_equals_pandas,
     )
     apply_functions = [lambda df: -df, lambda df: df.sum(axis=1)]
@@ -1038,8 +1010,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_general(
             modin_groupby,
             pandas_groupby,
-            # AttributeError: 'DataFrameGroupBy' object has no attribute 'pad'
-            lambda df: df.pct_change(fill_method="ffill"),
+            lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
         )
         eval_general(
@@ -2182,7 +2153,9 @@ def test_not_str_by(by, as_index):
         pytest.param(
             lambda grp: grp.apply(lambda df: df.dtypes), id="modin_dtypes_impl"
         ),
-        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
+        pytest.param(
+            lambda grp: grp.apply(lambda df: df.sum(numeric_only=True)), id="apply_sum"
+        ),
         pytest.param(lambda grp: grp.count(), id="count"),
         pytest.param(lambda grp: grp.nunique(), id="nunique"),
         # Integer key means the index of the column to replace it with.
@@ -2236,13 +2209,6 @@ def test_handle_as_index(
         pytest.skip(
             "The linked bug makes pandas raise an exception when 'by' is categorical: "
             + "https://github.com/pandas-dev/pandas/issues/36698"
-        )
-
-    if has_categorical_by and (
-        callable(agg_func) or ("apply_sum" in request.node.callspec.id.split("-"))
-    ):
-        pytest.skip(
-            "TypeError: 'Categorical' with dtype category does not support reduction 'sum'"
         )
 
     df = pandas.DataFrame(test_groupby_data)
