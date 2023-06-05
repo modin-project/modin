@@ -1491,16 +1491,6 @@ class DataFrameGroupBy(ClassLogger):
         agg_args = tuple() if agg_args is None else agg_args
         agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
 
-        """
-        if numeric_only is None or numeric_only is no_default:
-            # pandas behavior: if `numeric_only` wasn't explicitly specified then
-            # the parameter is considered to be `False` if there are no numeric types
-            # in the frame and `True` otherwise.
-            numeric_only = any(
-                is_numeric_dtype(dtype) for dtype in self._query_compiler.dtypes
-            )
-        """
-
         if numeric_only and self.ndim == 2:
             by_cols = self._internal_by
             mask_cols = [
