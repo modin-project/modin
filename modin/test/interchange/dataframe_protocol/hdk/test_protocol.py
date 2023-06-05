@@ -30,6 +30,9 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
 
 
+@pytest.mark.xfail(
+    reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 @pytest.mark.parametrize("from_hdk", [True, False])
 @pytest.mark.parametrize("n_chunks", [None, 3, 5, 12])
@@ -50,6 +53,9 @@ def test_simple_export(data_has_nulls, from_hdk, n_chunks):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.xfail(
+    reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+)
 @pytest.mark.parametrize("n_chunks", [2, 4, 7])
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
@@ -80,6 +86,9 @@ def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.xfail(
+    reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_unaligned_at_chunks(data_has_nulls):
     """
@@ -139,6 +148,9 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.xfail(
+    reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 def test_export_indivisible_chunking(data_has_nulls):
     """
