@@ -142,7 +142,7 @@ def enable_logging(
                     get_logger("modin.logger.errors").exception(
                         stop_line, stack_info=True
                     )
-                    e._modin_logged = True
+                    e._modin_logged = True  # type: ignore[attr-defined]
                 raise
             finally:
                 logger_level(stop_line)
