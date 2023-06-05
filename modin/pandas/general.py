@@ -257,10 +257,6 @@ def pivot(
     """
     Return reshaped DataFrame organized by given index / column values.
     """
-    if index is NoDefault:
-        index = None
-    if values is NoDefault:
-        values = None
     if not isinstance(data, DataFrame):
         raise ValueError("can not pivot with instance of type {}".format(type(data)))
     return data.pivot(index=index, columns=columns, values=values)
