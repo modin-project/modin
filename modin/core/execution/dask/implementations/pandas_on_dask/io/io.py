@@ -105,9 +105,9 @@ class PandasOnDaskIO(BaseIO):
     frame_cls = PandasOnDaskDataframe
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
-        frame_cls=PandasOnDaskDataframe,
         frame_partition_cls=PandasOnDaskDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
+        frame_cls=PandasOnDaskDataframe,
         base_io=BaseIO,
     )
 
@@ -227,7 +227,8 @@ class PandasOnDaskIO(BaseIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            DaskWrapper.materialize(signals.wait(partition_idx))
+            # DaskWrapper.materialize(signals.wait(partition_idx))
+            signals.wait(partition_idx).result()
 
             # preparing to write data from the buffer to a file
             with get_handle(
@@ -244,12 +245,14 @@ class PandasOnDaskIO(BaseIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            DaskWrapper.materialize(signals.send(partition_idx + 1))
+            # DaskWrapper.materialize(signals.send(partition_idx + 1))
+            signals.send(partition_idx + 1).result()
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        DaskWrapper.materialize(signals.send(0))
+        # DaskWrapper.materialize(signals.send(0))
+        signals.send(0).result()
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
@@ -263,5 +266,5 @@ class PandasOnDaskIO(BaseIO):
         )
         # pending completion
         DaskWrapper.materialize(
-            [partition.list_of_blocks[0] for partition in result.flatten()]
+            [part.list_of_blocks[0] for row in result for part in row]
         )
