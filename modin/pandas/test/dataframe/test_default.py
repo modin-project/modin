@@ -259,7 +259,7 @@ class TestCorr:
             lambda df: df.corr(min_periods=min_periods),
         )
 
-        # only 4 valid values
+        # only 4 valid values (a valid value is considered a row with no NaNs)
         eval_general(
             *create_test_dfs(
                 {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}

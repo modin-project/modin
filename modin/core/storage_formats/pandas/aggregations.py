@@ -339,7 +339,7 @@ class _CorrCovKernels:
         count = total_agg["count"]
 
         cols = sum_of_pairwise_mul.columns
-        # If there were NaNs in the original dataframe then have computed a matrix
+        # If there are NaNs in the original dataframe, then we have computed a matrix
         # of sums/square sums/counts at the Map phase, meaning that we now have multiple
         # columns in `sums`.
         has_nans = len(sums.columns) > 1
