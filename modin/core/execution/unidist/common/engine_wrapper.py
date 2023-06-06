@@ -80,7 +80,7 @@ class UnidistWrapper:
         )
 
     @classmethod
-    def call_future(cls, future, *args, **kwargs):  # GL08
+    def call_future(cls, future, *args, **kwargs):  # noqa: GL08
         return future.remote(*args, **kwargs)
 
     @classmethod

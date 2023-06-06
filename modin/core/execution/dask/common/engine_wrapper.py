@@ -98,7 +98,7 @@ class DaskWrapper:
         return remote_task_future
 
     @classmethod
-    def call_future(cls, future, *args, **kwargs):  # GL08
+    def call_future(cls, future, *args, **kwargs):  # noqa: GL08
         return future(*args, **kwargs)
 
     @classmethod

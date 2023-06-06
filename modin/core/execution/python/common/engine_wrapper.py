@@ -42,7 +42,7 @@ class PythonWrapper:
         return func(*args, **kwargs)
 
     @classmethod
-    def call_future(cls, future, *args, **kwargs):  # GL08
+    def call_future(cls, future, *args, **kwargs):  # noqa: GL08
         return future(*args, **kwargs)
 
     @classmethod
