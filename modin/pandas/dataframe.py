@@ -168,10 +168,10 @@ class DataFrame(BasePandasDataset):
                 columns = pandas.Index(columns)
             if columns is not None:
                 obj_with_new_columns = self.set_axis(columns, axis=1, copy=False)
-                self._query_compiler = obj_with_new_columns._query_compiler
+                self._update_inplace(obj_with_new_columns._query_compiler)
             if index is not None:
                 obj_with_new_index = self.set_axis(index, axis=0, copy=False)
-                self._query_compiler = obj_with_new_index._query_compiler
+                self._update_inplace(obj_with_new_index._query_compiler)
             if dtype is not None:
                 casted_obj = self.astype(dtype, copy=False)
                 self._query_compiler = casted_obj._query_compiler
@@ -655,6 +655,7 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
+        # FIXME: https://github.com/modin-project/modin/issues/6215
         if not numeric_only:
             return self._default_to_pandas(
                 pandas.DataFrame.corr,
@@ -693,6 +694,7 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
+        # FIXME: https://github.com/modin-project/modin/issues/6232
         if not numeric_only:
             return self._default_to_pandas(
                 pandas.DataFrame.cov,

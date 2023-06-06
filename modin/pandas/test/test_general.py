@@ -545,6 +545,7 @@ def test_pivot():
 
     if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
         # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
+        # https://github.com/modin-project/modin/issues/6240
         df_equals(
             pd.pivot(test_df, columns="bar"),
             pandas.pivot(test_df._to_pandas(), columns="bar"),
