@@ -16,6 +16,8 @@
 from collections import UserDict
 
 from distributed.client import default_client
+from distributed.actor import ActorFuture
+import distributed
 
 
 def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
@@ -50,6 +52,7 @@ class DaskWrapper:
         f_kwargs=None,
         num_returns=1,
         pure=True,
+        deploy_as_actor=False,
     ):
         """
         Deploy a function in a worker process.
@@ -66,6 +69,8 @@ class DaskWrapper:
             The number of returned objects.
         pure : bool, default: True
             Whether or not `func` is pure. See `Client.submit` for details.
+        deploy_as_actor : bool, default: False
+            Whether or not `func` is a Actor.
 
         Returns
         -------
@@ -75,6 +80,9 @@ class DaskWrapper:
         client = default_client()
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
+        if deploy_as_actor:
+            # https://distributed.dask.org/en/stable/actors.html?highlight=actor#call-remote-methods
+            return client.submit(func, *args, actors=True, **kwargs).result()
         if callable(func):
             remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
         else:
@@ -88,6 +96,10 @@ class DaskWrapper:
                 for i in range(num_returns)
             ]
         return remote_task_future
+
+    @classmethod
+    def call_future(cls, future, *args, **kwargs):  # GL08
+        return future(*args, **kwargs)
 
     @classmethod
     def materialize(cls, future):
@@ -104,6 +116,10 @@ class DaskWrapper:
         Any
             An object(s) from the distributed memory.
         """
+        # This type does not work correctly with `gather` function.
+        # https://distributed.dask.org/en/stable/actors.html?highlight=actor#call-remote-methods
+        if isinstance(future, ActorFuture):
+            return future.result()
         client = default_client()
         return client.gather(future)
 
@@ -133,3 +149,51 @@ class DaskWrapper:
             data = UserDict(data)
         client = default_client()
         return client.scatter(data, **kwargs)
+
+
+class SignalActor:  # pragma: no cover
+    """
+    Help synchronize across tasks and actors on cluster.
+
+    Parameters
+    ----------
+    event_count : int
+        Number of events required for synchronization.
+    """
+
+    def __init__(self, event_count: int):
+        self.events = [distributed.Event() for _ in range(event_count)]
+
+    def send(self, event_idx: int):
+        """
+        Indicate that event with `event_idx` has occured.
+
+        Parameters
+        ----------
+        event_idx : int
+        """
+        self.events[event_idx].set()
+
+    async def wait(self, event_idx: int):
+        """
+        Wait until event with `event_idx` has occured.
+
+        Parameters
+        ----------
+        event_idx : int
+        """
+        await self.events[event_idx].wait()
+
+    def is_set(self, event_idx: int) -> bool:
+        """
+        Check that event with `event_idx` had occured or not.
+
+        Parameters
+        ----------
+        event_idx : int
+
+        Returns
+        -------
+        bool
+        """
+        return self.events[event_idx].is_set()

@@ -13,10 +13,11 @@
 
 """Common utilities for Dask execution engine."""
 
-from .engine_wrapper import DaskWrapper
+from .engine_wrapper import DaskWrapper, SignalActor
 from .utils import initialize_dask
 
 __all__ = [
     "initialize_dask",
     "DaskWrapper",
+    "SignalActor",
 ]

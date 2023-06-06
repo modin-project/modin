@@ -47,7 +47,9 @@ class UnidistWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
     @classmethod
-    def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
+    def deploy(
+        cls, func, f_args=None, f_kwargs=None, num_returns=1, deploy_as_actor=False
+    ):
         """
         Run local `func` remotely.
 
@@ -61,6 +63,8 @@ class UnidistWrapper:
             Keyword arguments to pass to ``func``.
         num_returns : int, default: 1
             Amount of return values expected from `func`.
+        deploy_as_actor : bool, default: False
+            Whether or not `func` is a Actor.
 
         Returns
         -------
@@ -69,9 +73,15 @@ class UnidistWrapper:
         """
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
+        if deploy_as_actor:
+            return func.remote(*args, **kwargs)
         return _deploy_unidist_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
+
+    @classmethod
+    def call_future(cls, future, *args, **kwargs):  # GL08
+        return future.remote(*args, **kwargs)
 
     @classmethod
     def materialize(cls, obj_id):

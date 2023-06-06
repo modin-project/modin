@@ -42,6 +42,10 @@ class PythonWrapper:
         return func(*args, **kwargs)
 
     @classmethod
+    def call_future(cls, future, *args, **kwargs):  # GL08
+        return future(*args, **kwargs)
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the data from the data storage.
