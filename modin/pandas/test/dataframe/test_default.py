@@ -245,13 +245,13 @@ class TestCorr:
 
     @pytest.mark.parametrize("min_periods", [1, 3, 5, 6])
     def test_corr_min_periods(self, min_periods):
-        # only 3 valid values
+        # only 3 valid values (a valid value is considered a row with no NaNs)
         eval_general(
             *create_test_dfs({"a": [1, 2, 3], "b": [3, 1, 5]}),
             lambda df: df.corr(min_periods=min_periods),
         )
 
-        # only 5 valid values
+        # only 5 valid values (a valid value is considered a row with no NaNs)
         eval_general(
             *create_test_dfs(
                 {"a": [1, 2, 3, 4, 5, np.nan], "b": [1, 2, 1, 4, 5, np.nan]}
@@ -268,7 +268,7 @@ class TestCorr:
         )
 
         if StorageFormat.get() == "Pandas":
-            # only 4 valid values located in different partitions
+            # only 4 valid values located in different partitions (a valid value is considered a row with no NaNs)
             modin_df, pandas_df = create_test_dfs(
                 {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
             )

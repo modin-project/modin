@@ -2120,6 +2120,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         -------
         PandasQueryCompiler
             The covariance or correlation matrix.
+
+        Notes
+        -----
+        This method is only used to compute covariance at the moment.
         """
         other = self.to_numpy()
         other_mask = self._isfinite().to_numpy()
