@@ -51,7 +51,7 @@ def test_simple_export(data_has_nulls, from_hdk, n_chunks, exclude_datetime):
         # issue for bool: https://github.com/modin-project/modin/issues/4299
         exclude_dtypes = ["bool", "uint64"]
     else:
-        exclude_dtypes = None
+        exclude_dtypes = []
 
     if exclude_datetime:
         exclude_dtypes += ["datetime"]
