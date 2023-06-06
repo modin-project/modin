@@ -123,17 +123,15 @@ def merge_ordered(
     """
     Perform a merge for ordered data with optional filling/interpolation.
     """
-    if not isinstance(left, DataFrame):
-        raise ValueError(
-            "can not merge DataFrame with instance of type {}".format(type(right))
-        )
-    ErrorMessage.default_to_pandas("`merge_ordered`")
-    if isinstance(right, DataFrame):
-        right = to_pandas(right)
+    for operand in (left, right):
+        if not isinstance(operand, (Series, DataFrame)):
+            raise TypeError(
+                f"Can only merge Series or DataFrame objects, a {type(operand)} was passed"
+            )
+
     return DataFrame(
-        pandas.merge_ordered(
-            to_pandas(left),
-            right,
+        query_compiler=left._query_compiler.merge_ordered(
+            right._query_compiler,
             on=on,
             left_on=left_on,
             right_on=right_on,
@@ -288,6 +286,60 @@ def qcut(
     if not isinstance(x, Series):
         return pandas.qcut(x, q, **kwargs)
     return x._qcut(q, **kwargs)
+
+
+@_inherit_docstrings(pandas.cut, apilink="pandas.cut")
+@enable_logging
+def cut(
+    x,
+    bins,
+    right: bool = True,
+    labels=None,
+    retbins: bool = False,
+    precision: int = 3,
+    include_lowest: bool = False,
+    duplicates: str = "raise",
+    ordered: bool = True,
+):
+    if isinstance(x, DataFrame):
+        raise ValueError("Input array must be 1 dimensional")
+    if not isinstance(x, Series):
+        ErrorMessage.default_to_pandas(
+            reason=f"pd.cut is not supported on objects of type {type(x)}"
+        )
+        import pandas
+
+        return pandas.cut(
+            x,
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
+        )
+
+    def _wrap_in_series_object(qc_result):
+        if isinstance(qc_result, type(x._query_compiler)):
+            return Series(query_compiler=qc_result)
+        if isinstance(qc_result, (tuple, list)):
+            return tuple([_wrap_in_series_object(result) for result in qc_result])
+        return qc_result
+
+    return _wrap_in_series_object(
+        x._query_compiler.cut(
+            bins,
+            right=right,
+            labels=labels,
+            retbins=retbins,
+            precision=precision,
+            include_lowest=include_lowest,
+            duplicates=duplicates,
+            ordered=ordered,
+        )
+    )
 
 
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
@@ -505,7 +557,7 @@ def to_datetime(
     """
     Convert argument to datetime.
     """
-    if not isinstance(arg, (DataFrame, Series)):
+    if not hasattr(arg, "_to_datetime"):
         return pandas.to_datetime(
             arg,
             errors=errors,
@@ -685,9 +737,14 @@ def wide_to_long(
         raise ValueError(
             "can not wide_to_long with instance of type {}".format(type(df))
         )
-    ErrorMessage.default_to_pandas("`wide_to_long`")
     return DataFrame(
-        pandas.wide_to_long(to_pandas(df), stubnames, i, j, sep=sep, suffix=suffix)
+        query_compiler=df._query_compiler.wide_to_long(
+            stubnames=stubnames,
+            i=i,
+            j=j,
+            sep=sep,
+            suffix=suffix,
+        )
     )
 
 

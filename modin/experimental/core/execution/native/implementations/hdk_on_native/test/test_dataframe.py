@@ -319,6 +319,20 @@ class TestCSV:
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize("parse_dates", [None, True, False])
+    def test_read_csv_datetime_tz(self, engine, parse_dates):
+        with ensure_clean(".csv") as file:
+            with open(file, "w") as f:
+                f.write("test\n2023-01-01T00:00:00.000-07:00")
+
+            eval_io(
+                fn_name="read_csv",
+                filepath_or_buffer=file,
+                md_extra_kwargs={"engine": engine},
+                parse_dates=parse_dates,
+            )
+
+    @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize(
         "usecols",
         [
@@ -774,6 +788,45 @@ class TestConcat:
         exp = pd.concat([df1, df2], axis=1, join="inner")
 
         df_equals(ref, exp)
+
+    def test_concat_str(self):
+        def concat(df1, df2, lib, **kwargs):
+            return lib.concat([df1.dropna(), df2.dropna()]).astype(str)
+
+        run_and_compare(
+            concat,
+            data={"a": ["1", "2", "3"]},
+            data2={"a": ["4", "5", "6"]},
+            force_lazy=False,
+        )
+
+    @pytest.mark.parametrize("transform", [True, False])
+    @pytest.mark.parametrize("sort_last", [True, False])
+    # RecursionError in case of concatenation of big number of frames
+    def test_issue_5889(self, transform, sort_last):
+        with ensure_clean(".csv") as file:
+            data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
+            pandas.DataFrame(data).to_csv(file, index=False)
+
+            def test_concat(lib, **kwargs):
+                if transform:
+
+                    def read_csv():
+                        return lib.read_csv(file)["b"]
+
+                else:
+
+                    def read_csv():
+                        return lib.read_csv(file)
+
+                df = read_csv()
+                for _ in range(100):
+                    df = lib.concat([df, read_csv()])
+                if sort_last:
+                    df = lib.concat([df, read_csv()], sort=True)
+                return df
+
+            run_and_compare(test_concat, data={})
 
 
 class TestGroupby:
@@ -1512,6 +1565,19 @@ class TestMerge:
             right_on=left_on,
         )
 
+    def test_self_merge(self):
+        def merge(df, lib, iterations, **kwargs):
+            for _ in range(iterations):
+                df = lib.merge(df, df)
+            return df
+
+        for i in range(1, 3):
+            run_and_compare(
+                merge,
+                data={"a": [1]},
+                iterations=i,
+            )
+
 
 class TestBinaryOp:
     data = {
@@ -1538,179 +1604,179 @@ class TestBinaryOp:
         run_and_compare(applier, data=self.data, data2=self.data, force_lazy=False)
 
     def test_add_cst(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             return df + 1
 
         run_and_compare(add, data=self.data)
 
     def test_add_list(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             return df + [1, 2, 3, 4]
 
         run_and_compare(add, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_add_method_columns(self, fill_value):
-        def add1(lib, df, fill_value):
+        def add1(df, fill_value, **kwargs):
             return df["a"].add(df["b"], fill_value=fill_value)
 
-        def add2(lib, df, fill_value):
+        def add2(df, fill_value, **kwargs):
             return df[["a", "c"]].add(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(add1, data=self.data, fill_value=fill_value)
         run_and_compare(add2, data=self.data, fill_value=fill_value)
 
     def test_add_columns(self):
-        def add1(lib, df):
+        def add1(df, **kwargs):
             return df["a"] + df["b"]
 
-        def add2(lib, df):
+        def add2(df, **kwargs):
             return df[["a", "c"]] + df[["b", "a"]]
 
         run_and_compare(add1, data=self.data)
         run_and_compare(add2, data=self.data)
 
     def test_add_columns_and_assign(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             df["sum"] = df["a"] + df["b"]
             return df
 
         run_and_compare(add, data=self.data)
 
     def test_add_columns_and_assign_to_existing(self):
-        def add(lib, df):
+        def add(df, **kwargs):
             df["a"] = df["a"] + df["b"]
             return df
 
         run_and_compare(add, data=self.data)
 
     def test_mul_cst(self):
-        def mul(lib, df):
+        def mul(df, **kwargs):
             return df * 2
 
         run_and_compare(mul, data=self.data)
 
     def test_mul_list(self):
-        def mul(lib, df):
+        def mul(df, **kwargs):
             return df * [2, 3, 4, 5]
 
         run_and_compare(mul, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_mul_method_columns(self, fill_value):
-        def mul1(lib, df, fill_value):
+        def mul1(df, fill_value, **kwargs):
             return df["a"].mul(df["b"], fill_value=fill_value)
 
-        def mul2(lib, df, fill_value):
+        def mul2(df, fill_value, **kwargs):
             return df[["a", "c"]].mul(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(mul1, data=self.data, fill_value=fill_value)
         run_and_compare(mul2, data=self.data, fill_value=fill_value)
 
     def test_mul_columns(self):
-        def mul1(lib, df):
+        def mul1(df, **kwargs):
             return df["a"] * df["b"]
 
-        def mul2(lib, df):
+        def mul2(df, **kwargs):
             return df[["a", "c"]] * df[["b", "a"]]
 
         run_and_compare(mul1, data=self.data)
         run_and_compare(mul2, data=self.data)
 
     def test_mod_cst(self):
-        def mod(lib, df):
+        def mod(df, **kwargs):
             return df % 2
 
         run_and_compare(mod, data=self.data)
 
     def test_mod_list(self):
-        def mod(lib, df):
+        def mod(df, **kwargs):
             return df % [2, 3, 4, 5]
 
         run_and_compare(mod, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_mod_method_columns(self, fill_value):
-        def mod1(lib, df, fill_value):
+        def mod1(df, fill_value, **kwargs):
             return df["a"].mod(df["b"], fill_value=fill_value)
 
-        def mod2(lib, df, fill_value):
+        def mod2(df, fill_value, **kwargs):
             return df[["a", "c"]].mod(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(mod1, data=self.data, fill_value=fill_value)
         run_and_compare(mod2, data=self.data, fill_value=fill_value)
 
     def test_mod_columns(self):
-        def mod1(lib, df):
+        def mod1(df, **kwargs):
             return df["a"] % df["b"]
 
-        def mod2(lib, df):
+        def mod2(df, **kwargs):
             return df[["a", "c"]] % df[["b", "a"]]
 
         run_and_compare(mod1, data=self.data)
         run_and_compare(mod2, data=self.data)
 
     def test_truediv_cst(self):
-        def truediv(lib, df):
+        def truediv(df, **kwargs):
             return df / 2
 
         run_and_compare(truediv, data=self.data)
 
     def test_truediv_list(self):
-        def truediv(lib, df):
+        def truediv(df, **kwargs):
             return df / [1, 0.5, 0.2, 2.0]
 
         run_and_compare(truediv, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_truediv_method_columns(self, fill_value):
-        def truediv1(lib, df, fill_value):
+        def truediv1(df, fill_value, **kwargs):
             return df["a"].truediv(df["b"], fill_value=fill_value)
 
-        def truediv2(lib, df, fill_value):
+        def truediv2(df, fill_value, **kwargs):
             return df[["a", "c"]].truediv(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(truediv1, data=self.data, fill_value=fill_value)
         run_and_compare(truediv2, data=self.data, fill_value=fill_value)
 
     def test_truediv_columns(self):
-        def truediv1(lib, df):
+        def truediv1(df, **kwargs):
             return df["a"] / df["b"]
 
-        def truediv2(lib, df):
+        def truediv2(df, **kwargs):
             return df[["a", "c"]] / df[["b", "a"]]
 
         run_and_compare(truediv1, data=self.data)
         run_and_compare(truediv2, data=self.data)
 
     def test_floordiv_cst(self):
-        def floordiv(lib, df):
+        def floordiv(df, **kwargs):
             return df // 2
 
         run_and_compare(floordiv, data=self.data)
 
     def test_floordiv_list(self):
-        def floordiv(lib, df):
+        def floordiv(df, **kwargs):
             return df // [1, 0.54, 0.24, 2.01]
 
         run_and_compare(floordiv, data=self.data)
 
     @pytest.mark.parametrize("fill_value", fill_values)
     def test_floordiv_method_columns(self, fill_value):
-        def floordiv1(lib, df, fill_value):
+        def floordiv1(df, fill_value, **kwargs):
             return df["a"].floordiv(df["b"], fill_value=fill_value)
 
-        def floordiv2(lib, df, fill_value):
+        def floordiv2(df, fill_value, **kwargs):
             return df[["a", "c"]].floordiv(df[["b", "a"]], fill_value=fill_value)
 
         run_and_compare(floordiv1, data=self.data, fill_value=fill_value)
         run_and_compare(floordiv2, data=self.data, fill_value=fill_value)
 
     def test_floordiv_columns(self):
-        def floordiv1(lib, df):
+        def floordiv1(df, **kwargs):
             return df["a"] // df["b"]
 
-        def floordiv2(lib, df):
+        def floordiv2(df, **kwargs):
             return df[["a", "c"]] // df[["b", "a"]]
 
         run_and_compare(floordiv1, data=self.data)
@@ -2386,6 +2452,16 @@ class TestLoc:
         pds = pandas.Series(data[next(iter(data.keys()))]).iloc[1:]
         df_equals(mds, pds)
 
+    def test_iloc_issue_6037(self):
+        def iloc(df, **kwargs):
+            return df.iloc[:-1].dropna()
+
+        run_and_compare(
+            fn=iloc,
+            data={"A": range(1000000)},
+            force_lazy=False,
+        )
+
 
 class TestStr:
     def test_str(self):
@@ -2508,7 +2584,6 @@ class TestFromArrow:
         mdf = from_arrow(at)
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
-        df_equals(mdf, pdf)
 
         mdt = mdf.dtypes[0]
         pdt = pdf.dtypes[0]
@@ -2519,17 +2594,24 @@ class TestFromArrow:
 
         # Make sure the lazy proxy dtype is not materialized yet.
         assert type(mdt) != pandas.CategoricalDtype
-        assert mdt._table is not None
-        assert mdt._new(at, at.column(0)._name) is mdt
-        assert mdt._new(at, at.column(2)._name) is not mdt
-        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
+        assert mdt._parent is not None
+        assert mdt._update_proxy(at, at.column(0)._name) is mdt
+        assert mdt._update_proxy(at, at.column(2)._name) is not mdt
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) != pandas.CategoricalDtype
+        )
 
         assert mdt == pdt
         assert pdt == mdt
         assert repr(mdt) == repr(pdt)
 
+        # `df_equals` triggers categories materialization and thus
+        # has to be called after all checks for laziness
+        df_equals(mdf, pdf)
         # Should be materialized now
-        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) == pandas.CategoricalDtype
+        )
 
 
 class TestSparseArray:

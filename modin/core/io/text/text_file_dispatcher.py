@@ -924,23 +924,17 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             New query compiler, created from `new_frame`.
         """
-        new_index, row_lengths = cls._define_index(index_ids, index_name)
-        # Compose modin partitions from `partition_ids`
-        partition_ids = cls.build_partition(partition_ids, row_lengths, column_widths)
-
-        # Compute dtypes by collecting and combining all of the partition dtypes. The
-        # reported dtypes from differing rows can be different based on the inference in
-        # the limited data seen by each worker. We use pandas to compute the exact dtype
-        # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids, column_names)
+        partition_ids = cls.build_partition(
+            partition_ids, [None] * len(index_ids), column_widths
+        )
 
         new_frame = cls.frame_cls(
             partition_ids,
-            new_index,
+            lambda: cls._define_index(index_ids, index_name),
             column_names,
-            row_lengths,
+            None,
             column_widths,
-            dtypes=dtypes,
+            dtypes=lambda: cls.get_dtypes(dtypes_ids, column_names),
         )
         new_query_compiler = cls.query_compiler_cls(new_frame)
         skipfooter = kwargs.get("skipfooter", None)

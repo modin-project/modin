@@ -33,15 +33,17 @@ from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
     is_bool_dtype,
 )
-from pandas.errors import DataError
+from pandas.core.dtypes.cast import find_common_type
+from pandas.errors import DataError, MergeError
 from pandas._libs.lib import no_default
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
 import hashlib
+from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import Engine
+from modin.config import ExperimentalGroupbyImpl
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -50,6 +52,7 @@ from modin.utils import (
     _inherit_docstrings,
     MODIN_UNNAMED_SERIES_LABEL,
 )
+from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.algebra import (
     Fold,
     Map,
@@ -58,7 +61,11 @@ from modin.core.dataframe.algebra import (
     Binary,
     GroupByReduce,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy, GroupByDefault
+from modin.core.dataframe.algebra.default2pandas.groupby import (
+    GroupBy,
+    GroupByDefault,
+    SeriesGroupByDefault,
+)
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 
@@ -263,7 +270,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         bool
         """
         frame = self._modin_frame
-        return frame._index_cache is None or frame._columns_cache is None
+        return not frame.has_materialized_index or not frame.has_materialized_columns
 
     def finalize(self):
         self._modin_frame.finalize()
@@ -442,6 +449,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         assert isinstance(
             cond, type(self)
         ), "Must have the same QueryCompiler subclass to perform this operation"
+        # it's doesn't work if `other` is Series._query_compiler because
+        # `n_ary_op` performs columns copartition both for `cond` and `other`.
+        if isinstance(other, type(self)) and other._shape_hint is not None:
+            other = other.to_pandas()
         if isinstance(other, type(self)):
             # Make sure to set join_type=None so the `where` result always has
             # the same row and column labels as `self`.
@@ -479,7 +490,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
                 return pandas.merge(left, right_pandas, **kwargs)
 
             # Want to ensure that these are python lists
@@ -488,6 +499,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 right_on = list(right_on) if is_list_like(right_on) else [right_on]
             elif on is not None:
                 on = list(on) if is_list_like(on) else [on]
+
+            new_columns = None
+            new_dtypes = None
+            if self._modin_frame.has_materialized_columns:
+                if left_on is None and right_on is None:
+                    if on is None:
+                        on = [c for c in self.columns if c in right_pandas.columns]
+                    _left_on, _right_on = on, on
+                else:
+                    if left_on is None or right_on is None:
+                        raise MergeError(
+                            "Must either pass only 'on' or 'left_on' and 'right_on', not combination of them."
+                        )
+                    _left_on, _right_on = left_on, right_on
+
+                try:
+                    new_columns, left_renamer, right_renamer = join_columns(
+                        self.columns,
+                        right_pandas.columns,
+                        _left_on,
+                        _right_on,
+                        kwargs.get("suffixes", ("_x", "_y")),
+                    )
+                except NotImplementedError:
+                    # This happens when one of the keys to join is an index level. Pandas behaviour
+                    # is really complicated in this case, so we're not computing resulted columns for now.
+                    pass
+                else:
+                    if self._modin_frame.has_materialized_dtypes:
+                        new_dtypes = []
+                        for old_col in left_renamer.keys():
+                            new_dtypes.append(self.dtypes[old_col])
+                        for old_col in right_renamer.keys():
+                            new_dtypes.append(right_pandas.dtypes[old_col])
+                        new_dtypes = pandas.Series(new_dtypes, index=new_columns)
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
@@ -499,6 +545,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
+                    new_columns=new_columns,
+                    dtypes=new_dtypes,
+                    sync_labels=False,
                 )
             )
 
@@ -507,7 +556,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # it's fine too, we can also decide that by columns, which tend to be already
             # materialized quite often compared to the indexes.
             keep_index = False
-            if self._modin_frame._index_cache is not None:
+            if self._modin_frame.has_materialized_index:
                 if left_on is not None and right_on is not None:
                     keep_index = any(
                         o in self.index.names
@@ -561,7 +610,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if how in ["left", "inner"]:
             right_pandas = right.to_pandas()
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):
+            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
@@ -597,7 +646,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def reset_index(self, **kwargs):
         if self.lazy_execution:
 
-            def _reset(df, *axis_lengths, partition_idx):
+            def _reset(df, *axis_lengths, partition_idx):  # pragma: no cover
                 df = df.reset_index(**kwargs)
 
                 if isinstance(df.index, pandas.RangeIndex):
@@ -610,8 +659,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame._columns_cache is not None and kwargs["drop"]:
-                new_columns = self._modin_frame._columns_cache
+            if self._modin_frame.has_columns_cache and kwargs["drop"]:
+                new_columns = self._modin_frame.copy_columns_cache()
             else:
                 new_columns = None
 
@@ -621,6 +670,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     enumerate_partitions=True,
                     new_columns=new_columns,
+                    dtypes=(
+                        self._modin_frame._dtypes if kwargs.get("drop", False) else None
+                    ),
                     sync_labels=False,
                     pass_axis_lengths_to_partitions=True,
                 )
@@ -797,11 +849,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
     prod = TreeReduce.register(pandas.DataFrame.prod)
     any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
-    memory_usage = TreeReduce.register(
+    # memory_usage adds an extra column for index usage, but we don't want to distribute
+    # the index memory usage calculation.
+    _memory_usage_without_index = TreeReduce.register(
         pandas.DataFrame.memory_usage,
         lambda x, *args, **kwargs: pandas.DataFrame.sum(x),
         axis=0,
     )
+
+    def memory_usage(self, **kwargs):
+        index = kwargs.get("index", True)
+        deep = kwargs.get("deep", False)
+        usage_without_index = self._memory_usage_without_index(index=False, deep=deep)
+        return (
+            self.from_pandas(
+                pandas.DataFrame(
+                    [self.index.memory_usage()],
+                    columns=["Index"],
+                    index=[MODIN_UNNAMED_SERIES_LABEL],
+                ),
+                data_cls=type(self._modin_frame),
+            ).concat(axis=1, other=[usage_without_index])
+            if index
+            else usage_without_index
+        )
 
     def max(self, axis, **kwargs):
         def map_func(df, **kwargs):
@@ -930,7 +1001,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler containing the result of resample aggregation.
         """
 
-        def map_func(df, resample_kwargs=resample_kwargs):
+        def map_func(df, resample_kwargs=resample_kwargs):  # pragma: no cover
             """Resample time-series data of the passed frame and apply aggregation function on it."""
             if df_op is not None:
                 df = df_op(df)
@@ -1114,6 +1185,190 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_quantile(self, resample_kwargs, q, **kwargs):
         return self._resample_func(resample_kwargs, "quantile", q=q, **kwargs)
 
+    def expanding_aggregate(self, axis, expanding_args, func, *args, **kwargs):
+        new_modin_frame = self._modin_frame.apply_full_axis(
+            axis,
+            lambda df: pandas.DataFrame(
+                df.expanding(*expanding_args).aggregate(func=func, *args, **kwargs)
+            ),
+            new_index=self.index,
+        )
+        return self.__constructor__(new_modin_frame)
+
+    expanding_sum = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sum(*args, **kwargs)
+        )
+    )
+
+    expanding_min = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).min(*args, **kwargs)
+        )
+    )
+
+    expanding_max = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).max(*args, **kwargs)
+        )
+    )
+
+    expanding_mean = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).mean(*args, **kwargs)
+        )
+    )
+
+    expanding_median = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).median(*args, **kwargs)
+        )
+    )
+
+    expanding_var = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).var(*args, **kwargs)
+        )
+    )
+
+    expanding_std = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).std(*args, **kwargs)
+        )
+    )
+
+    expanding_count = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).count(*args, **kwargs)
+        )
+    )
+
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing covariance for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).cov(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .cov(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing correlation for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).corr(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .corr(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    expanding_quantile = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).quantile(*args, **kwargs)
+        )
+    )
+
+    expanding_sem = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
+    expanding_kurt = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).kurt(*args, **kwargs)
+        )
+    )
+
+    expanding_skew = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).skew(*args, **kwargs)
+        )
+    )
+
+    expanding_rank = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).rank(*args, **kwargs)
+        )
+    )
+
     window_mean = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).mean(*args, **kwargs)
@@ -1140,6 +1395,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
     rolling_sum = Fold.register(
         lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
             df.rolling(*rolling_args).sum(*args, **kwargs)
+        )
+    )
+    rolling_sem = Fold.register(
+        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).sem(*args, **kwargs)
         )
     )
     rolling_mean = Fold.register(
@@ -1201,6 +1461,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
     )
+    rolling_rank = Fold.register(
+        lambda df, rolling_args, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_args).rank(
+                method=method,
+                ascending=ascending,
+                pct=pct,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+    )
 
     def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:
@@ -1258,7 +1529,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = None
             need_reindex = False
 
-        def map_func(df):
+        def map_func(df):  # pragma: no cover
             return pandas.DataFrame(df.unstack(level=level, fill_value=fill_value))
 
         def is_tree_like_or_1d(calc_index, valid_index):
@@ -1446,7 +1717,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     abs = Map.register(pandas.DataFrame.abs, dtypes="copy")
     applymap = Map.register(pandas.DataFrame.applymap)
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
-    convert_dtypes = Map.register(pandas.DataFrame.convert_dtypes)
+    convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
     isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
     _isfinite = Map.register(
@@ -1538,7 +1809,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_match = Map.register(_str_map("match"), dtypes="copy")
     str_normalize = Map.register(_str_map("normalize"), dtypes="copy")
     str_pad = Map.register(_str_map("pad"), dtypes="copy")
-    str_partition = Map.register(_str_map("partition"), dtypes="copy")
+    _str_partition = Map.register(_str_map("partition"), dtypes="copy")
+
+    def str_partition(self, sep=" ", expand=True):
+        # For `expand`, need an operator that can create more columns than before
+        if expand:
+            return super().str_partition(sep=sep, expand=expand)
+        return self._str_partition(sep=sep, expand=False)
+
     str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
     _str_extract = Map.register(_str_map("extract"), dtypes="copy")
 
@@ -1547,25 +1825,46 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # need an operator that can create more columns than before
         if expand and regex.groups == 1:
             qc = self._str_extract(pat, flags=flags, expand=expand)
+            qc.columns = get_group_names(regex)
         else:
             qc = super().str_extract(pat, flags=flags, expand=expand)
-        qc.columns = get_group_names(regex)
         return qc
 
     str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
     str_rfind = Map.register(_str_map("rfind"), dtypes="copy", shape_hint="column")
     str_rindex = Map.register(_str_map("rindex"), dtypes="copy", shape_hint="column")
     str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
-    str_rpartition = Map.register(
+    _str_rpartition = Map.register(
         _str_map("rpartition"), dtypes="copy", shape_hint="column"
     )
-    str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+
+    def str_rpartition(self, sep=" ", expand=True):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_rpartition(sep=sep, expand=expand)
+        return self._str_rpartition(sep=sep, expand=False)
+
+    _str_rsplit = Map.register(_str_map("rsplit"), dtypes="copy", shape_hint="column")
+
+    def str_rsplit(self, pat=None, n=-1, expand=False):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_rsplit(pat=pat, n=n, expand=expand)
+        return self._str_rsplit(pat=pat, n=n, expand=False)
+
     str_rstrip = Map.register(_str_map("rstrip"), dtypes="copy", shape_hint="column")
     str_slice = Map.register(_str_map("slice"), dtypes="copy", shape_hint="column")
     str_slice_replace = Map.register(
         _str_map("slice_replace"), dtypes="copy", shape_hint="column"
     )
-    str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+    _str_split = Map.register(_str_map("split"), dtypes="copy", shape_hint="column")
+
+    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+        if expand:
+            # For `expand`, need an operator that can create more columns than before
+            return super().str_split(pat=pat, n=n, expand=expand, regex=regex)
+        return self._str_split(pat=pat, n=n, expand=False, regex=regex)
+
     str_startswith = Map.register(
         _str_map("startswith"), dtypes=np.bool_, shape_hint="column"
     )
@@ -1664,7 +1963,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes))
+        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())
@@ -1709,24 +2008,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Column/Row partitions reduce operations
 
-    # Column/Row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # This will return a new QueryCompiler object which the front end will handle.
-
-    def describe(self, **kwargs):
+    def describe(
+        self,
+        percentiles: np.ndarray,
+        datetime_is_numeric: bool,
+    ):
         # Use pandas to calculate the correct columns
         empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .describe(**kwargs)
+            .describe(
+                percentiles, datetime_is_numeric=datetime_is_numeric, include="all"
+            )
         )
         new_index = empty_df.index
 
         # Note: `describe` convert timestamp type to object type
         # which results in the loss of two values in index: `first` and `last`
         # for empty DataFrame.
-        datetime_is_numeric = kwargs.get("datetime_is_numeric") or False
         if not any(map(is_numeric_dtype, empty_df.dtypes)) and not datetime_is_numeric:
             for col_name in empty_df.dtypes.index:
                 # if previosly type of `col_name` was datetime or timedelta
@@ -1736,7 +2035,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                     break
 
-        def describe_builder(df, internal_indices=[]):
+        def describe_builder(df, internal_indices=[]):  # pragma: no cover
             """Apply `describe` function to the subset of columns in a single partition."""
             # The index of the resulting dataframe is the same amongst all partitions
             # when dealing with the same data type. However, if we work with columns
@@ -1745,7 +2044,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # we can have cases where certain partitions do not contain any of the
             # object string data leading to an index mismatch between partitions.
             # Thus, we must reindex each partition with the global new_index.
-            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
+            return (
+                df.iloc[:, internal_indices]
+                .describe(
+                    percentiles=percentiles,
+                    datetime_is_numeric=datetime_is_numeric,
+                    include="all",
+                )
+                .reindex(new_index)
+            )
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
@@ -1768,7 +2075,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     cummin = Fold.register(pandas.DataFrame.cummin)
     cumsum = Fold.register(pandas.DataFrame.cumsum)
     cumprod = Fold.register(pandas.DataFrame.cumprod)
-    diff = Fold.register(pandas.DataFrame.diff)
+    _diff = Fold.register(pandas.DataFrame.diff)
+
+    def diff(self, axis, periods):
+        return self._diff(fold_axis=axis, axis=axis, periods=periods)
 
     def clip(self, lower, upper, **kwargs):
         if isinstance(lower, BaseQueryCompiler):
@@ -1795,10 +2105,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return super().corr(method=method, min_periods=min_periods)
 
-    def cov(self, min_periods=None):
-        return self._nancorr(min_periods=min_periods, cov=True)
+    def cov(self, min_periods=None, ddof=1):
+        return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
-    def _nancorr(self, min_periods=1, cov=False):
+    def _nancorr(self, min_periods=1, cov=False, ddof=1):
         """
         Compute either pairwise covariance or pairwise correlation of columns.
 
@@ -1811,6 +2121,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to have a valid result.
         cov : boolean, default: False
             Either covariance or correlation should be computed.
+        ddof : int, default: 1
+            Means Delta Degrees of Freedom. The divisor used in calculations.
 
         Returns
         -------
@@ -1824,7 +2136,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if min_periods is None:
             min_periods = 1
 
-        def map_func(df):
+        def map_func(df):  # pragma: no cover
             """Compute covariance or correlation matrix for the passed frame."""
             df = df.to_numpy()
             n_rows = df.shape[0]
@@ -1855,7 +2167,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         sumxx = (vx * vx).sum()
                         sumyy = (vy * vy).sum()
 
-                        denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
+                        denom = (nobs - ddof) if cov else np.sqrt(sumxx * sumyy)
                         if denom != 0:
                             result[i, j] = sumxy / denom
                         else:
@@ -1879,7 +2191,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else other.to_pandas()
             )
 
-        def map_func(df, other=other, squeeze_self=squeeze_self):
+        def map_func(df, other=other, squeeze_self=squeeze_self):  # pragma: no cover
             """Compute matrix multiplication of the passed frames."""
             result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
             if is_list_like(result):
@@ -1934,7 +2246,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             sorted in the given order.
         """
 
-        def map_func(df, n=n, keep=keep, columns=columns):
+        def map_func(df, n=n, keep=keep, columns=columns):  # pragma: no cover
             """Return first `N` rows of the sorted data for a single partition."""
             if columns is None:
                 return pandas.DataFrame(
@@ -1989,7 +2301,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def mode(self, **kwargs):
         axis = kwargs.get("axis", 0)
 
-        def mode_builder(df):
+        def mode_builder(df):  # pragma: no cover
             """Compute modes for a single partition."""
             result = pandas.DataFrame(df.mode(**kwargs))
             # We return a dataframe with the same shape as the input to ensure
@@ -2027,7 +2339,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if full_axis:
                     value = value.to_pandas().squeeze(axis=1)
 
-                    def fillna_builder(series):
+                    def fillna_builder(series):  # pragma: no cover
                         # `limit` parameter works only on `Series` type, so we have to squeeze both objects to get
                         # correct behavior.
                         return series.squeeze(axis=1).fillna(value=value, **kwargs)
@@ -2314,18 +2626,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # __setitem__ methods
     def setitem_bool(self, row_loc, col_loc, item):
-        def _set_item(df, row_loc):
+        def _set_item(df, row_loc):  # pragma: no cover
             df = df.copy()
             df.loc[row_loc.squeeze(axis=1), col_loc] = item
             return df
+
+        if self._modin_frame.has_materialized_dtypes and is_scalar(item):
+            new_dtypes = self.dtypes.copy()
+            old_dtypes = new_dtypes[col_loc]
+
+            if hasattr(item, "dtype"):
+                # If we're dealing with a numpy scalar (np.int, np.datetime64, ...)
+                # we would like to get its internal dtype
+                item_type = item.dtype
+            elif hasattr(item, "to_numpy"):
+                # If we're dealing with a scalar that can be converted to numpy (for example pandas.Timestamp)
+                # we would like to convert it and get its proper internal dtype
+                item_type = item.to_numpy().dtype
+            else:
+                item_type = type(item)
+
+            if isinstance(old_dtypes, pandas.Series):
+                new_dtypes[col_loc] = [
+                    find_common_type([dtype, item_type]) for dtype in old_dtypes.values
+                ]
+            else:
+                new_dtypes[col_loc] = find_common_type([old_dtypes, item_type])
+        else:
+            new_dtypes = None
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame._index_cache,
-            new_columns=self._modin_frame._columns_cache,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 
@@ -2421,7 +2758,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             New QueryCompiler with updated `key` value.
         """
 
-        def setitem_builder(df, internal_indices=[]):
+        def setitem_builder(df, internal_indices=[]):  # pragma: no cover
             """
             Set the row/column to the `value` in a single partition.
 
@@ -2523,7 +2860,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return result
 
-        def _compute_duplicated(df):
+        def _compute_duplicated(df):  # pragma: no cover
             result = df.duplicated(**kwargs)
             if isinstance(result, pandas.Series):
                 result = result.to_frame(
@@ -2546,7 +2883,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = hashed_modin_frame.apply_full_axis(
             axis=0,
             func=_compute_duplicated,
-            new_index=self._modin_frame._index_cache,
+            new_index=self._modin_frame.copy_index_cache(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
             keep_partitioning=False,
@@ -2563,7 +2900,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 
-        def insert(df, internal_indices=[]):
+        def insert(df, internal_indices=[]):  # pragma: no cover
             """
             Insert new column to the partition.
 
@@ -2654,15 +2991,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if "axis" not in kwargs:
             kwargs["axis"] = axis
 
-        def dict_apply_builder(df, func_dict={}):
+        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+
+        def dict_apply_builder(df, internal_indices=[]):  # pragma: no cover
             # Sometimes `apply` can return a `Series`, but we require that internally
             # all objects are `DataFrame`s.
-            return pandas.DataFrame(df.apply(func_dict, *args, **kwargs))
+            # It looks like it doesn't need to use `internal_indices` option internally
+            # for the case since `apply` use labels from dictionary keys in `func` variable.
+            return pandas.DataFrame(df.apply(func, *args, **kwargs))
 
-        func = {k: wrap_udf_function(v) if callable(v) else v for k, v in func.items()}
+        labels = list(func.keys())
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
-                axis, dict_apply_builder, func, keep_remaining=False
+                axis,
+                dict_apply_builder,
+                labels,
+                new_index=labels if axis == 1 else None,
+                new_columns=labels if axis == 0 else None,
+                keep_remaining=False,
             )
         )
 
@@ -2771,7 +3117,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
-            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_by = []
+            for o in by:
+                if isinstance(o, pandas.Grouper) and o.key in self.columns:
+                    internal_by.append(o.key)
+                elif hashable(o) and o in self.columns:
+                    internal_by.append(o)
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
             )
@@ -2787,7 +3138,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
     groupby_sum = GroupbyReduceImpl.build_qc_method("sum")
     groupby_skew = GroupbyReduceImpl.build_qc_method("skew")
 
+    def groupby_nth(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        result = super().groupby_nth(
+            by, axis, groupby_kwargs, agg_args, agg_kwargs, drop
+        )
+        if not groupby_kwargs.get("as_index", True):
+            # pandas keeps order of columns intact, follow suit
+            return result.getitem_column_array(self.columns)
+        return result
+
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="mean",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
+                )
+
         _, internal_by = self._groupby_internal_columns(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
@@ -2842,6 +3227,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func="size",
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a TreeReduce implementation."
+                )
+
         result = self._groupby_dict_reduce(
             by=by,
             axis=axis,
@@ -2980,6 +3382,141 @@ class PandasQueryCompiler(BaseQueryCompiler):
             drop=drop,
         )
 
+    @_inherit_docstrings(BaseQueryCompiler.groupby_agg)
+    def _groupby_shuffle(
+        self,
+        by,
+        agg_func,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+        how="axis_wise",
+    ):
+        # Defaulting to pandas in case of an empty frame as we can't process it properly.
+        # Higher API level won't pass empty data here unless the frame has delayed
+        # computations. FIXME: We apparently lose some laziness here (due to index access)
+        # because of the inability to process empty groupby natively.
+        if len(self.columns) == 0 or len(self.index) == 0:
+            return super().groupby_agg(
+                by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
+            )
+
+        if isinstance(by, type(self)) and drop:
+            by = by.columns.tolist()
+
+        if not isinstance(by, list):
+            by = [by]
+
+        is_all_labels = all(isinstance(col, (str, tuple)) for col in by)
+        is_all_column_names = (
+            all(col in self.columns for col in by) if is_all_labels else False
+        )
+
+        if not is_all_column_names:
+            raise NotImplementedError(
+                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame. "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
+
+        # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
+        # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
+        if self._modin_frame._dtypes is not None and any(
+            dtype == "category" for dtype in self.dtypes[by].values
+        ):
+            raise NotImplementedError(
+                "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                + "https://github.com/modin-project/modin/issues/5925"
+            )
+
+        is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
+
+        if is_transform:
+            # https://github.com/modin-project/modin/issues/5924
+            ErrorMessage.missmatch_with_pandas(
+                operation="reshuffling groupby",
+                message="the order of rows may be shuffled for the result",
+            )
+
+        if isinstance(agg_func, dict):
+            assert (
+                how == "axis_wise"
+            ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
+
+            subset = by + list(agg_func.keys())
+            # extracting unique values; no we can't use np.unique here as it would
+            # convert a list of tuples to a 2D matrix and so mess up the result
+            subset = list(dict.fromkeys(subset))
+            obj = self.getitem_column_array(subset)
+        else:
+            obj = self
+
+        agg_func = functools.partial(
+            GroupByDefault.get_aggregation_method(how), func=agg_func
+        )
+
+        result = obj._modin_frame.groupby(
+            axis=axis,
+            by=by,
+            operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            **groupby_kwargs,
+        )
+        result_qc = self.__constructor__(result)
+
+        if not is_transform and not groupby_kwargs.get("as_index", True):
+            return result_qc.reset_index(drop=True)
+
+        return result_qc
+
+    def groupby_corr(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.corr`")
+        # TODO(https://github.com/modin-project/modin/issues/1323) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="corr",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_cov(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.cov`")
+        # TODO(https://github.com/modin-project/modin/issues/1322) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="cov",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
     def groupby_agg(
         self,
         by,
@@ -2990,6 +3527,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3000,10 +3538,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
+        if ExperimentalGroupbyImpl.get():
+            try:
+                return self._groupby_shuffle(
+                    by=by,
+                    agg_func=agg_func,
+                    axis=axis,
+                    groupby_kwargs=groupby_kwargs,
+                    agg_args=agg_args,
+                    agg_kwargs=agg_kwargs,
+                    drop=drop,
+                    how=how,
+                )
+            except NotImplementedError as e:
+                ErrorMessage.warn(
+                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    + "\nFalling back to a full-axis implementation."
+                )
+
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, drop
             )
+
+        is_transform_method = how == "transform" or (
+            isinstance(agg_func, str) and agg_func in transformation_kernels
+        )
+
+        original_agg_func = agg_func
 
         if isinstance(agg_func, dict):
             assert (
@@ -3011,7 +3573,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
             agg_func = functools.partial(
-                GroupByDefault.get_aggregation_method(how), func=agg_func
+                (
+                    SeriesGroupByDefault if series_groupby else GroupByDefault
+                ).get_aggregation_method(how),
+                func=agg_func,
             )
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
@@ -3089,10 +3654,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by = []
 
             by += not_broadcastable_by
+            level = groupby_kwargs.get("level", None)
+            if level is not None and not by:
+                by = None
+                by_length = len(level) if is_list_like(level) else 1
+            else:
+                by_length = len(by)
 
             def compute_groupby(df, drop=False, partition_idx=0):
                 """Compute groupby aggregation for a single partition."""
-                grouped_df = df.groupby(by=by, axis=axis, **groupby_kwargs)
+                target_df = df.squeeze(axis=1) if series_groupby else df
+                grouped_df = target_df.groupby(by=by, axis=axis, **groupby_kwargs)
                 try:
                     result = partition_agg_func(grouped_df, *agg_args, **agg_kwargs)
                 except DataError:
@@ -3126,11 +3698,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         result,
                         internal_by_cols,
                         by_cols_dtypes=df[internal_by_cols].dtypes.values,
-                        by_length=len(by),
+                        by_length=by_length,
                         selection=selection,
                         partition_idx=partition_idx,
                         drop=drop,
                         inplace=True,
+                        method="transform" if is_transform_method else None,
                     )
                 else:
                     new_index_names = tuple(
@@ -3154,7 +3727,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # all the time, so this will try to fast-path the code first.
                 return compute_groupby(df.copy(), drop, partition_idx)
 
-        apply_indices = list(agg_func.keys()) if isinstance(agg_func, dict) else None
+        if isinstance(original_agg_func, dict):
+            apply_indices = list(agg_func.keys())
+        elif isinstance(original_agg_func, list):
+            apply_indices = self.columns.difference(internal_by).tolist()
+        else:
+            apply_indices = None
 
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
@@ -3169,6 +3747,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
+        # TODO: we should be able to drop this logic with pandas 2.0 as it removes `numeric_only=None`
+        # parameter for groupby thus making the behavior of processing of non-numeric columns more
+        # predictable (we can decide whether to raise an exception before actually executing groupby)
         if len(result.columns) == 0 and len(self.columns) != 0:
             # determening type of raised exception by applying `aggfunc`
             # to empty DataFrame
@@ -3277,7 +3858,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if len_values == 0:
             len_values = len(self.columns.drop(unique_keys))
 
-        def applyier(df, other):
+        def applyier(df, other):  # pragma: no cover
             """
             Build pivot table for a single partition.
 
@@ -3347,7 +3928,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         elif not is_list_like(columns):
             columns = [columns]
 
-        def map_fn(df):
+        def map_fn(df):  # pragma: no cover
             cols_to_encode = df.columns.intersection(columns)
             return pandas.get_dummies(df, columns=cols_to_encode, **kwargs)
 
@@ -3423,48 +4004,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        # Our algebra sort is only implemented for Engines that support virtual partitioning.
-        if Engine.get() in ["Ray", "Dask", "Unidist"]:
-            new_modin_frame = self._modin_frame.sort_by(
-                0, columns, ascending=ascending, **kwargs
-            )
-            return self.__constructor__(new_modin_frame)
-        ignore_index = kwargs.get("ignore_index", False)
-        kwargs["ignore_index"] = False
-        if not is_list_like(columns):
-            columns = [columns]
-        # Currently, sort_values will just reindex based on the sorted values.
-        # TODO create a more efficient way to sort
-        ErrorMessage.default_to_pandas("sort_values")
-        broadcast_value_dict = {
-            col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
-            for col in columns
-        }
-        # Clear index level names because they also appear in broadcast_value_dict
-        orig_index_level_names = self.index.names
-        tmp_index = self.index.copy()
-        tmp_index.names = [None] * tmp_index.nlevels
-        # Index may contain duplicates
-        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=tmp_index)
-        # Index without duplicates
-        broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
-        broadcast_values2 = broadcast_values2.reset_index(drop=True)
-        # Index may contain duplicates
-        new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-        # Index without duplicates
-        new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-
-        result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
-        if ignore_index:
-            result = result.reset_index(drop=True)
-        else:
-            result.index = new_index1
-            result.index.names = orig_index_level_names
-        return result
+        new_modin_frame = self._modin_frame.sort_by(
+            0, columns, ascending=ascending, **kwargs
+        )
+        return self.__constructor__(new_modin_frame)
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
         if not is_list_like(rows):
@@ -3485,21 +4028,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Cat operations
     def cat_codes(self):
-        def func(df) -> np.ndarray:
-            # `df` is supposed to be consisted of multiple partitions,
-            # which should be concatenated before applying a function.
-            # `pd.concat` doesn't preserve categorical dtype
-            # if the dfs have categorical columns
-            # so we intentionaly restore the right dtype.
-            # TODO: revert the change when https://github.com/pandas-dev/pandas/issues/51362 is fixed.
+        def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            if ser.dtype != "category":
-                ser = ser.astype("category", copy=False)
+            assert ser.dtype == "category"
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
-        res = self._modin_frame.fold(
-            axis=0, func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL]
-        )
+        res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])
         return self.__constructor__(res, shape_hint="column")
 
     # END Cat operations

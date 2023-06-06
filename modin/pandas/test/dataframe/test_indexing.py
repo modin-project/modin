@@ -40,9 +40,8 @@ from modin.pandas.test.utils import (
     extra_test_parameters,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, MinPartitionSize
+from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
@@ -513,6 +512,18 @@ def test_loc_4456(
 
     eval_loc(modin_df, pandas_df, pdf_value, key)
     eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
+
+
+def test_loc_5829():
+    data = {"a": [1, 2, 3, 4, 5], "b": [11, 12, 13, 14, 15]}
+    modin_df = pd.DataFrame(data, dtype=object)
+    pandas_df = pandas.DataFrame(data, dtype=object)
+    eval_loc(
+        modin_df,
+        pandas_df,
+        value=np.array([[24, 34, 44], [25, 35, 45]]),
+        key=([3, 4], ["c", "d", "e"]),
+    )
 
 
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
@@ -1004,23 +1015,25 @@ def test_reindex_4438():
 
 
 def test_reindex_like():
-    df1 = pd.DataFrame(
-        [
-            [24.3, 75.7, "high"],
-            [31, 87.8, "high"],
-            [22, 71.6, "medium"],
-            [35, 95, "medium"],
-        ],
-        columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
-        index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
-    )
-    df2 = pd.DataFrame(
-        [[28, "low"], [30, "low"], [35.1, "medium"]],
-        columns=["temp_celsius", "windspeed"],
-        index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
-    )
-    with warns_that_defaulting_to_pandas():
-        df2.reindex_like(df1)
+    o_data = [
+        [24.3, 75.7, "high"],
+        [31, 87.8, "high"],
+        [22, 71.6, "medium"],
+        [35, 95, "medium"],
+    ]
+    o_columns = ["temp_celsius", "temp_fahrenheit", "windspeed"]
+    o_index = pd.date_range(start="2014-02-12", end="2014-02-15", freq="D")
+    new_data = [[28, "low"], [30, "low"], [35.1, "medium"]]
+    new_columns = ["temp_celsius", "windspeed"]
+    new_index = pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"])
+    modin_df1 = pd.DataFrame(o_data, columns=o_columns, index=o_index)
+    modin_df2 = pd.DataFrame(new_data, columns=new_columns, index=new_index)
+    modin_result = modin_df2.reindex_like(modin_df1)
+
+    pandas_df1 = pandas.DataFrame(o_data, columns=o_columns, index=o_index)
+    pandas_df2 = pandas.DataFrame(new_data, columns=new_columns, index=new_index)
+    pandas_result = pandas_df2.reindex_like(pandas_df1)
+    df_equals(modin_result, pandas_result)
 
 
 def test_rename_sanity():
@@ -1219,6 +1232,23 @@ def test_rename_bug():
     df_equals(modin_df, df)
 
 
+def test_index_to_datetime_using_set_index():
+    data = {"YEAR": ["1992", "1993", "1994"], "ALIENS": [1, 99, 1]}
+    modin_df_years = pd.DataFrame(data=data)
+    df_years = pandas.DataFrame(data=data)
+    modin_df_years = modin_df_years.set_index("YEAR")
+    df_years = df_years.set_index("YEAR")
+    modin_datetime_index = pd.to_datetime(modin_df_years.index, format="%Y")
+    pandas_datetime_index = pandas.to_datetime(df_years.index, format="%Y")
+
+    modin_df_years.index = modin_datetime_index
+    df_years.index = pandas_datetime_index
+
+    modin_df_years.set_index(modin_datetime_index)
+    df_years.set_index(pandas_datetime_index)
+    df_equals(modin_df_years, df_years)
+
+
 def test_rename_axis():
     data = {"num_legs": [4, 4, 2], "num_arms": [0, 0, 2]}
     index = ["dog", "cat", "monkey"]
@@ -1368,7 +1398,7 @@ def test_reindex_multiindex():
 def test_reset_index(data, test_async_reset_index):
     modin_df, pandas_df = create_test_dfs(data)
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_result = modin_df.reset_index(inplace=False)
     pandas_result = pandas_df.reset_index(inplace=False)
     df_equals(modin_result, pandas_result)
@@ -1376,13 +1406,25 @@ def test_reset_index(data, test_async_reset_index):
     modin_df_cp = modin_df.copy()
     pd_df_cp = pandas_df.copy()
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df_cp.reset_index(inplace=True)
     pd_df_cp.reset_index(inplace=True)
     df_equals(modin_df_cp, pd_df_cp)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    [
+        test_data["int_data"],
+        pytest.param(
+            test_data["float_nan_data"],
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="https://github.com/modin-project/modin/issues/2896",
+            ),
+        ),
+    ],
+)
 def test_reset_index_multiindex_groupby(data):
     # GH#4394
     modin_df, pandas_df = create_test_dfs(data)
@@ -1547,8 +1589,14 @@ def test_reset_index_with_multi_index_no_drop(
     if col_fill != "no_col_fill":
         kwargs["col_fill"] = col_fill
     if test_async_reset_index:
-        modin_df._query_compiler._modin_frame._index_cache = None
-    eval_general(modin_df, pandas_df, lambda df: df.reset_index(**kwargs))
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.reset_index(**kwargs),
+        # https://github.com/modin-project/modin/issues/5960
+        comparator_kwargs={"check_dtypes": False},
+    )
 
 
 @pytest.mark.parametrize("test_async_reset_index", [False, True])
@@ -1648,7 +1696,19 @@ def test_reset_index_with_multi_index_drop(
     )
 
 
-@pytest.mark.parametrize("test_async_reset_index", [False, True])
+@pytest.mark.parametrize(
+    "test_async_reset_index",
+    [
+        False,
+        pytest.param(
+            True,
+            marks=pytest.mark.xfail(
+                StorageFormat.get() == "Hdk",
+                reason="HDK does not store trivial indexes.",
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("index_levels_names_max_levels", [0, 1, 2])
 def test_reset_index_with_named_index(
     index_levels_names_max_levels, test_async_reset_index
@@ -1668,7 +1728,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
     if test_async_reset_index:
@@ -1676,7 +1736,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df.reset_index(drop=True, inplace=True)
     pandas_df.reset_index(drop=True, inplace=True)
     df_equals(modin_df, pandas_df)
@@ -1689,7 +1749,7 @@ def test_reset_index_with_named_index(
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
 
 
@@ -1712,7 +1772,7 @@ def test_reset_index_metadata_update(index, test_async_reset_index):
         modin_df.index = modin_df.index
         modin_df._to_pandas()
 
-        modin_df._query_compiler._modin_frame._index_cache = None
+        modin_df._query_compiler._modin_frame.set_index_cache(None)
     eval_general(modin_df, pandas_df, lambda df: df.reset_index())
 
 
@@ -2087,6 +2147,10 @@ def test___setitem__(data):
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/165",
+)
 def test___setitem__partitions_aligning():
     # from issue #2390
     modin_df = pd.DataFrame({"a": [1, 2, 3]})
@@ -2154,6 +2218,9 @@ def test___setitem__mask():
         modin_df[array] = 20
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk", reason="https://github.com/intel-ai/hdk/issues/165"
+)
 @pytest.mark.parametrize(
     "data",
     [
@@ -2187,7 +2254,15 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
-    eval_general(modin_df, pandas_df, applyier)
+    eval_general(
+        modin_df,
+        pandas_df,
+        applyier,
+        # https://github.com/modin-project/modin/issues/5961
+        comparator_kwargs={
+            "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
+        },
+    )
 
 
 def test_setitem_on_empty_df_4407():
@@ -2340,6 +2415,38 @@ def test_iloc_assigning_scalar_none_to_string_frame():
     modin_df.iloc[0, 0] = None
     pandas_df = pandas.DataFrame(data, dtype="string")
     pandas_df.iloc[0, 0] = None
+    df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        1,
+        np.int32(1),
+        1.0,
+        "str val",
+        pandas.Timestamp("1/4/2018"),
+        np.datetime64(0, "ms"),
+        True,
+    ],
+)
+def test_loc_boolean_assignment_scalar_dtypes(value):
+    modin_df, pandas_df = create_test_dfs(
+        {
+            "a": [1, 2, 3],
+            "b": [3.0, 5.0, 6.0],
+            "c": ["a", "b", "c"],
+            "d": [1.0, "c", 2.0],
+            "e": pandas.to_datetime(["1/1/2018", "1/2/2018", "1/3/2018"]),
+            "f": [True, False, True],
+        }
+    )
+    modin_idx, pandas_idx = pd.Series([False, True, True]), pandas.Series(
+        [False, True, True]
+    )
+
+    modin_df.loc[modin_idx] = value
+    pandas_df.loc[pandas_idx] = value
     df_equals(modin_df, pandas_df)
 
 

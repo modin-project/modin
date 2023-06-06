@@ -93,6 +93,7 @@ class ModinDataframe(ABC):
         function: Callable,
         axis: Optional[Union[int, Axis]] = None,
         dtypes: Optional[str] = None,
+        new_columns: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
         """
         Apply a user-defined function row-wise if `axis`=0, column-wise if `axis`=1, and cell-wise if `axis` is None.
@@ -107,6 +108,9 @@ class ModinDataframe(ABC):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+        new_columns : List[Hashable], optional
+            New column labels of the result, its length has to be identical
+            to the older columns. If not specified, old column labels are preserved.
 
         Returns
         -------

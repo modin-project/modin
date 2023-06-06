@@ -233,7 +233,7 @@ def get_query_info(sql, con, partition_column):
     return list(cols.keys()), query
 
 
-def query_put_bounders(query, partition_column, start, end):
+def query_put_bounders(query, partition_column, start, end):  # pragma: no cover
     """
     Put partition boundaries into the query.
 
@@ -285,7 +285,7 @@ def read_sql_with_offset(
     parse_dates=None,
     columns=None,
     chunksize=None,
-):
+):  # pragma: no cover
     """
     Read a chunk of SQL query or table into a pandas DataFrame.
 

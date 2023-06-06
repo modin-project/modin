@@ -26,7 +26,7 @@ cores. Modin works especially well on larger datasets, where pandas becomes pain
 
 By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-<img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 

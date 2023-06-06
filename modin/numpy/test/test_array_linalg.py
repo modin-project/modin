@@ -19,6 +19,7 @@ import numpy.linalg as NLA
 import modin.pandas as pd
 import modin.numpy as np
 import modin.numpy.linalg as LA
+from .utils import assert_scalar_or_array_equal
 
 
 def test_dot_from_pandas_reindex():
@@ -29,7 +30,7 @@ def test_dot_from_pandas_reindex():
     result1 = np.dot(df, s)
     s2 = s.reindex([1, 0, 2, 3])
     result2 = np.dot(df, s2)
-    numpy.testing.assert_array_equal(result1._to_numpy(), result2._to_numpy())
+    assert_scalar_or_array_equal(result1, result2)
 
 
 def test_dot_1d():
@@ -38,7 +39,7 @@ def test_dot_1d():
     numpy_result = numpy.dot(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = np.dot(x1, x2)
-    numpy.testing.assert_array_equal(modin_result, numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 def test_dot_2d():
@@ -47,7 +48,27 @@ def test_dot_2d():
     numpy_result = numpy.dot(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = np.dot(x1, x2)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
+
+
+def test_dot_scalar():
+    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x2 = numpy.random.randint(-100, 100)
+    numpy_result = numpy.dot(x1, x2)
+    x1 = np.array(x1)
+    modin_result = np.dot(x1, x2)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
+
+
+def test_matmul_scalar():
+    x1 = numpy.random.randint(-100, 100, size=(100, 3))
+    x2 = numpy.random.randint(-100, 100)
+    x1 = np.array(x1)
+    # Modin error message differs from numpy for readability; the original numpy error is:
+    # ValueError: matmul: Input operand 1 does not have enough dimensions (has 0, gufunc
+    # core with signature (n?,k),(k,m?)->(n?,m?) requires 1)
+    with pytest.raises(ValueError):
+        x1 @ x2
 
 
 def test_dot_broadcast():
@@ -57,7 +78,7 @@ def test_dot_broadcast():
     numpy_result = numpy.dot(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = np.dot(x1, x2)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
     # 1D @ 2D
     x1 = numpy.random.randint(-100, 100, size=(100,))
@@ -65,7 +86,7 @@ def test_dot_broadcast():
     numpy_result = numpy.dot(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = np.dot(x1, x2)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1], ids=["axis=None", "axis=0", "axis=1"])

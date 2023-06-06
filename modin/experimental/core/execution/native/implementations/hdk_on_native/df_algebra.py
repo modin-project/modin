@@ -14,6 +14,8 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
+
+from .dataframe.utils import ColNameCodec
 from .expr import InputRefExpr
 from collections import OrderedDict
 
@@ -54,7 +56,7 @@ class TransformMapper:
         BaseExpr
             Translated expression.
         """
-        if col == "__rowid__":
+        if col == ColNameCodec.ROWID_COL_NAME:
             return self._op.input[0].ref(col)
         return self._op.exprs[col]
 
@@ -719,6 +721,12 @@ class UnionNode(DFAlgNode):
     ----------
     frames : list of DFAlgNode
         Input frames.
+    join : str
+        Either outer or inner.
+    sort : bool
+        Sort columns.
+    ignore_index : bool
+        Ignore index columns.
 
     Attributes
     ----------
@@ -726,8 +734,11 @@ class UnionNode(DFAlgNode):
         Input frames.
     """
 
-    def __init__(self, frames):
+    def __init__(self, frames, join, sort, ignore_index):
         self.input = frames
+        self.join = join
+        self.sort = sort
+        self.ignore_index = ignore_index
 
     def copy(self):
         """

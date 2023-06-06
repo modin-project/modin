@@ -60,6 +60,24 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+elif Engine.get() == "Python":
+    from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
+        PandasOnPythonDataframeColumnPartition,
+        PandasOnPythonDataframeRowPartition,
+        PandasOnPythonDataframePartition,
+    )
+    from modin.core.execution.python.common import PythonWrapper
+
+    def put(x):
+        return PythonWrapper.put(x, hash=False)
+
+    block_partition_class = PandasOnPythonDataframePartition
+    virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
+    virtual_row_partition_class = PandasOnPythonDataframeRowPartition
+else:
+    raise NotImplementedError(
+        f"These test suites are not implemented for the '{Engine.get()}' engine"
+    )
 
 
 def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
@@ -241,10 +259,6 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Rebalancing partitions is only supported for Dask and Ray engines",
-)
 @pytest.mark.parametrize(
     "test_type",
     [
@@ -357,10 +371,6 @@ def test_rebalance_partitions(test_type, set_num_partitions):
     ), "Partitions are not block partitioned after element-wise apply."
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "axis,virtual_partition_class",
     ((0, virtual_column_partition_class), (1, virtual_row_partition_class)),
@@ -475,10 +485,6 @@ class TestDrainVirtualPartitionCallQueue:
         )
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "virtual_partition_class",
     (virtual_column_partition_class, virtual_row_partition_class),
@@ -811,7 +817,13 @@ def test_split_partitions_kernel(
 
     # Randomly reordering rows in the dataframe
     df = df.reindex(random_state.permutation(df.index))
-    bins = split_partitions_using_pivots_for_sort(df, df, col_name, pivots, ascending)
+    bins = split_partitions_using_pivots_for_sort(
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=pivots,
+        ascending=ascending,
+    )
 
     # Building reference bounds to make the result verification simpler
     bounds = np.concatenate([[min_val], pivots, [max_val]])
@@ -856,7 +868,11 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
     )
 
     result = split_partitions_using_pivots_for_sort(
-        df, df, col_name, pivots=[], ascending=ascending
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=[],
+        ascending=ascending,
     )
     # We're expecting to recieve a single split here
     assert isinstance(result, tuple)
@@ -901,3 +917,128 @@ def test_shuffle_partitions_with_empty_pivots(ascending):
 
     assert new_partitions.shape == (1, 1)
     assert ref.equals(res)
+
+
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partition_preserve_names(ascending):
+    """
+    This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
+    preserve their index/column names.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    index_name = "custom_name"
+    df.index.name = index_name
+    df.columns.name = index_name
+
+    # Pivots that contain empty bins
+    pivots = [2, 2, 5, 7]
+    splits = split_partitions_using_pivots_for_sort(
+        df,
+        column="numeric_col",
+        is_numeric_column=True,
+        pivots=pivots,
+        ascending=ascending,
+    )
+
+    for part in splits:
+        assert part.index.name == index_name
+        assert part.columns.name == index_name
+
+
+@pytest.mark.parametrize("has_cols_metadata", [True, False])
+@pytest.mark.parametrize("has_dtypes_metadata", [True, False])
+def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
+    df1 = pd.DataFrame({"a": [1, 1, 2, 2], "b": list("abcd")})
+    df2 = pd.DataFrame({"a": [4, 2, 1, 3], "b": list("bcaf"), "c": [3, 2, 1, 0]})
+
+    modin_frame = df1._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_materialized_columns
+    else:
+        modin_frame._columns_cache = None
+
+    if has_dtypes_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_dtypes_cache
+    else:
+        modin_frame.set_dtypes_cache(None)
+
+    res = df1.merge(df2, on="b")._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        assert res.has_materialized_columns
+        if has_dtypes_metadata:
+            assert res.has_dtypes_cache
+        else:
+            # Verify that no materialization was triggered
+            assert not res.has_dtypes_cache
+            assert not modin_frame.has_dtypes_cache
+    else:
+        # Verify that no materialization was triggered
+        assert not res.has_materialized_columns
+        assert not res.has_dtypes_cache
+        assert not modin_frame.has_materialized_columns
+        if not has_dtypes_metadata:
+            assert not modin_frame.has_dtypes_cache
+
+
+def test_binary_op_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
+
+    def setup_cache(df, has_cache=True):
+        if has_cache:
+            _ = df.dtypes
+            assert df._query_compiler._modin_frame.has_materialized_dtypes
+        else:
+            df._query_compiler._modin_frame.set_dtypes_cache(None)
+            assert not df._query_compiler._modin_frame.has_materialized_dtypes
+        return df
+
+    def assert_cache(df, has_cache=True):
+        assert not (has_cache ^ df._query_compiler._modin_frame.has_materialized_dtypes)
+
+    # Check when `other` is a non-distributed object
+    assert_cache(setup_cache(df) + 2.0)
+    assert_cache(setup_cache(df) + {"a": 2.0, "b": 4})
+    assert_cache(setup_cache(df) + [2.0, 4])
+    assert_cache(setup_cache(df) + np.array([2.0, 4]))
+
+    # Check when `other` is a dataframe
+    other = pd.DataFrame({"b": [3, 4, 5], "c": [4.0, 5.0, 6.0]})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+    # Check when `other` is a series
+    other = pd.Series({"b": 3.0, "c": 4.0})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+
+def test_setitem_bool_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    indexer = pd.Series([True, False, True, False])
+
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # slice(None) as a col_loc
+    df.loc[indexer] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # list as a col_loc
+    df.loc[indexer, ["a", "b"]] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # scalar as a col_loc
+    df.loc[indexer, "a"] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes

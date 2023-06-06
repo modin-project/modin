@@ -238,26 +238,25 @@ class BaseIO:
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_html`")
-        return cls.from_pandas(
-            pandas.read_html(
-                io=io,
-                match=match,
-                flavor=flavor,
-                header=header,
-                index_col=index_col,
-                skiprows=skiprows,
-                attrs=attrs,
-                parse_dates=parse_dates,
-                thousands=thousands,
-                encoding=encoding,
-                decimal=decimal,
-                converters=converters,
-                na_values=na_values,
-                keep_default_na=keep_default_na,
-                displayed_only=displayed_only,
-                **kwargs,
-            )[0]
+        result = pandas.read_html(
+            io=io,
+            match=match,
+            flavor=flavor,
+            header=header,
+            index_col=index_col,
+            skiprows=skiprows,
+            attrs=attrs,
+            parse_dates=parse_dates,
+            thousands=thousands,
+            encoding=encoding,
+            decimal=decimal,
+            converters=converters,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            displayed_only=displayed_only,
+            **kwargs,
         )
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -440,18 +439,20 @@ class BaseIO:
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
-        return cls.from_pandas(
-            pandas.read_sql(
-                sql,
-                con,
-                index_col=index_col,
-                coerce_float=coerce_float,
-                params=params,
-                parse_dates=parse_dates,
-                columns=columns,
-                chunksize=chunksize,
-            )
+        result = pandas.read_sql(
+            sql,
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
         )
+
+        if isinstance(result, (pandas.DataFrame, pandas.Series)):
+            return cls.from_pandas(result)
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")

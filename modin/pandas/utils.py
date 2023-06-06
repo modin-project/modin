@@ -138,6 +138,29 @@ def from_dataframe(df):
     return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
+def cast_function_modin2pandas(func):
+    """
+    Replace Modin functions with pandas functions if `func` is callable.
+
+    Parameters
+    ----------
+    func : object
+
+    Returns
+    -------
+    object
+    """
+    if callable(func):
+        if func.__module__ == "modin.pandas.series":
+            func = getattr(pandas.Series, func.__name__)
+        elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
+            # FIXME: when the method is defined in `modin.pandas.base` file, then the
+            # type cannot be determined, in general there may be an error, but at the
+            # moment it is better.
+            func = getattr(pandas.DataFrame, func.__name__)
+    return func
+
+
 def is_scalar(obj):
     """
     Return True if given object is scalar.

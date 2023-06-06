@@ -16,6 +16,7 @@
 import pandas
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from ..dataframe.utils import arrow_to_pandas
 from ..db_worker import DbWorker
 import pyarrow
 
@@ -82,7 +83,22 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         if isinstance(obj, (pandas.DataFrame, pandas.Series)):
             return obj
         assert isinstance(obj, pyarrow.Table)
-        return obj.to_pandas()
+        return arrow_to_pandas(obj)
+
+    def to_numpy(self, **kwargs):
+        """
+        Transform to NumPy format.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed in ``to_numpy``.
+
+        Returns
+        -------
+        np.ndarray
+        """
+        return self.to_pandas().to_numpy(**kwargs)
 
     def get(self):
         """

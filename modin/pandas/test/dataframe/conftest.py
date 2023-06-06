@@ -28,3 +28,15 @@ def pytest_collection_modifyitems(items):
                         reason="https://github.com/intel-ai/hdk/issues/286"
                     )
                 )
+            elif item.name == "test_insert_dtypes[category-int_data]":
+                item.add_marker(
+                    pytest.mark.xfail(
+                        reason="Categorical columns are converted to string due to #1698"
+                    )
+                )
+            elif item.name == "test_insert_dtypes[int32-float_nan_data]":
+                item.add_marker(
+                    pytest.mark.xfail(
+                        reason="HDK does not raise IntCastingNaNError on NaN to int cast"
+                    )
+                )

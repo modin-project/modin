@@ -39,14 +39,18 @@ from modin.pandas.test.utils import (
     eval_general,
     create_test_dfs,
     test_data_diff_dtype,
+    default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+if StorageFormat.get() == "Hdk":
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -86,6 +90,17 @@ def test_diff(axis, periods):
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.diff(axis=axis, periods=periods),
     )
+
+
+def test_diff_error_handling():
+    df = pd.DataFrame([["a", "b", "c"]], columns=["col 0", "col 1", "col 2"])
+    with pytest.raises(
+        ValueError, match="periods must be an int. got <class 'str'> instead"
+    ):
+        df.diff(axis=0, periods="1")
+
+    with pytest.raises(TypeError, match="unsupported operand type for -: got object"):
+        df.diff()
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])

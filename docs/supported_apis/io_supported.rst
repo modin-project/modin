@@ -1,11 +1,11 @@
 ``pd.read_<file>`` and I/O APIs
 =================================
 
-A number of IO methods default to pandas. We have parallelized ``read_csv`` and
-``read_parquet``, though many of the remaining methods can be relatively easily
-parallelized. Some of the operations default to the pandas implementation, meaning it
-will read in serially as a single, non-distributed DataFrame and distribute it.
-Performance will be affected by this.
+A number of IO methods default to pandas. We have parallelized ``read_csv``,
+``read_parquet`` and some more (see table), though many of the remaining methods
+can be relatively easily parallelized. Some of the operations default to the
+pandas implementation, meaning it will read in serially as a single, non-distributed
+DataFrame and distribute it. Performance will be affected by this.
 
 The following table is structured as follows: The first column contains the method name.
 The second column is a flag for whether or not there is an implementation in Modin for
@@ -16,6 +16,13 @@ default to pandas.
 .. note::
     Currently, the second column reflects implementation status for ``Ray`` and ``Dask`` engines. By default, support for a method
     in the ``Hdk`` engine could be treated as ``D`` unless ``Notes`` column contains additional information.
+
+.. note::
+    Support for fully asynchronous reading has been added for the following functions:
+    ``read_csv``, ``read_fwf``, ``read_table``, ``read_custom_text``.
+    This mode is disabled by default, one can enable it using ``MODIN_ASYNC_READ_MODE=True``
+    environment variable. Some parameter combinations are not supported and the function
+    will be executed in synchronous mode.
 
 +--------------------+---------------------------------+----------------------------------------------------+
 | IO method          | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
@@ -30,6 +37,8 @@ default to pandas.
 |                    |                                 | should not be specified), ``quotechar``,           |
 |                    |                                 | ``escapechar``, ``doublequote``,                   |
 |                    |                                 | ``delim_whitespace``                               |
++--------------------+---------------------------------+----------------------------------------------------+
+| `read_fwf`_        | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_table`_      | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
@@ -60,6 +69,7 @@ default to pandas.
 +--------------------+---------------------------------+----------------------------------------------------+
 
 .. _`read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html#pandas.read_csv
+.. _`read_fwf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_fwf.html#pandas.read_fwf
 .. _`read_table`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_table.html#pandas.read_table
 .. _`read_parquet`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_parquet.html#pandas.read_parquet
 .. _`read_json`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_json.html#pandas.read_json

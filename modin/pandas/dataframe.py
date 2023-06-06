@@ -24,7 +24,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
-from pandas.io.formats.printing import pprint_thing
+from pandas.io.formats.info import DataFrameInfo
 from pandas._libs.lib import no_default, NoDefault
 from pandas._typing import (
     CompressionOptions,
@@ -42,7 +42,6 @@ import sys
 from typing import IO, Optional, Union, Iterator, Hashable, Sequence
 import warnings
 
-import modin
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -57,6 +56,7 @@ from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
+    cast_function_modin2pandas,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
 from .iterator import PartitionIterator
@@ -143,7 +143,7 @@ class DataFrame(BasePandasDataset):
                 # the DataFrame and sets columns to the columns provided.
                 elif columns is not None and data.name not in columns:
                     self._query_compiler = from_pandas(
-                        self.__constructor__(columns=columns)
+                        pandas.DataFrame(columns=columns)
                     )._query_compiler
                 if index is not None:
                     self._query_compiler = data.loc[index]._query_compiler
@@ -171,7 +171,8 @@ class DataFrame(BasePandasDataset):
             if index is not None:
                 self.set_axis(index, axis=0, inplace=True)
             if dtype is not None:
-                self.astype(dtype, copy=False)
+                casted_obj = self.astype(dtype, copy=False)
+                self._query_compiler = casted_obj._query_compiler
         # Check type of data and use appropriate constructor
         elif query_compiler is None:
             distributed_frame = from_non_pandas(data, index, columns, dtype)
@@ -383,6 +384,7 @@ class DataFrame(BasePandasDataset):
         """
         Apply a function along an axis of the ``DataFrame``.
         """
+        func = cast_function_modin2pandas(func)
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
             func,
@@ -474,35 +476,42 @@ class DataFrame(BasePandasDataset):
             drop = by._parent is self
             idx_name = by.name
             by = by._query_compiler
+        elif isinstance(by, pandas.Grouper):
+            drop = by.key in self
         elif is_list_like(by):
             # fastpath for multi column groupby
             if axis == 0 and all(
                 (
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
+                    or (isinstance(o, pandas.Grouper) and o.key in self)
                     or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
                 for o in by
             ):
-                # We want to split 'by's into those that belongs to the self (internal_by)
-                # and those that doesn't (external_by)
-                internal_by, external_by = [], []
+                has_external = False
+                processed_by = []
 
                 for current_by in by:
-                    if hashable(current_by):
-                        internal_by.append(current_by)
+                    if isinstance(current_by, pandas.Grouper):
+                        processed_by.append(current_by)
+                        has_external = True
+                    elif hashable(current_by):
+                        processed_by.append(current_by)
                     elif isinstance(current_by, Series):
                         if current_by._parent is self:
-                            internal_by.append(current_by.name)
+                            processed_by.append(current_by.name)
                         else:
-                            external_by.append(current_by._query_compiler)
+                            processed_by.append(current_by._query_compiler)
+                            has_external = True
                     else:
-                        external_by.append(current_by)
+                        has_external = True
+                        processed_by.append(current_by)
 
-                by = internal_by + external_by
+                by = processed_by
 
-                if len(external_by) == 0:
-                    by = self[internal_by]._query_compiler
+                if not has_external:
+                    by = self[processed_by]._query_compiler
 
                 drop = True
             else:
@@ -732,19 +741,20 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise correlation.
         """
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        return self._default_to_pandas(
-            pandas.DataFrame.corrwith,
-            other,
-            axis=axis,
-            drop=drop,
-            method=method,
-            numeric_only=numeric_only,
+        if not isinstance(other, (Series, DataFrame)):
+            raise TypeError(f"unsupported type: {type(other)}")
+        return self.__constructor__(
+            query_compiler=self._query_compiler.corrwith(
+                other=other._query_compiler,
+                axis=axis,
+                drop=drop,
+                method=method,
+                numeric_only=numeric_only,
+            )
         )
 
     def cov(
-        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default
+        self, min_periods=None, ddof: int = 1, numeric_only=no_default
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
@@ -756,39 +766,22 @@ class DataFrame(BasePandasDataset):
                 ddof=ddof,
                 numeric_only=numeric_only,
             )
-        numeric_df = self.drop(
+        cov_df = self.drop(
             columns=[
                 i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
             ]
         )
 
-        is_notna = True
+        if min_periods is not None and min_periods > len(cov_df):
+            result = np.empty((cov_df.shape[1], cov_df.shape[1]))
+            result.fill(np.nan)
+            return cov_df.__constructor__(result)
 
-        if all(numeric_df.notna().all()):
-            if min_periods is not None and min_periods > len(numeric_df):
-                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
-                result.fill(np.nan)
-                return numeric_df.__constructor__(result)
-            else:
-                cols = numeric_df.columns
-                idx = cols.copy()
-                numeric_df = numeric_df.astype(dtype="float64")
-                denom = 1.0 / (len(numeric_df) - ddof)
-                means = numeric_df.mean(axis=0)
-                result = numeric_df - means
-                result = result.T._query_compiler.conj().dot(result._query_compiler)
-        else:
-            result = numeric_df._query_compiler.cov(min_periods=min_periods)
-            is_notna = False
-
-        if is_notna:
-            result = numeric_df.__constructor__(
-                query_compiler=result, index=idx, columns=cols
+        return cov_df.__constructor__(
+            query_compiler=cov_df._query_compiler.cov(
+                min_periods=min_periods, ddof=ddof
             )
-            result *= denom
-        else:
-            result = numeric_df.__constructor__(query_compiler=result)
-        return result
+        )
 
     def dot(self, other):  # noqa: PR01, RT01, D200
         """
@@ -1051,133 +1044,25 @@ class DataFrame(BasePandasDataset):
         """
         Print a concise summary of the ``DataFrame``.
         """
-
-        def put_str(src, output_len=None, spaces=2):
-            src = str(src)
-            return src.ljust(output_len if output_len else len(src)) + " " * spaces
-
-        def format_size(num):
-            for x in ["bytes", "KB", "MB", "GB", "TB"]:
-                if num < 1024.0:
-                    return f"{num:3.1f} {x}"
-                num /= 1024.0
-            return f"{num:3.1f} PB"
-
-        output = []
-
-        type_line = str(type(self))
-        index_line = self.index._summary()
-        columns = self.columns
-        columns_len = len(columns)
-        dtypes = self.dtypes
-        dtypes_line = f"dtypes: {', '.join(['{}({})'.format(dtype, count) for dtype, count in dtypes.value_counts().items()])}"
-
-        if max_cols is None:
-            max_cols = 100
-
-        exceeds_info_cols = columns_len > max_cols
-
-        if buf is None:
-            buf = sys.stdout
-
-        if null_counts is None:
-            null_counts = not exceeds_info_cols
-
-        if verbose is None:
-            verbose = not exceeds_info_cols
-
-        if null_counts and verbose:
-            # We're gonna take items from `non_null_count` in a loop, which
-            # works kinda slow with `Modin.Series`, that's why we call `_to_pandas()` here
-            # that will be faster.
-            non_null_count = self.count()._to_pandas()
-
-        if memory_usage is None:
-            memory_usage = True
-
-        def get_header(spaces=2):
-            output = []
-            head_label = " # "
-            column_label = "Column"
-            null_label = "Non-Null Count"
-            dtype_label = "Dtype"
-            non_null_label = " non-null"
-            delimiter = "-"
-
-            lengths = {}
-            lengths["head"] = max(len(head_label), len(pprint_thing(len(columns))))
-            lengths["column"] = max(
-                len(column_label), max(len(pprint_thing(col)) for col in columns)
+        if null_counts is not None:
+            if show_counts is not None:
+                raise ValueError("null_counts used with show_counts. Use show_counts.")
+            warnings.warn(
+                "null_counts is deprecated. Use show_counts instead",
+                FutureWarning,
+                stacklevel=2,
             )
-            lengths["dtype"] = len(dtype_label)
-            dtype_spaces = (
-                max(lengths["dtype"], max(len(pprint_thing(dtype)) for dtype in dtypes))
-                - lengths["dtype"]
-            )
-
-            header = put_str(head_label, lengths["head"]) + put_str(
-                column_label, lengths["column"]
-            )
-            if null_counts:
-                lengths["null"] = max(
-                    len(null_label),
-                    max(len(pprint_thing(x)) for x in non_null_count)
-                    + len(non_null_label),
-                )
-                header += put_str(null_label, lengths["null"])
-            header += put_str(dtype_label, lengths["dtype"], spaces=dtype_spaces)
-
-            output.append(header)
-
-            delimiters = put_str(delimiter * lengths["head"]) + put_str(
-                delimiter * lengths["column"]
-            )
-            if null_counts:
-                delimiters += put_str(delimiter * lengths["null"])
-            delimiters += put_str(delimiter * lengths["dtype"], spaces=dtype_spaces)
-            output.append(delimiters)
-
-            return output, lengths
-
-        output.extend([type_line, index_line])
-
-        def verbose_repr(output):
-            columns_line = f"Data columns (total {len(columns)} columns):"
-            header, lengths = get_header()
-            output.extend([columns_line, *header])
-            for i, col in enumerate(columns):
-                i, col_s, dtype = map(pprint_thing, [i, col, dtypes[col]])
-
-                to_append = put_str(" {}".format(i), lengths["head"]) + put_str(
-                    col_s, lengths["column"]
-                )
-                if null_counts:
-                    non_null = pprint_thing(non_null_count[col])
-                    to_append += put_str(
-                        "{} non-null".format(non_null), lengths["null"]
-                    )
-                to_append += put_str(dtype, lengths["dtype"], spaces=0)
-                output.append(to_append)
-
-        def non_verbose_repr(output):
-            output.append(columns._summary(name="Columns"))
-
-        if verbose:
-            verbose_repr(output)
-        else:
-            non_verbose_repr(output)
-
-        output.append(dtypes_line)
-
-        if memory_usage:
-            deep = memory_usage == "deep"
-            mem_usage_bytes = self.memory_usage(index=True, deep=deep).sum()
-            mem_line = f"memory usage: {format_size(mem_usage_bytes)}"
-
-            output.append(mem_line)
-
-        output.append("")
-        buf.write("\n".join(output))
+            show_counts = null_counts
+        info = DataFrameInfo(
+            data=self,
+            memory_usage=memory_usage,
+        )
+        info.render(
+            buf=buf,
+            max_cols=max_cols,
+            verbose=verbose,
+            show_counts=show_counts,
+        )
 
     def insert(
         self, loc, column, value, allow_duplicates=no_default
@@ -1241,32 +1126,6 @@ class DataFrame(BasePandasDataset):
             new_query_compiler = self._query_compiler.insert(loc, column, value)
 
         self._update_inplace(new_query_compiler=new_query_compiler)
-
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
 
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
@@ -1332,6 +1191,10 @@ class DataFrame(BasePandasDataset):
         """
         Join columns of another ``DataFrame``.
         """
+        if on is not None and not isinstance(other, (Series, DataFrame)):
+            raise ValueError(
+                "Joining multiple DataFrames only supported for joining on index"
+            )
         if validate is not None:
             return self._default_to_pandas(
                 pandas.DataFrame.join,
@@ -1411,7 +1274,7 @@ class DataFrame(BasePandasDataset):
         """
         Label-based "fancy indexing" function for ``DataFrame``.
         """
-        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
+        return self.__constructor__(self._query_compiler.lookup(row_labels, col_labels))
 
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
@@ -1453,18 +1316,6 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
-        """
-        Return the memory usage of each column in bytes.
-        """
-        if index:
-            result = self._reduce_dimension(
-                self._query_compiler.memory_usage(index=False, deep=deep)
-            )
-            index_value = self.index.memory_usage(deep=deep)
-            return modin.pandas.concat([Series(index_value, index=["Index"]), result])
-        return super(DataFrame, self).memory_usage(index=index, deep=deep)
-
     def merge(
         self,
         right,
@@ -1493,7 +1344,9 @@ class DataFrame(BasePandasDataset):
                 f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
-        if left_index and right_index:
+        # If we are joining on the index and we are using
+        # default parameters we can map this to a join
+        if left_index and right_index and not indicator:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
@@ -1620,10 +1473,10 @@ class DataFrame(BasePandasDataset):
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
-        if not isinstance(self.index, pandas.MultiIndex) or (
-            isinstance(self.index, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.index.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.index.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.unstack(level, fill_value)
@@ -1637,6 +1490,15 @@ class DataFrame(BasePandasDataset):
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
+        # if values is not specified, it should be the remaining columns not in
+        # index or columns
+        if values is None:
+            values = list(self.columns)
+            if index:
+                values = [v for v in values if v not in index]
+            if columns:
+                values = [v for v in values if v not in columns]
+
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
@@ -2105,7 +1967,11 @@ class DataFrame(BasePandasDataset):
             else:
                 if not found:
                     missing.append(col)
-        if missing:
+        # If the missing column is a "primitive", return the errors.
+        # Otherwise we let the query compiler figure out what to do with
+        # the keys
+        if missing and not hasattr(missing[0], "__dict__"):
+            # The keys are a primitive type
             raise KeyError(f"None of {missing} are in the columns")
 
         new_query_compiler = self._query_compiler.set_index_from_columns(
@@ -2140,10 +2006,10 @@ class DataFrame(BasePandasDataset):
         """
         Stack the prescribed level(s) from columns to index.
         """
-        if not isinstance(self.columns, pandas.MultiIndex) or (
-            isinstance(self.columns, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.columns.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.columns.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)
@@ -2509,7 +2375,7 @@ class DataFrame(BasePandasDataset):
         Replace values where the condition is False.
         """
         inplace = validate_bool_kwarg(inplace, "inplace")
-        if isinstance(other, pandas.Series) and axis is None:
+        if isinstance(other, Series) and axis is None:
             raise ValueError("Must specify axis=0 or 1")
         if level is not None:
             if isinstance(other, DataFrame):
@@ -2572,8 +2438,13 @@ class DataFrame(BasePandasDataset):
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
             axis = self._get_axis_number(axis)
-            if isinstance(other, pandas.Series):
-                other = other.reindex(self.index if axis == 0 else self.columns)
+            if isinstance(other, Series):
+                other = other.reindex(
+                    self.index if axis == 0 else self.columns
+                )._query_compiler
+                if other._shape_hint is None:
+                    # To make the query compiler recognizable as a Series at lower levels
+                    other._shape_hint = "column"
             elif is_list_like(other):
                 index = self.index if axis == 0 else self.columns
                 other = pandas.Series(other, index=index)
@@ -2817,7 +2688,7 @@ class DataFrame(BasePandasDataset):
         -------
         DataFrame
         """
-        return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
+        return self.round(decimals)
 
     def __delitem__(self, key):
         """
@@ -2906,6 +2777,25 @@ class DataFrame(BasePandasDataset):
             return df.style
 
         return self._default_to_pandas(style)
+
+    def reindex_like(
+        self: "DataFrame",
+        other,
+        method=None,
+        copy: bool = True,
+        limit=None,
+        tolerance=None,
+    ) -> "DataFrame":
+        # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
+        # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.reindex_like.html
+        return self.reindex(
+            index=other.index,
+            columns=other.columns,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+        )
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """

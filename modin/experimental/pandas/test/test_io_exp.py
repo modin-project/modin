@@ -12,17 +12,16 @@
 # governing permissions and limitations under the License.
 
 from contextlib import nullcontext
-import os
 import glob
 import json
 
 import numpy as np
 import pandas
-from pandas._testing import ensure_clean, ensure_clean_dir
+from pandas._testing import ensure_clean
 import pytest
 
 import modin.experimental.pandas as pd
-from modin.config import Engine
+from modin.config import Engine, AsyncReadMode
 from modin.pandas.test.utils import (
     df_equals,
     teardown_test_files,
@@ -37,30 +36,29 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_distributed(make_sql_connection):
-    with ensure_clean_dir() as dirname:
-        filename = "test_from_sql_distributed.db"
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(os.path.join(dirname, filename), table)
-        query = "select * from {0}".format(table)
+def test_from_sql_distributed(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        modin_df_from_query = pd.read_sql(
-            query,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
-        modin_df_from_table = pd.read_sql(
-            table,
-            conn,
-            partition_column="col1",
-            lower_bound=0,
-            upper_bound=6,
-            max_sessions=2,
-        )
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df_from_query = pd.read_sql(
+        query,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
+    modin_df_from_table = pd.read_sql(
+        table,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
@@ -70,18 +68,17 @@ def test_from_sql_distributed(make_sql_connection):
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_defaults(make_sql_connection):
-    with ensure_clean_dir() as dirname:
-        filename = "test_from_sql_distributed.db"
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(os.path.join(dirname, filename), table)
-        query = "select * from {0}".format(table)
+def test_from_sql_defaults(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_query = pd.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_table = pd.read_sql(table, conn)
+    pandas_df = pandas.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_query = pd.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_table = pd.read_sql(table, conn)
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
@@ -274,7 +271,8 @@ def test_distributed_pickling(filename, compression):
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
-def test_read_custom_json_text():
+@pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+def test_read_custom_json_text(set_async_read_mode):
     def _generate_json(file_name, nrows, ncols):
         data = np.random.rand(nrows, ncols)
         df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
@@ -305,14 +303,21 @@ def test_read_custom_json_text():
         df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
             columns={"col0": "testID"}
         )
-    df_equals(df1, df2)
+        if AsyncReadMode.get():
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean` context
+            # because the file may be deleted before actual reading starts
+            df_equals(df1, df2)
+    if not AsyncReadMode.get():
+        df_equals(df1, df2)
 
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_read_evaluated_dict():
+@pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+def test_read_evaluated_dict(set_async_read_mode):
     def _generate_evaluated_dict(file_name, nrows, ncols):
         result = {}
         keys = [f"col{x}" for x in range(ncols)]
@@ -355,4 +360,10 @@ def test_read_evaluated_dict():
         df2 = pd.read_custom_text(
             filename, columns=columns_callback, custom_parser=_custom_parser
         )
-    df_equals(df1, df2)
+        if AsyncReadMode.get():
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean` context
+            # because the file may be deleted before actual reading starts
+            df_equals(df1, df2)
+    if not AsyncReadMode.get():
+        df_equals(df1, df2)

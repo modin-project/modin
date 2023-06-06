@@ -19,10 +19,10 @@ from .series import SeriesDefault
 from .str import StrDefault
 from .binary import BinaryDefault
 from .resample import ResampleDefault
-from .rolling import RollingDefault
+from .rolling import RollingDefault, ExpandingDefault
 from .default import DefaultMethod
 from .cat import CatDefault
-from .groupby import GroupByDefault
+from .groupby import GroupByDefault, SeriesGroupByDefault
 
 __all__ = [
     "DataFrameDefault",
@@ -32,7 +32,9 @@ __all__ = [
     "BinaryDefault",
     "ResampleDefault",
     "RollingDefault",
+    "ExpandingDefault",
     "DefaultMethod",
     "CatDefault",
     "GroupByDefault",
+    "SeriesGroupByDefault",
 ]

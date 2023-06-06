@@ -256,7 +256,8 @@ class CalciteSerializer:
         dict
             Serialized literal.
         """
-        if literal.val is None:
+        val = literal.val
+        if val is None:
             return {
                 "literal": None,
                 "type": "BIGINT",
@@ -266,29 +267,40 @@ class CalciteSerializer:
                 "type_scale": 0,
                 "type_precision": 19,
             }
-        if type(literal.val) is str:
+        if type(val) is str:
             return {
-                "literal": literal.val,
+                "literal": val,
                 "type": "CHAR",
                 "target_type": "CHAR",
                 "scale": -2147483648,
-                "precision": len(literal.val),
+                "precision": len(val),
                 "type_scale": -2147483648,
-                "type_precision": len(literal.val),
+                "type_precision": len(val),
             }
-        if type(literal.val) in self._INT_OPTS.keys():
-            target_type, precision = self.opts_for_int_type(type(literal.val))
+        if type(val) in self._INT_OPTS.keys():
+            target_type, precision = self.opts_for_int_type(type(val))
             return {
-                "literal": int(literal.val),
+                "literal": int(val),
                 "type": "DECIMAL",
                 "target_type": target_type,
                 "scale": 0,
-                "precision": len(str(literal.val)),
+                "precision": len(str(val)),
                 "type_scale": 0,
                 "type_precision": precision,
             }
-        if type(literal.val) in (float, np.float64):
-            str_val = f"{literal.val:f}"
+        if type(val) in (float, np.float64):
+            if np.isnan(val):
+                return {
+                    "literal": None,
+                    "type": "DOUBLE",
+                    "target_type": "DOUBLE",
+                    "scale": 0,
+                    "precision": 19,
+                    "type_scale": 0,
+                    "type_precision": 19,
+                }
+
+            str_val = f"{val:f}"
             precision = len(str_val) - 1
             scale = precision - str_val.index(".")
             return {
@@ -300,9 +312,9 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": 15,
             }
-        if type(literal.val) is bool:
+        if type(val) is bool:
             return {
-                "literal": literal.val,
+                "literal": val,
                 "type": "BOOLEAN",
                 "target_type": "BOOLEAN",
                 "scale": -2147483648,
@@ -310,7 +322,7 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": 1,
             }
-        raise NotImplementedError(f"Can not serialize {type(literal.val).__name__}")
+        raise NotImplementedError(f"Can not serialize {type(val).__name__}")
 
     def opts_for_int_type(self, int_type):
         """
