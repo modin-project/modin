@@ -1752,6 +1752,7 @@ class Series(BasePandasDataset):
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
+        copy = True if copy is None else copy
         obj = self.copy() if copy else self
         return super(Series, obj).swaplevel(i, j, axis=0)
 
