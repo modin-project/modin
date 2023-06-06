@@ -132,8 +132,17 @@ def enable_logging(
             logger_level(start_line)
             try:
                 result = obj(*args, **kwargs)
-            except BaseException:
-                get_logger("modin.logger.errors").exception(stop_line)
+            except BaseException as e:
+                # Only log the exception if a deeper layer of the modin stack has not
+                # already logged it.
+                if not hasattr(e, "_modin_logged"):
+                    # use stack_info=True so that even if we are a few layers deep in
+                    # modin, we log a stack trace that includes calls to higher layers
+                    # of modin
+                    get_logger("modin.logger.errors").exception(
+                        stop_line, stack_info=True
+                    )
+                    e._modin_logged = True  # type: ignore[attr-defined]
                 raise
             finally:
                 logger_level(stop_line)
