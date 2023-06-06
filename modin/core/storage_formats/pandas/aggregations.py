@@ -512,31 +512,19 @@ class _CorrCovKernels:
             Correlation matrix.
         """
         res = pandas.DataFrame(index=cols, columns=cols, dtype="float")
+        nan_mask = count < min_periods
 
-        for col_idx, i in enumerate(cols):
-            mul_row = sum_of_pairwise_mul.loc[i]
-            mean_row = means.loc[i]
-            sum_row = sums.loc[i]
-            count_row = count.loc[i]
-            std_row = std.loc[i]
+        for col in cols:
+            top = (
+                sum_of_pairwise_mul.loc[col]
+                - sums.loc[col] * means[col]
+                - means.loc[col] * sums[col]
+                + count.loc[col] * means.loc[col] * means[col]
+            )
+            down = std.loc[col] * std[col]
+            res.loc[col, :] = top / down
 
-            if count_row[i] >= min_periods:
-                res.loc[i, i] = 1.0
-
-            for j in cols[col_idx + 1 :]:
-                if count_row.loc[j] < min_periods:
-                    # Leave the value to be NaN
-                    continue
-                top = (
-                    mul_row.loc[j]
-                    - means.loc[j, i] * sum_row.loc[j]
-                    - mean_row.loc[j] * sums.loc[j, i]
-                    + count_row.loc[j] * mean_row.loc[j] * means.loc[j, i]
-                )
-                down = std_row.loc[j] * std.loc[j, i]
-                corr_ij = top / down
-                res.loc[i, j] = corr_ij
-                res.loc[j, i] = corr_ij
+        res[nan_mask] = np.nan
 
         return res
 
@@ -568,23 +556,14 @@ class _CorrCovKernels:
         """
         res = pandas.DataFrame(index=cols, columns=cols, dtype="float")
 
-        for col_idx, i in enumerate(cols):
-            mul_row = sum_of_pairwise_mul.loc[i]
-            mean_row = means.loc[i]
-            sum_row = sums.loc[i]
-            std_row = std.loc[i]
-
-            res.loc[i, i] = 1.0
-            for j in cols[col_idx + 1 :]:
-                top = (
-                    mul_row.loc[j]
-                    - means.loc[j] * sum_row
-                    - mean_row * sums.loc[j]
-                    + count * mean_row * means.loc[j]
-                )
-                down = std_row * std.loc[j]
-                corr_ij = top / down
-                res.loc[i, j] = corr_ij
-                res.loc[j, i] = corr_ij
+        for col in cols:
+            top = (
+                sum_of_pairwise_mul.loc[col]
+                - sums.loc[col] * means
+                - means.loc[col] * sums
+                + count * means.loc[col] * means
+            )
+            down = std.loc[col] * std
+            res.loc[col, :] = top / down
 
         return res
