@@ -59,6 +59,7 @@ from modin.core.storage_formats.pandas.utils import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.utils import ModinAssumptionError
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.
@@ -705,7 +706,7 @@ class PandasJSONParser(PandasParser):
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_json(fname, **kwargs)
         if not pandas_df.columns.equals(columns):
-            raise ValueError("Columns must be the same across all rows.")
+            raise ModinAssumptionError("Columns must be the same across all rows.")
         partition_columns = pandas_df.columns
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             len(pandas_df),

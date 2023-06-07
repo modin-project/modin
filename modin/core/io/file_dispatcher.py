@@ -26,6 +26,7 @@ from pandas.io.common import is_url, is_fsspec_url
 
 from modin.logging import ClassLogger
 from modin.config import AsyncReadMode
+from modin.utils import ModinAssumptionError
 
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -154,7 +155,12 @@ class FileDispatcher(ClassLogger):
         dispatcher class `_read` function with passed parameters and performs some
         postprocessing work on the resulting query_compiler object.
         """
-        query_compiler = cls._read(*args, **kwargs)
+        try:
+            query_compiler = cls._read(*args, **kwargs)
+        except ModinAssumptionError as exc:
+            param_name = "path_or_buf" if "path_or_buf" in kwargs else "fname"
+            fname = kwargs.pop(param_name)
+            return cls.single_worker_read(fname, *args, reason=str(exc), **kwargs)
         # TextFileReader can also be returned from `_read`.
         if not AsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
             # at the moment it is not possible to use `wait_partitions` function;
