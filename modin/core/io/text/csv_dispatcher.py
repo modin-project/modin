@@ -150,5 +150,6 @@ class CSVDispatcher(TextFileDispatcher):
             enumerate_partitions=True,
             max_retries=0,
         )
+        cls.materialize(cls.call_future(signals.wait, len(qc._modin_frame._partitions)))
         # pending completion
         cls.materialize([part.list_of_blocks[0] for row in result for part in row])
