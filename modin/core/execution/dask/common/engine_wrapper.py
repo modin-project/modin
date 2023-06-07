@@ -152,6 +152,11 @@ class DaskWrapper:
         if num_returns == len(obj_ids):
             wait(obj_ids, return_when="ALL_COMPLETED")
         else:
-            # Dask doesn't natively support `num_returns` as int
-            for _ in range(num_returns):
-                wait(obj_ids, return_when="FIRST_COMPLETED")
+            # Dask doesn't natively support `num_returns` as int.
+            # `wait` function doesn't always return only one finished future,
+            # so a simple loop is not enough here
+            done, not_done = wait(obj_ids, return_when="FIRST_COMPLETED")
+            while len(done) < num_returns and (i := 0 < num_returns):
+                extra_done, not_done = wait(not_done, return_when="FIRST_COMPLETED")
+                done.update(extra_done)
+                i += 1
