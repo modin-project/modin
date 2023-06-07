@@ -128,7 +128,6 @@ class CorrCovBuilder:
         numeric_only : bool
             Whether to only include numeric types.
 
-
         Returns
         -------
         Tuple[Callable(pandas.DataFrame) -> pandas.DataFrame, Callable(pandas.DataFrame) -> pandas.DataFrame]
