@@ -721,17 +721,11 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
-        if not numeric_only:
-            return self._default_to_pandas(
-                pandas.DataFrame.corr,
-                method=method,
-                min_periods=min_periods,
-                numeric_only=numeric_only,
-            )
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
                 min_periods=min_periods,
+                numeric_only=numeric_only,
             )
         )
 
