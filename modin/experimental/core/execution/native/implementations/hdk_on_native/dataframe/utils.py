@@ -13,18 +13,23 @@
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
-from typing import Tuple, Union
+import re
+
+import typing
+from typing import Tuple, Union, List, Any
 from functools import lru_cache
 from collections import OrderedDict
 
-import pandas as pd
+import numpy as np
+
+import pandas
 from pandas import Timestamp
+from pandas.core.dtypes.common import get_dtype
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 
 import pyarrow as pa
 from pyarrow.types import is_dictionary
 
-from modin.error_message import ErrorMessage
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -32,6 +37,7 @@ class ColNameCodec:
     IDX_COL_NAME = "__index__"
     ROWID_COL_NAME = "__rowid__"
 
+    _IDX_NAME_PATTERN = re.compile(f"{IDX_COL_NAME}\\d+_(.*)")
     _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
     _COL_TYPES = Union[str, int, float, Timestamp, None]
     _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
@@ -149,65 +155,144 @@ class ColNameCodec:
         except KeyError:
             raise ValueError(f"Invalid encoded column name: {name}")
 
+    @staticmethod
+    def mangle_index_names(names: List[_COL_NAME_TYPE]) -> List[str]:
+        """
+        Return mangled index names for index labels.
 
-class LazyProxyCategoricalDtype(pd.CategoricalDtype):
+        Mangled names are used for index columns because index
+        labels cannot always be used as HDK table column
+        names. E.e. label can be a non-string value or an
+        unallowed string (empty strings, etc.) for a table column
+        name.
+
+        Parameters
+        ----------
+        names : list of str
+            Index labels.
+
+        Returns
+        -------
+        list of str
+            Mangled names.
+        """
+        pref = ColNameCodec.IDX_COL_NAME
+        return [f"{pref}{i}_{ColNameCodec.encode(n)}" for i, n in enumerate(names)]
+
+    @staticmethod
+    def demangle_index_names(
+        cols: List[str],
+    ) -> Union[_COL_NAME_TYPE, List[_COL_NAME_TYPE]]:
+        """
+        Demangle index column names to index labels.
+
+        Parameters
+        ----------
+        cols : list of str
+            Index column names.
+
+        Returns
+        -------
+        list or a single demangled name
+            Demangled index names.
+        """
+        if len(cols) == 1:
+            return ColNameCodec.demangle_index_name(cols[0])
+        return [ColNameCodec.demangle_index_name(n) for n in cols]
+
+    @staticmethod
+    def demangle_index_name(col: str) -> _COL_NAME_TYPE:
+        """
+        Demangle index column name into index label.
+
+        Parameters
+        ----------
+        col : str
+            Index column name.
+
+        Returns
+        -------
+        str
+            Demangled index name.
+        """
+        match = ColNameCodec._IDX_NAME_PATTERN.search(col)
+        if match:
+            name = match.group(1)
+            if name == MODIN_UNNAMED_SERIES_LABEL:
+                return None
+            return ColNameCodec.decode(name)
+        return col
+
+    @staticmethod
+    def concat_index_names(frames) -> typing.OrderedDict[str, Any]:
+        """
+        Calculate the index names and dtypes.
+
+        Calculate the index names and dtypes, that the index
+        columns will have after the frames concatenation.
+
+        Parameters
+        ----------
+        frames : list[HdkOnNativeDataframe]
+
+        Returns
+        -------
+        typing.OrderedDict[str, Any]
+        """
+        first = frames[0]
+        names = OrderedDict()
+        if first._index_width() > 1:
+            # When we're dealing with a MultiIndex case the resulting index
+            # inherits the levels from the first frame in concatenation.
+            dtypes = first._dtypes
+            for n in first._index_cols:
+                names[n] = dtypes[n]
+        else:
+            # In a non-MultiIndex case, we check if all the indices have the same
+            # names, and if they do - inherit the name and dtype from the first frame,
+            # otherwise return metadata matching unnamed RangeIndex.
+            mangle = ColNameCodec.mangle_index_names
+            idx_names = set()
+            for f in frames:
+                if f._index_cols is not None:
+                    idx_names.update(f._index_cols)
+                elif f.has_index_cache:
+                    idx_names.update(mangle(f.index.names))
+                else:
+                    idx_names.update(mangle([None]))
+                if len(idx_names) > 1:
+                    names[mangle([None])[0]] = get_dtype(int)
+                    return names
+
+            # Inherit Index's name and dtype from the first frame.
+            if first._index_cols is not None:
+                name = first._index_cols[0]
+                names[name] = first._dtypes[name]
+            elif first.has_index_cache:
+                idx = first.index
+                names[mangle(idx.names)[0]] = idx.dtype
+            else:
+                # A trivial index with no name
+                names[mangle([None])[0]] = get_dtype(int)
+        return names
+
+
+def build_categorical_from_at(table, column_name):
     """
-    Proxy class for lazily retrieving categorical dtypes from arrow tables.
+    Build ``pandas.CategoricalDtype`` from a dictionary column of the passed PyArrow Table.
 
     Parameters
     ----------
     table : pyarrow.Table
-        Source table.
     column_name : str
-        Column name.
+
+    Returns
+    -------
+    pandas.CategoricalDtype
     """
-
-    def __init__(self, table: pa.Table, column_name: str):
-        ErrorMessage.catch_bugs_and_request_email(
-            failure_condition=table is None,
-            extra_log="attempted to bind 'None' pyarrow table to a lazy category",
-        )
-        self._table = table
-        self._column_name = column_name
-        self._ordered = False
-        self._lazy_categories = None
-
-    def _new(self, table: pa.Table, column_name: str) -> pd.CategoricalDtype:
-        """
-        Create a new proxy, if either table or column name are different.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            Source table.
-        column_name : str
-            Column name.
-
-        Returns
-        -------
-        pandas.CategoricalDtype or LazyProxyCategoricalDtype
-        """
-        if self._table is None:
-            # The table has been materialized, we don't need a proxy anymore.
-            return pd.CategoricalDtype(self.categories)
-        elif table is self._table and column_name == self._column_name:
-            return self
-        else:
-            return LazyProxyCategoricalDtype(table, column_name)
-
-    @property
-    def _categories(self):  # noqa: GL08
-        if self._table is not None:
-            chunks = self._table.column(self._column_name).chunks
-            cat = pd.concat([chunk.dictionary.to_pandas() for chunk in chunks])
-            self._lazy_categories = self.validate_categories(cat.unique())
-            self._table = None  # The table is not required any more
-        return self._lazy_categories
-
-    @_categories.setter
-    def _set_categories(self, categories):  # noqa: GL08
-        self._lazy_categories = categories
-        self._table = None
+    chunks = table.column(column_name).chunks
+    cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+    return pandas.CategoricalDtype(cat.unique())
 
 
 def check_join_supported(join_type: str):
@@ -224,9 +309,7 @@ def check_join_supported(join_type: str):
     None
     """
     if join_type not in ("inner", "left"):
-        raise NotImplementedError(
-            f"{join_type} join is not supported by the HDK engine"
-        )
+        raise NotImplementedError(f"{join_type} join")
 
 
 def check_cols_to_join(what, df, col_names):
@@ -258,7 +341,7 @@ def check_cols_to_join(what, df, col_names):
         new_name = None
         if df._index_cols is not None:
             for c in df._index_cols:
-                if col == df._index_name(c):
+                if col == ColNameCodec.demangle_index_name(c):
                     new_name = c
                     break
         elif df.has_index_cache:
@@ -321,11 +404,13 @@ def get_data_for_join_by_index(
         elif df._index_cols is not None:
             if len(df._index_cols) > 1:
                 arrays = [[i] for i in range(len(df._index_cols))]
-                names = [df._index_name(n) for n in df._index_cols]
-                idx = pd.MultiIndex.from_arrays(arrays, names=names)
+                names = [ColNameCodec.demangle_index_name(n) for n in df._index_cols]
+                idx = pandas.MultiIndex.from_arrays(arrays, names=names)
             else:
-                idx = pd.Index(name=df._index_name(df._index_cols[0]))
-        return pd.DataFrame(columns=df.columns, index=idx)
+                idx = pandas.Index(
+                    name=ColNameCodec.demangle_index_name(df._index_cols[0])
+                )
+        return pandas.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
     exprs = OrderedDict()
@@ -341,7 +426,7 @@ def get_data_for_join_by_index(
     if len(merged.index.names) == 1 and (merged.index.names[0] is None):
         index_cols = None
     else:
-        index_cols = left._mangle_index_names(merged.index.names)
+        index_cols = ColNameCodec.mangle_index_names(merged.index.names)
         for orig_name, mangled_name in zip(merged.index.names, index_cols):
             # Using _dtypes here since it contains all column names,
             # including the index.
@@ -379,7 +464,36 @@ def get_data_for_join_by_index(
     return index_cols, exprs, new_dtypes, merged.columns
 
 
-def arrow_to_pandas(at: pa.Table) -> pd.DataFrame:
+def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:
+    """
+    Get common arrow data type.
+
+    Parameters
+    ----------
+    t1 : pa.lib.DataType
+    t2 : pa.lib.DataType
+
+    Returns
+    -------
+    pa.lib.DataType
+    """
+    if t1 == t2:
+        return t1
+    if pa.types.is_string(t1):
+        return t1
+    if pa.types.is_string(t2):
+        return t2
+    if pa.types.is_null(t1):
+        return t2
+    if pa.types.is_null(t2):
+        return t1
+
+    t1 = t1.to_pandas_dtype()
+    t2 = t2.to_pandas_dtype()
+    return pa.from_numpy_dtype(np.promote_types(t1, t2))
+
+
+def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
     """
     Convert the specified arrow table to pandas.
 
@@ -414,7 +528,7 @@ class _CategoricalDtypeMapper:  # noqa: GL08
             cat = chunk.dictionary.to_pandas()
             values.append(chunk.indices.to_pandas().map(cat))
             categories.update((c, None) for c in cat)
-        return pd.Categorical(
-            pd.concat(values, ignore_index=True),
-            dtype=pd.CategoricalDtype(categories, ordered=True),
+        return pandas.Categorical(
+            pandas.concat(values, ignore_index=True),
+            dtype=pandas.CategoricalDtype(categories, ordered=True),
         )

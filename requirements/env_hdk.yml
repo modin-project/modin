@@ -12,7 +12,7 @@ dependencies:
   - pytest-xdist>=2.1.0
   - coverage
   - pygithub
-  - pyhdk==0.5
+  - pyhdk==0.6
   - s3fs>=2021.8
   - psutil
   - openpyxl<3.1.0
@@ -30,6 +30,8 @@ dependencies:
   - flake8
   - flake8-no-implicit-concat
   - flake8-print
+  - boto3
+  - moto
   - pip:
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0

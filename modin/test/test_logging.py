@@ -82,7 +82,31 @@ def test_function_decorator(monkeypatch, get_log_messages):
 
     assert "func" in get_log_messages()["info"][0]
     assert "START" in get_log_messages()["info"][0]
-    assert "STOP" in get_log_messages("modin.logger.errors")["exception"][0]
+    assert get_log_messages("modin.logger.errors")["exception"] == [
+        "STOP::PANDAS-API::func"
+    ]
+
+
+def test_function_decorator_on_outer_function_6237(monkeypatch, get_log_messages):
+    @modin.logging.enable_logging
+    def inner_func():
+        raise ValueError()
+
+    @modin.logging.enable_logging
+    def outer_func():
+        inner_func()
+
+    with monkeypatch.context() as ctx:
+        # NOTE: we cannot patch in the fixture as mockin logger.getLogger()
+        # without monkeypatch.context() breaks pytest
+        mock_get_logger(ctx)
+
+        with pytest.raises(ValueError):
+            outer_func()
+
+    assert get_log_messages("modin.logger.errors")["exception"] == [
+        "STOP::PANDAS-API::inner_func"
+    ]
 
 
 def test_class_decorator(monkeypatch, get_log_messages):

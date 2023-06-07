@@ -1,7 +1,7 @@
 :orphan:
 
-IO module Description For Pandas-on-Unidist Execution
-"""""""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For ExperimentalPandasOnUnidist Execution
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''
@@ -30,8 +30,6 @@ functions for the experimental IO class:
 
 * ``io.py`` - submodule containing IO class and parse functions, which are responsible
   for data processing on the workers.
-
-* ``sql.py`` - submodule with util functions for experimental ``read_sql`` function.
 
 Public API
 ''''''''''

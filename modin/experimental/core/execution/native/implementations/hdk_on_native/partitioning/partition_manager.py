@@ -240,6 +240,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 or pyarrow.types.is_null(dtype)
             ):
                 return True
+            if isinstance(dtype, pyarrow.ExtensionType) or pyarrow.types.is_duration(
+                dtype
+            ):
+                return False
             try:
                 pandas_dtype = dtype.to_pandas_dtype()
                 return pandas_dtype != np.dtype("O")
@@ -292,7 +296,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                                 if frame.has_materialized_index
                                 else [None]
                             )
-                            idx_names = frame._mangle_index_names(idx_names)
+                            idx_names = ColNameCodec.mangle_index_names(idx_names)
                             obj = pyarrow.table(
                                 {n: [] for n in idx_names},
                                 schema=pyarrow.schema(

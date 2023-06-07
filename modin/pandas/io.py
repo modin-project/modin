@@ -393,28 +393,12 @@ def read_html(
     """
     Read HTML tables into a ``DataFrame`` object.
     """
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
-        query_compiler=FactoryDispatcher.read_html(
-            io,
-            match=match,
-            flavor=flavor,
-            header=header,
-            index_col=index_col,
-            skiprows=skiprows,
-            attrs=attrs,
-            parse_dates=parse_dates,
-            thousands=thousands,
-            encoding=encoding,
-            decimal=decimal,
-            converters=converters,
-            na_values=na_values,
-            keep_default_na=keep_default_na,
-            displayed_only=displayed_only,
-            extract_links=extract_links,
-        )
-    )
+    qcs = FactoryDispatcher.read_html(**kwargs)
+    return [DataFrame(query_compiler=qc) for qc in qcs]
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -716,7 +700,7 @@ def to_pickle(
 @enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
-    usecols: Union[Sequence[str], type(None)] = None,
+    usecols: Optional[Sequence[str]] = None,
     convert_categoricals: bool = True,
 ):  # noqa: PR01, RT01, D200
     """
@@ -725,7 +709,9 @@ def read_spss(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
-        query_compiler=FactoryDispatcher.read_spss(path, usecols, convert_categoricals)
+        query_compiler=FactoryDispatcher.read_spss(
+            path=path, usecols=usecols, convert_categoricals=convert_categoricals
+        )
     )
 
 
@@ -761,7 +747,7 @@ def read_orc(
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(pandas.read_orc(path, columns, **kwargs))
+    return DataFrame(pandas.read_orc(path, columns=columns, **kwargs))
 
 
 @_inherit_docstrings(pandas.HDFStore)

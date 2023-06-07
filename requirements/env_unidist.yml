@@ -46,6 +46,7 @@ dependencies:
   - flake8
   - flake8-no-implicit-concat
   - flake8-print
+  - moto
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5

@@ -26,7 +26,6 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from pandas import (
         eval,
-        cut,
         factorize,
         test,
         date_range,
@@ -247,6 +246,7 @@ from .general import (
     wide_to_long,
     to_timedelta,
     pivot_table,
+    cut,
 )
 
 from .plotting import Plotting as plotting

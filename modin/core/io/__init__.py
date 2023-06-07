@@ -15,12 +15,8 @@
 
 from .io import BaseIO
 from .text.csv_dispatcher import CSVDispatcher
-from .text.csv_glob_dispatcher import CSVGlobDispatcher
 from .text.fwf_dispatcher import FWFDispatcher
 from .text.json_dispatcher import JSONDispatcher
-from .text.custom_text_dispatcher import (
-    ExperimentalCustomTextDispatcher,
-)
 from .text.excel_dispatcher import ExcelDispatcher
 from .file_dispatcher import FileDispatcher
 from .text.text_file_dispatcher import TextFileDispatcher
@@ -28,12 +24,10 @@ from .column_stores.parquet_dispatcher import ParquetDispatcher
 from .column_stores.hdf_dispatcher import HDFDispatcher
 from .column_stores.feather_dispatcher import FeatherDispatcher
 from .sql.sql_dispatcher import SQLDispatcher
-from .pickle.pickle_dispatcher import ExperimentalPickleDispatcher
 
 __all__ = [
     "BaseIO",
     "CSVDispatcher",
-    "CSVGlobDispatcher",
     "FWFDispatcher",
     "JSONDispatcher",
     "FileDispatcher",
@@ -43,6 +37,4 @@ __all__ = [
     "FeatherDispatcher",
     "SQLDispatcher",
     "ExcelDispatcher",
-    "ExperimentalPickleDispatcher",
-    "ExperimentalCustomTextDispatcher",
 ]

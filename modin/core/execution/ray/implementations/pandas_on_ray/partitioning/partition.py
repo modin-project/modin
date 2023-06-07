@@ -327,7 +327,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
 
 @ray.remote(num_returns=2)
-def _get_index_and_columns(df):
+def _get_index_and_columns(df):  # pragma: no cover
     """
     Get the number of rows and columns of a pandas DataFrame.
 

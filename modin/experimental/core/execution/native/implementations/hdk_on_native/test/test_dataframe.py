@@ -319,6 +319,20 @@ class TestCSV:
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
+    @pytest.mark.parametrize("parse_dates", [None, True, False])
+    def test_read_csv_datetime_tz(self, engine, parse_dates):
+        with ensure_clean(".csv") as file:
+            with open(file, "w") as f:
+                f.write("test\n2023-01-01T00:00:00.000-07:00")
+
+            eval_io(
+                fn_name="read_csv",
+                filepath_or_buffer=file,
+                md_extra_kwargs={"engine": engine},
+                parse_dates=parse_dates,
+            )
+
+    @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize(
         "usecols",
         [
@@ -774,6 +788,45 @@ class TestConcat:
         exp = pd.concat([df1, df2], axis=1, join="inner")
 
         df_equals(ref, exp)
+
+    def test_concat_str(self):
+        def concat(df1, df2, lib, **kwargs):
+            return lib.concat([df1.dropna(), df2.dropna()]).astype(str)
+
+        run_and_compare(
+            concat,
+            data={"a": ["1", "2", "3"]},
+            data2={"a": ["4", "5", "6"]},
+            force_lazy=False,
+        )
+
+    @pytest.mark.parametrize("transform", [True, False])
+    @pytest.mark.parametrize("sort_last", [True, False])
+    # RecursionError in case of concatenation of big number of frames
+    def test_issue_5889(self, transform, sort_last):
+        with ensure_clean(".csv") as file:
+            data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
+            pandas.DataFrame(data).to_csv(file, index=False)
+
+            def test_concat(lib, **kwargs):
+                if transform:
+
+                    def read_csv():
+                        return lib.read_csv(file)["b"]
+
+                else:
+
+                    def read_csv():
+                        return lib.read_csv(file)
+
+                df = read_csv()
+                for _ in range(100):
+                    df = lib.concat([df, read_csv()])
+                if sort_last:
+                    df = lib.concat([df, read_csv()], sort=True)
+                return df
+
+            run_and_compare(test_concat, data={})
 
 
 class TestGroupby:
@@ -2399,6 +2452,16 @@ class TestLoc:
         pds = pandas.Series(data[next(iter(data.keys()))]).iloc[1:]
         df_equals(mds, pds)
 
+    def test_iloc_issue_6037(self):
+        def iloc(df, **kwargs):
+            return df.iloc[:-1].dropna()
+
+        run_and_compare(
+            fn=iloc,
+            data={"A": range(1000000)},
+            force_lazy=False,
+        )
+
 
 class TestStr:
     def test_str(self):
@@ -2521,7 +2584,6 @@ class TestFromArrow:
         mdf = from_arrow(at)
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
-        df_equals(mdf, pdf)
 
         mdt = mdf.dtypes[0]
         pdt = pdf.dtypes[0]
@@ -2532,17 +2594,24 @@ class TestFromArrow:
 
         # Make sure the lazy proxy dtype is not materialized yet.
         assert type(mdt) != pandas.CategoricalDtype
-        assert mdt._table is not None
-        assert mdt._new(at, at.column(0)._name) is mdt
-        assert mdt._new(at, at.column(2)._name) is not mdt
-        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
+        assert mdt._parent is not None
+        assert mdt._update_proxy(at, at.column(0)._name) is mdt
+        assert mdt._update_proxy(at, at.column(2)._name) is not mdt
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) != pandas.CategoricalDtype
+        )
 
         assert mdt == pdt
         assert pdt == mdt
         assert repr(mdt) == repr(pdt)
 
+        # `df_equals` triggers categories materialization and thus
+        # has to be called after all checks for laziness
+        df_equals(mdf, pdf)
         # Should be materialized now
-        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) == pandas.CategoricalDtype
+        )
 
 
 class TestSparseArray:

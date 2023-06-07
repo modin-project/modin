@@ -14,9 +14,12 @@
 import pytest
 import modin.utils
 import json
+import pandas
+import modin.pandas as pd
 
 from textwrap import dedent, indent
 from modin.error_message import ErrorMessage
+from modin.pandas.test.utils import create_test_dfs
 
 
 # Note: classes below are used for purely testing purposes - they
@@ -287,3 +290,48 @@ def test_warns_that_defaulting_to_pandas():
 
     with warns_that_defaulting_to_pandas():
         ErrorMessage.default_to_pandas(message="Function name")
+
+
+def test_assert_dtypes_equal():
+    """Verify that `assert_dtypes_equal` from test utils works correctly (raises an error when it has to)."""
+    from modin.pandas.test.utils import assert_dtypes_equal
+
+    # Serieses with equal dtypes
+    sr1, sr2 = pd.Series([1.0]), pandas.Series([1.0])
+    assert sr1.dtype == sr2.dtype == "float"
+    assert_dtypes_equal(sr1, sr2)  # shouldn't raise an error since dtypes are equal
+
+    # Serieses with different dtypes belonging to the same class
+    sr1 = sr1.astype("int")
+    assert sr1.dtype != sr2.dtype and sr1.dtype == "int"
+    assert_dtypes_equal(sr1, sr2)  # shouldn't raise an error since both are numeric
+
+    # Serieses with different dtypes not belonging to the same class
+    sr2 = sr2.astype("str")
+    assert sr1.dtype != sr2.dtype and sr2.dtype == "object"
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(sr1, sr2)
+
+    # Dfs with equal dtypes
+    df1, df2 = create_test_dfs({"a": [1], "b": [1.0]})
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since dtypes are equal
+
+    # Dfs with different dtypes belonging to the same class
+    df1 = df1.astype({"a": "float"})
+    assert df1.dtypes["a"] != df2.dtypes["a"]
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since both are numeric
+
+    # Dfs with different dtypes
+    df2 = df2.astype("str")
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(sr1, sr2)
+
+    # Dfs with categorical dtypes
+    df1 = df1.astype("category")
+    df2 = df2.astype("category")
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since both are categorical
+
+    # Dfs with different dtypes (categorical and str)
+    df1 = df1.astype({"a": "str"})
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(df1, df2)

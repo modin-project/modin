@@ -37,6 +37,7 @@ dependencies:
   - rpyc==4.1.5
   - cloudpickle
   - boto3
+  - moto
   - scikit-learn
   - pymssql
   - psycopg2

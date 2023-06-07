@@ -45,7 +45,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -63,7 +63,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     "op, make_args",
     [
         ("align", lambda df: {"other": df}),
-        ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
         ("ewm", lambda df: {"com": 0.5}),
         ("from_dict", lambda df: {"data": None}),
@@ -221,37 +220,139 @@ def test_combine_first():
     data2 = {"A": [1, 1], "B": [3, 3]}
     modin_df2 = pd.DataFrame(data2)
     pandas_df2 = pandas.DataFrame(data2)
-    df_equals(modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2))
-
-
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-def test_corr(min_periods):
-    eval_general(
-        *create_test_dfs(test_data["int_data"]),
-        lambda df: df.corr(min_periods=min_periods),
+    df_equals(
+        modin_df1.combine_first(modin_df2),
+        pandas_df1.combine_first(pandas_df2),
+        # https://github.com/modin-project/modin/issues/5959
+        check_dtypes=False,
     )
+
+
+class TestCorr:
+    @pytest.mark.parametrize("method", ["pearson", "kendall", "spearman"])
+    def test_corr(self, method):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.corr(method=method),
+        )
+        # Modin result may slightly differ from pandas result
+        # due to floating pointing arithmetic.
+        eval_general(
+            *create_test_dfs(test_data["float_nan_data"]),
+            lambda df: df.corr(method=method),
+            comparator=modin_df_almost_equals_pandas,
+        )
+
+    @pytest.mark.parametrize("min_periods", [1, 3, 5, 6])
+    def test_corr_min_periods(self, min_periods):
+        # only 3 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 1, 5]}),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        # only 5 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, 2, 3, 4, 5, np.nan], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        # only 4 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        if StorageFormat.get() == "Pandas":
+            # only 4 valid values located in different partitions (a valid value is considered a row with no NaNs)
+            modin_df, pandas_df = create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            )
+            modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
+
+            assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+            eval_general(
+                modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
+            )
+
+    @pytest.mark.parametrize("numeric_only", [True, False, None])
+    def test_corr_non_numeric(self, numeric_only):
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
+            lambda df: df.corr(numeric_only=numeric_only),
+        )
+
+    @pytest.mark.skipif(
+        StorageFormat.get() != "Pandas",
+        reason="doesn't make sense for non-partitioned executions",
+    )
+    def test_corr_nans_in_different_partitions(self):
+        # NaN in the first partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in the last partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [1, 2, 3, 4, 5, np.nan], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in two partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in all partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, np.nan, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+
+@pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")
+@pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
+def test_cov(min_periods, ddof):
     # Modin result may slightly differ from pandas result
     # due to floating pointing arithmetic.
-    eval_general(
-        *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: df.corr(min_periods=min_periods),
-        comparator=modin_df_almost_equals_pandas,
-    )
+    if StorageFormat.get() == "Hdk":
 
+        def comparator1(df1, df2):
+            modin_df_almost_equals_pandas(df1, df2, max_diff=0.0002)
 
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-@pytest.mark.parametrize("ddof", [1, 2, 4])
-def test_cov(min_periods, ddof):
+        comparator2 = comparator1
+    else:
+        comparator1 = df_equals
+        comparator2 = modin_df_almost_equals_pandas
+
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: df.cov(min_periods=min_periods, ddof=ddof),
+        comparator=comparator1,
     )
-    # Modin result may slightly differ from pandas result
-    # due to floating pointing arithmetic.
+
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.cov(min_periods=min_periods),
-        comparator=modin_df_almost_equals_pandas,
+        comparator=comparator2,
     )
 
 
@@ -472,11 +573,21 @@ def test_mad_level(level):
     "value_vars", [lambda df: df.columns[-1], lambda df: df.columns[-4:], None]
 )
 def test_melt(data, id_vars, value_vars):
+    if StorageFormat.get() == "Hdk":
+        # Drop NA and sort by all columns to make sure the order
+        # is identical to Pandas.
+        def melt(df, *args, **kwargs):
+            df = df.melt(*args, **kwargs).dropna()
+            return df.sort_values(df.columns.tolist())
+
+    else:
+
+        def melt(df, *args, **kwargs):
+            return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.melt(*args, **kwargs)
-        .sort_values(["variable", "value"])
-        .reset_index(drop=True),
+        lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
         id_vars=id_vars,
         value_vars=value_vars,
     )
@@ -1050,6 +1161,12 @@ def test_truncate(data):
         df_equals(modin_result, pandas_result)
 
 
+def test_truncate_before_greater_than_after():
+    df = pd.DataFrame([[1, 2, 3]])
+    with pytest.raises(ValueError, match="Truncate: 1 must be after 2"):
+        df.truncate(before=2, after=1)
+
+
 def test_tshift():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     data = np.random.randint(0, 100, size=(len(idx), 4))
@@ -1186,12 +1303,13 @@ def test_setattr_axes():
             # In BaseOnPython, setting columns raises a warning because get_axis
             #  defaults to pandas.
             warnings.simplefilter("error")
-        df.index = ["foo", "bar"]
-        df.columns = [9, 10]
+        if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
+            df.index = ["foo", "bar"]
+            # Check that ensure_index was called
+            pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
 
-    # Check that ensure_index was called
-    pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
-    pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+        df.columns = [9, 10]
+        pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

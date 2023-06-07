@@ -15,6 +15,7 @@ import pytest
 import numpy
 
 import modin.numpy as np
+from .utils import assert_scalar_or_array_equal
 
 
 small_arr_c_2d = numpy.array(
@@ -41,10 +42,7 @@ def test_unary_with_axis(operand_shape, operator, axis):
     numpy_result = getattr(numpy, operator)(x1, axis=axis)
     x1 = np.array(x1)
     modin_result = getattr(np, operator)(x1, axis=axis)
-    # Result may be a scalar
-    if isinstance(modin_result, np.array):
-        modin_result = modin_result._to_numpy()
-    numpy.testing.assert_array_equal(
+    assert_scalar_or_array_equal(
         modin_result, numpy_result, err_msg=f"Unary operator {operator} failed."
     )
 
@@ -58,13 +56,13 @@ def test_all_any_where():
 
     where = np.array([[True, False], [False, False]])
     result = arr.all(where=where, axis=1)
-    numpy.testing.assert_array_equal(result, numpy.array([False, True]))
+    assert_scalar_or_array_equal(result, numpy.array([False, True]))
 
     # Results should contain vacuous Trues in the relevant shape
     result = arr.all(where=False, axis=1)
-    numpy.testing.assert_array_equal(result, numpy.array([True, True]))
+    assert_scalar_or_array_equal(result, numpy.array([True, True]))
     result = arr.all(where=False, axis=0)
-    numpy.testing.assert_array_equal(result, numpy.array([True, True]))
+    assert_scalar_or_array_equal(result, numpy.array([True, True]))
     assert bool(arr.all(where=False, axis=None))
 
     where = np.array([[True, False], [False, True]])
@@ -74,13 +72,13 @@ def test_all_any_where():
 
     where = np.array([[False, True], [False, False]])
     result = arr.any(where=where, axis=1)
-    numpy.testing.assert_array_equal(result, numpy.array([True, False]))
+    assert_scalar_or_array_equal(result, numpy.array([True, False]))
 
     # Results should contain vacuous Falses in the relevant shape
     result = arr.any(where=False, axis=1)
-    numpy.testing.assert_array_equal(result, numpy.array([False, False]))
+    assert_scalar_or_array_equal(result, numpy.array([False, False]))
     result = arr.any(where=False, axis=0)
-    numpy.testing.assert_array_equal(result, numpy.array([False, False]))
+    assert_scalar_or_array_equal(result, numpy.array([False, False]))
     assert not bool(arr.any(where=False, axis=None))
 
 
@@ -93,7 +91,7 @@ def test_unary_with_complex(data, operator):
     numpy_result = getattr(numpy, operator)(x1)
     x1 = np.array(x1)
     modin_result = getattr(np, operator)(x1)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 def test_isnat():
@@ -101,7 +99,7 @@ def test_isnat():
     numpy_result = numpy.isnat(x1)
     x1 = np.array(x1)
     modin_result = np.isnat(x1)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 @pytest.mark.parametrize("data", [small_arr_r_2d, small_arr_r_1d], ids=["2D", "1D"])
@@ -111,7 +109,7 @@ def test_unary_without_complex(data, operator):
     numpy_result = getattr(numpy, operator)(x1)
     x1 = np.array(x1)
     modin_result = getattr(np, operator)(x1)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 @pytest.mark.parametrize("data", [small_arr_r_2d, small_arr_r_1d], ids=["2D", "1D"])
@@ -120,7 +118,7 @@ def test_logical_not(data):
     numpy_result = numpy.logical_not(x1)
     x1 = np.array(x1)
     modin_result = np.logical_not(x1)
-    numpy.testing.assert_array_equal(modin_result._to_numpy(), numpy_result)
+    assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
 @pytest.mark.parametrize("operand1_shape", [100, (3, 100)])
@@ -134,8 +132,6 @@ def test_logical_binops(operand1_shape, operand2_shape, operator):
     numpy_result = getattr(numpy, operator)(x1, x2)
     x1, x2 = np.array(x1), np.array(x2)
     modin_result = getattr(np, operator)(x1, x2)
-    numpy.testing.assert_array_equal(
-        modin_result._to_numpy(),
-        numpy_result,
-        err_msg=f"Logic binary operator {operator} failed.",
+    assert_scalar_or_array_equal(
+        modin_result, numpy_result, err_msg=f"Logic binary operator {operator} failed."
     )
