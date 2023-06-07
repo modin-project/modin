@@ -301,15 +301,10 @@ class Rolling(ClassLogger):
     excluded=[pandas.core.window.expanding.Expanding.__init__],
 )
 class Expanding(ClassLogger):
-    def __init__(self, dataframe, min_periods=1, center=None, axis=0, method="single"):
+    def __init__(self, dataframe, min_periods=1, axis=0, method="single"):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        self.expanding_args = [
-            min_periods,
-            center,
-            axis,
-            method,
-        ]
+        self.expanding_args = [min_periods, axis, method]
         self.axis = axis
 
     def aggregate(self, func, *args, **kwargs):

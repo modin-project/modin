@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import sys
 import pytest
 import numpy as np
 import pandas
@@ -69,7 +70,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
         ("interpolate", None),
-        ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
         ("to_xarray", None),
@@ -79,6 +79,8 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
+    if op == "to_xarray" and sys.version_info < (3, 9):
+        pytest.skip("xarray doesn't support pandas>=2.0 for python 3.8")
     with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:
@@ -455,7 +457,6 @@ def test_info_default_param(data):
             verbose=None,
             max_cols=None,
             memory_usage=None,
-            null_counts=None,
             operation=lambda df, **kwargs: df.info(**kwargs),
             buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
         )
@@ -474,8 +475,8 @@ def test_info_default_param(data):
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
-@pytest.mark.parametrize("null_counts", [True, False])
-def test_info(data, verbose, max_cols, memory_usage, null_counts):
+@pytest.mark.parametrize("show_counts", [True, False])
+def test_info(data, verbose, max_cols, memory_usage, show_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -484,7 +485,7 @@ def test_info(data, verbose, max_cols, memory_usage, null_counts):
             verbose=verbose,
             max_cols=max_cols,
             memory_usage=memory_usage,
-            null_counts=null_counts,
+            show_counts=show_counts,
             buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
         )
         modin_info = first.getvalue().splitlines()
@@ -510,22 +511,6 @@ def test_kurt_kurtosis(axis, skipna, numeric_only, method):
     )
 
 
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_kurt_kurtosis_level(level):
-    data = test_data["int_data"]
-    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    df_modin.columns = index
-    df_pandas.columns = index
-
-    eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(axis=1, level=level),
-    )
-
-
 def test_last():
     modin_index = pd.date_range("2010-04-09", periods=400, freq="2D")
     pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")
@@ -537,32 +522,6 @@ def test_last():
     )
     df_equals(modin_df.last("3D"), pandas_df.last("3D"))
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
-
-
-@pytest.mark.parametrize("data", test_data_values)
-@pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("skipna", [None, True, False])
-def test_mad(data, axis, skipna):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    df_equals(
-        modin_df.mad(axis=axis, skipna=skipna, level=None),
-        pandas_df.mad(axis=axis, skipna=skipna, level=None),
-    )
-
-
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_mad_level(level):
-    data = test_data_values[0]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    modin_df.columns = index
-    pandas_df.columns = index
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.mad(axis=1, level=level),
-    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -775,10 +734,8 @@ def test_resampler(rule, axis):
         test_data_resample["data"],
         test_data_resample["index"],
     )
-    modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis, base=2)
-    pandas_resampler = pandas.DataFrame(data, index=index).resample(
-        rule, axis=axis, base=2
-    )
+    modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis)
+    pandas_resampler = pandas.DataFrame(data, index=index).resample(rule, axis=axis)
 
     assert pandas_resampler.indices == modin_resampler.indices
     assert pandas_resampler.groups == modin_resampler.groups
@@ -796,7 +753,7 @@ def test_resampler(rule, axis):
     [
         *("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
         *("min", "median", "mean", "max", "last", "first", "nunique", "var"),
-        *("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
+        *("interpolate", "asfreq", "nearest", "bfill", "ffill"),
     ],
 )
 def test_resampler_functions(rule, axis, method):
@@ -810,7 +767,7 @@ def test_resampler_functions(rule, axis, method):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(),
+        lambda df: getattr(df.resample(rule, axis=axis), method)(),
     )
 
 
@@ -838,7 +795,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(arg),
+        lambda df: getattr(df.resample(rule, axis=axis), method)(arg),
     )
 
 
@@ -931,7 +888,7 @@ def test_resample_getitem(columns):
 @pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_shift_slice_shift(data, index, axis, periods):
+def test_shift(data, index, axis, periods):
     modin_df, pandas_df = create_test_dfs(data)
     if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
@@ -946,10 +903,6 @@ def test_shift_slice_shift(data, index, axis, periods):
     df_equals(
         modin_df.shift(periods=periods, axis=axis, fill_value=777),
         pandas_df.shift(periods=periods, axis=axis, fill_value=777),
-    )
-    df_equals(
-        modin_df.slice_shift(periods=periods, axis=axis),
-        pandas_df.slice_shift(periods=periods, axis=axis),
     )
 
 
@@ -1165,14 +1118,6 @@ def test_truncate_before_greater_than_after():
     df = pd.DataFrame([[1, 2, 3]])
     with pytest.raises(ValueError, match="Truncate: 1 must be after 2"):
         df.truncate(before=2, after=1)
-
-
-def test_tshift():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    data = np.random.randint(0, 100, size=(len(idx), 4))
-    modin_df = pd.DataFrame(data, index=idx)
-    pandas_df = pandas.DataFrame(data, index=idx)
-    df_equals(modin_df.tshift(4), pandas_df.tshift(4))
 
 
 def test_tz_convert():

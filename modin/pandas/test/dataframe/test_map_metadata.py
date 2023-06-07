@@ -196,18 +196,32 @@ def test_abs(request, data):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_prefix(data):
+def test_add_prefix(data, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     test_prefix = "TEST"
-    new_modin_df = modin_df.add_prefix(test_prefix)
-    new_pandas_df = pandas_df.add_prefix(test_prefix)
+    new_modin_df = modin_df.add_prefix(test_prefix, axis=axis)
+    new_pandas_df = pandas_df.add_prefix(test_prefix, axis=axis)
     df_equals(new_modin_df.columns, new_pandas_df.columns)
     # TODO(https://github.com/modin-project/modin/issues/3804):
     # make df_equals always check dtypes.
     df_equals(new_modin_df.dtypes, new_pandas_df.dtypes)
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add_suffix(data, axis):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    test_suffix = "TEST"
+    new_modin_df = modin_df.add_suffix(test_suffix, axis=axis)
+    new_pandas_df = pandas_df.add_suffix(test_suffix, axis=axis)
+
+    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -240,18 +254,6 @@ def test_applymap_numeric(request, data, testfunc):
         else:
             modin_result = modin_df.applymap(testfunc)
             df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_suffix(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    test_suffix = "TEST"
-    new_modin_df = modin_df.add_suffix(test_suffix)
-    new_pandas_df = pandas_df.add_suffix(test_suffix)
-
-    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -383,71 +385,6 @@ def test_isnull(data):
     modin_result = modin_df.isnull()
 
     df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_append(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    data_to_append = {"append_a": 2, "append_b": 1000}
-
-    ignore_idx_values = [True, False]
-
-    for ignore in ignore_idx_values:
-        try:
-            pandas_result = pandas_df.append(data_to_append, ignore_index=ignore)
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append(data_to_append, ignore_index=ignore)
-        else:
-            modin_result = modin_df.append(data_to_append, ignore_index=ignore)
-            df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.append(pandas_df.iloc[-1])
-    except Exception as err:
-        with pytest.raises(type(err)):
-            modin_df.append(modin_df.iloc[-1])
-    else:
-        modin_result = modin_df.append(modin_df.iloc[-1])
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.append(list(pandas_df.iloc[-1]))
-    except Exception as err:
-        with pytest.raises(type(err)):
-            modin_df.append(list(modin_df.iloc[-1]))
-    else:
-        modin_result = modin_df.append(list(modin_df.iloc[-1]))
-        df_equals(modin_result, pandas_result)
-
-    verify_integrity_values = [True, False]
-
-    for verify_integrity in verify_integrity_values:
-        try:
-            pandas_result = pandas_df.append(
-                [pandas_df, pandas_df], verify_integrity=verify_integrity
-            )
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
-        else:
-            modin_result = modin_df.append(
-                [modin_df, modin_df], verify_integrity=verify_integrity
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.append(
-                pandas_df, verify_integrity=verify_integrity
-            )
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append(modin_df, verify_integrity=verify_integrity)
-        else:
-            modin_result = modin_df.append(modin_df, verify_integrity=verify_integrity)
-            df_equals(modin_result, pandas_result)
 
 
 def test_astype():
@@ -830,6 +767,28 @@ def test_convert_dtypes_single_partition(
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.parametrize("dtype_backend", ["numpy_nullable", "pyarrow"])
+def test_convert_dtypes_dtype_backend(dtype_backend):
+    data = {
+        "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+    }
+
+    def comparator(df1, df2):
+        df_equals(df1, df2)
+        df_equals(df1.dtypes, df2.dtypes)
+
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.convert_dtypes(dtype_backend=dtype_backend),
+        comparator=comparator,
+    )
+
+
 @pytest.mark.xfail(
     StorageFormat.get() == "Hdk",
     reason="HDK does not support columns with different types",
@@ -927,9 +886,9 @@ def test_drop():
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
     pytest.raises(KeyError, modin_simple.drop, 5)
-    pytest.raises(KeyError, modin_simple.drop, "C", 1)
+    pytest.raises(KeyError, modin_simple.drop, "C", axis=1)
     pytest.raises(KeyError, modin_simple.drop, [1, 5])
-    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], 1)
+    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], axis=1)
 
     # errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)
@@ -993,7 +952,7 @@ def test_drop_api_equivalence():
     modin_df2 = modin_df.drop(index="a")
     df_equals(modin_df1, modin_df2)
 
-    modin_df1 = modin_df.drop("d", 1)
+    modin_df1 = modin_df.drop("d", axis=1)
     modin_df2 = modin_df.drop(columns="d")
     df_equals(modin_df1, modin_df2)
 

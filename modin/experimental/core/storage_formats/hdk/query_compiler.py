@@ -551,9 +551,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert all(
             isinstance(o, type(self)) for o in other
         ), "Different Manager objects are being used. This is not allowed"
-        sort = kwargs.get("sort", None)
+        sort = kwargs.get("sort", False)
         if sort is None:
-            sort = False
+            raise ValueError(
+                "The 'sort' keyword only accepts boolean values; None was passed."
+            )
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frames = [o._modin_frame for o in other]

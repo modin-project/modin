@@ -26,7 +26,7 @@ from pandas.core.dtypes.common import (
 )
 from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import IndexKeyFunc, Axis, IgnoreRaise, Level
+from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
 
@@ -89,7 +89,7 @@ class Series(BasePandasDataset):
         index=None,
         dtype=None,
         name=None,
-        copy=False,
+        copy=None,
         fastpath=False,
         query_compiler=None,
     ):
@@ -524,97 +524,23 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
-    def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
+    def add_prefix(self, prefix, axis=None):  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
         """
+        axis = 0 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix, axis=0)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis=axis)
         )
 
-    def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
+    def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
+        axis = 0 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix, axis=0)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis=axis)
         )
-
-    def append(
-        self, to_append, ignore_index=False, verify_integrity=False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Concatenate two or more Series.
-        """
-        from .dataframe import DataFrame
-
-        bad_type_msg = (
-            'cannot concatenate object of type "{}"; only pd.Series, '
-            + "pd.DataFrame, and pd.Panel (deprecated) objs are valid"
-        )
-        if isinstance(to_append, list):
-            if not all(isinstance(o, BasePandasDataset) for o in to_append):
-                raise TypeError(
-                    bad_type_msg.format(
-                        type(
-                            next(
-                                o
-                                for o in to_append
-                                if not isinstance(o, BasePandasDataset)
-                            )
-                        )
-                    )
-                )
-            elif all(isinstance(o, Series) for o in to_append):
-                self.name = None
-                for i in range(len(to_append)):
-                    to_append[i].name = None
-                    to_append[i] = to_append[i]._query_compiler
-            else:
-                # Matching pandas behavior of naming the Series columns 0
-                self.name = 0
-                for i in range(len(to_append)):
-                    if isinstance(to_append[i], Series):
-                        to_append[i].name = 0
-                        to_append[i] = DataFrame(to_append[i])
-                return DataFrame(self.copy()).append(
-                    to_append,
-                    ignore_index=ignore_index,
-                    verify_integrity=verify_integrity,
-                )
-        elif isinstance(to_append, Series):
-            self.name = None
-            to_append.name = None
-            to_append = [to_append._query_compiler]
-        elif isinstance(to_append, DataFrame):
-            self.name = 0
-            return DataFrame(self.copy()).append(
-                to_append, ignore_index=ignore_index, verify_integrity=verify_integrity
-            )
-        else:
-            raise TypeError(bad_type_msg.format(type(to_append)))
-        # If ignore_index is False, by definition the Index will be correct.
-        # We also do this first to ensure that we don't waste compute/memory.
-        if verify_integrity and not ignore_index:
-            appended_index = (
-                self.index.append(to_append.index)
-                if not isinstance(to_append, list)
-                else self.index.append([o.index for o in to_append])
-            )
-            is_valid = next((False for idx in appended_index.duplicated() if idx), True)
-            if not is_valid:
-                raise ValueError(
-                    "Indexes have overlapping values: {}".format(
-                        appended_index[appended_index.duplicated()]
-                    )
-                )
-        query_compiler = self._query_compiler.concat(
-            0, to_append, ignore_index=ignore_index, sort=None
-        )
-        if len(query_compiler.columns) > 1:
-            return DataFrame(query_compiler=query_compiler)
-        else:
-            return self.__constructor__(query_compiler=query_compiler)
 
     def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -847,11 +773,11 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.series_corr(other, method, min_periods)
         )
 
-    def count(self, level=None):  # noqa: PR01, RT01, D200
+    def count(self):  # noqa: PR01, RT01, D200
         """
         Return number of non-NA/null observations in the Series.
         """
-        return super(Series, self).count(level=level)
+        return super(Series, self).count()
 
     def cov(
         self, other, min_periods=None, ddof: Optional[int] = 1
@@ -891,14 +817,19 @@ class Series(BasePandasDataset):
         return result
 
     def describe(
-        self, percentiles=None, include=None, exclude=None, datetime_is_numeric=False
+        self,
+        percentiles=None,
+        include=None,
+        exclude=None,
     ):  # noqa: PR01, RT01, D200
         """
         Generate descriptive statistics.
         """
         # Pandas ignores the `include` and `exclude` for Series for some reason.
         return super(Series, self).describe(
-            percentiles=percentiles, datetime_is_numeric=datetime_is_numeric
+            percentiles=percentiles,
+            include=None,
+            exclude=None,
         )
 
     def diff(self, periods=1):  # noqa: PR01, RT01, D200
@@ -958,17 +889,25 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.dot(other, squeeze_self=True)
         )
 
-    def drop_duplicates(self, keep="first", inplace=False):  # noqa: PR01, RT01, D200
+    def drop_duplicates(
+        self, *, keep="first", inplace=False, ignore_index=False
+    ):  # noqa: PR01, RT01, D200
         """
         Return Series with duplicate values removed.
         """
-        return super(Series, self).drop_duplicates(keep=keep, inplace=inplace)
+        return super(Series, self).drop_duplicates(
+            keep=keep, inplace=inplace, ignore_index=ignore_index
+        )
 
-    def dropna(self, axis=0, inplace=False, how=None):  # noqa: PR01, RT01, D200
+    def dropna(
+        self, *, axis=0, inplace=False, how=None, ignore_index=False
+    ):  # noqa: PR01, RT01, D200
         """
         Return a new Series with missing values removed.
         """
-        return super(Series, self).dropna(axis=axis, inplace=inplace)
+        return super(Series, self).dropna(
+            axis=axis, inplace=inplace, ignore_index=ignore_index
+        )
 
     def duplicated(self, keep="first"):  # noqa: PR01, RT01, D200
         """
@@ -1002,22 +941,20 @@ class Series(BasePandasDataset):
             ignore_index=ignore_index,
         )
 
-    def factorize(
-        self, sort=False, na_sentinel=no_default, use_na_sentinel=no_default
-    ):  # noqa: PR01, RT01, D200
+    def factorize(self, sort=False, use_na_sentinel=True):  # noqa: PR01, RT01, D200
         """
         Encode the object as an enumerated type or categorical variable.
         """
         return self._default_to_pandas(
             pandas.Series.factorize,
             sort=sort,
-            na_sentinel=na_sentinel,
             use_na_sentinel=use_na_sentinel,
         )
 
     def fillna(
         self,
         value=None,
+        *,
         method=None,
         axis=None,
         inplace=False,
@@ -1068,26 +1005,13 @@ class Series(BasePandasDataset):
         level=None,
         as_index=True,
         sort=True,
-        group_keys=no_default,
-        squeeze=no_default,
+        group_keys=True,
         observed=False,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Group Series using a mapper or by a Series of columns.
         """
-        if squeeze is not no_default:
-            warnings.warn(
-                (
-                    "The `squeeze` parameter is deprecated and "
-                    + "will be removed in a future version."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            squeeze = False
-
         from .groupby import SeriesGroupBy
 
         if not as_index:
@@ -1107,7 +1031,6 @@ class Series(BasePandasDataset):
             as_index,
             sort,
             group_keys,
-            squeeze,
             idx_name=None,
             observed=observed,
             drop=False,
@@ -1206,12 +1129,6 @@ class Series(BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def iteritems(self):  # noqa: RT01, D200
-        """
-        Lazily iterate over (index, value) tuples.
-        """
-        return self.items()
-
     def keys(self):  # noqa: RT01, D200
         """
         Return alias for index.
@@ -1220,17 +1137,16 @@ class Series(BasePandasDataset):
 
     def kurt(
         self,
-        axis: Axis | None | NoDefault = no_default,
+        axis: Axis = 0,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Return unbiased kurtosis over requested axis.
         """
         axis = self._get_axis_number(axis)
-        return super(Series, self).kurt(axis, skipna, level, numeric_only, **kwargs)
+        return super(Series, self).kurt(axis, skipna, numeric_only, **kwargs)
 
     kurtosis = kurt
 
@@ -1247,21 +1163,6 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
-
-    def mask(
-        self,
-        cond,
-        other=np.nan,
-        inplace: bool = False,
-        axis: Axis | None = None,
-        level: Level = None,
-        errors: IgnoreRaise | NoDefault = no_default,
-        try_cast=no_default,
-    ):  # noqa: PR01, RT01, D200
-        # This method exists because `errors` has different default value for Series :(
-        return super(Series, self).mask(
-            cond, other, inplace, axis, level, "raise", try_cast
-        )
 
     def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
         """
@@ -1365,29 +1266,6 @@ class Series(BasePandasDataset):
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Equivalent to `shift` without copying data.
-        """
-        if periods == 0:
-            return self.copy()
-
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                return self.__constructor__(dtype=self.dtype, name=self.name)
-            else:
-                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
-                new_df.index = (
-                    self.index[periods:] if periods > 0 else self.index[:periods]
-                )
-                return new_df
-        else:
-            raise ValueError(
-                "No axis named {axis} for object type {type}".format(
-                    axis=axis, type=type(self)
-                )
-            )
-
     def shift(
         self, periods=1, freq=None, axis=0, fill_value=None
     ):  # noqa: PR01, RT01, D200
@@ -1465,24 +1343,12 @@ class Series(BasePandasDataset):
         self,
         axis=None,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         min_count=0,
         **kwargs,
     ):
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).prod(
-                numeric_only=numeric_only, min_count=min_count, **kwargs
-            )
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
             return np.nan
@@ -1493,7 +1359,6 @@ class Series(BasePandasDataset):
                 data._query_compiler.prod_min_count(
                     axis=axis,
                     skipna=skipna,
-                    level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
                     **kwargs,
@@ -1503,7 +1368,6 @@ class Series(BasePandasDataset):
             data._query_compiler.prod(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
@@ -1523,27 +1387,20 @@ class Series(BasePandasDataset):
         return data
 
     @_inherit_docstrings(pandas.Series.reindex, apilink="pandas.Series.reindex")
-    def reindex(self, *args, **kwargs):
-        if args:
-            if len(args) > 1:
-                raise TypeError("Only one positional argument ('index') is allowed")
-            if "index" in kwargs:
-                raise TypeError(
-                    "'index' passed as both positional and keyword argument"
-                )
-            kwargs.update({"index": args[0]})
-        index = kwargs.pop("index", None)
-        method = kwargs.pop("method", None)
-        level = kwargs.pop("level", None)
-        copy = kwargs.pop("copy", True)
-        limit = kwargs.pop("limit", None)
-        tolerance = kwargs.pop("tolerance", None)
-        fill_value = kwargs.pop("fill_value", np.nan)
-        if kwargs:
-            raise TypeError(
-                "reindex() got an unexpected keyword "
-                + f'argument "{list(kwargs.keys())[0]}"'
-            )
+    def reindex(
+        self,
+        index=None,
+        *,
+        axis: Axis = None,
+        method: str = None,
+        copy: Optional[bool] = None,
+        level=None,
+        fill_value=None,
+        limit: int = None,
+        tolerance=None,
+    ):  # noqa: PR01, RT01, D200
+        if fill_value is None:
+            fill_value = np.nan
         return super(Series, self).reindex(
             index=index,
             columns=None,
@@ -1560,7 +1417,7 @@ class Series(BasePandasDataset):
         index=None,
         *,
         axis=None,
-        copy=True,
+        copy=None,
         inplace=False,
         level=None,
         errors="ignore",
@@ -1599,6 +1456,7 @@ class Series(BasePandasDataset):
     def reset_index(
         self,
         level=None,
+        *,
         drop=False,
         name=no_default,
         inplace=False,
@@ -1731,6 +1589,7 @@ class Series(BasePandasDataset):
         self,
         to_replace=None,
         value=no_default,
+        *,
         inplace=False,
         limit=None,
         regex=False,
@@ -1785,6 +1644,7 @@ class Series(BasePandasDataset):
 
     def sort_values(
         self,
+        *,
         axis=0,
         ascending=True,
         inplace=False,
@@ -1851,8 +1711,7 @@ class Series(BasePandasDataset):
         self,
         axis=None,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -1861,17 +1720,6 @@ class Series(BasePandasDataset):
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).sum(
-                numeric_only=numeric_only, min_count=min_count, **kwargs
-            )
 
         new_index = self.columns if axis else self.index
         if min_count > len(new_index):
@@ -1885,7 +1733,6 @@ class Series(BasePandasDataset):
                 data._query_compiler.sum_min_count(
                     axis=axis,
                     skipna=skipna,
-                    level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
                     **kwargs,
@@ -1895,25 +1742,25 @@ class Series(BasePandasDataset):
             data._query_compiler.sum(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
             )
         )
 
-    def swaplevel(self, i=-2, j=-1, copy=True):  # noqa: PR01, RT01, D200
+    def swaplevel(self, i=-2, j=-1, copy=None):  # noqa: PR01, RT01, D200
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
+        copy = True if copy is None else copy
         obj = self.copy() if copy else self
         return super(Series, obj).swaplevel(i, j, axis=0)
 
-    def take(self, indices, axis=0, is_copy=None, **kwargs):  # noqa: PR01, RT01, D200
+    def take(self, indices, axis=0, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the elements in the given positional indices along an axis.
         """
-        return super(Series, self).take(indices, axis=axis, is_copy=is_copy, **kwargs)
+        return super(Series, self).take(indices, axis=axis, **kwargs)
 
     def to_dict(self, into=dict):  # pragma: no cover # noqa: PR01, RT01, D200
         """
@@ -1971,7 +1818,7 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_period(self, freq=None, copy=True):  # noqa: PR01, RT01, D200
+    def to_period(self, freq=None, copy=None):  # noqa: PR01, RT01, D200
         """
         Cast to PeriodArray/Index at a particular frequency.
         """
@@ -2008,7 +1855,7 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_timestamp(self, freq=None, how="start", copy=True):  # noqa: PR01, RT01, D200
+    def to_timestamp(self, freq=None, how="start", copy=None):  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of Timestamps, at beginning of period.
         """
@@ -2077,8 +1924,6 @@ class Series(BasePandasDataset):
             ascending=ascending,
             dropna=dropna,
         )
-        # pandas sets output index names to None because the Series name already contains it
-        counted_values._query_compiler.set_index_name(None)
         return counted_values
 
     def view(self, dtype=None):  # noqa: PR01, RT01, D200
@@ -2093,11 +1938,10 @@ class Series(BasePandasDataset):
         self,
         cond,
         other=no_default,
+        *,
         inplace=False,
         axis=None,
         level=None,
-        errors=no_default,
-        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.
@@ -2114,8 +1958,6 @@ class Series(BasePandasDataset):
             inplace=inplace,
             axis=axis,
             level=level,
-            errors=errors,
-            try_cast=try_cast,
         )
 
     @property
@@ -2171,13 +2013,11 @@ class Series(BasePandasDataset):
         return self.isna().sum() > 0
 
     @property
-    def is_monotonic(self):  # noqa: RT01, D200
+    def is_monotonic_increasing(self):  # noqa: RT01, D200
         """
         Return True if values in the Series are monotonic_increasing.
         """
         return self._reduce_dimension(self._query_compiler.is_monotonic_increasing())
-
-    is_monotonic_increasing = is_monotonic
 
     @property
     def is_monotonic_decreasing(self):  # noqa: RT01, D200
@@ -2224,7 +2064,7 @@ class Series(BasePandasDataset):
         self: "Series",
         other,
         method=None,
-        copy: bool = True,
+        copy: Optional[bool] = None,
         limit=None,
         tolerance=None,
     ) -> "Series":

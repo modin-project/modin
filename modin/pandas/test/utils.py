@@ -1159,13 +1159,13 @@ def get_unique_filename(
         name of the test for which the unique file name is needed.
     kwargs: list of ints
         Unique combiantion of test parameters for creation of unique name.
-    extension: str
+    extension: str, default: "csv"
         Extension of unique file.
     data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.
-    debug_mode: bool
+    debug_mode: bool, default: False
         Get unique filename containing kwargs values.
         Otherwise kwargs values will be replaced with hash equivalent.
 
@@ -1373,7 +1373,7 @@ def _make_csv_file(filenames):
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=None,
+        lineterminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -1412,7 +1412,7 @@ def _make_csv_file(filenames):
                 compression=compression,
                 index=False,
                 decimal=decimal_separator if decimal_separator else ".",
-                line_terminator=line_terminator,
+                lineterminator=lineterminator,
                 quoting=quoting,
                 quotechar=quotechar,
                 doublequote=doublequote,
@@ -1422,7 +1422,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "lineterminator": lineterminator if lineterminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }

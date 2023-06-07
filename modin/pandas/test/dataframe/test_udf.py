@@ -19,6 +19,7 @@ from modin.config import MinPartitionSize
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like
+from pandas._libs.lib import no_default
 from modin.pandas.test.utils import (
     random_state,
     df_equals,
@@ -136,7 +137,7 @@ def test_apply_key_error(func):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize("level", [no_default, None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
@@ -390,7 +391,7 @@ def test_pipe(data):
 
     def g(x, arg1=0):
         for _ in range(arg1):
-            x = x.append(x)
+            x = (pd if isinstance(x, pd.DataFrame) else pandas).concat((x, x))
         return x
 
     def f(x, arg2=0, arg3=0):

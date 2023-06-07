@@ -931,6 +931,6 @@ def build_dt_expr(dt_operation, col_expr):
     """
     operation = LiteralExpr(dt_operation)
 
-    res = OpExpr("PG_EXTRACT", [operation, col_expr], get_dtype(int))
+    res = OpExpr("PG_EXTRACT", [operation, col_expr], get_dtype("int32"))
 
     return res

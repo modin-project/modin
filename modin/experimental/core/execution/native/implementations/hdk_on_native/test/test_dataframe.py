@@ -999,7 +999,10 @@ class TestGroupby:
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         def taxi_q3(df, as_index, **kwargs):
-            return df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
+            # TODO: remove 'astype' temp fix
+            return df.groupby(
+                ["b", df["c"].dt.year.astype("int32")], as_index=as_index
+            ).size()
 
         run_and_compare(taxi_q3, data=self.taxi_data, as_index=as_index)
 
@@ -1878,7 +1881,8 @@ class TestDateTime:
                 "2018-10-26 13:00:15",
                 "2020-10-26 04:00:15",
                 "2020-10-26",
-            ]
+            ],
+            format="mixed",
         ),
     }
 
@@ -2551,21 +2555,19 @@ class TestDuplicateColumns:
             labels = [
                 np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))
             ]
-            inplace = kwargs["set_axis_inplace"]
-            res = df.set_axis(labels, axis=1, inplace=inplace)
-            return df if inplace else res
+            return df.set_axis(labels, axis=1, copy=kwargs["copy"])
 
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=True,
+            copy=True,
         )
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=False,
+            copy=False,
         )
 
 

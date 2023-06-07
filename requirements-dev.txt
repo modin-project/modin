@@ -1,9 +1,9 @@
-pandas==1.5.3
+pandas==2.0.2
 numpy>=1.18.5
 dask[complete]>=2.22.0
 distributed>=2.22.0
 ray[default]>=1.13.0
-pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
+pyarrow
 psutil
 fsspec
 xarray

@@ -30,16 +30,31 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
 
 
+@pytest.mark.parametrize(
+    "exclude_datetime",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
 @pytest.mark.parametrize("from_hdk", [True, False])
 @pytest.mark.parametrize("n_chunks", [None, 3, 5, 12])
-def test_simple_export(data_has_nulls, from_hdk, n_chunks):
+def test_simple_export(data_has_nulls, from_hdk, n_chunks, exclude_datetime):
     if from_hdk:
         # HDK can't import 'uint64' as well as booleans
         # issue for bool: https://github.com/modin-project/modin/issues/4299
         exclude_dtypes = ["bool", "uint64"]
     else:
-        exclude_dtypes = None
+        exclude_dtypes = []
+
+    if exclude_datetime:
+        exclude_dtypes += ["datetime"]
 
     data = get_data_of_all_types(
         has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
@@ -50,12 +65,29 @@ def test_simple_export(data_has_nulls, from_hdk, n_chunks):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.parametrize(
+    "exclude_datetime",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("n_chunks", [2, 4, 7])
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
+def test_export_aligned_at_chunks(n_chunks, data_has_nulls, exclude_datetime):
     """Test export from DataFrame exchange protocol when internal PyArrow table is equaly chunked."""
+    exclude_dtypes = ["category"]
+    if exclude_datetime:
+        exclude_dtypes += ["datetime"]
     # Modin DataFrame constructor can't process PyArrow's category when using `from_arrow`, so exclude it
-    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    data = get_data_of_all_types(
+        has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
+    )
     pd_df = pandas.DataFrame(data)
     pd_chunks = split_df_into_chunks(pd_df, n_chunks)
 
@@ -80,8 +112,20 @@ def test_export_aligned_at_chunks(n_chunks, data_has_nulls):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.parametrize(
+    "exclude_datetime",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-def test_export_unaligned_at_chunks(data_has_nulls):
+def test_export_unaligned_at_chunks(data_has_nulls, exclude_datetime):
     """
     Test export from DataFrame exchange protocol when internal PyArrow table's chunks are unaligned.
 
@@ -89,8 +133,13 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     each column has its individual chunking and so some preprocessing is required in order
     to emulate equaly chunked columns in the protocol.
     """
+    exclude_dtypes = ["category"]
+    if exclude_datetime:
+        exclude_dtypes += ["datetime"]
     # Modin DataFrame constructor can't process PyArrow's category when using `from_arrow`, so exclude it
-    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    data = get_data_of_all_types(
+        has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
+    )
     pd_df = pandas.DataFrame(data)
     # divide columns in 3 groups: unchunked, 2-chunked, 7-chunked
     chunk_groups = [1, 2, 7]
@@ -139,15 +188,32 @@ def test_export_unaligned_at_chunks(data_has_nulls):
     df_equals(md_df, exported_df)
 
 
+@pytest.mark.parametrize(
+    "exclude_datetime",
+    [
+        True,
+        pytest.param(
+            False,
+            marks=pytest.mark.xfail(
+                reason="conversion from 'pyarrow' ends up with the wrong datetime64 resolution"
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("data_has_nulls", [True, False])
-def test_export_indivisible_chunking(data_has_nulls):
+def test_export_indivisible_chunking(data_has_nulls, exclude_datetime):
     """
     Test ``.get_chunks(n_chunks)`` when internal PyArrow table's is 'indivisibly chunked'.
 
     The setup for the test is a PyArrow table having one of the chunk consisting of a single row,
     meaning that the chunk can't be subdivide.
     """
-    data = get_data_of_all_types(has_nulls=data_has_nulls, exclude_dtypes=["category"])
+    exclude_dtypes = ["category"]
+    if exclude_datetime:
+        exclude_dtypes += ["datetime"]
+    data = get_data_of_all_types(
+        has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
+    )
     pd_df = pandas.DataFrame(data)
     pd_chunks = (pd_df.iloc[:1], pd_df.iloc[1:])
 

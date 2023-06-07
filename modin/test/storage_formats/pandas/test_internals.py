@@ -166,8 +166,8 @@ def test_aligning_blocks_with_duplicated_index():
     data21 = [0]
     data22 = [1, 2, 3]
 
-    df1 = pd.DataFrame(data11).append(pd.DataFrame(data12))
-    df2 = pd.DataFrame(data21).append(pd.DataFrame(data22))
+    df1 = pd.concat((pd.DataFrame(data11), pd.DataFrame(data12)))
+    df2 = pd.concat((pd.DataFrame(data21), pd.DataFrame(data22)))
 
     repr(df1 - df2)
 
@@ -177,7 +177,7 @@ def test_aligning_partitions():
     modin_df1, _ = create_test_dfs({"a": data, "b": data})
     modin_df = modin_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
     repr(modin_df2)

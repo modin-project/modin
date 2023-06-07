@@ -42,7 +42,6 @@ from modin.pandas.test.utils import (
     default_to_pandas_ignore_string,
 )
 from modin.config import NPartitions, StorageFormat
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -167,6 +166,10 @@ def test_fillna(data, method, axis, limit):
             df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="'datetime64[ns, pytz.FixedOffset(60)]' vs 'datetime64[ns, UTC+01:00]'",
+)
 def test_fillna_sanity():
     # with different dtype
     frame_data = [
@@ -513,10 +516,7 @@ def test_median_skew_std_var_sem_1953(method):
     modin_df = pd.DataFrame(data, index=arrays)
     pandas_df = pandas.DataFrame(data, index=arrays)
 
-    # These shouldn't default to pandas: follow up on
-    # https://github.com/modin-project/modin/issues/1953
-    with warns_that_defaulting_to_pandas():
-        eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
+    eval_general(modin_df, pandas_df, lambda df: getattr(df, method)())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

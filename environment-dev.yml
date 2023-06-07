@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
+  - pandas==2.0.2
   - numpy>=1.18.5
   - ray-default>=1.13.0
   - pyarrow
@@ -12,7 +12,8 @@ dependencies:
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
-  - xarray
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - Jinja2
   - scipy
   - pip

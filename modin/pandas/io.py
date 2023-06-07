@@ -41,6 +41,7 @@ from pandas._typing import (
     ConvertersArg,
     ParseDatesArg,
     XMLParsers,
+    DtypeBackend,
 )
 import pathlib
 import pickle
@@ -102,6 +103,7 @@ def _read(**kwargs):
 @enable_logging
 def read_xml(
     path_or_buffer: FilePath | ReadBuffer[bytes] | ReadBuffer[str],
+    *,
     xpath: str = "./*",
     namespaces: dict[str, str] | None = None,
     elems_only: bool = False,
@@ -116,33 +118,18 @@ def read_xml(
     iterparse: dict[str, list[str]] | None = None,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame:
     ErrorMessage.default_to_pandas("read_xml")
-    return DataFrame(
-        pandas.read_xml(
-            path_or_buffer,
-            xpath=xpath,
-            namespaces=namespaces,
-            elems_only=elems_only,
-            attrs_only=attrs_only,
-            names=names,
-            dtype=dtype,
-            converters=converters,
-            parse_dates=parse_dates,
-            encoding=encoding,
-            parser=parser,
-            stylesheet=stylesheet,
-            iterparse=iterparse,
-            compression=compression,
-            storage_options=storage_options,
-        )
-    )
+    _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+    return DataFrame(pandas.read_xml(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
 @enable_logging
 def read_csv(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    *,
     sep: str | None | NoDefault = no_default,
     delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
@@ -150,9 +137,6 @@ def read_csv(
     names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze: bool | None = None,
-    prefix: str | NoDefault = no_default,
-    mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
     engine: CSVEngine | None = None,
@@ -171,9 +155,10 @@ def read_csv(
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=None,
-    infer_datetime_format: bool = False,
+    infer_datetime_format: bool = no_default,
     keep_date_col: bool = False,
-    date_parser=None,
+    date_parser=no_default,
+    date_format=None,
     dayfirst: bool = False,
     cache_dates: bool = True,
     # Iteration
@@ -193,24 +178,20 @@ def read_csv(
     encoding_errors: str | None = "strict",
     dialect: str | csv.Dialect | None = None,
     # Error Handling
-    error_bad_lines: bool | None = None,
-    warn_bad_lines: bool | None = None,
-    on_bad_lines=None,
+    on_bad_lines="error",
     # Internal
     delim_whitespace: bool = False,
     low_memory=_c_parser_defaults["low_memory"],
     memory_map: bool = False,
     float_precision: Literal["high", "legacy"] | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
     }
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    f_locals.pop("mangle_dupe_cols", None)
     kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
     return _read(**kwargs)
 
@@ -219,6 +200,7 @@ def read_csv(
 @enable_logging
 def read_table(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    *,
     sep: str | None | NoDefault = no_default,
     delimiter: str | None | NoDefault = None,
     # Column and Index Locations and Names
@@ -226,9 +208,6 @@ def read_table(
     names: Sequence[Hashable] | None | NoDefault = no_default,
     index_col: IndexLabel | Literal[False] | None = None,
     usecols=None,
-    squeeze: bool | None = None,
-    prefix: str | NoDefault = no_default,
-    mangle_dupe_cols: bool = True,
     # General Parsing Configuration
     dtype: DtypeArg | None = None,
     engine: CSVEngine | None = None,
@@ -247,9 +226,10 @@ def read_table(
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=False,
-    infer_datetime_format: bool = False,
+    infer_datetime_format: bool = no_default,
     keep_date_col: bool = False,
-    date_parser=None,
+    date_parser=no_default,
+    date_format: str = None,
     dayfirst: bool = False,
     cache_dates: bool = True,
     # Iteration
@@ -269,15 +249,14 @@ def read_table(
     encoding_errors: str | None = "strict",
     dialect: str | csv.Dialect | None = None,
     # Error Handling
-    error_bad_lines: bool | None = None,
-    warn_bad_lines: bool | None = None,
-    on_bad_lines=None,
+    on_bad_lines="error",
     # Internal
     delim_whitespace=False,
     low_memory=_c_parser_defaults["low_memory"],
     memory_map: bool = False,
     float_precision: str | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_table_signature = {
@@ -286,9 +265,6 @@ def read_table(
     _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
     if f_locals.get("sep", sep) is False or f_locals.get("sep", sep) is no_default:
         f_locals["sep"] = "\t"
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    f_locals.pop("mangle_dupe_cols", None)
     kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_table_signature}
     return _read(**kwargs)
 
@@ -300,7 +276,8 @@ def read_parquet(
     engine: str = "auto",
     columns: list[str] | None = None,
     storage_options: StorageOptions = None,
-    use_nullable_dtypes: bool = False,
+    use_nullable_dtypes: bool = no_default,
+    dtype_backend=no_default,
     **kwargs,
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -312,6 +289,7 @@ def read_parquet(
             columns=columns,
             storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
+            dtype_backend=dtype_backend,
             **kwargs,
         )
     )
@@ -321,13 +299,13 @@ def read_parquet(
 @enable_logging
 def read_json(
     path_or_buf,
+    *,
     orient: str | None = None,
     typ: Literal["frame", "series"] = "frame",
     dtype: DtypeArg | None = None,
     convert_axes=None,
     convert_dates: bool | list[str] = True,
     keep_default_dates: bool = True,
-    numpy: bool = False,
     precise_float: bool = False,
     date_unit: str | None = None,
     encoding: str | None = None,
@@ -337,6 +315,8 @@ def read_json(
     compression: CompressionOptions = "infer",
     nrows: int | None = None,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    engine="ujson",
 ) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -374,6 +354,7 @@ def read_gbq(
 @enable_logging
 def read_html(
     io,
+    *,
     match: str | Pattern = ".+",
     flavor: str | None = None,
     header: int | Sequence[int] | None = None,
@@ -389,6 +370,7 @@ def read_html(
     keep_default_na: bool = True,
     displayed_only: bool = True,
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
@@ -403,7 +385,11 @@ def read_html(
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
 @enable_logging
-def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT01, D200
+def read_clipboard(
+    sep=r"\s+",
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    **kwargs,
+):  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read text from clipboard and pass to read_csv.
     """
@@ -420,6 +406,7 @@ def read_clipboard(sep=r"\s+", **kwargs):  # pragma: no cover  # noqa: PR01, RT0
 def read_excel(
     io,
     sheet_name: str | int | list[IntStrT] | None = 0,
+    *,
     header: int | Sequence[int] | None = 0,
     names: list[str] | None = None,
     index_col: int | Sequence[int] | None = None,
@@ -429,7 +416,6 @@ def read_excel(
     | Sequence[str]
     | Callable[[str], bool]
     | None = None,
-    squeeze: bool | None = None,
     dtype: DtypeArg | None = None,
     engine: Literal[("xlrd", "openpyxl", "odf", "pyxlsb")] | None = None,
     converters: dict[str, Callable] | dict[int, Callable] | None = None,
@@ -442,19 +428,16 @@ def read_excel(
     na_filter: bool = True,
     verbose: bool = False,
     parse_dates: list | dict | bool = False,
-    date_parser: Callable | None = None,
+    date_parser: Union[Callable, NoDefault] = no_default,
+    date_format=None,
     thousands: str | None = None,
     decimal: str = ".",
     comment: str | None = None,
     skipfooter: int = 0,
-    convert_float: bool | None = None,
-    mangle_dupe_cols: bool = True,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-    # kwargs so pandas doesn't spuriously warn people not to use it.
-    kwargs.pop("mangle_dupe_cols", None)
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -501,6 +484,7 @@ def read_feather(
     columns: Sequence[Hashable] | None = None,
     use_threads: bool = True,
     storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -513,6 +497,7 @@ def read_feather(
 @enable_logging
 def read_stata(
     filepath_or_buffer,
+    *,
     convert_dates: bool = True,
     convert_categoricals: bool = True,
     index_col: str | None = None,
@@ -536,6 +521,7 @@ def read_stata(
 @enable_logging
 def read_sas(
     filepath_or_buffer,
+    *,
     format: str | None = None,
     index: Hashable | None = None,
     encoding: str | None = None,
@@ -586,6 +572,8 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    dtype=None,
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL query or database table into a DataFrame.
@@ -607,9 +595,11 @@ def read_sql(
 @enable_logging
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+    *,
     colspecs="infer",
     widths=None,
     infer_nrows=100,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     **kwds,
 ):  # noqa: PR01, RT01, D200
     """
@@ -644,6 +634,7 @@ def read_sql_table(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
     """
     Read SQL database table into a DataFrame.
@@ -666,6 +657,7 @@ def read_sql_query(
     parse_dates: list[str] | dict[str, str] | None = None,
     chunksize: int | None = None,
     dtype: DtypeArg | None = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ) -> DataFrame | Iterator[DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -702,6 +694,7 @@ def read_spss(
     path: Union[str, pathlib.Path],
     usecols: Optional[Sequence[str]] = None,
     convert_categoricals: bool = True,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
 ):  # noqa: PR01, RT01, D200
     """
     Load an SPSS file from the file path, returning a DataFrame.
@@ -710,7 +703,10 @@ def read_spss(
 
     return DataFrame(
         query_compiler=FactoryDispatcher.read_spss(
-            path=path, usecols=usecols, convert_categoricals=convert_categoricals
+            path=path,
+            usecols=usecols,
+            convert_categoricals=convert_categoricals,
+            dtype_backend=dtype_backend,
         )
     )
 
@@ -741,13 +737,18 @@ def json_normalize(
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
 @enable_logging
 def read_orc(
-    path, columns: Optional[List[str]] = None, **kwargs
+    path,
+    columns: Optional[List[str]] = None,
+    dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    **kwargs,
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(pandas.read_orc(path, columns=columns, **kwargs))
+    return DataFrame(
+        pandas.read_orc(path, columns=columns, dtype_backend=dtype_backend, **kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.HDFStore)

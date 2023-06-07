@@ -41,7 +41,7 @@ from modin.config import StorageFormat
 from pandas.core.dtypes.common import is_scalar, is_number
 import pandas.core.resample
 import pandas
-from pandas._typing import IndexLabel, Suffixes
+from pandas._typing import IndexLabel, Suffixes, DtypeBackend
 import numpy as np
 from typing import List, Hashable, Optional
 
@@ -193,12 +193,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New query compiler with updated labels.
         """
-        if axis:
-            return DataFrameDefault.register(pandas.DataFrame.add_prefix)(
-                self, prefix=prefix
-            )
-        else:
-            return SeriesDefault.register(pandas.Series.add_prefix)(self, prefix=prefix)
+        return DataFrameDefault.register(pandas.DataFrame.add_prefix)(
+            self, prefix=prefix, axis=axis
+        )
 
     def add_suffix(self, suffix, axis=1):
         """
@@ -216,12 +213,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New query compiler with updated labels.
         """
-        if axis:
-            return DataFrameDefault.register(pandas.DataFrame.add_suffix)(
-                self, suffix=suffix
-            )
-        else:
-            return SeriesDefault.register(pandas.Series.add_suffix)(self, suffix=suffix)
+        return DataFrameDefault.register(pandas.DataFrame.add_suffix)(
+            self, suffix=suffix, axis=axis
+        )
 
     # END Metadata modification abstract methods
 
@@ -473,7 +467,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return SeriesDefault.register(pandas.Series.to_list)(self)
 
     @doc_utils.add_refer_to("DataFrame.to_dict")
-    def dataframe_to_dict(self, orient="dict", into=dict):  # noqa: PR01
+    def dataframe_to_dict(self, orient="dict", into=dict, index=True):  # noqa: PR01
         """
         Convert the DataFrame to a dictionary.
 
@@ -481,7 +475,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -------
         dict or `into` instance
         """
-        return self.to_pandas().to_dict(orient, into)
+        return self.to_pandas().to_dict(orient, into, index)
 
     @doc_utils.add_refer_to("Series.to_dict")
     def series_to_dict(self, into=dict):  # noqa: PR01
@@ -1850,6 +1844,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         convert_integer: bool = True,
         convert_boolean: bool = True,
         convert_floating: bool = True,
+        dtype_backend: DtypeBackend = "numpy_nullable",
     ):
         """
         Convert columns to best possible dtypes using dtypes supporting ``pd.NA``.
@@ -1868,6 +1863,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Whether, if possible, conversion can be done to floating extension types.
             If `convert_integer` is also True, preference will be give to integer dtypes
             if the floats can be faithfully casted to integers.
+        dtype_backend : {"numpy_nullable", "pyarrow"}, default: "numpy_nullable"
+            Which dtype_backend to use, e.g. whether a DataFrame should use nullable
+            dtypes for all dtypes that have a nullable
+            implementation when "numpy_nullable" is set, PyArrow is used for all
+            dtypes if "pyarrow" is set.
 
         Returns
         -------
@@ -1881,6 +1881,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             convert_integer=convert_integer,
             convert_boolean=convert_boolean,
             convert_floating=convert_floating,
+            dtype_backend=dtype_backend,
         )
 
     @property
@@ -2117,18 +2118,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     # END Abstract column/row partitions reduce operations
 
     @doc_utils.add_refer_to("DataFrame.describe")
-    def describe(
-        self,
-        percentiles: np.ndarray,
-        datetime_is_numeric: bool,
-    ):
+    def describe(self, percentiles: np.ndarray):
         """
         Generate descriptive statistics.
 
         Parameters
         ----------
         percentiles : list-like
-        datetime_is_numeric : bool
 
         Returns
         -------
@@ -2139,7 +2135,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.describe)(
             self,
             percentiles=percentiles,
-            datetime_is_numeric=datetime_is_numeric,
             include="all",
         )
 
@@ -3124,6 +3119,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         agg_kwargs,
         drop=False,
     ):
+        if axis == 1:
+            # To avoid `ValueError: Operation skew does not support axis=1` due to the
+            # difference in the behavior of `groupby(...).skew(axis=1)` and
+            # `groupby(...).agg("skew", axis=1)`.
+            return GroupByDefault.register(pandas.core.groupby.DataFrameGroupBy.skew)(
+                self,
+                by=by,
+                axis=axis,
+                groupby_kwargs=groupby_kwargs,
+                agg_args=agg_args,
+                agg_kwargs=agg_kwargs,
+                drop=drop,
+            )
         return self.groupby_agg(
             by=by,
             agg_func="skew",
@@ -4612,6 +4620,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DateTimeDefault.register(pandas.Series.dt.freq)(self)
 
+    @doc_utils.add_refer_to("Series.dt.unit")
+    def dt_unit(self):  # noqa: RT01
+        return DateTimeDefault.register(pandas.Series.dt.unit)(self)
+
+    @doc_utils.add_refer_to("Series.dt.as_unit")
+    def dt_as_unit(self, *args, **kwargs):  # noqa: PR01, RT01
+        return DateTimeDefault.register(pandas.Series.dt.as_unit)(self, *args, **kwargs)
+
     @doc_utils.doc_dt_timestamp(
         prop="Calculate year, week, and day according to the ISO 8601 standard.",
         refer_to="isocalendar",
@@ -4897,17 +4913,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, tz, ambiguous, nonexistent
         )
 
-    @doc_utils.doc_dt_timestamp(prop="week component", refer_to="week")
-    def dt_week(self):
-        return DateTimeDefault.register(pandas.Series.dt.week)(self)
-
     @doc_utils.doc_dt_timestamp(prop="integer day of week", refer_to="weekday")
     def dt_weekday(self):
         return DateTimeDefault.register(pandas.Series.dt.weekday)(self)
-
-    @doc_utils.doc_dt_timestamp(prop="week of year", refer_to="weekofyear")
-    def dt_weekofyear(self):
-        return DateTimeDefault.register(pandas.Series.dt.weekofyear)(self)
 
     @doc_utils.doc_dt_timestamp(prop="year component", refer_to="year")
     def dt_year(self):
@@ -5029,14 +5037,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs, fill_value
         )
 
-    # FIXME: `resample_backfill` is an alias for `resample_bfill`, one of these method
-    # should be removed (Modin issue #3107).
-    @doc_utils.doc_resample_fillna(method="back-fill", refer_to="backfill")
-    def resample_backfill(self, resample_kwargs, limit):
-        return ResampleDefault.register(pandas.core.resample.Resampler.backfill)(
-            self, resample_kwargs, limit
-        )
-
     @doc_utils.doc_resample_fillna(method="back-fill", refer_to="bfill")
     def resample_bfill(self, resample_kwargs, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.bfill)(
@@ -5051,8 +5051,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, resample_kwargs
         )
 
-    # FIXME: `resample_ffill` is an alias for `resample_pad`, one of these method
-    # should be removed (Modin issue #3107).
     @doc_utils.doc_resample_fillna(method="forward-fill", refer_to="ffill")
     def resample_ffill(self, resample_kwargs, limit):
         return ResampleDefault.register(pandas.core.resample.Resampler.ffill)(
@@ -5133,12 +5131,12 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self,
             resample_kwargs,
             method,
-            axis,
-            limit,
-            inplace,
-            limit_direction,
-            limit_area,
-            downcast,
+            axis=axis,
+            limit=limit,
+            inplace=inplace,
+            limit_direction=limit_direction,
+            limit_area=limit_area,
+            downcast=downcast,
             **kwargs,
         )
 
@@ -5205,12 +5203,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return ResampleDefault.register(
             pandas.core.resample.Resampler.ohlc, squeeze_self=True
         )(self, resample_kwargs, *args, **kwargs)
-
-    @doc_utils.doc_resample_fillna(method="'pad'", refer_to="pad")
-    def resample_pad(self, resample_kwargs, limit):
-        return ResampleDefault.register(pandas.core.resample.Resampler.pad)(
-            self, resample_kwargs, limit
-        )
 
     # FIXME: This method require us to build high-level resampler object
     # which we shouldn't do at the query compiler. We need to move this at the front.
@@ -5619,8 +5611,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         n : int, default: -1
         expand : bool, default: False""",
     )
-    def str_rsplit(self, pat=None, n=-1, expand=False):
-        return StrDefault.register(pandas.Series.str.rsplit)(self, pat, n, expand)
+    def str_rsplit(self, pat=None, *, n=-1, expand=False):
+        return StrDefault.register(pandas.Series.str.rsplit)(
+            self, pat, n=n, expand=expand
+        )
 
     @doc_utils.doc_str_method(refer_to="rstrip", params="to_strip : str, optional")
     def str_rstrip(self, to_strip=None):
@@ -5656,7 +5650,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         expand : bool, default: False
         regex : bool, default: None""",
     )
-    def str_split(self, pat=None, n=-1, expand=False, regex=None):
+    def str_split(self, pat=None, *, n=-1, expand=False, regex=None):
         return StrDefault.register(pandas.Series.str.split)(
             self, pat, n=n, expand=expand, regex=regex
         )
@@ -6458,23 +6452,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
 
     @doc_utils.doc_reduce_agg(
-        method="mean absolute deviation",
-        params="""
-        axis : {0, 1}
-        skipna : bool
-        level : None, default: None
-            Serves the compatibility purpose. Always has to be None.""",
-        refer_to="mad",
-    )
-    def mad(self, axis, skipna, level=None):
-        return DataFrameDefault.register(pandas.DataFrame.mad)(
-            self, axis=axis, skipna=skipna, level=level
-        )
-
-    @doc_utils.doc_reduce_agg(
         method="unbiased kurtosis", refer_to="kurt", extra_params=["skipna", "**kwargs"]
     )
-    def kurt(self, axis, level=None, numeric_only=None, skipna=True, **kwargs):
+    def kurt(self, axis, numeric_only=False, skipna=True, **kwargs):
         return DataFrameDefault.register(pandas.DataFrame.kurt)(
             self, axis=axis, skipna=skipna, numeric_only=numeric_only, **kwargs
         )

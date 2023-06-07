@@ -35,8 +35,6 @@ class Resampler(ClassLogger):
         label=None,
         convention="start",
         kind=None,
-        loffset=None,
-        base=0,
         on=None,
         level=None,
         origin="start_day",
@@ -53,8 +51,6 @@ class Resampler(ClassLogger):
             "label": label,
             "convention": convention,
             "kind": kind,
-            "loffset": loffset,
-            "base": base,
             "on": on,
             "level": level,
             "origin": origin,
@@ -80,8 +76,6 @@ class Resampler(ClassLogger):
                 closed=self.resample_kwargs["closed"],
                 label=self.resample_kwargs["label"],
                 convention=self.resample_kwargs["convention"],
-                loffset=self.resample_kwargs["loffset"],
-                base=self.resample_kwargs["base"],
                 level=self.resample_kwargs["level"],
                 origin=self.resample_kwargs["origin"],
                 offset=self.resample_kwargs["offset"],
@@ -211,14 +205,8 @@ class Resampler(ClassLogger):
     def ffill(self, limit=None):
         return self.fillna(method="ffill", limit=limit)
 
-    def backfill(self, limit=None):
-        return self.bfill(limit)
-
     def bfill(self, limit=None):
         return self.fillna(method="bfill", limit=limit)
-
-    def pad(self, limit=None):
-        return self.fillna(method="ffill", limit=limit)
 
     def nearest(self, limit=None):
         return self._dataframe.__constructor__(
@@ -244,6 +232,7 @@ class Resampler(ClassLogger):
     def interpolate(
         self,
         method="linear",
+        *,
         axis=0,
         limit=None,
         inplace=False,
@@ -256,12 +245,12 @@ class Resampler(ClassLogger):
             query_compiler=self._query_compiler.resample_interpolate(
                 self.resample_kwargs,
                 method,
-                axis,
-                limit,
-                inplace,
-                limit_direction,
-                limit_area,
-                downcast,
+                axis=axis,
+                limit=limit,
+                inplace=inplace,
+                limit_direction=limit_direction,
+                limit_area=limit_area,
+                downcast=downcast,
                 **kwargs,
             )
         )

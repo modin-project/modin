@@ -543,6 +543,19 @@ def test_pivot():
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
+    if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
+        # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
+        # https://github.com/modin-project/modin/issues/6240
+        df_equals(
+            pd.pivot(test_df, columns="bar"),
+            pandas.pivot(test_df._to_pandas(), columns="bar"),
+        )
+
+        df_equals(
+            pd.pivot(test_df, index="foo", columns="bar"),
+            pandas.pivot(test_df._to_pandas(), index="foo", columns="bar"),
+        )
+
 
 def test_pivot_values_is_none():
     test_df = pd.DataFrame(
@@ -901,7 +914,7 @@ def test_create_categorical_dataframe_with_duplicate_column_name():
 @pytest.mark.parametrize(
     "func, regex",
     [
-        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df.mean(), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
         (

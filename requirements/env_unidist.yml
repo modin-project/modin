@@ -3,11 +3,12 @@ channels:
   - conda-forge
 dependencies:
   - unidist-mpi>=0.2.1
-  - pandas==1.5.3
+  - pandas==2.0.2
   - numpy>=1.18.5
   - pyarrow
   - fsspec
-  - xarray
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - Jinja2
   - scipy
   - pip
