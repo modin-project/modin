@@ -68,6 +68,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
 )
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
+from .aggregations import CorrCovBuilder
 
 
 def _get_axis(axis):
@@ -2063,16 +2064,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def corr(self, method="pearson", min_periods=1):
-        if method == "pearson":
-            numeric_self = self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-            return numeric_self._nancorr(min_periods=min_periods)
-        else:
-            return super().corr(method=method, min_periods=min_periods)
+    corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
@@ -2097,6 +2089,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         -------
         PandasQueryCompiler
             The covariance or correlation matrix.
+
+        Notes
+        -----
+        This method is only used to compute covariance at the moment.
         """
         other = self.to_numpy()
         other_mask = self._isfinite().to_numpy()
