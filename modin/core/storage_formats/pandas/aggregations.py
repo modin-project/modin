@@ -37,25 +37,36 @@ class CorrCovBuilder:
     @classmethod
     def build_corr_method(
         cls,
-    ) -> Callable[["PandasQueryCompiler", str, int], "PandasQueryCompiler"]:
+    ) -> Callable[["PandasQueryCompiler", str, int, bool], "PandasQueryCompiler"]:
         """
         Build a query compiler method computing the correlation matrix.
 
         Returns
         -------
-        callable(qc: PandasQueryCompiler, method: str, min_periods: int) -> PandasQueryCompiler
+        callable(qc: PandasQueryCompiler, method: str, min_periods: int, numeric_only: bool) -> PandasQueryCompiler
             A callable matching the ``BaseQueryCompiler.corr`` signature and computing the correlation matrix.
         """
 
         def corr_method(
-            qc: "PandasQueryCompiler", method: str, min_periods: int = 1
+            qc: "PandasQueryCompiler",
+            method: str,
+            min_periods: int = 1,
+            numeric_only: bool = True,
         ) -> "PandasQueryCompiler":
             if method != "pearson":
                 return super(type(qc), qc).corr(
-                    method=method, min_periods=min_periods, numeric_only=True
+                    method=method, min_periods=min_periods, numeric_only=numeric_only
                 )
 
-            if qc._modin_frame.has_materialized_dtypes:
+            if not numeric_only and qc._modin_frame.has_materialized_columns:
+                new_index, new_columns = (
+                    qc._modin_frame.copy_columns_cache(),
+                    qc._modin_frame.copy_columns_cache(),
+                )
+                new_dtypes = pandas.Series(
+                    np.repeat(np.dtype("float"), len(new_columns)), index=new_columns
+                )
+            elif numeric_only and qc._modin_frame.has_materialized_dtypes:
                 old_dtypes = qc._modin_frame.dtypes
 
                 new_columns = old_dtypes[old_dtypes.map(is_numeric_dtype)].index
@@ -67,7 +78,7 @@ class CorrCovBuilder:
                 new_index, new_columns, new_dtypes = None, None, None
 
             map, reduce = cls._build_map_reduce_methods(
-                min_periods, method=cls.Method.CORR
+                min_periods, method=cls.Method.CORR, numeric_only=numeric_only
             )
 
             reduced = qc._modin_frame.apply_full_axis(axis=1, func=map)
@@ -100,9 +111,7 @@ class CorrCovBuilder:
 
     @classmethod
     def _build_map_reduce_methods(
-        cls,
-        min_periods: int,
-        method: Method,
+        cls, min_periods: int, method: Method, numeric_only: bool
     ) -> Tuple[
         Callable[[pandas.DataFrame], pandas.DataFrame],
         Callable[[pandas.DataFrame], pandas.DataFrame],
@@ -116,6 +125,8 @@ class CorrCovBuilder:
             The parameter to pass to the reduce method.
         method : CorrCovBuilder.Method
             Whether the kernels compute correlation or covariance.
+        numeric_only : bool
+            Whether to only include numeric types.
 
         Returns
         -------
@@ -126,16 +137,16 @@ class CorrCovBuilder:
         if method == cls.Method.COV:
             raise NotImplementedError("Computing covariance is not yet implemented.")
 
-        return _CorrCovKernels.map, lambda df: _CorrCovKernels.reduce(
-            df, min_periods, method
-        )
+        return lambda df: _CorrCovKernels.map(
+            df, numeric_only
+        ), lambda df: _CorrCovKernels.reduce(df, min_periods, method)
 
 
 class _CorrCovKernels:
     """Holds kernel functions computing correlation/covariance matrices in a MapReduce manner."""
 
     @classmethod
-    def map(cls, df: pandas.DataFrame) -> pandas.DataFrame:
+    def map(cls, df: pandas.DataFrame, numeric_only: bool) -> pandas.DataFrame:
         """
         Perform the Map phase to compute the corr/cov matrix.
 
@@ -151,6 +162,8 @@ class _CorrCovKernels:
         ----------
         df : pandas.DataFrame
             Partition to compute the aggregations for.
+        numeric_only : bool
+            Whether to only include numeric types.
 
         Returns
         -------
@@ -158,11 +171,18 @@ class _CorrCovKernels:
             A MultiIndex columned DataFrame holding the described aggregation results for this
             specifix partition under the following keys: ``["mul", "sum", "pow2_sum", "count"]``
         """
-        df = df.select_dtypes(include="number")
+        if numeric_only:
+            df = df.select_dtypes(include="number")
         # It's more convenient to use a NumPy array here as it appears to perform
         # much faster in for-loops which this kernel function has plenty of
         raw_df = df.values.T
-        nan_mask = np.isnan(raw_df)
+        try:
+            nan_mask = np.isnan(raw_df)
+        except TypeError as e:
+            # Pandas raises ValueError on unsupported types, so casting
+            # the exception to a proper type
+            raise ValueError("Unsupported types with 'numeric_only=False'") from e
+
         has_nans = nan_mask.sum() != 0
 
         if has_nans:
