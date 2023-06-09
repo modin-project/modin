@@ -13,8 +13,6 @@
 
 """Module houses class that implements ``PandasDataframePartitionManager``."""
 
-from dask.distributed import wait
-
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
@@ -47,7 +45,6 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        wait(
-            [block for partition in partitions for block in partition.list_of_blocks],
-            return_when="ALL_COMPLETED",
+        DaskWrapper.wait(
+            [block for partition in partitions for block in partition.list_of_blocks]
         )

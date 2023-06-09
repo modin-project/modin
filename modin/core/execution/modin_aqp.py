@@ -93,17 +93,22 @@ def call_progress_bar(result_parts, line_no):
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
 
     modin_engine = Engine.get()
+    engine_wrapper = None
     if modin_engine == "Ray":
-        from ray import wait
+        from modin.core.execution.ray.common.engine_wrapper import RayWrapper
+
+        engine_wrapper = RayWrapper
     elif modin_engine == "Unidist":
-        from unidist import wait
+        from modin.core.execution.unidist.common.engine_wrapper import UnidistWrapper
+
+        engine_wrapper = UnidistWrapper
     else:
         raise NotImplementedError(
             f"ProgressBar feature is not supported for {modin_engine} engine."
         )
 
     for i in range(1, len(futures) + 1):
-        wait(futures, num_returns=i)
+        engine_wrapper.wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
     if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
