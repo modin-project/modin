@@ -535,7 +535,14 @@ class PandasExcelParser(PandasParser):
         return cell.value
 
     @property
-    def need_rich_text_param(self):  # noqa: GL08
+    def need_rich_text_param(self):
+        """
+        Determine whether a required `rich_text` parameter should be specified for the ``WorksheetReader`` constructor.
+
+        Returns
+        -------
+        bool
+        """
         import openpyxl
         from packaging import version
 
