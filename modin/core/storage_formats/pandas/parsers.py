@@ -534,6 +534,20 @@ class PandasExcelParser(PandasParser):
 
         return cell.value
 
+    @property
+    def need_rich_text_param(self):
+        """
+        Determine whether a required `rich_text` parameter should be specified for the ``WorksheetReader`` constructor.
+
+        Returns
+        -------
+        bool
+        """
+        import openpyxl
+        from packaging import version
+
+        return version.parse(openpyxl.__version__) >= version.parse("3.1.0")
+
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
@@ -550,7 +564,7 @@ class PandasExcelParser(PandasParser):
             return pandas.read_excel(fname, **kwargs)
 
         from zipfile import ZipFile
-        from openpyxl import load_workbook
+        import openpyxl
         from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
         from openpyxl.worksheet.worksheet import Worksheet
@@ -562,7 +576,7 @@ class PandasExcelParser(PandasParser):
         from pandas.io.parsers import TextParser
         import re
 
-        wb = load_workbook(filename=fname, read_only=True)
+        wb = openpyxl.load_workbook(filename=fname, read_only=True)
         # Get shared strings
         ex = ExcelReader(fname, read_only=True)
         ex.read_manifest()
@@ -610,7 +624,11 @@ class PandasExcelParser(PandasParser):
         bytes_data = re.sub(rb'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
-        reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
+        common_args = (ws, bytesio, ex.shared_strings, False)
+        if PandasExcelParser.need_rich_text_param:
+            reader = WorksheetReader(*common_args, rich_text=False)
+        else:
+            reader = WorksheetReader(*common_args)
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
