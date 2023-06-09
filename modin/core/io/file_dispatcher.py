@@ -157,10 +157,10 @@ class FileDispatcher(ClassLogger):
         """
         try:
             query_compiler = cls._read(*args, **kwargs)
-        except ModinAssumptionError as exc:
+        except ModinAssumptionError as err:
             param_name = "path_or_buf" if "path_or_buf" in kwargs else "fname"
             fname = kwargs.pop(param_name)
-            return cls.single_worker_read(fname, *args, reason=str(exc), **kwargs)
+            return cls.single_worker_read(fname, *args, reason=str(err), **kwargs)
         # TextFileReader can also be returned from `_read`.
         if not AsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
             # at the moment it is not possible to use `wait_partitions` function;
