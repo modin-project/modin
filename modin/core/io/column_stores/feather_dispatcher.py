@@ -13,8 +13,6 @@
 
 """Module houses `FeatherDispatcher` class, that is used for reading `.feather` files."""
 
-import pandas._libs.lib as lib
-
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.utils import import_optional_dependency
 from modin.core.io.file_dispatcher import OpenFile
@@ -49,14 +47,6 @@ class FeatherDispatcher(ColumnStoreDispatcher):
         PyArrow feather is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/api.html#feather-format
         """
-        if kwargs["dtype_backend"] != lib.no_default:
-            return cls.single_worker_read(
-                path,
-                columns=columns,
-                reason="'dtype_backend' not supported",
-                **kwargs,
-            )
-
         path = cls.get_path(path)
         if columns is None:
             import_optional_dependency(
@@ -81,4 +71,6 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             )
             # Filtering out the columns that describe the frame's index
             columns = [col for col in reader.schema.names if col not in index_cols]
-        return cls.build_query_compiler(path, columns, use_threads=False)
+        return cls.build_query_compiler(
+            path, columns, use_threads=False, dtype_backend=kwargs["dtype_backend"]
+        )

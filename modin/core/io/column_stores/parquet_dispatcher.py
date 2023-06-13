@@ -620,7 +620,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if (
             any(arg not in ("storage_options",) for arg in kwargs)
             or use_nullable_dtypes != lib.no_default
-            or dtype_backend != lib.no_default
         ):
             return cls.single_worker_read(
                 path,
@@ -692,7 +691,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if c not in index_columns and not cls.index_regex.match(c)
         ]
 
-        return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)
+        return cls.build_query_compiler(
+            dataset, columns, index_columns, dtype_backend=dtype_backend, **kwargs
+        )
 
     @staticmethod
     def _to_parquet_check_support(kwargs):
