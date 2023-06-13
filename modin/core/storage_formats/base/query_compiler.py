@@ -486,7 +486,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -------
         dict or `into` instance
         """
-        return self.to_pandas().to_dict(into)
+        return self.to_pandas().squeeze(axis=1).to_dict(into)
 
     # Abstract inter-data operations (e.g. add, sub)
     # These operations require two DataFrames and will change the shape of the

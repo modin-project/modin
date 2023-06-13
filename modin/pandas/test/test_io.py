@@ -23,7 +23,7 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pandas._testing import ensure_clean
 from pathlib import Path
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from modin.config.envvars import MinPartitionSize
 from modin.db_conn import (
     ModinDatabaseConnection,
@@ -68,6 +68,7 @@ from .utils import (
     parse_dates_values_by_id,
     time_parsing_csv_path,
     test_data as utils_test_data,
+    eval_general,
 )
 
 if StorageFormat.get() == "Hdk":
@@ -2889,9 +2890,20 @@ def test_to_dense():
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
-def test_to_dict():
+def test_to_dict_dataframe():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
+
+
+@pytest.mark.parametrize(
+    "kwargs", [{}, {"into": dict}, {"into": OrderedDict}, {"into": defaultdict(list)}]
+)
+def test_to_dict_series(kwargs):
+    eval_general(
+        *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
+        lambda df: df.to_dict(**kwargs),
+        raising_exceptions=(Exception,),
+    )
 
 
 def test_to_latex():
