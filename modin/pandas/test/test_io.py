@@ -2896,7 +2896,13 @@ def test_to_dict_dataframe():
 
 
 @pytest.mark.parametrize(
-    "kwargs", [{}, {"into": dict}, {"into": OrderedDict}, {"into": defaultdict(list)}]
+    "kwargs",
+    [
+        pytest.param({}, id="no_kwargs"),
+        pytest.param({"into": dict}, id="into_dict"),
+        pytest.param({"into": OrderedDict}, id="into_ordered_dict"),
+        pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
+    ],
 )
 def test_to_dict_series(kwargs):
     eval_general(
