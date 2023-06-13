@@ -1334,26 +1334,29 @@ def eval___getitem__(md_grp, pd_grp, item):
         def test(grp):
             res = grp[item].agg(fns)
             if res.ndim == 2:
+                # `as_index=False` case
+                new_axis = fns
+                if "index" in res.columns:
+                    new_axis = ["index"] + new_axis
                 # Modin's frame has an extra level in the result. Alligning columns to compare.
                 # https://github.com/modin-project/modin/issues/3490
-                res = res.set_axis(fns, axis=1)
+                res = res.set_axis(new_axis, axis=1)
             return res
 
         return test
 
-    # issue-#3252, https://github.com/pandas-dev/pandas/issues/52760
-    # eval_general(
-    #    md_grp,
-    #    pd_grp,
-    #    build_list_agg(["mean"]),
-    #    comparator=build_types_asserter(df_equals),
-    # )
-    # eval_general(
-    #    md_grp,
-    #    pd_grp,
-    #    build_list_agg(["mean", "count"]),
-    #    comparator=build_types_asserter(df_equals),
-    # )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean", "count"]),
+        comparator=build_types_asserter(df_equals),
+    )
 
     # Explicit default-to-pandas test
     eval_general(
