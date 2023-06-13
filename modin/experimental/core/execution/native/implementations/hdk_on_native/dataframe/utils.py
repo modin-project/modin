@@ -513,7 +513,15 @@ def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
             return _CategoricalDtypeMapper
         return None
 
-    return at.to_pandas(types_mapper=mapper)
+    df = at.to_pandas(types_mapper=mapper)
+    dtype = {}
+    for idx, _type in enumerate(at.schema.types):
+        if isinstance(_type, pa.lib.TimestampType) and _type.unit != "ns":
+            dtype[at.schema.names[idx]] = f"datetime64[{_type.unit}]"
+    if dtype:
+        # TODO: remove after https://github.com/apache/arrow/pull/35656 is merge
+        df = df.astype(dtype)
+    return df
 
 
 class _CategoricalDtypeMapper:  # noqa: GL08
