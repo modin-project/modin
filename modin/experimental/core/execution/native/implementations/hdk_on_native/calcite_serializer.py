@@ -133,8 +133,10 @@ class CalciteSerializer:
             return self.serialize_obj(item)
         elif isinstance(item, list):
             return [self.serialize_item(v) for v in item]
+        elif isinstance(item, dict):
+            return {k: self.serialize_item(v) for k, v in item.items()}
 
-        self.expect_one_of(item, str, int)
+        self.expect_one_of(item, str, int, type(None))
         return item
 
     def serialize_node(self, node):

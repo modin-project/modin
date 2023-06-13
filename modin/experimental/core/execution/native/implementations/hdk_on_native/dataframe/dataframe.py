@@ -255,12 +255,12 @@ class HdkOnNativeDataframe(PandasDataframe):
         ----------
         partitions : np.ndarray, optional
             Partitions of the frame.
-        index : pandas.Index, optional
+        index : pandas.Index or list, optional
             Index of the frame to be used as an index cache. If None then will be
             computed on demand.
-        columns : pandas.Index, optional
+        columns : pandas.Index or list, optional
             Columns of the frame.
-        dtypes : pandas.Index, optional
+        dtypes : pandas.Index or list, optional
             Column data types.
         op : DFAlgNode, optional
             A tree describing how frame is computed. For materialized frames it
@@ -550,6 +550,10 @@ class HdkOnNativeDataframe(PandasDataframe):
                 + f"met '{type(by_frame._op).__name__}'."
             )
 
+        if agg in ("head", "tail"):
+            n = kwargs["agg_kwargs"]["n"]
+            return self._groupby_head_tail(agg, n, groupby_cols.tolist())
+
         col_to_delete_template = "__delete_me_{name}"
 
         def generate_by_name(by):
@@ -635,6 +639,86 @@ class HdkOnNativeDataframe(PandasDataframe):
                     col_labels=filtered_columns
                 )
         return new_frame
+
+    def _groupby_head_tail(
+        self, agg: str, n: int, cols: List[str]
+    ) -> "HdkOnNativeDataframe":
+        """
+        Return first/last n rows of each group.
+
+        Parameters
+        ----------
+        agg : {"head", "tail"}
+        n : int
+            If positive: number of entries to include from start/end of each group.
+            If negative: number of entries to exclude from start/end of each group.
+        cols : List[str]
+            Group by column names.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            The new frame.
+        """
+        fold = True  # Fold TransformNodes
+        sort = self._op
+        if isinstance(sort, SortNode):
+            base = sort.input[0]
+        else:
+            base = self._maybe_materialize_rowid()
+            fold = base is self  # Do not fold if rowid is added
+            sort = SortNode(base, base._index_cols[0:1], [True], "FIRST")
+        row_num_name = "__HDK_ROW_NUMBER__"
+        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op.is_rows = True
+        row_num_op.order_keys = []
+        row_num_op.partition_keys = [base.ref(col) for col in cols]
+        ascending = sort.ascending
+        na_pos = sort.na_position.upper()
+        if (n < 0) == (agg == "head"):  # Invert sorting
+            ascending = [not a for a in ascending]
+            na_pos = "FIRST" if na_pos == "LAST" else "LAST"
+        for col, asc in zip(sort.columns, ascending):
+            key = {
+                "field": base.ref(col),
+                "direction": "ASCENDING" if asc else "DESCENDING",
+                "nulls": na_pos,
+            }
+            row_num_op.order_keys.append(key)
+        row_num_op.lower_bound = {
+            "unbounded": True,
+            "preceding": True,
+            "following": False,
+            "is_current_row": False,
+            "offset": None,
+            "order_key": 0,
+        }
+        row_num_op.upper_bound = {
+            "unbounded": False,
+            "preceding": False,
+            "following": False,
+            "is_current_row": True,
+            "offset": None,
+            "order_key": 1,
+        }
+        exprs = base._index_exprs()
+        exprs.update((col, base.ref(col)) for col in base.columns)
+        exprs[row_num_name] = row_num_op
+        transform = base.copy(
+            columns=list(base.columns) + [row_num_name],
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(base, exprs, fold),
+        )
+
+        if n < 0:
+            cond = transform.ref(row_num_name).ge(-n + 1)
+        else:
+            cond = transform.ref(row_num_name).le(n)
+
+        filter = transform.copy(op=FilterNode(transform, cond))
+        exprs = filter._index_exprs()
+        exprs.update((col, filter.ref(col)) for col in base.columns)
+        return base.copy(op=TransformNode(filter, exprs))
 
     def agg(self, agg):
         """

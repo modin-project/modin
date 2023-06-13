@@ -510,13 +510,9 @@ class CalciteBuilder:
                 expr.agg = self._simple_aggregates[expr.agg]
                 return expr
 
-            copied = False
-            for i, op in enumerate(getattr(expr, "operands", [])):
-                new_op = self._maybe_copy_and_translate_expr(op)
-                if new_op != op:
-                    if not copied:
-                        expr = expr.copy()
-                    expr.operands[i] = new_op
+            gen = expr.nested_expressions()
+            for op in gen:
+                expr = gen.send(self._maybe_copy_and_translate_expr(op))
             return expr
 
     class InputContextMgr:
