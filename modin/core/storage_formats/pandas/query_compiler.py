@@ -3168,7 +3168,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if len(datetime_cols) > 0
             else self
         )
-
+        # breakpoint()
         result = GroupbyReduceImpl.build_qc_method("mean")(
             query_compiler=qc_with_converted_datetime_cols,
             by=by,

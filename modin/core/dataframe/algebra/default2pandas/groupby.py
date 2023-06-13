@@ -372,13 +372,15 @@ class GroupBy:
             drop=drop,
             method=method,
         )
-
+        print(reset_index, drop, lvls_to_drop, cols_to_drop)
+        print(result)
         if len(lvls_to_drop) > 0:
             result.index = result.index.droplevel(lvls_to_drop)
         if len(cols_to_drop) > 0:
             result.drop(columns=cols_to_drop, inplace=True)
         if reset_index:
             result.reset_index(drop=drop, inplace=True)
+        print(result)
         return result
 
     @staticmethod
@@ -479,7 +481,10 @@ class GroupBy:
             )
         else:
             keep_index_levels = False
-
+        print(f"{keep_index_levels=}")
+        print(f"{partition_idx=}")
+        print(f"{drop=}")
+        print(f"{method=}")
         # 1. We insert 'by'-columns to the result at the beginning of the frame and so only to the
         #    first partition, if partition_idx != 0 we just drop the index. If there are no columns
         #    that are required to drop (keep_index_levels is True) then we can exit here.
@@ -487,14 +492,19 @@ class GroupBy:
         #    frame (drop is False), there's only one exception for this rule: if the `method` is "size",
         #    so if (drop is False) and method is not "size" we just drop the index and so can exit here.
         if (not keep_index_levels and partition_idx != 0) or (
-            not drop and method != "size"
+            not drop and method not in ("size", None)
         ):
+            print("first return")
             return reset_index, True, [], []
 
+        print(f"internal_by_cols before processing: {internal_by_cols=}")
         if not isinstance(internal_by_cols, pandas.Index):
             if not is_list_like(internal_by_cols):
                 internal_by_cols = [internal_by_cols]
             internal_by_cols = pandas.Index(internal_by_cols)
+
+        if internal_by_cols.empty:
+            return reset_index, False, [], []
 
         internal_by_cols = (
             internal_by_cols[
@@ -509,7 +519,7 @@ class GroupBy:
 
         lvls_to_drop = []
         cols_to_drop = []
-
+        print(f"{selection=}, {internal_by_cols=}, {result_cols=}")
         if not keep_index_levels:
             # We want to insert only these internal-by-cols that are not presented
             # in the result in order to not create naming conflicts
@@ -531,6 +541,7 @@ class GroupBy:
             cols_to_drop = frozenset(internal_by_cols) & frozenset(result_cols)
 
         if partition_idx == 0:
+            print(f"{result_index_names=}, {cols_to_insert=}")
             lvls_to_drop = [
                 i
                 for i, name in enumerate(result_index_names)
@@ -543,7 +554,7 @@ class GroupBy:
         if len(lvls_to_drop) == len(result_index_names):
             drop = True
             lvls_to_drop = []
-
+        print("last return")
         return reset_index, drop, lvls_to_drop, cols_to_drop
 
 

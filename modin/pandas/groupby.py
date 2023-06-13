@@ -264,6 +264,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def mean(self, numeric_only=False, engine="cython", engine_kwargs=None):
+        # breakpoint()
         if engine not in ("cython", None) and engine_kwargs is not None:
             return self._default_to_pandas(
                 lambda df: df.mean(
@@ -659,21 +660,17 @@ class DataFrameGroupBy(ClassLogger):
             "idx_name": self._idx_name,
         }
         # The rules of type deduction for the resulted object is the following:
-        #   1. If `key` is a list-like or `as_index is False`, then the resulted object is a DataFrameGroupBy
+        #   1. If `key` is a list-like then the resulted object is a DataFrameGroupBy
         #   2. Otherwise, the resulted object is SeriesGroupBy
         #   3. Result type does not depend on the `by` origin
         # Examples:
         #   - drop: any, as_index: any, __getitem__(key: list_like) -> DataFrameGroupBy
-        #   - drop: any, as_index: False, __getitem__(key: any) -> DataFrameGroupBy
-        #   - drop: any, as_index: True, __getitem__(key: label) -> SeriesGroupBy
+        #   - drop: any, as_index: any, __getitem__(key: label) -> SeriesGroupBy
         if is_list_like(key):
             make_dataframe = True
         else:
-            if self._as_index:
-                make_dataframe = False
-            else:
-                make_dataframe = True
-                key = [key]
+            make_dataframe = False
+        # breakpoint()
         if make_dataframe:
             internal_by = frozenset(self._internal_by)
             if len(internal_by.intersection(key)) != 0:
@@ -1502,7 +1499,13 @@ class DataFrameGroupBy(ClassLogger):
         else:
             groupby_qc = self._query_compiler
 
-        return type(self._df)(
+        klass = type(self._df)
+        if not self._kwargs.get("as_index", True):
+            # for the case: modin_groupby["col3"].mean()
+            from .dataframe import DataFrame
+
+            klass = DataFrame
+        return klass(
             query_compiler=qc_method(
                 groupby_qc,
                 by=self._by,
@@ -1589,7 +1592,16 @@ class DataFrameGroupBy(ClassLogger):
         by = GroupBy.validate_by(by)
 
         def groupby_on_multiple_columns(df, *args, **kwargs):
-            groupby_obj = df.groupby(by=by, axis=self._axis, **self._kwargs)
+            # TypeError: as_index=False only valid with DataFrame
+            # in grp[item]._default_to_pandas(lambda df: df.sum())
+            breakpoint()
+            if isinstance(df, pandas.Series) and not self._kwargs["as_index"]:
+                self._kwargs["as_index"] = True
+                groupby_obj = df.groupby(by=by, axis=self._axis, **self._kwargs)
+                groupby_obj.as_index = False
+                self._kwargs["as_index"] = False
+            else:
+                groupby_obj = df.groupby(by=by, axis=self._axis, **self._kwargs)
 
             if callable(f):
                 return f(groupby_obj, *args, **kwargs)
@@ -1818,14 +1830,16 @@ class SeriesGroupBy(DataFrameGroupBy):
                     groupby_kwargs=self._kwargs,
                     agg_args=args,
                     agg_kwargs=kwargs,
+                    series_groupby=False,
                 )
             )
+            # breakpoint()
             # query compiler always gives result a multiindex on the axis with the
             # function names, but series always gets a regular index on the columns
             # because there is no need to identify which original column's aggregation
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
-            return result.set_axis(labels=self._try_get_str_func(func), axis=1)
+            return result
         else:
             return super().aggregate(
                 func, *args, engine=engine, engine_kwargs=engine_kwargs, **kwargs

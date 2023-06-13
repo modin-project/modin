@@ -385,6 +385,26 @@ def test_simple_row_groupby(by, as_index, col1_category):
     pandas_by = maybe_get_columns(pandas_df, try_cast_to_pandas(by))
     pandas_groupby = pandas_df.groupby(by=pandas_by, as_index=as_index)
 
+    apply_functions = [
+        lambda df: df.sum(numeric_only=True),
+        lambda df: pandas.Series([1, 2, 3, 4], name="result"),
+        min,
+    ]
+    # for func in apply_functions:
+    func = apply_functions[0]
+    breakpoint()
+    modin_groupby.apply(func)
+    pandas_groupby.apply(func)
+    eval_apply(modin_groupby, pandas_groupby, func)
+
+    # breakpoint()
+    # res1 = modin_groupby["col3"].mean()
+    # res2 = pandas_groupby["col3"].mean()
+    # df_equals(res1, res2)
+
+    modin_groupby["col3"].agg(["mean"])
+    pandas_groupby["col3"].agg(["mean"])
+    eval___getitem__(modin_groupby, pandas_groupby, "col3")
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
     eval_shift(modin_groupby, pandas_groupby)
@@ -1332,7 +1352,8 @@ def eval___getitem__(md_grp, pd_grp, item):
 
     def build_list_agg(fns):
         def test(grp):
-            res = grp[item].agg(fns)
+            res = grp[item].agg(fns, numeric_only=True)
+            # breakpoint()
             if res.ndim == 2:
                 # Modin's frame has an extra level in the result. Alligning columns to compare.
                 # https://github.com/modin-project/modin/issues/3490
@@ -1342,18 +1363,18 @@ def eval___getitem__(md_grp, pd_grp, item):
         return test
 
     # issue-#3252, https://github.com/pandas-dev/pandas/issues/52760
-    # eval_general(
-    #    md_grp,
-    #    pd_grp,
-    #    build_list_agg(["mean"]),
-    #    comparator=build_types_asserter(df_equals),
-    # )
-    # eval_general(
-    #    md_grp,
-    #    pd_grp,
-    #    build_list_agg(["mean", "count"]),
-    #    comparator=build_types_asserter(df_equals),
-    # )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean"]),
+        comparator=build_types_asserter(df_equals),
+    )
+    eval_general(
+        md_grp,
+        pd_grp,
+        build_list_agg(["mean", "count"]),
+        comparator=build_types_asserter(df_equals),
+    )
 
     # Explicit default-to-pandas test
     eval_general(
