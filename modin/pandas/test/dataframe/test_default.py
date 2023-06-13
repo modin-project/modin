@@ -358,6 +358,14 @@ def test_cov(min_periods, ddof):
     )
 
 
+@pytest.mark.parametrize("numeric_only", [True, False, None])
+def test_cov_numeric_only(numeric_only):
+    eval_general(
+        *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
+        lambda df: df.cov(numeric_only=numeric_only),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dot(data):
     modin_df = pd.DataFrame(data)

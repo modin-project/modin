@@ -2095,7 +2095,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         This method is only used to compute covariance at the moment.
         """
         other = self.to_numpy()
-        other_mask = self._isfinite().to_numpy()
+        try:
+            other_mask = self._isfinite().to_numpy()
+        except TypeError as err:
+            # Pandas raises ValueError on unsupported types, so casting
+            # the exception to a proper type
+            raise ValueError("Unsupported types with 'numeric_only=False'") from err
         n_cols = other.shape[1]
 
         if min_periods is None:
