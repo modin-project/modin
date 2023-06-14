@@ -548,8 +548,9 @@ def test_astype_category_large():
 @pytest.mark.xfail(
     StorageFormat.get() == "Hdk",
     reason="https://github.com/modin-project/modin/issues/6268",
+    strict=True,
 )
-def test_astype_int64_to_astype_categor_github_issue_6259():
+def test_astype_int64_to_astype_category_github_issue_6259():
     eval_general(
         *create_test_dfs(
             {"c0": [0, 1, 2, 3, 4], "par": ["foo", "boo", "bar", "foo", "boo"]},
