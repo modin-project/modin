@@ -3280,6 +3280,7 @@ class PandasDataframe(ClassLogger):
         right_frames: list,
         join_type="outer",
         copartition_along_columns=True,
+        labels="keep",
         dtypes=None,
     ):
         """
@@ -3349,9 +3350,9 @@ class PandasDataframe(ClassLogger):
 
         return self.__constructor__(
             new_frame,
-            joined_index,
+            joined_index if labels == "keep" else None,
             joined_columns,
-            row_lengths,
+            row_lengths if labels == "keep" else None,
             column_widths,
             dtypes,
         )

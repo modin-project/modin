@@ -926,11 +926,16 @@ class Series(BasePandasDataset):
         """
         Test whether two objects contain the same elements.
         """
-        return (
-            self.name == other.name
-            and self.index.equals(other.index)
-            and self.eq(other).all()
+        if not self.name == other.name or not self.index.equals(other.index):
+            return False
+
+        # self.eq(other).all()
+        # from pandas.core.dtypes.missing import array_equals
+
+        res = self.__constructor__(
+            query_compiler=self._query_compiler.equals(other._query_compiler)
         )
+        return res.all()
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
