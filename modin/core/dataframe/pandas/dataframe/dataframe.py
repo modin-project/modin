@@ -27,6 +27,7 @@ from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
+from modin.config import Engine
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -1374,6 +1375,7 @@ class PandasDataframe(ClassLogger):
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
+        has_categorical_cast = False
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
             if (
@@ -1400,13 +1402,20 @@ class PandasDataframe(ClassLogger):
                             columns=[column]
                         )[column],
                     )
-                    use_full_axis_cast = True
+                    use_full_axis_cast = has_categorical_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            return df.astype(
+            # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
+            # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
+            df_for_astype = (
+                df.copy(deep=True)
+                if Engine.get() == "Ray" and has_categorical_cast
+                else df
+            )
+            return df_for_astype.astype(
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
