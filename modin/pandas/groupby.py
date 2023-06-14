@@ -836,7 +836,7 @@ class DataFrameGroupBy(ClassLogger):
             # for list-list aggregation pandas always puts
             # groups as index in the result, ignoring as_index,
             # so we have to reset it to default value
-            return self.__override(as_index=True)._wrap_aggregation(
+            res = self.__override(as_index=True)._wrap_aggregation(
                 qc_method=type(self._query_compiler).groupby_agg,
                 numeric_only=False,
                 agg_func=func,
@@ -844,6 +844,9 @@ class DataFrameGroupBy(ClassLogger):
                 agg_kwargs=kwargs,
                 how="axis_wise",
             )
+            if not self._kwargs["as_index"]:
+                res.reset_index(inplace=True)
+            return res
         elif callable(func):
             return self._check_index(
                 self._wrap_aggregation(
