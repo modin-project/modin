@@ -687,19 +687,13 @@ class DataFrame(BasePandasDataset):
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
-        # FIXME: https://github.com/modin-project/modin/issues/6232
-        if not numeric_only:
-            return self._default_to_pandas(
-                pandas.DataFrame.cov,
-                min_periods=min_periods,
-                ddof=ddof,
-                numeric_only=numeric_only,
+        cov_df = self
+        if numeric_only:
+            cov_df = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
             )
-        cov_df = self.drop(
-            columns=[
-                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-            ]
-        )
 
         if min_periods is not None and min_periods > len(cov_df):
             result = np.empty((cov_df.shape[1], cov_df.shape[1]))
