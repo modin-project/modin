@@ -545,6 +545,18 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+def test_astype_int64_to_astype_categor_github_issue_6259():
+    eval_general(
+        *create_test_dfs(
+            {"c0": [0, 1, 2, 3, 4], "par": ["foo", "boo", "bar", "foo", "boo"]},
+            index=["a", "b", "c", "d", "e"],
+        ),
+        lambda df: df["c0"].astype("Int64").astype("category"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
 @pytest.mark.skipif(
     get_current_execution() == "BaseOnPython",
     reason="BaseOnPython doesn't have proxy categories",
