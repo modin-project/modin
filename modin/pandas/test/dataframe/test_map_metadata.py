@@ -545,6 +545,10 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/6268",
+)
 def test_astype_int64_to_astype_categor_github_issue_6259():
     eval_general(
         *create_test_dfs(

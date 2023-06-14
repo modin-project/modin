@@ -1408,7 +1408,6 @@ class PandasDataframe(ClassLogger):
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-
             # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
             # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
             df_for_astype = (
