@@ -98,6 +98,10 @@ def test_count_specific(numeric_only):
     )
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/513",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_count_dtypes(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)

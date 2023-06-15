@@ -21,10 +21,9 @@ from functools import lru_cache
 from collections import OrderedDict
 
 import numpy as np
-
 import pandas
 from pandas import Timestamp
-from pandas.core.dtypes.common import get_dtype
+from pandas.core.dtypes.common import get_dtype, is_string_dtype
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 
 import pyarrow as pa
@@ -32,10 +31,13 @@ from pyarrow.types import is_dictionary
 
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
+EMPTY_ARROW_TABLE = pa.Table.from_pandas(pandas.DataFrame({}))
+
 
 class ColNameCodec:
     IDX_COL_NAME = "__index__"
     ROWID_COL_NAME = "__rowid__"
+    UNNAMED_IDX_COL_NAME = "__index__0__N"
 
     _IDX_NAME_PATTERN = re.compile(f"{IDX_COL_NAME}\\d+_(.*)")
     _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
@@ -259,21 +261,20 @@ class ColNameCodec:
                 elif f.has_index_cache:
                     idx_names.update(mangle(f.index.names))
                 else:
-                    idx_names.update(mangle([None]))
+                    idx_names.add(ColNameCodec.UNNAMED_IDX_COL_NAME)
                 if len(idx_names) > 1:
-                    names[mangle([None])[0]] = get_dtype(int)
-                    return names
+                    idx_names = [ColNameCodec.UNNAMED_IDX_COL_NAME]
+                    break
 
-            # Inherit Index's name and dtype from the first frame.
+            name = next(iter(idx_names))
+            # Inherit the Index's dtype from the first frame.
             if first._index_cols is not None:
-                name = first._index_cols[0]
-                names[name] = first._dtypes[name]
+                names[name] = first._dtypes.iloc[0]
             elif first.has_index_cache:
-                idx = first.index
-                names[mangle(idx.names)[0]] = idx.dtype
+                names[name] = first.index.dtype
             else:
                 # A trivial index with no name
-                names[mangle([None])[0]] = get_dtype(int)
+                names[name] = get_dtype(int)
         return names
 
 
@@ -462,6 +463,23 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
+
+
+def to_arrow_type(dtype) -> pa.lib.DataType:
+    """
+    Convert the specified dtype to arrow.
+
+    Parameters
+    ----------
+    dtype : dtype
+
+    Returns
+    -------
+    pa.lib.DataType
+    """
+    if is_string_dtype(dtype):
+        return pa.from_numpy_dtype(str)
+    return pa.from_numpy_dtype(dtype)
 
 
 def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.DataType:

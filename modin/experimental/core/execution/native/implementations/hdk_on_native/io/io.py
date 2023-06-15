@@ -581,8 +581,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 ErrorMessage.default_to_pandas(f"Argument {key}={value}")
                 return df.to_pandas().to_csv(**kwargs)
 
-        df._execute()
-        at = df._partitions[0][0].get()
+        at = df._execute()
         if not isinstance(at, pa.Table):
             return df.to_pandas().to_csv(**kwargs)
         idx_names = df._index_cols

@@ -251,6 +251,7 @@ def run_and_compare(
     data,
     data2=None,
     force_lazy=True,
+    force_hdk_execute=False,
     force_arrow_execute=False,
     allow_subqueries=False,
     comparator=df_equals,
@@ -263,6 +264,7 @@ def run_and_compare(
         data,
         data2,
         force_lazy,
+        force_hdk_execute,
         force_arrow_execute,
         allow_subqueries,
         constructor_kwargs,
@@ -272,16 +274,21 @@ def run_and_compare(
         kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
 
-        if force_lazy:
-            set_execution_mode(kwargs["df1"], "lazy")
-            set_execution_mode(kwargs["df2"], "lazy")
+        if force_hdk_execute:
+            set_execution_mode(kwargs["df1"], "hdk")
+            set_execution_mode(kwargs["df2"], "hdk")
         elif force_arrow_execute:
             set_execution_mode(kwargs["df1"], "arrow")
             set_execution_mode(kwargs["df2"], "arrow")
+        elif force_lazy:
+            set_execution_mode(kwargs["df1"], "lazy")
+            set_execution_mode(kwargs["df2"], "lazy")
 
         exp_res = fn(lib=pd, **kwargs)
 
-        if force_arrow_execute:
+        if force_hdk_execute:
+            set_execution_mode(exp_res, "hdk", allow_subqueries)
+        elif force_arrow_execute:
             set_execution_mode(exp_res, "arrow", allow_subqueries)
         elif force_lazy:
             set_execution_mode(exp_res, None, allow_subqueries)
@@ -301,6 +308,7 @@ def run_and_compare(
                 data=data,
                 data2=data2,
                 force_lazy=force_lazy,
+                force_hdk_execute=force_hdk_execute,
                 force_arrow_execute=force_arrow_execute,
                 allow_subqueries=allow_subqueries,
                 constructor_kwargs=constructor_kwargs,
@@ -313,6 +321,7 @@ def run_and_compare(
             data=data,
             data2=data2,
             force_lazy=force_lazy,
+            force_hdk_execute=force_hdk_execute,
             force_arrow_execute=force_arrow_execute,
             allow_subqueries=allow_subqueries,
             constructor_kwargs=constructor_kwargs,
