@@ -29,7 +29,7 @@ from modin.utils import _inherit_docstrings
 from modin.pandas.indexing import is_range_like
 
 from .expr import InputRefExpr, LiteralExpr, OpExpr
-from .dataframe.utils import ColNameCodec, empty_arrow_table, get_common_arrow_type
+from .dataframe.utils import ColNameCodec, EMPTY_ARROW_TABLE, get_common_arrow_type
 
 if TYPE_CHECKING:
     from .dataframe.dataframe import HdkOnNativeDataframe
@@ -445,7 +445,7 @@ class FrameNode(DFAlgNode):
             return pa.Table.from_pandas(
                 pandas.DataFrame(index=frame._index_cache, columns=frame._columns_cache)
             )
-        return empty_arrow_table()
+        return EMPTY_ARROW_TABLE
 
     def copy(self):
         """
@@ -950,7 +950,7 @@ class UnionNode(DFAlgNode):
         if len(self.columns) == 0:
             frames = self.input
             if len(frames) == 0:
-                return empty_arrow_table()
+                return EMPTY_ARROW_TABLE
             elif self.ignore_index:
                 idx = pandas.RangeIndex(0, sum(len(frame.index) for frame in frames))
             else:
@@ -996,7 +996,7 @@ class UnionNode(DFAlgNode):
         -------
         UnionNode
         """
-        return UnionNode(self.input)
+        return UnionNode(self.input, self.columns, self.ignore_index)
 
     def _prints(self, prefix):
         """

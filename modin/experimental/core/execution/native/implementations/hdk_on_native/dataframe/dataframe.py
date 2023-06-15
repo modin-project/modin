@@ -1072,20 +1072,20 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         index_cols = None
-        columns = OrderedDict()
+        col_name_to_dtype = OrderedDict()
         for col in self.columns:
-            columns[col] = self._dtypes[col]
+            col_name_to_dtype[col] = self._dtypes[col]
 
         if join == "inner":
             for frame in other_modin_frames:
-                for col in list(columns):
+                for col in list(col_name_to_dtype):
                     if col not in frame.columns:
-                        del columns[col]
+                        del col_name_to_dtype[col]
         elif join == "outer":
             for frame in other_modin_frames:
                 for col in frame.columns:
-                    if col not in columns:
-                        columns[col] = frame._dtypes[col]
+                    if col not in col_name_to_dtype:
+                        col_name_to_dtype[col] = frame._dtypes[col]
         else:
             raise NotImplementedError(f"Unsupported join type {join=}")
 
@@ -1103,7 +1103,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 else:
                     frames.append(frame)
 
-        if len(columns) == 0:
+        if len(col_name_to_dtype) == 0:
             if len(frames) == 0:
                 dtypes = pd.Series()
             elif ignore_index:
@@ -1117,23 +1117,27 @@ class HdkOnNativeDataframe(PandasDataframe):
             # Find common dtypes
             for frame in other_modin_frames:
                 frame_dtypes = frame._dtypes
-                for col in columns:
+                for col in col_name_to_dtype:
                     if col in frame_dtypes:
-                        columns[col] = pd.core.dtypes.cast.find_common_type(
-                            [columns[col], frame_dtypes[col]]
+                        col_name_to_dtype[col] = pd.core.dtypes.cast.find_common_type(
+                            [col_name_to_dtype[col], frame_dtypes[col]]
                         )
 
             if sort:
-                columns = OrderedDict((col, columns[col]) for col in sorted(columns))
+                col_name_to_dtype = OrderedDict(
+                    (col, col_name_to_dtype[col]) for col in sorted(col_name_to_dtype)
+                )
 
             if ignore_index:
-                table_columns = columns
+                table_col_name_to_dtype = col_name_to_dtype
             else:
-                table_columns = ColNameCodec.concat_index_names(frames)
-                index_cols = list(table_columns)
-                table_columns.update(columns)
+                table_col_name_to_dtype = ColNameCodec.concat_index_names(frames)
+                index_cols = list(table_col_name_to_dtype)
+                table_col_name_to_dtype.update(col_name_to_dtype)
 
-            dtypes = pd.Series(table_columns.values(), index=table_columns.keys())
+            dtypes = pd.Series(
+                table_col_name_to_dtype.values(), index=table_col_name_to_dtype.keys()
+            )
             for i, frame in enumerate(frames):
                 frame_dtypes = frame._dtypes.get()
                 if (
@@ -1143,7 +1147,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 ):
                     exprs = OrderedDict()
                     uses_rowid = False
-                    for col in table_columns:
+                    for col in table_col_name_to_dtype:
                         if col in frame_dtypes:
                             expr = frame.ref(col)
                         elif col == UNNAMED_IDX_COL_NAME:
@@ -1154,9 +1158,9 @@ class HdkOnNativeDataframe(PandasDataframe):
                                 uses_rowid = True
                                 expr = frame.ref(ROWID_COL_NAME)
                         else:
-                            expr = LiteralExpr(None, table_columns[col])
-                        if expr._dtype != table_columns[col]:
-                            expr = expr.cast(table_columns[col])
+                            expr = LiteralExpr(None, table_col_name_to_dtype[col])
+                        if expr._dtype != table_col_name_to_dtype[col]:
+                            expr = expr.cast(table_col_name_to_dtype[col])
                         exprs[col] = expr
                     frames[i] = frame.__constructor__(
                         columns=dtypes.index,
@@ -1168,9 +1172,9 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return self.__constructor__(
             index_cols=index_cols,
-            columns=columns.keys(),
+            columns=col_name_to_dtype.keys(),
             dtypes=dtypes,
-            op=UnionNode(frames, columns, ignore_index),
+            op=UnionNode(frames, col_name_to_dtype, ignore_index),
             force_execution_mode=self._force_execution_mode,
         )
 

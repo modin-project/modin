@@ -20,6 +20,7 @@ from typing import Tuple, Union, List, Any
 from functools import lru_cache
 from collections import OrderedDict
 
+import numpy as np
 import pandas
 from pandas import Timestamp
 from pandas.core.dtypes.common import get_dtype, is_string_dtype
@@ -28,11 +29,9 @@ from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 import pyarrow as pa
 from pyarrow.types import is_dictionary
 
-import numpy as np
-
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
-_EMPTY_ARROW_TABLE = None
+EMPTY_ARROW_TABLE = pa.Table.from_pandas(pandas.DataFrame({}))
 
 
 class ColNameCodec:
@@ -464,20 +463,6 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
-
-
-def empty_arrow_table() -> pa.Table:
-    """
-    Return an empty arrow table.
-
-    Returns
-    -------
-    pyarrow.Table
-    """
-    global _EMPTY_ARROW_TABLE
-    if _EMPTY_ARROW_TABLE is None:
-        _EMPTY_ARROW_TABLE = pa.Table.from_pandas(pandas.DataFrame({}))
-    return _EMPTY_ARROW_TABLE
 
 
 def to_arrow_type(dtype) -> pa.lib.DataType:

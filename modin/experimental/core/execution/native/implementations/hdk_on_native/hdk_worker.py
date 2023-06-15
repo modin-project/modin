@@ -84,6 +84,7 @@ class HdkWorker(BaseDbWorker):
     @classmethod
     def executeRA(cls, query):
         if query.startswith("execute relalg"):
+            # 14 == len("execute relalg")
             ra = query[14:]
         else:
             assert query.startswith("execute calcite")

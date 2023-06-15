@@ -48,7 +48,7 @@ def _nullcontext():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("append_na", [True, False])
 @pytest.mark.parametrize("op", ["isna", "isnull", "notna", "notnull"])
-def test_isna(data, append_na, op):
+def test_isna_isnull_notna_notnull(data, append_na, op):
     pandas_df = pandas.DataFrame(data)
     modin_df = pd.DataFrame(pandas_df)
     if append_na:
