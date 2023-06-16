@@ -332,7 +332,7 @@ def test_sum_single_column(data):
 @pytest.mark.parametrize(
     "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize(
     "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )

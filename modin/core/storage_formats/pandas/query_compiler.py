@@ -900,7 +900,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def mean(self, axis, **kwargs):
-        if kwargs.get("level") is not None:
+        if kwargs.get("level") is not None or axis is None:
             return self.default_to_pandas(pandas.DataFrame.mean, axis=axis, **kwargs)
 
         skipna = kwargs.get("skipna", True)
@@ -949,10 +949,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Reduce operations
     idxmax = Reduce.register(pandas.DataFrame.idxmax)
     idxmin = Reduce.register(pandas.DataFrame.idxmin)
-    median = Reduce.register(pandas.DataFrame.median)
+
+    def median(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.median, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.median)(self, axis=axis, **kwargs)
+
     nunique = Reduce.register(pandas.DataFrame.nunique)
-    skew = Reduce.register(pandas.DataFrame.skew)
-    kurt = Reduce.register(pandas.DataFrame.kurt)
+
+    def skew(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.skew, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.skew)(self, axis=axis, **kwargs)
+
+    def kurt(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.kurt, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.kurt)(self, axis=axis, **kwargs)
+
     sem = Reduce.register(pandas.DataFrame.sem)
     std = Reduce.register(pandas.DataFrame.std)
     var = Reduce.register(pandas.DataFrame.var)
