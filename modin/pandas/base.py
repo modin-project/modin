@@ -1891,7 +1891,7 @@ class BasePandasDataset(ClassLogger):
                 res._query_compiler.max(
                     axis=0,
                     skipna=skipna,
-                    numeric_only=numeric_only,
+                    numeric_only=False,
                     **kwargs,
                 )
             )
@@ -1924,7 +1924,7 @@ class BasePandasDataset(ClassLogger):
                 res._query_compiler.min(
                     axis=0,
                     skipna=skipna,
-                    numeric_only=numeric_only,
+                    numeric_only=False,
                     **kwargs,
                 )
             )
