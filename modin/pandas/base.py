@@ -1967,6 +1967,7 @@ class BasePandasDataset(ClassLogger):
         return (
             self._reduce_dimension(result_qc)
             if isinstance(result_qc, type(self._query_compiler))
+            # scalar case
             else result_qc
         )
 
