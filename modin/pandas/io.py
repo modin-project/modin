@@ -282,6 +282,11 @@ def read_parquet(
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
+    if engine == "fastparquet" and dtype_backend is not no_default:
+        raise ValueError(
+            "The 'dtype_backend' argument is not supported for the fastparquet engine"
+        )
+
     return DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
             path=path,

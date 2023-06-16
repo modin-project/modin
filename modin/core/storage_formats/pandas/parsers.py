@@ -317,6 +317,29 @@ class PandasParser(ClassLogger):
             }
         return cls.query_compiler_cls.from_pandas(pandas_frame, cls.frame_cls)
 
+    @staticmethod
+    def get_types_mapper(dtype_backend):
+        """
+        Get types mapper that would be used in read_parquet/read_feather.
+
+        Parameters
+        ----------
+        dtype_backend : {"numpy_nullable", "pyarrow", lib.no_default}
+
+        Returns
+        -------
+        dict
+        """
+        to_pandas_kwargs = {}
+        if dtype_backend == "numpy_nullable":
+            from pandas.io._util import _arrow_dtype_mapping
+
+            mapping = _arrow_dtype_mapping()
+            to_pandas_kwargs["types_mapper"] = mapping.get
+        elif dtype_backend == "pyarrow":
+            to_pandas_kwargs["types_mapper"] = pandas.ArrowDtype
+        return to_pandas_kwargs
+
     infer_compression = infer_compression
 
 
@@ -758,7 +781,7 @@ class ParquetFileToRead(NamedTuple):
 class PandasParquetParser(PandasParser):
     @staticmethod
     def _read_row_group_chunk(
-        f, row_group_start, row_group_end, columns, engine
+        f, row_group_start, row_group_end, columns, engine, to_pandas_kwargs
     ):  # noqa: GL08
         if engine == "pyarrow":
             from pyarrow.parquet import ParquetFile
@@ -773,7 +796,7 @@ class PandasParquetParser(PandasParser):
                     columns=columns,
                     use_pandas_metadata=True,
                 )
-                .to_pandas()
+                .to_pandas(**to_pandas_kwargs)
             )
         elif engine == "fastparquet":
             from fastparquet import ParquetFile
@@ -804,6 +827,8 @@ engine : str
         if isinstance(files_for_parser, (str, os.PathLike)):
             return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
 
+        to_pandas_kwargs = PandasParser.get_types_mapper(kwargs["dtype_backend"])
+
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
                 context = _nullcontext(file_for_parser.path)
@@ -816,6 +841,7 @@ engine : str
                     file_for_parser.row_group_end,
                     columns,
                     engine,
+                    to_pandas_kwargs,
                 )
             chunks.append(chunk)
         df = pandas.concat(chunks)
@@ -855,11 +881,14 @@ class PandasFeatherParser(PandasParser):
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
 
+        to_pandas_kwargs = PandasParser.get_types_mapper(kwargs["dtype_backend"])
+        del kwargs["dtype_backend"]
+
         with OpenFile(
             fname,
             **(kwargs.pop("storage_options", None) or {}),
         ) as file:
-            df = feather.read_feather(file, **kwargs)
+            df = feather.read_feather(file, **kwargs, **to_pandas_kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
