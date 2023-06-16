@@ -1135,21 +1135,6 @@ class Series(BasePandasDataset):
         """
         return self.index
 
-    def kurt(
-        self,
-        axis: Axis = 0,
-        skipna=True,
-        numeric_only=False,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return unbiased kurtosis over requested axis.
-        """
-        axis = self._get_axis_number(axis)
-        return super(Series, self).kurt(axis, skipna, numeric_only, **kwargs)
-
-    kurtosis = kurt
-
     def le(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
         Return less than or equal to of series and `other`, element-wise (binary operator `le`).

@@ -1779,30 +1779,7 @@ class BasePandasDataset(ClassLogger):
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
     def kurt(self, axis=0, skipna=True, numeric_only=False, **kwargs):
-        if axis is None:
-            return self._default_to_pandas(
-                pandas.DataFrame.kurt,
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        axis = self._get_axis_number(axis)
-
-        if not numeric_only:
-            self._validate_dtypes(numeric_only=True)
-
-        data = self._get_numeric_data(axis) if numeric_only else self
-
-        return self._reduce_dimension(
-            data._query_compiler.kurt(
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
-        )
+        return self._stat_operation("kurt", axis, skipna, numeric_only, **kwargs)
 
     kurtosis = kurt
 
@@ -1963,7 +1940,7 @@ class BasePandasDataset(ClassLogger):
                 self is DataFrame and level is not specified.
             `DataFrame` - self is DataFrame and level is specified.
         """
-        axis = self._get_axis_number(axis)
+        axis = self._get_axis_number(axis) if axis is not None else None
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         if op_name == "median":
             numpy_compat.function.validate_median((), kwargs)
@@ -1976,14 +1953,22 @@ class BasePandasDataset(ClassLogger):
         if not numeric_only:
             self._validate_dtypes(numeric_only=True)
 
-        data = self._get_numeric_data(axis) if numeric_only else self
+        data = (
+            self._get_numeric_data(axis if axis is not None else 0)
+            if numeric_only
+            else self
+        )
         result_qc = getattr(data._query_compiler, op_name)(
             axis=axis,
             skipna=skipna,
             numeric_only=numeric_only,
             **kwargs,
         )
-        return self._reduce_dimension(result_qc)
+        return (
+            self._reduce_dimension(result_qc)
+            if isinstance(result_qc, type(self._query_compiler))
+            else result_qc
+        )
 
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
         """
@@ -2661,14 +2646,6 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
-        if axis is None:
-            return self._default_to_pandas(
-                pandas.DataFrame.mean,
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         return self._stat_operation("mean", axis, skipna, numeric_only, **kwargs)
 
     def median(
@@ -2681,14 +2658,6 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
-        if axis is None:
-            return self._default_to_pandas(
-                pandas.DataFrame.median,
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         return self._stat_operation("median", axis, skipna, numeric_only, **kwargs)
 
     def set_axis(
@@ -2753,14 +2722,6 @@ class BasePandasDataset(ClassLogger):
         """
         Return unbiased skew over requested axis.
         """
-        if axis is None:
-            return self._default_to_pandas(
-                pandas.DataFrame.skew,
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         return self._stat_operation("skew", axis, skipna, numeric_only, **kwargs)
 
     def sort_index(
