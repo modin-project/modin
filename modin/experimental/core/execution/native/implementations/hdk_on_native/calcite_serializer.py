@@ -122,7 +122,7 @@ class CalciteSerializer:
 
         Returns
         -------
-        str, int, dict or list of dict
+        str, int, None, dict or list of dict
             Serialized item.
         """
         if isinstance(item, CalciteBaseNode):

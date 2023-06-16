@@ -577,8 +577,8 @@ class BaseExpr(abc.ABC):
         -------
         Generator
         """
+        expr = self
         if operands := getattr(self, "operands", None):
-            expr = self
             for i, op in enumerate(operands):
                 new_op = yield op
                 if new_op is not None:
@@ -587,6 +587,7 @@ class BaseExpr(abc.ABC):
                             expr = self.copy()
                         expr.operands[i] = new_op
                     yield expr
+        return expr
 
     def collect_frames(self, frames):
         """
@@ -923,6 +924,16 @@ class OpExpr(BaseExpr):
         Operation operands.
     _dtype : dtype
         Result data type.
+    partition_keys : list of BaseExpr, optional
+        This attribute is used with window functions only and contains
+        a list of column expressions to partition the result set.
+    order_keys : list of dict, optional
+        This attribute is used with window functions only and contains
+        order clauses.
+    lower_bound : dict, optional
+        Lover bound for windowed aggregates.
+    upper_bound : dict, optional
+        Upper bound for windowed aggregates.
     """
 
     _FOLD_OPS = {
@@ -960,6 +971,44 @@ class OpExpr(BaseExpr):
         self.operands = operands
         self._dtype = dtype
 
+    def set_window_opts(self, partition_keys, order_keys, order_ascending, na_pos):
+        """
+        Set the window function options.
+
+        Parameters
+        ----------
+        partition_keys : list of BaseExpr
+        order_keys : list of BaseExpr
+        order_ascending : list of bool
+        na_pos : {"FIRST", "LAST"}
+        """
+        self.is_rows = True
+        self.partition_keys = partition_keys
+        self.order_keys = []
+        for key, asc in zip(order_keys, order_ascending):
+            key = {
+                "field": key,
+                "direction": "ASCENDING" if asc else "DESCENDING",
+                "nulls": na_pos,
+            }
+            self.order_keys.append(key)
+        self.lower_bound = {
+            "unbounded": True,
+            "preceding": True,
+            "following": False,
+            "is_current_row": False,
+            "offset": None,
+            "order_key": 0,
+        }
+        self.upper_bound = {
+            "unbounded": False,
+            "preceding": False,
+            "following": False,
+            "is_current_row": True,
+            "offset": None,
+            "order_key": 1,
+        }
+
     def copy(self):
         """
         Make a shallow copy of the expression.
@@ -980,16 +1029,8 @@ class OpExpr(BaseExpr):
     @_inherit_docstrings(BaseExpr.nested_expressions)
     def nested_expressions(
         self,
-    ) -> Generator[Type["BaseExpr"], Type["BaseExpr"], Type["OpExpr"]]:
-        expr = self
-        for i, op in enumerate(self.operands):
-            new_op = yield op
-            if new_op is not None:
-                if new_op is not op:
-                    if expr is self:
-                        expr = self.copy()
-                    expr.operands[i] = new_op
-                yield expr
+    ) -> Generator[Type["BaseExpr"], Type["BaseExpr"], Type["BaseExpr"]]:
+        expr = yield from super().nested_expressions()
         if partition_keys := getattr(self, "partition_keys", None):
             for i, key in enumerate(partition_keys):
                 new_key = yield key
@@ -1008,6 +1049,7 @@ class OpExpr(BaseExpr):
                             expr = self.copy()
                         expr.order_keys[i]["field"] = new_field
                     yield expr
+        return expr
 
     @_inherit_docstrings(BaseExpr.fold)
     def fold(self):

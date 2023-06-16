@@ -17,7 +17,7 @@ import re
 import numpy as np
 from collections import OrderedDict
 
-from typing import List, Hashable, Optional, Tuple, Union
+from typing import List, Hashable, Optional, Tuple, Union, Iterable
 
 import pyarrow
 from pyarrow.types import is_dictionary
@@ -552,7 +552,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if agg in ("head", "tail"):
             n = kwargs["agg_kwargs"]["n"]
-            return self._groupby_head_tail(agg, n, groupby_cols.tolist())
+            return self._groupby_head_tail(agg, n, groupby_cols)
 
         col_to_delete_template = "__delete_me_{name}"
 
@@ -641,7 +641,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         return new_frame
 
     def _groupby_head_tail(
-        self, agg: str, n: int, cols: List[str]
+        self, agg: str, n: int, cols: Iterable[str]
     ) -> "HdkOnNativeDataframe":
         """
         Return first/last n rows of each group.
@@ -652,7 +652,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         n : int
             If positive: number of entries to include from start/end of each group.
             If negative: number of entries to exclude from start/end of each group.
-        cols : List[str]
+        cols : Iterable[str]
             Group by column names.
 
         Returns
@@ -660,47 +660,27 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        fold = True  # Fold TransformNodes
-        sort = self._op
-        if isinstance(sort, SortNode):
-            base = sort.input[0]
+        if isinstance(self._op, SortNode):
+            base = self._op.input[0]
+            order_keys = self._op.columns
+            ascending = self._op.ascending
+            na_pos = self._op.na_position.upper()
+            fold = True  # Fold TransformNodes
         else:
             base = self._maybe_materialize_rowid()
+            order_keys = base._index_cols[0:1]
+            ascending = [True]
+            na_pos = "FIRST"
             fold = base is self  # Do not fold if rowid is added
-            sort = SortNode(base, base._index_cols[0:1], [True], "FIRST")
-        row_num_name = "__HDK_ROW_NUMBER__"
-        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
-        row_num_op.is_rows = True
-        row_num_op.order_keys = []
-        row_num_op.partition_keys = [base.ref(col) for col in cols]
-        ascending = sort.ascending
-        na_pos = sort.na_position.upper()
         if (n < 0) == (agg == "head"):  # Invert sorting
             ascending = [not a for a in ascending]
             na_pos = "FIRST" if na_pos == "LAST" else "LAST"
-        for col, asc in zip(sort.columns, ascending):
-            key = {
-                "field": base.ref(col),
-                "direction": "ASCENDING" if asc else "DESCENDING",
-                "nulls": na_pos,
-            }
-            row_num_op.order_keys.append(key)
-        row_num_op.lower_bound = {
-            "unbounded": True,
-            "preceding": True,
-            "following": False,
-            "is_current_row": False,
-            "offset": None,
-            "order_key": 0,
-        }
-        row_num_op.upper_bound = {
-            "unbounded": False,
-            "preceding": False,
-            "following": False,
-            "is_current_row": True,
-            "offset": None,
-            "order_key": 1,
-        }
+        partition_keys = [base.ref(col) for col in cols]
+        order_keys = [base.ref(col) for col in order_keys]
+
+        row_num_name = "__HDK_ROW_NUMBER__"
+        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
         exprs = base._index_exprs()
         exprs.update((col, base.ref(col)) for col in base.columns)
         exprs[row_num_name] = row_num_op
