@@ -240,6 +240,14 @@ def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
     )
 
 
+@pytest.mark.parametrize("method", ["min", "max", "mean", "median", "skew", "kurt"])
+def test_aggreagations_with_axis_none(method):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: getattr(df, method)(axis=None),
+    )
+
+
 @pytest.mark.parametrize("method", ["prod", "product"])
 @pytest.mark.parametrize("is_transposed", [False, True])
 @pytest.mark.parametrize(

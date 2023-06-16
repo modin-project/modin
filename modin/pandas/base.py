@@ -1779,6 +1779,14 @@ class BasePandasDataset(ClassLogger):
 
     @_inherit_docstrings(pandas.DataFrame.kurt, apilink="pandas.DataFrame.kurt")
     def kurt(self, axis=0, skipna=True, numeric_only=False, **kwargs):
+        if axis is None:
+            return self._default_to_pandas(
+                pandas.DataFrame.kurt,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
 
@@ -1867,9 +1875,10 @@ class BasePandasDataset(ClassLogger):
         Return the maximum of the values over the requested axis.
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        orig_axis = axis
         axis = self._get_axis_number(axis)
         data = self._validate_dtypes_min_max(axis, numeric_only)
-        return data._reduce_dimension(
+        res = data._reduce_dimension(
             data._query_compiler.max(
                 axis=axis,
                 skipna=skipna,
@@ -1877,6 +1886,49 @@ class BasePandasDataset(ClassLogger):
                 **kwargs,
             )
         )
+        if orig_axis is None:
+            res = res._reduce_dimension(
+                res._query_compiler.max(
+                    axis=0,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return res
+
+    def min(
+        self,
+        axis: Axis = 0,
+        skipna: bool = True,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return the minimum of the values over the requested axis.
+        """
+        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
+        orig_axis = axis
+        axis = self._get_axis_number(axis)
+        data = self._validate_dtypes_min_max(axis, numeric_only)
+        res = data._reduce_dimension(
+            data._query_compiler.min(
+                axis=axis,
+                skipna=skipna,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+        if orig_axis is None:
+            res = res._reduce_dimension(
+                res._query_compiler.min(
+                    axis=0,
+                    skipna=skipna,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return res
 
     def _stat_operation(
         self,
@@ -1939,28 +1991,6 @@ class BasePandasDataset(ClassLogger):
         """
         return self._reduce_dimension(
             self._query_compiler.memory_usage(index=index, deep=deep)
-        )
-
-    def min(
-        self,
-        axis: Axis = 0,
-        skipna: bool = True,
-        numeric_only=False,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Return the minimum of the values over the requested axis.
-        """
-        validate_bool_kwarg(skipna, "skipna", none_allowed=False)
-        axis = self._get_axis_number(axis)
-        data = self._validate_dtypes_min_max(axis, numeric_only)
-        return data._reduce_dimension(
-            data._query_compiler.min(
-                axis=axis,
-                skipna=skipna,
-                numeric_only=numeric_only,
-                **kwargs,
-            )
         )
 
     def mod(
@@ -2631,6 +2661,14 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
+        if axis is None:
+            return self._default_to_pandas(
+                pandas.DataFrame.mean,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         return self._stat_operation("mean", axis, skipna, numeric_only, **kwargs)
 
     def median(
@@ -2643,6 +2681,14 @@ class BasePandasDataset(ClassLogger):
         """
         Return the mean of the values over the requested axis.
         """
+        if axis is None:
+            return self._default_to_pandas(
+                pandas.DataFrame.median,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         return self._stat_operation("median", axis, skipna, numeric_only, **kwargs)
 
     def set_axis(
@@ -2707,6 +2753,14 @@ class BasePandasDataset(ClassLogger):
         """
         Return unbiased skew over requested axis.
         """
+        if axis is None:
+            return self._default_to_pandas(
+                pandas.DataFrame.skew,
+                axis=axis,
+                skipna=skipna,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
         return self._stat_operation("skew", axis, skipna, numeric_only, **kwargs)
 
     def sort_index(
