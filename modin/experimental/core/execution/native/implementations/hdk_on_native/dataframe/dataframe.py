@@ -17,7 +17,7 @@ import re
 import numpy as np
 from collections import OrderedDict
 
-from typing import List, Hashable, Optional, Tuple, Union
+from typing import List, Hashable, Optional, Tuple, Union, Iterable
 
 import pyarrow
 from pyarrow.types import is_dictionary
@@ -255,12 +255,12 @@ class HdkOnNativeDataframe(PandasDataframe):
         ----------
         partitions : np.ndarray, optional
             Partitions of the frame.
-        index : pandas.Index, optional
+        index : pandas.Index or list, optional
             Index of the frame to be used as an index cache. If None then will be
             computed on demand.
-        columns : pandas.Index, optional
+        columns : pandas.Index or list, optional
             Columns of the frame.
-        dtypes : pandas.Index, optional
+        dtypes : pandas.Index or list, optional
             Column data types.
         op : DFAlgNode, optional
             A tree describing how frame is computed. For materialized frames it
@@ -550,6 +550,10 @@ class HdkOnNativeDataframe(PandasDataframe):
                 + f"met '{type(by_frame._op).__name__}'."
             )
 
+        if agg in ("head", "tail"):
+            n = kwargs["agg_kwargs"]["n"]
+            return self._groupby_head_tail(agg, n, groupby_cols)
+
         col_to_delete_template = "__delete_me_{name}"
 
         def generate_by_name(by):
@@ -635,6 +639,66 @@ class HdkOnNativeDataframe(PandasDataframe):
                     col_labels=filtered_columns
                 )
         return new_frame
+
+    def _groupby_head_tail(
+        self, agg: str, n: int, cols: Iterable[str]
+    ) -> "HdkOnNativeDataframe":
+        """
+        Return first/last n rows of each group.
+
+        Parameters
+        ----------
+        agg : {"head", "tail"}
+        n : int
+            If positive: number of entries to include from start/end of each group.
+            If negative: number of entries to exclude from start/end of each group.
+        cols : Iterable[str]
+            Group by column names.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            The new frame.
+        """
+        if isinstance(self._op, SortNode):
+            base = self._op.input[0]
+            order_keys = self._op.columns
+            ascending = self._op.ascending
+            na_pos = self._op.na_position.upper()
+            fold = True  # Fold TransformNodes
+        else:
+            base = self._maybe_materialize_rowid()
+            order_keys = base._index_cols[0:1]
+            ascending = [True]
+            na_pos = "FIRST"
+            fold = base is self  # Do not fold if rowid is added
+        if (n < 0) == (agg == "head"):  # Invert sorting
+            ascending = [not a for a in ascending]
+            na_pos = "FIRST" if na_pos == "LAST" else "LAST"
+        partition_keys = [base.ref(col) for col in cols]
+        order_keys = [base.ref(col) for col in order_keys]
+
+        row_num_name = "__HDK_ROW_NUMBER__"
+        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
+        exprs = base._index_exprs()
+        exprs.update((col, base.ref(col)) for col in base.columns)
+        exprs[row_num_name] = row_num_op
+        transform = base.copy(
+            columns=list(base.columns) + [row_num_name],
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(base, exprs, fold),
+        )
+
+        if n < 0:
+            cond = transform.ref(row_num_name).ge(-n + 1)
+        else:
+            cond = transform.ref(row_num_name).le(n)
+
+        filter = transform.copy(op=FilterNode(transform, cond))
+        exprs = filter._index_exprs()
+        exprs.update((col, filter.ref(col)) for col in base.columns)
+        return base.copy(op=TransformNode(filter, exprs))
 
     def agg(self, agg):
         """

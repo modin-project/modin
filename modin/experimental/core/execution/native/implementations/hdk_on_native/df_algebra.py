@@ -679,6 +679,7 @@ class TransformNode(DFAlgNode):
         A transformed frame.
     exprs : dict
         Expressions for frame's columns computation.
+    fold : bool
 
     Attributes
     ----------
@@ -692,10 +693,11 @@ class TransformNode(DFAlgNode):
         self,
         base: "HdkOnNativeDataframe",
         exprs: Dict[str, Union[InputRefExpr, LiteralExpr, OpExpr]],
+        fold: bool = True,
     ):
         # If base of this node is another `TransformNode`, then translate all
         # expressions in `expr` to its base.
-        if isinstance(base._op, TransformNode):
+        if fold and isinstance(base._op, TransformNode):
             self.input = [base._op.input[0]]
             self.exprs = exprs = translate_exprs_to_base(exprs, self.input[0])
             for col, expr in exprs.items():
@@ -1024,7 +1026,7 @@ class SortNode(DFAlgNode):
         Sorted frame.
     columns : list of str
         A list of key columns for a sort.
-    ascending : bool
+    ascending : list of bool
         Ascending or descending sort.
     na_position : {"first", "last"}
         "first" to put NULLs at the start of the result,
@@ -1036,7 +1038,7 @@ class SortNode(DFAlgNode):
         Holds a single sorted frame.
     columns : list of str
         A list of key columns for a sort.
-    ascending : bool
+    ascending : list of bool
         Ascending or descending sort.
     na_position : {"first", "last"}
         "first" to put NULLs at the start of the result,

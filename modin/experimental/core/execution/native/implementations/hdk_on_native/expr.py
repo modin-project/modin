@@ -14,7 +14,7 @@
 """Module provides classes for scalar expression trees."""
 
 import abc
-from typing import Union
+from typing import Union, Generator, Type
 
 import numpy as np
 import pyarrow as pa
@@ -564,6 +564,31 @@ class BaseExpr(abc.ABC):
         """
         pass
 
+    def nested_expressions(
+        self,
+    ) -> Generator[Type["BaseExpr"], Type["BaseExpr"], Type["BaseExpr"]]:
+        """
+        Return a generator that allows to iterate over and replace the nested expressions.
+
+        If the generator receives a new expression, it creates a copy of `self` and
+        replaces the expression in the copy. The copy is returned to the sender.
+
+        Returns
+        -------
+        Generator
+        """
+        expr = self
+        if operands := getattr(self, "operands", None):
+            for i, op in enumerate(operands):
+                new_op = yield op
+                if new_op is not None:
+                    if new_op is not op:
+                        if expr is self:
+                            expr = self.copy()
+                        expr.operands[i] = new_op
+                    yield expr
+        return expr
+
     def collect_frames(self, frames):
         """
         Recursively collect all frames participating in the expression.
@@ -577,8 +602,8 @@ class BaseExpr(abc.ABC):
         frames : set
             Output set of collected frames.
         """
-        for op in getattr(self, "operands", []):
-            op.collect_frames(frames)
+        for expr in self.nested_expressions():
+            expr.collect_frames(frames)
 
     # currently we translate only exprs with a single input frame
     def translate_input(self, mapper):
@@ -599,12 +624,11 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The expression copy with translated input columns.
         """
-        if hasattr(self, "operands"):
-            res = self.copy()
-            for i, op in enumerate(self.operands):
-                res.operands[i] = op.translate_input(mapper)
-            return res
-        return self._translate_input(mapper)
+        res = None
+        gen = self.nested_expressions()
+        for expr in gen:
+            res = gen.send(expr.translate_input(mapper))
+        return self._translate_input(mapper) if res is None else res
 
     def _translate_input(self, mapper):
         """
@@ -635,10 +659,11 @@ class BaseExpr(abc.ABC):
         -------
         BaseExpr
         """
-        if (operands := getattr(self, "operands", None)) is not None:
-            for i, o in enumerate(operands):
-                operands[i] = o.fold()
-        return self
+        res = self
+        gen = self.nested_expressions()
+        for expr in gen:
+            res = gen.send(expr.fold())
+        return res
 
     def can_execute_hdk(self) -> bool:
         """
@@ -899,6 +924,16 @@ class OpExpr(BaseExpr):
         Operation operands.
     _dtype : dtype
         Result data type.
+    partition_keys : list of BaseExpr, optional
+        This attribute is used with window functions only and contains
+        a list of column expressions to partition the result set.
+    order_keys : list of dict, optional
+        This attribute is used with window functions only and contains
+        order clauses.
+    lower_bound : dict, optional
+        Lover bound for windowed aggregates.
+    upper_bound : dict, optional
+        Upper bound for windowed aggregates.
     """
 
     _FOLD_OPS = {
@@ -936,6 +971,44 @@ class OpExpr(BaseExpr):
         self.operands = operands
         self._dtype = dtype
 
+    def set_window_opts(self, partition_keys, order_keys, order_ascending, na_pos):
+        """
+        Set the window function options.
+
+        Parameters
+        ----------
+        partition_keys : list of BaseExpr
+        order_keys : list of BaseExpr
+        order_ascending : list of bool
+        na_pos : {"FIRST", "LAST"}
+        """
+        self.is_rows = True
+        self.partition_keys = partition_keys
+        self.order_keys = []
+        for key, asc in zip(order_keys, order_ascending):
+            key = {
+                "field": key,
+                "direction": "ASCENDING" if asc else "DESCENDING",
+                "nulls": na_pos,
+            }
+            self.order_keys.append(key)
+        self.lower_bound = {
+            "unbounded": True,
+            "preceding": True,
+            "following": False,
+            "is_current_row": False,
+            "offset": None,
+            "order_key": 0,
+        }
+        self.upper_bound = {
+            "unbounded": False,
+            "preceding": False,
+            "following": False,
+            "is_current_row": True,
+            "offset": None,
+            "order_key": 1,
+        }
+
     def copy(self):
         """
         Make a shallow copy of the expression.
@@ -944,7 +1017,39 @@ class OpExpr(BaseExpr):
         -------
         OpExpr
         """
-        return OpExpr(self.op, self.operands.copy(), self._dtype)
+        op = OpExpr(self.op, self.operands.copy(), self._dtype)
+        if pk := getattr(self, "partition_keys", None):
+            op.partition_keys = pk
+            op.is_rows = self.is_rows
+            op.order_keys = self.order_keys
+            op.lower_bound = self.lower_bound
+            op.upper_bound = self.upper_bound
+        return op
+
+    @_inherit_docstrings(BaseExpr.nested_expressions)
+    def nested_expressions(
+        self,
+    ) -> Generator[Type["BaseExpr"], Type["BaseExpr"], Type["BaseExpr"]]:
+        expr = yield from super().nested_expressions()
+        if partition_keys := getattr(self, "partition_keys", None):
+            for i, key in enumerate(partition_keys):
+                new_key = yield key
+                if new_key is not None:
+                    if new_key is not key:
+                        if expr is self:
+                            expr = self.copy()
+                        expr.partition_keys[i] = new_key
+                    yield expr
+            for i, key in enumerate(self.order_keys):
+                field = key["field"]
+                new_field = yield field
+                if new_field is not None:
+                    if new_field is not field:
+                        if expr is self:
+                            expr = self.copy()
+                        expr.order_keys[i]["field"] = new_field
+                    yield expr
+        return expr
 
     @_inherit_docstrings(BaseExpr.fold)
     def fold(self):
@@ -1042,8 +1147,8 @@ class OpExpr(BaseExpr):
         -------
         str
         """
-        if len(self.operands) == 1:
-            return f"({self.op} {self.operands[0]} [{self._dtype}])"
+        if pk := getattr(self, "partition_keys", None):
+            return f"({self.op} {self.operands} {pk} {self.order_keys} [{self._dtype}])"
         return f"({self.op} {self.operands} [{self._dtype}])"
 
     def _col(self, table: pa.Table) -> pa.ChunkedArray:
