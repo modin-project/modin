@@ -12,15 +12,12 @@
 # governing permissions and limitations under the License.
 from __future__ import annotations
 
-from typing import Hashable, NoReturn
-
 import numpy as np
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from torch.utils import data as data_utils
 from torch.utils.data import DataLoader, IterableDataset
 
 from modin.pandas import DataFrame as ModinDataFrame
-from modin.pandas import Series as ModinSeries
 
 
 class ModinIterableDataset(IterableDataset):
@@ -73,11 +70,6 @@ class ModinIterableDataset(IterableDataset):
                 yield idx, np_row
             else:
                 yield np_row
-
-    def _multithread_iter(self) -> NoReturn:
-        raise NotImplementedError(
-            "Using `ModinIterableDataset` in a multi-process context is not supported yet."
-        )
 
 
 PandasIterableDataset = ModinIterableDataset
