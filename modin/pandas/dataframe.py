@@ -167,9 +167,11 @@ class DataFrame(BasePandasDataset):
             if columns is not None and not isinstance(columns, pandas.Index):
                 columns = pandas.Index(columns)
             if columns is not None:
-                self.set_axis(columns, axis=1, inplace=True)
+                obj_with_new_columns = self.set_axis(columns, axis=1, copy=False)
+                self._update_inplace(obj_with_new_columns._query_compiler)
             if index is not None:
-                self.set_axis(index, axis=0, inplace=True)
+                obj_with_new_index = self.set_axis(index, axis=0, copy=False)
+                self._update_inplace(obj_with_new_index._query_compiler)
             if dtype is not None:
                 casted_obj = self.astype(dtype, copy=False)
                 self._query_compiler = casted_obj._query_compiler
@@ -307,7 +309,7 @@ class DataFrame(BasePandasDataset):
         return 2
 
     def drop_duplicates(
-        self, subset=None, keep="first", inplace=False, ignore_index=False
+        self, subset=None, *, keep="first", inplace=False, ignore_index=False
     ):  # noqa: PR01, RT01, D200
         """
         Return ``DataFrame`` with duplicate rows removed.
@@ -353,20 +355,22 @@ class DataFrame(BasePandasDataset):
         """
         return len(self.index), len(self.columns)
 
-    def add_prefix(self, prefix):  # noqa: PR01, RT01, D200
+    def add_prefix(self, prefix, axis=None):  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
         """
+        axis = 1 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_prefix(prefix)
+            query_compiler=self._query_compiler.add_prefix(prefix, axis)
         )
 
-    def add_suffix(self, suffix):  # noqa: PR01, RT01, D200
+    def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
+        axis = 1 if axis is None else self._get_axis_number(axis)
         return self.__constructor__(
-            query_compiler=self._query_compiler.add_suffix(suffix)
+            query_compiler=self._query_compiler.add_suffix(suffix, axis)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):
@@ -425,26 +429,13 @@ class DataFrame(BasePandasDataset):
         level=None,
         as_index=True,
         sort=True,
-        group_keys=no_default,
-        squeeze: bool = no_default,
+        group_keys=True,
         observed=False,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
-        if squeeze is not no_default:
-            warnings.warn(
-                (
-                    "The `squeeze` parameter is deprecated and "
-                    + "will be removed in a future version."
-                ),
-                FutureWarning,
-                stacklevel=2,
-            )
-        else:
-            squeeze = False
-
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -454,12 +445,14 @@ class DataFrame(BasePandasDataset):
         # groupby takes place.
         drop = False
 
+        return_tuple_when_iterating = False
         if (
             not isinstance(by, (pandas.Series, Series))
             and is_list_like(by)
             and len(by) == 1
         ):
             by = by[0]
+            return_tuple_when_iterating = True
 
         if callable(by):
             by = self.index.map(by)
@@ -476,35 +469,42 @@ class DataFrame(BasePandasDataset):
             drop = by._parent is self
             idx_name = by.name
             by = by._query_compiler
+        elif isinstance(by, pandas.Grouper):
+            drop = by.key in self
         elif is_list_like(by):
             # fastpath for multi column groupby
             if axis == 0 and all(
                 (
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
+                    or (isinstance(o, pandas.Grouper) and o.key in self)
                     or (is_list_like(o) and len(o) == len(self.axes[axis]))
                 )
                 for o in by
             ):
-                # We want to split 'by's into those that belongs to the self (internal_by)
-                # and those that doesn't (external_by)
-                internal_by, external_by = [], []
+                has_external = False
+                processed_by = []
 
                 for current_by in by:
-                    if hashable(current_by):
-                        internal_by.append(current_by)
+                    if isinstance(current_by, pandas.Grouper):
+                        processed_by.append(current_by)
+                        has_external = True
+                    elif hashable(current_by):
+                        processed_by.append(current_by)
                     elif isinstance(current_by, Series):
                         if current_by._parent is self:
-                            internal_by.append(current_by.name)
+                            processed_by.append(current_by.name)
                         else:
-                            external_by.append(current_by._query_compiler)
+                            processed_by.append(current_by._query_compiler)
+                            has_external = True
                     else:
-                        external_by.append(current_by)
+                        has_external = True
+                        processed_by.append(current_by)
 
-                by = internal_by + external_by
+                by = processed_by
 
-                if len(external_by) == 0:
-                    by = self[internal_by]._query_compiler
+                if not has_external:
+                    by = self[processed_by]._query_compiler
 
                 drop = True
             else:
@@ -532,11 +532,11 @@ class DataFrame(BasePandasDataset):
             as_index,
             sort,
             group_keys,
-            squeeze,
             idx_name,
             observed=observed,
             drop=drop,
             dropna=dropna,
+            return_tuple_when_iterating=return_tuple_when_iterating,
         )
 
     def keys(self):  # noqa: RT01, D200
@@ -571,65 +571,6 @@ class DataFrame(BasePandasDataset):
             fill_value=fill_value,
             broadcast=isinstance(other, Series),
         )
-
-    def append(
-        self, other, ignore_index=False, verify_integrity=False, sort=False
-    ):  # noqa: PR01, RT01, D200
-        """
-        Append rows of `other` to the end of caller, returning a new object.
-        """
-        if sort is False:
-            warnings.warn(
-                "Due to https://github.com/pandas-dev/pandas/issues/35092, "
-                + "Pandas ignores sort=False; Modin correctly does not sort."
-            )
-        if isinstance(other, (Series, dict)):
-            if isinstance(other, dict):
-                other = Series(other)
-            if other.name is None and not ignore_index:
-                raise TypeError(
-                    "Can only append a Series if ignore_index=True"
-                    + " or if the Series has a name"
-                )
-            if other.name is not None:
-                # other must have the same index name as self, otherwise
-                # index name will be reset
-                name = other.name
-                # We must transpose here because a Series becomes a new row, and the
-                # structure of the query compiler is currently columnar
-                other = other._query_compiler.transpose()
-                other.index = pandas.Index([name], name=self.index.name)
-            else:
-                # See note above about transpose
-                other = other._query_compiler.transpose()
-        elif isinstance(other, list):
-            if not all(isinstance(o, BasePandasDataset) for o in other):
-                other = self.__constructor__(pandas.DataFrame(other))._query_compiler
-            else:
-                other = [obj._query_compiler for obj in other]
-        else:
-            other = other._query_compiler
-
-        # If ignore_index is False, by definition the Index will be correct.
-        # We also do this first to ensure that we don't waste compute/memory.
-        if verify_integrity and not ignore_index:
-            appended_index = (
-                self.index.append(other.index)
-                if not isinstance(other, list)
-                else self.index.append([o.index for o in other])
-            )
-            is_valid = next((False for idx in appended_index.duplicated() if idx), True)
-            if not is_valid:
-                raise ValueError(
-                    "Indexes have overlapping values: {}".format(
-                        appended_index[appended_index.duplicated()]
-                    )
-                )
-
-        query_compiler = self._query_compiler.concat(
-            0, other, ignore_index=ignore_index, sort=sort
-        )
-        return self.__constructor__(query_compiler=query_compiler)
 
     def assign(self, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -709,88 +650,61 @@ class DataFrame(BasePandasDataset):
         )
 
     def corr(
-        self, method="pearson", min_periods=1, numeric_only=no_default
+        self, method="pearson", min_periods=1, numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation of columns, excluding NA/null values.
         """
-        if not numeric_only:
-            return self._default_to_pandas(
-                pandas.DataFrame.corr,
-                method=method,
-                min_periods=min_periods,
-                numeric_only=numeric_only,
-            )
         return self.__constructor__(
             query_compiler=self._query_compiler.corr(
                 method=method,
                 min_periods=min_periods,
+                numeric_only=numeric_only,
             )
         )
 
     def corrwith(
-        self, other, axis=0, drop=False, method="pearson", numeric_only=no_default
+        self, other, axis=0, drop=False, method="pearson", numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise correlation.
         """
-        if isinstance(other, DataFrame):
-            other = other._query_compiler.to_pandas()
-        return self._default_to_pandas(
-            pandas.DataFrame.corrwith,
-            other,
-            axis=axis,
-            drop=drop,
-            method=method,
-            numeric_only=numeric_only,
+        if not isinstance(other, (Series, DataFrame)):
+            raise TypeError(f"unsupported type: {type(other)}")
+        return self.__constructor__(
+            query_compiler=self._query_compiler.corrwith(
+                other=other._query_compiler,
+                axis=axis,
+                drop=drop,
+                method=method,
+                numeric_only=numeric_only,
+            )
         )
 
     def cov(
-        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=no_default
+        self, min_periods=None, ddof: Optional[int] = 1, numeric_only=False
     ):  # noqa: PR01, RT01, D200
         """
         Compute pairwise covariance of columns, excluding NA/null values.
         """
-        if not numeric_only:
-            return self._default_to_pandas(
-                pandas.DataFrame.cov,
-                min_periods=min_periods,
-                ddof=ddof,
-                numeric_only=numeric_only,
+        cov_df = self
+        if numeric_only:
+            cov_df = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
             )
-        numeric_df = self.drop(
-            columns=[
-                i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-            ]
+
+        if min_periods is not None and min_periods > len(cov_df):
+            result = np.empty((cov_df.shape[1], cov_df.shape[1]))
+            result.fill(np.nan)
+            return cov_df.__constructor__(result)
+
+        return cov_df.__constructor__(
+            query_compiler=cov_df._query_compiler.cov(
+                min_periods=min_periods, ddof=ddof
+            )
         )
-
-        is_notna = True
-
-        if all(numeric_df.notna().all()):
-            if min_periods is not None and min_periods > len(numeric_df):
-                result = np.empty((numeric_df.shape[1], numeric_df.shape[1]))
-                result.fill(np.nan)
-                return numeric_df.__constructor__(result)
-            else:
-                cols = numeric_df.columns
-                idx = cols.copy()
-                numeric_df = numeric_df.astype(dtype="float64")
-                denom = 1.0 / (len(numeric_df) - ddof)
-                means = numeric_df.mean(axis=0)
-                result = numeric_df - means
-                result = result.T._query_compiler.conj().dot(result._query_compiler)
-        else:
-            result = numeric_df._query_compiler.cov(min_periods=min_periods)
-            is_notna = False
-
-        if is_notna:
-            result = numeric_df.__constructor__(
-                query_compiler=result, index=idx, columns=cols
-            )
-            result *= denom
-        else:
-            result = numeric_df.__constructor__(query_compiler=result)
-        return result
 
     def dot(self, other):  # noqa: PR01, RT01, D200
         """
@@ -913,6 +827,7 @@ class DataFrame(BasePandasDataset):
     def fillna(
         self,
         value=None,
+        *,
         method=None,
         axis=None,
         inplace=False,
@@ -1048,20 +963,10 @@ class DataFrame(BasePandasDataset):
         max_cols: Optional[int] = None,
         memory_usage: Optional[Union[bool, str]] = None,
         show_counts: Optional[bool] = None,
-        null_counts: Optional[bool] = None,
     ):  # noqa: PR01, D200
         """
         Print a concise summary of the ``DataFrame``.
         """
-        if null_counts is not None:
-            if show_counts is not None:
-                raise ValueError("null_counts used with show_counts. Use show_counts.")
-            warnings.warn(
-                "null_counts is deprecated. Use show_counts instead",
-                FutureWarning,
-                stacklevel=2,
-            )
-            show_counts = null_counts
         info = DataFrameInfo(
             data=self,
             memory_usage=memory_usage,
@@ -1136,32 +1041,6 @@ class DataFrame(BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def interpolate(
-        self,
-        method="linear",
-        axis=0,
-        limit=None,
-        inplace=False,
-        limit_direction: Optional[str] = None,
-        limit_area=None,
-        downcast=None,
-        **kwargs,
-    ):  # noqa: PR01, RT01, D200
-        """
-        Fill NaN values using an interpolation method.
-        """
-        return self._default_to_pandas(
-            pandas.DataFrame.interpolate,
-            method=method,
-            axis=axis,
-            limit=limit,
-            inplace=inplace,
-            limit_direction=limit_direction,
-            limit_area=limit_area,
-            downcast=downcast,
-            **kwargs,
-        )
-
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `DataFrame` are contained in `values`.
@@ -1193,12 +1072,6 @@ class DataFrame(BasePandasDataset):
         partition_iterator = PartitionIterator(self, 1, items_builder)
         for v in partition_iterator:
             yield v
-
-    def iteritems(self):  # noqa: RT01, D200
-        """
-        Iterate over (column name, ``Series``) pairs.
-        """
-        return self.items()
 
     def itertuples(self, index=True, name="Pandas"):  # noqa: PR01, D200
         """
@@ -1305,12 +1178,6 @@ class DataFrame(BasePandasDataset):
             "le", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
-    def lookup(self, row_labels, col_labels):  # noqa: PR01, RT01, D200
-        """
-        Label-based "fancy indexing" function for ``DataFrame``.
-        """
-        return self._default_to_pandas(pandas.DataFrame.lookup, row_labels, col_labels)
-
     def lt(self, other, axis="columns", level=None):  # noqa: PR01, RT01, D200
         """
         Get less than comparison of ``DataFrame`` and `other`, element-wise (binary operator `le`).
@@ -1362,13 +1229,15 @@ class DataFrame(BasePandasDataset):
         right_index=False,
         sort=False,
         suffixes=("_x", "_y"),
-        copy=True,
+        copy=None,
         indicator=False,
         validate=None,
     ):  # noqa: PR01, RT01, D200
         """
         Merge ``DataFrame`` or named ``Series`` objects with a database-style join.
         """
+        if copy is None:
+            copy = True
         if isinstance(right, Series):
             if right.name is None:
                 raise ValueError("Cannot merge a Series without a name")
@@ -1379,7 +1248,9 @@ class DataFrame(BasePandasDataset):
                 f"Can only merge Series or DataFrame objects, a {type(right)} was passed"
             )
 
-        if left_index and right_index:
+        # If we are joining on the index and we are using
+        # default parameters we can map this to a join
+        if left_index and right_index and not indicator:
             return self.join(
                 right, how=how, lsuffix=suffixes[0], rsuffix=suffixes[1], sort=sort
             )
@@ -1474,42 +1345,14 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def slice_shift(self, periods=1, axis=0):  # noqa: PR01, RT01, D200
-        """
-        Equivalent to `shift` without copying data.
-        """
-        if periods == 0:
-            return self.copy()
-
-        if axis == "index" or axis == 0:
-            if abs(periods) >= len(self.index):
-                return self.__constructor__(columns=self.columns)
-            else:
-                new_df = self.iloc[:-periods] if periods > 0 else self.iloc[-periods:]
-                new_df.index = (
-                    self.index[periods:] if periods > 0 else self.index[:periods]
-                )
-                return new_df
-        else:
-            if abs(periods) >= len(self.columns):
-                return self.__constructor__(index=self.index)
-            else:
-                new_df = (
-                    self.iloc[:, :-periods] if periods > 0 else self.iloc[:, -periods:]
-                )
-                new_df.columns = (
-                    self.columns[periods:] if periods > 0 else self.columns[:periods]
-                )
-                return new_df
-
     def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
-        if not isinstance(self.index, pandas.MultiIndex) or (
-            isinstance(self.index, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.index.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.index.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.index.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.unstack(level, fill_value)
@@ -1519,10 +1362,26 @@ class DataFrame(BasePandasDataset):
                 query_compiler=self._query_compiler.unstack(level, fill_value)
             )
 
-    def pivot(self, index=None, columns=None, values=None):  # noqa: PR01, RT01, D200
+    def pivot(
+        self, *, columns, index=NoDefault, values=NoDefault
+    ):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
+        if index is NoDefault:
+            index = None
+        if values is NoDefault:
+            values = None
+
+        # if values is not specified, it should be the remaining columns not in
+        # index or columns
+        if values is None:
+            values = list(self.columns)
+            if index:
+                values = [v for v in values if v not in index]
+            if columns:
+                values = [v for v in values if v not in columns]
+
         return self.__constructor__(
             query_compiler=self._query_compiler.pivot(
                 index=index, columns=columns, values=values
@@ -1623,8 +1482,7 @@ class DataFrame(BasePandasDataset):
         self,
         axis=None,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -1633,22 +1491,11 @@ class DataFrame(BasePandasDataset):
         """
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).prod(
-                numeric_only=numeric_only, min_count=min_count
-            )
 
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
-            and numeric_only is None
+            and numeric_only is False
             and min_count > len(axis_to_apply)
         ):
             new_index = self.columns if not axis else self.index
@@ -1662,7 +1509,6 @@ class DataFrame(BasePandasDataset):
                 data._query_compiler.prod_min_count(
                     axis=axis,
                     skipna=skipna,
-                    level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
                     **kwargs,
@@ -1672,7 +1518,6 @@ class DataFrame(BasePandasDataset):
             data._query_compiler.prod(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
@@ -1685,14 +1530,14 @@ class DataFrame(BasePandasDataset):
         self,
         q=0.5,
         axis=0,
-        numeric_only=no_default,
+        numeric_only=False,
         interpolation="linear",
         method="single",
     ):
         return super(DataFrame, self).quantile(
             q=q,
             axis=axis,
-            numeric_only=True if numeric_only is no_default else numeric_only,
+            numeric_only=numeric_only,
             interpolation=interpolation,
             method=method,
         )
@@ -1759,6 +1604,7 @@ class DataFrame(BasePandasDataset):
     def reindex(
         self,
         labels=None,
+        *,
         index=None,
         columns=None,
         axis=None,
@@ -1789,6 +1635,7 @@ class DataFrame(BasePandasDataset):
         self,
         to_replace=None,
         value=no_default,
+        *,
         inplace: bool = False,
         limit=None,
         regex: bool = False,
@@ -1944,7 +1791,7 @@ class DataFrame(BasePandasDataset):
         return self.drop(columns=self.columns[indicate], inplace=False)
 
     def set_index(
-        self, keys, drop=True, append=False, inplace=False, verify_integrity=False
+        self, keys, *, drop=True, append=False, inplace=False, verify_integrity=False
     ):  # noqa: PR01, RT01, D200
         """
         Set the ``DataFrame`` index using existing columns.
@@ -1991,7 +1838,11 @@ class DataFrame(BasePandasDataset):
             else:
                 if not found:
                     missing.append(col)
-        if missing:
+        # If the missing column is a "primitive", return the errors.
+        # Otherwise we let the query compiler figure out what to do with
+        # the keys
+        if missing and not hasattr(missing[0], "__dict__"):
+            # The keys are a primitive type
             raise KeyError(f"None of {missing} are in the columns")
 
         new_query_compiler = self._query_compiler.set_index_from_columns(
@@ -2026,10 +1877,10 @@ class DataFrame(BasePandasDataset):
         """
         Stack the prescribed level(s) from columns to index.
         """
-        if not isinstance(self.columns, pandas.MultiIndex) or (
-            isinstance(self.columns, pandas.MultiIndex)
-            and is_list_like(level)
-            and len(level) == self.columns.nlevels
+        # This ensures that non-pandas MultiIndex objects are caught.
+        is_multiindex = len(self.columns.names) > 1
+        if not is_multiindex or (
+            is_multiindex and is_list_like(level) and len(level) == self.columns.nlevels
         ):
             return self._reduce_dimension(
                 query_compiler=self._query_compiler.stack(level, dropna)
@@ -2060,8 +1911,7 @@ class DataFrame(BasePandasDataset):
         self,
         axis=None,
         skipna=True,
-        level=None,
-        numeric_only=None,
+        numeric_only=False,
         min_count=0,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
@@ -2073,7 +1923,7 @@ class DataFrame(BasePandasDataset):
         axis_to_apply = self.columns if axis else self.index
         if (
             skipna is not False
-            and numeric_only is None
+            and numeric_only is False
             and min_count > len(axis_to_apply)
         ):
             new_index = self.columns if not axis else self.index
@@ -2084,23 +1934,11 @@ class DataFrame(BasePandasDataset):
         data = self._validate_dtypes_sum_prod_mean(
             axis, numeric_only, ignore_axis=False
         )
-        if level is not None:
-            if (
-                not self._query_compiler.has_multiindex(axis=axis)
-                and level > 0
-                or level < -1
-                and level != self.index.name
-            ):
-                raise ValueError("level > 0 or level < -1 only valid with MultiIndex")
-            return self.groupby(level=level, axis=axis, sort=False).sum(
-                numeric_only=numeric_only, min_count=min_count
-            )
         if min_count > 1:
             return data._reduce_dimension(
                 data._query_compiler.sum_min_count(
                     axis=axis,
                     skipna=skipna,
-                    level=level,
                     numeric_only=numeric_only,
                     min_count=min_count,
                     **kwargs,
@@ -2110,7 +1948,6 @@ class DataFrame(BasePandasDataset):
             data._query_compiler.sum(
                 axis=axis,
                 skipna=skipna,
-                level=level,
                 numeric_only=numeric_only,
                 min_count=min_count,
                 **kwargs,
@@ -2244,7 +2081,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def to_period(
-        self, freq=None, axis=0, copy=True
+        self, freq=None, axis=0, copy=None
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Convert ``DataFrame`` from ``DatetimeIndex`` to ``PeriodIndex``.
@@ -2267,6 +2104,7 @@ class DataFrame(BasePandasDataset):
     def to_stata(
         self,
         path: FilePath | WriteBuffer[bytes],
+        *,
         convert_dates: dict[Hashable, str] | None = None,
         write_index: bool = True,
         byteorder: str | None = None,
@@ -2277,7 +2115,6 @@ class DataFrame(BasePandasDataset):
         convert_strl: Sequence[Hashable] | None = None,
         compression: CompressionOptions = "infer",
         storage_options: StorageOptions = None,
-        *,
         value_labels: dict[Hashable, dict[float | int, str]] | None = None,
     ):
         return self._default_to_pandas(
@@ -2338,7 +2175,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def to_timestamp(
-        self, freq=None, how="start", axis=0, copy=True
+        self, freq=None, how="start", axis=0, copy=None
     ):  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of timestamps, at *beginning* of period.
@@ -2385,11 +2222,10 @@ class DataFrame(BasePandasDataset):
         self,
         cond,
         other=no_default,
+        *,
         inplace=False,
         axis=None,
         level=None,
-        errors="raise",
-        try_cast=no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.
@@ -2409,8 +2245,6 @@ class DataFrame(BasePandasDataset):
                 inplace=False,
                 axis=axis,
                 level=level,
-                errors=errors,
-                try_cast=try_cast,
             )
             return self._create_or_update_from_compiler(new_query_compiler, inplace)
         cond = cond(self) if callable(cond) else cond
@@ -2708,7 +2542,7 @@ class DataFrame(BasePandasDataset):
         -------
         DataFrame
         """
-        return self._default_to_pandas(pandas.DataFrame.__round__, decimals=decimals)
+        return self.round(decimals)
 
     def __delitem__(self, key):
         """
@@ -2797,6 +2631,27 @@ class DataFrame(BasePandasDataset):
             return df.style
 
         return self._default_to_pandas(style)
+
+    def reindex_like(
+        self: "DataFrame",
+        other,
+        method=None,
+        copy: Optional[bool] = None,
+        limit=None,
+        tolerance=None,
+    ) -> "DataFrame":
+        if copy is None:
+            copy = True
+        # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
+        # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.DataFrame.reindex_like.html
+        return self.reindex(
+            index=other.index,
+            columns=other.columns,
+            method=method,
+            copy=copy,
+            limit=limit,
+            tolerance=tolerance,
+        )
 
     def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
         """
@@ -2903,11 +2758,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
 
-        return (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
         """
@@ -2958,11 +2809,7 @@ class DataFrame(BasePandasDataset):
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
 
-        return (
-            self._get_numeric_data(axis)
-            if numeric_only is None or numeric_only
-            else self
-        )
+        return self._get_numeric_data(axis) if numeric_only else self
 
     def _to_pandas(self):
         """

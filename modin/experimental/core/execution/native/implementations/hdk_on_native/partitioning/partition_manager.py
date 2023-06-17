@@ -279,7 +279,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         for frame in frames:
             if frame._partitions.size != 1:
                 raise NotImplementedError(
-                    "HdkOnNative engine doesn't suport partitioned frames"
+                    "HdkOnNative engine doesn't support partitioned frames"
                 )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:
@@ -296,7 +296,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                                 if frame.has_materialized_index
                                 else [None]
                             )
-                            idx_names = frame._mangle_index_names(idx_names)
+                            idx_names = ColNameCodec.mangle_index_names(idx_names)
                             obj = pyarrow.table(
                                 {n: [] for n in idx_names},
                                 schema=pyarrow.schema(

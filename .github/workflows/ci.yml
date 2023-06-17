@@ -414,6 +414,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
@@ -644,6 +645,7 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_expanding.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: MODIN_EXPERIMENTAL_GROUPBY=1 mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
@@ -792,6 +794,8 @@ jobs:
       - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
@@ -1023,6 +1027,8 @@ jobs:
         if: matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
         if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
+        if: matrix.test_task == 'group_4'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
         if: matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/numpy/test/test_array.py
@@ -1049,7 +1055,7 @@ jobs:
         if: matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
         if: matrix.test_task == 'group_4'
-      - timeout-minutes: 30
+      - timeout-minutes: 60
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test_task == 'group_4'
       - uses: ./.github/workflows/upload-coverage

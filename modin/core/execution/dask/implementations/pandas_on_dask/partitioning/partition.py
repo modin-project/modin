@@ -15,7 +15,6 @@
 
 from distributed import Future
 from distributed.utils import get_ip
-from dask.distributed import wait
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
@@ -154,7 +153,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait(self._data)
+        DaskWrapper.wait(self._data)
 
     def mask(self, row_labels, col_labels):
         """

@@ -17,7 +17,6 @@ from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
 from modin.core.execution.ray.common import RayWrapper
-from modin.core.execution.ray.common.utils import wait
 from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
@@ -47,10 +46,9 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        blocks = [
-            block for partition in partitions for block in partition.list_of_blocks
-        ]
-        wait(blocks)
+        RayWrapper.wait(
+            [block for partition in partitions for block in partition.list_of_blocks]
+        )
 
 
 def _make_wrapped_method(name: str):

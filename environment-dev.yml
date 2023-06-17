@@ -2,24 +2,25 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
+  - pandas>=2,<2.1
   - numpy>=1.18.5
   - ray-default>=1.13.0
-  - pyarrow<12 # workaround for https://github.com/modin-project/modin/issues/6072
+  - pyarrow
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
   - grpcio!=1.46.*
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
-  - xarray
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - Jinja2
   - scipy
   - pip
   - s3fs>=2021.8
   - feather-format
   - lxml
-  - openpyxl<3.1.0
+  - openpyxl
   - xlrd
   - matplotlib
   - sqlalchemy>=1.4.0,<1.4.46

@@ -19,6 +19,7 @@ Module houses ``HdkOnNativeIO`` class.
 
 from csv import Dialect
 from typing import Union, Sequence, Callable, Dict, Tuple
+import functools
 import inspect
 import os
 
@@ -37,7 +38,8 @@ import pyarrow as pa
 
 import pandas
 import pandas._libs.lib as lib
-from pandas.io.common import is_url
+from pandas.core.dtypes.common import is_list_like
+from pandas.io.common import is_url, get_handle
 
 from modin.utils import _inherit_docstrings
 
@@ -83,6 +85,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "infer_datetime_format",
         "keep_date_col",
         "date_parser",
+        "date_format",
         "dayfirst",
         "cache_dates",
         "iterator",
@@ -93,13 +96,12 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         "dialect",
         "quoting",
         "comment",
-        "warn_bad_lines",
-        "error_bad_lines",
         "on_bad_lines",
         "low_memory",
         "memory_map",
         "float_precision",
         "storage_options",
+        "dtype_backend",
     ]
 
     @classmethod
@@ -116,7 +118,8 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         -----
         Reading performed by using of `pyarrow.read_csv` function.
         """
-        eng = str(kwargs["engine"]).lower().strip()
+        if eng := kwargs["engine"]:
+            eng = eng.lower().strip()
         try:
             if eng in ("pandas", "c"):
                 return super().read_csv(**kwargs)
@@ -128,21 +131,53 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             if not use_modin_impl:
                 raise ArrowEngineException(error_message)
 
-            dtype = kwargs["dtype"]
-            if isinstance(dtype, dict):
-                column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
-            else:
-                column_types = cls._dtype_to_arrow(dtype)
-
-            parse_dates = kwargs["parse_dates"]
-            if (type(parse_dates) is list) and type(column_types) is dict:
-                for c in parse_dates:
-                    column_types[c] = pa.timestamp("s")
-
-            names = kwargs["names"]
+            if (names := kwargs["names"]) is lib.no_default:
+                names = None
             skiprows = kwargs["skiprows"]
-            if names not in (lib.no_default, None) and kwargs["header"] == 0:
+            if names and kwargs["header"] == 0:
                 skiprows = skiprows + 1 if skiprows is not None else 1
+
+            @functools.lru_cache(maxsize=None)
+            def get_col_names():
+                # Using pandas to read the column names
+                return pandas.read_csv(
+                    kwargs["filepath_or_buffer"], nrows=0, engine="c"
+                ).columns.tolist()
+
+            if dtype := kwargs["dtype"]:
+                if isinstance(dtype, dict):
+                    column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
+                else:
+                    dtype = cls._dtype_to_arrow(dtype)
+                    column_types = {name: dtype for name in get_col_names()}
+            else:
+                column_types = {}
+
+            if parse_dates := kwargs["parse_dates"]:
+                # Either list of column names or list of column indices is supported.
+                if isinstance(parse_dates, list) and (
+                    all(isinstance(col, str) for col in parse_dates)
+                    or all(isinstance(col, int) for col in parse_dates)
+                ):
+                    # Pandas uses datetime64[ns] dtype for dates.
+                    timestamp_dt = pa.timestamp("ns")
+                    if names and isinstance(parse_dates[0], str):
+                        # The `names` parameter could be used to override the
+                        # column names. If new names are specified in `parse_dates`
+                        # they should be replaced with the real names. Replacing
+                        # with the column indices first.
+                        parse_dates = [names.index(name) for name in parse_dates]
+                    if isinstance(parse_dates[0], int):
+                        # If column indices are specified, load the column names
+                        # with pandas and replace the indices with column names.
+                        column_names = get_col_names()
+                        parse_dates = [column_names[i] for i in parse_dates]
+                    for c in parse_dates:
+                        column_types[c] = timestamp_dt
+                elif not isinstance(parse_dates, bool):
+                    raise NotImplementedError(
+                        f"Argument parse_dates={parse_dates} is not supported"
+                    )
 
             sep = kwargs["sep"]
             delimiter = kwargs["delimiter"]
@@ -198,25 +233,28 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 convert_options=co,
             )
 
-            col_names = at.column_names
-            col_counts = {}
-            for name in col_names:
-                col_counts[name] = 1 if name in col_counts else 0
+            if names:
+                at = at.rename_columns(names)
+            else:
+                col_names = at.column_names
+                col_counts = {}
+                for name in col_names:
+                    col_counts[name] = 1 if name in col_counts else 0
 
-            if len(col_names) != len(col_counts):
-                for i, name in enumerate(col_names):
-                    count = col_counts[name]
-                    if count != 0:
-                        if count == 1:
-                            col_counts[name] = 2
-                        else:
-                            new_name = f"{name}.{count - 1}"
-                            while new_name in col_counts:
-                                new_name = f"{name}.{count}"
-                                count += 1
-                            col_counts[name] = count + 1
-                            col_names[i] = new_name
-                at = at.rename_columns(col_names)
+                if len(col_names) != len(col_counts):
+                    for i, name in enumerate(col_names):
+                        count = col_counts[name]
+                        if count != 0:
+                            if count == 1:
+                                col_counts[name] = 2
+                            else:
+                                new_name = f"{name}.{count - 1}"
+                                while new_name in col_counts:
+                                    new_name = f"{name}.{count}"
+                                    count += 1
+                                col_counts[name] = count + 1
+                                col_names[i] = new_name
+                    at = at.rename_columns(col_names)
 
             return cls.from_arrow(at)
         except (
@@ -224,11 +262,14 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             pa.ArrowInvalid,
             NotImplementedError,
             ArrowEngineException,
-        ):
+        ) as err:
             if eng in ["arrow"]:
                 raise
 
-            ErrorMessage.default_to_pandas("`read_csv`")
+            ErrorMessage.warn(
+                f"Failed to read csv {kwargs['filepath_or_buffer']} "
+                + f"due to error: {err}. Defaulting to pandas."
+            )
             return super().read_csv(**kwargs)
 
     @classmethod
@@ -485,8 +526,6 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         delimiter = read_csv_kwargs["delimiter"]
         sep = read_csv_kwargs["sep"]
         on_bad_lines = read_csv_kwargs["on_bad_lines"]
-        error_bad_lines = read_csv_kwargs["error_bad_lines"]
-        warn_bad_lines = read_csv_kwargs["warn_bad_lines"]
         delim_whitespace = read_csv_kwargs["delim_whitespace"]
 
         if delimiter and (sep is not lib.no_default):
@@ -503,15 +542,111 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 "Specified a delimiter with both sep and "
                 + "delim_whitespace=True; you can only specify one."
             )
-        if on_bad_lines is not None:
-            if error_bad_lines is not None or warn_bad_lines is not None:
-                raise ValueError(
-                    "Both on_bad_lines and error_bad_lines/warn_bad_lines are set. "
-                    + "Please only set on_bad_lines."
-                )
 
         if on_bad_lines not in ["error", "warn", "skip", None]:
             raise ValueError(f"Argument {on_bad_lines} is invalid for on_bad_lines.")
+
+    @classmethod
+    @_inherit_docstrings(BaseIO.to_csv, apilink="pandas.to_csv")
+    def to_csv(cls, qc, **kwargs):
+        df = qc._modin_frame
+        write_opts = pa.csv.WriteOptions(include_header=True, delimiter=",")
+        for key, value in kwargs.items():
+            if value is None:
+                pass
+            elif key == "sep":
+                write_opts.delimiter = value
+            elif key == "chunksize":
+                write_opts.batch_size = value
+            elif not (
+                (key == "na_rep" and len(value) == 0)
+                or (key == "decimal" and value == ".")
+                or (key == "quotechar" and value == '"')
+                or (key == "doublequote" and value is True)
+                or (key == "encoding" and value == "utf-8")
+                or (key == "lineterminator" and value == os.linesep)
+                or key
+                in (
+                    "path_or_buf",
+                    "columns",
+                    "header",
+                    "index",
+                    "index_label",
+                    "mode",
+                    "compression",
+                    "errors",
+                    "storage_options",
+                )
+            ):
+                ErrorMessage.default_to_pandas(f"Argument {key}={value}")
+                return df.to_pandas().to_csv(**kwargs)
+
+        at = df._execute()
+        if not isinstance(at, pa.Table):
+            return df.to_pandas().to_csv(**kwargs)
+        idx_names = df._index_cols
+
+        if kwargs.get("index", True):
+            if idx_names is None:  # Trivial index
+                idx_col = pa.array(range(len(df.index)), type=pa.int64())
+                at = at.add_column(0, "", idx_col)
+            if (idx_names := kwargs.get("index_label", None)) is None:
+                idx_names = df.index.names
+            elif idx_names is False:
+                idx_names = [""] * len(df.index.names)
+            elif not is_list_like(idx_names):
+                idx_names = [idx_names]
+            idx_names = ["" if n is None else str(n) for n in idx_names]
+            at = at.rename_columns(idx_names + df.columns.tolist())
+        elif idx_names is not None:
+            at = at.drop(idx_names)
+            at = at.rename_columns(df.columns.tolist())
+            idx_names = None
+        else:
+            at = at.rename_columns(df.columns.tolist())
+
+        if (value := kwargs.get("columns", None)) is not None:
+            if idx_names is not None:
+                value = idx_names + value
+            at = at.select(value)
+
+        if (value := kwargs.get("header", None)) is False:
+            write_opts.include_header = False
+        elif isinstance(value, list):
+            if idx_names is not None:
+                value = idx_names + value
+            at = at.rename_columns(value)
+
+        def write_header(out):
+            # Using pandas to write the header, because pyarrow
+            # writes column names enclosed in double quotes.
+            if write_opts.include_header:
+                pdf = pandas.DataFrame(columns=at.column_names)
+                pdf.to_csv(out, sep=write_opts.delimiter, index=False)
+                write_opts.include_header = False
+
+        if (path_or_buf := kwargs.get("path_or_buf", None)) is None:
+            out = pa.BufferOutputStream()
+            write_header(out)
+            pa.csv.write_csv(at, out, write_opts)
+            return out.getvalue().to_pybytes().decode()
+
+        # Pyarrow fails to write in text mode.
+        mode = kwargs.get("mode", "w").replace("t", "")
+        if "b" not in mode:
+            mode += "b"
+
+        with get_handle(
+            path_or_buf=path_or_buf,
+            mode=mode,
+            errors=kwargs.get("errors", "strict"),
+            compression=kwargs.get("compression", "infer"),
+            storage_options=kwargs.get("storage_options", None),
+            is_text=False,
+        ) as handles:
+            out = handles.handle
+            write_header(out)
+            pa.csv.write_csv(at, out, write_opts)
 
     @classmethod
     @_inherit_docstrings(BaseIO.read_sql, apilink="pandas.read_sql")

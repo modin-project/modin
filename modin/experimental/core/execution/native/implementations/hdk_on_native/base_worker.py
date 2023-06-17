@@ -251,4 +251,4 @@ class BaseDbWorker(abc.ABC):
         str
             Imported table name.
         """
-        return cls.import_arrow_table(pa.Table.from_pandas(df))
+        return cls.import_arrow_table(pa.Table.from_pandas(df), name=name)

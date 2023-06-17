@@ -876,6 +876,11 @@ class _LocIndexer(_LocationIndexerBase):
             return
 
         row_lookup, col_lookup = self.qc.get_positions_from_labels(row_loc, col_loc)
+        if isinstance(item, np.ndarray) and is_boolean_array(row_loc):
+            # fix for 'test_loc_series'; np.log(Series) returns nd.array instead
+            # of Series as it was before (`Series.__array_wrap__` is removed)
+            # otherwise incompatible shapes are obtained
+            item = item.take(row_lookup)
         self._setitem_positional(
             row_lookup,
             col_lookup,

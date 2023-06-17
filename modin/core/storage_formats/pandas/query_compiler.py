@@ -43,7 +43,7 @@ import hashlib
 from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import Engine, ExperimentalGroupbyImpl
+from modin.config import ExperimentalGroupbyImpl
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -68,6 +68,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
 )
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
+from .aggregations import CorrCovBuilder
 
 
 def _get_axis(axis):
@@ -907,7 +908,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # TODO-FIX: this function may work incorrectly with user-defined "numeric" values.
         # Since `count(numeric_only=True)` discards all unknown "numeric" types, we can get incorrect
         # divisor inside the reduce function.
-        def map_fn(df, **kwargs):
+        def map_fn(df, numeric_only=False, **kwargs):
             """
             Perform Map phase of the `mean`.
 
@@ -915,8 +916,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """
             result = pandas.DataFrame(
                 {
-                    "sum": df.sum(axis=axis, skipna=skipna),
-                    "count": df.count(axis=axis, numeric_only=True),
+                    "sum": df.sum(axis=axis, skipna=skipna, numeric_only=numeric_only),
+                    "count": df.count(axis=axis, numeric_only=numeric_only),
                 }
             )
             return result if axis else result.T
@@ -958,7 +959,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     sum_min_count = Reduce.register(pandas.DataFrame.sum)
     prod_min_count = Reduce.register(pandas.DataFrame.prod)
     quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
-    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:
@@ -1070,14 +1070,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_ffill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "ffill", limit=limit)
 
-    def resample_backfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "backfill", limit=limit)
-
     def resample_bfill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "bfill", limit=limit)
-
-    def resample_pad(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "pad", limit=limit)
 
     def resample_nearest(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "nearest", limit=limit)
@@ -1219,6 +1213,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
+    expanding_median = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).median(*args, **kwargs)
+        )
+    )
+
     expanding_var = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).var(*args, **kwargs)
@@ -1237,6 +1237,102 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
+    def expanding_cov(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing covariance for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).cov(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .cov(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
+    def expanding_corr(
+        self,
+        fold_axis,
+        expanding_args,
+        squeeze_self,
+        squeeze_other,
+        other=None,
+        pairwise=None,
+        ddof=1,
+        numeric_only=False,
+        **kwargs,
+    ):
+        other_for_pandas = (
+            other
+            if other is None
+            else other.to_pandas().squeeze(axis=1)
+            if squeeze_other
+            else other.to_pandas()
+        )
+        if len(self.columns) > 1:
+            # computing correlation for each column requires having the other columns,
+            # so we can't parallelize this as a full-column operation
+            return self.default_to_pandas(
+                lambda df: pandas.DataFrame.expanding(df, *expanding_args).corr(
+                    other=other_for_pandas,
+                    pairwise=pairwise,
+                    ddof=ddof,
+                    numeric_only=numeric_only,
+                    **kwargs,
+                )
+            )
+        return Fold.register(
+            lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+                (df.squeeze(axis=1) if squeeze_self else df)
+                .expanding(*expanding_args)
+                .corr(*args, **kwargs)
+            )
+        )(
+            self,
+            fold_axis,
+            expanding_args,
+            other=other_for_pandas,
+            pairwise=pairwise,
+            ddof=ddof,
+            numeric_only=numeric_only,
+            **kwargs,
+        )
+
     expanding_quantile = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).quantile(*args, **kwargs)
@@ -1246,6 +1342,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
     expanding_sem = Fold.register(
         lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
             df.expanding(*expanding_args).sem(*args, **kwargs)
+        )
+    )
+
+    expanding_kurt = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).kurt(*args, **kwargs)
+        )
+    )
+
+    expanding_skew = Fold.register(
+        lambda df, expanding_args, *args, **kwargs: pandas.DataFrame(
+            df.expanding(*expanding_args).skew(*args, **kwargs)
         )
     )
 
@@ -1794,16 +1902,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_date = Map.register(_dt_prop_map("date"), dtypes=np.object_)
     dt_time = Map.register(_dt_prop_map("time"), dtypes=np.object_)
     dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes=np.object_)
-    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int64)
-    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int64)
-    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int64)
+    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int32)
+    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int32)
+    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int32)
     dt_hour = Map.register(_dt_prop_map("hour"), dtypes=np.int64)
     dt_minute = Map.register(_dt_prop_map("minute"), dtypes=np.int64)
     dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
     dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes=np.int64)
     dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes=np.int64)
-    dt_week = Map.register(_dt_prop_map("week"), dtypes=np.int64)
-    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"), dtypes=np.int64)
     dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
     dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
     dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
@@ -1894,32 +2000,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Column/Row partitions reduce operations
 
-    # Column/Row partitions reduce operations over select indices
-    #
-    # These operations result in a reduced dimensionality of data.
-    # This will return a new QueryCompiler object which the front end will handle.
-
-    def describe(self, **kwargs):
+    def describe(self, percentiles: np.ndarray):
         # Use pandas to calculate the correct columns
         empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .describe(**kwargs)
+            .describe(percentiles, include="all")
         )
         new_index = empty_df.index
-
-        # Note: `describe` convert timestamp type to object type
-        # which results in the loss of two values in index: `first` and `last`
-        # for empty DataFrame.
-        datetime_is_numeric = kwargs.get("datetime_is_numeric") or False
-        if not any(map(is_numeric_dtype, empty_df.dtypes)) and not datetime_is_numeric:
-            for col_name in empty_df.dtypes.index:
-                # if previosly type of `col_name` was datetime or timedelta
-                if is_datetime_or_timedelta_dtype(self.dtypes[col_name]):
-                    new_index = pandas.Index(
-                        empty_df.index.to_list() + ["first"] + ["last"]
-                    )
-                    break
 
         def describe_builder(df, internal_indices=[]):  # pragma: no cover
             """Apply `describe` function to the subset of columns in a single partition."""
@@ -1930,7 +2018,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # we can have cases where certain partitions do not contain any of the
             # object string data leading to an index mismatch between partitions.
             # Thus, we must reindex each partition with the global new_index.
-            return df.iloc[:, internal_indices].describe(**kwargs).reindex(new_index)
+            return (
+                df.iloc[:, internal_indices]
+                .describe(percentiles=percentiles, include="all")
+                .reindex(new_index)
+            )
 
         return self.__constructor__(
             self._modin_frame.apply_full_axis_select_indices(
@@ -1953,7 +2045,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     cummin = Fold.register(pandas.DataFrame.cummin)
     cumsum = Fold.register(pandas.DataFrame.cumsum)
     cumprod = Fold.register(pandas.DataFrame.cumprod)
-    diff = Fold.register(pandas.DataFrame.diff)
+    _diff = Fold.register(pandas.DataFrame.diff)
+
+    def diff(self, axis, periods):
+        return self._diff(fold_axis=axis, axis=axis, periods=periods)
 
     def clip(self, lower, upper, **kwargs):
         if isinstance(lower, BaseQueryCompiler):
@@ -1969,21 +2064,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def corr(self, method="pearson", min_periods=1):
-        if method == "pearson":
-            numeric_self = self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-            return numeric_self._nancorr(min_periods=min_periods)
-        else:
-            return super().corr(method=method, min_periods=min_periods)
+    corr = CorrCovBuilder.build_corr_method()
 
-    def cov(self, min_periods=None):
-        return self._nancorr(min_periods=min_periods, cov=True)
+    def cov(self, min_periods=None, ddof=1):
+        return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
 
-    def _nancorr(self, min_periods=1, cov=False):
+    def _nancorr(self, min_periods=1, cov=False, ddof=1):
         """
         Compute either pairwise covariance or pairwise correlation of columns.
 
@@ -1996,14 +2082,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
             to have a valid result.
         cov : boolean, default: False
             Either covariance or correlation should be computed.
+        ddof : int, default: 1
+            Means Delta Degrees of Freedom. The divisor used in calculations.
 
         Returns
         -------
         PandasQueryCompiler
             The covariance or correlation matrix.
+
+        Notes
+        -----
+        This method is only used to compute covariance at the moment.
         """
         other = self.to_numpy()
-        other_mask = self._isfinite().to_numpy()
+        try:
+            other_mask = self._isfinite().to_numpy()
+        except TypeError as err:
+            # Pandas raises ValueError on unsupported types, so casting
+            # the exception to a proper type
+            raise ValueError("Unsupported types with 'numeric_only=False'") from err
         n_cols = other.shape[1]
 
         if min_periods is None:
@@ -2040,7 +2137,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         sumxx = (vx * vx).sum()
                         sumyy = (vy * vy).sum()
 
-                        denom = (nobs - 1.0) if cov else np.sqrt(sumxx * sumyy)
+                        denom = (nobs - ddof) if cov else np.sqrt(sumxx * sumyy)
                         if denom != 0:
                             result[i, j] = sumxy / denom
                         else:
@@ -2318,9 +2415,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # correctness and cleanliness of the code.
         if axis == 1:
             q_index = new_columns
-            new_columns = pandas.Float64Index(q)
+            new_columns = pandas.Index(q)
         else:
-            q_index = pandas.Float64Index(q)
+            q_index = pandas.Index(q)
         new_modin_frame = query_compiler._modin_frame.apply_full_axis(
             axis,
             lambda df: quantile_builder(df, **kwargs),
@@ -2990,7 +3087,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
-            internal_by = [o for o in by if hashable(o) and o in self.columns]
+            internal_by = []
+            for o in by:
+                if isinstance(o, pandas.Grouper) and o.key in self.columns:
+                    internal_by.append(o.key)
+                elif hashable(o) and o in self.columns:
+                    internal_by.append(o)
             internal_qc = (
                 [self.getitem_column_array(internal_by)] if len(internal_by) else []
             )
@@ -3241,9 +3343,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by=by,
             axis=axis,
             agg_func=lambda df: df.dtypes,
-            # passing 'group_wise' will make the function be applied to the 'by' columns as well,
-            # this is exactly what we want when 'as_index=False'
-            how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
+            how="group_wise",
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             groupby_kwargs=groupby_kwargs,
@@ -3262,12 +3362,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         drop=False,
         how="axis_wise",
     ):
-        if Engine.get() == "Python":
-            raise NotImplementedError(
-                "Reshuffling groupby is not implemented for python engine, see: "
-                + "https://github.com/modin-project/modin/issues/5916"
-            )
-
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. FIXME: We apparently lose some laziness here (due to index access)
@@ -3342,6 +3436,54 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return result_qc.reset_index(drop=True)
 
         return result_qc
+
+    def groupby_corr(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.corr`")
+        # TODO(https://github.com/modin-project/modin/issues/1323) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="corr",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
+
+    def groupby_cov(
+        self,
+        by,
+        axis,
+        groupby_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        ErrorMessage.default_to_pandas("`GroupBy.cov`")
+        # TODO(https://github.com/modin-project/modin/issues/1322) implement this.
+        # Right now, using this class's groupby_agg method, even with how="group_wise",
+        # produces a result with the wrong index, so default to pandas by using the
+        # super class's groupby_agg method.
+        return super().groupby_agg(
+            by=by,
+            agg_func="cov",
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=drop,
+        )
 
     def groupby_agg(
         self,
@@ -3573,21 +3715,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
-        # TODO: we should be able to drop this logic with pandas 2.0 as it removes `numeric_only=None`
-        # parameter for groupby thus making the behavior of processing of non-numeric columns more
-        # predictable (we can decide whether to raise an exception before actually executing groupby)
-        if len(result.columns) == 0 and len(self.columns) != 0:
-            # determening type of raised exception by applying `aggfunc`
-            # to empty DataFrame
-            try:
-                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
-                    agg_func, dict
-                ) else agg_func(
-                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_kwargs,
-                )
-            except Exception as err:
-                raise type(err)("No numeric types to aggregate.")
+        if (
+            len(result.columns) == 0
+            and len(self.columns) != 0
+            and agg_kwargs.get("numeric_only", False)
+        ):
+            raise TypeError("No numeric types to aggregate.")
 
         return result
 
@@ -3830,48 +3963,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
-        # Our algebra sort is only implemented for Engines that support virtual partitioning.
-        if Engine.get() in ["Ray", "Dask", "Unidist"]:
-            new_modin_frame = self._modin_frame.sort_by(
-                0, columns, ascending=ascending, **kwargs
-            )
-            return self.__constructor__(new_modin_frame)
-        ignore_index = kwargs.get("ignore_index", False)
-        kwargs["ignore_index"] = False
-        if not is_list_like(columns):
-            columns = [columns]
-        # Currently, sort_values will just reindex based on the sorted values.
-        # TODO create a more efficient way to sort
-        ErrorMessage.default_to_pandas("sort_values")
-        broadcast_value_dict = {
-            col: self.getitem_column_array([col]).to_pandas().squeeze(axis=1)
-            for col in columns
-        }
-        # Clear index level names because they also appear in broadcast_value_dict
-        orig_index_level_names = self.index.names
-        tmp_index = self.index.copy()
-        tmp_index.names = [None] * tmp_index.nlevels
-        # Index may contain duplicates
-        broadcast_values1 = pandas.DataFrame(broadcast_value_dict, index=tmp_index)
-        # Index without duplicates
-        broadcast_values2 = pandas.DataFrame(broadcast_value_dict)
-        broadcast_values2 = broadcast_values2.reset_index(drop=True)
-        # Index may contain duplicates
-        new_index1 = broadcast_values1.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-        # Index without duplicates
-        new_index2 = broadcast_values2.sort_values(
-            by=columns, axis=0, ascending=ascending, **kwargs
-        ).index
-
-        result = self.reset_index(drop=True).reindex(axis=0, labels=new_index2)
-        if ignore_index:
-            result = result.reset_index(drop=True)
-        else:
-            result.index = new_index1
-            result.index.names = orig_index_level_names
-        return result
+        new_modin_frame = self._modin_frame.sort_by(
+            0, columns, ascending=ascending, **kwargs
+        )
+        return self.__constructor__(new_modin_frame)
 
     def sort_columns_by_row_values(self, rows, ascending=True, **kwargs):
         if not is_list_like(rows):
@@ -3892,21 +3987,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Cat operations
     def cat_codes(self):
-        def func(df) -> np.ndarray:
-            # `df` is supposed to be consisted of multiple partitions,
-            # which should be concatenated before applying a function.
-            # `pd.concat` doesn't preserve categorical dtype
-            # if the dfs have categorical columns
-            # so we intentionaly restore the right dtype.
-            # TODO: revert the change when https://github.com/pandas-dev/pandas/issues/51362 is fixed.
+        def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            if ser.dtype != "category":
-                ser = ser.astype("category", copy=False)
+            assert ser.dtype == "category"
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
-        res = self._modin_frame.fold(
-            axis=0, func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL]
-        )
+        res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])
         return self.__constructor__(res, shape_hint="column")
 
     # END Cat operations

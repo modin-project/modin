@@ -301,15 +301,10 @@ class Rolling(ClassLogger):
     excluded=[pandas.core.window.expanding.Expanding.__init__],
 )
 class Expanding(ClassLogger):
-    def __init__(self, dataframe, min_periods=1, center=None, axis=0, method="single"):
+    def __init__(self, dataframe, min_periods=1, axis=0, method="single"):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
-        self.expanding_args = [
-            min_periods,
-            center,
-            axis,
-            method,
-        ]
+        self.expanding_args = [min_periods, axis, method]
         self.axis = axis
 
     def aggregate(self, func, *args, **kwargs):
@@ -356,6 +351,18 @@ class Expanding(ClassLogger):
             )
         )
 
+    def median(self, numeric_only=False, engine=None, engine_kwargs=None, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_median(
+                self.axis,
+                self.expanding_args,
+                numeric_only=numeric_only,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
+                **kwargs,
+            )
+        )
+
     def var(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_var(
@@ -377,17 +384,66 @@ class Expanding(ClassLogger):
             )
         )
 
-    def sem(self, *args, **kwargs):
+    def cov(self, other=None, pairwise=None, ddof=1, numeric_only=False, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
         return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.expanding_sem(
-                self.axis, self.expanding_args, *args, **kwargs
+            query_compiler=self._query_compiler.expanding_cov(
+                self.axis,
+                self.expanding_args,
+                squeeze_self=isinstance(self._dataframe, Series),
+                squeeze_other=isinstance(other, Series),
+                other=(
+                    other._query_compiler
+                    if isinstance(other, (Series, DataFrame))
+                    else other
+                ),
+                pairwise=pairwise,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
             )
         )
 
-    def skew(self, **kwargs):
+    def corr(self, other=None, pairwise=None, ddof=1, numeric_only=False, **kwargs):
+        from .dataframe import DataFrame
+        from .series import Series
+
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_corr(
+                self.axis,
+                self.expanding_args,
+                squeeze_self=isinstance(self._dataframe, Series),
+                squeeze_other=isinstance(other, Series),
+                other=(
+                    other._query_compiler
+                    if isinstance(other, (Series, DataFrame))
+                    else other
+                ),
+                pairwise=pairwise,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                **kwargs,
+            )
+        )
+
+    def sem(self, ddof=1, numeric_only=False, *args, **kwargs):
+        return self._dataframe.__constructor__(
+            query_compiler=self._query_compiler.expanding_sem(
+                self.axis,
+                self.expanding_args,
+                ddof=ddof,
+                numeric_only=numeric_only,
+                *args,
+                **kwargs,
+            )
+        )
+
+    def skew(self, numeric_only=False, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_skew(
-                self.axis, self.expanding_args, **kwargs
+                self.axis, self.expanding_args, numeric_only=numeric_only, **kwargs
             )
         )
 

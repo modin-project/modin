@@ -141,12 +141,16 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs["_header"] = sheet_header
             footer = b"</sheetData></worksheet>"
             # Use openpyxml to parse the data
-            reader = WorksheetReader(
+            common_args = (
                 ws,
                 BytesIO(sheet_header_with_first_row + footer),
                 ex.shared_strings,
                 False,
             )
+            if cls.need_rich_text_param:
+                reader = WorksheetReader(*common_args, rich_text=False)
+            else:
+                reader = WorksheetReader(*common_args)
             # Attach cells to the worksheet
             reader.bind_cells()
             data = PandasExcelParser.get_sheet_data(

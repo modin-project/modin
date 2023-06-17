@@ -33,11 +33,11 @@ from modin.pandas.test.utils import (
     int_arg_values,
     eval_general,
     create_test_dfs,
-    generate_multiindex,
     test_data_diff_dtype,
     df_equals_with_non_stable_indices,
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
+    assert_dtypes_equal,
 )
 from modin.config import NPartitions, StorageFormat
 
@@ -79,29 +79,6 @@ def test_all_any_specific(bool_only, method):
     )
 
 
-@pytest.mark.parametrize("method", ["all", "any"])
-@pytest.mark.parametrize("level", [-1, 0, 1])
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("data", [test_data["int_data"]])
-def test_all_any_level(data, axis, level, method):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    if axis == 0:
-        new_idx = generate_multiindex(len(modin_df.index))
-        modin_df.index = new_idx
-        pandas_df.index = new_idx
-    else:
-        new_col = generate_multiindex(len(modin_df.columns))
-        modin_df.columns = new_col
-        pandas_df.columns = new_col
-
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: getattr(df, method)(axis=axis, level=level),
-    )
-
-
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "data", [test_data["float_nan_data"], test_data_large_categorical_dataframe]
@@ -121,28 +98,10 @@ def test_count_specific(numeric_only):
     )
 
 
-@pytest.mark.parametrize("level", [-1, 0, 1])
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("data", [test_data["int_data"]])
-def test_count_level(data, axis, level):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    if axis == 0:
-        new_idx = generate_multiindex(len(modin_df.index))
-        modin_df.index = new_idx
-        pandas_df.index = new_idx
-    else:
-        new_col = generate_multiindex(len(modin_df.columns))
-        modin_df.columns = new_col
-        pandas_df.columns = new_col
-
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.count(axis=axis, level=level),
-    )
-
-
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/513",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_count_dtypes(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
@@ -164,8 +123,7 @@ def test_describe(data, percentiles):
 
 
 @pytest.mark.parametrize("has_numeric_column", [False, True])
-@pytest.mark.parametrize("datetime_is_numeric", [True, False, None])
-def test_2195(datetime_is_numeric, has_numeric_column):
+def test_2195(has_numeric_column):
     data = {
         "categorical": pd.Categorical(["d"] * 10**2),
         "date": [np.datetime64("2000-01-01")] * 10**2,
@@ -179,7 +137,7 @@ def test_2195(datetime_is_numeric, has_numeric_column):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.describe(datetime_is_numeric=datetime_is_numeric),
+        lambda df: df.describe(),
     )
 
 
@@ -316,8 +274,8 @@ def test_prod(
     pandas_df = pandas.DataFrame(
         [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
     )
-    modin_result = modin_df.prod(level=0)
-    pandas_result = pandas_df.prod(level=0)
+    modin_result = modin_df.prod()
+    pandas_result = pandas_df.prod()
     df_equals(modin_result, pandas_result)
 
 
@@ -344,8 +302,8 @@ def test_sum(data, axis, skipna, is_transposed):
     pandas_df = pandas.DataFrame(
         [[1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4], [1, 2, 3, 4]], index=arrays
     )
-    modin_result = modin_df.sum(level=0)
-    pandas_result = pandas_df.sum(level=0)
+    modin_result = modin_df.sum()
+    pandas_result = pandas_df.sum()
     df_equals(modin_result, pandas_result)
 
 
@@ -444,7 +402,11 @@ def test_value_counts_categorical():
         # The order of HDK categories is different from Pandas
         # and, thus, index comparison fails.
         def comparator(df1, df2):
-            assert_series_equal(df1._to_pandas(), df2, check_index=False)
+            # Perform our own non-strict version of dtypes equality check
+            assert_dtypes_equal(df1, df2)
+            assert_series_equal(
+                df1._to_pandas(), df2, check_index=False, check_dtype=False
+            )
 
     else:
         comparator = df_equals

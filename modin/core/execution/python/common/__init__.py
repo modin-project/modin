@@ -11,9 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Utilities and classes to handle work with metadata."""
+"""Modin's functionality related to Python execution engine."""
 
-from .index import ModinIndex
-from .dtypes import ModinDtypes, LazyProxyCategoricalDtype
+from .engine_wrapper import PythonWrapper
 
-__all__ = ["ModinDtypes", "ModinIndex", "LazyProxyCategoricalDtype"]
+__all__ = ["PythonWrapper"]

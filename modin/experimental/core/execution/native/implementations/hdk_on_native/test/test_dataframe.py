@@ -221,6 +221,9 @@ class TestCSV:
             with ForceHdkImport(exp):
                 exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
+            # The arrow table contains empty strings, when reading as category.
+            assert all(v == "" for v in exp["c"])
+            exp["c"] = None
 
         df_equals(ref, exp)
 
@@ -697,7 +700,11 @@ class TestConcat:
             return df_equals(df1, df2)
 
         run_and_compare(
-            concat, data=self.data, data2=self.data2, comparator=sort_comparator
+            concat,
+            data=self.data,
+            data2=self.data2,
+            comparator=sort_comparator,
+            allow_subqueries=True,
         )
 
     def test_concat_agg(self):
@@ -799,6 +806,34 @@ class TestConcat:
             data2={"a": ["4", "5", "6"]},
             force_lazy=False,
         )
+
+    @pytest.mark.parametrize("transform", [True, False])
+    @pytest.mark.parametrize("sort_last", [True, False])
+    # RecursionError in case of concatenation of big number of frames
+    def test_issue_5889(self, transform, sort_last):
+        with ensure_clean(".csv") as file:
+            data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
+            pandas.DataFrame(data).to_csv(file, index=False)
+
+            def test_concat(lib, **kwargs):
+                if transform:
+
+                    def read_csv():
+                        return lib.read_csv(file)["b"]
+
+                else:
+
+                    def read_csv():
+                        return lib.read_csv(file)
+
+                df = read_csv()
+                for _ in range(100):
+                    df = lib.concat([df, read_csv()])
+                if sort_last:
+                    df = lib.concat([df, read_csv()], sort=True)
+                return df
+
+            run_and_compare(test_concat, data={})
 
 
 class TestGroupby:
@@ -971,7 +1006,10 @@ class TestGroupby:
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         def taxi_q3(df, as_index, **kwargs):
-            return df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
+            # TODO: remove 'astype' temp fix
+            return df.groupby(
+                ["b", df["c"].dt.year.astype("int32")], as_index=as_index
+            ).size()
 
         run_and_compare(taxi_q3, data=self.taxi_data, as_index=as_index)
 
@@ -1836,6 +1874,43 @@ class TestBinaryOp:
                 test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
             )
 
+    @pytest.mark.parametrize("force_hdk", [False, True])
+    def test_arithmetic_ops(self, force_hdk):
+        def compute(df, operation, **kwargs):
+            df = getattr(df, operation)(3)
+            return df
+
+        for op in (
+            "__add__",
+            "__sub__",
+            "__mul__",
+            "__pow__",
+            "__truediv__",
+            "__floordiv__",
+        ):
+            run_and_compare(
+                compute,
+                {"A": [1, 2, 3, 4, 5]},
+                operation=op,
+                force_hdk_execute=force_hdk,
+            )
+
+    @pytest.mark.parametrize(
+        "force_hdk",
+        [
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.xfail(reason="Invert is not yet supported by HDK"),
+            ),
+        ],
+    )
+    def test_invert_op(self, force_hdk):
+        def invert(df, **kwargs):
+            return ~df
+
+        run_and_compare(invert, {"A": [1, 2, 3, 4, 5]}, force_hdk_execute=force_hdk)
+
 
 class TestDateTime:
     datetime_data = {
@@ -1850,7 +1925,8 @@ class TestDateTime:
                 "2018-10-26 13:00:15",
                 "2020-10-26 04:00:15",
                 "2020-10-26",
-            ]
+            ],
+            format="mixed",
         ),
     }
 
@@ -2523,21 +2599,19 @@ class TestDuplicateColumns:
             labels = [
                 np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))
             ]
-            inplace = kwargs["set_axis_inplace"]
-            res = df.set_axis(labels, axis=1, inplace=inplace)
-            return df if inplace else res
+            return df.set_axis(labels, axis=1, copy=kwargs["copy"])
 
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=True,
+            copy=True,
         )
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=False,
+            copy=False,
         )
 
 
@@ -2566,10 +2640,12 @@ class TestFromArrow:
 
         # Make sure the lazy proxy dtype is not materialized yet.
         assert type(mdt) != pandas.CategoricalDtype
-        assert mdt._table is not None
-        assert mdt._new(at, at.column(0)._name) is mdt
-        assert mdt._new(at, at.column(2)._name) is not mdt
-        assert type(mdt._new(at, at.column(2)._name)) != pandas.CategoricalDtype
+        assert mdt._parent is not None
+        assert mdt._update_proxy(at, at.column(0)._name) is mdt
+        assert mdt._update_proxy(at, at.column(2)._name) is not mdt
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) != pandas.CategoricalDtype
+        )
 
         assert mdt == pdt
         assert pdt == mdt
@@ -2579,7 +2655,9 @@ class TestFromArrow:
         # has to be called after all checks for laziness
         df_equals(mdf, pdf)
         # Should be materialized now
-        assert type(mdt._new(at, at.column(2)._name)) == pandas.CategoricalDtype
+        assert (
+            type(mdt._update_proxy(at, at.column(2)._name)) == pandas.CategoricalDtype
+        )
 
 
 class TestSparseArray:
