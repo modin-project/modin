@@ -1,3 +1,15 @@
+# Licensed to Modin Development Team under one or more contributor license agreements.
+# See the NOTICE file distributed with this work for additional information regarding
+# copyright ownership.  The Modin Development Team licenses this file to you under the
+# Apache License, Version 2.0 (the "License"); you may not use this file except in
+# compliance with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under
+# the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
 from __future__ import annotations
 
 from typing import Hashable, NoReturn
@@ -55,19 +67,12 @@ class ModinIterableDataset(IterableDataset):
         Single threaded iterator.
         """
         for idx, row in self._df.iterrows():
-            yield self._proc_row(idx, row)
+            np_row = np.array(row)
 
-    def _proc_row(self, index: Hashable, row: Series | ModinSeries):
-        """
-        Convert row to ndarray.
-        """
-
-        np_row = np.array(row)
-
-        if self._with_index:
-            return index, np_row
-        else:
-            return np_row
+            if self._with_index:
+                yield idx, np_row
+            else:
+                yield np_row
 
     def _multithread_iter(self) -> NoReturn:
         raise NotImplementedError(
@@ -92,7 +97,7 @@ def to_dataloader(
         Batch size that dataloader uses.
 
     with_index : bool, default: False
-	If true, include the index object with the resulting iterable, similar to `DataFrame.iterrows`.
+        If true, include the index object with the resulting iterable, similar to `DataFrame.iterrows`.
 
     Returns
     -------
