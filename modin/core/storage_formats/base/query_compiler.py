@@ -580,7 +580,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return BinaryDefault.register(pandas.DataFrame.eq)(self, other=other, **kwargs)
 
     @doc_utils.add_refer_to("DataFrame.equals")
-    def equals(self, other):  # noqa: PR02
+    def equals(self, other):  # noqa: PR01, RT01
         return BinaryDefault.register(pandas.DataFrame.equals)(self, other=other)
 
     @doc_utils.doc_binary_method(operation="integer division", sign="//")

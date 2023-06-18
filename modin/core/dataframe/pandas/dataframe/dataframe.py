@@ -3354,9 +3354,9 @@ class PandasDataframe(ClassLogger):
         return self.__constructor__(
             new_frame,
             joined_index if labels == "replace" else None,
-            joined_columns,
+            joined_columns if labels == "replace" else None,
             row_lengths if labels == "replace" else None,
-            column_widths,
+            column_widths if labels == "replace" else None,
             dtypes,
         )
 

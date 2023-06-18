@@ -247,6 +247,12 @@ def test_equals():
     assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
 
 
+def test_equals_with_nans():
+    df1 = pd.DataFrame([0, 1, None], dtype="uint8[pyarrow]")
+    df2 = pd.DataFrame([None, None, None], dtype="uint8[pyarrow]")
+    assert not df1.equals(df2)
+
+
 @pytest.mark.parametrize("is_more_other_partitions", [True, False])
 @pytest.mark.parametrize(
     "op_type", ["df_ser", "df_df", "ser_ser_same_name", "ser_ser_different_name"]

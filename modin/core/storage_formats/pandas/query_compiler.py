@@ -391,7 +391,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
     eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
     equals = Binary.register(
-        lambda df, other: pandas.DataFrame([df.equals(other)], columns=df.columns),
+        lambda df, other: pandas.DataFrame([df.equals(other)]),
         join_type=None,
         labels="drop",
         infer_dtypes="bool",

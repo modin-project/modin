@@ -1919,10 +1919,10 @@ def test_equals():
         df_equals(modin_df3, modin_df2)
 
 
-def test_equals_6229():
-    ser = pd.Series([0, 1, None], dtype="uint8[pyarrow]")
+def test_equals_with_nans():
+    ser1 = pd.Series([0, 1, None], dtype="uint8[pyarrow]")
     ser2 = pd.Series([None, None, None], dtype="uint8[pyarrow]")
-    assert not ser.equals(ser2)
+    assert not ser1.equals(ser2)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
