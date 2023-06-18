@@ -13,74 +13,16 @@
 
 """Module houses class that implements ``GenericUnidistDataframePartitionManager`` using Unidist."""
 
-import inspect
-import threading
-
-from modin.config import ProgressBar
 from modin.core.execution.unidist.generic.partitioning import (
     GenericUnidistDataframePartitionManager,
 )
 from modin.core.execution.unidist.common import UnidistWrapper
-from modin.core.execution.unidist.common.utils import wait
 from .virtual_partition import (
     PandasOnUnidistDataframeColumnPartition,
     PandasOnUnidistDataframeRowPartition,
 )
 from .partition import PandasOnUnidistDataframePartition
-from modin.core.execution.modin_aqp import call_progress_bar
-
-
-def progress_bar_wrapper(f):
-    """
-    Wrap computation function inside a progress bar.
-
-    Spawns another thread which displays a progress bar showing
-    estimated completion time.
-
-    Parameters
-    ----------
-    f : callable
-        The name of the function to be wrapped.
-
-    Returns
-    -------
-    callable
-        Decorated version of `f` which reports progress.
-    """
-    from functools import wraps
-
-    @wraps(f)
-    def magic(*args, **kwargs):
-        result_parts = f(*args, **kwargs)
-        if ProgressBar.get():
-            current_frame = inspect.currentframe()
-            function_name = None
-            while function_name != "<module>":
-                (
-                    filename,
-                    line_number,
-                    function_name,
-                    lines,
-                    index,
-                ) = inspect.getframeinfo(current_frame)
-                current_frame = current_frame.f_back
-            t = threading.Thread(
-                target=call_progress_bar,
-                args=(result_parts, line_number),
-            )
-            t.start()
-            # We need to know whether or not we are in a jupyter notebook
-            from IPython import get_ipython
-
-            try:
-                ipy_str = str(type(get_ipython()))
-                if "zmqshell" not in ipy_str:
-                    t.join()
-            except Exception:
-                pass
-        return result_parts
-
-    return magic
+from modin.core.execution.modin_aqp import progress_bar_wrapper
 
 
 class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionManager):
@@ -90,33 +32,7 @@ class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionM
     _partition_class = PandasOnUnidistDataframePartition
     _column_partitions_class = PandasOnUnidistDataframeColumnPartition
     _row_partition_class = PandasOnUnidistDataframeRowPartition
-
-    @classmethod
-    def get_objects_from_partitions(cls, partitions):
-        """
-        Get the objects wrapped by `partitions` in parallel.
-
-        This function assumes that each partition in `partitions` contains a single block.
-
-        Parameters
-        ----------
-        partitions : np.ndarray
-            NumPy array with ``PandasDataframePartition``-s.
-
-        Returns
-        -------
-        list
-            The objects wrapped by `partitions`.
-        """
-        for idx, part in enumerate(partitions):
-            if hasattr(part, "force_materialization"):
-                partitions[idx] = part.force_materialization()
-        assert all(
-            [len(partition.list_of_blocks) == 1 for partition in partitions]
-        ), "Implementation assumes that each partition contains a signle block."
-        return UnidistWrapper.materialize(
-            [partition.list_of_blocks[0] for partition in partitions]
-        )
+    _execution_wrapper = UnidistWrapper
 
     @classmethod
     def wait_partitions(cls, partitions):
@@ -130,10 +46,9 @@ class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionM
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        blocks = [
-            block for partition in partitions for block in partition.list_of_blocks
-        ]
-        wait(blocks)
+        UnidistWrapper.wait(
+            [block for partition in partitions for block in partition.list_of_blocks]
+        )
 
 
 def _make_wrapped_method(name: str):

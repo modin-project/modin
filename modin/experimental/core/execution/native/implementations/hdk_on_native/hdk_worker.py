@@ -84,10 +84,12 @@ class HdkWorker(BaseDbWorker):
     @classmethod
     def executeRA(cls, query):
         if query.startswith("execute relalg"):
-            ra = query.removeprefix("execute relalg")
+            # 14 == len("execute relalg")
+            ra = query[14:]
         else:
             assert query.startswith("execute calcite")
             ra = cls._calcite.process(query, db_name="hdk")
+
         return cls._executeRelAlgJson(ra)
 
     @classmethod

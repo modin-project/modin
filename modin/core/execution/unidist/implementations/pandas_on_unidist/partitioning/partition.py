@@ -16,7 +16,7 @@
 import unidist
 
 from modin.core.execution.unidist.common import UnidistWrapper
-from modin.core.execution.unidist.common.utils import deserialize, wait
+from modin.core.execution.unidist.common.utils import deserialize
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
@@ -148,7 +148,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        wait([self._data])
+        UnidistWrapper.wait(self._data)
 
     # If unidist has not been initialized yet by Modin,
     # unidist itself handles initialization when calling `unidist.put`,
@@ -303,7 +303,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
 
 
 @unidist.remote(num_returns=2)
-def _get_index_and_columns_size(df):
+def _get_index_and_columns_size(df):  # pragma: no cover
     """
     Get the number of rows and columns of a pandas DataFrame.
 

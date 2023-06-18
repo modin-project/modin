@@ -13,6 +13,25 @@
 
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
 
+import re
+import numpy as np
+from collections import OrderedDict
+
+from typing import List, Hashable, Optional, Tuple, Union, Iterable
+
+import pyarrow
+from pyarrow.types import is_dictionary
+
+import pandas as pd
+from pandas._libs.lib import no_default
+from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
+from pandas.core.dtypes.common import (
+    get_dtype,
+    is_list_like,
+    is_bool_dtype,
+    is_categorical_dtype,
+)
+
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -22,33 +41,19 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
 from .utils import (
-    LazyProxyCategoricalDtype,
     ColNameCodec,
     arrow_to_pandas,
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
-    get_common_arrow_type,
+    build_categorical_from_at,
 )
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
-
-from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
-from pandas.core.dtypes.common import (
-    get_dtype,
-    is_list_like,
-    is_bool_dtype,
-    is_string_dtype,
-    is_categorical_dtype,
-)
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.error_message import ErrorMessage
-from modin.pandas.indexing import is_range_like
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.dataframe.base.dataframe.utils import join_columns
-import pandas as pd
-import typing
-from typing import List, Hashable, Optional, Tuple, Union
-
 from ..df_algebra import (
     MaskNode,
     FrameNode,
@@ -71,19 +76,15 @@ from ..expr import (
     _get_common_dtype,
     is_cmp_op,
 )
-from collections import OrderedDict
-
-import numpy as np
-import pyarrow
-import re
 from modin.pandas.utils import check_both_not_none
-from pyarrow.types import is_dictionary
-
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
 ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME
+UNNAMED_IDX_COL_NAME = ColNameCodec.UNNAMED_IDX_COL_NAME
 encode_col_name = ColNameCodec.encode
 decode_col_name = ColNameCodec.decode
+mangle_index_names = ColNameCodec.mangle_index_names
+demangle_index_names = ColNameCodec.demangle_index_names
 
 
 class HdkOnNativeDataframe(PandasDataframe):
@@ -205,9 +206,10 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._op is None:
             self._op = FrameNode(self)
 
-        self._table_cols = columns.tolist()
         if self._index_cols is not None:
-            self._table_cols = self._index_cols + self._table_cols
+            self._table_cols = self._index_cols + columns.tolist()
+        else:
+            self._table_cols = columns.tolist()
 
         assert len(dtypes) == len(
             self._table_cols
@@ -231,37 +233,68 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             self.set_dtypes_cache(dtypes)
 
-        if partitions is not None:
+        if partitions is not None and partitions.size > 1:
             self._filter_empties()
-
-        if self._has_arrow_table() and self._partitions.size > 0:
-            assert self._partitions.size == 1
-            table = self._partitions[0][0].get()
-            for i, t in enumerate(dtypes):
-                if isinstance(t, LazyProxyCategoricalDtype):
-                    dtypes[i] = t._new(table, table.column_names[i])
 
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
 
-    def copy(self):
+    def copy(
+        self,
+        partitions=no_default,
+        index=no_default,
+        columns=no_default,
+        dtypes=no_default,
+        op=no_default,
+        index_cols=no_default,
+    ):
         """
         Copy this DataFrame.
+
+        Parameters
+        ----------
+        partitions : np.ndarray, optional
+            Partitions of the frame.
+        index : pandas.Index or list, optional
+            Index of the frame to be used as an index cache. If None then will be
+            computed on demand.
+        columns : pandas.Index or list, optional
+            Columns of the frame.
+        dtypes : pandas.Index or list, optional
+            Column data types.
+        op : DFAlgNode, optional
+            A tree describing how frame is computed. For materialized frames it
+            is always ``FrameNode``.
+        index_cols : list of str, optional
+            A list of columns included into the frame's index. None value means
+            a default index (row id is used as an index).
 
         Returns
         -------
         HdkOnNativeDataframe
             A copy of this DataFrame.
         """
+        if partitions is no_default:
+            partitions = self._partitions
+        if index is no_default:
+            index = self.copy_index_cache()
+        if columns is no_default:
+            columns = self.copy_columns_cache()
+        if op is no_default:
+            op = self._op
+        if dtypes is no_default:
+            dtypes = self.copy_dtypes_cache()
+        if index_cols is no_default:
+            index_cols = self._index_cols
         return self.__constructor__(
-            partitions=self._partitions,
-            index=self.copy_index_cache(),
-            columns=self.copy_columns_cache(),
+            partitions=partitions,
+            index=index,
+            columns=columns,
             row_lengths=self._row_lengths_cache,
             column_widths=self._column_widths_cache,
-            dtypes=self.copy_dtypes_cache(),
-            op=self._op,
-            index_cols=self._index_cols,
+            dtypes=dtypes,
+            op=op,
+            index_cols=index_cols,
             uses_rowid=self._uses_rowid,
             force_execution_mode=self._force_execution_mode,
             has_unsupported_data=self._has_unsupported_data,
@@ -406,7 +439,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         if self._partitions is None or not isinstance(self._op, FrameNode):
             return False
-        return all(p.arrow_table is not None for p in self._partitions.flatten())
+        return self._partitions.size > 0 and all(
+            p.arrow_table is not None for p in self._partitions.flatten()
+        )
 
     def _dtypes_for_exprs(self, exprs):
         """
@@ -422,6 +457,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         list of dtype
         """
         return [expr._dtype for expr in exprs.values()]
+
+    @_inherit_docstrings(PandasDataframe._maybe_update_proxies)
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        if new_parent is not None:
+            super()._maybe_update_proxies(dtypes, new_parent)
+        elif self._has_arrow_table():
+            table = self._partitions[0, 0].get()
+            super()._maybe_update_proxies(dtypes, new_parent=table)
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """
@@ -507,6 +550,10 @@ class HdkOnNativeDataframe(PandasDataframe):
                 + f"met '{type(by_frame._op).__name__}'."
             )
 
+        if agg in ("head", "tail"):
+            n = kwargs["agg_kwargs"]["n"]
+            return self._groupby_head_tail(agg, n, groupby_cols)
+
         col_to_delete_template = "__delete_me_{name}"
 
         def generate_by_name(by):
@@ -530,7 +577,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         base = self.__constructor__(
             columns=base_cols,
             dtypes=self._dtypes_for_exprs(exprs),
-            op=TransformNode(base, exprs, fold=True),
+            op=TransformNode(base, exprs),
             index_cols=None,
             force_execution_mode=self._force_execution_mode,
         )
@@ -592,6 +639,66 @@ class HdkOnNativeDataframe(PandasDataframe):
                     col_labels=filtered_columns
                 )
         return new_frame
+
+    def _groupby_head_tail(
+        self, agg: str, n: int, cols: Iterable[str]
+    ) -> "HdkOnNativeDataframe":
+        """
+        Return first/last n rows of each group.
+
+        Parameters
+        ----------
+        agg : {"head", "tail"}
+        n : int
+            If positive: number of entries to include from start/end of each group.
+            If negative: number of entries to exclude from start/end of each group.
+        cols : Iterable[str]
+            Group by column names.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+            The new frame.
+        """
+        if isinstance(self._op, SortNode):
+            base = self._op.input[0]
+            order_keys = self._op.columns
+            ascending = self._op.ascending
+            na_pos = self._op.na_position.upper()
+            fold = True  # Fold TransformNodes
+        else:
+            base = self._maybe_materialize_rowid()
+            order_keys = base._index_cols[0:1]
+            ascending = [True]
+            na_pos = "FIRST"
+            fold = base is self  # Do not fold if rowid is added
+        if (n < 0) == (agg == "head"):  # Invert sorting
+            ascending = [not a for a in ascending]
+            na_pos = "FIRST" if na_pos == "LAST" else "LAST"
+        partition_keys = [base.ref(col) for col in cols]
+        order_keys = [base.ref(col) for col in order_keys]
+
+        row_num_name = "__HDK_ROW_NUMBER__"
+        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
+        exprs = base._index_exprs()
+        exprs.update((col, base.ref(col)) for col in base.columns)
+        exprs[row_num_name] = row_num_op
+        transform = base.copy(
+            columns=list(base.columns) + [row_num_name],
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(base, exprs, fold),
+        )
+
+        if n < 0:
+            cond = transform.ref(row_num_name).ge(-n + 1)
+        else:
+            cond = transform.ref(row_num_name).le(n)
+
+        filter = transform.copy(op=FilterNode(transform, cond))
+        exprs = filter._index_exprs()
+        exprs.update((col, filter.ref(col)) for col in base.columns)
+        return base.copy(op=TransformNode(filter, exprs))
 
     def agg(self, agg):
         """
@@ -737,6 +844,44 @@ class HdkOnNativeDataframe(PandasDataframe):
             force_execution_mode=base._force_execution_mode,
         )
         return result
+
+    def isna(self, invert):
+        """
+        Detect missing values.
+
+        Parameters
+        ----------
+        invert : bool
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+        """
+        expr = "is_not_null" if invert else "is_null"
+        exprs = self._index_exprs()
+        for col in self.columns:
+            exprs[col] = getattr(self.ref(col), expr)()
+        return self.__constructor__(
+            columns=self.columns,
+            dtypes=self._dtypes_for_exprs(exprs),
+            op=TransformNode(self, exprs),
+            index=self._index_cache,
+            index_cols=self._index_cols,
+            force_execution_mode=self._force_execution_mode,
+        )
+
+    def invert(self):
+        """
+        Apply bitwise inverse to each column.
+
+        Returns
+        -------
+        HdkOnNativeDataframe
+        """
+        exprs = self._index_exprs()
+        for col in self.columns:
+            exprs[col] = self.ref(col).invert()
+        return self.copy(op=TransformNode(self, exprs))
 
     def dt_extract(self, obj):
         """
@@ -990,284 +1135,111 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        # In case of different number of columns, HDK performs
-        # slowly and supports only numeric column types.
-        # See https://github.com/intel-ai/hdk/issues/182
-        # To work around this issue, perform concatenation
-        # with arrow.
-        if (
-            len(other_modin_frames) == 0
-            or len(self.columns) == 0
-            or all(f._has_arrow_table() for f in ([self] + other_modin_frames))
-            or any(is_string_dtype(t) for t in self._dtypes)
-            or any(len(f.columns) != len(self.columns) for f in other_modin_frames)
-            or any(set(f._dtypes) != set(self._dtypes) for f in other_modin_frames)
-        ):
-            return self._union_all_arrow(other_modin_frames, join, sort, ignore_index)
-
-        # determine output columns
-        new_cols_map = OrderedDict()
+        index_cols = None
+        col_name_to_dtype = OrderedDict()
         for col in self.columns:
-            new_cols_map[col] = self._dtypes[col]
-        for frame in other_modin_frames:
-            if join == "inner":
-                for col in list(new_cols_map):
-                    if col not in frame.columns:
-                        del new_cols_map[col]
-            else:
-                for col in frame.columns:
-                    if col not in new_cols_map:
-                        new_cols_map[col] = frame._dtypes[col]
-        new_columns = list(new_cols_map.keys())
+            col_name_to_dtype[col] = self._dtypes[col]
 
-        if sort:
-            new_columns = sorted(new_columns)
-
-        # determine how many index components are going into
-        # the resulting table
-        if not ignore_index:
-            index_width = self._index_width()
+        if join == "inner":
             for frame in other_modin_frames:
-                index_width = min(index_width, frame._index_width())
-
-        # compute resulting dtypes
-        if sort:
-            new_dtypes = [new_cols_map[col] for col in new_columns]
+                for col in list(col_name_to_dtype):
+                    if col not in frame.columns:
+                        del col_name_to_dtype[col]
+        elif join == "outer":
+            for frame in other_modin_frames:
+                for col in frame.columns:
+                    if col not in col_name_to_dtype:
+                        col_name_to_dtype[col] = frame._dtypes[col]
         else:
-            new_dtypes = list(new_cols_map.values())
+            raise NotImplementedError(f"Unsupported join type {join=}")
 
-        # build projections to align all frames
-        aligned_frames = []
+        frames = []
         for frame in [self] + other_modin_frames:
-            aligned_index = None
-            exprs = OrderedDict()
-            uses_rowid = False
-
-            if not ignore_index:
-                if frame._index_cols:
-                    aligned_index = frame._index_cols[0 : index_width + 1]
-                    aligned_index_dtypes = frame._dtypes[aligned_index].tolist()
-                    for i in range(0, index_width):
-                        col = frame._index_cols[i]
-                        exprs[col] = frame.ref(col)
-                else:
-                    assert index_width == 1, "unexpected index width"
-                    aligned_index = self._mangle_index_names([None])
-                    exprs[aligned_index[0]] = frame.ref(ROWID_COL_NAME)
-                    aligned_index_dtypes = [get_dtype(int)]
-                    uses_rowid = True
-                aligned_dtypes = aligned_index_dtypes + new_dtypes
-            else:
-                aligned_dtypes = new_dtypes
-
-            for col in new_columns:
-                if col in frame._table_cols:
-                    exprs[col] = frame.ref(col)
-                else:
-                    exprs[col] = LiteralExpr(None)
-
-            aligned_frame_op = TransformNode(frame, exprs)
-            aligned_frames.append(
-                self.__constructor__(
-                    columns=new_columns,
-                    dtypes=aligned_dtypes,
-                    op=aligned_frame_op,
-                    index_cols=aligned_index,
-                    uses_rowid=uses_rowid,
-                    force_execution_mode=self._force_execution_mode,
-                )
-            )
-
-        new_frame = aligned_frames[0]
-        for frame in aligned_frames[1:]:
-            new_frame = self.__constructor__(
-                columns=new_columns,
-                dtypes=new_frame.copy_dtypes_cache(),
-                op=UnionNode([new_frame, frame]),
-                index_cols=new_frame._index_cols,
-                force_execution_mode=self._force_execution_mode,
-            )
-
-        return new_frame
-
-    def _union_all_arrow(self, other_modin_frames, join, sort, ignore_index):
-        """
-        Concatenate frames' rows, using the PyArrow API.
-
-        Parameters
-        ----------
-        other_modin_frames : list of HdkOnNativeDataframe
-            Frames to concat.
-        join : {"outer", "inner"}
-            How to handle columns with mismatched names.
-            "inner" - drop such columns. "outer" - fill
-            with NULLs.
-        sort : bool
-            Sort unaligned columns for 'outer' join.
-        ignore_index : bool
-            Ignore index columns.
-
-        Returns
-        -------
-        HdkOnNativeDataframe
-            The new frame.
-        """
-
-        class FrameData:
-            def __init__(self, frame):
-                if not frame._has_arrow_table():
-                    frame._execute()
-                if not frame._has_arrow_table():
-                    raise NotImplementedError("PyArrow tables concatenation")
-                self.index = frame.index
-                self.columns = frame.columns
-                self.index_cols = frame._index_cols
-                self.table: pyarrow.Table = frame._partitions[0][0].arrow_table
-
-        frames: List[FrameData] = [FrameData(f) for f in [self] + other_modin_frames]
-        col_fields: typing.OrderedDict[Tuple[str, str], pyarrow.Field] = OrderedDict()
-
-        # Add field to the col_fields dictionary. If the field is already exists, chose
-        # the most appropriate field, according to the fields type and bit_width.
-        def add_col_field(table, col_name, table_col_name):
-            key = (col_name, table_col_name)
-            field = table.field(table_col_name)
-            cur_field = col_fields.get(key, None)
-            if cur_field is None or (
-                cur_field.type != get_common_arrow_type(cur_field.type, field.type)
+            # Empty frames are filtered out only in case of the outer join.
+            if (
+                join == "inner"
+                or len(frame.columns) != 0
+                or (frame.has_index_cache and len(frame.index) != 0)
+                or (not frame.has_index_cache and frame.index_cols)
             ):
-                col_fields[key] = field
-
-        if join == "outer":
-            frames = [f for f in frames if len(f.columns) != 0 or len(f.index) != 0]
-            for frame in frames:
-                table = frame.table
-                idx_width = 0 if frame.index_cols is None else len(frame.index_cols)
-                table_cols = table.column_names[idx_width:]
-                for col_name, table_col_name in zip(frame.columns, table_cols):
-                    add_col_field(table, col_name, table_col_name)
-        else:
-            col_names = {c for c in frames[0].columns} if len(frames) > 1 else []
-            if len(col_names) != 0:
-                for frame in frames[1:]:
-                    for name in list(col_names):
-                        if name not in frame.columns:
-                            col_names.remove(name)
-                if len(col_names) != 0:
-                    for frame in frames:
-                        table = frame.table
-                        idx_width = (
-                            0 if frame.index_cols is None else len(frame.index_cols)
-                        )
-                        table_cols = table.column_names[idx_width:]
-                        for col_name, table_col_name in zip(frame.columns, table_cols):
-                            if col_name in col_names:
-                                add_col_field(table, col_name, table_col_name)
-
-        if len(col_fields) == 0:
-            if ignore_index or len(frames) == 0:
-                idx = RangeIndex(0, sum(len(f.table) for f in frames))
-            else:
-                idx = frames[0].index.append([f.index for f in frames[1:]])
-            idx_cols = self._mangle_index_names(idx.names)
-            idx_df = pd.DataFrame(index=idx).reset_index()
-            union = pyarrow.Table.from_pandas(idx_df).rename_columns(idx_cols)
-        else:
-            # Process empty frames with non-empty index
-            for frame in frames:
-                if len(frame.table) == 0 and len(frame.index) != 0:
-                    if ignore_index:
-                        frame.index = pd.RangeIndex(0, len(frame.index))
-                    idx = frame.index
-                    frame.index_cols = self._mangle_index_names(idx.names)
-                    idx_df = pd.DataFrame(index=idx).reset_index()
-                    frame.table = pyarrow.Table.from_pandas(idx_df)
-                    frame.table = frame.table.rename_columns(frame.index_cols)
-
-            idx_cols = None
-            idx_table = None
-            idx_fields: typing.OrderedDict[str, pyarrow.Field] = OrderedDict()
-
-            if not ignore_index:
-                idx_cols = frames[0].index_cols
-                idx_equal = idx_cols is not None
-
-                if idx_equal:
-                    idx_width = len(idx_cols)
-                    idx_types = [frames[0].table.field(c).type for c in idx_cols]
-                    for frame in frames[1:]:
-                        table = frame.table
-                        frame_idx_cols = frame.index_cols
-                        if (
-                            (frame_idx_cols is None)
-                            or (len(frame_idx_cols) != idx_width)
-                            or any(
-                                idx_types[i] != table.field(frame_idx_cols[i]).type
-                                for i in range(idx_width)
-                            )
-                        ):
-                            idx_equal = False
-                            break
-
-                if idx_equal:
-                    idx = frames[0].index
-                    if isinstance(idx, MultiIndex):
-                        idx_cols = self._mangle_index_names(idx.names)
-                    else:
-                        idx_names = {f.index.name for f in frames}
-                        idx_names = [None] if len(idx_names) > 1 else [idx.name]
-                        idx_cols = self._mangle_index_names(idx_names)
-
-                    # Rename index columns
-                    for frame in frames:
-                        table = frame.table
-                        new_names = idx_cols + table.column_names[len(idx_cols) :]
-                        frame.table = table.rename_columns(new_names)
-
-                    for name in idx_cols:
-                        idx_fields[name] = frames[0].table.field(name)
+                if isinstance(frame._op, UnionNode):
+                    frames.extend(frame._op.input)
                 else:
-                    # Align index columns
-                    idx = frames[0].index.append([f.index for f in frames[1:]])
-                    idx_cols = self._mangle_index_names(idx.names)
-                    idx_df = pd.DataFrame(index=idx).reset_index()
-                    obj_cols = idx_df.select_dtypes(include=["object"]).columns.tolist()
-                    if len(obj_cols) != 0:
-                        # PyArrow fails to convert object fields. Converting to str.
-                        idx_df[obj_cols] = idx_df[obj_cols].astype(str)
-                    idx_table = pyarrow.Table.from_pandas(idx_df, preserve_index=False)
-                    idx_table = idx_table.rename_columns(idx_cols)
+                    frames.append(frame)
+
+        if len(col_name_to_dtype) == 0:
+            if len(frames) == 0:
+                dtypes = pd.Series()
+            elif ignore_index:
+                index_cols = [UNNAMED_IDX_COL_NAME]
+                dtypes = pd.Series([get_dtype(int)], index=index_cols)
+            else:
+                index_names = ColNameCodec.concat_index_names(frames)
+                index_cols = list(index_names)
+                dtypes = pd.Series(index_names.values(), index=index_cols)
+        else:
+            # Find common dtypes
+            for frame in other_modin_frames:
+                frame_dtypes = frame._dtypes
+                for col in col_name_to_dtype:
+                    if col in frame_dtypes:
+                        col_name_to_dtype[col] = pd.core.dtypes.cast.find_common_type(
+                            [col_name_to_dtype[col], frame_dtypes[col]]
+                        )
 
             if sort:
-                col_fields = OrderedDict(sorted(col_fields.items(), key=lambda i: i[0]))
+                col_name_to_dtype = OrderedDict(
+                    (col, col_name_to_dtype[col]) for col in sorted(col_name_to_dtype)
+                )
 
-            schema = pyarrow.schema(
-                list(idx_fields.values()) + list(col_fields.values())
+            if ignore_index:
+                table_col_name_to_dtype = col_name_to_dtype
+            else:
+                table_col_name_to_dtype = ColNameCodec.concat_index_names(frames)
+                index_cols = list(table_col_name_to_dtype)
+                table_col_name_to_dtype.update(col_name_to_dtype)
+
+            dtypes = pd.Series(
+                table_col_name_to_dtype.values(), index=table_col_name_to_dtype.keys()
             )
+            for i, frame in enumerate(frames):
+                frame_dtypes = frame._dtypes.get()
+                if (
+                    len(frame_dtypes) != len(dtypes)
+                    or any(frame_dtypes.index != dtypes.index)
+                    or any(frame_dtypes.values != dtypes.values)
+                ):
+                    exprs = OrderedDict()
+                    uses_rowid = False
+                    for col in table_col_name_to_dtype:
+                        if col in frame_dtypes:
+                            expr = frame.ref(col)
+                        elif col == UNNAMED_IDX_COL_NAME:
+                            if frame._index_cols is not None:
+                                assert len(frame._index_cols) == 1
+                                expr = frame.ref(frame._index_cols[0])
+                            else:
+                                uses_rowid = True
+                                expr = frame.ref(ROWID_COL_NAME)
+                        else:
+                            expr = LiteralExpr(None, table_col_name_to_dtype[col])
+                        if expr._dtype != table_col_name_to_dtype[col]:
+                            expr = expr.cast(table_col_name_to_dtype[col])
+                        exprs[col] = expr
+                    frames[i] = frame.__constructor__(
+                        columns=dtypes.index,
+                        dtypes=dtypes,
+                        uses_rowid=uses_rowid,
+                        op=TransformNode(frame, exprs),
+                        force_execution_mode=frame._force_execution_mode,
+                    )
 
-            tables = []
-            for frame in frames:
-                data = []
-                table = frame.table
-                col_names = table.column_names
-                for field in schema:
-                    if field.name in col_names:
-                        data.append(table.column(field.name))
-                    else:
-                        data.append(pyarrow.nulls(len(table), field.type))
-                tables.append(pyarrow.table(data, schema=schema))
-
-            union = pyarrow.concat_tables(tables)
-
-            if idx_table is not None:
-                for i, name in enumerate(idx_table.column_names):
-                    union = union.add_column(i, idx_table.field(i), idx_table.column(i))
-
-        return self.from_arrow(
-            union,
-            index_cols=idx_cols,
-            columns=[k[0] for k in col_fields.keys()],
-            encode_col_names=False,
+        return self.__constructor__(
+            index_cols=index_cols,
+            columns=col_name_to_dtype.keys(),
+            dtypes=dtypes,
+            op=UnionNode(frames, col_name_to_dtype, ignore_index),
+            force_execution_mode=self._force_execution_mode,
         )
 
     def _join_by_index(self, other_modin_frames, how, sort, ignore_index):
@@ -1290,7 +1262,15 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        check_join_supported(how)
+        try:
+            check_join_supported(how)
+        except NotImplementedError as err:
+            # The outer join is not supported by HDK, however, if all the frames
+            # have a trivial index, we can simply concatenate the columns with arrow.
+            if (frame := self._join_arrow_columns(other_modin_frames)) is not None:
+                return frame
+            raise err
+
         lhs = self._maybe_materialize_rowid()
         reset_index_names = False
         new_columns_dtype = self.columns.dtype
@@ -1359,6 +1339,48 @@ class HdkOnNativeDataframe(PandasDataframe):
             lhs = lhs._set_columns(new_columns)
 
         return lhs
+
+    def _join_arrow_columns(self, other_modin_frames):
+        """
+        Join arrow table columns.
+
+        If all the frames have a trivial index and an arrow
+        table in partitions, concatenate the table columns.
+
+        Parameters
+        ----------
+        other_modin_frames : list of HdkOnNativeDataframe
+            Frames to join with.
+
+        Returns
+        -------
+        HdkOnNativeDataframe or None
+        """
+        frames = [self] + other_modin_frames
+        if all(
+            f._index_cols is None
+            # Make sure all the frames have an arrow table in partitions.
+            and isinstance(f._execute(), pyarrow.Table)
+            for f in frames
+        ):
+            tables = [f._partitions[0][0].get() for f in frames]
+            column_names = [c for t in tables for c in t.column_names]
+            if len(column_names) != len(set(column_names)):
+                raise NotImplementedError("Duplicate column names")
+            max_len = max(len(t) for t in tables)
+            columns = [c for t in tables for c in t.columns]
+            # Make all columns of the same length, if required.
+            for i, col in enumerate(columns):
+                if len(col) < max_len:
+                    columns[i] = pyarrow.chunked_array(
+                        col.chunks + [pyarrow.nulls(max_len - len(col), col.type)]
+                    )
+            return self.from_arrow(
+                at=pyarrow.table(columns, column_names),
+                columns=[c for f in frames for c in f.columns],
+                encode_col_names=False,
+            )
+        return None
 
     def concat(
         self,
@@ -1591,10 +1613,11 @@ class HdkOnNativeDataframe(PandasDataframe):
         exprs[col_name] = build_if_then_else(
             col_expr.is_null(), null_val, code_expr, get_dtype("int32")
         )
+        dtypes = [expr._dtype for expr in exprs.values()]
 
         return self.__constructor__(
             columns=Index([col_name]),
-            dtypes=pd.Series(self._dtypes[0], index=Index([col_name])),
+            dtypes=pd.Series(dtypes, index=Index(exprs.keys())),
             op=TransformNode(self, exprs),
             index=self._index_cache,
             index_cols=self._index_cols,
@@ -1770,8 +1793,9 @@ class HdkOnNativeDataframe(PandasDataframe):
             exprs = translate_exprs_to_base(self._op.exprs, base)
             exprs = replace_frame_in_exprs(exprs, base, filtered_base)
             if base._index_cols is None:
-                exprs[IDX_COL_NAME] = filtered_base.ref(IDX_COL_NAME)
-                exprs.move_to_end(IDX_COL_NAME, last=False)
+                idx_name = mangle_index_names([None])[0]
+                exprs[idx_name] = filtered_base.ref(idx_name)
+                exprs.move_to_end(idx_name, last=False)
 
         return self.__constructor__(
             columns=self.columns,
@@ -1807,7 +1831,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         name = self._index_cache.get().name if self.has_index_cache else None
-        name = IDX_COL_NAME if name is None else self._mangle_index_names([name])[0]
+        name = mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref(ROWID_COL_NAME)
         for col in self._table_cols:
@@ -1883,63 +1907,64 @@ class HdkOnNativeDataframe(PandasDataframe):
         Materialize lazy frame.
 
         After this call frame always has ``FrameNode`` operation.
-        """
-        if isinstance(self._op, FrameNode):
-            return
-
-        if self._force_execution_mode == "lazy":
-            raise RuntimeError("unexpected execution triggered on lazy frame")
-
-        # Some frames require rowid which is available for executed frames only.
-        # Also there is a common pattern when MaskNode is executed to print
-        # frame. If we run the whole tree then any following frame usage will
-        # require re-compute. So we just execute MaskNode's operands.
-        self._run_sub_queries()
-
-        if self._can_execute_arrow():
-            new_table = self._execute_arrow()
-            new_partitions = np.empty((1, 1), dtype=np.dtype(object))
-            new_partitions[0][0] = self._partition_mgr_cls._partition_class.put_arrow(
-                new_table
-            )
-        else:
-            if self._force_execution_mode == "arrow":
-                raise RuntimeError("forced arrow execution failed")
-
-            new_partitions = self._partition_mgr_cls.run_exec_plan(
-                self._op, self._table_cols
-            )
-        self._partitions = new_partitions
-        self._op = FrameNode(self)
-
-    def _require_executed_base(self):
-        """
-        Check if materialization of input frames is required.
 
         Returns
         -------
-        bool
-        """
-        if isinstance(self._op, MaskNode):
-            return True
-        return self._uses_rowid
-
-    def _run_sub_queries(self):
-        """
-        Run sub-queries for materialization.
-
-        Materialize all frames in the execution tree which have to
-        be materialized to materialize this frame.
+        pyarrow.Table or pandas.Dataframe
         """
         if isinstance(self._op, FrameNode):
-            return
+            return self._op.execute_arrow()
 
-        if self._require_executed_base():
-            for op in self._op.input:
-                op._execute()
+        result = None
+        stack = [self._materialize, self]
+        while stack:
+            frame = stack.pop()
+            if callable(frame):
+                result = frame()
+                continue
+            if isinstance(frame._op, FrameNode):
+                result = frame._op.execute_arrow()
+                continue
+            if not frame._op.can_execute_hdk():
+                stack.append(frame._materialize)
+            if frame._uses_rowid or frame._op.require_executed_base():
+                for i in reversed(frame._op.input):
+                    if not isinstance(i._op, FrameNode):
+                        stack.append(i._materialize)
+                        stack.append(i)
+            else:
+                stack.extend(reversed(frame._op.input))
+        return result
+
+    def _materialize(self):
+        """
+        Materialize this frame.
+
+        Returns
+        -------
+        pyarrow.Table
+        """
+        assert (
+            self._force_execution_mode != "lazy"
+        ), "Unexpected execution triggered on lazy frame!"
+
+        if self._force_execution_mode != "hdk" and self._can_execute_arrow():
+            new_table = self._execute_arrow()
+            partitions = np.empty((1, 1), dtype=np.dtype(object))
+            partitions[0][0] = self._partition_mgr_cls._partition_class.put_arrow(
+                new_table
+            )
         else:
-            for frame in self._op.input:
-                frame._run_sub_queries()
+            assert (
+                self._force_execution_mode != "arrow"
+            ), "Forced arrow execution failed!"
+            partitions = self._partition_mgr_cls.run_exec_plan(
+                self._op, self._table_cols
+            )
+
+        self._partitions = partitions
+        self._op = FrameNode(self)
+        return partitions[0][0].get()
 
     def _can_execute_arrow(self):
         """
@@ -1952,20 +1977,14 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if isinstance(self._op, FrameNode):
-            return self._has_arrow_table()
-        elif isinstance(self._op, MaskNode):
-            return (
-                self._op.row_labels is None and self._op.input[0]._can_execute_arrow()
-            )
-        elif isinstance(self._op, TransformNode):
-            return (
-                self._op.is_simple_select() and self._op.input[0]._can_execute_arrow()
-            )
-        elif isinstance(self._op, UnionNode):
-            return all(frame._can_execute_arrow() for frame in self._op.input)
-        else:
-            return False
+        stack = [self]
+        while stack:
+            op = stack.pop()._op
+            if not op.can_execute_arrow():
+                return False
+            if input := getattr(op, "input", None):
+                stack.extend(input)
+        return True
 
     def _execute_arrow(self):
         """
@@ -1976,111 +1995,48 @@ class HdkOnNativeDataframe(PandasDataframe):
         pyarrow.Table
             The resulting table.
         """
-        if isinstance(self._op, FrameNode):
-            if self._partitions.size == 0:
-                return pyarrow.Table.from_pandas(pd.DataFrame({}))
+        result = None
+        stack = [self]
+
+        while stack:
+            frame = stack.pop()
+
+            if callable(frame):
+                result = frame(result)
+            elif input := getattr(frame._op, "input", None):
+                if len(input) == 1:
+                    stack.append(frame._op.execute_arrow)
+                    stack.append(input[0])
+                else:
+
+                    def to_arrow(result, op=frame._op, tables=[], frames=iter(input)):
+                        """
+                        Convert the input list to a list of arrow tables.
+
+                        This function is created for each input list. When the function
+                        is created, the frames iterator is saved in the `frames` argument.
+                        Then, the function is added to the stack followed by the first
+                        frame from the `frames` iterator. When the frame is processed, the
+                        arrow table is added to the `tables` list. This procedure is
+                        repeated until the iterator is not empty. When all the frames are
+                        processed, the arrow tables are passed to `execute_arrow` and the
+                        result is returned.
+                        """
+                        if (f := next(frames, None)) is None:
+                            return op.execute_arrow(tables)
+                        else:
+                            # When this function is called, the `frame` attribute contains
+                            # a reference to this function.
+                            stack.append(frame if callable(frame) else to_arrow)
+                            stack.append(tables.append)
+                            stack.append(f)
+                            return result
+
+                    to_arrow(result)
             else:
-                assert self._partitions.size == 1
-                return self._partitions[0][0].get()
-        elif isinstance(self._op, MaskNode):
-            return self._op.input[0]._arrow_row_slice(self._op.row_positions)
-        elif isinstance(self._op, TransformNode):
-            return self._op.input[0]._arrow_select(self._op.exprs)
-        elif isinstance(self._op, UnionNode):
-            return self._arrow_concat(self._op.input)
-        else:
-            raise RuntimeError(f"Unexpected op ({type(self._op)}) in _execute_arrow")
+                result = frame._op.execute_arrow(result)
 
-    def _arrow_select(self, exprs):
-        """
-        Perform column selection on the frame using Arrow API.
-
-        Parameters
-        ----------
-        exprs : dict
-            Select expressions.
-
-        Returns
-        -------
-        pyarrow.Table
-            The resulting table.
-        """
-        table = self._execute_arrow()
-
-        new_fields = []
-        new_columns = []
-
-        for col, expr in exprs.items():
-            col_name = expr.column
-            if col_name == ROWID_COL_NAME:
-                if ROWID_COL_NAME not in table.schema.names:
-                    arr = pyarrow.array(np.arange(0, table.num_rows))
-                    table = table.append_column(ROWID_COL_NAME, arr)
-            elif not isinstance(col_name, str) or not col_name.startswith(IDX_COL_NAME):
-                col_name = encode_col_name(col_name)
-
-            field = table.schema.field(col_name)
-            if col != expr.column:
-                field = field.with_name(encode_col_name(col))
-            new_fields.append(field)
-            new_columns.append(table.column(col_name))
-
-        new_schema = pyarrow.schema(new_fields)
-
-        return pyarrow.Table.from_arrays(new_columns, schema=new_schema)
-
-    def _arrow_row_slice(self, row_positions):
-        """
-        Perform row selection on the frame using Arrow API.
-
-        Parameters
-        ----------
-        row_positions : list of int
-            Row positions to select.
-
-        Returns
-        -------
-        pyarrow.Table
-            The resulting table.
-        """
-        table = self._execute_arrow()
-
-        if not isinstance(row_positions, slice) and not is_range_like(row_positions):
-            if not isinstance(row_positions, (pyarrow.Array, np.ndarray, list)):
-                row_positions = pyarrow.array(row_positions)
-            return table.take(row_positions)
-
-        if isinstance(row_positions, slice):
-            row_positions = range(*row_positions.indices(table.num_rows))
-
-        start, stop, step = (
-            row_positions.start,
-            row_positions.stop,
-            row_positions.step,
-        )
-
-        if step == 1:
-            return table.slice(start, len(row_positions))
-        else:
-            indices = np.arange(start, stop, step)
-            return table.take(indices)
-
-    @classmethod
-    def _arrow_concat(cls, frames):
-        """
-        Concat frames' rows using Arrow API.
-
-        Parameters
-        ----------
-        frames : list of HdkOnNativeDataframe
-            Frames to concat.
-
-        Returns
-        -------
-        pyarrow.Table
-            The resulting table.
-        """
-        return pyarrow.concat_tables(frame._execute_arrow() for frame in frames)
+        return result
 
     def _build_index_cache(self):
         """
@@ -2104,14 +2060,13 @@ class HdkOnNativeDataframe(PandasDataframe):
                         Index.__new__(RangeIndex, data=range(obj.num_rows))
                     )
                 else:
-                    col_names = [
-                        n for n in obj.column_names if not n.startswith(IDX_COL_NAME)
-                    ]
+                    # The index columns must be in the beginning of the list
+                    col_names = obj.column_names[len(self._index_cols) :]
                     index_at = obj.drop(col_names)
                     index_df = index_at.to_pandas()
                     index_df.set_index(self._index_cols, inplace=True)
                     idx = index_df.index
-                    idx.rename(self._index_names(self._index_cols), inplace=True)
+                    idx.rename(demangle_index_names(self._index_cols), inplace=True)
                     if (
                         isinstance(idx, (pd.DatetimeIndex, pd.TimedeltaIndex))
                         and len(idx) >= 3  # infer_freq() requires at least 3 values
@@ -2153,10 +2108,8 @@ class HdkOnNativeDataframe(PandasDataframe):
                 "HdkOnNativeDataframe._set_index is not yet suported"
             )
 
-        self._execute()
-
+        obj = self._execute()
         assert self._partitions.size == 1
-        obj = self._partitions[0][0].get()
         if isinstance(obj, pd.DataFrame):
             raise NotImplementedError(
                 "HdkOnNativeDataframe._set_index is not yet suported"
@@ -2169,7 +2122,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 at = at.drop(self._index_cols)
 
             new_index = new_index.copy()
-            index_names = self._mangle_index_names(new_index.names)
+            index_names = mangle_index_names(new_index.names)
             new_index.names = index_names
             index_df = pd.DataFrame(data={}, index=new_index)
             index_df = index_df.reset_index()
@@ -2214,7 +2167,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # Need to demangle index names.
             exprs = OrderedDict()
             for i, c in enumerate(self._index_cols):
-                name = self._index_name(c)
+                name = ColNameCodec.demangle_index_name(c)
                 if name is None:
                     name = f"level_{i}"
                 if name in exprs:
@@ -2269,6 +2222,12 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        if (
+            self.columns.identical(new_columns)
+            if isinstance(new_columns, Index)
+            else all(self.columns == new_columns)
+        ):
+            return self
         exprs = self._index_exprs()
         for old, new in zip(self.columns, new_columns):
             expr = self.ref(old)
@@ -2441,7 +2400,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._index_cols is None and name is None:
             return self
 
-        names = self._mangle_index_names([name])
+        names = mangle_index_names([name])
         exprs = OrderedDict()
         if self._index_cols is None:
             exprs[names[0]] = self.ref(ROWID_COL_NAME)
@@ -2496,7 +2455,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 f"Unexpected names count: expected {len(self._index_cols)} got {len(names)}"
             )
 
-        names = self._mangle_index_names(names)
+        names = mangle_index_names(names)
         exprs = OrderedDict()
         for old, new in zip(self._index_cols, names):
             exprs[new] = self.ref(old)
@@ -2561,7 +2520,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 df.index = self._index_cache.get().copy()
             else:
                 df.set_index(self._index_cols, inplace=True)
-                df.index.rename(self._index_names(self._index_cols), inplace=True)
+                df.index.rename(demangle_index_names(self._index_cols), inplace=True)
             assert len(df.columns) == len(self.columns)
         else:
             assert self._index_cols is None
@@ -2576,48 +2535,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         df.columns = self.columns
 
         return df
-
-    def _index_names(self, cols):
-        """
-        Demangle index column names to index labels.
-
-        Parameters
-        ----------
-        cols : list of str
-            Index column names.
-
-        Returns
-        -------
-        list of str
-            Demangled index names.
-        """
-        if len(cols) == 1:
-            return self._index_name(cols[0])
-        return [self._index_name(n) for n in cols]
-
-    def _index_name(self, col):
-        """
-        Demangle index column name into index label.
-
-        Parameters
-        ----------
-        col : str
-            Index column name.
-
-        Returns
-        -------
-        str
-            Demangled index name.
-        """
-        if col == IDX_COL_NAME:
-            return None
-
-        match = re.search(f"{IDX_COL_NAME}\\d+_(.*)", col)
-        if match:
-            name = match.group(1)
-            return None if name == MODIN_UNNAMED_SERIES_LABEL else decode_col_name(name)
-
-        return col
 
     def _find_index_or_col(self, col):
         """
@@ -2637,8 +2554,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             return col
 
         if self._index_cols is not None:
+            if col in self._index_cols:
+                return col
+
+            pattern = re.compile(f"{IDX_COL_NAME}\\d+_{encode_col_name(col)}")
             for idx_col in self._index_cols:
-                if col == idx_col or re.match(f"{IDX_COL_NAME}\\d+_{col}", idx_col):
+                if pattern.match(idx_col):
                     return idx_col
 
         raise ValueError(f"Unknown column '{col}'")
@@ -2684,7 +2605,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             orig_index_names = new_index.names
             orig_df = df
-            index_cols = cls._mangle_index_names(new_index.names)
+            index_cols = mangle_index_names(new_index.names)
             df.index.names = index_cols
             df = df.reset_index()
             orig_df.index.names = orig_index_names
@@ -2730,29 +2651,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
         )
-
-    @classmethod
-    def _mangle_index_names(cls, names):
-        """
-        Return mangled index names for index labels.
-
-        Mangled names are used for index columns because index
-        labels cannot always be used as HDK table column
-        names. E.e. label can be a non-string value or an
-        unallowed string (empty strings, etc.) for a table column
-        name.
-
-        Parameters
-        ----------
-        names : list of str
-            Index labels.
-
-        Returns
-        -------
-        list of str
-            Mangled names.
-        """
-        return [f"{IDX_COL_NAME}{i}_{encode_col_name(n)}" for i, n in enumerate(names)]
 
     @classmethod
     def from_arrow(
@@ -2808,7 +2706,13 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         for col in at.columns:
             if pyarrow.types.is_dictionary(col.type):
-                new_dtypes.append(LazyProxyCategoricalDtype(at, col._name))
+                new_dtypes.append(
+                    LazyProxyCategoricalDtype._build_proxy(
+                        parent=at,
+                        column_name=col._name,
+                        materializer=build_categorical_from_at,
+                    )
+                )
             else:
                 new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 

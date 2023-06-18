@@ -30,7 +30,7 @@ from modin.pandas.test.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -182,7 +182,7 @@ def test_comparison(data, op, other):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    StorageFormat.get() != "Pandas",
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.parametrize(
@@ -259,8 +259,8 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
     modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
-    pandas_df2 = pandas_df.append(pandas_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
+    pandas_df2 = pandas.concat((pandas_df, pandas_df))
     if is_more_other_partitions:
         modin_df2, modin_df1 = modin_df1, modin_df2
         pandas_df2, pandas_df1 = pandas_df1, pandas_df2

@@ -19,10 +19,11 @@ Modin Automatic Query Progress (AQP).
 
 import os
 import time
+import inspect
 import threading
 import warnings
 
-from modin.config import Engine
+from modin.config import Engine, ProgressBar
 
 
 progress_bars = {}
@@ -92,17 +93,22 @@ def call_progress_bar(result_parts, line_no):
     threading.Thread(target=_show_time_updates, args=(progress_bars[pbar_id],)).start()
 
     modin_engine = Engine.get()
+    engine_wrapper = None
     if modin_engine == "Ray":
-        from ray import wait
+        from modin.core.execution.ray.common.engine_wrapper import RayWrapper
+
+        engine_wrapper = RayWrapper
     elif modin_engine == "Unidist":
-        from unidist import wait
+        from modin.core.execution.unidist.common.engine_wrapper import UnidistWrapper
+
+        engine_wrapper = UnidistWrapper
     else:
         raise NotImplementedError(
             f"ProgressBar feature is not supported for {modin_engine} engine."
         )
 
     for i in range(1, len(futures) + 1):
-        wait(futures, num_returns=i)
+        engine_wrapper.wait(futures, num_returns=i)
         progress_bars[pbar_id].update(1)
         progress_bars[pbar_id].refresh()
     if progress_bars[pbar_id].n == progress_bars[pbar_id].total:
@@ -134,3 +140,56 @@ def _show_time_updates(p_bar):
         time.sleep(1)
         if p_bar.total > p_bar.n:
             p_bar.refresh()
+
+
+def progress_bar_wrapper(f):
+    """
+    Wrap computation function inside a progress bar.
+
+    Spawns another thread which displays a progress bar showing
+    estimated completion time.
+
+    Parameters
+    ----------
+    f : callable
+        The name of the function to be wrapped.
+
+    Returns
+    -------
+    callable
+        Decorated version of `f` which reports progress.
+    """
+    from functools import wraps
+
+    @wraps(f)
+    def magic(*args, **kwargs):
+        result_parts = f(*args, **kwargs)
+        if ProgressBar.get():
+            current_frame = inspect.currentframe()
+            function_name = None
+            while function_name != "<module>":
+                (
+                    filename,
+                    line_number,
+                    function_name,
+                    lines,
+                    index,
+                ) = inspect.getframeinfo(current_frame)
+                current_frame = current_frame.f_back
+            t = threading.Thread(
+                target=call_progress_bar,
+                args=(result_parts, line_number),
+            )
+            t.start()
+            # We need to know whether or not we are in a jupyter notebook
+            from IPython import get_ipython
+
+            try:
+                ipy_str = str(type(get_ipython()))
+                if "zmqshell" not in ipy_str:
+                    t.join()
+            except Exception:
+                pass
+        return result_parts
+
+    return magic

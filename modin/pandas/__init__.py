@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.5.3"
+__pandas_version__ = "2.0.2"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
@@ -26,7 +26,6 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from pandas import (
         eval,
-        cut,
         factorize,
         test,
         date_range,
@@ -65,9 +64,6 @@ with warnings.catch_warnings():
         IntervalDtype,
         PeriodDtype,
         RangeIndex,
-        Int64Index,
-        UInt64Index,
-        Float64Index,
         TimedeltaIndex,
         IntervalIndex,
         IndexSlice,
@@ -79,7 +75,6 @@ with warnings.catch_warnings():
         infer_freq,
         interval_range,
         ExcelWriter,
-        datetime,
         NamedAgg,
         NA,
         api,
@@ -247,6 +242,7 @@ from .general import (
     wide_to_long,
     to_timedelta,
     pivot_table,
+    cut,
 )
 
 from .plotting import Plotting as plotting
@@ -327,9 +323,6 @@ __all__ = [  # noqa: F405
     "StringDtype",
     "NA",
     "RangeIndex",
-    "Int64Index",
-    "UInt64Index",
-    "Float64Index",
     "TimedeltaIndex",
     "IntervalIndex",
     "IndexSlice",
@@ -358,7 +351,6 @@ __all__ = [  # noqa: F405
     "to_numeric",
     "unique",
     "value_counts",
-    "datetime",
     "NamedAgg",
     "api",
     "read_xml",

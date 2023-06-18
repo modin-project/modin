@@ -36,6 +36,8 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend=lib.no_default,
+    dtype=None,
     partition_column: Optional[str] = None,
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
@@ -85,6 +87,13 @@ def read_sql(
     chunksize : int, optional
         If specified, return an iterator where `chunksize` is the
         number of rows to include in each chunk.
+    dtype_backend : {"numpy_nullable", "pyarrow"}, default: NumPy backed DataFrames
+        Which dtype_backend to use, e.g. whether a DataFrame should have NumPy arrays,
+        nullable dtypes are used for all dtypes that have a nullable implementation when
+        "numpy_nullable" is set, PyArrow is used for all dtypes if "pyarrow" is set.
+        The dtype_backends are still experimential.
+    dtype : Type name or dict of columns, optional
+        Data type for data or columns. E.g. np.float64 or {'a': np.float64, 'b': np.int32, 'c': 'Int64'}. The argument is ignored if a table is passed instead of a query.
     partition_column : str, optional
         Column used to share the data between the workers (MUST be a INTEGER column).
     lower_bound : int, optional
@@ -171,15 +180,13 @@ def _make_parser_func(sep: str) -> Callable:
 
     def parser_func(
         filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+        *,
         sep=lib.no_default,
         delimiter=None,
         header="infer",
         names=lib.no_default,
         index_col=None,
         usecols=None,
-        squeeze=False,
-        prefix=lib.no_default,
-        mangle_dupe_cols=True,
         dtype=None,
         engine=None,
         converters=None,
@@ -187,16 +194,18 @@ def _make_parser_func(sep: str) -> Callable:
         false_values=None,
         skipinitialspace=False,
         skiprows=None,
+        skipfooter=0,
         nrows=None,
         na_values=None,
         keep_default_na=True,
         na_filter=True,
         verbose=False,
         skip_blank_lines=True,
-        parse_dates=False,
-        infer_datetime_format=False,
+        parse_dates=None,
+        infer_datetime_format=lib.no_default,
         keep_date_col=False,
-        date_parser=None,
+        date_parser=lib.no_default,
+        date_format=None,
         dayfirst=False,
         cache_dates=True,
         iterator=False,
@@ -212,16 +221,14 @@ def _make_parser_func(sep: str) -> Callable:
         encoding=None,
         encoding_errors="strict",
         dialect=None,
-        error_bad_lines=None,
-        warn_bad_lines=None,
-        on_bad_lines=None,
-        skipfooter=0,
+        on_bad_lines="error",
         doublequote=True,
         delim_whitespace=False,
         low_memory=True,
         memory_map=False,
         float_precision=None,
         storage_options: StorageOptions = None,
+        dtype_backend=lib.no_default,
     ) -> DataFrame:
         # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
         _pd_read_csv_signature = {
@@ -230,9 +237,6 @@ def _make_parser_func(sep: str) -> Callable:
         _, _, _, f_locals = inspect.getargvalues(inspect.currentframe())
         if f_locals.get("sep", sep) is False:
             f_locals["sep"] = "\t"
-        # mangle_dupe_cols has no effect starting in pandas 1.5. Exclude it from
-        # kwargs so pandas doesn't spuriously warn people not to use it.
-        f_locals.pop("mangle_dupe_cols", None)
 
         kwargs = {k: v for k, v in f_locals.items() if k in _pd_read_csv_signature}
         return _read(**kwargs)

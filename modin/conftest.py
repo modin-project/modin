@@ -506,13 +506,11 @@ def make_sql_connection():
     Yields:
         Factory that generates sql connection objects
     """
-    filenames = []
 
     def _sql_connection(filename, table=""):
         # Remove file if exists
         if os.path.exists(filename):
             os.remove(filename)
-        filenames.append(filename)
         # Create connection and, if needed, table
         conn = "sqlite:///{}".format(filename)
         if table:

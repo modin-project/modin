@@ -28,22 +28,32 @@ PartitionClass = (
 
 if Engine.get() == "Ray":
     from modin.core.execution.ray.common import RayWrapper
-    from ray import ObjectRef
+    from modin.core.execution.ray.common.utils import ObjectIDType
 
     put_func = RayWrapper.put
     get_func = RayWrapper.materialize
-    FutureType = ObjectRef
+    is_future = lambda obj: isinstance(obj, ObjectIDType)  # noqa: E731
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
 
-    put_func = DaskWrapper.put
+    # Looks like there is a key collision;
+    # https://github.com/dask/distributed/issues/3703#issuecomment-619446739
+    # recommends to use `hash=False`. Perhaps this should be the default value of `put`.
+    put_func = lambda obj: DaskWrapper.put(obj, hash=False)  # noqa: E731
     get_func = DaskWrapper.materialize
-    FutureType = Future
+    is_future = lambda obj: isinstance(obj, Future)  # noqa: E731
+elif Engine.get() == "Unidist":
+    from modin.core.execution.unidist.common import UnidistWrapper
+    from unidist import is_object_ref
+
+    put_func = UnidistWrapper.put
+    get_func = UnidistWrapper.materialize
+    is_future = is_object_ref
 elif Engine.get() == "Python":
     put_func = lambda x: x  # noqa: E731
     get_func = lambda x: x  # noqa: E731
-    FutureType = object
+    is_future = lambda obj: isinstance(obj, object)  # noqa: E731
 else:
     raise NotImplementedError(
         f"'{Engine.get()}' engine is not supported by these test suites"
@@ -132,16 +142,10 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
         else [num_cols, num_cols]
     )
     futures = []
-    if Engine.get() == "Ray":
-        if axis is None:
-            futures = [[put_func(df1), put_func(df2)]]
-        else:
-            futures = [put_func(df1), put_func(df2)]
-    if Engine.get() == "Dask":
-        if axis is None:
-            futures = [put_func([df1, df2], hash=False)]
-        else:
-            futures = put_func([df1, df2], hash=False)
+    if axis is None:
+        futures = [[put_func(df1), put_func(df2)]]
+    else:
+        futures = [put_func(df1), put_func(df2)]
     actual_df = from_partitions(
         futures,
         axis,
@@ -183,7 +187,7 @@ def test_from_partitions_mismatched_labels(axis, index, columns):
 @pytest.mark.parametrize("is_width_future", [False, True])
 def test_mask_preserve_cache(row_labels, col_labels, is_length_future, is_width_future):
     def deserialize(obj):
-        if isinstance(obj, FutureType):
+        if is_future(obj):
             return get_func(obj)
         return obj
 

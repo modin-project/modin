@@ -791,7 +791,7 @@ def test_sort_values_with_string_index():
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    StorageFormat.get() != "Pandas",
     reason="We only need to test this case where sort does not default to pandas.",
 )
 @pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])

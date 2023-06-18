@@ -109,6 +109,10 @@ class ErrorMessage(object):
         )
 
     @classmethod
+    def warn(cls, message: str) -> None:
+        warnings.warn(message)
+
+    @classmethod
     def not_initialized(cls, engine: str, code: str) -> None:
         get_logger().debug(f"Modin Warning: Not Initialized: {engine}")
         warnings.warn(

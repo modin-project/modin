@@ -42,7 +42,6 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
@@ -1016,23 +1015,25 @@ def test_reindex_4438():
 
 
 def test_reindex_like():
-    df1 = pd.DataFrame(
-        [
-            [24.3, 75.7, "high"],
-            [31, 87.8, "high"],
-            [22, 71.6, "medium"],
-            [35, 95, "medium"],
-        ],
-        columns=["temp_celsius", "temp_fahrenheit", "windspeed"],
-        index=pd.date_range(start="2014-02-12", end="2014-02-15", freq="D"),
-    )
-    df2 = pd.DataFrame(
-        [[28, "low"], [30, "low"], [35.1, "medium"]],
-        columns=["temp_celsius", "windspeed"],
-        index=pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"]),
-    )
-    with warns_that_defaulting_to_pandas():
-        df2.reindex_like(df1)
+    o_data = [
+        [24.3, 75.7, "high"],
+        [31, 87.8, "high"],
+        [22, 71.6, "medium"],
+        [35, 95, "medium"],
+    ]
+    o_columns = ["temp_celsius", "temp_fahrenheit", "windspeed"]
+    o_index = pd.date_range(start="2014-02-12", end="2014-02-15", freq="D")
+    new_data = [[28, "low"], [30, "low"], [35.1, "medium"]]
+    new_columns = ["temp_celsius", "windspeed"]
+    new_index = pd.DatetimeIndex(["2014-02-12", "2014-02-13", "2014-02-15"])
+    modin_df1 = pd.DataFrame(o_data, columns=o_columns, index=o_index)
+    modin_df2 = pd.DataFrame(new_data, columns=new_columns, index=new_index)
+    modin_result = modin_df2.reindex_like(modin_df1)
+
+    pandas_df1 = pandas.DataFrame(o_data, columns=o_columns, index=o_index)
+    pandas_df2 = pandas.DataFrame(new_data, columns=new_columns, index=new_index)
+    pandas_result = pandas_df2.reindex_like(pandas_df1)
+    df_equals(modin_result, pandas_result)
 
 
 def test_rename_sanity():
@@ -1229,6 +1230,23 @@ def test_rename_bug():
     modin_df.columns = ["2001-01-01"]
 
     df_equals(modin_df, df)
+
+
+def test_index_to_datetime_using_set_index():
+    data = {"YEAR": ["1992", "1993", "1994"], "ALIENS": [1, 99, 1]}
+    modin_df_years = pd.DataFrame(data=data)
+    df_years = pandas.DataFrame(data=data)
+    modin_df_years = modin_df_years.set_index("YEAR")
+    df_years = df_years.set_index("YEAR")
+    modin_datetime_index = pd.to_datetime(modin_df_years.index, format="%Y")
+    pandas_datetime_index = pandas.to_datetime(df_years.index, format="%Y")
+
+    modin_df_years.index = modin_datetime_index
+    df_years.index = pandas_datetime_index
+
+    modin_df_years.set_index(modin_datetime_index)
+    df_years.set_index(pandas_datetime_index)
+    df_equals(modin_df_years, df_years)
 
 
 def test_rename_axis():
@@ -2454,10 +2472,10 @@ def test_index_order():
     df_modin.index = index
     df_pandas.index = index
 
-    for func in ["all", "any", "mad", "count"]:
+    for func in ["all", "any", "count"]:
         df_equals(
-            getattr(df_modin, func)(level=0).index,
-            getattr(df_pandas, func)(level=0).index,
+            getattr(df_modin, func)().index,
+            getattr(df_pandas, func)().index,
         )
 
 
