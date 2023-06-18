@@ -382,7 +382,7 @@ class Binary(Operator):
                             lambda x, y: func(x, y, *args, **kwargs),
                             [other._modin_frame],
                             join_type=join_type,
-                            labels=None,
+                            labels=labels,
                             dtypes=dtypes,
                         ),
                         shape_hint=shape_hint,

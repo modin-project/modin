@@ -3280,7 +3280,7 @@ class PandasDataframe(ClassLogger):
         right_frames: list,
         join_type="outer",
         copartition_along_columns=True,
-        labels="keep",
+        labels="replace",
         dtypes=None,
     ):
         """
@@ -3297,6 +3297,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
+        labels : {"replace", "drop"}, default: "replace"
+            Whether use labels from joined DataFrame or drop altogether to make
+            them be computed lazily later.
         dtypes : series, default: None
             Dtypes of the resultant dataframe, this argument will be
             received if the resultant dtypes of n-opary operation is precomputed.
@@ -3350,9 +3353,9 @@ class PandasDataframe(ClassLogger):
 
         return self.__constructor__(
             new_frame,
-            joined_index if labels == "keep" else None,
+            joined_index if labels == "replace" else None,
             joined_columns,
-            row_lengths if labels == "keep" else None,
+            row_lengths if labels == "replace" else None,
             column_widths,
             dtypes,
         )

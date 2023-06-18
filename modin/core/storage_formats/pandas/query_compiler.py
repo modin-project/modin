@@ -393,6 +393,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     equals = Binary.register(
         lambda df, other: pandas.DataFrame([df.equals(other)], columns=df.columns),
         join_type=None,
+        labels="drop",
         infer_dtypes="bool",
     )
     floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")

@@ -929,13 +929,11 @@ class Series(BasePandasDataset):
         if not self.name == other.name or not self.index.equals(other.index):
             return False
 
-        # self.eq(other).all()
-        # from pandas.core.dtypes.missing import array_equals
-
         res = self.__constructor__(
             query_compiler=self._query_compiler.equals(other._query_compiler)
         )
-        return res.all()
+        # this function should return only scalar
+        return res.iloc[0]
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
