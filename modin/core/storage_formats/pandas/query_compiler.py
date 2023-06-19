@@ -3836,7 +3836,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return df
 
         result = GroupbyReduceImpl.build_qc_method(
-            aggfunc, allow_experimental_groupby=False, finalizer_fn=make_pivot_table
+            aggfunc, finalizer_fn=make_pivot_table
         )(
             self,
             by=grouper,
