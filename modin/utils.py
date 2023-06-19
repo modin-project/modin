@@ -32,7 +32,7 @@ from packaging import version
 import pandas
 import numpy as np
 
-from pandas.util._decorators import Appender
+from pandas.util._decorators import Appender  # type: ignore
 from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
 from pandas._typing import JSONSerializable
 
@@ -772,3 +772,9 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
             print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
             for k, v in d.items():
                 print(f"{k:<{maxlen}}: {v}")
+
+
+class ModinAssumptionError(Exception):
+    """An exception that allows us defaults to pandas if any assumption fails."""
+
+    pass

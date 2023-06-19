@@ -23,7 +23,7 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pandas._testing import ensure_clean
 from pathlib import Path
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from modin.config.envvars import MinPartitionSize
 from modin.db_conn import (
     ModinDatabaseConnection,
@@ -68,6 +68,7 @@ from .utils import (
     parse_dates_values_by_id,
     time_parsing_csv_path,
     test_data as utils_test_data,
+    eval_general,
 )
 
 if StorageFormat.get() == "Hdk":
@@ -212,6 +213,44 @@ def eval_to_file(tmp_dir, modin_obj, pandas_obj, fn, extension, **fn_kwargs):
     assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
+def eval_to_csv_file(tmp_dir, modin_obj, pandas_obj, extension, **kwargs):
+    if extension is None:
+        kwargs["mode"] = "t"
+        kwargs["compression"] = "infer"
+        modin_csv = modin_obj.to_csv(**kwargs)
+        pandas_csv = pandas_obj.to_csv(**kwargs)
+        if modin_csv == pandas_csv:
+            return
+
+        force_read = True
+        modin_file = get_unique_filename(extension="csv", data_dir=tmp_dir)
+        pandas_file = get_unique_filename(extension="csv", data_dir=tmp_dir)
+        with open(modin_file, "w") as file:
+            file.write(modin_csv)
+        with open(pandas_file, "w") as file:
+            file.write(pandas_csv)
+    else:
+        force_read = extension != "csv" or kwargs.get("compression", None)
+        modin_file = get_unique_filename(extension=extension, data_dir=tmp_dir)
+        pandas_file = get_unique_filename(extension=extension, data_dir=tmp_dir)
+        modin_obj.to_csv(modin_file, **kwargs)
+        pandas_obj.to_csv(pandas_file, **kwargs)
+
+    if force_read or not assert_files_eq(modin_file, pandas_file):
+        # If the files are not identical, make sure they can
+        # be read by pandas and contains identical data.
+        read_kwargs = {}
+        if kwargs.get("index", None) is not False:
+            read_kwargs["index_col"] = 0
+        if (value := kwargs.get("sep", None)) is not None:
+            read_kwargs["sep"] = value
+        if (value := kwargs.get("compression", None)) is not None:
+            read_kwargs["compression"] = value
+        modin_obj = pandas.read_csv(modin_file, **read_kwargs)
+        pandas_obj = pandas.read_csv(pandas_file, **read_kwargs)
+        df_equals(pandas_obj, modin_obj)
+
+
 @pytest.fixture
 def make_parquet_dir(tmp_path):
     def _make_parquet_dir(
@@ -258,10 +297,28 @@ class TestCsv:
                 thousands=thousands,
             )
 
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_csv_dtype_backend(self, make_csv_file, dtype_backend):
+        with ensure_clean(".csv") as unique_filename:
+            make_csv_file(filename=unique_filename)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                dtype_backend=dtype_backend,
+                comparator=comparator,
+            )
+
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
-    @pytest.mark.parametrize("prefix", [None, "_", "col"])
     @pytest.mark.parametrize(
         "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
     )
@@ -273,7 +330,6 @@ class TestCsv:
         self,
         header,
         index_col,
-        prefix,
         names,
         usecols,
         skip_blank_lines,
@@ -290,7 +346,6 @@ class TestCsv:
             filepath_or_buffer=pytest.csvs_names["test_read_csv_blank_lines"],
             header=header,
             index_col=index_col,
-            prefix=prefix,
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
@@ -457,50 +512,6 @@ class TestCsv:
 
             eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
-    @pytest.mark.parametrize(
-        "test_case",
-        ["single_element", "single_column", "multiple_columns"],
-    )
-    def test_read_csv_squeeze(self, request, test_case):
-        if request.config.getoption("--simulate-cloud").lower() != "off":
-            pytest.xfail(
-                reason="Error EOFError: stream has been closed in `modin in the cloud` mode - issue #3329"
-            )
-        with ensure_clean(".csv") as unique_filename:
-            str_single_element = "1"
-            str_single_col = "1\n2\n3\n"
-            str_four_cols = "1, 2, 3, 4\n5, 6, 7, 8\n9, 10, 11, 12\n"
-            case_to_data = {
-                "single_element": str_single_element,
-                "single_column": str_single_col,
-                "multiple_columns": str_four_cols,
-            }
-
-            eval_io_from_str(case_to_data[test_case], unique_filename, squeeze=True)
-            eval_io_from_str(
-                case_to_data[test_case], unique_filename, header=None, squeeze=True
-            )
-
-    def test_read_csv_mangle_dupe_cols(self):
-        with ensure_clean() as unique_filename, pytest.warns(
-            FutureWarning, match="'mangle_dupe_cols' keyword is deprecated"
-        ):
-            str_non_unique_cols = "col,col,col,col\n5, 6, 7, 8\n9, 10, 11, 12\n"
-            eval_io_from_str(
-                str_non_unique_cols, unique_filename, mangle_dupe_cols=True
-            )
-
-    # Putting this filterwarnings in setup.cfg doesn't seem to catch the error.
-    @pytest.mark.filterwarnings(
-        "error:.*'mangle_dupe_cols' keyword is deprecated:FutureWarning"
-    )
-    def test_read_csv_does_not_warn_mangle_dupe_cols_kwarg(self):
-        with ensure_clean() as unique_filename:
-            eval_io_from_str(
-                "a,b,c\n1,2,3\n",
-                unique_filename,
-            )
-
     # NA and Missing Data Handling tests
     @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
     @pytest.mark.parametrize("keep_default_na", [True, False])
@@ -533,7 +544,8 @@ class TestCsv:
     @pytest.mark.parametrize("infer_datetime_format", [True, False])
     @pytest.mark.parametrize("keep_date_col", [True, False])
     @pytest.mark.parametrize(
-        "date_parser", [None, lambda x: pandas.datetime.strptime(x, "%Y-%m-%d")]
+        "date_parser",
+        [lib.no_default, lambda x: pandas.to_datetime(x, format="%Y-%m-%d")],
     )
     @pytest.mark.parametrize("dayfirst", [True, False])
     @pytest.mark.parametrize("cache_dates", [True, False])
@@ -546,15 +558,6 @@ class TestCsv:
         dayfirst,
         cache_dates,
     ):
-        if (
-            StorageFormat.get() == "Hdk"
-            and isinstance(parse_dates, list)
-            and ("col4" in parse_dates or 3 in parse_dates)
-        ):
-            pytest.xfail(
-                "In some cases read_csv with `parse_dates` with HDK storage format outputs incorrect result - issue #3081"
-            )
-
         raising_exceptions = io_ops_bad_exc  # default value
         if isinstance(parse_dates, dict) and callable(date_parser):
             # In this case raised TypeError: <lambda>() takes 1 positional argument but 2 were given
@@ -574,6 +577,21 @@ class TestCsv:
             dayfirst=dayfirst,
             cache_dates=cache_dates,
         )
+
+    @pytest.mark.parametrize("date", ["2023-01-01 00:00:01.000000000", "2023"])
+    @pytest.mark.parametrize("dtype", [None, "str", {"id": "int64"}])
+    @pytest.mark.parametrize("parse_dates", [None, [], ["date"], [1]])
+    def test_read_csv_dtype_parse_dates(self, date, dtype, parse_dates):
+        with ensure_clean(".csv") as filename:
+            with open(filename, "w") as file:
+                file.write(f"id,date\n1,{date}")
+            eval_io(
+                fn_name="read_csv",
+                # read_csv kwargs
+                filepath_or_buffer=filename,
+                dtype=dtype,
+                parse_dates=parse_dates,
+            )
 
     # Iteration tests
     @pytest.mark.parametrize("iterator", [True, False])
@@ -718,7 +736,7 @@ class TestCsv:
                     thousands_separator=thousands,
                     decimal_separator=decimal,
                     escapechar=escapechar,
-                    line_terminator=lineterminator,
+                    lineterminator=lineterminator,
                 )
 
             if (
@@ -791,20 +809,12 @@ class TestCsv:
             )
 
     # Error Handling parameters tests
-    @pytest.mark.parametrize("warn_bad_lines", [True, False, None])
-    @pytest.mark.parametrize("error_bad_lines", [True, False, None])
+    @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/6239")
     @pytest.mark.parametrize("on_bad_lines", ["error", "warn", "skip", None])
-    def test_read_csv_error_handling(
-        self,
-        warn_bad_lines,
-        error_bad_lines,
-        on_bad_lines,
-    ):
+    def test_read_csv_error_handling(self, on_bad_lines):
         # in that case exceptions are raised both by Modin and pandas
         # and tests pass
-        raise_exception_case = on_bad_lines is not None and (
-            error_bad_lines is not None or warn_bad_lines is not None
-        )
+        raise_exception_case = on_bad_lines is not None
         if (
             not raise_exception_case
             and Engine.get() not in ["Python", "Cloudpython"]
@@ -815,8 +825,6 @@ class TestCsv:
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_bad_lines"],
-            warn_bad_lines=warn_bad_lines,
-            error_bad_lines=error_bad_lines,
             on_bad_lines=on_bad_lines,
         )
 
@@ -1104,34 +1112,52 @@ class TestCsv:
             filepath_or_buffer="/some/wrong/path.csv",
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
-    @pytest.mark.parametrize("header", [False, True])
+    @pytest.mark.parametrize("extension", [None, "csv", "csv.gz"])
+    @pytest.mark.parametrize("sep", [" "])
+    @pytest.mark.parametrize("header", [False, True, "sfx-"])
     @pytest.mark.parametrize("mode", ["w", "wb+"])
+    @pytest.mark.parametrize("idx_name", [None, "Index"])
+    @pytest.mark.parametrize("index", [True, False, "New index"])
+    @pytest.mark.parametrize("index_label", [None, False, "New index"])
+    @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
-    def test_to_csv(self, tmp_path, header, mode):
-        pandas_df = generate_dataframe()
+    def test_to_csv(
+        self,
+        tmp_path,
+        extension,
+        sep,
+        header,
+        mode,
+        idx_name,
+        index,
+        index_label,
+        columns,
+    ):
+        pandas_df = generate_dataframe(idx_name=idx_name)
         modin_df = pd.DataFrame(pandas_df)
 
-        eval_to_file(
+        if isinstance(header, str):
+            if columns is None:
+                header = [f"{header}{c}" for c in modin_df.columns]
+            else:
+                header = [f"{header}{c}" for c in columns]
+
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
-            fn="to_csv",
-            extension="csv",
+            extension=extension,
+            sep=sep,
             header=header,
             mode=mode,
+            index=index,
+            index_label=index_label,
+            columns=columns,
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -1139,18 +1165,13 @@ class TestCsv:
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
-        eval_to_file(
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
-            fn="to_csv",
             extension="csv",
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() == "Hdk",
-        reason="to_csv is not implemented with HDK storage format yet - issue #3082",
-    )
     @pytest.mark.xfail(
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
@@ -1160,11 +1181,10 @@ class TestCsv:
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
         ).squeeze()
         modin_s = pd.Series(pandas_s)
-        eval_to_file(
+        eval_to_csv_file(
             tmp_path,
             modin_obj=modin_s,
             pandas_obj=pandas_s,
-            fn="to_csv",
             extension="csv",
         )
 
@@ -1297,7 +1317,7 @@ class TestCsv:
             values,
             columns=["key"] + ["avalue" + str(i) for i in range(1, 1 + cols)],
         ).set_index("key")
-        eval_to_file(tmp_path, modin_df, pandas_df, "to_csv", "csv")
+        eval_to_csv_file(tmp_path, modin_df, pandas_df, "csv")
 
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
     def test_read_csv_issue_5150(self, set_async_read_mode):
@@ -1390,6 +1410,30 @@ class TestParquet:
                 engine=engine,
                 path=unique_filename,
                 columns=columns,
+            )
+
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    def test_read_parquet_dtype_backend(self, engine, make_parquet_file, dtype_backend):
+        with ensure_clean(".parquet") as unique_filename:
+            make_parquet_file(filename=unique_filename, row_group_size=100)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                dtype_backend=dtype_backend,
+                comparator=comparator,
             )
 
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
@@ -1485,6 +1529,12 @@ class TestParquet:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_pandas_index(self, engine):
+        if (
+            version.parse(pa.__version__) >= version.parse("12.0.0")
+            and version.parse(pd.__version__) < version.parse("2.0.0")
+            and engine == "pyarrow"
+        ):
+            pytest.xfail("incompatible versions; see #6072")
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         pandas_df = pandas.DataFrame(
             {
@@ -1640,7 +1690,7 @@ class TestParquet:
         test_df = pandas.DataFrame()
         path = tmp_path / "data"
         path.mkdir()
-        test_df.to_parquet(path / "part-00000.parquet")
+        test_df.to_parquet(path / "part-00000.parquet", engine=engine)
         eval_io(fn_name="read_parquet", path=path, engine=engine)
 
     @pytest.mark.xfail(
@@ -1756,6 +1806,23 @@ class TestJson:
         )
 
     @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_json_dtype_backend(self, make_json_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_json",
+            # read_json kwargs
+            path_or_buf=make_json_file(lines=True),
+            lines=True,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
+    @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
@@ -1775,6 +1842,15 @@ class TestJson:
             path_or_buf="modin/pandas/test/data/test_categories.json",
             dtype={"one": "int64", "two": "category"},
         )
+
+    def test_read_json_different_columns(self):
+        with warns_that_defaulting_to_pandas():
+            eval_io(
+                fn_name="read_json",
+                # read_json kwargs
+                path_or_buf="modin/pandas/test/data/test_different_columns_in_rows.json",
+                lines=True,
+            )
 
     @pytest.mark.parametrize(
         "data",
@@ -1849,6 +1925,23 @@ class TestExcel:
             fn_name="read_excel",
             # read_excel kwargs
             io=make_excel_file(),
+        )
+
+    @check_file_leaks
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_excel_dtype_backend(self, make_excel_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_excel",
+            # read_csv kwargs
+            io=make_excel_file(),
+            dtype_backend=dtype_backend,
+            comparator=comparator,
         )
 
     @check_file_leaks
@@ -2146,6 +2239,7 @@ class TestSql:
             con=sqlalchemy_connection,
         )
 
+        old_sql_engine = ReadSqlEngine.get()
         ReadSqlEngine.put(read_sql_engine)
         if ReadSqlEngine.get() == "Connectorx":
             modin_df = pd.read_sql(sql=query, con=conn)
@@ -2153,8 +2247,36 @@ class TestSql:
             modin_df = pd.read_sql(
                 sql=query, con=ModinDatabaseConnection("sqlalchemy", conn)
             )
+        ReadSqlEngine.put(old_sql_engine)
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_sql_dtype_backend(self, tmp_path, make_sql_connection, dtype_backend):
+        filename = get_unique_filename(extension="db")
+
+        table = "test_read_sql_dtype_backend"
+        conn = make_sql_connection(tmp_path / filename, table)
+        query = f"select * from {table}"
+
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_sql",
+            # read_sql kwargs
+            sql=query,
+            con=conn,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     @pytest.mark.skipif(
         not TestReadFromSqlServer.get(),
@@ -2244,7 +2366,6 @@ class TestSql:
 
 
 class TestHtml:
-    @pytest.mark.xfail(reason="read_html is not yet implemented properly - issue #1296")
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
 
@@ -2330,6 +2451,25 @@ class TestFwf:
             filepath_or_buffer=make_fwf_file(fwf_data=fwf_data),
             usecols=usecols,
         )
+
+    @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_fwf_dtype_backend(self, make_fwf_file, dtype_backend):
+        with ensure_clean(".fwf") as unique_filename:
+            make_fwf_file(filename=unique_filename)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_fwf",
+                # read_csv kwargs
+                filepath_or_buffer=unique_filename,
+                dtype_backend=dtype_backend,
+                comparator=comparator,
+            )
 
     def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = make_fwf_file()
@@ -2549,6 +2689,26 @@ class TestFeather:
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     @pytest.mark.parametrize(
+        "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
+    )
+    def test_read_feather_dtype_backend(self, make_feather_file, dtype_backend):
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
+
+        eval_io(
+            fn_name="read_feather",
+            # read_feather kwargs
+            path=make_feather_file(),
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
+
+    @pytest.mark.xfail(
+        condition="config.getoption('--simulate-cloud').lower() != 'off'",
+        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    )
+    @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
@@ -2577,6 +2737,18 @@ class TestFeather:
             pandas_obj=pandas_df,
             fn="to_feather",
             extension="feather",
+        )
+
+    def test_read_feather_with_index_metadata(self, tmp_path):
+        # see: https://github.com/modin-project/modin/issues/6212
+        df = pandas.DataFrame({"a": [1, 2, 3]}, index=[0, 1, 2])
+        assert not isinstance(df.index, pandas.RangeIndex)
+
+        path = get_unique_filename(extension=".feather", data_dir=tmp_path)
+        df.to_feather(path)
+        eval_io(
+            fn_name="read_feather",
+            path=path,
         )
 
 
@@ -2621,12 +2793,6 @@ class TestPickle:
             fn="to_pickle",
             extension="pkl",
         )
-        unique_filename_modin = get_unique_filename(extension="pkl", data_dir=tmp_path)
-        unique_filename_pandas = get_unique_filename(extension="pkl", data_dir=tmp_path)
-        pd.to_pickle(modin_df, unique_filename_modin)
-        pandas.to_pickle(pandas_df, unique_filename_pandas)
-
-        assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
 
 class TestXml:
@@ -2654,7 +2820,11 @@ class TestOrc:
     # to check that the parameters are passed to pandas.
     def test_read_orc(self):
         test_args = ("fake_path",)
-        test_kwargs = {"columns": ["A"], "fake_kwarg": "some_pyarrow_parameter"}
+        test_kwargs = dict(
+            columns=["A"],
+            dtype_backend=lib.no_default,
+            fake_kwarg="some_pyarrow_parameter",
+        )
         with mock.patch(
             "pandas.read_orc", return_value=pandas.DataFrame([])
         ) as read_orc:
@@ -2667,12 +2837,15 @@ class TestSpss:
     # In case of defaulting to pandas, it's enough
     # to check that the parameters are passed to pandas.
     def test_read_spss(self):
-        test_args = ("fake_path", ["A"], False)
+        test_args = ("fake_path",)
+        test_kwargs = dict(
+            usecols=["A"], convert_categoricals=False, dtype_backend=lib.no_default
+        )
         with mock.patch(
             "pandas.read_spss", return_value=pandas.DataFrame([])
         ) as read_spss:
-            pd.read_spss(*test_args)
-        read_spss.assert_called_once_with(*test_args)
+            pd.read_spss(*test_args, **test_kwargs)
+        read_spss.assert_called_once_with(*test_args, **test_kwargs)
 
 
 def test_json_normalize():
@@ -2712,13 +2885,33 @@ def test_from_spmatrix():
     reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
 )
 def test_to_dense():
-    modin_df, pandas_df = create_test_dfs({"col1": pandas.SparseArray([0, 1, 0])})
+    data = {"col1": pandas.arrays.SparseArray([0, 1, 0])}
+    modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
-def test_to_dict():
+def test_to_dict_dataframe():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        pytest.param({}, id="no_kwargs"),
+        pytest.param({"into": dict}, id="into_dict"),
+        pytest.param({"into": OrderedDict}, id="into_ordered_dict"),
+        pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
+    ],
+)
+def test_to_dict_series(kwargs):
+    eval_general(
+        *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
+        lambda df: df.to_dict(**kwargs),
+        # TODO(https://github.com/modin-project/modin/issues/6016): fix eval_general
+        # and remove this raising_exceptions
+        raising_exceptions=(Exception,),
+    )
 
 
 def test_to_latex():

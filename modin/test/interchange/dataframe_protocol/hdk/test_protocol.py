@@ -39,7 +39,7 @@ def test_simple_export(data_has_nulls, from_hdk, n_chunks):
         # issue for bool: https://github.com/modin-project/modin/issues/4299
         exclude_dtypes = ["bool", "uint64"]
     else:
-        exclude_dtypes = None
+        exclude_dtypes = []
 
     data = get_data_of_all_types(
         has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes

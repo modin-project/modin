@@ -244,8 +244,6 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
     if params is None:
         params = """
         axis : {{0, 1}}
-        level : None, default: None
-            Serves the compatibility purpose. Always has to be None.
         numeric_only : bool, optional"""
 
     extra_params_map = {

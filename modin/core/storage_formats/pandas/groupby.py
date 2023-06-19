@@ -151,7 +151,7 @@ class GroupbyReduceImpl:
         def skew_reduce(dfgb, *args, **kwargs):
             df = dfgb.sum(*args, **kwargs)
             if df.empty:
-                return df
+                return df.droplevel(GroupByReduce.ID_LEVEL_NAME, axis=1)
 
             count = df["count"]
             s = df["sum"]
@@ -221,7 +221,7 @@ class GroupbyReduceImpl:
             """
             sums_counts_df = dfgb.sum(**kwargs)
             if sums_counts_df.empty:
-                return sums_counts_df
+                return sums_counts_df.droplevel(GroupByReduce.ID_LEVEL_NAME, axis=1)
 
             sum_df = sums_counts_df["sum"]
             count_df = sums_counts_df["count"]

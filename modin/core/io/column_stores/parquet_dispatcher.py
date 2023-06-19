@@ -23,6 +23,7 @@ from fsspec.spec import AbstractBufferedFile
 import numpy as np
 from pandas.io.common import stringify_path
 import pandas
+import pandas._libs.lib as lib
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -589,7 +590,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return cls.query_compiler_cls(frame)
 
     @classmethod
-    def _read(cls, path, engine, columns, **kwargs):
+    def _read(cls, path, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs):
         """
         Load a parquet object from the file path, returning a query compiler.
 
@@ -601,6 +602,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
+        use_nullable_dtypes : Union[bool, lib.NoDefault]
+        dtype_backend : {"numpy_nullable", "pyarrow", lib.no_default}
         **kwargs : dict
             Keyword arguments.
 
@@ -614,11 +617,16 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
-        if any(arg not in ("storage_options", "use_nullable_dtypes") for arg in kwargs):
+        if (
+            any(arg not in ("storage_options",) for arg in kwargs)
+            or use_nullable_dtypes != lib.no_default
+        ):
             return cls.single_worker_read(
                 path,
                 engine=engine,
                 columns=columns,
+                use_nullable_dtypes=use_nullable_dtypes,
+                dtype_backend=dtype_backend,
                 reason="Parquet options that are not currently supported",
                 **kwargs,
             )
@@ -627,7 +635,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
             # files in parallel.
             compilers: list[cls.query_compiler_cls] = [
-                cls._read(p, engine, columns, **kwargs) for p in path
+                cls._read(
+                    p, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs
+                )
+                for p in path
             ]
             return compilers[0].concat(axis=0, other=compilers[1:], ignore_index=True)
         if isinstance(path, str):
@@ -660,6 +671,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     path,
                     engine=engine,
                     columns=columns,
+                    use_nullable_dtypes=use_nullable_dtypes,
+                    dtype_backend=dtype_backend,
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs,
                 )
@@ -678,7 +691,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if c not in index_columns and not cls.index_regex.match(c)
         ]
 
-        return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)
+        return cls.build_query_compiler(
+            dataset, columns, index_columns, dtype_backend=dtype_backend, **kwargs
+        )
 
     @staticmethod
     def _to_parquet_check_support(kwargs):

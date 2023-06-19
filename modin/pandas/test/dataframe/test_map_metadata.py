@@ -49,6 +49,8 @@ from modin.pandas.test.utils import (
 )
 from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
 NPartitions.put(4)
 
@@ -194,18 +196,32 @@ def test_abs(request, data):
         df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_prefix(data):
+def test_add_prefix(data, axis):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
     test_prefix = "TEST"
-    new_modin_df = modin_df.add_prefix(test_prefix)
-    new_pandas_df = pandas_df.add_prefix(test_prefix)
+    new_modin_df = modin_df.add_prefix(test_prefix, axis=axis)
+    new_pandas_df = pandas_df.add_prefix(test_prefix, axis=axis)
     df_equals(new_modin_df.columns, new_pandas_df.columns)
     # TODO(https://github.com/modin-project/modin/issues/3804):
     # make df_equals always check dtypes.
     df_equals(new_modin_df.dtypes, new_pandas_df.dtypes)
+
+
+@pytest.mark.parametrize("axis", [None, 0, 1])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_add_suffix(data, axis):
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+
+    test_suffix = "TEST"
+    new_modin_df = modin_df.add_suffix(test_suffix, axis=axis)
+    new_pandas_df = pandas_df.add_suffix(test_suffix, axis=axis)
+
+    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -238,18 +254,6 @@ def test_applymap_numeric(request, data, testfunc):
         else:
             modin_result = modin_df.applymap(testfunc)
             df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_add_suffix(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    test_suffix = "TEST"
-    new_modin_df = modin_df.add_suffix(test_suffix)
-    new_pandas_df = pandas_df.add_suffix(test_suffix)
-
-    df_equals(new_modin_df.columns, new_pandas_df.columns)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -381,71 +385,6 @@ def test_isnull(data):
     modin_result = modin_df.isnull()
 
     df_equals(modin_result, pandas_result)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_append(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    data_to_append = {"append_a": 2, "append_b": 1000}
-
-    ignore_idx_values = [True, False]
-
-    for ignore in ignore_idx_values:
-        try:
-            pandas_result = pandas_df.append(data_to_append, ignore_index=ignore)
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append(data_to_append, ignore_index=ignore)
-        else:
-            modin_result = modin_df.append(data_to_append, ignore_index=ignore)
-            df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.append(pandas_df.iloc[-1])
-    except Exception as err:
-        with pytest.raises(type(err)):
-            modin_df.append(modin_df.iloc[-1])
-    else:
-        modin_result = modin_df.append(modin_df.iloc[-1])
-        df_equals(modin_result, pandas_result)
-
-    try:
-        pandas_result = pandas_df.append(list(pandas_df.iloc[-1]))
-    except Exception as err:
-        with pytest.raises(type(err)):
-            modin_df.append(list(modin_df.iloc[-1]))
-    else:
-        modin_result = modin_df.append(list(modin_df.iloc[-1]))
-        df_equals(modin_result, pandas_result)
-
-    verify_integrity_values = [True, False]
-
-    for verify_integrity in verify_integrity_values:
-        try:
-            pandas_result = pandas_df.append(
-                [pandas_df, pandas_df], verify_integrity=verify_integrity
-            )
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append([modin_df, modin_df], verify_integrity=verify_integrity)
-        else:
-            modin_result = modin_df.append(
-                [modin_df, modin_df], verify_integrity=verify_integrity
-            )
-            df_equals(modin_result, pandas_result)
-
-        try:
-            pandas_result = pandas_df.append(
-                pandas_df, verify_integrity=verify_integrity
-            )
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.append(modin_df, verify_integrity=verify_integrity)
-        else:
-            modin_result = modin_df.append(modin_df, verify_integrity=verify_integrity)
-            df_equals(modin_result, pandas_result)
 
 
 def test_astype():
@@ -606,12 +545,200 @@ def test_astype_category_large():
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/6268",
+    strict=True,
+)
+def test_astype_int64_to_astype_category_github_issue_6259():
+    eval_general(
+        *create_test_dfs(
+            {"c0": [0, 1, 2, 3, 4], "par": ["foo", "boo", "bar", "foo", "boo"]},
+            index=["a", "b", "c", "d", "e"],
+        ),
+        lambda df: df["c0"].astype("Int64").astype("category"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
+@pytest.mark.skipif(
+    get_current_execution() == "BaseOnPython",
+    reason="BaseOnPython doesn't have proxy categories",
+)
+class TestCategoricalProxyDtype:
+    """This class contains test and test usilities for the ``LazyProxyCategoricalDtype`` class."""
+
+    @staticmethod
+    def _get_lazy_proxy():
+        """
+        Build a dataframe containing a column that has a proxy type and return
+        this proxy together with an original dtype that this proxy is emulating.
+
+        Returns
+        -------
+        (LazyProxyCategoricalDtype, pandas.CategoricalDtype, modin.pandas.DataFrame)
+        """
+        nchunks = 3
+        pandas_df = pandas.DataFrame({"a": [1, 1, 2, 2, 3, 2], "b": [1, 2, 3, 4, 5, 6]})
+        original_dtype = pandas_df.astype({"a": "category"}).dtypes["a"]
+
+        chunks = split_result_of_axis_func_pandas(
+            axis=0, num_splits=nchunks, result=pandas_df, length_list=[2, 2, 2]
+        )
+
+        if StorageFormat.get() == "Pandas":
+            df = pd.concat([pd.DataFrame(chunk) for chunk in chunks])
+            assert df._query_compiler._modin_frame._partitions.shape == (nchunks, 1)
+
+            df = df.astype({"a": "category"})
+            return df.dtypes["a"], original_dtype, df
+        elif StorageFormat.get() == "Hdk":
+            import pyarrow as pa
+            from modin.pandas.utils import from_arrow
+
+            at = pa.concat_tables(
+                [
+                    pa.Table.from_pandas(chunk.astype({"a": "category"}))
+                    for chunk in chunks
+                ]
+            )
+            assert len(at.column(0).chunks) == nchunks
+
+            df = from_arrow(at)
+            return df.dtypes["a"], original_dtype, df
+        else:
+            raise NotImplementedError()
+
+    def test_update_proxy(self):
+        """Verify that ``LazyProxyCategoricalDtype._update_proxy`` method works as expected."""
+        lazy_proxy, _, _ = self._get_lazy_proxy()
+        new_parent = pd.DataFrame({"a": [10, 20, 30]})._query_compiler._modin_frame
+
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+        # When we try to create a new proxy from the same arguments it should return itself
+        assert (
+            lazy_proxy._update_proxy(lazy_proxy._parent, lazy_proxy._column_name)
+            is lazy_proxy
+        )
+
+        # When any of the arguments is changing we should create a new proxy
+        proxy_with_new_column = lazy_proxy._update_proxy(
+            lazy_proxy._parent, "other_column"
+        )
+        assert proxy_with_new_column is not lazy_proxy and isinstance(
+            proxy_with_new_column, LazyProxyCategoricalDtype
+        )
+
+        # When any of the arguments is changing we should create a new proxy
+        proxy_with_new_parent = lazy_proxy._update_proxy(
+            new_parent, lazy_proxy._column_name
+        )
+        assert proxy_with_new_parent is not lazy_proxy and isinstance(
+            proxy_with_new_parent, LazyProxyCategoricalDtype
+        )
+
+        lazy_proxy.categories  # trigger materialization
+        # `._update_proxy` now should produce pandas Categoricals instead of a proxy as it already has materialized data
+        assert (
+            type(lazy_proxy._update_proxy(lazy_proxy._parent, lazy_proxy._column_name))
+            == pandas.CategoricalDtype
+        )
+
+    def test_update_proxy_implicit(self):
+        """
+        Verify that a lazy proxy correctly updates its parent when passed from one parent to another.
+        """
+        lazy_proxy, _, parent = self._get_lazy_proxy()
+        parent_frame = parent._query_compiler._modin_frame
+
+        if StorageFormat.get() == "Pandas":
+            assert lazy_proxy._parent is parent_frame
+        elif StorageFormat.get() == "Hdk":
+            arrow_table = parent_frame._partitions[0, 0].get()
+            assert lazy_proxy._parent is arrow_table
+        else:
+            raise NotImplementedError(
+                f"The test is not implemented for {StorageFormat.get()} storage format"
+            )
+
+        # Making a copy of the dataframe, the new proxy should now start pointing to the new parent
+        new_parent = parent.copy()
+        new_parent_frame = new_parent._query_compiler._modin_frame
+        new_lazy_proxy = new_parent_frame.dtypes[lazy_proxy._column_name]
+
+        if StorageFormat.get() == "Pandas":
+            # Make sure that the old proxy still pointing to the old parent
+            assert lazy_proxy._parent is parent_frame
+            assert new_lazy_proxy._parent is new_parent_frame
+        elif StorageFormat.get() == "Hdk":
+            new_arrow_table = new_parent_frame._partitions[0, 0].get()
+            # Make sure that the old proxy still pointing to the old parent
+            assert lazy_proxy._parent is arrow_table
+            assert new_lazy_proxy._parent is new_arrow_table
+        else:
+            raise NotImplementedError(
+                f"The test is not implemented for {StorageFormat.get()} storage format"
+            )
+
+    def test_if_proxy_lazy(self):
+        """Verify that proxy is able to pass simple comparison checks without triggering materialization."""
+        lazy_proxy, actual_dtype, _ = self._get_lazy_proxy()
+
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+        assert not lazy_proxy._is_materialized
+
+        assert lazy_proxy == "category"
+        assert isinstance(lazy_proxy, pd.CategoricalDtype)
+        assert isinstance(lazy_proxy, pandas.CategoricalDtype)
+        assert pandas.api.types.is_categorical_dtype(lazy_proxy)
+        assert str(lazy_proxy) == "category"
+        assert str(lazy_proxy) == str(actual_dtype)
+        assert not lazy_proxy.ordered
+        assert not lazy_proxy._is_materialized
+
+        # Further, there are all checks that materialize categories
+        assert lazy_proxy == actual_dtype
+        assert actual_dtype == lazy_proxy
+        assert repr(lazy_proxy) == repr(actual_dtype)
+        assert lazy_proxy.categories.equals(actual_dtype.categories)
+        assert lazy_proxy._is_materialized
+
+    def test_proxy_as_dtype(self):
+        """Verify that proxy can be used as an actual dtype."""
+        lazy_proxy, actual_dtype, _ = self._get_lazy_proxy()
+
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+        assert not lazy_proxy._is_materialized
+
+        modin_df2, pandas_df2 = create_test_dfs({"c": [2, 2, 3, 4, 5, 6]})
+        eval_general(
+            (modin_df2, lazy_proxy),
+            (pandas_df2, actual_dtype),
+            lambda args: args[0].astype({"c": args[1]}),
+        )
+
+    def test_proxy_with_pandas_constructor(self):
+        """Verify that users still can use pandas' constructor using `type(cat)(...)` notation."""
+        lazy_proxy, _, _ = self._get_lazy_proxy()
+        assert isinstance(lazy_proxy, LazyProxyCategoricalDtype)
+
+        new_cat_values = pandas.Index([3, 4, 5])
+        new_category_dtype = type(lazy_proxy)(categories=new_cat_values, ordered=True)
+        assert not lazy_proxy._is_materialized
+        assert new_category_dtype._is_materialized
+        assert new_category_dtype.categories.equals(new_cat_values)
+        assert new_category_dtype.ordered
+
+
 def test_infer_objects_single_partition():
     data = {"a": ["s", 2, 3]}
     modin_df = pd.DataFrame(data).iloc[1:]
     pandas_df = pandas.DataFrame(data).iloc[1:]
     modin_result = modin_df.infer_objects()
     pandas_result = pandas_df.infer_objects()
+
+    df_equals(modin_result, pandas_result)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
 
 
@@ -655,6 +782,28 @@ def test_convert_dtypes_single_partition(
     modin_result = modin_df.convert_dtypes(**kwargs)
     pandas_result = pandas_df.convert_dtypes(**kwargs)
     assert modin_result.dtypes.equals(pandas_result.dtypes)
+
+
+@pytest.mark.parametrize("dtype_backend", ["numpy_nullable", "pyarrow"])
+def test_convert_dtypes_dtype_backend(dtype_backend):
+    data = {
+        "a": pd.Series([1, 2, 3], dtype=np.dtype("int32")),
+        "b": pd.Series(["x", "y", "z"], dtype=np.dtype("O")),
+        "c": pd.Series([True, False, np.nan], dtype=np.dtype("O")),
+        "d": pd.Series(["h", "i", np.nan], dtype=np.dtype("O")),
+        "e": pd.Series([10, np.nan, 20], dtype=np.dtype("float")),
+        "f": pd.Series([np.nan, 100.5, 200], dtype=np.dtype("float")),
+    }
+
+    def comparator(df1, df2):
+        df_equals(df1, df2)
+        df_equals(df1.dtypes, df2.dtypes)
+
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.convert_dtypes(dtype_backend=dtype_backend),
+        comparator=comparator,
+    )
 
 
 @pytest.mark.xfail(
@@ -754,9 +903,9 @@ def test_drop():
     df_equals(modin_simple.drop([0, 3], axis="index"), simple.loc[[1, 2], :])
 
     pytest.raises(KeyError, modin_simple.drop, 5)
-    pytest.raises(KeyError, modin_simple.drop, "C", 1)
+    pytest.raises(KeyError, modin_simple.drop, "C", axis=1)
     pytest.raises(KeyError, modin_simple.drop, [1, 5])
-    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], 1)
+    pytest.raises(KeyError, modin_simple.drop, ["A", "C"], axis=1)
 
     # errors = 'ignore'
     df_equals(modin_simple.drop(5, errors="ignore"), simple)
@@ -820,7 +969,7 @@ def test_drop_api_equivalence():
     modin_df2 = modin_df.drop(index="a")
     df_equals(modin_df1, modin_df2)
 
-    modin_df1 = modin_df.drop("d", 1)
+    modin_df1 = modin_df.drop("d", axis=1)
     modin_df2 = modin_df.drop(columns="d")
     df_equals(modin_df1, modin_df2)
 
@@ -1519,8 +1668,7 @@ def test___abs__(request, data):
 
 def test___round__():
     data = test_data_values[0]
-    with warns_that_defaulting_to_pandas():
-        pd.DataFrame(data).__round__()
+    eval_general(pd.DataFrame(data), pandas.DataFrame(data), lambda df: df.__round__())
 
 
 @pytest.mark.parametrize(

@@ -21,6 +21,7 @@ from .virtual_partition import (
     PandasOnPythonDataframeRowPartition,
 )
 from .partition import PandasOnPythonDataframePartition
+from modin.core.execution.python.common import PythonWrapper
 
 
 class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
@@ -33,3 +34,4 @@ class PandasOnPythonDataframePartitionManager(PandasDataframePartitionManager):
     _partition_class = PandasOnPythonDataframePartition
     _column_partitions_class = PandasOnPythonDataframeColumnPartition
     _row_partition_class = PandasOnPythonDataframeRowPartition
+    _execution_wrapper = PythonWrapper

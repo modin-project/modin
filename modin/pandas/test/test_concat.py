@@ -84,8 +84,15 @@ def test_concat_on_index():
     )
 
 
-def test_concat_on_column():
+@pytest.mark.parametrize("no_dup_cols", [True, False])
+@pytest.mark.parametrize("different_len", [True, False])
+def test_concat_on_column(no_dup_cols, different_len):
     df, df2 = generate_dfs()
+    if no_dup_cols:
+        df = df.drop(set(df.columns) & set(df2.columns), axis="columns")
+    if different_len:
+        df = pandas.concat([df, df], ignore_index=True)
+
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
     df_equals(

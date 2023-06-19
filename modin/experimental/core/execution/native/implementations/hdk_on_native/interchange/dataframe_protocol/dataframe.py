@@ -185,13 +185,13 @@ class HdkProtocolDataframe(ProtocolDataframe):
         is_zero_copy_op = False
         if isinstance(op, (FrameNode, TransformNode, UnionNode)):
             # - FrameNode: already materialized PyArrow table
-            # - TransformNode: select certain columns of the table, implemented zero-copy (``df._arrow_select``)
-            # - UnionNode: concatenate PyArrow tables, implemented zero-copy (``df._arrow_concat``)
+            # - TransformNode: select certain columns of the table, implemented zero-copy
+            # - UnionNode: concatenate PyArrow tables, implemented zero-copy
             is_zero_copy_op = True
         elif isinstance(op, MaskNode) and (
             isinstance(op.row_positions, slice) or is_range_like(op.row_positions)
         ):
-            # Can select rows zero-copy if indexer is a slice-like (``df._arrow_row_slice``)
+            # Can select rows zero-copy if indexer is a slice-like
             is_zero_copy_op = True
         return is_zero_copy_op and all(
             # Walk the computation tree
@@ -209,10 +209,7 @@ class HdkProtocolDataframe(ProtocolDataframe):
         -------
         pyarrow.Table
         """
-        if not self._df._has_arrow_table():
-            self._df._execute()
-
-        at = self._df._partitions[0][0].arrow_table
+        at = self._df._execute()
         assert at is not None
         return at
 

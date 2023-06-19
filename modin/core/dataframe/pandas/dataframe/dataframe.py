@@ -27,6 +27,7 @@ from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
+from modin.config import Engine
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -42,7 +43,11 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     build_sort_functions,
     lazy_metadata_decorator,
 )
-from modin.core.dataframe.pandas.metadata import ModinDtypes, ModinIndex
+from modin.core.dataframe.pandas.metadata import (
+    ModinDtypes,
+    ModinIndex,
+    LazyProxyCategoricalDtype,
+)
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -250,6 +255,25 @@ class PandasDataframe(ClassLogger):
             dtypes_cache = self._dtypes.copy()
         return dtypes_cache
 
+    def _maybe_update_proxies(self, dtypes, new_parent=None):
+        """
+        Update lazy proxies stored inside of `dtypes` with a new parent inplace.
+
+        Parameters
+        ----------
+        dtypes : pandas.Series, ModinDtypes or callable
+        new_parent : object, optional
+            A new parent to link the proxies to. If not specified
+            will consider the `self` to be a new parent.
+        """
+        new_parent = new_parent or self
+        if isinstance(dtypes, pandas.Series) or (
+            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
+        ):
+            for key, value in dtypes.items():
+                if isinstance(value, LazyProxyCategoricalDtype):
+                    dtypes[key] = value._update_proxy(new_parent, column_name=key)
+
     def set_dtypes_cache(self, dtypes):
         """
         Set dtypes cache.
@@ -258,6 +282,7 @@ class PandasDataframe(ClassLogger):
         ----------
         dtypes : pandas.Series, ModinDtypes or callable
         """
+        self._maybe_update_proxies(dtypes)
         if isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
@@ -280,9 +305,15 @@ class PandasDataframe(ClassLogger):
             self.set_dtypes_cache(dtypes)
         return dtypes
 
-    def _compute_dtypes(self):
+    def _compute_dtypes(self, columns=None):
         """
-        Compute the data types via TreeReduce pattern.
+        Compute the data types via TreeReduce pattern for the specified columns.
+
+        Parameters
+        ----------
+        columns : list-like, default: None
+            Columns to compute dtypes for. If not specified compute dtypes
+            for all the columns in the dataframe.
 
         Returns
         -------
@@ -293,10 +324,17 @@ class PandasDataframe(ClassLogger):
         def dtype_builder(df):
             return df.apply(lambda col: find_common_type(col.values), axis=0)
 
+        if columns is not None:
+            # Sorting positions to request columns in the order they're stored (it's more efficient)
+            numeric_indices = sorted(self.columns.get_indexer_for(columns))
+            obj = self._take_2d_positional(col_positions=numeric_indices)
+        else:
+            obj = self
+
         # For now we will use a pandas Series for the dtypes.
-        if len(self.columns) > 0:
+        if len(obj.columns) > 0:
             dtypes = (
-                self.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
+                obj.tree_reduce(0, lambda df: df.dtypes, dtype_builder)
                 .to_pandas()
                 .iloc[0]
             )
@@ -1332,6 +1370,12 @@ class PandasDataframe(ClassLogger):
         columns = col_dtypes.keys()
         # Create Series for the updated dtypes
         new_dtypes = self.dtypes.copy()
+        # When casting to "category" we have to make up the whole axis partition
+        # to get the properly encoded table of categories. Every block partition
+        # will store the encoded table. That can lead to higher memory footprint.
+        # TODO: Revisit if this hurts users.
+        use_full_axis_cast = False
+        has_categorical_cast = False
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
             if (
@@ -1350,20 +1394,39 @@ class PandasDataframe(ClassLogger):
                     new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
                 elif isinstance(new_dtype, str) and new_dtype == "category":
-                    new_dtypes = None
-                    break
+                    new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
+                        # Actual parent will substitute `None` at `.set_dtypes_cache`
+                        parent=None,
+                        column_name=column,
+                        materializer=lambda parent, column: parent._compute_dtypes(
+                            columns=[column]
+                        )[column],
+                    )
+                    use_full_axis_cast = has_categorical_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            return df.astype(
+            # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
+            # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
+            df_for_astype = (
+                df.copy(deep=True)
+                if Engine.get() == "Ray" and has_categorical_cast
+                else df
+            )
+            return df_for_astype.astype(
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
-        new_frame = self._partition_mgr_cls.map_partitions(
-            self._partitions, astype_builder
-        )
+        if use_full_axis_cast:
+            new_frame = self._partition_mgr_cls.map_axis_partitions(
+                0, self._partitions, astype_builder, keep_partitioning=True
+            )
+        else:
+            new_frame = self._partition_mgr_cls.map_partitions(
+                self._partitions, astype_builder
+            )
         return self.__constructor__(
             new_frame,
             self.copy_index_cache(),
@@ -1866,7 +1929,12 @@ class PandasDataframe(ClassLogger):
         return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
 
     @lazy_metadata_decorator(apply_axis=None)
-    def map(self, func: Callable, dtypes: Optional[str] = None) -> "PandasDataframe":
+    def map(
+        self,
+        func: Callable,
+        dtypes: Optional[str] = None,
+        new_columns: Optional[pandas.Index] = None,
+    ) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
 
@@ -1878,6 +1946,9 @@ class PandasDataframe(ClassLogger):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+        new_columns : pandas.Index, optional
+            New column labels of the result, its length has to be identical
+            to the older columns. If not specified, old column labels are preserved.
 
         Returns
         -------
@@ -1885,16 +1956,25 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
+        if new_columns is not None and self.has_materialized_columns:
+            assert len(new_columns) == len(
+                self.columns
+            ), "New column's length must be identical to the previous columns"
+        elif new_columns is None:
+            new_columns = self.copy_columns_cache()
         if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None and not isinstance(dtypes, pandas.Series):
+            if isinstance(new_columns, ModinIndex):
+                # Materializing lazy columns in order to build dtype's index
+                new_columns = new_columns.get(return_lengths=False)
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(self.columns), index=self.columns
+                [np.dtype(dtypes)] * len(new_columns), index=new_columns
             )
         return self.__constructor__(
             new_partitions,
             self.copy_index_cache(),
-            self.copy_columns_cache(),
+            new_columns,
             self._row_lengths_cache,
             self._column_widths_cache,
             dtypes=dtypes,
@@ -2133,6 +2213,51 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
+    def combine_and_apply(
+        self, func, new_index=None, new_columns=None, new_dtypes=None
+    ):
+        """
+        Combine all partitions into a single big one and apply the passed function to it.
+
+        Use this method with care as it collects all the data on the same worker,
+        it's only recommended to use this method on small or reduced datasets.
+
+        Parameters
+        ----------
+        func : callable(pandas.DataFrame) -> pandas.DataFrame
+            A function to apply to the combined partition.
+        new_index : sequence, optional
+            Index of the result.
+        new_columns : sequence, optional
+            Columns of the result.
+        new_dtypes : dict-like, optional
+            Dtypes of the result.
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        if self._partitions.shape[1] > 1:
+            new_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
+            new_partitions = np.array([[partition] for partition in new_partitions])
+            modin_frame = self.__constructor__(
+                new_partitions,
+                self.copy_index_cache(),
+                self.copy_columns_cache(),
+                self._row_lengths_cache,
+                [len(self.columns)] if self.has_materialized_columns else None,
+                self.copy_dtypes_cache(),
+            )
+        else:
+            modin_frame = self
+        return modin_frame.apply_full_axis(
+            axis=0,
+            func=func,
+            new_index=new_index,
+            new_columns=new_columns,
+            dtypes=new_dtypes,
+        )
+
     def _apply_func_to_range_partitioning(
         self, key_column, func, ascending=True, **kwargs
     ):
@@ -2176,26 +2301,9 @@ class PandasDataframe(ClassLogger):
 
             ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
             if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
-                modin_frame = self
-                if self._partitions.shape[1] != 1:
-                    # In this case, we have more than one column partition, so we first need
-                    # to create row-wise partitions with all of the columns, so we don't have
-                    # a KeyError when sorting. This method can be slow if we have very very
-                    # many columns.
-                    new_partitions = self._partition_mgr_cls.row_partitions(
-                        self._partitions
-                    )
-                    new_partitions = np.array(
-                        [[partition] for partition in new_partitions]
-                    )
-                    modin_frame = self.__constructor__(
-                        new_partitions,
-                        *self.axes,
-                        self._row_lengths_cache,
-                        [len(self.columns)],
-                        self.dtypes,
-                    )
-                return modin_frame.apply_full_axis(axis=0, func=func)
+                # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
+                # simply combine all partitions and apply the sorting to the whole dataframe
+                return self.combine_and_apply(func=func)
 
         if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
@@ -3423,7 +3531,7 @@ class PandasDataframe(ClassLogger):
         passed to the groupby may be at most the number of rows in the group, and
         may be as small as a single row.
 
-        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+        Unlike the pandas API, an intermediate "GROUP BY" object is not present in this
         algebra implementation.
         """
         axis = Axis(axis)

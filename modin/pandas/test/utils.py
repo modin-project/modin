@@ -1159,13 +1159,13 @@ def get_unique_filename(
         name of the test for which the unique file name is needed.
     kwargs: list of ints
         Unique combiantion of test parameters for creation of unique name.
-    extension: str
+    extension: str, default: "csv"
         Extension of unique file.
     data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.
-    debug_mode: bool
+    debug_mode: bool, default: False
         Get unique filename containing kwargs values.
         Otherwise kwargs values will be replaced with hash equivalent.
 
@@ -1335,7 +1335,7 @@ def dummy_decorator():
     return wrapper
 
 
-def generate_dataframe(row_size=NROWS, additional_col_values=None):
+def generate_dataframe(row_size=NROWS, additional_col_values=None, idx_name=None):
     dates = pandas.date_range("2000", freq="h", periods=row_size)
     data = {
         "col1": np.arange(row_size) * 10,
@@ -1345,11 +1345,12 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None):
         "col5": [get_random_string() for _ in range(row_size)],
         "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
     }
+    index = None if idx_name is None else pd.RangeIndex(0, row_size, name=idx_name)
 
     if additional_col_values is not None:
         assert isinstance(additional_col_values, (list, tuple))
         data.update({"col7": random_state.choice(additional_col_values, size=row_size)})
-    return pandas.DataFrame(data)
+    return pandas.DataFrame(data, index=index)
 
 
 def _make_csv_file(filenames):
@@ -1372,7 +1373,7 @@ def _make_csv_file(filenames):
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=None,
+        lineterminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -1411,7 +1412,7 @@ def _make_csv_file(filenames):
                 compression=compression,
                 index=False,
                 decimal=decimal_separator if decimal_separator else ".",
-                line_terminator=line_terminator,
+                lineterminator=lineterminator,
                 quoting=quoting,
                 quotechar=quotechar,
                 doublequote=doublequote,
@@ -1421,7 +1422,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "lineterminator": lineterminator if lineterminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }

@@ -41,8 +41,8 @@ NPartitions.put(4)
 matplotlib.use("Agg")
 
 
-@pytest.mark.parametrize("method", ["items", "iteritems", "iterrows"])
-def test_items_iteritems_iterrows(method):
+@pytest.mark.parametrize("method", ["items", "iterrows"])
+def test_items_iterrows(method):
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -113,9 +113,15 @@ def test___contains__(request, data):
 
 
 @pytest.mark.parametrize("expand_frame_repr", [False, True])
-@pytest.mark.parametrize("max_rows_columns", [(5, 5), (10, 10), (75, 75), (None, None)])
-def test__options_display(max_rows_columns, expand_frame_repr):
-    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(102, 102))
+@pytest.mark.parametrize(
+    "max_rows_columns",
+    [(5, 5), (10, 10), (50, 50), (51, 51), (52, 52), (75, 75), (None, None)],
+)
+@pytest.mark.parametrize("frame_size", [101, 102])
+def test_display_options_for___repr__(max_rows_columns, expand_frame_repr, frame_size):
+    frame_data = random_state.randint(
+        RAND_LOW, RAND_HIGH, size=(frame_size, frame_size)
+    )
     pandas_df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
 
