@@ -52,13 +52,13 @@ def eval_io(
     For parameters description please refer to ``modin.pandas.test.utils.eval_io``.
     """
 
-    def hdk_comparator(df1, df2):
+    def hdk_comparator(df1, df2, **kwargs):
         """Evaluate equality comparison of the passed frames after importing the Modin's one to HDK."""
         with ForceHdkImport(df1, df2):
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             df1, df2 = align_datetime_dtypes(df1, df2)
-            comparator(df1, df2)
+            comparator(df1, df2, **kwargs)
 
     general_eval_io(
         fn_name,
@@ -161,13 +161,17 @@ class ForceHdkImport:
             df.shape  # to trigger real execution
             if df.empty:
                 continue
-            partition = df._query_compiler._modin_frame._partitions[0][0]
+            modin_frame = df._query_compiler._modin_frame
+            partition = modin_frame._partitions[0][0]
             if partition.frame_id is not None:
                 continue
             frame = partition.get()
             if isinstance(frame, (pandas.DataFrame, pandas.Series)):
-                frame_id = DbWorker().import_pandas_dataframe(frame)
-            elif isinstance(frame, pa.Table):
+                frame = pa.Table.from_pandas(frame)
+            if isinstance(frame, pa.Table):
+                _, cols = modin_frame._partition_mgr_cls._get_unsupported_cols(frame)
+                if len(cols) != 0:
+                    continue
                 frame_id = DbWorker().import_arrow_table(frame)
             else:
                 raise TypeError(
@@ -198,8 +202,6 @@ class ForceHdkImport:
             # as it has a chance of running via pyarrow bypassing HDK
             new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
                 modin_frame._op,
-                modin_frame._index_cols,
-                modin_frame._dtypes,
                 modin_frame._table_cols,
             )
             modin_frame._partitions = new_partitions
@@ -249,6 +251,7 @@ def run_and_compare(
     data,
     data2=None,
     force_lazy=True,
+    force_hdk_execute=False,
     force_arrow_execute=False,
     allow_subqueries=False,
     comparator=df_equals,
@@ -261,6 +264,7 @@ def run_and_compare(
         data,
         data2,
         force_lazy,
+        force_hdk_execute,
         force_arrow_execute,
         allow_subqueries,
         constructor_kwargs,
@@ -270,16 +274,21 @@ def run_and_compare(
         kwargs["df2"] = pd.DataFrame(data2, **constructor_kwargs)
         kwargs["df"] = kwargs["df1"]
 
-        if force_lazy:
-            set_execution_mode(kwargs["df1"], "lazy")
-            set_execution_mode(kwargs["df2"], "lazy")
+        if force_hdk_execute:
+            set_execution_mode(kwargs["df1"], "hdk")
+            set_execution_mode(kwargs["df2"], "hdk")
         elif force_arrow_execute:
             set_execution_mode(kwargs["df1"], "arrow")
             set_execution_mode(kwargs["df2"], "arrow")
+        elif force_lazy:
+            set_execution_mode(kwargs["df1"], "lazy")
+            set_execution_mode(kwargs["df2"], "lazy")
 
         exp_res = fn(lib=pd, **kwargs)
 
-        if force_arrow_execute:
+        if force_hdk_execute:
+            set_execution_mode(exp_res, "hdk", allow_subqueries)
+        elif force_arrow_execute:
             set_execution_mode(exp_res, "arrow", allow_subqueries)
         elif force_lazy:
             set_execution_mode(exp_res, None, allow_subqueries)
@@ -299,6 +308,7 @@ def run_and_compare(
                 data=data,
                 data2=data2,
                 force_lazy=force_lazy,
+                force_hdk_execute=force_hdk_execute,
                 force_arrow_execute=force_arrow_execute,
                 allow_subqueries=allow_subqueries,
                 constructor_kwargs=constructor_kwargs,
@@ -311,29 +321,10 @@ def run_and_compare(
             data=data,
             data2=data2,
             force_lazy=force_lazy,
+            force_hdk_execute=force_hdk_execute,
             force_arrow_execute=force_arrow_execute,
             allow_subqueries=allow_subqueries,
             constructor_kwargs=constructor_kwargs,
             **kwargs,
         )
-
-        # Currently, strings are converted to categories when exported from HDK,
-        # this makes the equality comparison fail. Converting string cols back to
-        # their original dtypes until the issue is resolved:
-        # https://github.com/modin-project/modin/issues/2747
-        if isinstance(exp_res, pd.DataFrame):
-            external_dtypes = exp_res.dtypes
-            exp_res = try_cast_to_pandas(exp_res)
-            internal_dtypes = exp_res.dtypes
-
-            new_schema = {}
-            for col in exp_res.columns:
-                if (
-                    not isinstance(internal_dtypes[col], pandas.Series)
-                    and internal_dtypes[col] == "category"
-                    and external_dtypes[col] != "category"
-                ):
-                    new_schema[col] = external_dtypes[col]
-            exp_res = exp_res.astype(new_schema)
-
         comparator(ref_res, exp_res)

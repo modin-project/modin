@@ -149,3 +149,6 @@ class TimeReadCsvNamesDtype:
                 parse_dates=self.parse_dates,
             )
         )
+
+
+from ..utils import setup  # noqa: E402, F401

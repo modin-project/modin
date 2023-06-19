@@ -276,23 +276,6 @@ class TimeConcat:
         )
 
 
-class TimeAppend:
-    param_names = ["shapes", "sort"]
-    params = [
-        get_benchmark_shapes("TimeAppend"),
-        [False, True],
-    ]
-
-    def setup(self, shapes, sort):
-        self.df1 = generate_dataframe("int", *shapes[0], RAND_LOW, RAND_HIGH)
-        self.df2 = generate_dataframe("int", *shapes[1], RAND_LOW, RAND_HIGH)
-        if sort:
-            self.df1.columns = self.df1.columns[::-1]
-
-    def time_append(self, shapes, sort):
-        execute(self.df1.append(self.df2, sort=sort))
-
-
 class TimeBinaryOp:
     param_names = ["shapes", "binary_op", "axis"]
     params = [
@@ -488,7 +471,7 @@ class TimeDrop:
         self.labels = self.df.axes[axis][:drop_count]
 
     def time_drop(self, shape, axis, drop_ncols):
-        execute(self.df.drop(self.labels, axis))
+        execute(self.df.drop(self.labels, axis=axis))
 
 
 class TimeHead:
@@ -834,7 +817,6 @@ class TimeProperties:
 
 
 class TimeIndexingNumericSeries:
-
     param_names = ["shape", "dtype", "index_structure"]
     params = [
         get_benchmark_shapes("TimeIndexingNumericSeries"),
@@ -949,7 +931,6 @@ class TimeReindex:
 
 
 class TimeReindexMethod:
-
     params = [
         get_benchmark_shapes("TimeReindexMethod"),
         ["pad", "backfill"],
@@ -968,7 +949,6 @@ class TimeReindexMethod:
 
 
 class TimeFillnaMethodSeries:
-
     params = [get_benchmark_shapes("TimeFillnaMethodSeries"), ["pad", "backfill"]]
     param_names = ["shape", "method"]
 
@@ -988,7 +968,6 @@ class TimeFillnaMethodSeries:
 
 
 class TimeFillnaMethodDataframe:
-
     params = [get_benchmark_shapes("TimeFillnaMethodDataframe"), ["pad", "backfill"]]
     param_names = ["shape", "method"]
 
@@ -1040,7 +1019,6 @@ class TimeLevelAlign:
 
 
 class TimeDropDuplicatesDataframe:
-
     params = [get_benchmark_shapes("TimeDropDuplicatesDataframe")]
     param_names = ["shape"]
 
@@ -1068,7 +1046,6 @@ class TimeDropDuplicatesDataframe:
 
 
 class TimeDropDuplicatesSeries:
-
     params = [get_benchmark_shapes("TimeDropDuplicatesSeries")]
     param_names = ["shape"]
 
@@ -1086,7 +1063,6 @@ class TimeDropDuplicatesSeries:
 
 
 class TimeDatetimeAccessor:
-
     params = [get_benchmark_shapes("TimeDatetimeAccessor")]
     param_names = ["shape"]
 
@@ -1165,7 +1141,6 @@ class TimeUnstack(BaseReshape):
 
 
 class TimeReplace:
-
     params = [get_benchmark_shapes("TimeReplace")]
     param_names = ["shape"]
 
@@ -1180,7 +1155,6 @@ class TimeReplace:
 
 
 class TimeGroups:
-
     params = [get_benchmark_shapes("TimeGroups")]
     param_names = ["shape"]
 
@@ -1198,7 +1172,6 @@ class TimeGroups:
 
 
 class TimeRepr:
-
     params = [get_benchmark_shapes("TimeRepr")]
     param_names = ["shape"]
 
@@ -1212,7 +1185,6 @@ class TimeRepr:
 
 
 class TimeMaskBool:
-
     params = [get_benchmark_shapes("TimeMaskBool")]
     param_names = ["shape"]
 
@@ -1226,7 +1198,6 @@ class TimeMaskBool:
 
 
 class TimeIsnull:
-
     params = [get_benchmark_shapes("TimeIsnull")]
     param_names = ["shape"]
 
@@ -1241,7 +1212,6 @@ class TimeIsnull:
 
 
 class TimeDropna:
-
     params = (["all", "any"], [0, 1], get_benchmark_shapes("TimeDropna"))
     param_names = ["how", "axis", "shape"]
 
@@ -1257,7 +1227,6 @@ class TimeDropna:
 
 
 class TimeEquals:
-
     params = [get_benchmark_shapes("TimeEquals")]
     param_names = ["shape"]
 

@@ -28,10 +28,10 @@ Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask<
 
 .. code-block:: bash
 
-  pip install modin[ray] # Install Modin dependencies and Ray to run on Ray
-  pip install modin[dask] # Install Modin dependencies and Dask to run on Dask
-  pip install modin[unidist] # Install Modin dependencies and Unidist to run on Unidist
-  pip install modin[all] # Install all of the above
+  pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
+  pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
+  pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist
+  pip install "modin[all]" # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation! See below for HDK engine installation.
@@ -74,7 +74,7 @@ Modin can be used with Google Colab_ via the ``pip`` command, by running the fol
 
 .. code-block:: bash
 
-  !pip install modin[all]
+  !pip install "modin[all]"
 
 Since Colab preloads several of Modin's dependencies by default, we need to restart the Colab environment once Modin is installed by either clicking on the :code:`"RESTART RUNTIME"` button in the installation output or by run the following code:
 
@@ -207,7 +207,7 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 
   cd modin
   pip install -e .
-  pip install -e .[all]  # will install dependencies for all engines
+  pip install -e ".[all]"  # will install dependencies for all engines
 
 .. _`GitHub repo`: https://github.com/modin-project/modin/tree/master
 .. _issue: https://github.com/modin-project/modin/issues

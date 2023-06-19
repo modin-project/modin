@@ -30,8 +30,9 @@ from modin.pandas.test.utils import (
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
 )
-from modin.config import Engine, NPartitions
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -109,6 +110,9 @@ def test_math_functions_fill_value(other, fill_value, op):
         modin_df,
         pandas_df,
         lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+        # This test causes an empty slice to be generated thus triggering:
+        # https://github.com/modin-project/modin/issues/5974
+        comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
 
 
@@ -163,14 +167,22 @@ def test_math_alias(math_op, alias):
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other):
+    def operation(df):
+        df = getattr(df, op)(df if other == "as_left" else other)
+        if other == "as_left" and StorageFormat.get() == "Hdk":
+            # In case of comparison with a DataFrame, HDK returns
+            # a DataFrame with sorted columns.
+            df = df.sort_index(axis=1)
+        return df
+
     eval_general(
         *create_test_dfs(data),
-        lambda df: getattr(df, op)(df if other == "as_left" else other),
+        operation=operation,
     )
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Dask"),
+    StorageFormat.get() != "Pandas",
     reason="Modin on this engine doesn't create virtual partitions.",
 )
 @pytest.mark.parametrize(
@@ -247,8 +259,8 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
     modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
-    pandas_df2 = pandas_df.append(pandas_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
+    pandas_df2 = pandas.concat((pandas_df, pandas_df))
     if is_more_other_partitions:
         modin_df2, modin_df1 = modin_df1, modin_df2
         pandas_df2, pandas_df1 = pandas_df1, pandas_df2

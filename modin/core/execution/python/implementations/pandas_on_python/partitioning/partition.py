@@ -14,6 +14,7 @@
 """The module defines interface for a partition with pandas storage format and Python engine."""
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+from modin.core.execution.python.common import PythonWrapper
 
 
 class PandasOnPythonDataframePartition(PandasDataframePartition):
@@ -40,6 +41,8 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     Objects of this class are treated as immutable by partition manager
     subclasses. There is no logic for updating in-place.
     """
+
+    execution_wrapper = PythonWrapper
 
     def __init__(self, data, length=None, width=None, call_queue=None):
         if hasattr(data, "copy"):
@@ -143,7 +146,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
         PandasOnPythonDataframePartition
             New ``PandasOnPythonDataframePartition`` object.
         """
-        return cls(obj.copy())
+        return cls(obj.copy(), len(obj.index), len(obj.columns))
 
     @classmethod
     def preprocess_func(cls, func):

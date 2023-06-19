@@ -45,9 +45,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``any``                    | `any`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``append``                 | `append`_                 | Y                      | **Hdk**: ``Y`` but ``sort`` and                    |
-|                            |                           |                        | ``ignore_index`` parameters ignored                |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``apply``                  | `apply`_                  | Y                      | See ``agg``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``applymap``               | `applymap`_               | Y                      |                                                    |
@@ -204,8 +201,6 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``items``                  | `items`_                  | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``iteritems``              | `iteritems`_              | P                      | Modin does not parallelize iteration in Python     |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``iterrows``               | `iterrows`_               | P                      | Modin does not parallelize iteration in Python     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``itertuples``             | `itertuples`_             | P                      | Modin does not parallelize iteration in Python     |
@@ -229,11 +224,7 @@ default to pandas.
 |                            |                           |                        | **Hdk**: ``P``, read access fully supported,       |
 |                            |                           |                        | write access: no row and 2D assignments support    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``lookup``                 | `lookup`_                 | D                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``lt``                     | `lt`_                     | Y                      | See ``add``                                        |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``mad``                    | `mad`_                    | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``mask``                   | `mask`_                   | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -371,8 +362,6 @@ default to pandas.
 | ``skew``                   | `skew`_                   | P                      | Modin defaults to pandas if given the ``level``    |
 |                            |                           |                        | param                                              |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``slice_shift``            | `slice_shift`_            | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``sort_index``             | `sort_index`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``sort_values``            | `sort_values`_            | Y                      | Shuffles data. Order of indexes that have the      |
@@ -427,15 +416,13 @@ default to pandas.
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_orc``                 | `to_orc`_                 | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``to_parquet``             | `to_parquet`_             | P                      | **Dask**: Defaults to Pandas implementation and    |
-|                            |                           |                        | writes a  single output file.                      |
-|                            |                           |                        | **Ray**: Parallel implementation only if path      |
-|                            |                           |                        | parameter is a string; does not end with ".gz",    |
-|                            |                           |                        | ".bz2", ".zip", or ".xz"; and compression parameter|
-|                            |                           |                        | is not ``None`` or "snappy". In these cases, the   |
-|                            |                           |                        | ``path`` parameter specifies a directory where     |
-|                            |                           |                        | one file is written per row partition of the Modin |
-|                            |                           |                        | dataframe.                                         |
+| ``to_parquet``             | `to_parquet`_             | P                      | **Ray/Dask/Unidist**: Parallel implementation only |
+|                            |                           |                        | if path parameter is a string; does not end with   |
+|                            |                           |                        | ".gz", ".bz2", ".zip", or ".xz"; and compression   |
+|                            |                           |                        | parameter is not ``None`` or "snappy". In these    |
+|                            |                           |                        | cases, the ``path`` parameter specifies a directory|
+|                            |                           |                        | where one file is written per row partition of the |
+|                            |                           |                        | Modin dataframe.                                   |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -460,8 +447,6 @@ default to pandas.
 | ``truediv``                | `truediv`_                | Y                      | See ``add``                                        |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``truncate``               | `truncate`_               | Y                      |                                                    |
-+----------------------------+---------------------------+------------------------+----------------------------------------------------+
-| ``tshift``                 | `tshift`_                 | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``tz_convert``             | `tz_convert`_             | Y                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -492,7 +477,6 @@ default to pandas.
 .. _`align`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.align.html#pandas.DataFrame.align
 .. _`all`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.all.html#pandas.DataFrame.all
 .. _`any`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.any.html#pandas.DataFrame.any
-.. _`append`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.append.html#pandas.DataFrame.append
 .. _`apply`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.apply.html#pandas.DataFrame.apply
 .. _`applymap`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.applymap.html#pandas.DataFrame.applymap
 .. _`asfreq`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.asfreq.html#pandas.DataFrame.asfreq
@@ -570,7 +554,6 @@ default to pandas.
 .. _`isna`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isna.html#pandas.DataFrame.isna
 .. _`isnull`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.isnull.html#pandas.DataFrame.isnull
 .. _`items`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.items.html#pandas.DataFrame.items
-.. _`iteritems`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iteritems.html#pandas.DataFrame.iteritems
 .. _`iterrows`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.iterrows.html#pandas.DataFrame.iterrows
 .. _`itertuples`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.itertuples.html#pandas.DataFrame.itertuples
 .. _`ix`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.ix.html#pandas.DataFrame.ix
@@ -582,9 +565,7 @@ default to pandas.
 .. _`last_valid_index`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.last_valid_index.html#pandas.DataFrame.last_valid_index
 .. _`le`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.le.html#pandas.DataFrame.le
 .. _`loc`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.loc.html#pandas.DataFrame.loc
-.. _`lookup`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lookup.html#pandas.DataFrame.lookup
 .. _`lt`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.lt.html#pandas.DataFrame.lt
-.. _`mad`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mad.html#pandas.DataFrame.mad
 .. _`mask`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mask.html#pandas.DataFrame.mask
 .. _`max`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.max.html#pandas.DataFrame.max
 .. _`mean`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.mean.html#pandas.DataFrame.mean
@@ -644,7 +625,6 @@ default to pandas.
 .. _`shift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.shift.html#pandas.DataFrame.shift
 .. _`size`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.size.html#pandas.DataFrame.size
 .. _`skew`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.skew.html#pandas.DataFrame.skew
-.. _`slice_shift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.slice_shift.html#pandas.DataFrame.slice_shift
 .. _`sort_index`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_index.html#pandas.DataFrame.sort_index
 .. _`sort_values`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sort_values.html#pandas.DataFrame.sort_values
 .. _`sparse`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.sparse.html#pandas-dataframe-sparse
@@ -683,7 +663,6 @@ default to pandas.
 .. _`transpose`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.transpose.html#pandas.DataFrame.transpose
 .. _`truediv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.truediv.html#pandas.DataFrame.truediv
 .. _`truncate`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.truncate.html#pandas.DataFrame.truncate
-.. _`tshift`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tshift.html#pandas.DataFrame.tshift
 .. _`tz_convert`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tz_convert.html#pandas.DataFrame.tz_convert
 .. _`tz_localize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.tz_localize.html#pandas.DataFrame.tz_localize
 .. _`unstack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.unstack.html#pandas.DataFrame.unstack

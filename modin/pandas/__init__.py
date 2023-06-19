@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.5.2"
+__pandas_version__ = "2.0.2"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
@@ -26,10 +26,8 @@ with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from pandas import (
         eval,
-        cut,
         factorize,
         test,
-        qcut,
         date_range,
         period_range,
         Index,
@@ -41,7 +39,11 @@ with warnings.catch_warnings():
         Timestamp,
         set_eng_float_format,
         options,
+        describe_option,
         set_option,
+        get_option,
+        reset_option,
+        option_context,
         NaT,
         PeriodIndex,
         Categorical,
@@ -62,9 +64,6 @@ with warnings.catch_warnings():
         IntervalDtype,
         PeriodDtype,
         RangeIndex,
-        Int64Index,
-        UInt64Index,
-        Float64Index,
         TimedeltaIndex,
         IntervalIndex,
         IndexSlice,
@@ -76,7 +75,6 @@ with warnings.catch_warnings():
         infer_freq,
         interval_range,
         ExcelWriter,
-        datetime,
         NamedAgg,
         NA,
         api,
@@ -233,6 +231,7 @@ from .general import (
     notna,
     pivot,
     to_numeric,
+    qcut,
     to_datetime,
     unique,
     value_counts,
@@ -243,6 +242,7 @@ from .general import (
     wide_to_long,
     to_timedelta,
     pivot_table,
+    cut,
 )
 
 from .plotting import Plotting as plotting
@@ -290,7 +290,11 @@ __all__ = [  # noqa: F405
     "to_timedelta",
     "set_eng_float_format",
     "options",
+    "describe_option",
     "set_option",
+    "get_option",
+    "reset_option",
+    "option_context",
     "CategoricalIndex",
     "Timedelta",
     "Timestamp",
@@ -319,9 +323,6 @@ __all__ = [  # noqa: F405
     "StringDtype",
     "NA",
     "RangeIndex",
-    "Int64Index",
-    "UInt64Index",
-    "Float64Index",
     "TimedeltaIndex",
     "IntervalIndex",
     "IndexSlice",
@@ -350,7 +351,6 @@ __all__ = [  # noqa: F405
     "to_numeric",
     "unique",
     "value_counts",
-    "datetime",
     "NamedAgg",
     "api",
     "read_xml",

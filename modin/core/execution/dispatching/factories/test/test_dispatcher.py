@@ -114,8 +114,9 @@ def test_factory_switch():
 
 def test_engine_wrong_factory():
     with pytest.raises(FactoryNotFoundError):
-        with _switch_value(Engine, "BadEngine"):
-            pass
+        with _switch_value(StorageFormat, "Pyarrow"):
+            with _switch_value(Engine, "Dask"):
+                pass
 
 
 def test_set_execution():

@@ -27,7 +27,7 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode, Engine, StorageFormat
+from modin.config import NPartitions, ProgressBar, BenchmarkMode
 from modin.logging import ClassLogger
 
 import os
@@ -242,7 +242,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         if by is not None:
             mapped_partitions = cls.broadcast_apply(
-                axis, map_func, left=partitions, right=by, other_name="other"
+                axis, map_func, left=partitions, right=by
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
@@ -332,7 +332,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def broadcast_apply(cls, axis, apply_func, left, right, other_name="right"):
+    def broadcast_apply(cls, axis, apply_func, left, right):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` function.
 
@@ -346,9 +346,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             NumPy array of left partitions.
         right : np.ndarray
             NumPy array of right partitions.
-        other_name : str, default: "right"
-            Name of key-value argument for `apply_func` that
-            is used to pass `right` to `apply_func`.
 
         Returns
         -------
@@ -365,7 +362,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
-            return apply_func(df, **{other_name: other})
+            return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
         rt_axis_parts = cls.axis_partition(right, axis ^ 1)
@@ -395,9 +392,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         left,
         right,
         keep_partitioning=False,
+        num_splits=None,
         apply_indices=None,
         enumerate_partitions=False,
         lengths=None,
+        apply_func_args=None,
         **kwargs,
     ):
         """
@@ -414,15 +413,25 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         right : NumPy 2D array
             Right partitions.
         keep_partitioning : boolean, default: False
-            The flag to keep partition boundaries for Modin Frame.
-            Setting it to True disables shuffling data from one partition to another.
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         apply_indices : list of ints, default: None
             Indices of `axis ^ 1` to apply function over.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `apply_func`.
             Note that `apply_func` must be able to accept `partition_idx` kwarg.
         lengths : list of ints, default: None
-            The list of lengths to shuffle the object.
+            The list of lengths to shuffle the object. Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
+        apply_func_args : list-like, optional
+            Positional arguments to pass to the `func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -431,15 +440,25 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         NumPy array
             An array of partition objects.
         """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=keep_partitioning and lengths is not None,
+            extra_log=f"`keep_partitioning` must be set to `False` when passing `lengths`. Got: {keep_partitioning=} | {lengths=}",
+        )
+
         # Since we are already splitting the DataFrame back up after an
         # operation, we will just use this time to compute the number of
         # partitions as best we can right now.
-        if keep_partitioning:
+        if keep_partitioning and num_splits is None:
             num_splits = len(left) if axis == 0 else len(left.T)
         elif lengths:
             num_splits = len(lengths)
-        else:
+        elif num_splits is None:
             num_splits = NPartitions.get()
+        else:
+            ErrorMessage.catch_bugs_and_request_email(
+                failure_condition=not isinstance(num_splits, int),
+                extra_log=f"Expected `num_splits` to be an integer, got: {type(num_splits)} | {num_splits=}",
+            )
         preprocessed_map_func = cls.preprocess_func(apply_func)
         left_partitions = cls.axis_partition(left, axis)
         right_partitions = None if right is None else cls.axis_partition(right, axis)
@@ -450,6 +469,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         kw = {
             "num_splits": num_splits,
             "other_axis_partition": right_partitions,
+            "maintain_partitioning": keep_partitioning,
         }
         if lengths:
             kw["lengths"] = lengths
@@ -462,6 +482,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             [
                 left_partitions[i].apply(
                     preprocessed_map_func,
+                    *(apply_func_args if apply_func_args else []),
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
                     **kwargs,
@@ -533,6 +554,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         partitions,
         map_func,
         keep_partitioning=False,
+        num_splits=None,
         lengths=None,
         enumerate_partitions=False,
         **kwargs,
@@ -548,11 +570,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
-        keep_partitioning : bool, default: False
-            Whether to keep partitioning for Modin Frame.
-            Setting it to True stops data shuffling between partitions.
+        keep_partitioning : boolean, default: False
+            The flag to keep partition boundaries for Modin Frame if possible.
+            Setting it to True disables shuffling data from one partition to another in case the resulting
+            number of splits is equal to the initial number of splits.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically. If `num_splits` is None and `keep_partitioning=True`
+            then the number of splits is preserved.
         lengths : list of ints, default: None
-            List of lengths to shuffle the object.
+            The list of lengths to shuffle the object. Note:
+                1. Passing `lengths` omits the `num_splits` parameter as the number of splits
+                will now be inferred from the number of integers present in `lengths`.
+                2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
@@ -574,6 +604,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             left=partitions,
             apply_func=map_func,
             keep_partitioning=keep_partitioning,
+            num_splits=num_splits,
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
@@ -813,7 +844,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     def get_objects_from_partitions(cls, partitions):
         """
-        Get the objects wrapped by `partitions`.
+        Get the objects wrapped by `partitions` (in parallel if supported).
 
         Parameters
         ----------
@@ -824,12 +855,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         -------
         list
             The objects wrapped by `partitions`.
-
-        Notes
-        -----
-        This method should be implemented in a more efficient way for engines that support
-        getting objects in parallel.
         """
+        if hasattr(cls, "_execution_wrapper"):
+            # more efficient parallel implementation
+            for idx, part in enumerate(partitions):
+                if hasattr(part, "force_materialization"):
+                    partitions[idx] = part.force_materialization()
+            assert all(
+                [len(partition.list_of_blocks) == 1 for partition in partitions]
+            ), "Implementation assumes that each partition contains a single block."
+            return cls._execution_wrapper.materialize(
+                [partition.list_of_blocks[0] for partition in partitions]
+            )
         return [partition.get() for partition in partitions]
 
     @classmethod
@@ -1401,120 +1438,112 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         list[int] or None
             Row lengths if possible to compute it.
         """
+        # We rebalance when the ratio of the number of existing partitions to
+        # the ideal number of partitions is larger than this threshold. The
+        # threshold is a heuristic that may need to be tuned for performance.
+        max_excess_of_num_partitions = 1.5
+        num_existing_partitions = partitions.shape[0]
+        ideal_num_new_partitions = NPartitions.get()
         if (
-            Engine.get() in ["Ray", "Dask", "Unidist"]
-            and StorageFormat.get() == "Pandas"
+            num_existing_partitions
+            <= ideal_num_new_partitions * max_excess_of_num_partitions
         ):
-            # Rebalancing partitions is currently only implemented for PandasOnRay and PandasOnDask.
-            # We rebalance when the ratio of the number of existing partitions to
-            # the ideal number of partitions is larger than this threshold. The
-            # threshold is a heuristic that may need to be tuned for performance.
-            max_excess_of_num_partitions = 1.5
-            num_existing_partitions = partitions.shape[0]
-            ideal_num_new_partitions = NPartitions.get()
-            if (
-                num_existing_partitions
-                <= ideal_num_new_partitions * max_excess_of_num_partitions
-            ):
-                return partitions, None
-            # If any partition has an unknown length, give each axis partition
-            # roughly the same number of row partitions. We use `_length_cache` here
-            # to avoid materializing any unmaterialized lengths.
-            if any(
-                partition._length_cache is None
-                for row in partitions
-                for partition in row
-            ):
-                # We need each partition to go into an axis partition, but the
-                # number of axis partitions may not evenly divide the number of
-                # partitions.
-                chunk_size = compute_chunksize(
-                    num_existing_partitions, ideal_num_new_partitions, min_block_size=1
-                )
-                new_partitions = np.array(
-                    [
-                        cls.column_partitions(
-                            partitions[i : i + chunk_size],
-                            full_axis=False,
-                        )
-                        for i in range(
-                            0,
-                            num_existing_partitions,
-                            chunk_size,
-                        )
-                    ]
-                )
-                return new_partitions, None
-
-            # If we know the number of rows in every partition, then we should try
-            # instead to give each new partition roughly the same number of rows.
-            new_partitions = []
-            # `start` is the index of the first existing partition that we want to
-            # put into the current new partition.
-            start = 0
-            total_rows = sum(part.length() for part in partitions[:, 0])
-            ideal_partition_size = compute_chunksize(
-                total_rows, ideal_num_new_partitions, min_block_size=1
+            return partitions, None
+        # If any partition has an unknown length, give each axis partition
+        # roughly the same number of row partitions. We use `_length_cache` here
+        # to avoid materializing any unmaterialized lengths.
+        if any(
+            partition._length_cache is None for row in partitions for partition in row
+        ):
+            # We need each partition to go into an axis partition, but the
+            # number of axis partitions may not evenly divide the number of
+            # partitions.
+            chunk_size = compute_chunksize(
+                num_existing_partitions, ideal_num_new_partitions, min_block_size=1
             )
-            for _ in range(ideal_num_new_partitions):
-                # We might pick up old partitions too quickly and exhaust all of them.
-                if start >= len(partitions):
-                    break
-                # `stop` is the index of the last existing partition so far that we
-                # want to put into the current new partition.
-                stop = start
-                partition_size = partitions[start][0].length()
-                # Add existing partitions into the current new partition until the
-                # number of rows in the new partition hits `ideal_partition_size`.
-                while stop < len(partitions) and partition_size < ideal_partition_size:
-                    stop += 1
-                    if stop < len(partitions):
-                        partition_size += partitions[stop][0].length()
-                # If the new partition is larger than we want, split the last
-                # current partition that it contains into two partitions, where
-                # the first partition has just enough rows to make the current
-                # new partition have length `ideal_partition_size`, and the second
-                # partition has the remainder.
-                if partition_size > ideal_partition_size * max_excess_of_num_partitions:
-                    prev_length = sum(row[0].length() for row in partitions[start:stop])
-                    new_last_partition_size = ideal_partition_size - prev_length
-                    partitions = np.insert(
-                        partitions,
-                        stop + 1,
-                        [
-                            obj.mask(slice(new_last_partition_size, None), slice(None))
-                            for obj in partitions[stop]
-                        ],
-                        0,
+            new_partitions = np.array(
+                [
+                    cls.column_partitions(
+                        partitions[i : i + chunk_size],
+                        full_axis=False,
                     )
-                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
-                    for obj in partitions[stop + 1]:
-                        obj._length_cache = partition_size - (
-                            prev_length + new_last_partition_size
-                        )
+                    for i in range(
+                        0,
+                        num_existing_partitions,
+                        chunk_size,
+                    )
+                ]
+            )
+            return new_partitions, None
 
-                    partitions[stop, :] = [
-                        obj.mask(slice(None, new_last_partition_size), slice(None))
+        # If we know the number of rows in every partition, then we should try
+        # instead to give each new partition roughly the same number of rows.
+        new_partitions = []
+        # `start` is the index of the first existing partition that we want to
+        # put into the current new partition.
+        start = 0
+        total_rows = sum(part.length() for part in partitions[:, 0])
+        ideal_partition_size = compute_chunksize(
+            total_rows, ideal_num_new_partitions, min_block_size=1
+        )
+        for _ in range(ideal_num_new_partitions):
+            # We might pick up old partitions too quickly and exhaust all of them.
+            if start >= len(partitions):
+                break
+            # `stop` is the index of the last existing partition so far that we
+            # want to put into the current new partition.
+            stop = start
+            partition_size = partitions[start][0].length()
+            # Add existing partitions into the current new partition until the
+            # number of rows in the new partition hits `ideal_partition_size`.
+            while stop < len(partitions) and partition_size < ideal_partition_size:
+                stop += 1
+                if stop < len(partitions):
+                    partition_size += partitions[stop][0].length()
+            # If the new partition is larger than we want, split the last
+            # current partition that it contains into two partitions, where
+            # the first partition has just enough rows to make the current
+            # new partition have length `ideal_partition_size`, and the second
+            # partition has the remainder.
+            if partition_size > ideal_partition_size * max_excess_of_num_partitions:
+                prev_length = sum(row[0].length() for row in partitions[start:stop])
+                new_last_partition_size = ideal_partition_size - prev_length
+                partitions = np.insert(
+                    partitions,
+                    stop + 1,
+                    [
+                        obj.mask(slice(new_last_partition_size, None), slice(None))
                         for obj in partitions[stop]
-                    ]
-                    # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
-                    for obj in partitions[stop]:
-                        obj._length_cache = new_last_partition_size
-
-                # The new virtual partitions are not `full_axis`, even if they
-                # happen to span all rows in the dataframe, because they are
-                # meant to be the final partitions of the dataframe. They've
-                # already been split up correctly along axis 0, but using the
-                # default full_axis=True would cause partition.apply() to split
-                # its result along axis 0.
-                new_partitions.append(
-                    cls.column_partitions(partitions[start : stop + 1], full_axis=False)
+                    ],
+                    0,
                 )
-                start = stop + 1
-            new_partitions = np.array(new_partitions)
-            lengths = [part.length() for part in new_partitions[:, 0]]
-            return new_partitions, lengths
-        return partitions, None
+                # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                for obj in partitions[stop + 1]:
+                    obj._length_cache = partition_size - (
+                        prev_length + new_last_partition_size
+                    )
+
+                partitions[stop, :] = [
+                    obj.mask(slice(None, new_last_partition_size), slice(None))
+                    for obj in partitions[stop]
+                ]
+                # TODO: explicit `_length_cache` computing may be avoided after #4903 is merged
+                for obj in partitions[stop]:
+                    obj._length_cache = new_last_partition_size
+
+            # The new virtual partitions are not `full_axis`, even if they
+            # happen to span all rows in the dataframe, because they are
+            # meant to be the final partitions of the dataframe. They've
+            # already been split up correctly along axis 0, but using the
+            # default full_axis=True would cause partition.apply() to split
+            # its result along axis 0.
+            new_partitions.append(
+                cls.column_partitions(partitions[start : stop + 1], full_axis=False)
+            )
+            start = stop + 1
+        new_partitions = np.array(new_partitions)
+        lengths = [part.length() for part in new_partitions[:, 0]]
+        return new_partitions, lengths
 
     @classmethod
     def shuffle_partitions(
@@ -1546,34 +1575,38 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         samples = [partition.apply(sample_func) for partition in masked_partitions]
         # Get each sample to pass in to the pivot function
         samples = cls.get_objects_from_partitions(samples)
-        pivots = shuffle_functions.pivot_function(samples)
+        pivots = np.unique(shuffle_functions.pivot_function(samples))
         # Convert our list of block partitions to row partitions. We need to create full-axis
         # row partitions since we need to send the whole partition to the split step as otherwise
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
-        row_partitions = [
-            partition.force_materialization().list_of_block_partitions[0]
-            for partition in cls.row_partitions(partitions)
-        ]
-        # Gather together all of the sub-partitions
-        split_row_partitions = np.array(
-            [
-                partition.split(
-                    shuffle_functions.split_function, len(pivots) + 1, pivots
-                )
-                for partition in row_partitions
+        row_partitions = cls.row_partitions(partitions)
+        if len(pivots):
+            # Gather together all of the sub-partitions
+            split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_function,
+                        num_splits=len(pivots) + 1,
+                        f_args=(pivots,),
+                        # The partition's metadata will never be accessed for the split partitions,
+                        # thus no need to compute it.
+                        extract_metadata=False,
+                    )
+                    for partition in row_partitions
+                ]
+            ).T
+            # We need to convert every partition that came from the splits into a full-axis column partition.
+            new_partitions = [
+                [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func
+                    )
+                ]
+                for row_partition in split_row_partitions
             ]
-        ).T
-        # We need to convert every partition that came from the splits into a full-axis column partition.
-        col_partitioning_func = np.vectorize(
-            lambda partition: cls._row_partition_class(partition)
-        )
-        split_row_partitions = col_partitioning_func(split_row_partitions)
-        new_partitions = [
-            [
-                cls._column_partitions_class(row_partition, full_axis=False).apply(
-                    final_shuffle_func
-                )
-            ]
-            for row_partition in split_row_partitions
-        ]
-        return np.array(new_partitions)
+            return np.array(new_partitions)
+        else:
+            # If there are not pivots we can simply apply the function row-wise
+            return np.array(
+                [row_part.apply(final_shuffle_func) for row_part in row_partitions]
+            )

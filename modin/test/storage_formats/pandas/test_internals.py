@@ -17,7 +17,7 @@ from modin.pandas.test.utils import (
     test_data_values,
     df_equals,
 )
-from modin.config import NPartitions, Engine
+from modin.config import NPartitions, Engine, MinPartitionSize
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
@@ -28,7 +28,6 @@ import pytest
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
-    import ray
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
     )
@@ -36,11 +35,12 @@ if Engine.get() == "Ray":
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframeRowPartition,
     )
+    from modin.core.execution.ray.common import RayWrapper
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
-    put = ray.put
+    put = RayWrapper.put
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
@@ -60,6 +60,24 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+elif Engine.get() == "Python":
+    from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
+        PandasOnPythonDataframeColumnPartition,
+        PandasOnPythonDataframeRowPartition,
+        PandasOnPythonDataframePartition,
+    )
+    from modin.core.execution.python.common import PythonWrapper
+
+    def put(x):
+        return PythonWrapper.put(x, hash=False)
+
+    block_partition_class = PandasOnPythonDataframePartition
+    virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
+    virtual_row_partition_class = PandasOnPythonDataframeRowPartition
+else:
+    raise NotImplementedError(
+        f"These test suites are not implemented for the '{Engine.get()}' engine"
+    )
 
 
 def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
@@ -97,6 +115,21 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
+@pytest.fixture
+def modify_config(request):
+    values = request.param
+    old_values = {}
+
+    for key, value in values.items():
+        old_values[key] = key.get()
+        key.put(value)
+
+    yield  # waiting for the test to be completed
+    # restoring old parameters
+    for key, value in old_values.items():
+        key.put(value)
+
+
 def validate_partitions_cache(df):
     """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
     row_lengths = df._row_lengths_cache
@@ -111,14 +144,6 @@ def validate_partitions_cache(df):
         for j in range(df._partitions.shape[1]):
             assert df._partitions[i, j].length() == row_lengths[i]
             assert df._partitions[i, j].width() == column_widths[j]
-
-
-@pytest.fixture
-def set_num_partitions(request):
-    old_num_partitions = NPartitions.get()
-    NPartitions.put(request.param)
-    yield
-    NPartitions.put(old_num_partitions)
 
 
 def test_aligning_blocks():
@@ -141,8 +166,8 @@ def test_aligning_blocks_with_duplicated_index():
     data21 = [0]
     data22 = [1, 2, 3]
 
-    df1 = pd.DataFrame(data11).append(pd.DataFrame(data12))
-    df2 = pd.DataFrame(data21).append(pd.DataFrame(data22))
+    df1 = pd.concat((pd.DataFrame(data11), pd.DataFrame(data12)))
+    df2 = pd.concat((pd.DataFrame(data21), pd.DataFrame(data22)))
 
     repr(df1 - df2)
 
@@ -152,7 +177,7 @@ def test_aligning_partitions():
     modin_df1, _ = create_test_dfs({"a": data, "b": data})
     modin_df = modin_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
     repr(modin_df2)
@@ -234,10 +259,6 @@ def test_apply_func_to_both_axis(has_partitions_shape_cache, has_frame_shape_cac
     df_equals(md_df, pd_df)
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Rebalancing partitions is only supported for Dask and Ray engines",
-)
 @pytest.mark.parametrize(
     "test_type",
     [
@@ -350,10 +371,6 @@ def test_rebalance_partitions(test_type, set_num_partitions):
     ), "Partitions are not block partitioned after element-wise apply."
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "axis,virtual_partition_class",
     ((0, virtual_column_partition_class), (1, virtual_row_partition_class)),
@@ -444,7 +461,6 @@ class TestDrainVirtualPartitionCallQueue:
     def test_virtual_partition_call_queues_at_three_levels(
         self, axis, virtual_partition_class
     ):
-
         block = block_partition_class(put(pandas.DataFrame([1])))
         level_one_virtual = virtual_partition_class([block], full_axis=False)
         level_one_virtual = level_one_virtual.add_to_apply_calls(
@@ -469,10 +485,6 @@ class TestDrainVirtualPartitionCallQueue:
         )
 
 
-@pytest.mark.skipif(
-    Engine.get() not in ("Dask", "Ray"),
-    reason="Only Dask and Ray engines have virtual partitions.",
-)
 @pytest.mark.parametrize(
     "virtual_partition_class",
     (virtual_column_partition_class, virtual_row_partition_class),
@@ -606,3 +618,427 @@ def test_reorder_labels_dtypes():
         row_positions=None, col_positions=np.arange(len(md_df.columns) - 1, -1, -1)
     )
     df_equals(result.dtypes, result.to_pandas().dtypes)
+
+
+@pytest.mark.parametrize(
+    "left_partitioning, right_partitioning, ref_with_cache_available, ref_with_no_cache",
+    # Note: this test takes into consideration that `MinPartitionSize == 32` and `NPartitions == 4`
+    [
+        (
+            [2],
+            [2],
+            1,  # the num_splits is computed like (2 + 2 = 4 / chunk_size = 1 split)
+            2,  # the num_splits is just splits sum (1 + 1 == 2)
+        ),
+        (
+            [24],
+            [54],
+            3,  # the num_splits is computed like (24 + 54 = 78 / chunk_size = 3 splits)
+            2,  # the num_splits is just splits sum (1 + 1 == 2)
+        ),
+        (
+            [2],
+            [299],
+            4,  # the num_splits is bounded by NPartitions (2 + 299 = 301 / chunk_size = 10 splits -> bound by 4)
+            2,  # the num_splits is just splits sum (1 + 1 == 2)
+        ),
+        (
+            [32, 32],
+            [128],
+            4,  # the num_splits is bounded by NPartitions (32 + 32 + 128 = 192 / chunk_size = 6 splits -> bound by 4)
+            3,  # the num_splits is just splits sum (2 + 1 == 3)
+        ),
+        (
+            [128] * 7,
+            [128] * 6,
+            4,  # the num_splits is bounded by NPartitions (128 * 7 + 128 * 6 = 1664 / chunk_size = 52 splits -> bound by 4)
+            4,  # the num_splits is just splits sum bound by NPartitions (7 + 6 = 13 splits -> 4 splits)
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "modify_config", [{NPartitions: 4, MinPartitionSize: 32}], indirect=True
+)
+def test_merge_partitioning(
+    left_partitioning,
+    right_partitioning,
+    ref_with_cache_available,
+    ref_with_no_cache,
+    modify_config,
+):
+    from modin.core.storage_formats.pandas.utils import merge_partitioning
+
+    left_df = pandas.DataFrame(
+        [np.arange(sum(left_partitioning)) for _ in range(sum(left_partitioning))]
+    )
+    right_df = pandas.DataFrame(
+        [np.arange(sum(right_partitioning)) for _ in range(sum(right_partitioning))]
+    )
+
+    left = construct_modin_df_by_scheme(
+        left_df, {"row_lengths": left_partitioning, "column_widths": left_partitioning}
+    )._query_compiler._modin_frame
+    right = construct_modin_df_by_scheme(
+        right_df,
+        {"row_lengths": right_partitioning, "column_widths": right_partitioning},
+    )._query_compiler._modin_frame
+
+    assert left.row_lengths == left.column_widths == left_partitioning
+    assert right.row_lengths == right.column_widths == right_partitioning
+
+    res = merge_partitioning(left, right, axis=0)
+    assert res == ref_with_cache_available
+
+    res = merge_partitioning(left, right, axis=1)
+    assert res == ref_with_cache_available
+
+    (
+        left._row_lengths_cache,
+        left._column_widths_cache,
+        right._row_lengths_cache,
+        right._column_widths_cache,
+    ) = [None] * 4
+
+    res = merge_partitioning(left, right, axis=0)
+    assert res == ref_with_no_cache
+    # Verifying that no computations are being triggered
+    assert all(
+        cache is None
+        for cache in (
+            left._row_lengths_cache,
+            left._column_widths_cache,
+            right._row_lengths_cache,
+            right._column_widths_cache,
+        )
+    )
+
+    res = merge_partitioning(left, right, axis=1)
+    assert res == ref_with_no_cache
+    # Verifying that no computations are being triggered
+    assert all(
+        cache is None
+        for cache in (
+            left._row_lengths_cache,
+            left._column_widths_cache,
+            right._row_lengths_cache,
+            right._column_widths_cache,
+        )
+    )
+
+
+@pytest.mark.parametrize("set_num_partitions", [2], indirect=True)
+def test_repartitioning(set_num_partitions):
+    """
+    This test verifies that 'keep_partitioning=False' doesn't actually preserve partitioning.
+
+    For more details see: https://github.com/modin-project/modin/issues/5621
+    """
+    assert NPartitions.get() == 2
+
+    pandas_df = pandas.DataFrame(
+        {"a": [1, 1, 2, 2], "b": [3, 4, 5, 6], "c": [1, 2, 3, 4], "d": [4, 5, 6, 7]}
+    )
+
+    modin_df = construct_modin_df_by_scheme(
+        pandas_df=pandas.DataFrame(
+            {"a": [1, 1, 2, 2], "b": [3, 4, 5, 6], "c": [1, 2, 3, 4], "d": [4, 5, 6, 7]}
+        ),
+        partitioning_scheme={"row_lengths": [4], "column_widths": [2, 2]},
+    )
+
+    modin_frame = modin_df._query_compiler._modin_frame
+
+    assert modin_frame._partitions.shape == (1, 2)
+    assert modin_frame.column_widths == [2, 2]
+
+    res = modin_frame.apply_full_axis(
+        axis=1,
+        func=lambda df: df,
+        keep_partitioning=False,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c", "d"],
+    )
+
+    assert res._partitions.shape == (1, 1)
+    assert res.column_widths == [4]
+    df_equals(res._partitions[0, 0].to_pandas(), pandas_df)
+    df_equals(res.to_pandas(), pandas_df)
+
+
+@pytest.mark.parametrize("col_name", ["numeric_col", "non_numeric_col"])
+@pytest.mark.parametrize("ascending", [True, False])
+@pytest.mark.parametrize("num_pivots", [3, 2, 1])
+@pytest.mark.parametrize("all_pivots_are_unique", [True, False])
+def test_split_partitions_kernel(
+    col_name, ascending, num_pivots, all_pivots_are_unique
+):
+    """
+    This test verifies proper work of the `split_partitions_using_pivots_for_sort` function
+    used in partitions reshuffling.
+
+    The function being tested splits the passed dataframe into parts according
+    to the 'pivots' indicating boundary values for the parts.
+
+    Parameters
+    ----------
+    col_name : {"numeric_col", "non_numeric_col"}
+        The tested function takes a key column name to which the pivot values belong.
+        The function may behave differently depending on the type of that column.
+    ascending : {True, False}
+        The split parts are returned either in ascending or descending order.
+        This parameter helps us to test both of the cases.
+    num_pivots : {3, 2, 1}
+        The function's behavior may depend on the number of boundary values being passed.
+    all_pivots_are_unique : {True, False}
+        Duplicate pivot values cause empty partitions to be produced. This parameter helps
+        to verify that the function still behaves correctly in such cases.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    random_state = np.random.RandomState(42)
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    min_val, max_val = df[col_name].iloc[0], df[col_name].iloc[-1]
+
+    # Selecting random boundary values for the key column
+    pivots = random_state.choice(df[col_name], num_pivots, replace=False)
+    if not all_pivots_are_unique:
+        # Making the 'pivots' contain only duplicate values
+        pivots = np.repeat(pivots[0], num_pivots)
+    # The tested function assumes that we pass pivots in the ascending order
+    pivots = np.sort(pivots)
+
+    # Randomly reordering rows in the dataframe
+    df = df.reindex(random_state.permutation(df.index))
+    bins = split_partitions_using_pivots_for_sort(
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=pivots,
+        ascending=ascending,
+    )
+
+    # Building reference bounds to make the result verification simpler
+    bounds = np.concatenate([[min_val], pivots, [max_val]])
+    if not ascending:
+        # If the order is descending we want bounds to be in the descending order as well:
+        # Ex: bounds = [0, 2, 5, 10] for ascending and [10, 5, 2, 0] for descending.
+        bounds = bounds[::-1]
+
+    for idx, part in enumerate(bins):
+        if ascending:
+            # Check that each part is in the range of 'bound[i] <= part <= bound[i + 1]'
+            # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
+            # Then each part satisfies: 0 <= part[0] <= 2; 2 <= part[1] <= 5; 5 <= part[2] <= 10
+            assert (
+                (bounds[idx] <= part[col_name]) & (part[col_name] <= bounds[idx + 1])
+            ).all()
+        else:
+            # Check that each part is in the range of 'bound[i + 1] <= part <= bound[i]'
+            # Example, if the `pivots` were [2, 5] and the min/max values for the colum are min=0, max=10
+            # Then each part satisfies: 5 <= part[0] <= 10; 2 <= part[1] <= 5; 0 <= part[2] <= 2
+            assert (
+                (bounds[idx + 1] <= part[col_name]) & (part[col_name] <= bounds[idx])
+            ).all()
+
+
+@pytest.mark.parametrize("col_name", ["numeric_col", "non_numeric_col"])
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partitions_with_empty_pivots(col_name, ascending):
+    """
+    This test verifies that the splitting function performs correctly when an empty pivots list is passed.
+    The expected behavior is to return a single split consisting of the exact copy of the input dataframe.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+
+    result = split_partitions_using_pivots_for_sort(
+        df,
+        col_name,
+        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+        pivots=[],
+        ascending=ascending,
+    )
+    # We're expecting to recieve a single split here
+    assert isinstance(result, tuple)
+    assert len(result) == 1
+    assert result[0].equals(df)
+
+
+@pytest.mark.parametrize("ascending", [True, False])
+def test_shuffle_partitions_with_empty_pivots(ascending):
+    """
+    This test verifies that the `PartitionMgr.shuffle_partitions` method can handle empty pivots list.
+    """
+    modin_frame = pd.DataFrame(
+        np.array([["hello", "goodbye"], ["hello", "Hello"]])
+    )._query_compiler._modin_frame
+
+    assert modin_frame._partitions.shape == (1, 1)
+
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        build_sort_functions,
+    )
+
+    column_name = modin_frame.columns[1]
+
+    shuffle_functions = build_sort_functions(
+        # These are the parameters we pass in the `.sort_by()` implementation
+        modin_frame,
+        column=column_name,
+        method="inverted_cdf",
+        ascending=ascending,
+        ideal_num_new_partitions=1,
+    )
+
+    new_partitions = modin_frame._partition_mgr_cls.shuffle_partitions(
+        modin_frame._partitions,
+        index=0,
+        shuffle_functions=shuffle_functions,
+        final_shuffle_func=lambda df: df.sort_values(column_name),
+    )
+    ref = modin_frame.to_pandas().sort_values(column_name)
+    res = new_partitions[0, 0].get()
+
+    assert new_partitions.shape == (1, 1)
+    assert ref.equals(res)
+
+
+@pytest.mark.parametrize("ascending", [True, False])
+def test_split_partition_preserve_names(ascending):
+    """
+    This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
+    preserve their index/column names.
+    """
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        split_partitions_using_pivots_for_sort,
+    )
+
+    df = pandas.DataFrame(
+        {
+            "numeric_col": range(9),
+            "non_numeric_col": list("abcdefghi"),
+        }
+    )
+    index_name = "custom_name"
+    df.index.name = index_name
+    df.columns.name = index_name
+
+    # Pivots that contain empty bins
+    pivots = [2, 2, 5, 7]
+    splits = split_partitions_using_pivots_for_sort(
+        df,
+        column="numeric_col",
+        is_numeric_column=True,
+        pivots=pivots,
+        ascending=ascending,
+    )
+
+    for part in splits:
+        assert part.index.name == index_name
+        assert part.columns.name == index_name
+
+
+@pytest.mark.parametrize("has_cols_metadata", [True, False])
+@pytest.mark.parametrize("has_dtypes_metadata", [True, False])
+def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
+    df1 = pd.DataFrame({"a": [1, 1, 2, 2], "b": list("abcd")})
+    df2 = pd.DataFrame({"a": [4, 2, 1, 3], "b": list("bcaf"), "c": [3, 2, 1, 0]})
+
+    modin_frame = df1._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_materialized_columns
+    else:
+        modin_frame._columns_cache = None
+
+    if has_dtypes_metadata:
+        # Verify that there were initially materialized metadata
+        assert modin_frame.has_dtypes_cache
+    else:
+        modin_frame.set_dtypes_cache(None)
+
+    res = df1.merge(df2, on="b")._query_compiler._modin_frame
+
+    if has_cols_metadata:
+        assert res.has_materialized_columns
+        if has_dtypes_metadata:
+            assert res.has_dtypes_cache
+        else:
+            # Verify that no materialization was triggered
+            assert not res.has_dtypes_cache
+            assert not modin_frame.has_dtypes_cache
+    else:
+        # Verify that no materialization was triggered
+        assert not res.has_materialized_columns
+        assert not res.has_dtypes_cache
+        assert not modin_frame.has_materialized_columns
+        if not has_dtypes_metadata:
+            assert not modin_frame.has_dtypes_cache
+
+
+def test_binary_op_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]})
+
+    def setup_cache(df, has_cache=True):
+        if has_cache:
+            _ = df.dtypes
+            assert df._query_compiler._modin_frame.has_materialized_dtypes
+        else:
+            df._query_compiler._modin_frame.set_dtypes_cache(None)
+            assert not df._query_compiler._modin_frame.has_materialized_dtypes
+        return df
+
+    def assert_cache(df, has_cache=True):
+        assert not (has_cache ^ df._query_compiler._modin_frame.has_materialized_dtypes)
+
+    # Check when `other` is a non-distributed object
+    assert_cache(setup_cache(df) + 2.0)
+    assert_cache(setup_cache(df) + {"a": 2.0, "b": 4})
+    assert_cache(setup_cache(df) + [2.0, 4])
+    assert_cache(setup_cache(df) + np.array([2.0, 4]))
+
+    # Check when `other` is a dataframe
+    other = pd.DataFrame({"b": [3, 4, 5], "c": [4.0, 5.0, 6.0]})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+    # Check when `other` is a series
+    other = pd.Series({"b": 3.0, "c": 4.0})
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=True))
+    assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
+
+
+def test_setitem_bool_preserve_dtypes():
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    indexer = pd.Series([True, False, True, False])
+
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # slice(None) as a col_loc
+    df.loc[indexer] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # list as a col_loc
+    df.loc[indexer, ["a", "b"]] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    # scalar as a col_loc
+    df.loc[indexer, "a"] = 2.0
+    assert df._query_compiler._modin_frame.has_materialized_dtypes

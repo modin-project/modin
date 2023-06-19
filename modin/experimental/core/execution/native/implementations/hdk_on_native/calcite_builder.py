@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``CalciteBuilder`` class."""
-
+from .dataframe.utils import ColNameCodec
 from .expr import (
     InputRefExpr,
     LiteralExpr,
@@ -397,7 +397,7 @@ class CalciteBuilder:
             if frame in self.replacements:
                 return self.replacements[frame].index(col) + offs
 
-            if col == "__rowid__":
+            if col == ColNameCodec.ROWID_COL_NAME:
                 if not isinstance(self.frame_to_node[frame], CalciteScanNode):
                     raise NotImplementedError(
                         "rowid can be accessed in materialized frames only"
@@ -510,13 +510,9 @@ class CalciteBuilder:
                 expr.agg = self._simple_aggregates[expr.agg]
                 return expr
 
-            copied = False
-            for i, op in enumerate(getattr(expr, "operands", [])):
-                new_op = self._maybe_copy_and_translate_expr(op)
-                if new_op != op:
-                    if not copied:
-                        expr = expr.copy()
-                    expr.operands[i] = new_op
+            gen = expr.nested_expressions()
+            for op in gen:
+                expr = gen.send(self._maybe_copy_and_translate_expr(op))
             return expr
 
     class InputContextMgr:
@@ -854,7 +850,7 @@ class CalciteBuilder:
         frame = op.input[0]
 
         # select rows by rowid
-        rowid_col = self._ref(frame, "__rowid__")
+        rowid_col = self._ref(frame, ColNameCodec.ROWID_COL_NAME)
         condition = build_row_idx_filter_expr(op.row_positions, rowid_col)
         self._push(CalciteFilterNode(condition))
 

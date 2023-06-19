@@ -54,7 +54,7 @@ class RayWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or ray.ObjectID
             The function to perform.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -90,6 +90,45 @@ class RayWrapper:
             Whatever was identified by `obj_id`.
         """
         return ray.get(obj_id)
+
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Store an object in the object store.
+
+        Parameters
+        ----------
+        data : object
+            The Python object to be stored.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        ray.ObjectID
+            Ray object identifier to get the value by.
+        """
+        return ray.put(data, **kwargs)
+
+    @classmethod
+    def wait(cls, obj_ids, num_returns=None):
+        """
+        Wait on the objects without materializing them (blocking operation).
+
+        ``ray.wait`` assumes a list of unique object references: see
+        https://github.com/modin-project/modin/issues/5045
+
+        Parameters
+        ----------
+        obj_ids : list, scalar
+        num_returns : int, optional
+        """
+        if not isinstance(obj_ids, list):
+            obj_ids = [obj_ids]
+        unique_ids = list(set(obj_ids))
+        if num_returns is None:
+            num_returns = len(unique_ids)
+        ray.wait(unique_ids, num_returns=num_returns)
 
 
 @ray.remote

@@ -2,7 +2,7 @@ name: modin
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.2
+  - pandas>=2,<2.1
   - numpy>=1.18.5
   - ray-default>=1.13.0
   - pyarrow
@@ -12,7 +12,8 @@ dependencies:
   - dask>=2.22.0
   - distributed>=2.22.0
   - fsspec
-  - xarray
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - Jinja2
   - scipy
   - pip
@@ -22,7 +23,7 @@ dependencies:
   - openpyxl
   - xlrd
   - matplotlib
-  - sqlalchemy>=1.4.0
+  - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq
   - pytables
   - msgpack-python
@@ -37,13 +38,14 @@ dependencies:
   - rpyc==4.1.5
   - cloudpickle
   - boto3
+  - moto
   - scikit-learn
   - pymssql
   - psycopg2
   # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206  
   - mypy!=0.990
   - pandas-stubs
-  - fastparquet
+  - fastparquet<2023.1.0
   # for release script
   - pygit2
   # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost

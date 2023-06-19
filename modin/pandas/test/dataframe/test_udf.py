@@ -19,6 +19,7 @@ from modin.config import MinPartitionSize
 import modin.pandas as pd
 
 from pandas.core.dtypes.common import is_list_like
+from pandas._libs.lib import no_default
 from modin.pandas.test.utils import (
     random_state,
     df_equals,
@@ -40,7 +41,7 @@ from modin.pandas.test.utils import (
     arg_keys,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -116,13 +117,6 @@ def test_aggregate_error_checking():
         modin_df.aggregate("NOT_EXISTS")
 
 
-@pytest.mark.xfail(
-    StorageFormat.get() == "Pandas",
-    reason="DataFrame.apply(dict) raises an exception because of a bug in its"
-    + "implementation for pandas storage format, this prevents us from catching the desired"
-    + "exception. You can track this bug at:"
-    + "https://github.com/modin-project/modin/issues/3221",
-)
 @pytest.mark.parametrize(
     "func",
     agg_func_values + agg_func_except_values,
@@ -143,7 +137,7 @@ def test_apply_key_error(func):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize("level", [no_default, None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
@@ -245,6 +239,67 @@ def test_apply_udf(data, func):
     )
 
 
+def test_apply_dict_4828():
+    data = [[2, 4], [1, 3]]
+    modin_df1, pandas_df1 = create_test_dfs(data)
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 0
+    modin_df2, pandas_df2 = create_test_dfs(data, index=[2, 3])
+    modin_df3 = pd.concat([modin_df1, modin_df2], axis=0)
+    pandas_df3 = pandas.concat([pandas_df1, pandas_df2], axis=0)
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 1
+    modin_df4, pandas_df4 = create_test_dfs(data, columns=[2, 3])
+    modin_df5 = pd.concat([modin_df1, modin_df4], axis=1)
+    pandas_df5 = pandas.concat([pandas_df1, pandas_df4], axis=1)
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+
+def test_apply_modin_func_4635():
+    data = [1]
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df.apply(pd.Series.sum), pandas_df.apply(pandas.Series.sum))
+
+    data = {"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]}
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_df = modin_df.set_index(["a"])
+    pandas_df = pandas_df.set_index(["a"])
+
+    df_equals(
+        modin_df.groupby("a", group_keys=False).apply(pd.DataFrame.sample, n=1),
+        pandas_df.groupby("a", group_keys=False).apply(pandas.DataFrame.sample, n=1),
+    )
+
+
 def test_eval_df_use_case():
     frame_data = {"a": random_state.randn(10), "b": random_state.randn(10)}
     df = pandas.DataFrame(frame_data)
@@ -336,7 +391,7 @@ def test_pipe(data):
 
     def g(x, arg1=0):
         for _ in range(arg1):
-            x = x.append(x)
+            x = (pd if isinstance(x, pd.DataFrame) else pandas).concat((x, x))
         return x
 
     def f(x, arg2=0, arg3=0):
@@ -370,7 +425,7 @@ def test_query(data, funcs):
     else:
         modin_result = modin_df.query(funcs)
         # `dtypes` must be evaluated after `query` so we need to check cache
-        assert modin_result._query_compiler._modin_frame._dtypes is not None
+        assert modin_result._query_compiler._modin_frame.has_dtypes_cache
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 

@@ -22,6 +22,7 @@ from typing import Any
 
 import pandas
 from pandas.util._decorators import doc
+from pandas._libs.lib import no_default
 
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
@@ -124,11 +125,7 @@ class BaseIO:
     )
     def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(
-            pandas.read_parquet(
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_parquet(**kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -221,6 +218,7 @@ class BaseIO:
     def read_html(
         cls,
         io,
+        *,
         match=".+",
         flavor=None,
         header=None,
@@ -238,26 +236,25 @@ class BaseIO:
         **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_html`")
-        return cls.from_pandas(
-            pandas.read_html(
-                io=io,
-                match=match,
-                flavor=flavor,
-                header=header,
-                index_col=index_col,
-                skiprows=skiprows,
-                attrs=attrs,
-                parse_dates=parse_dates,
-                thousands=thousands,
-                encoding=encoding,
-                decimal=decimal,
-                converters=converters,
-                na_values=na_values,
-                keep_default_na=keep_default_na,
-                displayed_only=displayed_only,
-                **kwargs,
-            )[0]
+        result = pandas.read_html(
+            io=io,
+            match=match,
+            flavor=flavor,
+            header=header,
+            index_col=index_col,
+            skiprows=skiprows,
+            attrs=attrs,
+            parse_dates=parse_dates,
+            thousands=thousands,
+            encoding=encoding,
+            decimal=decimal,
+            converters=converters,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            displayed_only=displayed_only,
+            **kwargs,
         )
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -278,67 +275,9 @@ class BaseIO:
         returns="""BaseQueryCompiler or dict/OrderedDict :
     QueryCompiler or OrderedDict/dict with read data.""",
     )
-    def read_excel(
-        cls,
-        io,
-        sheet_name=0,
-        header=0,
-        names=None,
-        index_col=None,
-        usecols=None,
-        squeeze=False,
-        dtype=None,
-        engine=None,
-        converters=None,
-        true_values=None,
-        false_values=None,
-        skiprows=None,
-        nrows=None,
-        na_values=None,
-        keep_default_na=True,
-        verbose=False,
-        parse_dates=False,
-        date_parser=None,
-        thousands=None,
-        comment=None,
-        skip_footer=0,
-        skipfooter=0,
-        convert_float=True,
-        mangle_dupe_cols=True,
-        na_filter=True,
-        **kwds,
-    ):  # noqa: PR01
-        if skip_footer != 0:
-            skipfooter = skip_footer
+    def read_excel(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_excel`")
-        intermediate = pandas.read_excel(
-            io,
-            sheet_name=sheet_name,
-            header=header,
-            names=names,
-            index_col=index_col,
-            usecols=usecols,
-            squeeze=squeeze,
-            dtype=dtype,
-            engine=engine,
-            converters=converters,
-            true_values=true_values,
-            false_values=false_values,
-            skiprows=skiprows,
-            nrows=nrows,
-            na_values=na_values,
-            keep_default_na=keep_default_na,
-            verbose=verbose,
-            parse_dates=parse_dates,
-            date_parser=date_parser,
-            thousands=thousands,
-            comment=comment,
-            skipfooter=skipfooter,
-            convert_float=convert_float,
-            mangle_dupe_cols=mangle_dupe_cols,
-            na_filter=na_filter,
-            **kwds,
-        )
+        intermediate = pandas.read_excel(**kwargs)
         if isinstance(intermediate, (OrderedDict, dict)):
             parsed = type(intermediate)()
             for key in intermediate.keys():
@@ -437,6 +376,7 @@ class BaseIO:
     def read_sas(
         cls,
         filepath_or_buffer,
+        *,
         format=None,
         index=None,
         encoding=None,
@@ -494,22 +434,28 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
+        dtype=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
-        return cls.from_pandas(
-            pandas.read_sql(
-                sql,
-                con,
-                index_col=index_col,
-                coerce_float=coerce_float,
-                params=params,
-                parse_dates=parse_dates,
-                columns=columns,
-                chunksize=chunksize,
-            )
+        result = pandas.read_sql(
+            sql,
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
+            dtype_backend=dtype_backend,
+            dtype=dtype,
         )
+
+        if isinstance(result, (pandas.DataFrame, pandas.Series)):
+            return cls.from_pandas(result)
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
@@ -519,7 +465,14 @@ class BaseIO:
         returns=_doc_returns_qc_or_parser,
     )
     def read_fwf(
-        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+        cls,
+        filepath_or_buffer,
+        *,
+        colspecs="infer",
+        widths=None,
+        infer_nrows=100,
+        dtype_backend=no_default,
+        **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
         pd_obj = pandas.read_fwf(
@@ -527,6 +480,7 @@ class BaseIO:
             colspecs=colspecs,
             widths=widths,
             infer_nrows=infer_nrows,
+            dtype_backend=dtype_backend,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):
@@ -557,6 +511,7 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_table`")
         return cls.from_pandas(
@@ -569,6 +524,7 @@ class BaseIO:
                 parse_dates=parse_dates,
                 columns=columns,
                 chunksize=chunksize,
+                dtype_backend=dtype_backend,
             )
         )
 
@@ -601,9 +557,18 @@ class BaseIO:
         summary="Load an SPSS file from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def read_spss(cls, path, usecols, convert_categoricals):  # noqa: PR01
+    def read_spss(
+        cls, path, usecols, convert_categoricals, dtype_backend
+    ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_spss`")
-        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
+        return cls.from_pandas(
+            pandas.read_spss(
+                path,
+                usecols=usecols,
+                convert_categoricals=convert_categoricals,
+                dtype_backend=dtype_backend,
+            )
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_sql, apilink="pandas.DataFrame.to_sql")

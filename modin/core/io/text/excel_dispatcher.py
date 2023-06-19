@@ -15,7 +15,6 @@
 
 import pandas
 import re
-import sys
 import warnings
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -53,12 +52,6 @@ class ExcelDispatcher(TextFileDispatcher):
                 reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
                 + "use Modin's parallel implementation.",
-                **kwargs
-            )
-        if sys.version_info < (3, 7):
-            return cls.single_worker_read(
-                io,
-                reason="Python 3.7 or higher required for parallel `read_excel`.",
                 **kwargs
             )
 
@@ -132,28 +125,48 @@ class ExcelDispatcher(TextFileDispatcher):
             while end_of_row_tag not in sheet_block:
                 sheet_block += f.read(EXCEL_READ_BLOCK_SIZE)
             idx_of_header_end = sheet_block.index(end_of_row_tag) + len(end_of_row_tag)
-            sheet_header = sheet_block[:idx_of_header_end]
-            # Reset the file pointer to begin at the end of the header information.
-            f.seek(idx_of_header_end)
+            sheet_header_with_first_row = sheet_block[:idx_of_header_end]
+
+            if kwargs["header"] is not None:
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_end)
+                sheet_header = sheet_header_with_first_row
+            else:
+                start_of_row_tag = b"<row"
+                idx_of_header_start = sheet_block.index(start_of_row_tag)
+                sheet_header = sheet_block[:idx_of_header_start]
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_start)
+
             kwargs["_header"] = sheet_header
             footer = b"</sheetData></worksheet>"
             # Use openpyxml to parse the data
-            reader = WorksheetReader(
-                ws, BytesIO(sheet_header + footer), ex.shared_strings, False
+            common_args = (
+                ws,
+                BytesIO(sheet_header_with_first_row + footer),
+                ex.shared_strings,
+                False,
             )
+            if cls.need_rich_text_param:
+                reader = WorksheetReader(*common_args, rich_text=False)
+            else:
+                reader = WorksheetReader(*common_args)
             # Attach cells to the worksheet
             reader.bind_cells()
             data = PandasExcelParser.get_sheet_data(
                 ws, kwargs.get("convert_float", True)
             )
             # Extract column names from parsed data.
-            column_names = pandas.Index(data[0])
+            if kwargs["header"] is None:
+                column_names = pandas.RangeIndex(len(data[0]))
+            else:
+                column_names = pandas.Index(data[0])
             index_col = kwargs.get("index_col", None)
             # Remove column names that are specified as `index_col`
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
 
-            if not all(column_names):
+            if not all(column_names) or kwargs.get("usecols"):
                 # some column names are empty, use pandas reader to take the names from it
                 pandas_kw["nrows"] = 1
                 df = pandas.read_excel(io, **pandas_kw)
@@ -221,18 +234,14 @@ class ExcelDispatcher(TextFileDispatcher):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
 
+        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
+
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             data_ids,
             new_index,

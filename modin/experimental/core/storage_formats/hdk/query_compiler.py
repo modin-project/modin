@@ -29,8 +29,10 @@ from modin.error_message import ErrorMessage
 import pandas
 from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
-from pandas.core.dtypes.common import is_list_like
+from pandas.core.dtypes.common import is_list_like, is_bool_dtype, is_integer_dtype
 from functools import wraps
+
+import numpy as np
 
 
 def is_inoperable(value):
@@ -218,7 +220,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     default_to_pandas = PandasQueryCompiler.default_to_pandas
 
     def copy(self):
-        return self.__constructor__(self._modin_frame, self._shape_hint)
+        return self.__constructor__(self._modin_frame.copy(), self._shape_hint)
 
     def getitem_column_array(self, key, numeric=False):
         shape_hint = "column" if len(key) == 1 else None
@@ -399,9 +401,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
             )
+        _check_int_or_float("sum", self.dtypes)
         return self._agg("sum", **kwargs)
 
     def mean(self, **kwargs):
+        _check_int_or_float("mean", self.dtypes)
         return self._agg("mean", **kwargs)
 
     def nunique(self, axis=0, dropna=True):
@@ -479,12 +483,8 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         index : pandas.Index
             A new index.
         """
-        if self._modin_frame._has_unsupported_data:
-            default_axis_setter(0)(self, index)
-        else:
-            default_axis_setter(0)(self, index)
-            # NotImplementedError: HdkOnNativeDataframe._set_index is not yet suported
-            # self._modin_frame.index = index
+        # NotImplementedError: HdkOnNativeDataframe._set_index is not yet suported
+        default_axis_setter(0)(self, index)
 
     def _get_columns(self):
         """
@@ -528,6 +528,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         downcast=None,
     ):
         assert not inplace, "inplace=True should be handled on upper level"
+
+        if (
+            isinstance(value, dict)
+            and len(self._modin_frame.columns) == 1
+            and self._modin_frame.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
+            raise NotImplementedError("Series fillna with dict value")
+
         new_frame = self._modin_frame.fillna(
             value=value,
             method=method,
@@ -543,9 +551,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert all(
             isinstance(o, type(self)) for o in other
         ), "Different Manager objects are being used. This is not allowed"
-        sort = kwargs.get("sort", None)
+        sort = kwargs.get("sort", False)
         if sort is None:
-            sort = False
+            raise ValueError(
+                "The 'sort' keyword only accepts boolean values; None was passed."
+            )
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frames = [o._modin_frame for o in other]
@@ -557,17 +567,27 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def drop(self, index=None, columns=None, errors: str = "raise"):
         if index is not None:
+            # Only column drop is supported by the HDK engine
             raise NotImplementedError("Row drop")
         if errors != "raise":
             raise NotImplementedError(
                 "This lazy query compiler will always "
                 + "raise an error on invalid columns."
             )
-        return self.__constructor__(
-            self._modin_frame.take_2d_labels_or_positional(
-                row_labels=index, col_labels=self.columns.drop(columns)
-            )
+
+        columns = self.columns.drop(columns)
+        new_frame = self._modin_frame.take_2d_labels_or_positional(
+            row_labels=index, col_labels=columns
         )
+
+        # If all columns are dropped and the index is trivial, we are
+        # not able to restore it, since we don't know the number of rows.
+        # In this case, we copy the index from the current frame.
+        if len(columns) == 0 and new_frame._index_cols is None:
+            assert index is None, "Can't copy old indexes as there was a row drop"
+            new_frame.set_index_cache(self._modin_frame.index.copy())
+
+        return self.__constructor__(new_frame)
 
     def dropna(self, axis=0, how=no_default, thresh=no_default, subset=None):
         if thresh is not no_default or axis != 0:
@@ -583,6 +603,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dropna(subset=subset, how=how),
             shape_hint=self._shape_hint,
         )
+
+    def isna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=False))
+
+    def notna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=True))
+
+    def invert(self):
+        return self.__constructor__(self._modin_frame.invert())
 
     def dt_year(self):
         return self.__constructor__(
@@ -646,7 +675,22 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
 
+    def pow(self, other, **kwargs):
+        return self._bin_op(other, "pow", **kwargs)
+
     def mod(self, other, **kwargs):
+        def check_int(obj):
+            if isinstance(obj, DFAlgQueryCompiler):
+                cond = all(is_integer_dtype(t) for t in obj._modin_frame.dtypes)
+            elif isinstance(obj, list):
+                cond = all(isinstance(i, int) for i in obj)
+            else:
+                cond = isinstance(obj, int)
+            if not cond:
+                raise NotImplementedError("Non-integer operands in modulo operation")
+
+        check_int(self)
+        check_int(other)
         return self._bin_op(other, "mod", **kwargs)
 
     def floordiv(self, other, **kwargs):
@@ -674,10 +718,25 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._bin_op(other, "ne", **kwargs)
 
     def __and__(self, other, **kwargs):
-        return self._bin_op(other, "and", **kwargs)
+        return self._bool_op(other, "and", **kwargs)
 
     def __or__(self, other, **kwargs):
-        return self._bin_op(other, "or", **kwargs)
+        return self._bool_op(other, "or", **kwargs)
+
+    def _bool_op(self, other, op, **kwargs):  # noqa: GL08
+        def check_bool(obj):
+            if isinstance(obj, DFAlgQueryCompiler):
+                cond = all(is_bool_dtype(t) for t in obj._modin_frame.dtypes)
+            elif isinstance(obj, list):
+                cond = all(isinstance(i, bool) for i in obj)
+            else:
+                cond = isinstance(obj, bool)
+            if not cond:
+                raise NotImplementedError("Non-boolean operands in logic operation")
+
+        check_bool(self)
+        check_bool(other)
+        return self._bin_op(other, op, **kwargs)
 
     def reset_index(self, **kwargs):
         level = kwargs.get("level", None)
@@ -724,6 +783,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
+        if kwargs.get("key", None) is not None:
+            raise NotImplementedError("Sort with key function")
+
         ignore_index = kwargs.get("ignore_index", False)
         na_position = kwargs.get("na_position", "last")
         return self.__constructor__(
@@ -793,3 +855,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     @property
     def dtypes(self):
         return self._modin_frame.dtypes
+
+
+_SUPPORTED_NUM_TYPE_CODES = set(np.typecodes["AllInteger"] + np.typecodes["Float"]) - {
+    np.dtype(np.float16).char
+}
+
+
+def _check_int_or_float(op, dtypes):  # noqa: GL08
+    for t in dtypes:
+        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
+            raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")

@@ -32,8 +32,16 @@ from .calcite_algebra import (
     CalciteJoinNode,
     CalciteUnionNode,
 )
+from modin.error_message import ErrorMessage
 import json
 import numpy as np
+
+
+def _warn_if_unsigned(dtype):  # noqa: GL08
+    if np.issubdtype(dtype, np.unsignedinteger):
+        ErrorMessage.single_warning(
+            "HDK does not support unsigned integer types, such types will be rounded up to the signed equivalent."
+        )
 
 
 class CalciteSerializer:
@@ -45,14 +53,30 @@ class CalciteSerializer:
     a request in JSON format which can be fed to HDK.
     """
 
-    dtype_strings = {
+    _DTYPE_STRINGS = {
         "int8": "TINYINT",
         "int16": "SMALLINT",
         "int32": "INTEGER",
         "int64": "BIGINT",
+        "uint8": "SMALLINT",
+        "uint16": "INTEGER",
+        "uint32": "BIGINT",
+        "uint64": "BIGINT",
         "bool": "BOOLEAN",
         "float32": "FLOAT",
         "float64": "DOUBLE",
+    }
+
+    _INT_OPTS = {
+        np.int8: ("TINYINT", 3),
+        np.int16: ("SMALLINT", 5),
+        np.int32: ("INTEGER", 10),
+        np.int64: ("BIGINT", 19),
+        np.uint8: ("SMALLINT", 5),
+        np.uint16: ("INTEGER", 10),
+        np.uint32: ("BIGINT", 19),
+        np.uint64: ("BIGINT", 19),
+        int: ("BIGINT", 19),
     }
 
     def serialize(self, plan):
@@ -98,7 +122,7 @@ class CalciteSerializer:
 
         Returns
         -------
-        str, int, dict or list of dict
+        str, int, None, dict or list of dict
             Serialized item.
         """
         if isinstance(item, CalciteBaseNode):
@@ -109,8 +133,10 @@ class CalciteSerializer:
             return self.serialize_obj(item)
         elif isinstance(item, list):
             return [self.serialize_item(v) for v in item]
+        elif isinstance(item, dict):
+            return {k: self.serialize_item(v) for k, v in item.items()}
 
-        self.expect_one_of(item, str, int)
+        self.expect_one_of(item, str, int, type(None))
         return item
 
     def serialize_node(self, node):
@@ -165,7 +191,10 @@ class CalciteSerializer:
         res = {}
         for k, v in obj.__dict__.items():
             if k[0] != "_":
-                res[k] = self.serialize_item(v)
+                if k == "op" and isinstance(obj, OpExpr) and v == "//":
+                    res[k] = "/"
+                else:
+                    res[k] = self.serialize_item(v)
         return res
 
     def serialize_typed_obj(self, obj):
@@ -232,7 +261,8 @@ class CalciteSerializer:
         dict
             Serialized literal.
         """
-        if literal.val is None:
+        val = literal.val
+        if val is None:
             return {
                 "literal": None,
                 "type": "BIGINT",
@@ -242,29 +272,40 @@ class CalciteSerializer:
                 "type_scale": 0,
                 "type_precision": 19,
             }
-        if type(literal.val) is str:
+        if type(val) is str:
             return {
-                "literal": literal.val,
+                "literal": val,
                 "type": "CHAR",
                 "target_type": "CHAR",
                 "scale": -2147483648,
-                "precision": len(literal.val),
+                "precision": len(val),
                 "type_scale": -2147483648,
-                "type_precision": len(literal.val),
+                "type_precision": len(val),
             }
-        if type(literal.val) in (int, np.int8, np.int16, np.int32, np.int64):
-            target_type, precision = self.opts_for_int_type(type(literal.val))
+        if type(val) in self._INT_OPTS.keys():
+            target_type, precision = self.opts_for_int_type(type(val))
             return {
-                "literal": int(literal.val),
+                "literal": int(val),
                 "type": "DECIMAL",
                 "target_type": target_type,
                 "scale": 0,
-                "precision": len(str(literal.val)),
+                "precision": len(str(val)),
                 "type_scale": 0,
                 "type_precision": precision,
             }
-        if type(literal.val) in (float, np.float64):
-            str_val = f"{literal.val:f}"
+        if type(val) in (float, np.float64):
+            if np.isnan(val):
+                return {
+                    "literal": None,
+                    "type": "DOUBLE",
+                    "target_type": "DOUBLE",
+                    "scale": 0,
+                    "precision": 19,
+                    "type_scale": 0,
+                    "type_precision": 19,
+                }
+
+            str_val = f"{val:f}"
             precision = len(str_val) - 1
             scale = precision - str_val.index(".")
             return {
@@ -276,9 +317,9 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": 15,
             }
-        if type(literal.val) is bool:
+        if type(val) is bool:
             return {
-                "literal": literal.val,
+                "literal": val,
                 "type": "BOOLEAN",
                 "target_type": "BOOLEAN",
                 "scale": -2147483648,
@@ -286,7 +327,7 @@ class CalciteSerializer:
                 "type_scale": -2147483648,
                 "type_precision": 1,
             }
-        raise NotImplementedError(f"Can not serialize {type(literal.val).__name__}")
+        raise NotImplementedError(f"Can not serialize {type(val).__name__}")
 
     def opts_for_int_type(self, int_type):
         """
@@ -304,15 +345,11 @@ class CalciteSerializer:
         -------
         tuple
         """
-        if int_type is np.int8:
-            return "TINYINT", 3
-        if int_type is np.int16:
-            return "SMALLINT", 5
-        if int_type is np.int32:
-            return "INTEGER", 10
-        if int_type in (np.int64, int):
-            return "BIGINT", 19
-        raise NotImplementedError(f"Unsupported integer type {int_type.__name__}")
+        try:
+            _warn_if_unsigned(int_type)
+            return self._INT_OPTS[int_type]
+        except KeyError:
+            raise NotImplementedError(f"Unsupported integer type {int_type.__name__}")
 
     def serialize_dtype(self, dtype):
         """
@@ -328,7 +365,11 @@ class CalciteSerializer:
         dict
             Serialized data type.
         """
-        return {"type": type(self).dtype_strings[dtype.name], "nullable": True}
+        _warn_if_unsigned(dtype)
+        try:
+            return {"type": self._DTYPE_STRINGS[dtype.name], "nullable": True}
+        except KeyError:
+            raise TypeError(f"Unsupported dtype: {dtype}")
 
     def serialize_input_idx(self, expr):
         """

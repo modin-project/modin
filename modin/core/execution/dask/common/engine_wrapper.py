@@ -13,7 +13,31 @@
 
 """Module houses class responsible for execution of remote operations."""
 
+from collections import UserDict
+
 from distributed.client import default_client
+from dask.distributed import wait
+
+
+def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
+    """
+    Wrap `func` to ease calling it remotely.
+
+    Parameters
+    ----------
+    func : callable
+        A local function that we want to call remotely.
+    *args : iterable
+        Positional arguments to pass to `func` when calling remotely.
+    **kwargs : dict
+        Keyword arguments to pass to `func` when calling remotely.
+
+    Returns
+    -------
+    distributed.Future or list
+        Dask identifier of the result being put into distributed memory.
+    """
+    return func(*args, **kwargs)
 
 
 class DaskWrapper:
@@ -33,7 +57,7 @@ class DaskWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or distributed.Future
             Function to be deployed in a worker process.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -52,7 +76,13 @@ class DaskWrapper:
         client = default_client()
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
-        remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        if callable(func):
+            remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+        else:
+            # for the case where type(func) is distributed.Future
+            remote_task_future = client.submit(
+                _deploy_dask_func, func, *args, pure=pure, **kwargs
+            )
         if num_returns != 1:
             return [
                 client.submit(lambda tup, i: tup[i], remote_task_future, i)
@@ -94,5 +124,39 @@ class DaskWrapper:
         -------
         List, dict, iterator, or queue of futures matching the type of input.
         """
+        if isinstance(data, dict):
+            # there is a bug that looks similar to https://github.com/dask/distributed/issues/3965;
+            # to avoid this we could change behaviour for serialization:
+            # <Future: finished, type: collections.UserDict, key: UserDict-b8a15c164319c1d32fd28481125de455>
+            # vs
+            # {'sep': <Future: finished, type: pandas._libs.lib._NoDefault, key: sep>, \
+            #  'delimiter': <Future: finished, type: NoneType, key: delimiter> ...
+            data = UserDict(data)
         client = default_client()
         return client.scatter(data, **kwargs)
+
+    @classmethod
+    def wait(cls, obj_ids, num_returns=None):
+        """
+        Wait on the objects without materializing them (blocking operation).
+
+        Parameters
+        ----------
+        obj_ids : list, scalar
+        num_returns : int, optional
+        """
+        if not isinstance(obj_ids, list):
+            obj_ids = [obj_ids]
+        if num_returns is None:
+            num_returns = len(obj_ids)
+        if num_returns == len(obj_ids):
+            wait(obj_ids, return_when="ALL_COMPLETED")
+        else:
+            # Dask doesn't natively support `num_returns` as int.
+            # `wait` function doesn't always return only one finished future,
+            # so a simple loop is not enough here
+            done, not_done = wait(obj_ids, return_when="FIRST_COMPLETED")
+            while len(done) < num_returns and (i := 0 < num_returns):
+                extra_done, not_done = wait(not_done, return_when="FIRST_COMPLETED")
+                done.update(extra_done)
+                i += 1

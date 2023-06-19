@@ -6,7 +6,6 @@ on:
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/workflows/**
       - '!.github/workflows/push-to-master.yml'
-      - '!.github/workflows/push.yml'
       - asv_bench/**
       - modin/**
       - requirements/**
@@ -16,12 +15,20 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
+  push:
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   lint-black:
     name: lint (black)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -37,37 +44,22 @@ jobs:
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
-      - run: pip install -r requirements-dev.txt
-      - run: mypy --config-file mypy.ini
-
-  build-docs:
-    name: build docs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
         with:
           python-version: "3.8.x"
           architecture: "x64"
-          cache: "pip"
-          cache-dependency-path: '**/requirements-doc.txt'
-      - run: pip install -r docs/requirements-doc.txt
-      - run: cd docs && sphinx-build -T -E -W -b html . build
+      - run: pip install -r requirements-dev.txt
+      - run: mypy --config-file mypy.ini
 
   lint-pydocstyle:
+    if: github.event_name == 'pull_request'
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -77,7 +69,7 @@ jobs:
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: python -m pytest scripts/test
-      - run: pip install -e .[all]
+      - run: pip install -e ".[all]"
       - run: |
           python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
             modin/pandas/dataframe.py modin/pandas/series.py \
@@ -146,7 +138,7 @@ jobs:
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -168,7 +160,7 @@ jobs:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -208,7 +200,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -246,7 +238,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-ubuntu
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -255,9 +247,10 @@ jobs:
           architecture: "x64"
       - name: Clean install and run
         run: |
-          python -m pip install -e .[all]
+          python -m pip install -e ".[all]"
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-clean-install-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -267,7 +260,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-windows
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -276,9 +269,10 @@ jobs:
           architecture: "x64"
       - name: Clean install and run
         run: |
-          python -m pip install -e .[all]
+          python -m pip install -e ".[all]"
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -288,7 +282,7 @@ jobs:
         shell: bash -l {0}
     name: test-internals
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -322,12 +316,11 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/base/test_internals.py
       - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
       - run: python -m pytest modin/test/test_envvar_npartitions.py
-      - run: python -m pytest modin/test/test_partition_api.py
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-no-engine:
     runs-on: ubuntu-latest
@@ -335,7 +328,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -363,7 +356,7 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -378,7 +371,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -421,11 +414,13 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-hdk:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -434,10 +429,20 @@ jobs:
       run:
         shell: bash -l {0}
     env:
+      MODIN_EXPERIMENTAL: "True"
+      MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
     name: Test HDK storage format, Python 3.8
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -469,10 +474,21 @@ jobs:
       - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
       - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
+      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_utils.py
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
       - run: python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: python -m pytest modin/pandas/test/test_concat.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+      - run: python -m pytest modin/pandas/test/test_general.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
+      - run: python -m pytest modin/pandas/test/test_series.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_window.py
+      - run: python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -482,9 +498,10 @@ jobs:
           examples/data/plasticc_training_set_metadata_1k.csv \
           examples/data/plasticc_test_set_metadata_1k.csv \
           -no-ml
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-asv-benchmarks:
+    if: github.event_name == 'pull_request'
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
     runs-on: ubuntu-latest
     defaults:
@@ -496,7 +513,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
@@ -569,8 +586,16 @@ jobs:
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
     name: test-ubuntu (engine unidist ${{matrix.unidist-backend}}, python ${{matrix.python-version}})
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -607,6 +632,7 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
@@ -619,18 +645,34 @@ jobs:
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
+      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_expanding.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_logic.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_indexing.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_math.py
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_shaping.py
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_io.py --verbose
+      # need an extra argument "genv" to set environment variables for mpiexec. We need
+      # these variables to test writing to the mock s3 filesystem.
+      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v2
+      - run: |
+          python -m pip install lazy_import
+          mpiexec -n 1 python -m pytest modin/pandas/test/integrations/
+      - uses: ./.github/workflows/upload-coverage
 
   test-all:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -642,6 +684,18 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["python", "ray", "dask"]
+        test_task:
+          - group_1
+          - group_2
+          - group_3
+          - group_4
+        exclude: # python engine only have one task group that contains all the tests
+          - engine: "python"
+            test_task: "group_2"
+          - engine: "python"
+            test_task: "group_3"
+          - engine: "python"
+            test_task: "group_4"
     env:
       MODIN_ENGINE: ${{matrix.engine}}
       # Only test reading from SQL server and postgres on ubuntu for now.
@@ -649,12 +703,24 @@ jobs:
       # the servers differently.
       MODIN_TEST_READ_FROM_SQL_SERVER: true
       MODIN_TEST_READ_FROM_POSTGRES: true
-    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}})
+    name: test-ubuntu (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
+    services:
+      # This service only needs to run for test_task group_4; however, GitHub does not
+      # currently support conditionally running services. This issue: 
+      # is open https://github.com/actions/runner/issues/822 - until GitHub implements this feature,
+      # we will just have to run `moto` for all groups.
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -690,40 +756,93 @@ jobs:
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
       - run: MODIN_BENCHMARK_MODE=True python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+      - run: python -m pytest modin/test/test_partition_api.py
+        if: matrix.engine != 'python' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.engine == 'ray'
+        if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.engine == 'ray'
+        if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py
-        if: matrix.engine == 'python'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.engine != 'python'
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-      - uses: codecov/codecov-action@v2
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: |
+          python -m pip install lazy_import
+          python -m pytest modin/pandas/test/integrations/
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - uses: ./.github/workflows/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -735,8 +854,16 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
     name: test experimental
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -765,8 +892,9 @@ jobs:
           conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-cloud:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -778,8 +906,16 @@ jobs:
       MODIN_ENGINE: "python"
       MODIN_EXPERIMENTAL: "True"
     name: test cloud
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
       - name: Cache conda
@@ -812,7 +948,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: codecov/codecov-action@v2
+      - uses: ./.github/workflows/upload-coverage
 
   test-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -824,39 +960,18 @@ jobs:
       matrix:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
-        test-task:
-          - modin/pandas/test/dataframe/test_binary.py
-          - modin/pandas/test/dataframe/test_default.py
-          - modin/pandas/test/dataframe/test_indexing.py
-          - modin/pandas/test/dataframe/test_iter.py
-          - modin/pandas/test/dataframe/test_join_sort.py
-          - modin/pandas/test/dataframe/test_map_metadata.py
-          - modin/pandas/test/dataframe/test_reduce.py
-          - modin/pandas/test/dataframe/test_udf.py
-          - modin/pandas/test/dataframe/test_window.py
-          - modin/pandas/test/dataframe/test_pickle.py
-          - modin/pandas/test/test_series.py
-          - modin/pandas/test/test_rolling.py
-          - modin/pandas/test/test_concat.py
-          - modin/pandas/test/test_groupby.py
-          - modin/pandas/test/test_reshape.py
-          - modin/pandas/test/test_general.py
-          - modin/pandas/test/test_io.py
+        test_task:
+          - group_1
+          - group_2
+          - group_3
+          - group_4
     env:
       MODIN_ENGINE: ${{matrix.engine}}
-    name: test-windows
+    name: test-windows (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
       - uses: conda-incubator/setup-miniconda@v2
         with:
           miniforge-variant: Mambaforge
@@ -886,12 +1001,69 @@ jobs:
       - name: Tell Modin to use existing ray cluster
         run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - run: python -m pytest ${{matrix.test-task}}
-        if: matrix.test-task != 'modin/pandas/test/test_io.py'
-      - timeout-minutes: 30
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+        if: matrix.test_task == 'group_1'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
+        if: matrix.test_task == 'group_1'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
+        if: matrix.test_task == 'group_1'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+        if: matrix.test_task == 'group_1'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
+        if: matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
+        if: matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
+        if: matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
+        if: matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
+        if: matrix.test_task == 'group_2'
+      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+        if: matrix.test_task == 'group_3'
+      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.test_task == 'group_3'
+      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
+        if: matrix.test_task == 'group_3'
+      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
+        if: matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+        if: matrix.test_task == 'group_4'
+      - timeout-minutes: 60
         run: python -m pytest modin/pandas/test/test_io.py --verbose
-        if: matrix.test-task == 'modin/pandas/test/test_io.py'
-      - uses: codecov/codecov-action@v2
+        if: matrix.test_task == 'group_4'
+      - uses: ./.github/workflows/upload-coverage
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.engine == 'ray'
+      - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
+        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
 
   test-pyarrow:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -906,8 +1078,16 @@ jobs:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
     name: test (pyarrow, python ${{matrix.python-version}})
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -945,14 +1125,14 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8" ]
+        python-version: ["3.8"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda
@@ -980,3 +1160,27 @@ jobs:
           conda info
           conda list
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+
+  upload-coverage:
+    needs: [test-internals, test-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-windows]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+      - name: Download coverage data
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: coverage-data
+      - uses: actions/setup-python@v4
+      - run: pip install coverage
+      - name: Combine coverage
+        run: python -m coverage combine
+      - name: Generate coverage report in xml format
+        run: python -m coverage xml
+      - uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true

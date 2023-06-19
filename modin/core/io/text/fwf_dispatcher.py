@@ -13,7 +13,6 @@
 
 """Module houses `FWFDispatcher` class, that is used for reading of tables with fixed-width formatted lines."""
 
-import pandas
 from typing import Optional, Union, Sequence, Tuple
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -21,24 +20,6 @@ from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 class FWFDispatcher(TextFileDispatcher):
     """Class handles utils for reading of tables with fixed-width formatted lines."""
-
-    def read_callback(*args, **kwargs):
-        """
-        Parse data on each partition.
-
-        Parameters
-        ----------
-        *args : list
-            Positional arguments to be passed to the callback function.
-        **kwargs : dict
-            Keyword arguments to be passed to the callback function.
-
-        Returns
-        -------
-        pandas.DataFrame or pandas.io.parsers.TextFileReader
-            Function call result.
-        """
-        return pandas.read_fwf(*args, **kwargs)
 
     @classmethod
     def check_parameters_support(

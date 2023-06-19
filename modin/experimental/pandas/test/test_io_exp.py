@@ -14,14 +14,14 @@
 from contextlib import nullcontext
 import glob
 import json
+
 import numpy as np
-import os
 import pandas
-from pandas._testing import ensure_clean, ensure_clean_dir
+from pandas._testing import ensure_clean
 import pytest
+
 import modin.experimental.pandas as pd
-from modin.config import Engine
-from modin.utils import get_current_execution
+from modin.config import Engine, AsyncReadMode
 from modin.pandas.test.utils import (
     df_equals,
     teardown_test_files,
@@ -33,55 +33,52 @@ from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_p
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask",
-    reason="Dask does not have experimental API",
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_distributed(make_sql_connection):  # noqa: F811
-    if Engine.get() in ("Ray", "Unidist"):
-        with ensure_clean_dir() as dirname:
-            filename = "test_from_sql_distributed.db"
-            table = "test_from_sql_distributed"
-            conn = make_sql_connection(os.path.join(dirname, filename), table)
-            query = "select * from {0}".format(table)
+def test_from_sql_distributed(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-            pandas_df = pandas.read_sql(query, conn)
-            modin_df_from_query = pd.read_sql(
-                query,
-                conn,
-                partition_column="col1",
-                lower_bound=0,
-                upper_bound=6,
-                max_sessions=2,
-            )
-            modin_df_from_table = pd.read_sql(
-                table,
-                conn,
-                partition_column="col1",
-                lower_bound=0,
-                upper_bound=6,
-                max_sessions=2,
-            )
+    pandas_df = pandas.read_sql(query, conn)
+    modin_df_from_query = pd.read_sql(
+        query,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
+    modin_df_from_table = pd.read_sql(
+        table,
+        conn,
+        partition_column="col1",
+        lower_bound=0,
+        upper_bound=6,
+        max_sessions=2,
+    )
 
-        df_equals(modin_df_from_query, pandas_df)
-        df_equals(modin_df_from_table, pandas_df)
+    df_equals(modin_df_from_query, pandas_df)
+    df_equals(modin_df_from_table, pandas_df)
 
 
 @pytest.mark.skipif(
-    Engine.get() == "Dask",
-    reason="Dask does not have experimental API",
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
 )
-def test_from_sql_defaults(make_sql_connection):  # noqa: F811
-    with ensure_clean_dir() as dirname:
-        filename = "test_from_sql_distributed.db"
-        table = "test_from_sql_distributed"
-        conn = make_sql_connection(os.path.join(dirname, filename), table)
-        query = "select * from {0}".format(table)
+def test_from_sql_defaults(tmp_path, make_sql_connection):
+    filename = "test_from_sql_distributed.db"
+    table = "test_from_sql_distributed"
+    conn = make_sql_connection(tmp_path / filename, table)
+    query = "select * from {0}".format(table)
 
-        pandas_df = pandas.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_query = pd.read_sql(query, conn)
-        with pytest.warns(UserWarning):
-            modin_df_from_table = pd.read_sql(table, conn)
+    pandas_df = pandas.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_query = pd.read_sql(query, conn)
+    with pytest.warns(UserWarning):
+        modin_df_from_table = pd.read_sql(table, conn)
 
     df_equals(modin_df_from_query, pandas_df)
     df_equals(modin_df_from_table, pandas_df)
@@ -89,10 +86,11 @@ def test_from_sql_defaults(make_sql_connection):  # noqa: F811
 
 @pytest.mark.usefixtures("TestReadGlobCSVFixture")
 @pytest.mark.skipif(
-    Engine.get() != "Ray", reason="Currently only support Ray engine for glob paths."
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental glob API",
 )
 class TestCsvGlob:
-    def test_read_multiple_small_csv(self):  # noqa: F811
+    def test_read_multiple_small_csv(self):
         pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
         modin_df = pd.read_csv_glob(pytest.glob_path)
 
@@ -103,7 +101,7 @@ class TestCsvGlob:
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("nrows", [35, 100])
-    def test_read_multiple_csv_nrows(self, request, nrows):  # noqa: F811
+    def test_read_multiple_csv_nrows(self, request, nrows):
         pandas_df = pandas.concat([pandas.read_csv(fname) for fname in pytest.files])
         pandas_df = pandas_df.iloc[:nrows, :]
 
@@ -136,7 +134,13 @@ class TestCsvGlob:
 
     def test_read_csv_glob_4373(self):
         columns, filename = ["col0"], "1x1.csv"
-        pd.DataFrame([[1]], columns=columns).to_csv(filename)
+        df = pd.DataFrame([[1]], columns=columns)
+        with (
+            warns_that_defaulting_to_pandas()
+            if Engine.get() == "Dask"
+            else nullcontext()
+        ):
+            df.to_csv(filename)
 
         kwargs = {"filepath_or_buffer": filename, "usecols": columns}
         modin_df = pd.read_csv_glob(**kwargs)
@@ -167,16 +171,16 @@ class TestCsvGlob:
             df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental glob API",
+)
 @pytest.mark.parametrize(
     "path",
     [
         "s3://modin-datasets/testing/multiple_csv/test_data*.csv",
         "gs://modin-testing/testing/multiple_csv/test_data*.csv",
     ],
-)
-@pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist"),
-    reason="Currently only support Ray and Unidist engines for glob paths.",
 )
 def test_read_multiple_csv_cloud_store(path):
     def _pandas_read_csv_glob(path, storage_options):
@@ -202,9 +206,8 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 
 
 @pytest.mark.skipif(
-    get_current_execution()
-    not in ("ExperimentalPandasOnRay", "ExperimentalPandasOnUnidist"),
-    reason=f"Execution {get_current_execution()} isn't supported.",
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize(
     "storage_options",
@@ -236,7 +239,7 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
@@ -265,10 +268,11 @@ def test_distributed_pickling(filename, compression):
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
-def test_read_custom_json_text():
+@pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+def test_read_custom_json_text(set_async_read_mode):
     def _generate_json(file_name, nrows, ncols):
         data = np.random.rand(nrows, ncols)
         df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
@@ -299,14 +303,21 @@ def test_read_custom_json_text():
         df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
             columns={"col0": "testID"}
         )
-    df_equals(df1, df2)
+        if AsyncReadMode.get():
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean` context
+            # because the file may be deleted before actual reading starts
+            df_equals(df1, df2)
+    if not AsyncReadMode.get():
+        df_equals(df1, df2)
 
 
 @pytest.mark.skipif(
-    Engine.get() not in ("Ray", "Unidist"),
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
-def test_read_evaluated_dict():
+@pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
+def test_read_evaluated_dict(set_async_read_mode):
     def _generate_evaluated_dict(file_name, nrows, ncols):
         result = {}
         keys = [f"col{x}" for x in range(ncols)]
@@ -349,4 +360,10 @@ def test_read_evaluated_dict():
         df2 = pd.read_custom_text(
             filename, columns=columns_callback, custom_parser=_custom_parser
         )
-    df_equals(df1, df2)
+        if AsyncReadMode.get():
+            # If read operations are asynchronous, then the dataframes
+            # check should be inside `ensure_clean` context
+            # because the file may be deleted before actual reading starts
+            df_equals(df1, df2)
+    if not AsyncReadMode.get():
+        df_equals(df1, df2)

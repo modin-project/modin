@@ -18,7 +18,6 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class cuDFQueryCompiler(PandasQueryCompiler):
-
     # Transpose
     # For transpose, we need to check that all the columns are the same type due to cudf limitations.
     def transpose(self, *args, **kwargs):

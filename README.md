@@ -26,7 +26,7 @@ cores. Modin works especially well on larger datasets, where pandas becomes pain
 
 By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-<img src="https://github.com/modin-project/modin/raw/7c009c747caa90554607e30b9ac2bd1b190b8c7d/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 
@@ -56,15 +56,15 @@ The charts below show the speedup you get by replacing pandas with Modin based o
 Modin can be installed with `pip` on Linux, Windows and MacOS:
 
 ```bash
-pip install modin[all] # (Recommended) Install Modin with all of Modin's currently supported engines.
+pip install "modin[all]" # (Recommended) Install Modin with all of Modin's currently supported engines.
 ```
 
 If you want to install Modin with a specific engine, we recommend:
 
 ```bash
-pip install modin[ray] # Install Modin dependencies and Ray.
-pip install modin[dask] # Install Modin dependencies and Dask.
-pip install modin[unidist] # Install Modin dependencies and Unidist to run on Unidist
+pip install "modin[ray]" # Install Modin dependencies and Ray.
+pip install "modin[dask]" # Install Modin dependencies and Dask.
+pip install "modin[unidist]" # Install Modin dependencies and Unidist.
 ```
 
 Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.

@@ -23,6 +23,7 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
 )
 from modin.core.io import (
     CSVDispatcher,
+    FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
     FeatherDispatcher,
@@ -31,6 +32,7 @@ from modin.core.io import (
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
     PandasFeatherParser,
@@ -49,21 +51,28 @@ class PandasOnDaskIO(BaseIO):
         frame_cls=PandasOnDaskDataframe,
         frame_partition_cls=PandasOnDaskDataframePartition,
         query_compiler_cls=PandasQueryCompiler,
+        base_io=BaseIO,
     )
 
-    read_csv = type("", (DaskWrapper, PandasCSVParser, CSVDispatcher), build_args).read
-    read_json = type(
-        "", (DaskWrapper, PandasJSONParser, JSONDispatcher), build_args
-    ).read
-    read_parquet = type(
-        "", (DaskWrapper, PandasParquetParser, ParquetDispatcher), build_args
-    ).read
+    def __make_read(*classes, build_args=build_args):
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).read
+
+    def __make_write(*classes, build_args=build_args):
+        # used to reduce code duplication
+        return type("", (DaskWrapper, *classes), build_args).write
+
+    read_csv = __make_read(PandasCSVParser, CSVDispatcher)
+    read_fwf = __make_read(PandasFWFParser, FWFDispatcher)
+    read_json = __make_read(PandasJSONParser, JSONDispatcher)
+    read_parquet = __make_read(PandasParquetParser, ParquetDispatcher)
+    to_parquet = __make_write(ParquetDispatcher)
     # Blocked on pandas-dev/pandas#12236. It is faster to default to pandas.
-    # read_hdf = type("", (DaskWrapper, PandasHDFParser, HDFReader), build_args).read
-    read_feather = type(
-        "", (DaskWrapper, PandasFeatherParser, FeatherDispatcher), build_args
-    ).read
-    read_sql = type("", (DaskWrapper, PandasSQLParser, SQLDispatcher), build_args).read
-    read_excel = type(
-        "", (DaskWrapper, PandasExcelParser, ExcelDispatcher), build_args
-    ).read
+    # read_hdf = __make_read(PandasHDFParser, HDFReader)
+    read_feather = __make_read(PandasFeatherParser, FeatherDispatcher)
+    read_sql = __make_read(PandasSQLParser, SQLDispatcher)
+    to_sql = __make_write(SQLDispatcher)
+    read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    del __make_read  # to not pollute class namespace
+    del __make_write  # to not pollute class namespace

@@ -7,6 +7,13 @@ on:
       - .github/workflows/ci-notebooks.yml
       - setup.cfg
       - setup.py
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-tutorial-notebooks:
     defaults:
@@ -16,9 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        execution: [pandas_on_ray, pandas_on_dask, hdk_on_native]
+        execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: actions/setup-python@v4
@@ -65,7 +72,7 @@ jobs:
           pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
         if: matrix.execution != 'hdk_on_native'
       # Build Modin from sources for `hdk_on_native`
-      - run: pip install .
+      - run: pip install -e .
         if: matrix.execution == 'hdk_on_native'
       # install test dependencies
       # NOTE: If you are changing the set of packages installed here, make sure that
@@ -80,6 +87,10 @@ jobs:
           conda info
           conda list
         if: matrix.execution == 'hdk_on_native'
+      # setup kernel configuration for `pandas_on_unidist` execution with mpi backend
+      - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
+        if: matrix.execution == 'pandas_on_unidist'
+      - run: jupyter kernelspec list
       - run: |
           black --check --diff examples/tutorial/jupyter/execution/${{ matrix.execution }}/test/test_notebooks.py
           black --check --diff examples/tutorial/jupyter/execution/test/utils.py

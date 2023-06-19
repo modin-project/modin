@@ -6,7 +6,6 @@ on:
       # Actions in .github/workflows/ci.yml
       - .github/workflows/**
       - '!.github/workflows/push-to-master.yml'
-      - '!.github/workflows/push.yml'
       - asv_bench/**
       - modin/**
       - requirements/**
@@ -16,6 +15,13 @@ on:
       - setup.cfg
       - setup.py
       - versioneer.py
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-fuzzydata:
     runs-on: ubuntu-latest
@@ -27,7 +33,7 @@ jobs:
         python-version: ["3.8"]
         engine: ["ray", "dask"]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - name: Cache conda

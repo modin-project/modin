@@ -68,7 +68,6 @@ class WrappingConnection(rpyc.Connection):
         return bytes(pickle.dumps(local_obj))
 
     def deliver(self, args, kw):
-
         """
         More efficient, batched version of rpyc.classic.deliver()
         """
@@ -639,7 +638,6 @@ def make_dataframe_wrapper(DataFrame):
             copy=None,
             query_compiler=None,
         ):
-
             (data,) = conn.deliver((data,), {})[0]
             return (), dict(
                 data=data,

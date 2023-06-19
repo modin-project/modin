@@ -23,10 +23,17 @@ from .utils import (
     generate_multiindex_dfs,
     generate_none_dfs,
     create_test_dfs,
+    default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
+from modin.config import NPartitions, StorageFormat
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
+
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
+# Initialize env for storage format detection in @pytest.mark.*
+pd.DataFrame()
 
 
 def test_df_concat():
@@ -77,8 +84,15 @@ def test_concat_on_index():
     )
 
 
-def test_concat_on_column():
+@pytest.mark.parametrize("no_dup_cols", [True, False])
+@pytest.mark.parametrize("different_len", [True, False])
+def test_concat_on_column(no_dup_cols, different_len):
     df, df2 = generate_dfs()
+    if no_dup_cols:
+        df = df.drop(set(df.columns) & set(df2.columns), axis="columns")
+    if different_len:
+        df = pandas.concat([df, df], ignore_index=True)
+
     modin_df, modin_df2 = from_pandas(df), from_pandas(df2)
 
     df_equals(
@@ -126,7 +140,10 @@ def test_mixed_inner_concat():
     mixed_dfs = [from_pandas(df), from_pandas(df2), df3]
 
     df_equals(
-        pd.concat(mixed_dfs, join="inner"), pandas.concat([df, df2, df3], join="inner")
+        pd.concat(mixed_dfs, join="inner"),
+        pandas.concat([df, df2, df3], join="inner"),
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=False,
     )
 
 
@@ -167,6 +184,15 @@ def test_concat_series_only():
     df_equals(
         pd.concat([modin_series, modin_series]),
         pandas.concat([pandas_series, pandas_series]),
+    )
+
+
+def test_concat_5776():
+    modin_data = {key: pd.Series(index=range(3)) for key in ["a", "b"]}
+    pandas_data = {key: pandas.Series(index=range(3)) for key in ["a", "b"]}
+    df_equals(
+        pd.concat(modin_data, axis="columns"),
+        pandas.concat(pandas_data, axis="columns"),
     )
 
 
@@ -234,5 +260,117 @@ def test_sort_order(sort, join, axis):
     df_equals(
         pandas_concat,
         modin_concat,
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=join != "inner",
     )
     assert list(pandas_concat.columns) == list(modin_concat.columns)
+
+
+@pytest.mark.parametrize(
+    "data1, index1, data2, index2",
+    [
+        (None, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test")),
+        ({"A": [1, 2, 3]}, pandas.Index([1, 2, 3], name="Test"), None, None),
+        ({"A": [1, 2, 3]}, None, None, None),
+        (None, None, {"A": [1, 2, 3]}, None),
+        (None, pandas.Index([1, 2, 3], name="Test"), None, None),
+        (None, None, None, pandas.Index([1, 2, 3], name="Test")),
+    ],
+)
+@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("join", ["inner", "outer"])
+def test_concat_empty(data1, index1, data2, index2, axis, join):
+    pdf1 = pandas.DataFrame(data1, index=index1)
+    pdf2 = pandas.DataFrame(data2, index=index2)
+    pdf = pandas.concat((pdf1, pdf2), axis=axis, join=join)
+    mdf1 = pd.DataFrame(data1, index=index1)
+    mdf2 = pd.DataFrame(data2, index=index2)
+    mdf = pd.concat((mdf1, mdf2), axis=axis, join=join)
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5963
+        check_dtypes=join != "inner",
+    )
+
+
+def test_concat_empty_df_series():
+    pdf = pandas.concat((pandas.DataFrame({"A": [1, 2, 3]}), pandas.Series()))
+    mdf = pd.concat((pd.DataFrame({"A": [1, 2, 3]}), pd.Series()))
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5964
+        check_dtypes=False,
+    )
+    pdf = pandas.concat((pandas.DataFrame(), pandas.Series([1, 2, 3])))
+    mdf = pd.concat((pd.DataFrame(), pd.Series([1, 2, 3])))
+    df_equals(
+        pdf,
+        mdf,
+        # https://github.com/modin-project/modin/issues/5964
+        check_dtypes=False,
+    )
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() not in ("Hdk", "Base"),
+    reason="https://github.com/modin-project/modin/issues/5696",
+)
+@pytest.mark.parametrize("col_type", [None, "str"])
+@pytest.mark.parametrize("df1_cols", [0, 90, 100])
+@pytest.mark.parametrize("df2_cols", [0, 90, 100])
+@pytest.mark.parametrize("df1_rows", [0, 100])
+@pytest.mark.parametrize("df2_rows", [0, 100])
+@pytest.mark.parametrize("idx_type", [None, "str"])
+@pytest.mark.parametrize("ignore_index", [True, False])
+@pytest.mark.parametrize("sort", [True, False])
+@pytest.mark.parametrize("join", ["inner", "outer"])
+def test_concat_different_num_cols(
+    col_type,
+    df1_cols,
+    df2_cols,
+    df1_rows,
+    df2_rows,
+    idx_type,
+    ignore_index,
+    sort,
+    join,
+):
+    def create_frame(frame_type, ncols, nrows):
+        def to_str(val):
+            return f"str_{val}"
+
+        off = 0
+        data = {}
+        for n in range(1, ncols + 1):
+            row = range(off + 1, off + nrows + 1)
+            if col_type == "str":
+                row = map(to_str, row)
+            data[f"Col_{n}"] = list(row)
+            off += nrows
+
+        idx = None
+        if idx_type == "str":
+            idx = pandas.Index(map(to_str, range(1, nrows + 1)), name=f"Index_{nrows}")
+        df = frame_type(data=data, index=idx)
+        return df
+
+    def concat(frame_type, lib):
+        df1 = create_frame(frame_type, df1_cols, df1_rows)
+        df2 = create_frame(frame_type, df2_cols, df2_rows)
+        return lib.concat([df1, df2], ignore_index=ignore_index, sort=sort, join=join)
+
+    mdf = concat(pd.DataFrame, pd)
+    pdf = concat(pandas.DataFrame, pandas)
+    df_equals(
+        pdf,
+        mdf,
+        # Empty slicing causes this bug:
+        # https://github.com/modin-project/modin/issues/5974
+        check_dtypes=not (
+            get_current_execution() == "BaseOnPython"
+            and any(o == 0 for o in (df1_cols, df2_cols, df1_rows, df2_rows))
+        ),
+    )

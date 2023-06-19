@@ -53,7 +53,7 @@ class UnidistWrapper:
 
         Parameters
         ----------
-        func : callable
+        func : callable or unidist.ObjectRef
             The function to perform.
         f_args : list or tuple, optional
             Positional arguments to pass to ``func``.
@@ -89,6 +89,45 @@ class UnidistWrapper:
             Whatever was identified by `obj_id`.
         """
         return unidist.get(obj_id)
+
+    @classmethod
+    def put(cls, data, **kwargs):
+        """
+        Put data into the object store.
+
+        Parameters
+        ----------
+        data : object
+            Data to be put.
+        **kwargs : dict
+            Additional keyword arguments (mostly for compatibility).
+
+        Returns
+        -------
+        unidist.ObjectRef
+            A reference to `data`.
+        """
+        return unidist.put(data)
+
+    @classmethod
+    def wait(cls, obj_ids, num_returns=None):
+        """
+        Wait on the objects without materializing them (blocking operation).
+
+        ``unidist.wait`` assumes a list of unique object references: see
+        https://github.com/modin-project/modin/issues/5045
+
+        Parameters
+        ----------
+        obj_ids : list, scalar
+        num_returns : int, optional
+        """
+        if not isinstance(obj_ids, list):
+            obj_ids = [obj_ids]
+        unique_ids = list(set(obj_ids))
+        if num_returns is None:
+            num_returns = len(unique_ids)
+        unidist.wait(unique_ids, num_returns=num_returns)
 
 
 @unidist.remote

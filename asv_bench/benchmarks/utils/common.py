@@ -34,8 +34,6 @@ from .compatibility import (
 )
 from .data_shapes import RAND_LOW, RAND_HIGH
 
-random_state = np.random.RandomState(seed=42)
-
 POSSIBLE_IMPL = {
     "modin": modin.pandas,
     "pandas": pandas,
@@ -146,7 +144,7 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
         )
     )
     data = {
-        "col{}".format(i): random_state.randint(rand_low, rand_high, size=(nrows))
+        "col{}".format(i): np.random.randint(rand_low, rand_high, size=(nrows))
         for i in range(ncols)
     }
     data_cache[cache_key] = weakdict(data)
@@ -233,7 +231,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
 
     data_true_false = {
-        "tf_col{}".format(i): random_state.choice(
+        "tf_col{}".format(i): np.random.choice(
             ["Yes", "true", "No", "false"], size=(nrows - nrows // 2)
         )
         for i in range(ncols - ncols // 2)
@@ -430,7 +428,7 @@ def random_columns(df_columns: list, columns_number: int) -> list:
     -------
     list
     """
-    return list(random_state.choice(df_columns, size=columns_number))
+    return list(np.random.choice(df_columns, size=columns_number))
 
 
 def random_booleans(number: int) -> list:
@@ -446,7 +444,7 @@ def random_booleans(number: int) -> list:
     -------
     list
     """
-    return list(random_state.choice([True, False], size=number))
+    return list(np.random.choice([True, False], size=number))
 
 
 def trigger_import(*dfs):

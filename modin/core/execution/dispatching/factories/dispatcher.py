@@ -110,6 +110,9 @@ class FactoryDispatcher(object):
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
         if cls.__factory is None:
+            from modin.pandas import _update_engine
+
+            Engine.subscribe(_update_engine)
             Engine.subscribe(cls._update_factory)
             StorageFormat.subscribe(cls._update_factory)
         return cls.__factory

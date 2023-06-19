@@ -15,14 +15,46 @@ import nbformat
 from nbconvert.preprocessors import ExecutePreprocessor
 
 test_dataset_path = "taxi.csv"
-ep = ExecutePreprocessor(timeout=600, kernel_name="python3")
-
 download_taxi_dataset = f"""import os
 import urllib.request
 if not os.path.exists("{test_dataset_path}"):
     url_path = "https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
+
+
+# Default kernel name for ``ExecutePreprocessor`` to be created
+_default_kernel_name = "python3"
+
+
+def set_kernel(kernel_name):
+    """
+    Set custom kernel for ``ExecutePreprocessor`` to be created.
+
+    Parameters
+    ----------
+    kernel_name : str
+        Kernel name.
+    """
+    global _default_kernel_name
+    _default_kernel_name = kernel_name
+
+
+def make_execute_preprocessor():
+    """
+    Make ``ExecutePreprocessor`` with the `_default_kernel_name`.
+
+    Returns
+    -------
+    nbconvert.preprocessors.ExecutePreprocessor
+        Execute processor entity.
+
+    Notes
+    -----
+    Note that `_default_kernel_name` can be changed for the concrete executions
+    (e.g., ``PandasOnUnidist`` with MPI backend).
+    """
+    return ExecutePreprocessor(timeout=600, kernel_name=_default_kernel_name)
 
 
 def _execute_notebook(notebook):
@@ -35,6 +67,7 @@ def _execute_notebook(notebook):
         File-like object or path to the notebook to execute.
     """
     nb = nbformat.read(notebook, as_version=nbformat.NO_CONVERT)
+    ep = make_execute_preprocessor()
     ep.preprocess(nb)
 
 

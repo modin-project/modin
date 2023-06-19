@@ -21,6 +21,9 @@ import fsspec
 from fsspec.core import url_to_fs
 from fsspec.spec import AbstractBufferedFile
 import numpy as np
+from pandas.io.common import stringify_path
+import pandas
+import pandas._libs.lib as lib
 from packaging import version
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -158,6 +161,7 @@ class ColumnStoreDataset:
         # Older versions of fsspec doesn't support unstrip_protocol(). It
         # was only added relatively recently:
         # https://github.com/fsspec/filesystem_spec/pull/828
+
         def _unstrip_protocol(protocol, path):
             protos = (protocol,) if isinstance(protocol, str) else protocol
             for protocol in protos:
@@ -215,7 +219,12 @@ class PyArrowDataset(ColumnStoreDataset):
     @property
     def files(self):
         if self._files is None:
-            self._files = self._get_files(self.dataset.files)
+            try:
+                files = self.dataset.files
+            except AttributeError:
+                # compatibility at least with 3.0.0 <= pyarrow < 8.0.0
+                files = self.dataset._dataset.files
+            self._files = self._get_files(files)
         return self._files
 
     def to_pandas_dataframe(
@@ -581,7 +590,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return cls.query_compiler_cls(frame)
 
     @classmethod
-    def _read(cls, path, engine, columns, **kwargs):
+    def _read(cls, path, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs):
         """
         Load a parquet object from the file path, returning a query compiler.
 
@@ -593,6 +602,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Parquet library to use.
         columns : list
             If not None, only these columns will be read from the file.
+        use_nullable_dtypes : Union[bool, lib.NoDefault]
+        dtype_backend : {"numpy_nullable", "pyarrow", lib.no_default}
         **kwargs : dict
             Keyword arguments.
 
@@ -606,6 +617,30 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ParquetFile API is used. Please refer to the documentation here
         https://arrow.apache.org/docs/python/parquet.html
         """
+        if (
+            any(arg not in ("storage_options",) for arg in kwargs)
+            or use_nullable_dtypes != lib.no_default
+        ):
+            return cls.single_worker_read(
+                path,
+                engine=engine,
+                columns=columns,
+                use_nullable_dtypes=use_nullable_dtypes,
+                dtype_backend=dtype_backend,
+                reason="Parquet options that are not currently supported",
+                **kwargs,
+            )
+        path = stringify_path(path)
+        if isinstance(path, list):
+            # TODO(https://github.com/modin-project/modin/issues/5723): read all
+            # files in parallel.
+            compilers: list[cls.query_compiler_cls] = [
+                cls._read(
+                    p, engine, columns, use_nullable_dtypes, dtype_backend, **kwargs
+                )
+                for p in path
+            ]
+            return compilers[0].concat(axis=0, other=compilers[1:], ignore_index=True)
         if isinstance(path, str):
             if os.path.isdir(path):
                 path_generator = os.walk(path)
@@ -621,7 +656,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             # parquet directories have a unique column at each directory level.
             # Thus, we can use os.walk(), which does a dfs search, to walk
             # through the different columns that the data is partitioned on
-            for (_, dir_names, files) in path_generator:
+            for _, dir_names, files in path_generator:
                 if dir_names:
                     partitioned_columns.add(dir_names[0].split("=")[0])
                 if files:
@@ -636,6 +671,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     path,
                     engine=engine,
                     columns=columns,
+                    use_nullable_dtypes=use_nullable_dtypes,
+                    dtype_backend=dtype_backend,
                     reason="Mixed partitioning columns in Parquet",
                     **kwargs,
                 )
@@ -654,4 +691,84 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if c not in index_columns and not cls.index_regex.match(c)
         ]
 
-        return cls.build_query_compiler(dataset, columns, index_columns, **kwargs)
+        return cls.build_query_compiler(
+            dataset, columns, index_columns, dtype_backend=dtype_backend, **kwargs
+        )
+
+    @staticmethod
+    def _to_parquet_check_support(kwargs):
+        """
+        Check if parallel version of `to_parquet` could be used.
+
+        Parameters
+        ----------
+        kwargs : dict
+            Keyword arguments passed to `.to_parquet()`.
+
+        Returns
+        -------
+        bool
+            Whether parallel version of `to_parquet` is applicable.
+        """
+        path = kwargs["path"]
+        compression = kwargs["compression"]
+        if not isinstance(path, str):
+            return False
+        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
+            return False
+        if compression is None or not compression == "snappy":
+            return False
+        return True
+
+    @classmethod
+    def write(cls, qc, **kwargs):
+        """
+        Write a ``DataFrame`` to the binary parquet format.
+
+        Parameters
+        ----------
+        qc : BaseQueryCompiler
+            The query compiler of the Modin dataframe that we want to run `to_parquet` on.
+        **kwargs : dict
+            Parameters for `pandas.to_parquet(**kwargs)`.
+        """
+        if not cls._to_parquet_check_support(kwargs):
+            return cls.base_io.to_parquet(qc, **kwargs)
+
+        output_path = kwargs["path"]
+        client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
+        fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
+        fs.mkdirs(url, exist_ok=True)
+
+        def func(df, **kw):  # pragma: no cover
+            """
+            Dump a chunk of rows as parquet, then save them to target maintaining order.
+
+            Parameters
+            ----------
+            df : pandas.DataFrame
+                A chunk of rows to write to a parquet file.
+            **kw : dict
+                Arguments to pass to ``pandas.to_parquet(**kwargs)`` plus an extra argument
+                `partition_idx` serving as chunk index to maintain rows order.
+            """
+            compression = kwargs["compression"]
+            partition_idx = kw["partition_idx"]
+            kwargs[
+                "path"
+            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            df.to_parquet(**kwargs)
+            return pandas.DataFrame()
+
+        # Ensure that the metadata is synchronized
+        qc._modin_frame._propagate_index_objs(axis=None)
+        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+            axis=1,
+            partitions=qc._modin_frame._partitions,
+            map_func=func,
+            keep_partitioning=True,
+            lengths=None,
+            enumerate_partitions=True,
+        )
+        # pending completion
+        cls.materialize([part.list_of_blocks[0] for row in result for part in row])
