@@ -344,8 +344,6 @@ class CalciteSerializer:
             unit = np.datetime_data(val)[0]
             precision = self._TIMESTAMP_PRECISION.get(unit, None)
             if precision is not None:
-                if precision == 0 and unit != "s":
-                    val = val.astype("datetime64[s]")
                 return {
                     "literal": int(val.astype(np.int64)),
                     "type": "TIMESTAMP",
