@@ -2344,12 +2344,17 @@ class TestSql:
             df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize("index", [False, True])
-    def test_to_sql(self, tmp_path, make_sql_connection, index):
+    @pytest.mark.parametrize("conn_type", ["str", "sqlalchemy", "sqlalchemy+connect"])
+    def test_to_sql(self, tmp_path, make_sql_connection, index, conn_type):
         table_name = f"test_to_sql_{str(index)}"
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
 
         # We do not pass the table name so the fixture won't generate a table
         conn = make_sql_connection(tmp_path / f"{table_name}_modin.db")
+        if conn_type.startswith("sqlalchemy"):
+            conn = sa.create_engine(conn)
+            if conn_type == "sqlalchemy+connect":
+                conn = conn.connect()
         modin_df.to_sql(table_name, conn, index=index)
         df_modin_sql = pandas.read_sql(
             table_name, con=conn, index_col="index" if index else None
@@ -2357,6 +2362,10 @@ class TestSql:
 
         # We do not pass the table name so the fixture won't generate a table
         conn = make_sql_connection(tmp_path / f"{table_name}_pandas.db")
+        if conn_type.startswith("sqlalchemy"):
+            conn = sa.create_engine(conn)
+            if conn_type == "sqlalchemy+connect":
+                conn = conn.connect()
         pandas_df.to_sql(table_name, conn, index=index)
         df_pandas_sql = pandas.read_sql(
             table_name, con=conn, index_col="index" if index else None
