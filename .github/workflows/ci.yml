@@ -221,7 +221,7 @@ jobs:
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
       - run: python -m pytest modin/test/test_logging.py
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-no-engine:
     runs-on: ubuntu-latest
@@ -234,7 +234,7 @@ jobs:
         with:
           environment-file: requirements/requirements-no-engine.yml
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-defaults:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -275,7 +275,7 @@ jobs:
       - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-hdk:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -331,7 +331,7 @@ jobs:
           examples/data/plasticc_training_set_metadata_1k.csv \
           examples/data/plasticc_test_set_metadata_1k.csv \
           -no-ml
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
@@ -484,7 +484,7 @@ jobs:
       - run: |
           python -m pip install lazy_import
           mpiexec -n 1 python -m pytest modin/pandas/test/integrations/
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-all:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -632,7 +632,7 @@ jobs:
           python -m pip install lazy_import
           python -m pytest modin/pandas/test/integrations/
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -661,7 +661,7 @@ jobs:
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-cloud:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -692,7 +692,7 @@ jobs:
       - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
       - # When running without parameters, some of the tests fail
         run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
 
   test-windows:
     needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
@@ -788,7 +788,7 @@ jobs:
       - timeout-minutes: 60
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test_task == 'group_4'
-      - uses: ./.github/workflows/upload-coverage
+      - uses: ./.github/actions/upload-coverage
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.engine == 'ray'
