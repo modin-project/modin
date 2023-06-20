@@ -38,7 +38,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
 
     Attributes
     ----------
-    data :  pandas.DataFrame or pyarrow.Table
+    _data :  pandas.DataFrame or pyarrow.Table
         Partition data in either pandas or PyArrow format.
     frame_id : str
         A corresponding HDK table name if partition was imported
@@ -54,7 +54,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         data: Union[pa.Table, pandas.DataFrame],
         frame_id: Optional[str] = None,
     ):
-        self.data = data
+        self._data = data
         self.frame_id = frame_id
         if isinstance(data, pa.Table):
             self._length_cache = data.num_rows
@@ -106,7 +106,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         -------
         pandas.DataFrame or pyarrow.Table
         """
-        return self.data
+        return self._data
 
     @classmethod
     def put(cls, obj):
