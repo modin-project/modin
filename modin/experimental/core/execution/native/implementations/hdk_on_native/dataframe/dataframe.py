@@ -31,6 +31,8 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_bool_dtype,
     is_string_dtype,
+    is_any_int_dtype,
+    is_datetime64_dtype,
     is_categorical_dtype,
 )
 
@@ -922,6 +924,18 @@ class HdkOnNativeDataframe(PandasDataframe):
         orig_right_on = right_on
         left, left_on = check_cols_to_join("left_on", self, left_on)
         right, right_on = check_cols_to_join("right_on", other, right_on)
+        for left_col, right_col in zip(left_on, right_on):
+            left_dt = self._dtypes[left_col]
+            right_dt = other._dtypes[right_col]
+            if not (
+                (is_any_int_dtype(left_dt) and is_any_int_dtype(right_dt))
+                or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
+                or (is_datetime64_dtype(left_dt) and is_datetime64_dtype(right_dt))
+                or (is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt))
+            ):
+                raise NotImplementedError(
+                    f"Join on columns of '{left_dt}' and '{right_dt}' dtypes"
+                )
 
         # If either left_on or right_on has been changed, it means that there
         # are index columns in the list. Joining by index in this case.
