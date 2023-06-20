@@ -414,10 +414,7 @@ class FrameNode(DFAlgNode):
 
     @_inherit_docstrings(DFAlgNode.can_execute_arrow)
     def can_execute_arrow(self) -> bool:
-        frame = self.modin_frame
-        return not frame._has_unsupported_data and all(
-            p.arrow_table is not None for p in frame._partitions.flatten()
-        )
+        return self.modin_frame._has_arrow_table()
 
     def execute_arrow(self, ignore=None) -> Union[pa.Table, pandas.DataFrame]:
         """
@@ -435,7 +432,7 @@ class FrameNode(DFAlgNode):
         pa.Table or pandas.Dataframe
         """
         frame = self.modin_frame
-        if frame._partitions is not None and frame._partitions.size != 0:
+        if frame._partitions is not None:
             return frame._partitions[0][0].get()
         if frame._has_unsupported_data:
             return pandas.DataFrame(

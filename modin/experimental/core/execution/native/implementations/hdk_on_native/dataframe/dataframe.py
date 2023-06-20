@@ -191,6 +191,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         has_unsupported_data=False,
     ):
         assert dtypes is not None
+        assert partitions is None or (
+            partitions.size == 1 and partitions[0][0] is not None
+        )
 
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
@@ -235,9 +238,6 @@ class HdkOnNativeDataframe(PandasDataframe):
                 self.set_dtypes_cache(pd.Series(dtypes, index=columns))
         else:
             self.set_dtypes_cache(dtypes)
-
-        if partitions is not None and partitions.size > 1:
-            self._filter_empties()
 
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
@@ -440,10 +440,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if self._partitions is None or not isinstance(self._op, FrameNode):
-            return False
-        return self._partitions.size > 0 and all(
-            p.arrow_table is not None for p in self._partitions.flatten()
+        return self._partitions is not None and isinstance(
+            self._partitions[0][0].get(), pyarrow.Table
         )
 
     def _dtypes_for_exprs(self, exprs):
@@ -1965,10 +1963,9 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         if self._force_execution_mode != "hdk" and self._can_execute_arrow():
             new_table = self._execute_arrow()
-            partitions = np.empty((1, 1), dtype=np.dtype(object))
-            partitions[0][0] = self._partition_mgr_cls._partition_class.put_arrow(
-                new_table
-            )
+            partitions = self._partition_mgr_cls.from_arrow(
+                new_table, unsupported_cols=False, encode_col_names=False
+            )[0]
         else:
             assert (
                 self._force_execution_mode != "arrow"
@@ -2061,10 +2058,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         assert isinstance(self._op, FrameNode)
 
-        if self._partitions.size == 0:
+        if self._partitions is None:
             self.set_index_cache(Index.__new__(Index))
         else:
-            assert self._partitions.size == 1
             obj = self._partitions[0][0].get()
             if isinstance(obj, (pd.DataFrame, pd.Series)):
                 self.set_index_cache(obj.index)
@@ -2124,7 +2120,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             )
 
         obj = self._execute()
-        assert self._partitions.size == 1
         if isinstance(obj, pd.DataFrame):
             raise NotImplementedError(
                 "HdkOnNativeDataframe._set_index is not yet suported"
@@ -2493,21 +2488,17 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         pandas.DataFrame
         """
-        self._execute()
-
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
-        if len(self._partitions) == 0:
-            return pd.DataFrame(columns=self.columns, index=self.index)
+        obj = self._execute()
 
-        if self._has_arrow_table():
+        if isinstance(obj, pyarrow.Table):
             # If the table is exported from HDK, the string columns are converted
             # to dictionary. On conversion to pandas, these columns will be of type
             # Categorical, that is not correct. To make the valid conversion, these
             # fields are cast to string.
-            at = self._partitions[0][0].get()
-            schema = at.schema
+            schema = obj.schema
             cast = {
                 idx: arrow_type.name
                 for idx, (arrow_type, pandas_type) in enumerate(
@@ -2519,12 +2510,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             if cast:
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
-                at = at.cast(schema)
+                obj = obj.cast(schema)
             # concatenate() is called by _partition_mgr_cls.to_pandas
             # to preserve the categorical dtypes
-            df = concatenate([arrow_to_pandas(at)])
+            df = concatenate([arrow_to_pandas(obj)])
         else:
-            df = self._partition_mgr_cls.to_pandas(self._partitions)
+            df = obj.copy()
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.

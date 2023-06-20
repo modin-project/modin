@@ -180,7 +180,7 @@ class CalciteScanNode(CalciteBaseNode):
     """
 
     def __init__(self, modin_frame):
-        assert modin_frame._partitions.size == 1
+        assert modin_frame._partitions is not None
         assert modin_frame._partitions[0][0].frame_id is not None
         super(CalciteScanNode, self).__init__("EnumerableTableScan")
         self.table = ["hdk", modin_frame._partitions[0][0].frame_id]
