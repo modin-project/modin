@@ -5,6 +5,7 @@ on:
       # NOTE: keep these paths in sync with the paths that trigger the
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/workflows/**
+      - .github/actions/**
       - '!.github/workflows/push-to-master.yml'
       - asv_bench/**
       - modin/**
@@ -257,24 +258,18 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_concat.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py --execution=${{ matrix.execution }}
+      - uses: ./.github/actions/run-core-tests/group_1
+        with:
+          runner: python -m pytest --execution=${{ matrix.execution }}
+      - uses: ./.github/actions/run-core-tests/group_2
+        with:
+          runner: python -m pytest --execution=${{ matrix.execution }}
+      - uses: ./.github/actions/run-core-tests/group_3
+        with:
+          runner: python -m pytest --execution=${{ matrix.execution }}
+      - uses: ./.github/actions/run-core-tests/group_4
+        with:
+          runner: python -m pytest --execution=${{ matrix.execution }}
       - uses: ./.github/actions/upload-coverage
 
   test-hdk:
@@ -445,33 +440,22 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_binary.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_default.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_indexing.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_iter.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_reduce.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_udf.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_window.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/dataframe/test_pickle.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_series.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_rolling.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_expanding.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_concat.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 mpiexec -n 1 python -m pytest modin/pandas/test/test_groupby.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_reshape.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/test_general.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_creation.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_arithmetic.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_axis_functions.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_logic.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_linalg.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_indexing.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_math.py
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test/test_array_shaping.py
+      - uses: ./.github/actions/run-core-tests/group_1
+        with:
+          runner: mpiexec -n 1 python -m pytest
+          parallel: ""
+      - uses: ./.github/actions/run-core-tests/group_2
+        with:
+          runner: mpiexec -n 1 python -m pytest
+          parallel: ""
+      - uses: ./.github/actions/run-core-tests/group_3
+        with:
+          runner: mpiexec -n 1 python -m pytest
+          parallel: ""
+      - uses: ./.github/actions/run-core-tests/group_4
+        with:
+          runner: mpiexec -n 1 python -m pytest
+          parallel: ""
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
@@ -559,59 +543,13 @@ jobs:
         if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
+      - uses: ./.github/actions/run-core-tests/group_1
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
+      - uses: ./.github/actions/run-core-tests/group_2
         if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
+      - uses: ./.github/actions/run-core-tests/group_3
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
+      - uses: ./.github/actions/run-core-tests/group_4
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
@@ -731,60 +669,14 @@ jobs:
       - name: Tell Modin to use existing ray cluster
         run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_binary.py
-        if: matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_default.py
-        if: matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_indexing.py
-        if: matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_iter.py
-        if: matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_join_sort.py
-        if: matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_reduce.py
-        if: matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_udf.py
-        if: matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_window.py
-        if: matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_pickle.py
-        if: matrix.test_task == 'group_2'
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
-        if: matrix.test_task == 'group_3'
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-        if: matrix.test_task == 'group_3'
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 python -m pytest -n 2 modin/pandas/test/test_groupby.py
-        if: matrix.test_task == 'group_3'
-      - run: python -m pytest -n 2 modin/pandas/test/test_rolling.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_expanding.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_creation.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_arithmetic.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_axis_functions.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_logic.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_linalg.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_indexing.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_math.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test/test_array_shaping.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_groupby.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_reshape.py
-        if: matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/pandas/test/test_general.py
-        if: matrix.test_task == 'group_4'
+      - uses: ./.github/actions/run-core-tests/group_1
+        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
+      - uses: ./.github/actions/run-core-tests/group_2
+        if: matrix.engine == 'python' || matrix.test_task == 'group_2'
+      - uses: ./.github/actions/run-core-tests/group_3
+        if: matrix.engine == 'python' || matrix.test_task == 'group_3'
+      - uses: ./.github/actions/run-core-tests/group_4
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - timeout-minutes: 60
         run: python -m pytest modin/pandas/test/test_io.py --verbose
         if: matrix.test_task == 'group_4'

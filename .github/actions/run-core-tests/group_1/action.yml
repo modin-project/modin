@@ -1,0 +1,24 @@
+name: "Run core Modin tests - group 1"
+author: "Vasily Litvinov"
+description: "Run core Modin tests like dataframe or groupby"
+inputs:
+  runner:
+    description: "Runner for tests"
+    required: true
+    default: "python -m pytest"
+  parallel:
+    description: "How to run tests in parallel"
+    required: true
+    default: "-n 2"
+
+runs:
+  using: "composite"
+  steps:
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_binary.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_default.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_indexing.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_iter.py
+        shell: bash -l {0}

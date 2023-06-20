@@ -1,0 +1,46 @@
+name: "Run core Modin tests - group 4"
+author: "Vasily Litvinov"
+description: "Run core Modin tests like dataframe or groupby"
+inputs:
+  runner:
+    description: "Runner for tests"
+    required: true
+    default: "python -m pytest"
+  parallel:
+    description: "How to run tests in parallel"
+    required: true
+    default: "-n 2"
+
+runs:
+  using: "composite"
+  steps:
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_expanding.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_creation.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_arithmetic.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_axis_functions.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_logic.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_linalg.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_indexing.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_math.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_shaping.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_groupby.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_reshape.py
+        shell: bash -l {0}
+      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_general.py
+        shell: bash -l {0}
