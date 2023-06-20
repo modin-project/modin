@@ -1,0 +1,17 @@
+name: "Install Python only"
+author: "Vasily Litvinov"
+description: "Prepare the environment to run simple tasks"
+inputs:
+  python-version:
+    description: "Python version to install"
+    required: true
+    default: "3.8.x"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+        architecture: "x64"
+        cache: 'pip'

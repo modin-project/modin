@@ -29,12 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       - run: pip install black
       # NOTE: keep the black command here in sync with the pre-commit hook in
       # /contributing/pre-commit
@@ -45,12 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       - run: pip install -r requirements-dev.txt
       - run: mypy --config-file mypy.ini
 
@@ -60,12 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
       - run: python -m pytest scripts/test
@@ -139,12 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
       - run: pip install flake8 flake8-print flake8-no-implicit-concat
@@ -239,12 +219,7 @@ jobs:
     name: test-clean-install-ubuntu
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       - name: Clean install and run
         run: |
           python -m pip install -e ".[all]"
@@ -261,12 +236,7 @@ jobs:
     name: test-clean-install-windows
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
       - name: Clean install and run
         run: |
           python -m pip install -e ".[all]"
@@ -1168,14 +1138,12 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 1
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/python-only
       - name: Download coverage data
         uses: actions/download-artifact@v3.0.2
         with:
           name: coverage-data
-      - uses: actions/setup-python@v4
       - run: pip install coverage
       - name: Combine coverage
         run: python -m coverage combine
