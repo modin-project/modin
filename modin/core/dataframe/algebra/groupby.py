@@ -201,6 +201,7 @@ class GroupByReduce(TreeReduce):
         partition_idx=0,
         drop=False,
         method=None,
+        finalizer_fn=None,
     ):
         """
         Execute Reduce phase of GroupByReduce.
@@ -228,6 +229,8 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the groupby function. This is a hint to be able to do special casing.
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+            A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
         -------
@@ -240,7 +243,7 @@ class GroupByReduce(TreeReduce):
         by_part = pandas.Index(df.index.names)
 
         groupby_kwargs = groupby_kwargs.copy()
-        as_index = groupby_kwargs["as_index"]
+        as_index = groupby_kwargs.get("as_index", True)
 
         # Set `as_index` to True to track the metadata of the grouping object
         groupby_kwargs["as_index"] = True
@@ -275,7 +278,8 @@ class GroupByReduce(TreeReduce):
         result = pandas.DataFrame(result)
         if result.index.name == MODIN_UNNAMED_SERIES_LABEL:
             result.index.name = None
-        return result
+
+        return result if finalizer_fn is None else finalizer_fn(result)
 
     @classmethod
     def caller(
@@ -291,6 +295,7 @@ class GroupByReduce(TreeReduce):
         drop=False,
         method=None,
         default_to_pandas_func=None,
+        finalizer_fn=None,
     ):
         """
         Execute GroupBy aggregation with TreeReduce approach.
@@ -321,6 +326,8 @@ class GroupByReduce(TreeReduce):
         default_to_pandas_func : callable(pandas.DataFrameGroupBy) -> pandas.DataFrame, optional
             The pandas aggregation function equivalent to the `map_func + reduce_func`.
             Used in case of defaulting to pandas. If not specified `map_func` is used.
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+            A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
         -------
@@ -391,6 +398,7 @@ class GroupByReduce(TreeReduce):
             agg_kwargs=agg_kwargs,
             drop=drop,
             method=method,
+            finalizer_fn=finalizer_fn,
         )
 
         # If `by` is a ModinFrame, then its partitions will be broadcasted to every
@@ -641,6 +649,7 @@ class GroupByReduce(TreeReduce):
         agg_kwargs,
         drop=False,
         method=None,
+        finalizer_fn=None,
     ):
         """
         Bind appropriate arguments to map and reduce functions.
@@ -666,6 +675,8 @@ class GroupByReduce(TreeReduce):
             Indicates whether or not by-data came from the `self` frame.
         method : str, optional
             Name of the GroupBy aggregation function. This is a hint to be able to do special casing.
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+            A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
         -------
@@ -712,6 +723,7 @@ class GroupByReduce(TreeReduce):
                     agg_kwargs=agg_kwargs,
                     drop=drop,
                     method=method,
+                    finalizer_fn=finalizer_fn,
                     **call_kwargs,
                 )
 

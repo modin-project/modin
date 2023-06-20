@@ -2697,13 +2697,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
+            if ignore_order and is_list_like(key):
+                key = np.sort(key)
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
             )
         else:
+            if ignore_order and is_list_like(key):
+                key_set = frozenset(key)
+                key = [col for col in self.columns if col in key_set]
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
@@ -3790,6 +3795,62 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return unstacked
 
+    def _pivot_table_tree_reduce(
+        self, grouper, aggfunc, drop_column_level, fill_value, dropna, to_unstack=None
+    ):
+        """
+        Build a pivot table using TreeReduce implementation.
+
+        Parameters
+        ----------
+        grouper : PandasQueryCompiler
+            QueryCompiler holding columns to group on.
+        aggfunc : str
+            Aggregation to perform against the values of the pivot table. Note that ``GroupbyReduceImpl``
+            has to be able to build implementation for this aggregation.
+        drop_column_level : bool
+            Whether to drop the top level of the columns.
+        fill_value : object
+            Fill value for None values in the result.
+        dropna : bool
+            Whether to drop NaN columns.
+        to_unstack : list, optional
+            A list of column names to pass to the `.unstack()` when building the pivot table.
+            If `None` was passed perform regular transpose instead of unstacking.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A query compiler holding a pivot table.
+        """
+
+        def make_pivot_table(df):
+            if df.index.nlevels > 1 and to_unstack is not None:
+                df = df.unstack(level=to_unstack)
+            if drop_column_level and df.columns.nlevels > 1:
+                df = df.droplevel(0, axis=1)
+            if dropna:
+                df = df.dropna(axis=1, how="all")
+            if fill_value is not None:
+                df = df.fillna(fill_value, downcast="infer")
+            return df
+
+        result = GroupbyReduceImpl.build_qc_method(
+            aggfunc, finalizer_fn=make_pivot_table
+        )(
+            self,
+            by=grouper,
+            axis=0,
+            groupby_kwargs={},
+            agg_args=(),
+            agg_kwargs={},
+            drop=True,
+        )
+
+        if to_unstack is None:
+            result = result.transpose()
+        return result
+
     def pivot_table(
         self,
         index,
@@ -3816,17 +3877,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return list(by)
             return _convert_by(by)
 
+        drop_column_level = values is not None and not is_list_like(values)
         index, columns, values = map(__convert_by, [index, columns, values])
 
         unique_keys = np.unique(index + columns)
         unique_values = np.unique(values)
 
         if len(values):
-            to_group = self.getitem_column_array(unique_values)
+            to_group = self.getitem_column_array(unique_values, ignore_order=True)
         else:
             to_group = self.drop(columns=unique_keys)
 
-        keys_columns = self.getitem_column_array(unique_keys)
+        keys_columns = self.getitem_column_array(unique_keys, ignore_order=True)
+
+        # Here we can use TreeReduce implementation that tends to be more efficient rather full-axis one
+        if (
+            not margins
+            and GroupbyReduceImpl.has_impl_for(aggfunc)
+            and len(set(index).intersection(columns)) == 0
+        ):
+            return to_group._pivot_table_tree_reduce(
+                keys_columns,
+                aggfunc,
+                drop_column_level=drop_column_level,
+                fill_value=fill_value,
+                dropna=dropna,
+                to_unstack=columns if index else None,
+            )
+
         len_values = len(values)
         if len_values == 0:
             len_values = len(self.columns.drop(unique_keys))

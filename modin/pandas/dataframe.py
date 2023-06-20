@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 import pandas
-from pandas.core.common import apply_if_callable
+from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -1404,6 +1404,10 @@ class DataFrame(BasePandasDataset):
         """
         Create a spreadsheet-style pivot table as a ``DataFrame``.
         """
+        # Convert callable to a string aggregation name if possible
+        if hashable(aggfunc):
+            aggfunc = get_cython_func(aggfunc) or aggfunc
+
         result = self.__constructor__(
             query_compiler=self._query_compiler.pivot_table(
                 index=index,

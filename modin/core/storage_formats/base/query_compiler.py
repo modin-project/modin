@@ -2537,7 +2537,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(getitem_array)(self, key)
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         """
         Get column data for target labels.
 
@@ -2548,6 +2548,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         numeric : bool, default: False
             Whether or not the key passed in represents the numeric index
             or the named index.
+        ignore_order : bool, default: False
+            Allow returning columns in an arbitrary order for the sake of performance.
 
         Returns
         -------
