@@ -75,8 +75,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             if not return_dims:
                 return np.array(parts), unsupported_cols
             else:
-                row_lengths = len(df)
-                col_widths = len(df.columns)
+                row_lengths = [len(df)]
+                col_widths = [len(df.columns)]
                 return np.array(parts), row_lengths, col_widths, unsupported_cols
         else:
             # Since we already have arrow table, putting it into partitions instead
