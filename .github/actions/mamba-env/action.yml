@@ -1,0 +1,46 @@
+name: "Install environment using Mamba"
+author: "Vasily Litvinov"
+description: "Prepare the environment to run Modin"
+inputs:
+  python-version:
+    description: "Python version to install"
+    required: true
+    default: "3.8"
+  environment-file:
+    description: "Conda environment yml"
+    required: true
+  activate-environment:
+    description: "Conda environment to activate"
+    required: true
+    default: "modin"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get current week
+      id: get-week
+      # use current week as cache key to periodically refresh the cache,
+      # as cache is based on requirements, but dependencies push
+      # updated versions at some irregular pace
+      run: echo "thisweek=$(/bin/date -u '+%Y.w%W')" >> $GITHUB_OUTPUT
+      shell: bash
+    - name: Cache conda
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/conda_pkgs_dir
+          ~/.cache/pip
+        key:
+          ${{ runner.os }}-conda-${{ steps.get-week.outputs.thisweek }}-${{ hashFiles(inputs.environment-file) }}
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniforge-variant: Mambaforge
+        miniforge-version: latest
+        use-mamba: true
+        activate-environment: ${{ inputs.activate-environment }}
+        environment-file: ${{ inputs.environment-file }}
+        python-version: ${{ inputs.python-version }}
+        channel-priority: strict
+        # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+        # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+        use-only-tar-bz2: false

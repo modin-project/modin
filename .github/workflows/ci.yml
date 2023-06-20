@@ -141,32 +141,9 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Api tests
         run: python -m pytest modin/pandas/test/test_api.py
@@ -181,32 +158,9 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Headers tests
         run: python -m pytest modin/test/test_headers.py
 
@@ -253,32 +207,9 @@ jobs:
     name: test-internals
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Internals tests
         run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
       - run: python -m pytest modin/config/test
@@ -299,32 +230,9 @@ jobs:
         shell: bash -l {0}
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements-no-engine.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: requirements/requirements-no-engine.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
       - uses: ./.github/workflows/upload-coverage
 
@@ -342,32 +250,9 @@ jobs:
     name: Test ${{ matrix.execution }} execution, Python 3.8
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
@@ -413,32 +298,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
-      - name: Setting up Modin environment
-        uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin_on_hdk
           environment-file: requirements/env_hdk.yml
-          python-version: 3.8
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
+          activate-environment: modin_on_hdk
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
@@ -566,32 +429,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_unidist.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin_on_unidist
           environment-file: requirements/env_unidist.yml
+          activate-environment: modin_on_unidist
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Set up postgres
@@ -691,32 +533,10 @@ jobs:
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
         if: matrix.engine == 'ray'
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Set up postgres
@@ -834,32 +654,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/pandas/test/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
@@ -886,32 +683,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
         # TODO(https://github.com/modin-project/modin/issues/4004): Re-add
         # "python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose"
         # once that test stops crashing.
@@ -940,24 +714,10 @@ jobs:
     name: test-windows (engine ${{matrix.engine}}, python ${{matrix.python-version}}, ${{matrix.test_task}})
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 2
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - name: Start local ray cluster
         # Try a few times to start ray to work around
         # https://github.com/modin-project/modin/issues/4562
@@ -1058,32 +818,10 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
@@ -1103,32 +841,10 @@ jobs:
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
 
   upload-coverage:
