@@ -1,17 +1,14 @@
 name: "Install environment using Mamba"
-author: "Vasily Litvinov"
 description: "Prepare the environment to run Modin"
 inputs:
   python-version:
     description: "Python version to install"
-    required: true
     default: "3.8"
   environment-file:
     description: "Conda environment yml"
     required: true
   activate-environment:
     description: "Conda environment to activate"
-    required: true
     default: "modin"
 
 runs:

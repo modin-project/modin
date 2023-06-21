@@ -258,16 +258,7 @@ jobs:
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/run-core-tests/group_1
-        with:
-          runner: python -m pytest --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/run-core-tests/group_2
-        with:
-          runner: python -m pytest --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/run-core-tests/group_3
-        with:
-          runner: python -m pytest --execution=${{ matrix.execution }}
-      - uses: ./.github/actions/run-core-tests/group_4
+      - uses: ./.github/actions/run-core-tests
         with:
           runner: python -m pytest --execution=${{ matrix.execution }}
       - uses: ./.github/actions/upload-coverage
@@ -440,19 +431,7 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
       - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
       - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
-      - uses: ./.github/actions/run-core-tests/group_1
-        with:
-          runner: mpiexec -n 1 python -m pytest
-          parallel: ""
-      - uses: ./.github/actions/run-core-tests/group_2
-        with:
-          runner: mpiexec -n 1 python -m pytest
-          parallel: ""
-      - uses: ./.github/actions/run-core-tests/group_3
-        with:
-          runner: mpiexec -n 1 python -m pytest
-          parallel: ""
-      - uses: ./.github/actions/run-core-tests/group_4
+      - uses: ./.github/actions/run-core-tests
         with:
           runner: mpiexec -n 1 python -m pytest
           parallel: ""
