@@ -133,27 +133,9 @@ jobs:
       # /contributing/pre-commit
       - run: flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
 
-  test-api:
+  test-api-and-no-engine:
+    name: Test API, headers and no-engine mode
     runs-on: ubuntu-latest
-    name: test api
-    defaults:
-      run:
-        # `shell: bash -l {0}` - special way to activate modin environment
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - name: Api tests
-        run: python -m pytest modin/pandas/test/test_api.py
-      - name: Executions Api tests
-        run: python -m pytest modin/test/test_executions_api.py
-
-  test-headers:
-    runs-on: ubuntu-latest
-    name: test-headers
     defaults:
       run:
         shell: bash -l {0}
@@ -161,12 +143,15 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: environment-dev.yml
-      - name: Headers tests
-        run: python -m pytest modin/test/test_headers.py
+          environment-file: requirements/requirements-no-engine.yml
+      - run: python -m pytest modin/pandas/test/test_api.py
+      - run: python -m pytest modin/test/test_executions_api.py
+      - run: python -m pytest modin/test/test_headers.py
+      - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
+      - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     strategy:
       matrix:
         os:
@@ -188,7 +173,7 @@ jobs:
           MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -212,21 +197,8 @@ jobs:
       - run: python -m pytest modin/test/test_logging.py
       - uses: ./.github/actions/upload-coverage
 
-  test-no-engine:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: requirements/requirements-no-engine.yml
-      - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
-      - uses: ./.github/actions/upload-coverage
-
   test-defaults:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -252,7 +224,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-hdk:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -309,7 +281,7 @@ jobs:
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -375,7 +347,7 @@ jobs:
         if: failure()
 
   test-all-unidist:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -438,7 +410,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-all:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -540,7 +512,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -569,7 +541,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-cloud:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -600,7 +572,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-windows:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: windows-latest
     defaults:
       run:
@@ -655,7 +627,7 @@ jobs:
         run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
 
   test-pyarrow:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -685,7 +657,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
-    needs: [lint-flake8, lint-black, lint-mypy, test-api, test-headers]
+    needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -707,7 +679,7 @@ jobs:
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
 
   upload-coverage:
-    needs: [test-internals, test-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-windows]
+    needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-windows]
     runs-on: ubuntu-latest
     defaults:
       run:
