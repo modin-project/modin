@@ -307,14 +307,15 @@ jobs:
           pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       - name: Running benchmarks
         run: |
-          # ASV correctly creates environments for testing only from the branch
-          # with `master` name
-          git checkout -b master
-          cd asv_bench
-          asv check -v
           git remote add upstream https://github.com/modin-project/modin.git
           git fetch upstream
           if git diff upstream/master --name-only | grep -q "^asv_bench/"; then
+              # ASV correctly creates environments for testing only from the branch
+              # with `master` name
+              git checkout -b master
+              cd asv_bench
+              asv check -v
+
               asv machine --yes
 
               # check Modin on Ray
