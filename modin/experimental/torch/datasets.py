@@ -57,7 +57,7 @@ class ModinIterableDataset(IterableDataset):
         if worker_info is None:
             yield from self._iter()
         else:
-            yield from self._multithread_iter()
+            raise NotImplementedError("Multi-threaded iterator not implemented.")
 
     def _iter(self):
         """
