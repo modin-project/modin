@@ -396,6 +396,7 @@ jobs:
         with:
           runner: mpiexec -n 1 python -m pytest
           parallel: ""
+      - run: mpiexec -n 1 python -m pytest modin/numpy/test
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
@@ -506,6 +507,8 @@ jobs:
       - uses: ./.github/actions/run-core-tests/group_3
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - uses: ./.github/actions/run-core-tests/group_4
+        if: matrix.engine == 'python' || matrix.test_task == 'group_4'
+      - run: python -m pytest -n 2 modin/numpy/test
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')

@@ -15,15 +15,6 @@ runs:
           echo "::group::Running tests (group 4)..."
           ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py \
                                                       modin/pandas/test/test_expanding.py \
-                                                      modin/numpy/test/test_array.py \
-                                                      modin/numpy/test/test_array_creation.py \
-                                                      modin/numpy/test/test_array_arithmetic.py \
-                                                      modin/numpy/test/test_array_axis_functions.py \
-                                                      modin/numpy/test/test_array_logic.py \
-                                                      modin/numpy/test/test_array_linalg.py \
-                                                      modin/numpy/test/test_array_indexing.py \
-                                                      modin/numpy/test/test_array_math.py \
-                                                      modin/numpy/test/test_array_shaping.py \
                                                       modin/pandas/test/test_groupby.py \
                                                       modin/pandas/test/test_reshape.py \
                                                       modin/pandas/test/test_general.py
