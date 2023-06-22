@@ -11,9 +11,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_series.py
+      - run: |
+          echo "::group::Running tests (group 3)..."
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_series.py \
+                                                      modin/pandas/test/dataframe/test_map_metadata.py
+          echo "::endgroup::"
         shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_map_metadata.py
-        shell: bash -l {0}
-      - run: MODIN_EXPERIMENTAL_GROUPBY=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_groupby.py
+      - run: |
+          echo "::group::Running experimental groupby tests (group 3)..."
+          MODIN_EXPERIMENTAL_GROUPBY=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_groupby.py
+          echo "::endgroup::"
         shell: bash -l {0}

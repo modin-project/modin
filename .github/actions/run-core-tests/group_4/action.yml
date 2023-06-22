@@ -11,33 +11,26 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py
+      - run: |
+          echo "::group::Running tests (group 4)..."
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py \
+                                                      modin/pandas/test/test_expanding.py \
+                                                      modin/numpy/test/test_array.py \
+                                                      modin/numpy/test/test_array_creation.py \
+                                                      modin/numpy/test/test_array_arithmetic.py \
+                                                      modin/numpy/test/test_array_axis_functions.py \
+                                                      modin/numpy/test/test_array_logic.py \
+                                                      modin/numpy/test/test_array_linalg.py \
+                                                      modin/numpy/test/test_array_indexing.py \
+                                                      modin/numpy/test/test_array_math.py \
+                                                      modin/numpy/test/test_array_shaping.py \
+                                                      modin/pandas/test/test_groupby.py \
+                                                      modin/pandas/test/test_reshape.py \
+                                                      modin/pandas/test/test_general.py
+          echo "::endgroup::"
         shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_expanding.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_creation.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_arithmetic.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_axis_functions.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_logic.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_linalg.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_indexing.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_math.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/numpy/test/test_array_shaping.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_groupby.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_reshape.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_general.py
+      - run: |
+          echo "::group::Running concat tests (group 4)..."
+          ${{ inputs.runner }} modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+          echo "::endgroup::"
         shell: bash -l {0}

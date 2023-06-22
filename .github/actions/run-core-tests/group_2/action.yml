@@ -11,13 +11,12 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_join_sort.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_reduce.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_udf.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_window.py
-        shell: bash -l {0}
-      - run: ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_pickle.py
+      - run: |
+          echo "::group::Running dataframe tests (group 2)..."
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_join_sort.py \
+                                                      modin/pandas/test/dataframe/test_reduce.py \
+                                                      modin/pandas/test/dataframe/test_udf.py \
+                                                      modin/pandas/test/dataframe/test_window.py \
+                                                      modin/pandas/test/dataframe/test_pickle.py
+          echo "::endgroup::"
         shell: bash -l {0}
