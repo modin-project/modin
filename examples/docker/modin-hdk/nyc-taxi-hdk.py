@@ -15,9 +15,6 @@ import sys
 from utils import measure
 import modin.pandas as pd
 from modin.pandas.test.utils import df_equals
-from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
-    DbWorker,
-)
 from modin.experimental.sql import query
 
 
@@ -145,12 +142,8 @@ def read(filename):
         parse_dates=dates_only,
     )
 
-    df.shape  # to trigger real execution
-    df._query_compiler._modin_frame._partitions[0][
-        0
-    ].frame_id = DbWorker().import_arrow_table(
-        df._query_compiler._modin_frame._partitions[0][0].get()
-    )  # to trigger real execution
+    # to trigger real execution and table import
+    df._query_compiler._modin_frame.force_import()
     return df
 
 

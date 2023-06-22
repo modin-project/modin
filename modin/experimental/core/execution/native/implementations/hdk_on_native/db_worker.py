@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module chooses a proper worker class."""
+from .base_worker import DbTable
 from .hdk_worker import HdkWorker as DbWorker
 
-__all__ = ["DbWorker"]
+__all__ = ["DbTable", "DbWorker"]

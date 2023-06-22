@@ -34,6 +34,7 @@ from pandas.core.dtypes.common import (
     is_datetime64_dtype,
 )
 
+from modin.pandas.indexing import is_range_like
 from modin.utils import _inherit_docstrings
 from .dataframe.utils import ColNameCodec, to_arrow_type
 
@@ -1126,6 +1127,9 @@ class OpExpr(BaseExpr):
                 return OpExpr("IS NOT NULL", op.operands, op._dtype)
             if op.op == "IS NOT NULL":
                 return OpExpr("IS NULL", op.operands, op._dtype)
+            if op.op == "CASE":
+                operands = [op.operands[0], op.operands[2], op.operands[1]]
+                return OpExpr("CASE", operands, op._dtype)
         return self
 
     def _fold_literal(self, op, *args):
@@ -1327,8 +1331,17 @@ def build_row_idx_filter_expr(row_idx, row_col):
     if not is_list_like(row_idx):
         return row_col.eq(row_idx)
 
-    if isinstance(row_idx, (pandas.RangeIndex, range)) and row_idx.step == 1:
-        exprs = [row_col.ge(row_idx[0]), row_col.le(row_idx[-1])]
+    if is_range_like(row_idx):
+        start = row_idx[0]
+        stop = row_idx[-1]
+        step = row_idx.step
+        if step < 0:
+            start, stop = stop, start
+            step = -step
+        exprs = [row_col.ge(start), row_col.le(stop)]
+        if step > 1:
+            mod = OpExpr("MOD", [row_col, LiteralExpr(step)], get_dtype(int))
+            exprs.append(mod.eq(0))
         return OpExpr("AND", exprs, get_dtype(bool))
 
     exprs = [row_col.eq(idx) for idx in row_idx]

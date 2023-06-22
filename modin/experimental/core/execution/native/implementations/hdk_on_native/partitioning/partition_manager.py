@@ -22,7 +22,7 @@ from modin.core.dataframe.pandas.partitioning.partition_manager import (
 )
 from ..dataframe.utils import ColNameCodec
 from ..partitioning.partition import HdkOnNativeDataframePartition
-from ..db_worker import DbWorker
+from ..db_worker import DbTable, DbWorker
 from ..calcite_builder import CalciteBuilder
 from ..calcite_serializer import CalciteSerializer
 from modin.config import DoUseCalcite
@@ -243,52 +243,61 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         np.array
             Created frame's partitions.
         """
-        omniSession = DbWorker()
+        worker = DbWorker()
 
         # First step is to make sure all partitions are in HDK.
         frames = plan.collect_frames()
         for frame in frames:
-            for p in frame._partitions.flatten():
-                if p.frame_id is None:
-                    obj = p.get()
-                    if isinstance(obj, (pandas.DataFrame, pandas.Series)):
-                        p.frame_id = omniSession.import_pandas_dataframe(obj)
-                    else:
-                        assert isinstance(obj, pyarrow.Table)
-                        if obj.num_columns == 0:
-                            # Tables without columns are not supported.
-                            # Creating an empty table with index columns only.
-                            idx_names = (
-                                frame.index.names
-                                if frame.has_materialized_index
-                                else [None]
-                            )
-                            idx_names = ColNameCodec.mangle_index_names(idx_names)
-                            obj = pyarrow.table(
-                                {n: [] for n in idx_names},
-                                schema=pyarrow.schema(
-                                    {n: pyarrow.int64() for n in idx_names}
-                                ),
-                            )
-                        p.frame_id = omniSession.import_arrow_table(obj)
+            cls.import_table(frame, worker)
 
         calcite_plan = CalciteBuilder().build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
-
-        cmd_prefix = "execute relalg "
-
         if DoUseCalcite.get():
-            cmd_prefix = "execute calcite "
+            calcite_json = "execute calcite " + calcite_json
+        table = worker.executeRA(calcite_json)
 
-        at = omniSession.executeRA(cmd_prefix + calcite_json)
-
-        res = np.empty((1, 1), dtype=np.dtype(object))
         # workaround for https://github.com/modin-project/modin/issues/1851
         if DoUseCalcite.get():
-            at = at.rename_columns([ColNameCodec.encode(c) for c in columns])
-        res[0][0] = cls._partition_class(at)
+            table._column_names = [ColNameCodec.encode(c) for c in columns]
+
+        res = np.empty((1, 1), dtype=np.dtype(object))
+        res[0][0] = cls._partition_class(table)
 
         return res
+
+    @classmethod
+    def import_table(cls, frame, worker=DbWorker()) -> DbTable:
+        """
+        Import the frame's partition data, if required.
+
+        Parameters
+        ----------
+        frame : HdkOnNativeDataframe
+        worker : DbWorker, optional
+
+        Returns
+        -------
+        DbTable
+        """
+        table = frame._partitions[0][0].get()
+        if isinstance(table, pandas.DataFrame):
+            table = worker.import_pandas_dataframe(table)
+            frame._partitions[0][0] = cls._partition_class(table)
+        elif isinstance(table, pyarrow.Table):
+            if table.num_columns == 0:
+                # Tables without columns are not supported.
+                # Creating an empty table with index columns only.
+                idx_names = (
+                    frame.index.names if frame.has_materialized_index else [None]
+                )
+                idx_names = ColNameCodec.mangle_index_names(idx_names)
+                table = pyarrow.table(
+                    {n: [] for n in idx_names},
+                    schema=pyarrow.schema({n: pyarrow.int64() for n in idx_names}),
+                )
+            table = worker.import_arrow_table(table)
+            frame._partitions[0][0] = cls._partition_class(table)
+        return table
 
     @classmethod
     def _names_from_index_cols(cls, cols):
