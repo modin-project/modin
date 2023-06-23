@@ -537,7 +537,7 @@ jobs:
         if: matrix.os == 'windows' && matrix.engine == 'ray'
       - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
         run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
-        if: matrix.os == 'windows'
+        if: matrix.os == 'windows' && steps.cache-conda.outputs.cache-hit == 'true'
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
