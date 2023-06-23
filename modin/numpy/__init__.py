@@ -108,7 +108,7 @@ from . import linalg
 
 
 def where(condition, x=None, y=None):
-    if x is None != y is None:
+    if x is not None != y is not None:
         raise ValueError("either both or neither of x and y should be given")
     if condition is True:
         return x
