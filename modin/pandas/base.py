@@ -3437,10 +3437,10 @@ class BasePandasDataset(ClassLogger):
         types : list[types]
             Types of arguments.
         args : list
-            Arguments to pass to function
+            Arguments to pass to function.
         kwargs : dict
-            Key word arguments to pass to function
-        
+            Key word arguments to pass to function.
+
         Returns
         -------
         arr : np.ndarray or modin.numpy.array
