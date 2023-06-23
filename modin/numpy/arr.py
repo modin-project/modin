@@ -444,7 +444,9 @@ class array(object):
         return modin_func(*args, **kwargs)
 
     def where(self, x=None, y=None):
-        if x is not None != y is not None:
+        x_specified = x is not None
+        y_specified = y is not None
+        if x_specified != y_specified:
             raise ValueError("either both or neither of x and y should be given")
         if not is_bool_dtype(self.dtype):
             raise NotImplementedError(
