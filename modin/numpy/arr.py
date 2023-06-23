@@ -437,11 +437,15 @@ class array(object):
             modin_func = getattr(shaping, func_name)
         elif hasattr(creation, func_name):
             modin_func = getattr(creation, func_name)
+        if func_name == "where":
+            return self.where(*args[1:])
         if modin_func is None:
             return NotImplemented
         return modin_func(*args, **kwargs)
 
     def where(self, x=None, y=None):
+        if x is None != y is None:
+            raise ValueError("either both or neither of x and y should be given")
         if not is_bool_dtype(self.dtype):
             raise NotImplementedError(
                 "Modin currently only supports where on condition arrays with boolean dtype."

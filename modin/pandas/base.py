@@ -61,7 +61,7 @@ from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin import pandas as pd
 from modin.pandas.utils import is_scalar
-from modin.config import IsExperimental
+from modin.config import IsExperimental, ExperimentalNumPyAPI
 from modin.logging import disable_logging, ClassLogger
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
@@ -3426,6 +3426,40 @@ class BasePandasDataset(ClassLogger):
     def __rand__(self, other):
         return self._binary_op("__rand__", other, axis=0)
 
+    def __array_function__(self, func, types, args, kwargs):
+        """
+        Return the result of calling an array function on self.
+
+        Parameters
+        ----------
+        func : Callable
+            The function to call.
+        types : list[types]
+            Types of arguments.
+        args : list
+            Arguments to pass to function
+        kwargs : dict
+            Key word arguments to pass to function
+        
+        Returns
+        -------
+        arr : np.ndarray or modin.numpy.array
+            The result of calling the array function on self.
+        """
+        out = self.to_numpy().__array_function__(func, types, args, kwargs)
+        if out is NotImplemented:
+            func_name = func.__name__
+            arr = self.__array__()
+            if ExperimentalNumPyAPI.get():
+                ErrorMessage.warn(
+                    f"Attempted to use Experimental NumPy API for function {func_name} but failed. Defaulting to NumPy."
+                )
+            return func(arr, *args[1:], **kwargs)
+        return out
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        return self.to_numpy().__array_ufunc__(ufunc, method, *inputs, **kwargs)
+
     def __array__(self, dtype=None):
         """
         Return the values as a NumPy array.
@@ -3441,6 +3475,8 @@ class BasePandasDataset(ClassLogger):
             NumPy representation of Modin object.
         """
         arr = self.to_numpy(dtype)
+        if ExperimentalNumPyAPI.get():
+            arr = arr._to_numpy()
         return arr
 
     def __copy__(self, deep=True):
