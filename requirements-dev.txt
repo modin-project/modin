@@ -2,7 +2,7 @@ pandas>=2,<2.1
 numpy>=1.18.5
 dask[complete]>=2.22.0
 distributed>=2.22.0
-ray[default]>=1.13.0
+ray[default]>=1.13.0,<2.5.0
 pyarrow
 psutil
 fsspec
