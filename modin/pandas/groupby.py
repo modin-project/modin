@@ -39,6 +39,7 @@ from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.config import IsExperimental
 from .series import Series
+from .window import RollingGroupby
 from .utils import is_label
 
 
@@ -135,7 +136,7 @@ class DataFrameGroupBy(ClassLogger):
         }
         self._kwargs.update(kwargs)
 
-    def __override(self, **kwargs):
+    def _override(self, **kwargs):
         new_kw = dict(
             df=self._df,
             by=self._by,
@@ -836,7 +837,7 @@ class DataFrameGroupBy(ClassLogger):
             # for list-list aggregation pandas always puts
             # groups as index in the result, ignoring as_index,
             # so we have to reset it to default value
-            res = self.__override(as_index=True)._wrap_aggregation(
+            res = self._override(as_index=True)._wrap_aggregation(
                 qc_method=type(self._query_compiler).groupby_agg,
                 numeric_only=False,
                 agg_func=func,
@@ -916,7 +917,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def get_group(self, name, obj=None):
-        work_object = self.__override(
+        work_object = self._override(
             df=obj if obj is not None else self._df, as_index=True
         )
 
@@ -1067,7 +1068,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def head(self, n=5):
         # groupby().head()/.tail() ignore as_index, so override it to True
-        work_object = self.__override(as_index=True)
+        work_object = self._override(as_index=True)
 
         return work_object._check_index(
             work_object._wrap_aggregation(
@@ -1184,7 +1185,7 @@ class DataFrameGroupBy(ClassLogger):
 
     def tail(self, n=5):
         # groupby().head()/.tail() ignore as_index, so override it to True
-        work_object = self.__override(as_index=True)
+        work_object = self._override(as_index=True)
         return work_object._check_index(
             work_object._wrap_aggregation(
                 type(work_object._query_compiler).groupby_tail,
@@ -1199,7 +1200,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._default_to_pandas(lambda df: df.expanding(*args, **kwargs))
 
     def rolling(self, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.rolling(*args, **kwargs))
+        return RollingGroupby(self, *args, **kwargs)
 
     def hist(
         self,

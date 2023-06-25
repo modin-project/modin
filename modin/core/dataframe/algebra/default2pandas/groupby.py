@@ -605,6 +605,7 @@ class GroupByDefault(DefaultMethod):
         "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
         "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,
         "transform": pandas.core.groupby.DataFrameGroupBy.transform,
+        "direct": lambda grp, func, *args, **kwargs: func(grp, *args, **kwargs),
     }
 
     @classmethod
@@ -637,4 +638,5 @@ class SeriesGroupByDefault(GroupByDefault):
         "axis_wise": pandas.core.groupby.SeriesGroupBy.aggregate,
         "group_wise": pandas.core.groupby.SeriesGroupBy.apply,
         "transform": pandas.core.groupby.SeriesGroupBy.transform,
+        "direct": lambda grp, func, *args, **kwargs: func(grp, *args, **kwargs),
     }

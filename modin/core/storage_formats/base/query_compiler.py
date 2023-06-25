@@ -3021,6 +3021,74 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             result.columns = result.columns[:-1].append(pandas.Index(["size"]))
         return result
 
+    @doc_utils.add_refer_to("GroupBy.rolling")
+    def groupby_rolling(
+        self,
+        by,
+        agg_func,
+        axis,
+        groupby_kwargs,
+        rolling_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        """
+        Group QueryCompiler data and apply passed aggregation function.
+
+        Parameters
+        ----------
+        by : BaseQueryCompiler, column or index label, Grouper or list of such
+            Object that determine groups.
+        agg_func : str, dict or callable(Series | DataFrame) -> scalar | Series | DataFrame
+            Function to apply to the GroupBy object.
+        axis : {0, 1}
+            Axis to group and apply aggregation function along.
+            0 is for index, when 1 is for columns.
+        groupby_kwargs : dict
+            GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
+        agg_args : list-like
+            Positional arguments to pass to the `agg_func`.
+        agg_kwargs : dict
+            Key arguments to pass to the `agg_func`.
+        how : {'axis_wise', 'group_wise', 'transform'}, default: 'axis_wise'
+            How to apply passed `agg_func`:
+                - 'axis_wise': apply the function against each row/column.
+                - 'group_wise': apply the function against every group.
+                - 'transform': apply the function against every group and broadcast
+                  the result to the original Query Compiler shape.
+        drop : bool, default: False
+            If `by` is a QueryCompiler indicates whether or not by-data came
+            from the `self`.
+        series_groupby : bool, default: False
+            Whether we should treat `self` as Series when performing groupby.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing the result of groupby aggregation.
+        """
+        if isinstance(agg_func, str):
+            str_func = agg_func
+
+            def agg_func(window, *args, **kwargs):
+                return getattr(window, str_func)(*args, **kwargs)
+
+        else:
+            assert callable(agg_func)
+        return self.groupby_agg(
+            by=by,
+            agg_func=lambda grp, *args, **kwargs: agg_func(
+                grp.rolling(**rolling_kwargs), *args, **kwargs
+            ),
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            how="direct",
+            drop=drop,
+        )
+
     @doc_utils.add_refer_to("GroupBy.aggregate")
     def groupby_agg(
         self,
@@ -5760,9 +5828,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
         build_rules="udf_aggregation",
     )
-    def rolling_aggregate(self, fold_axis, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, fold_axis, rolling_kwargs, func, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.aggregate)(
-            self, rolling_args, func, *args, **kwargs
+            self, rolling_kwargs, func, *args, **kwargs
         )
 
     # FIXME: at the query compiler method `rolling_apply` is an alias for `rolling_aggregate`,
@@ -5787,7 +5855,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def rolling_apply(
         self,
         fold_axis,
-        rolling_args,
+        rolling_kwargs,
         func,
         raw=False,
         engine=None,
@@ -5796,7 +5864,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         kwargs=None,
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.apply)(
-            self, rolling_args, func, raw, engine, engine_kwargs, args, kwargs
+            self, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5810,18 +5878,18 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def rolling_corr(
-        self, fold_axis, rolling_args, other=None, pairwise=None, *args, **kwargs
+        self, fold_axis, rolling_kwargs, other=None, pairwise=None, *args, **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.corr)(
-            self, rolling_args, other, pairwise, *args, **kwargs
+            self, rolling_kwargs, other, pairwise, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
         window_cls_name="Rolling", result="number of non-NA values", refer_to="count"
     )
-    def rolling_count(self, fold_axis, rolling_args):
+    def rolling_count(self, fold_axis, rolling_kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.count)(
-            self, rolling_args
+            self, rolling_kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5835,10 +5903,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def rolling_cov(
-        self, fold_axis, rolling_args, other=None, pairwise=None, ddof=1, **kwargs
+        self, fold_axis, rolling_kwargs, other=None, pairwise=None, ddof=1, **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.cov)(
-            self, rolling_args, other, pairwise, ddof, **kwargs
+            self, rolling_kwargs, other, pairwise, ddof, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5847,9 +5915,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="kurt",
         params="**kwargs : dict",
     )
-    def rolling_kurt(self, fold_axis, rolling_args, **kwargs):
+    def rolling_kurt(self, fold_axis, rolling_kwargs, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.kurt)(
-            self, rolling_args, **kwargs
+            self, rolling_kwargs, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5860,9 +5928,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_max(self, fold_axis, rolling_args, *args, **kwargs):
+    def rolling_max(self, fold_axis, rolling_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.max)(
-            self, rolling_args, *args, **kwargs
+            self, rolling_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5873,9 +5941,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_mean(self, fold_axis, rolling_args, *args, **kwargs):
+    def rolling_mean(self, fold_axis, rolling_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.mean)(
-            self, rolling_args, *args, **kwargs
+            self, rolling_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5884,9 +5952,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="median",
         params="**kwargs : dict",
     )
-    def rolling_median(self, fold_axis, rolling_args, **kwargs):
+    def rolling_median(self, fold_axis, rolling_kwargs, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.median)(
-            self, rolling_args, **kwargs
+            self, rolling_kwargs, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5897,9 +5965,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_min(self, fold_axis, rolling_args, *args, **kwargs):
+    def rolling_min(self, fold_axis, rolling_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.min)(
-            self, rolling_args, *args, **kwargs
+            self, rolling_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5912,10 +5980,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         **kwargs : dict""",
     )
     def rolling_quantile(
-        self, fold_axis, rolling_args, quantile, interpolation="linear", **kwargs
+        self, fold_axis, rolling_kwargs, quantile, interpolation="linear", **kwargs
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.quantile)(
-            self, rolling_args, quantile, interpolation, **kwargs
+            self, rolling_kwargs, quantile, interpolation, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5924,9 +5992,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         refer_to="skew",
         params="**kwargs : dict",
     )
-    def rolling_skew(self, fold_axis, rolling_args, **kwargs):
+    def rolling_skew(self, fold_axis, rolling_kwargs, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.skew)(
-            self, rolling_args, **kwargs
+            self, rolling_kwargs, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5938,9 +6006,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_std(self, fold_axis, rolling_args, ddof=1, *args, **kwargs):
+    def rolling_std(self, fold_axis, rolling_kwargs, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.std)(
-            self, rolling_args, ddof, *args, **kwargs
+            self, rolling_kwargs, ddof, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5951,9 +6019,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_sum(self, fold_axis, rolling_args, *args, **kwargs):
+    def rolling_sum(self, fold_axis, rolling_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.sum)(
-            self, rolling_args, *args, **kwargs
+            self, rolling_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5964,9 +6032,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_sem(self, fold_axis, rolling_args, *args, **kwargs):
+    def rolling_sem(self, fold_axis, rolling_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.sem)(
-            self, rolling_args, *args, **kwargs
+            self, rolling_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5978,9 +6046,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def rolling_var(self, fold_axis, rolling_args, ddof=1, *args, **kwargs):
+    def rolling_var(self, fold_axis, rolling_kwargs, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.var)(
-            self, rolling_args, ddof, *args, **kwargs
+            self, rolling_kwargs, ddof, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -5998,7 +6066,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def rolling_rank(
         self,
         fold_axis,
-        rolling_args,
+        rolling_kwargs,
         method="average",
         ascending=True,
         pct=False,
@@ -6008,7 +6076,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     ):
         return RollingDefault.register(pandas.core.window.rolling.Rolling.rank)(
             self,
-            rolling_args,
+            rolling_kwargs,
             method=method,
             ascending=ascending,
             pct=pct,
@@ -6371,9 +6439,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_mean(self, fold_axis, window_args, *args, **kwargs):
+    def window_mean(self, fold_axis, window_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.mean)(
-            self, window_args, *args, **kwargs
+            self, window_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -6386,9 +6454,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_std(self, fold_axis, window_args, ddof=1, *args, **kwargs):
+    def window_std(self, fold_axis, window_kwargs, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.std)(
-            self, window_args, ddof, *args, **kwargs
+            self, window_kwargs, ddof, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -6400,9 +6468,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_sum(self, fold_axis, window_args, *args, **kwargs):
+    def window_sum(self, fold_axis, window_kwargs, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.sum)(
-            self, window_args, *args, **kwargs
+            self, window_kwargs, *args, **kwargs
         )
 
     @doc_utils.doc_window_method(
@@ -6415,9 +6483,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         *args : iterable
         **kwargs : dict""",
     )
-    def window_var(self, fold_axis, window_args, ddof=1, *args, **kwargs):
+    def window_var(self, fold_axis, window_kwargs, ddof=1, *args, **kwargs):
         return RollingDefault.register(pandas.core.window.Window.var)(
-            self, window_args, ddof, *args, **kwargs
+            self, window_kwargs, ddof, *args, **kwargs
         )
 
     # End of Window methods
