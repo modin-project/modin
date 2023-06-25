@@ -2,7 +2,7 @@ name: modin_on_hdk
 channels:
   - conda-forge
 dependencies:
-  - pandas==1.5.3
+  - pandas>=2,<2.1
   - pyarrow
   - numpy>=1.18.5
   - fsspec
@@ -15,14 +15,15 @@ dependencies:
   - pyhdk==0.6
   - s3fs>=2021.8
   - psutil
-  - openpyxl<3.1.0
+  - openpyxl
   - xlrd
   - sqlalchemy>=1.4.0,<1.4.46
   - scipy
   - xgboost>=1.7.1,<2.0.0
   - scikit-learn-intelex
   - matplotlib
-  - xarray
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - pytables
   - fastparquet
   # code linters

@@ -48,6 +48,8 @@ class ExperimentalSQLDispatcher(SQLDispatcher):
         parse_dates,
         columns,
         chunksize,
+        dtype_backend,
+        dtype,
         partition_column,
         lower_bound,
         upper_bound,
@@ -82,6 +84,8 @@ class ExperimentalSQLDispatcher(SQLDispatcher):
                 parse_dates=parse_dates,
                 columns=columns,
                 chunksize=chunksize,
+                dtype_backend=dtype_backend,
+                dtype=dtype,
             )
         #  starts the distributed alternative
         cols_names, query = get_query_info(sql, con, partition_column)
@@ -117,6 +121,8 @@ class ExperimentalSQLDispatcher(SQLDispatcher):
                     parse_dates,
                     columns,
                     chunksize,
+                    dtype_backend,
+                    dtype,
                 ),
                 num_returns=num_splits + 1,
             )

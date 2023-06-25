@@ -39,6 +39,7 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
+import os
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
@@ -59,6 +60,7 @@ from modin.core.storage_formats.pandas.utils import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.utils import ModinAssumptionError
 
 _doc_pandas_parser_class = """
 Class for handling {data_type} on the workers using pandas storage format.
@@ -247,6 +249,7 @@ class PandasParser(ClassLogger):
 
         combined_part_dtypes = pandas.concat(partitions_dtypes, axis=1)
         frame_dtypes = combined_part_dtypes.iloc[:, 0]
+        frame_dtypes.name = None
 
         if not combined_part_dtypes.eq(frame_dtypes, axis=0).all(axis=None):
             ErrorMessage.missmatch_with_pandas(
@@ -313,6 +316,29 @@ class PandasParser(ClassLogger):
                 for i, frame in pandas_frame.items()
             }
         return cls.query_compiler_cls.from_pandas(pandas_frame, cls.frame_cls)
+
+    @staticmethod
+    def get_types_mapper(dtype_backend):
+        """
+        Get types mapper that would be used in read_parquet/read_feather.
+
+        Parameters
+        ----------
+        dtype_backend : {"numpy_nullable", "pyarrow", lib.no_default}
+
+        Returns
+        -------
+        dict
+        """
+        to_pandas_kwargs = {}
+        if dtype_backend == "numpy_nullable":
+            from pandas.io._util import _arrow_dtype_mapping
+
+            mapping = _arrow_dtype_mapping()
+            to_pandas_kwargs["types_mapper"] = mapping.get
+        elif dtype_backend == "pyarrow":
+            to_pandas_kwargs["types_mapper"] = pandas.ArrowDtype
+        return to_pandas_kwargs
 
     infer_compression = infer_compression
 
@@ -531,6 +557,20 @@ class PandasExcelParser(PandasParser):
 
         return cell.value
 
+    @property
+    def need_rich_text_param(self):
+        """
+        Determine whether a required `rich_text` parameter should be specified for the ``WorksheetReader`` constructor.
+
+        Returns
+        -------
+        bool
+        """
+        import openpyxl
+        from packaging import version
+
+        return version.parse(openpyxl.__version__) >= version.parse("3.1.0")
+
     @staticmethod
     @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
     def parse(fname, **kwargs):
@@ -547,7 +587,7 @@ class PandasExcelParser(PandasParser):
             return pandas.read_excel(fname, **kwargs)
 
         from zipfile import ZipFile
-        from openpyxl import load_workbook
+        import openpyxl
         from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
         from openpyxl.worksheet.worksheet import Worksheet
@@ -559,7 +599,7 @@ class PandasExcelParser(PandasParser):
         from pandas.io.parsers import TextParser
         import re
 
-        wb = load_workbook(filename=fname, read_only=True)
+        wb = openpyxl.load_workbook(filename=fname, read_only=True)
         # Get shared strings
         ex = ExcelReader(fname, read_only=True)
         ex.read_manifest()
@@ -607,7 +647,11 @@ class PandasExcelParser(PandasParser):
         bytes_data = re.sub(rb'r="[A-Z]*\d+"', update_row_nums, bytes_data)
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
-        reader = WorksheetReader(ws, bytesio, ex.shared_strings, False)
+        common_args = (ws, bytesio, ex.shared_strings, False)
+        if PandasExcelParser.need_rich_text_param:
+            reader = WorksheetReader(*common_args, rich_text=False)
+        else:
+            reader = WorksheetReader(*common_args)
         # Attach cells to worksheet object
         reader.bind_cells()
         data = PandasExcelParser.get_sheet_data(ws, kwargs.pop("convert_float", True))
@@ -705,7 +749,7 @@ class PandasJSONParser(PandasParser):
             # This only happens when we are reading with only one worker (Default)
             return pandas.read_json(fname, **kwargs)
         if not pandas_df.columns.equals(columns):
-            raise ValueError("Columns must be the same across all rows.")
+            raise ModinAssumptionError("Columns must be the same across all rows.")
         partition_columns = pandas_df.columns
         return _split_result_for_readers(1, num_splits, pandas_df) + [
             len(pandas_df),
@@ -737,7 +781,7 @@ class ParquetFileToRead(NamedTuple):
 class PandasParquetParser(PandasParser):
     @staticmethod
     def _read_row_group_chunk(
-        f, row_group_start, row_group_end, columns, engine
+        f, row_group_start, row_group_end, columns, engine, to_pandas_kwargs
     ):  # noqa: GL08
         if engine == "pyarrow":
             from pyarrow.parquet import ParquetFile
@@ -752,7 +796,7 @@ class PandasParquetParser(PandasParser):
                     columns=columns,
                     use_pandas_metadata=True,
                 )
-                .to_pandas()
+                .to_pandas(**to_pandas_kwargs)
             )
         elif engine == "fastparquet":
             from fastparquet import ParquetFile
@@ -779,9 +823,11 @@ engine : str
         columns = kwargs.get("columns", None)
         storage_options = kwargs.get("storage_options", {})
         chunks = []
-        # `single_worker_read` just passes in a string path
-        if isinstance(files_for_parser, str):
+        # `single_worker_read` just passes in a string path or path-like object
+        if isinstance(files_for_parser, (str, os.PathLike)):
             return pandas.read_parquet(files_for_parser, engine=engine, **kwargs)
+
+        to_pandas_kwargs = PandasParser.get_types_mapper(kwargs["dtype_backend"])
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
@@ -795,6 +841,7 @@ engine : str
                     file_for_parser.row_group_end,
                     columns,
                     engine,
+                    to_pandas_kwargs,
                 )
             chunks.append(chunk)
         df = pandas.concat(chunks)
@@ -834,11 +881,14 @@ class PandasFeatherParser(PandasParser):
         if num_splits is None:
             return pandas.read_feather(fname, **kwargs)
 
+        to_pandas_kwargs = PandasParser.get_types_mapper(kwargs["dtype_backend"])
+        del kwargs["dtype_backend"]
+
         with OpenFile(
             fname,
             **(kwargs.pop("storage_options", None) or {}),
         ) as file:
-            df = feather.read_feather(file, **kwargs)
+            df = feather.read_feather(file, **kwargs, **to_pandas_kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 

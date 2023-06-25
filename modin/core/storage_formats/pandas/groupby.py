@@ -71,13 +71,15 @@ class GroupbyReduceImpl:
         return True
 
     @classmethod
-    def build_qc_method(cls, agg_name):
+    def build_qc_method(cls, agg_name, finalizer_fn=None):
         """
         Build a TreeReduce implemented query compiler method for the specified groupby aggregation.
 
         Parameters
         ----------
         agg_name : hashable
+        finalizer_fn : callable(pandas.DataFrame) -> pandas.DataFrame, default: None
+            A callable to execute at the end a groupby kernel against groupby result.
 
         Returns
         -------
@@ -87,12 +89,16 @@ class GroupbyReduceImpl:
         """
         map_fn, reduce_fn, d2p_fn = cls.get_impl(agg_name)
         map_reduce_method = GroupByReduce.register(
-            map_fn, reduce_fn, default_to_pandas_func=d2p_fn
+            map_fn, reduce_fn, default_to_pandas_func=d2p_fn, finalizer_fn=finalizer_fn
         )
 
         def method(query_compiler, *args, **kwargs):
             if ExperimentalGroupbyImpl.get():
                 try:
+                    if finalizer_fn is not None:
+                        raise NotImplementedError(
+                            "Reshuffling groupby is not implemented yet when a finalizing function is specified."
+                        )
                     return query_compiler._groupby_shuffle(
                         *args, agg_func=agg_name, **kwargs
                     )

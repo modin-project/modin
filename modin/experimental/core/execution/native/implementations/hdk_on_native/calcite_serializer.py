@@ -122,7 +122,7 @@ class CalciteSerializer:
 
         Returns
         -------
-        str, int, dict or list of dict
+        str, int, None, dict or list of dict
             Serialized item.
         """
         if isinstance(item, CalciteBaseNode):
@@ -133,8 +133,10 @@ class CalciteSerializer:
             return self.serialize_obj(item)
         elif isinstance(item, list):
             return [self.serialize_item(v) for v in item]
+        elif isinstance(item, dict):
+            return {k: self.serialize_item(v) for k, v in item.items()}
 
-        self.expect_one_of(item, str, int)
+        self.expect_one_of(item, str, int, type(None))
         return item
 
     def serialize_node(self, node):
@@ -189,7 +191,10 @@ class CalciteSerializer:
         res = {}
         for k, v in obj.__dict__.items():
             if k[0] != "_":
-                res[k] = self.serialize_item(v)
+                if k == "op" and isinstance(obj, OpExpr) and v == "//":
+                    res[k] = "/"
+                else:
+                    res[k] = self.serialize_item(v)
         return res
 
     def serialize_typed_obj(self, obj):

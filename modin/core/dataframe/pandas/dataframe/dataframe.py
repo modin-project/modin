@@ -27,6 +27,7 @@ from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
+from modin.config import Engine
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -1374,6 +1375,7 @@ class PandasDataframe(ClassLogger):
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
+        has_categorical_cast = False
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
             if (
@@ -1400,13 +1402,20 @@ class PandasDataframe(ClassLogger):
                             columns=[column]
                         )[column],
                     )
-                    use_full_axis_cast = True
+                    use_full_axis_cast = has_categorical_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            return df.astype(
+            # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
+            # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
+            df_for_astype = (
+                df.copy(deep=True)
+                if Engine.get() == "Ray" and has_categorical_cast
+                else df
+            )
+            return df_for_astype.astype(
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
@@ -2204,6 +2213,51 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
+    def combine_and_apply(
+        self, func, new_index=None, new_columns=None, new_dtypes=None
+    ):
+        """
+        Combine all partitions into a single big one and apply the passed function to it.
+
+        Use this method with care as it collects all the data on the same worker,
+        it's only recommended to use this method on small or reduced datasets.
+
+        Parameters
+        ----------
+        func : callable(pandas.DataFrame) -> pandas.DataFrame
+            A function to apply to the combined partition.
+        new_index : sequence, optional
+            Index of the result.
+        new_columns : sequence, optional
+            Columns of the result.
+        new_dtypes : dict-like, optional
+            Dtypes of the result.
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        if self._partitions.shape[1] > 1:
+            new_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
+            new_partitions = np.array([[partition] for partition in new_partitions])
+            modin_frame = self.__constructor__(
+                new_partitions,
+                self.copy_index_cache(),
+                self.copy_columns_cache(),
+                self._row_lengths_cache,
+                [len(self.columns)] if self.has_materialized_columns else None,
+                self.copy_dtypes_cache(),
+            )
+        else:
+            modin_frame = self
+        return modin_frame.apply_full_axis(
+            axis=0,
+            func=func,
+            new_index=new_index,
+            new_columns=new_columns,
+            dtypes=new_dtypes,
+        )
+
     def _apply_func_to_range_partitioning(
         self, key_column, func, ascending=True, **kwargs
     ):
@@ -2247,26 +2301,9 @@ class PandasDataframe(ClassLogger):
 
             ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
             if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
-                modin_frame = self
-                if self._partitions.shape[1] != 1:
-                    # In this case, we have more than one column partition, so we first need
-                    # to create row-wise partitions with all of the columns, so we don't have
-                    # a KeyError when sorting. This method can be slow if we have very very
-                    # many columns.
-                    new_partitions = self._partition_mgr_cls.row_partitions(
-                        self._partitions
-                    )
-                    new_partitions = np.array(
-                        [[partition] for partition in new_partitions]
-                    )
-                    modin_frame = self.__constructor__(
-                        new_partitions,
-                        *self.axes,
-                        self._row_lengths_cache,
-                        [len(self.columns)],
-                        self.dtypes,
-                    )
-                return modin_frame.apply_full_axis(axis=0, func=func)
+                # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
+                # simply combine all partitions and apply the sorting to the whole dataframe
+                return self.combine_and_apply(func=func)
 
         if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
@@ -3494,7 +3531,7 @@ class PandasDataframe(ClassLogger):
         passed to the groupby may be at most the number of rows in the group, and
         may be as small as a single row.
 
-        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+        Unlike the pandas API, an intermediate "GROUP BY" object is not present in this
         algebra implementation.
         """
         axis = Axis(axis)

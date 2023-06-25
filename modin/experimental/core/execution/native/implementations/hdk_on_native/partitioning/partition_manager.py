@@ -279,7 +279,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         for frame in frames:
             if frame._partitions.size != 1:
                 raise NotImplementedError(
-                    "HdkOnNative engine doesn't suport partitioned frames"
+                    "HdkOnNative engine doesn't support partitioned frames"
                 )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:

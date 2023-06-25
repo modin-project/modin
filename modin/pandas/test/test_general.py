@@ -46,64 +46,23 @@ def _nullcontext():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_isna(data):
+@pytest.mark.parametrize("append_na", [True, False])
+@pytest.mark.parametrize("op", ["isna", "isnull", "notna", "notnull"])
+def test_isna_isnull_notna_notnull(data, append_na, op):
     pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
+    modin_df = pd.DataFrame(pandas_df)
+    if append_na:
+        pandas_df["NONE_COL"] = None
+        pandas_df["NAN_COL"] = np.nan
+        modin_df["NONE_COL"] = None
+        modin_df["NAN_COL"] = np.nan
 
-    pandas_result = pandas.isna(pandas_df)
-    modin_result = pd.isna(modin_df)
+    pandas_result = getattr(pandas, op)(pandas_df)
+    modin_result = getattr(pd, op)(modin_df)
     df_equals(modin_result, pandas_result)
 
-    modin_result = pd.isna(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.isna(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_isnull(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-
-    pandas_result = pandas.isnull(pandas_df)
-    modin_result = pd.isnull(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.isnull(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.isnull(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_notna(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-
-    pandas_result = pandas.notna(pandas_df)
-    modin_result = pd.notna(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.notna(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.notna(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_notnull(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-
-    pandas_result = pandas.notnull(pandas_df)
-    modin_result = pd.notnull(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.notnull(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.notnull(pandas.Series([1, np.nan, 2]))
+    modin_result = getattr(pd, op)(pd.Series([1, np.nan, 2]))
+    pandas_result = getattr(pandas, op)(pandas.Series([1, np.nan, 2]))
     df_equals(modin_result, pandas_result)
 
     assert pd.isna(np.nan) == pandas.isna(np.nan)
@@ -543,6 +502,19 @@ def test_pivot():
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
 
+    if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
+        # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
+        # https://github.com/modin-project/modin/issues/6240
+        df_equals(
+            pd.pivot(test_df, columns="bar"),
+            pandas.pivot(test_df._to_pandas(), columns="bar"),
+        )
+
+        df_equals(
+            pd.pivot(test_df, index="foo", columns="bar"),
+            pandas.pivot(test_df._to_pandas(), index="foo", columns="bar"),
+        )
+
 
 def test_pivot_values_is_none():
     test_df = pd.DataFrame(
@@ -901,7 +873,7 @@ def test_create_categorical_dataframe_with_duplicate_column_name():
 @pytest.mark.parametrize(
     "func, regex",
     [
-        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df.mean(), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
         (

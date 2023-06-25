@@ -14,7 +14,7 @@
 import pandas
 import warnings
 
-__pandas_version__ = "1.5.3"
+__pandas_version__ = "2.0.2"
 
 if pandas.__version__ != __pandas_version__:
     warnings.warn(
@@ -64,9 +64,6 @@ with warnings.catch_warnings():
         IntervalDtype,
         PeriodDtype,
         RangeIndex,
-        Int64Index,
-        UInt64Index,
-        Float64Index,
         TimedeltaIndex,
         IntervalIndex,
         IndexSlice,
@@ -78,7 +75,6 @@ with warnings.catch_warnings():
         infer_freq,
         interval_range,
         ExcelWriter,
-        datetime,
         NamedAgg,
         NA,
         api,
@@ -327,9 +323,6 @@ __all__ = [  # noqa: F405
     "StringDtype",
     "NA",
     "RangeIndex",
-    "Int64Index",
-    "UInt64Index",
-    "Float64Index",
     "TimedeltaIndex",
     "IntervalIndex",
     "IndexSlice",
@@ -358,7 +351,6 @@ __all__ = [  # noqa: F405
     "to_numeric",
     "unique",
     "value_counts",
-    "datetime",
     "NamedAgg",
     "api",
     "read_xml",

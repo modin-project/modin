@@ -21,7 +21,6 @@ import re
 
 import numpy as np
 import pandas
-import pandas._libs.lib as lib
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 
@@ -62,50 +61,40 @@ class CategoryMethods(ClassLogger):
     def codes(self):
         return self._Series(query_compiler=self._query_compiler.cat_codes())
 
-    def rename_categories(self, new_categories, inplace=lib.no_default):
+    def rename_categories(self, new_categories):
         return self._default_to_pandas(
-            pandas.Series.cat.rename_categories, new_categories, inplace=inplace
+            pandas.Series.cat.rename_categories, new_categories
         )
 
-    def reorder_categories(self, new_categories, ordered=None, inplace=lib.no_default):
+    def reorder_categories(self, new_categories, ordered=None):
         return self._default_to_pandas(
             pandas.Series.cat.reorder_categories,
             new_categories,
             ordered=ordered,
-            inplace=inplace,
         )
 
-    def add_categories(self, new_categories, inplace=lib.no_default):
-        return self._default_to_pandas(
-            pandas.Series.cat.add_categories, new_categories, inplace=inplace
-        )
+    def add_categories(self, new_categories):
+        return self._default_to_pandas(pandas.Series.cat.add_categories, new_categories)
 
-    def remove_categories(self, removals, inplace=lib.no_default):
-        return self._default_to_pandas(
-            pandas.Series.cat.remove_categories, removals, inplace=inplace
-        )
+    def remove_categories(self, removals):
+        return self._default_to_pandas(pandas.Series.cat.remove_categories, removals)
 
-    def remove_unused_categories(self, inplace=lib.no_default):
-        return self._default_to_pandas(
-            pandas.Series.cat.remove_unused_categories, inplace=inplace
-        )
+    def remove_unused_categories(self):
+        return self._default_to_pandas(pandas.Series.cat.remove_unused_categories)
 
-    def set_categories(
-        self, new_categories, ordered=None, rename=False, inplace=lib.no_default
-    ):
+    def set_categories(self, new_categories, ordered=None, rename=False):
         return self._default_to_pandas(
             pandas.Series.cat.set_categories,
             new_categories,
             ordered=ordered,
             rename=rename,
-            inplace=inplace,
         )
 
-    def as_ordered(self, inplace=lib.no_default):
-        return self._default_to_pandas(pandas.Series.cat.as_ordered, inplace=inplace)
+    def as_ordered(self):
+        return self._default_to_pandas(pandas.Series.cat.as_ordered)
 
-    def as_unordered(self, inplace=lib.no_default):
-        return self._default_to_pandas(pandas.Series.cat.as_unordered, inplace=inplace)
+    def as_unordered(self):
+        return self._default_to_pandas(pandas.Series.cat.as_unordered)
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """
@@ -130,7 +119,7 @@ class CategoryMethods(ClassLogger):
         )
 
 
-@_inherit_docstrings(pandas.core.strings.StringMethods)
+@_inherit_docstrings(pandas.core.strings.accessor.StringMethods)
 class StringMethods(ClassLogger):
     def __init__(self, data):
         # Check if dtypes is objects
@@ -166,7 +155,7 @@ class StringMethods(ClassLogger):
             query_compiler=self._query_compiler.str_decode(encoding, errors)
         )
 
-    def split(self, pat=None, n=-1, expand=False, regex=None):
+    def split(self, pat=None, *, n=-1, expand=False, regex=None):
         if expand:
             from .dataframe import DataFrame
 
@@ -182,7 +171,7 @@ class StringMethods(ClassLogger):
                 )
             )
 
-    def rsplit(self, pat=None, n=-1, expand=False):
+    def rsplit(self, pat=None, *, n=-1, expand=False):
         if not pat and pat is not None:
             raise ValueError("rsplit() requires a non-empty pattern match.")
 
@@ -221,7 +210,7 @@ class StringMethods(ClassLogger):
             )
         )
 
-    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=None):
+    def replace(self, pat, repl, n=-1, case=None, flags=0, regex=False):
         if not (isinstance(repl, str) or callable(repl)):
             raise TypeError("repl must be a string or callable")
         return self._Series(
@@ -569,14 +558,6 @@ class DatetimeProperties(ClassLogger):
         return self._Series(query_compiler=self._query_compiler.dt_nanosecond())
 
     @property
-    def week(self):
-        return self._Series(query_compiler=self._query_compiler.dt_week())
-
-    @property
-    def weekofyear(self):
-        return self._Series(query_compiler=self._query_compiler.dt_weekofyear())
-
-    @property
     def dayofweek(self):
         return self._Series(query_compiler=self._query_compiler.dt_dayofweek())
 
@@ -642,6 +623,16 @@ class DatetimeProperties(ClassLogger):
     @property
     def freq(self):
         return self._query_compiler.dt_freq().to_pandas().squeeze()
+
+    @property
+    def unit(self):
+        # use `iloc[0]` to return scalar
+        return self._Series(query_compiler=self._query_compiler.dt_unit()).iloc[0]
+
+    def as_unit(self, *args, **kwargs):
+        return self._Series(
+            query_compiler=self._query_compiler.dt_as_unit(*args, **kwargs)
+        )
 
     def to_period(self, *args, **kwargs):
         return self._Series(

@@ -64,9 +64,9 @@ def create_test_series(vals):
 def test_dataframe(data, min_periods, axis, method, kwargs):
     eval_general(
         *create_test_dfs(data),
-        lambda df: getattr(
-            df.expanding(min_periods=min_periods, center=True, axis=axis), method
-        )(**kwargs)
+        lambda df: getattr(df.expanding(min_periods=min_periods, axis=axis), method)(
+            **kwargs
+        )
     )
 
 
@@ -79,7 +79,7 @@ def test_dataframe_corr_cov(data, min_periods, axis, method):
         eval_general(
             *create_test_dfs(data),
             lambda df: getattr(
-                df.expanding(min_periods=min_periods, center=True, axis=axis), method
+                df.expanding(min_periods=min_periods, axis=axis), method
             )()
         )
 
@@ -104,12 +104,10 @@ def test_dataframe_agg(data, min_periods):
     pandas_df = pandas.DataFrame(data)
     pandas_expanded = pandas_df.expanding(
         min_periods=min_periods,
-        center=True,
         axis=0,
     )
     modin_expanded = modin_df.expanding(
         min_periods=min_periods,
-        center=True,
         axis=0,
     )
     # aggregates are only supported on axis 0
@@ -145,9 +143,7 @@ def test_dataframe_agg(data, min_periods):
 def test_series(data, min_periods, method, kwargs):
     eval_general(
         *create_test_series(data),
-        lambda df: getattr(df.expanding(min_periods=min_periods, center=True), method)(
-            **kwargs
-        )
+        lambda df: getattr(df.expanding(min_periods=min_periods), method)(**kwargs)
     )
 
 
@@ -155,14 +151,8 @@ def test_series(data, min_periods, method, kwargs):
 @pytest.mark.parametrize("min_periods", [None, 5])
 def test_series_agg(data, min_periods):
     modin_series, pandas_series = create_test_series(data)
-    pandas_expanded = pandas_series.expanding(
-        min_periods=min_periods,
-        center=True,
-    )
-    modin_expanded = modin_series.expanding(
-        min_periods=min_periods,
-        center=True,
-    )
+    pandas_expanded = pandas_series.expanding(min_periods=min_periods)
+    modin_expanded = modin_series.expanding(min_periods=min_periods)
 
     df_equals(modin_expanded.aggregate(np.sum), pandas_expanded.aggregate(np.sum))
     df_equals(

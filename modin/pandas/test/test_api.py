@@ -43,7 +43,6 @@ def test_top_level_api_equality():
         "Panel",  # This is deprecated and throws a warning every time.
         "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
         "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
-        "SparseArray",  # usually not available in top-level namespace
     ]
 
     ignore_modin = [
@@ -164,8 +163,6 @@ def test_dataframe_api_equality():
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]
-    # skip verifying .rename_axis() due to https://github.com/modin-project/modin/issues/5077
-    allowed_different.append("rename_axis")
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 
@@ -189,7 +186,10 @@ def test_series_dt_api_equality():
     modin_dir = [obj for obj in dir(pd.Series.dt) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.Series.dt) if obj[0] != "_"]
 
-    missing_from_modin = set(pandas_dir) - set(modin_dir)
+    # should be deleted, but for some reason the check fails
+    # https://github.com/pandas-dev/pandas/pull/33595
+    ignore = ["week", "weekofyear"]
+    missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         missing_from_modin
     )
@@ -236,8 +236,9 @@ def test_sparse_accessor_api_equality(obj):
 def test_groupby_api_equality(obj):
     modin_dir = [x for x in dir(getattr(pd.groupby, obj)) if x[0] != "_"]
     pandas_dir = [x for x in dir(getattr(pandas.core.groupby, obj)) if x[0] != "_"]
-    # This attribute is hidden from the DataFrameGroupBy object
-    ignore = ["keys"]
+    # These attributes are hidden in the DataFrameGroupBy/SeriesGroupBy instance,
+    # but available in the DataFrameGroupBy/SeriesGroupBy class in pandas.
+    ignore = ["keys", "level"]
     missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         len(missing_from_modin)
@@ -260,13 +261,14 @@ def test_series_api_equality():
     pandas_dir = [obj for obj in dir(pandas.Series) if obj[0] != "_"]
 
     ignore = ["timetuple"]
-    missing_from_modin = set(pandas_dir) - set(modin_dir)
-    assert not len(
-        missing_from_modin - set(ignore)
-    ), "Differences found in API: {}".format(len(missing_from_modin - set(ignore)))
-    assert not len(
-        set(modin_dir) - set(pandas_dir)
-    ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
+    missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
+    assert not len(missing_from_modin), "Differences found in API: {}".format(
+        missing_from_modin
+    )
+    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    assert not len(extra_in_modin), "Differences found in API: {}".format(
+        extra_in_modin
+    )
 
     # These have to be checked manually
     allowed_different = ["to_hdf", "hist"]

@@ -68,6 +68,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
 )
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
+from .aggregations import CorrCovBuilder
 
 
 def _get_axis(axis):
@@ -899,7 +900,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return TreeReduce.register(map_func, reduce_func)(self, axis=axis, **kwargs)
 
     def mean(self, axis, **kwargs):
-        if kwargs.get("level") is not None:
+        if kwargs.get("level") is not None or axis is None:
             return self.default_to_pandas(pandas.DataFrame.mean, axis=axis, **kwargs)
 
         skipna = kwargs.get("skipna", True)
@@ -907,7 +908,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # TODO-FIX: this function may work incorrectly with user-defined "numeric" values.
         # Since `count(numeric_only=True)` discards all unknown "numeric" types, we can get incorrect
         # divisor inside the reduce function.
-        def map_fn(df, **kwargs):
+        def map_fn(df, numeric_only=False, **kwargs):
             """
             Perform Map phase of the `mean`.
 
@@ -915,8 +916,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             """
             result = pandas.DataFrame(
                 {
-                    "sum": df.sum(axis=axis, skipna=skipna),
-                    "count": df.count(axis=axis, numeric_only=True),
+                    "sum": df.sum(axis=axis, skipna=skipna, numeric_only=numeric_only),
+                    "count": df.count(axis=axis, numeric_only=numeric_only),
                 }
             )
             return result if axis else result.T
@@ -948,17 +949,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Reduce operations
     idxmax = Reduce.register(pandas.DataFrame.idxmax)
     idxmin = Reduce.register(pandas.DataFrame.idxmin)
-    median = Reduce.register(pandas.DataFrame.median)
+
+    def median(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.median, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.median)(self, axis=axis, **kwargs)
+
     nunique = Reduce.register(pandas.DataFrame.nunique)
-    skew = Reduce.register(pandas.DataFrame.skew)
-    kurt = Reduce.register(pandas.DataFrame.kurt)
+
+    def skew(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.skew, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.skew)(self, axis=axis, **kwargs)
+
+    def kurt(self, axis, **kwargs):
+        if axis is None:
+            return self.default_to_pandas(pandas.DataFrame.kurt, axis=axis, **kwargs)
+        return Reduce.register(pandas.DataFrame.kurt)(self, axis=axis, **kwargs)
+
     sem = Reduce.register(pandas.DataFrame.sem)
     std = Reduce.register(pandas.DataFrame.std)
     var = Reduce.register(pandas.DataFrame.var)
     sum_min_count = Reduce.register(pandas.DataFrame.sum)
     prod_min_count = Reduce.register(pandas.DataFrame.prod)
     quantile_for_single_value = Reduce.register(pandas.DataFrame.quantile)
-    mad = Reduce.register(pandas.DataFrame.mad)
 
     def to_datetime(self, *args, **kwargs):
         if len(self.columns) == 1:
@@ -1070,14 +1084,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def resample_ffill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "ffill", limit=limit)
 
-    def resample_backfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "backfill", limit=limit)
-
     def resample_bfill(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "bfill", limit=limit)
-
-    def resample_pad(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "pad", limit=limit)
 
     def resample_nearest(self, resample_kwargs, limit):
         return self._resample_func(resample_kwargs, "nearest", limit=limit)
@@ -1908,16 +1916,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     dt_date = Map.register(_dt_prop_map("date"), dtypes=np.object_)
     dt_time = Map.register(_dt_prop_map("time"), dtypes=np.object_)
     dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes=np.object_)
-    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int64)
-    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int64)
-    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int64)
+    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int32)
+    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int32)
+    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int32)
     dt_hour = Map.register(_dt_prop_map("hour"), dtypes=np.int64)
     dt_minute = Map.register(_dt_prop_map("minute"), dtypes=np.int64)
     dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
     dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes=np.int64)
     dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes=np.int64)
-    dt_week = Map.register(_dt_prop_map("week"), dtypes=np.int64)
-    dt_weekofyear = Map.register(_dt_prop_map("weekofyear"), dtypes=np.int64)
     dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
     dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
     dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
@@ -2008,32 +2014,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Column/Row partitions reduce operations
 
-    def describe(
-        self,
-        percentiles: np.ndarray,
-        datetime_is_numeric: bool,
-    ):
+    def describe(self, percentiles: np.ndarray):
         # Use pandas to calculate the correct columns
         empty_df = (
             pandas.DataFrame(columns=self.columns)
             .astype(self.dtypes)
-            .describe(
-                percentiles, datetime_is_numeric=datetime_is_numeric, include="all"
-            )
+            .describe(percentiles, include="all")
         )
         new_index = empty_df.index
-
-        # Note: `describe` convert timestamp type to object type
-        # which results in the loss of two values in index: `first` and `last`
-        # for empty DataFrame.
-        if not any(map(is_numeric_dtype, empty_df.dtypes)) and not datetime_is_numeric:
-            for col_name in empty_df.dtypes.index:
-                # if previosly type of `col_name` was datetime or timedelta
-                if is_datetime_or_timedelta_dtype(self.dtypes[col_name]):
-                    new_index = pandas.Index(
-                        empty_df.index.to_list() + ["first"] + ["last"]
-                    )
-                    break
 
         def describe_builder(df, internal_indices=[]):  # pragma: no cover
             """Apply `describe` function to the subset of columns in a single partition."""
@@ -2046,11 +2034,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # Thus, we must reindex each partition with the global new_index.
             return (
                 df.iloc[:, internal_indices]
-                .describe(
-                    percentiles=percentiles,
-                    datetime_is_numeric=datetime_is_numeric,
-                    include="all",
-                )
+                .describe(percentiles=percentiles, include="all")
                 .reindex(new_index)
             )
 
@@ -2094,16 +2078,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame.map(lambda df: df.clip(**kwargs))
         return self.__constructor__(new_modin_frame)
 
-    def corr(self, method="pearson", min_periods=1):
-        if method == "pearson":
-            numeric_self = self.drop(
-                columns=[
-                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
-                ]
-            )
-            return numeric_self._nancorr(min_periods=min_periods)
-        else:
-            return super().corr(method=method, min_periods=min_periods)
+    corr = CorrCovBuilder.build_corr_method()
 
     def cov(self, min_periods=None, ddof=1):
         return self._nancorr(min_periods=min_periods, cov=True, ddof=ddof)
@@ -2128,9 +2103,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
         -------
         PandasQueryCompiler
             The covariance or correlation matrix.
+
+        Notes
+        -----
+        This method is only used to compute covariance at the moment.
         """
         other = self.to_numpy()
-        other_mask = self._isfinite().to_numpy()
+        try:
+            other_mask = self._isfinite().to_numpy()
+        except TypeError as err:
+            # Pandas raises ValueError on unsupported types, so casting
+            # the exception to a proper type
+            raise ValueError("Unsupported types with 'numeric_only=False'") from err
         n_cols = other.shape[1]
 
         if min_periods is None:
@@ -2445,9 +2429,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # correctness and cleanliness of the code.
         if axis == 1:
             q_index = new_columns
-            new_columns = pandas.Float64Index(q)
+            new_columns = pandas.Index(q)
         else:
-            q_index = pandas.Float64Index(q)
+            q_index = pandas.Index(q)
         new_modin_frame = query_compiler._modin_frame.apply_full_axis(
             axis,
             lambda df: quantile_builder(df, **kwargs),
@@ -2713,13 +2697,18 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return self.getitem_column_array(key)
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
+            if ignore_order and is_list_like(key):
+                key = np.sort(key)
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_positions=key
             )
         else:
+            if ignore_order and is_list_like(key):
+                key_set = frozenset(key)
+                key = [col for col in self.columns if col in key_set]
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=key
             )
@@ -3373,9 +3362,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by=by,
             axis=axis,
             agg_func=lambda df: df.dtypes,
-            # passing 'group_wise' will make the function be applied to the 'by' columns as well,
-            # this is exactly what we want when 'as_index=False'
-            how="axis_wise" if groupby_kwargs.get("as_index", True) else "group_wise",
+            how="group_wise",
             agg_args=agg_args,
             agg_kwargs=agg_kwargs,
             groupby_kwargs=groupby_kwargs,
@@ -3747,21 +3734,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         # that means that exception in `compute_groupby` was raised
         # in every partition, so we also should raise it
-        # TODO: we should be able to drop this logic with pandas 2.0 as it removes `numeric_only=None`
-        # parameter for groupby thus making the behavior of processing of non-numeric columns more
-        # predictable (we can decide whether to raise an exception before actually executing groupby)
-        if len(result.columns) == 0 and len(self.columns) != 0:
-            # determening type of raised exception by applying `aggfunc`
-            # to empty DataFrame
-            try:
-                pandas.DataFrame(index=[1], columns=[1]).agg(agg_func) if isinstance(
-                    agg_func, dict
-                ) else agg_func(
-                    pandas.DataFrame(index=[1], columns=[1]).groupby(level=0),
-                    **agg_kwargs,
-                )
-            except Exception as err:
-                raise type(err)("No numeric types to aggregate.")
+        if (
+            len(result.columns) == 0
+            and len(self.columns) != 0
+            and agg_kwargs.get("numeric_only", False)
+        ):
+            raise TypeError("No numeric types to aggregate.")
 
         return result
 
@@ -3817,6 +3795,62 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return unstacked
 
+    def _pivot_table_tree_reduce(
+        self, grouper, aggfunc, drop_column_level, fill_value, dropna, to_unstack=None
+    ):
+        """
+        Build a pivot table using TreeReduce implementation.
+
+        Parameters
+        ----------
+        grouper : PandasQueryCompiler
+            QueryCompiler holding columns to group on.
+        aggfunc : str
+            Aggregation to perform against the values of the pivot table. Note that ``GroupbyReduceImpl``
+            has to be able to build implementation for this aggregation.
+        drop_column_level : bool
+            Whether to drop the top level of the columns.
+        fill_value : object
+            Fill value for None values in the result.
+        dropna : bool
+            Whether to drop NaN columns.
+        to_unstack : list, optional
+            A list of column names to pass to the `.unstack()` when building the pivot table.
+            If `None` was passed perform regular transpose instead of unstacking.
+
+        Returns
+        -------
+        PandasQueryCompiler
+            A query compiler holding a pivot table.
+        """
+
+        def make_pivot_table(df):
+            if df.index.nlevels > 1 and to_unstack is not None:
+                df = df.unstack(level=to_unstack)
+            if drop_column_level and df.columns.nlevels > 1:
+                df = df.droplevel(0, axis=1)
+            if dropna:
+                df = df.dropna(axis=1, how="all")
+            if fill_value is not None:
+                df = df.fillna(fill_value, downcast="infer")
+            return df
+
+        result = GroupbyReduceImpl.build_qc_method(
+            aggfunc, finalizer_fn=make_pivot_table
+        )(
+            self,
+            by=grouper,
+            axis=0,
+            groupby_kwargs={},
+            agg_args=(),
+            agg_kwargs={},
+            drop=True,
+        )
+
+        if to_unstack is None:
+            result = result.transpose()
+        return result
+
     def pivot_table(
         self,
         index,
@@ -3843,17 +3877,34 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return list(by)
             return _convert_by(by)
 
+        drop_column_level = values is not None and not is_list_like(values)
         index, columns, values = map(__convert_by, [index, columns, values])
 
         unique_keys = np.unique(index + columns)
         unique_values = np.unique(values)
 
         if len(values):
-            to_group = self.getitem_column_array(unique_values)
+            to_group = self.getitem_column_array(unique_values, ignore_order=True)
         else:
             to_group = self.drop(columns=unique_keys)
 
-        keys_columns = self.getitem_column_array(unique_keys)
+        keys_columns = self.getitem_column_array(unique_keys, ignore_order=True)
+
+        # Here we can use TreeReduce implementation that tends to be more efficient rather full-axis one
+        if (
+            not margins
+            and GroupbyReduceImpl.has_impl_for(aggfunc)
+            and len(set(index).intersection(columns)) == 0
+        ):
+            return to_group._pivot_table_tree_reduce(
+                keys_columns,
+                aggfunc,
+                drop_column_level=drop_column_level,
+                fill_value=fill_value,
+                dropna=dropna,
+                to_unstack=columns if index else None,
+            )
+
         len_values = len(values)
         if len_values == 0:
             len_values = len(self.columns.drop(unique_keys))

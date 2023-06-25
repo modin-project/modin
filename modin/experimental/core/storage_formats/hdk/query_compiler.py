@@ -222,7 +222,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def copy(self):
         return self.__constructor__(self._modin_frame.copy(), self._shape_hint)
 
-    def getitem_column_array(self, key, numeric=False):
+    def getitem_column_array(self, key, numeric=False, ignore_order=False):
         shape_hint = "column" if len(key) == 1 else None
         if numeric:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
@@ -551,9 +551,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         assert all(
             isinstance(o, type(self)) for o in other
         ), "Different Manager objects are being used. This is not allowed"
-        sort = kwargs.get("sort", None)
+        sort = kwargs.get("sort", False)
         if sort is None:
-            sort = False
+            raise ValueError(
+                "The 'sort' keyword only accepts boolean values; None was passed."
+            )
         join = kwargs.get("join", "outer")
         ignore_index = kwargs.get("ignore_index", False)
         other_modin_frames = [o._modin_frame for o in other]
@@ -601,6 +603,15 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dropna(subset=subset, how=how),
             shape_hint=self._shape_hint,
         )
+
+    def isna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=False))
+
+    def notna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=True))
+
+    def invert(self):
+        return self.__constructor__(self._modin_frame.invert())
 
     def dt_year(self):
         return self.__constructor__(
@@ -663,6 +674,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def mul(self, other, **kwargs):
         return self._bin_op(other, "mul", **kwargs)
+
+    def pow(self, other, **kwargs):
+        return self._bin_op(other, "pow", **kwargs)
 
     def mod(self, other, **kwargs):
         def check_int(obj):

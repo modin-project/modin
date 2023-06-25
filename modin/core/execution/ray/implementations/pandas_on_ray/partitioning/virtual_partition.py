@@ -20,7 +20,7 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.common.utils import deserialize, wait
+from modin.core.execution.ray.common.utils import deserialize
 from modin.core.execution.ray.common import RayWrapper
 from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
@@ -245,7 +245,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
         futures = self.list_of_blocks
-        wait(futures)
+        RayWrapper.wait(futures)
 
 
 @_inherit_docstrings(PandasOnRayDataframeVirtualPartition.__init__)

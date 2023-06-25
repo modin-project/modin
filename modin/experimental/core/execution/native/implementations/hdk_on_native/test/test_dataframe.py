@@ -20,7 +20,7 @@ import re
 
 from pandas._testing import ensure_clean
 
-from modin.config import StorageFormat
+from modin.config import StorageFormat, DoUseCalcite
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
     default_to_pandas_ignore_string,
@@ -221,6 +221,9 @@ class TestCSV:
             with ForceHdkImport(exp):
                 exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
+            # The arrow table contains empty strings, when reading as category.
+            assert all(v == "" for v in exp["c"])
+            exp["c"] = None
 
         df_equals(ref, exp)
 
@@ -697,7 +700,11 @@ class TestConcat:
             return df_equals(df1, df2)
 
         run_and_compare(
-            concat, data=self.data, data2=self.data2, comparator=sort_comparator
+            concat,
+            data=self.data,
+            data2=self.data2,
+            comparator=sort_comparator,
+            allow_subqueries=True,
         )
 
     def test_concat_agg(self):
@@ -999,7 +1006,10 @@ class TestGroupby:
     @pytest.mark.parametrize("as_index", bool_arg_values)
     def test_taxi_q3(self, as_index):
         def taxi_q3(df, as_index, **kwargs):
-            return df.groupby(["b", df["c"].dt.year], as_index=as_index).size()
+            # TODO: remove 'astype' temp fix
+            return df.groupby(
+                ["b", df["c"].dt.year.astype("int32")], as_index=as_index
+            ).size()
 
         run_and_compare(taxi_q3, data=self.taxi_data, as_index=as_index)
 
@@ -1247,6 +1257,43 @@ class TestGroupby:
             return df.groupby("a").agg({"b": "min", "c": ["min", "max", "sum", "skew"]})
 
         run_and_compare(groupby, data=self.data)
+
+    @pytest.mark.parametrize("op", ["head", "tail"])
+    @pytest.mark.parametrize("n", [10, -10])
+    @pytest.mark.parametrize("invert", [True, False])
+    @pytest.mark.parametrize("select", [True, False])
+    @pytest.mark.parametrize("ascending", [None, True, False])
+    @pytest.mark.parametrize(
+        "use_calcite",
+        [
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.xfail(
+                    reason="Function ROW_NUMBER() is not yet supported by Calcite"
+                ),
+            ),
+        ],
+    )
+    def test_head_tail(self, op, n, invert, select, ascending, use_calcite):
+        def head(df, **kwargs):
+            if invert:
+                df = df[~df["col3"].isna()]
+            if select:
+                df = df[["col1", "col10", "col2", "col20"]]
+            if ascending is not None:
+                df = df.sort_values(["col2", "col10"], ascending=ascending)
+            df = df.groupby(["col1", "col20"])
+            df = getattr(df, op)(n)
+            return df.sort_values(list(df.columns))
+
+        orig_value = DoUseCalcite.get()
+        DoUseCalcite._value = use_calcite
+        try:
+            # When invert is false, the rowid column is materialized.
+            run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
+        finally:
+            DoUseCalcite._value = orig_value
 
 
 class TestAgg:
@@ -1578,6 +1625,52 @@ class TestMerge:
                 iterations=i,
             )
 
+    def test_merge_float(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={"A": [1, 2] * 1000},
+            data2={"A": [1.0, 3.0] * 1000},
+            on_columns="A",
+            force_lazy=False,
+        )
+
+    def test_merge_categorical(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={"A": [1, 2] * 1000},
+            data2={"A": [1.0, 3.0] * 1000},
+            on_columns="A",
+            constructor_kwargs={"dtype": "category"},
+            comparator=lambda df1, df2: df_equals(df1.astype(float), df2.astype(float)),
+        )
+
+    def test_merge_date(self):
+        def merge(df, df2, on_columns, **kwargs):
+            return df.merge(df2, on=on_columns)
+
+        run_and_compare(
+            merge,
+            data={
+                "A": [
+                    pd.Timestamp("2023-01-01"),
+                    pd.Timestamp("2023-01-02"),
+                ]
+            },
+            data2={
+                "A": [
+                    pd.Timestamp("2023-01-01"),
+                    pd.Timestamp("2023-01-03"),
+                ]
+            },
+            on_columns="A",
+        )
+
 
 class TestBinaryOp:
     data = {
@@ -1864,6 +1957,43 @@ class TestBinaryOp:
                 test_bin_op, data={"a": ["a"]}, op_name=op, op_arg=arg, force_lazy=False
             )
 
+    @pytest.mark.parametrize("force_hdk", [False, True])
+    def test_arithmetic_ops(self, force_hdk):
+        def compute(df, operation, **kwargs):
+            df = getattr(df, operation)(3)
+            return df
+
+        for op in (
+            "__add__",
+            "__sub__",
+            "__mul__",
+            "__pow__",
+            "__truediv__",
+            "__floordiv__",
+        ):
+            run_and_compare(
+                compute,
+                {"A": [1, 2, 3, 4, 5]},
+                operation=op,
+                force_hdk_execute=force_hdk,
+            )
+
+    @pytest.mark.parametrize(
+        "force_hdk",
+        [
+            False,
+            pytest.param(
+                True,
+                marks=pytest.mark.xfail(reason="Invert is not yet supported by HDK"),
+            ),
+        ],
+    )
+    def test_invert_op(self, force_hdk):
+        def invert(df, **kwargs):
+            return ~df
+
+        run_and_compare(invert, {"A": [1, 2, 3, 4, 5]}, force_hdk_execute=force_hdk)
+
 
 class TestDateTime:
     datetime_data = {
@@ -1878,7 +2008,8 @@ class TestDateTime:
                 "2018-10-26 13:00:15",
                 "2020-10-26 04:00:15",
                 "2020-10-26",
-            ]
+            ],
+            format="mixed",
         ),
     }
 
@@ -2551,21 +2682,19 @@ class TestDuplicateColumns:
             labels = [
                 np.nan if i % 2 == 0 else sort_index[i] for i in range(len(sort_index))
             ]
-            inplace = kwargs["set_axis_inplace"]
-            res = df.set_axis(labels, axis=1, inplace=inplace)
-            return df if inplace else res
+            return df.set_axis(labels, axis=1, copy=kwargs["copy"])
 
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=True,
+            copy=True,
         )
         run_and_compare(
             fn=set_axis,
             data=test_data["float_nan_data"],
             force_lazy=False,
-            set_axis_inplace=False,
+            copy=False,
         )
 
 

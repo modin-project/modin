@@ -22,6 +22,7 @@ from typing import Any
 
 import pandas
 from pandas.util._decorators import doc
+from pandas._libs.lib import no_default
 
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
@@ -124,11 +125,7 @@ class BaseIO:
     )
     def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(
-            pandas.read_parquet(
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_parquet(**kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -221,6 +218,7 @@ class BaseIO:
     def read_html(
         cls,
         io,
+        *,
         match=".+",
         flavor=None,
         header=None,
@@ -378,6 +376,7 @@ class BaseIO:
     def read_sas(
         cls,
         filepath_or_buffer,
+        *,
         format=None,
         index=None,
         encoding=None,
@@ -435,6 +434,8 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
+        dtype=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
@@ -448,6 +449,8 @@ class BaseIO:
             parse_dates=parse_dates,
             columns=columns,
             chunksize=chunksize,
+            dtype_backend=dtype_backend,
+            dtype=dtype,
         )
 
         if isinstance(result, (pandas.DataFrame, pandas.Series)):
@@ -462,7 +465,14 @@ class BaseIO:
         returns=_doc_returns_qc_or_parser,
     )
     def read_fwf(
-        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+        cls,
+        filepath_or_buffer,
+        *,
+        colspecs="infer",
+        widths=None,
+        infer_nrows=100,
+        dtype_backend=no_default,
+        **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
         pd_obj = pandas.read_fwf(
@@ -470,6 +480,7 @@ class BaseIO:
             colspecs=colspecs,
             widths=widths,
             infer_nrows=infer_nrows,
+            dtype_backend=dtype_backend,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):
@@ -500,6 +511,7 @@ class BaseIO:
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_table`")
         return cls.from_pandas(
@@ -512,6 +524,7 @@ class BaseIO:
                 parse_dates=parse_dates,
                 columns=columns,
                 chunksize=chunksize,
+                dtype_backend=dtype_backend,
             )
         )
 
@@ -544,9 +557,18 @@ class BaseIO:
         summary="Load an SPSS file from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def read_spss(cls, path, usecols, convert_categoricals):  # noqa: PR01
+    def read_spss(
+        cls, path, usecols, convert_categoricals, dtype_backend
+    ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_spss`")
-        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
+        return cls.from_pandas(
+            pandas.read_spss(
+                path,
+                usecols=usecols,
+                convert_categoricals=convert_categoricals,
+                dtype_backend=dtype_backend,
+            )
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_sql, apilink="pandas.DataFrame.to_sql")
