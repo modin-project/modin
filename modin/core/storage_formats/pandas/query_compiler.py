@@ -3532,7 +3532,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             assert callable(agg_func)
 
         if unsupported_groupby:
-            # defaulting to pandas if 'on' parameter was specified
             obj = super(PandasQueryCompiler, self)
         else:
             obj = self

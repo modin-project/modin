@@ -281,11 +281,13 @@ class RollingGroupby(Rolling):
         return super().sem(*args, **kwargs)
 
     def corr(self, other=None, pairwise=None, *args, **kwargs):
+        # pandas behavior is that it always assumes that 'as_index=True' for the '.corr()' method
         return super().corr(
             *args, as_index=True, other=other, pairwise=pairwise, **kwargs
         )
 
     def cov(self, other=None, pairwise=None, ddof: Optional[int] = 1, **kwargs):
+        # pandas behavior is that it always assumes that 'as_index=True' for the '.cov()' method
         return super().cov(as_index=True, other=other, pairwise=pairwise, **kwargs)
 
     def _aggregate(self, method_name, *args, as_index=None, **kwargs):
