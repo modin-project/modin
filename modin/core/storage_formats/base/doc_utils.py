@@ -598,11 +598,11 @@ def doc_window_method(
     if action is None:
         action = f"compute {result}"
     if win_type == "rolling window":
-        window_args_name = "rolling_args"
+        window_args_name = "rolling_kwargs"
     elif win_type == "expanding window":
         window_args_name = "expanding_args"
     else:
-        window_args_name = "window_args"
+        window_args_name = "window_kwargs"
 
     # We need that `params` value ended with new line to have
     # an empty line between "parameters" and "return" sections

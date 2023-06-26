@@ -137,6 +137,19 @@ class DataFrameGroupBy(ClassLogger):
         self._kwargs.update(kwargs)
 
     def _override(self, **kwargs):
+        """
+        Override groupby parameters.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Parameters to override.
+
+        Returns
+        -------
+        DataFrameGroupBy
+            A groupby object with new parameters.
+        """
         new_kw = dict(
             df=self._df,
             by=self._by,

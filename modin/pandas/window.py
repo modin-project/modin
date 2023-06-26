@@ -118,10 +118,44 @@ class Rolling(ClassLogger):
         self.axis = axis
 
     def _call_qc_method(self, method_name, *args, **kwargs):
+        """
+        Call a query compiler method for the specified rolling aggregation.
+
+        Parameters
+        ----------
+        method_name : str
+            Name of the aggregation.
+        *args : tuple
+            Positional arguments to pass to the query compiler method.
+        **kwargs : dict
+            Keyword arguments to pass to the query compiler method.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler holding the result of the aggregation.
+        """
         qc_method = getattr(self._query_compiler, f"rolling_{method_name}")
         return qc_method(self.axis, self.rolling_kwargs, *args, **kwargs)
 
     def _aggregate(self, method_name, *args, **kwargs):
+        """
+        Run the specified rolling aggregation.
+
+        Parameters
+        ----------
+        method_name : str
+            Name of the aggregation.
+        *args : tuple
+            Positional arguments to pass to the aggregation.
+        **kwargs : dict
+            Keyword arguments to pass to the aggregation.
+
+        Returns
+        -------
+        DataFrame or Series
+            Result of the aggregation.
+        """
         qc_result = self._call_qc_method(method_name, *args, **kwargs)
         return self._dataframe.__constructor__(query_compiler=qc_result)
 
@@ -200,7 +234,6 @@ class Rolling(ClassLogger):
     ):
         from .dataframe import DataFrame
 
-        # breakpoint()
         dataframe = DataFrame(
             query_compiler=self._call_qc_method(
                 "aggregate",
@@ -228,6 +261,7 @@ class Rolling(ClassLogger):
         return self._aggregate("rank", method, ascending, pct, numeric_only, **kwargs)
 
 
+@_inherit_docstrings(Rolling)
 class RollingGroupby(Rolling):
     def __init__(self, groupby_obj, *args, **kwargs):
         self._as_index = groupby_obj._kwargs.get("as_index", True)
@@ -239,7 +273,10 @@ class RollingGroupby(Rolling):
     def sem(self, *args, **kwargs):
         ErrorMessage.missmatch_with_pandas(
             operation="RollingGroupby.sem() when 'as_index=False'",
-            message="#",
+            message=(
+                "The group columns won't be involved in the aggregation.\n"
+                + "See this gh-issue for more information: https://github.com/modin-project/modin/issues/6291"
+            ),
         )
         return super().sem(*args, **kwargs)
 
@@ -252,6 +289,26 @@ class RollingGroupby(Rolling):
         return super().cov(as_index=True, other=other, pairwise=pairwise, **kwargs)
 
     def _aggregate(self, method_name, *args, as_index=None, **kwargs):
+        """
+        Run the specified rolling aggregation.
+
+        Parameters
+        ----------
+        method_name : str
+            Name of the aggregation.
+        *args : tuple
+            Positional arguments to pass to the aggregation.
+        as_index : bool, optional
+            Whether the result should have the group labels as index levels or as columns.
+            If not specified the parameter value will be taken from groupby kwargs.
+        **kwargs : dict
+            Keyword arguments to pass to the aggregation.
+
+        Returns
+        -------
+        DataFrame or Series
+            Result of the aggregation.
+        """
         res = self._groupby_obj._wrap_aggregation(
             qc_method=type(self._query_compiler).groupby_rolling,
             numeric_only=False,

@@ -3034,7 +3034,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         drop=False,
     ):
         """
-        Group QueryCompiler data and apply passed aggregation function.
+        Group QueryCompiler data and apply passed aggregation function to a rolling window in each group.
 
         Parameters
         ----------
@@ -3047,21 +3047,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             0 is for index, when 1 is for columns.
         groupby_kwargs : dict
             GroupBy parameters as expected by ``modin.pandas.DataFrame.groupby`` signature.
+        rolling_kwargs : dict
+            Parameters to build a rolling window as expected by ``modin.pandas.window.RollingGroupby`` signature.
         agg_args : list-like
             Positional arguments to pass to the `agg_func`.
         agg_kwargs : dict
             Key arguments to pass to the `agg_func`.
-        how : {'axis_wise', 'group_wise', 'transform'}, default: 'axis_wise'
-            How to apply passed `agg_func`:
-                - 'axis_wise': apply the function against each row/column.
-                - 'group_wise': apply the function against every group.
-                - 'transform': apply the function against every group and broadcast
-                  the result to the original Query Compiler shape.
         drop : bool, default: False
             If `by` is a QueryCompiler indicates whether or not by-data came
             from the `self`.
-        series_groupby : bool, default: False
-            Whether we should treat `self` as Series when performing groupby.
 
         Returns
         -------

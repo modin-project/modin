@@ -2673,12 +2673,21 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.quantile(0.2))
     eval_general(md_window, pd_window, lambda window: window.rank())
 
-    by_cols = list(md_window._groupby_obj._internal_by)
-    eval_general(
-        md_window,
-        pd_window,
-        lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
-    )
+    if not md_window._as_index:
+        # There's a mismatch in group columns when 'as_index=False'
+        # see: https://github.com/modin-project/modin/issues/6291
+        by_cols = list(md_window._groupby_obj._internal_by)
+        eval_general(
+            md_window,
+            pd_window,
+            lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
+        )
+    else:
+        eval_general(
+            md_window,
+            pd_window,
+            lambda window: window.sem(),
+        )
 
 
 @pytest.mark.parametrize("center", [True, False])
@@ -2755,5 +2764,4 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
     pd_rolling = pd_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on
     )
-    # breakpoint()
     eval_rolling(md_window, pd_rolling)
