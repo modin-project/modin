@@ -96,7 +96,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             Input table.
         return_dims : bool, default: False
             True to include dimensions into returned tuple.
-        unsupported_cols : list of str or False, optional
+        unsupported_cols : list of str, optional
             List of columns holding unsupported data. If None then
             check all columns to compute the list.
         encode_col_names : bool, default: True
@@ -119,8 +119,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         parts = [[cls._partition_class(encoded_at)]]
         if unsupported_cols is None:
             _, unsupported_cols = cls._get_unsupported_cols(at)
-        elif unsupported_cols is False:
-            unsupported_cols = None
 
         if not return_dims:
             return np.array(parts), unsupported_cols

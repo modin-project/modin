@@ -1964,7 +1964,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._force_execution_mode != "hdk" and self._can_execute_arrow():
             new_table = self._execute_arrow()
             partitions = self._partition_mgr_cls.from_arrow(
-                new_table, unsupported_cols=False, encode_col_names=False
+                new_table, unsupported_cols=[], encode_col_names=False
             )[0]
         else:
             assert (
