@@ -50,6 +50,7 @@ def create_test_series(vals):
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -69,7 +70,7 @@ def create_test_series(vals):
         ("median", {}),
     ],
 )
-def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
+def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs, center):
     # Testing of Rolling class
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
@@ -82,7 +83,7 @@ def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
                 window=window,
                 min_periods=min_periods,
                 win_type=None,
-                center=True,
+                center=center,
                 axis=axis,
             ),
             method,
@@ -94,15 +95,16 @@ def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("axis", [0, 1])
-def test_dataframe_agg(data, window, min_periods, axis):
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
+def test_dataframe_agg(data, window, min_periods, axis, center):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
     modin_rolled = modin_df.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
+        window=window, min_periods=min_periods, win_type=None, center=center, axis=axis
     )
     pandas_rolled = pandas_df.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
+        window=window, min_periods=min_periods, win_type=None, center=center, axis=axis
     )
     df_equals(pandas_rolled.aggregate(np.sum), modin_rolled.aggregate(np.sum))
     # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
@@ -119,6 +121,7 @@ def test_dataframe_agg(data, window, min_periods, axis):
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
 @pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -128,7 +131,7 @@ def test_dataframe_agg(data, window, min_periods, axis):
         ("std", {"ddof": 0}),
     ],
 )
-def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
+def test_dataframe_window(data, window, min_periods, axis, method, kwargs, center):
     # Testing of Window class
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
@@ -141,7 +144,7 @@ def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
                 window=window,
                 min_periods=min_periods,
                 win_type="triang",
-                center=True,
+                center=center,
                 axis=axis,
             ),
             method,
@@ -203,6 +206,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -224,7 +228,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
         ("median", {}),
     ],
 )
-def test_series_rolling(data, window, min_periods, method, kwargs):
+def test_series_rolling(data, window, min_periods, method, kwargs, center):
     # Test of Rolling class
     modin_series, pandas_series = create_test_series(data)
     if window > len(pandas_series):
@@ -237,7 +241,7 @@ def test_series_rolling(data, window, min_periods, method, kwargs):
                 window=window,
                 min_periods=min_periods,
                 win_type=None,
-                center=True,
+                center=center,
             ),
             method,
         )(**kwargs),
@@ -247,15 +251,16 @@ def test_series_rolling(data, window, min_periods, method, kwargs):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-def test_series_corr_cov(data, window, min_periods):
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
+def test_series_corr_cov(data, window, min_periods, center):
     modin_series, pandas_series = create_test_series(data)
     if window > len(pandas_series):
         window = len(pandas_series)
     modin_rolled = modin_series.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True
+        window=window, min_periods=min_periods, win_type=None, center=center
     )
     pandas_rolled = pandas_series.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True
+        window=window, min_periods=min_periods, win_type=None, center=center
     )
     df_equals(modin_rolled.corr(modin_series), pandas_rolled.corr(pandas_series))
     df_equals(
@@ -269,6 +274,7 @@ def test_series_corr_cov(data, window, min_periods):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
+@pytest.mark.parametrize("center", [True, False], ids=lambda x: f"center={x}")
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -278,7 +284,7 @@ def test_series_corr_cov(data, window, min_periods):
         ("std", {"ddof": 0}),
     ],
 )
-def test_series_window(data, window, min_periods, method, kwargs):
+def test_series_window(data, window, min_periods, method, kwargs, center):
     # Test of Window class
     modin_series, pandas_series = create_test_series(data)
     if window > len(pandas_series):
@@ -291,7 +297,7 @@ def test_series_window(data, window, min_periods, method, kwargs):
                 window=window,
                 min_periods=min_periods,
                 win_type="triang",
-                center=True,
+                center=center,
             ),
             method,
         )(**kwargs),
