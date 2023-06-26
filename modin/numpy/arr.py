@@ -734,6 +734,16 @@ class array(object):
 
     absolute = __abs__
 
+    def __iter__(self):
+        """
+        Return an iterator of the values.
+
+        Returns
+        -------
+        iterable
+        """
+        return self._to_numpy().__iter__()
+
     def __invert__(self):
         """
         Apply bitwise inverse to each element of the `BasePandasDataset`.
