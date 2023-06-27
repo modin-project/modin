@@ -59,7 +59,7 @@ class TreeReduce(Operator):
     def apply(
         cls, df, map_function, reduce_function, axis=0, func_args=None, func_kwargs=None
     ):
-        """
+        r"""
         Apply a map-reduce function to the dataframe.
 
         Parameters

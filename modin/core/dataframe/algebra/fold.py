@@ -68,7 +68,7 @@ class Fold(Operator):
 
     @classmethod
     def apply(cls, df, func, fold_axis=0, func_args=None, func_kwargs=None):
-        """
+        r"""
         Apply a Fold (full-axis) function to the dataframe.
 
         Parameters

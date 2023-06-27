@@ -418,7 +418,7 @@ class Binary(Operator):
     def apply(
         cls, left, right, func, axis=0, func_args=None, func_kwargs=None, **kwargs
     ):
-        """
+        r"""
         Apply groupby aggregation function using map-reduce pattern.
 
         Parameters
