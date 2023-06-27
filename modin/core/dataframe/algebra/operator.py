@@ -60,3 +60,42 @@ class Operator(object):
             Integer representation of given axis.
         """
         return 0 if axis is None else axis
+
+
+def apply_operator(
+    df,
+    operator_cls,
+    func,
+    return_type=None,
+    func_args=None,
+    func_kwargs=None,
+    *args,
+    **kwargs
+):
+    """
+    Apply a function to a modin DataFrame using the passed operator.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame or modin.pandas.Series
+    operator_cls : Operator
+    func : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+    return_type : type, optional
+    func_args : tuple, optional
+    func_kwargs : dict, optional
+
+    Returns
+    -------
+    return_type
+    """
+    operator = operator_cls.register(func, *args, **kwargs)
+
+    func_args = tuple() if func_args is None else func_args
+    func_kwargs = dict() if func_kwargs is None else func_kwargs
+
+    qc_result = operator(df._query_compiler, *func_args, **func_kwargs)
+
+    if return_type is None:
+        return_type = type(df)
+
+    return return_type.__constructor__(query_compiler=qc_result)
