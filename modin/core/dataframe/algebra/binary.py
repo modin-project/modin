@@ -427,7 +427,7 @@ class Binary(Operator):
             Left operand.
         right : modin.pandas.DataFrame or modin.pandas.Series
             Right operand.
-        func : callable(pandas.DataFrame, pandas.DataFrame, *args, axis, *kwargs) -> pandas.DataFrame
+        func : callable(pandas.DataFrame, pandas.DataFrame, \*args, axis, \*\*kwargs) -> pandas.DataFrame
             A binary function to apply `left` and `right`.
         axis : int, default: 0
             Whether to apply the function across rows (``axis=0``) or across columns (``axis=1``).

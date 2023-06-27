@@ -75,7 +75,7 @@ class Fold(Operator):
         ----------
         df : modin.pandas.DataFrame or modin.pandas.Series
             DataFrame object to apply the operator against.
-        func : callable(pandas.DataFrame[NxM], *args, **kwargs) -> pandas.DataFrame[NxM]
+        func : callable(pandas.DataFrame[NxM], \*args, \*\*kwargs) -> pandas.DataFrame[NxM]
             A function to apply to every partition. Note that the function shouldn't change
             the shape of the dataframe.
         fold_axis : int, default: 0

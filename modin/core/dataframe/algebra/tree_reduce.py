@@ -66,9 +66,9 @@ class TreeReduce(Operator):
         ----------
         df : modin.pandas.DataFrame or modin.pandas.Series
             DataFrame object to apply the operator against.
-        map_function : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        map_function : callable(pandas.DataFrame, \*args, \*\*kwargs) -> pandas.DataFrame
             A map function to apply to every partition.
-        reduce_function : callable(pandas.DataFrame, *args, **kwargs) -> Union[pandas.Series, pandas.DataFrame[1xN]]
+        reduce_function : callable(pandas.DataFrame, \*args, \*\*kwargs) -> Union[pandas.Series, pandas.DataFrame[1xN]]
             A reduction function to apply to the results of the map functions.
         axis : int, default: 0
             Whether to apply the reduce function across rows (``axis=0``) or across columns (``axis=1``).

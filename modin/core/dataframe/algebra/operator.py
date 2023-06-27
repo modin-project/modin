@@ -65,14 +65,14 @@ class Operator(object):
     def apply(
         cls, df, func, func_args=None, func_kwargs=None, _return_type=None, **kwargs
     ):
-        """
-        Apply a function to a Modin DataFrame using the operator's scheme.
+        r"""
+        Apply a function to a Modin DataFrame using the operators scheme.
 
         Parameters
         ----------
         df : modin.pandas.DataFrame or modin.pandas.Series
             DataFrame object to apply the operator against.
-        func : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        func : callable(pandas.DataFrame, \*args, \*\*kwargs) -> pandas.DataFrame
             A function to apply.
         func_args : tuple, optional
             Positional arguments to pass to the `func`.
