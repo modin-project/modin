@@ -46,22 +46,9 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
     _partition_class = HdkOnNativeDataframePartition
 
     @classmethod
-    def _compute_num_partitions(cls):
-        """
-        Return a number of partitions a frame should be split to.
-
-        `HdkOnNativeDataframe` always has a single partition.
-
-        Returns
-        -------
-        int
-        """
-        return 1
-
-    @classmethod
     def from_pandas(cls, df, return_dims=False, encode_col_names=True):
         """
-        Create ``HdkOnNativeDataframe`` from ``pandas.DataFrame``.
+        Build partitions from a ``pandas.DataFrame``.
 
         Parameters
         ----------
@@ -84,28 +71,13 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             # Putting pandas frame into partitions instead of arrow table, because we know
             # that all of operations with this frame will be default to pandas and don't want
             # unnecessaries conversion pandas->arrow->pandas
-
-            def tuple_wrapper(obj):
-                """
-                Wrap non-tuple object into a tuple.
-
-                Parameters
-                ----------
-                obj : Any.
-                    Wrapped object.
-
-                Returns
-                -------
-                tuple
-                """
-                if not isinstance(obj, tuple):
-                    obj = (obj,)
-                return obj
-
-            return (
-                *tuple_wrapper(super().from_pandas(df, return_dims)),
-                unsupported_cols,
-            )
+            parts = [[cls._partition_class(df)]]
+            if not return_dims:
+                return np.array(parts), unsupported_cols
+            else:
+                row_lengths = [len(df)]
+                col_widths = [len(df.columns)]
+                return np.array(parts), row_lengths, col_widths, unsupported_cols
         else:
             # Since we already have arrow table, putting it into partitions instead
             # of pandas frame, to skip that phase when we will be putting our frame to HDK
@@ -116,7 +88,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         cls, at, return_dims=False, unsupported_cols=None, encode_col_names=True
     ):
         """
-        Build frame from Arrow table.
+        Build partitions from a ``pyarrow.Table``.
 
         Parameters
         ----------
@@ -144,8 +116,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         else:
             encoded_at = at
 
-        put_func = cls._partition_class.put_arrow
-        parts = [[put_func(encoded_at)]]
+        parts = [[cls._partition_class(encoded_at)]]
         if unsupported_cols is None:
             _, unsupported_cols = cls._get_unsupported_cols(at)
 
@@ -277,10 +248,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         # First step is to make sure all partitions are in HDK.
         frames = plan.collect_frames()
         for frame in frames:
-            if frame._partitions.size != 1:
-                raise NotImplementedError(
-                    "HdkOnNative engine doesn't support partitioned frames"
-                )
             for p in frame._partitions.flatten():
                 if p.frame_id is None:
                     obj = p.get()
@@ -319,7 +286,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         # workaround for https://github.com/modin-project/modin/issues/1851
         if DoUseCalcite.get():
             at = at.rename_columns([ColNameCodec.encode(c) for c in columns])
-        res[0][0] = cls._partition_class.put_arrow(at)
+        res[0][0] = cls._partition_class(at)
 
         return res
 
