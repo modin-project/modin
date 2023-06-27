@@ -54,3 +54,19 @@ class TreeReduce(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(
+        cls, df, map_function, reduce_function, axis=0, func_args=None, func_kwargs=None
+    ):
+        from modin.pandas import Series
+
+        return super().apply(
+            df,
+            map_function,
+            func_args,
+            func_kwargs,
+            reduce_function=reduce_function,
+            axis=axis,
+            _return_type=Series,
+        )

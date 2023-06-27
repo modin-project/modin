@@ -736,3 +736,31 @@ class GroupByReduce(TreeReduce):
             return result
 
         return _map, _reduce
+
+    @classmethod
+    def apply(
+        cls,
+        df,
+        map_func,
+        reduce_func,
+        by,
+        groupby_kwargs=None,
+        agg_args=None,
+        agg_kwargs=None,
+    ):
+        agg_args = tuple() if agg_args is None else agg_args
+        agg_kwargs = dict() if agg_kwargs is None else agg_kwargs
+        groupby_kwargs = dict() if groupby_kwargs is None else groupby_kwargs
+
+        operator = cls.register(map_func, reduce_func)
+        qc_result = operator(
+            df._query_compiler,
+            df[by]._query_compiler,
+            axis=0,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            drop=True,
+        )
+
+        return type(df)(query_compiler=qc_result)

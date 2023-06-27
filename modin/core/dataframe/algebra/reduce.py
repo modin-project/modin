@@ -50,3 +50,11 @@ class Reduce(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(cls, df, func, axis=0, func_args=None, func_kwargs=None):
+        from modin.pandas import Series
+
+        return super().apply(
+            df, func, func_args, func_kwargs, axis=axis, _return_type=Series
+        )

@@ -61,6 +61,22 @@ class Operator(object):
         """
         return 0 if axis is None else axis
 
+    @classmethod
+    def apply(
+        cls, df, func, func_args=None, func_kwargs=None, _return_type=None, **kwargs
+    ):
+        operator = cls.register(func, **kwargs)
+
+        func_args = tuple() if func_args is None else func_args
+        func_kwargs = dict() if func_kwargs is None else func_kwargs
+
+        qc_result = operator(df._query_compiler, *func_args, **func_kwargs)
+
+        if _return_type is None:
+            _return_type = type(df)
+
+        return _return_type(query_compiler=qc_result)
+
 
 def apply_operator(
     df,
@@ -78,9 +94,14 @@ def apply_operator(
     Parameters
     ----------
     df : modin.pandas.DataFrame or modin.pandas.Series
+        DataFrame object to apply the operator against.
     operator_cls : Operator
+        Operator describing how to apply the function.
     func : callable(pandas.DataFrame, *args, **kwargs) -> pandas.DataFrame
+        A function to apply.
     return_type : type, optional
+        A class that takes the ``query_compiler`` keyword argument. If not specified
+        will be identical to the type of the passed `df`.
     func_args : tuple, optional
     func_kwargs : dict, optional
 

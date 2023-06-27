@@ -297,7 +297,7 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
+            query_compiler, other, *args, broadcast=False, dtypes=None, **kwargs
         ):
             """
             Apply binary `func` to passed operands.
@@ -413,3 +413,23 @@ class Binary(Operator):
                 )
 
         return caller
+
+    @classmethod
+    def apply(
+        cls, left, right, func, axis=0, func_args=None, func_kwargs=None, **kwargs
+    ):
+        from modin.pandas import Series
+
+        operator = cls.register(func, **kwargs)
+
+        func_args = tuple() if func_args is None else func_args
+        func_kwargs = dict() if func_kwargs is None else func_kwargs
+        qc_result = operator(
+            left._query_compiler,
+            right._query_compiler,
+            broadcast=isinstance(right, Series),
+            *func_args,
+            axis=axis,
+            **func_kwargs,
+        )
+        return type(left)(query_compiler=qc_result)

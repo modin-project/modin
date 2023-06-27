@@ -65,3 +65,11 @@ class Fold(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(cls, df, func, fold_axis=0, func_args=None, func_kwargs=None):
+        func_args = tuple() if func_args is None else func_args
+        func_kwargs = dict() if func_kwargs is None else func_kwargs
+        func_args = (fold_axis,) + func_args
+
+        return super().apply(df, func, func_args, func_kwargs)
