@@ -3454,11 +3454,51 @@ class BasePandasDataset(ClassLogger):
                 ErrorMessage.warn(
                     f"Attempted to use Experimental NumPy API for function {func_name} but failed. Defaulting to NumPy."
                 )
-            return func(arr, *args[1:], **kwargs)
+            converted_args = []
+            for input in args:
+                if hasattr(input, "_query_compiler"):
+                    input = input.__array__()
+                converted_args += [input]
+            where_kwarg = kwargs.get("where")
+            if where_kwarg is not None:
+                if hasattr(where_kwarg, "_query_compiler"):
+                    kwargs["where"] = where_kwarg.__array__()
+            return func(arr, *converted_args[1:], **kwargs)
         return out
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-        return self.to_numpy().__array_ufunc__(ufunc, method, *inputs, **kwargs)
+        """
+        Return the result of calling ufunc `ufunc`.
+
+        Parameters
+        ----------
+        ufunc : Callable
+            The ufunc that was called.
+        method : str
+            Which method of the ufunc was called.
+        *inputs : tuple
+            Tuple of inputs passed to the ufunc.
+        **kwargs : dict
+            Keyword arguments passed to the ufunc.
+
+        Returns
+        -------
+        arr : np.ndarray or modin.numpy.array
+            The result of calling the array function on self.
+        """
+        if ExperimentalNumPyAPI.get():
+            return self.to_numpy().__array_ufunc__(ufunc, method, *inputs, **kwargs)
+        else:
+            # If we are not using our Experimental NumPy API, we need to convert
+            # all of the inputs to the ufunc to compatible types with NumPy - otherwise
+            # NumPy will not be able to find valid implementations for the ufunc.
+            arr = self.to_numpy()
+            args = []
+            for input in inputs:
+                if hasattr(input, "_query_compiler"):
+                    input = input.__array__()
+                args += [input]
+            return arr.__array_ufunc__(ufunc, method, *args, **kwargs)
 
     def __array__(self, dtype=None):
         """
