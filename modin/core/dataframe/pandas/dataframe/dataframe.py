@@ -1826,6 +1826,7 @@ class PandasDataframe(ClassLogger):
             Modin series (1xN frame) containing the reduced data.
         """
         new_axes, new_axes_lengths = [0, 0], [0, 0]
+
         new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
         new_axes[axis ^ 1] = self.axes[axis ^ 1]
 

@@ -418,6 +418,30 @@ class Binary(Operator):
     def apply(
         cls, left, right, func, axis=0, func_args=None, func_kwargs=None, **kwargs
     ):
+        """
+        Apply groupby aggregation function using map-reduce pattern.
+
+        Parameters
+        ----------
+        left : modin.pandas.DataFrame or modin.pandas.Series
+            Left operand.
+        right : modin.pandas.DataFrame or modin.pandas.Series
+            Right operand.
+        func : callable(pandas.DataFrame, pandas.DataFrame, *args, axis, *kwargs) -> pandas.DataFrame
+            A binary function to apply `left` and `right`.
+        axis : int, default: 0
+            Whether to apply the function across rows (``axis=0``) or across columns (``axis=1``).
+        func_args : tuple, optional
+            Positional arguments to pass to the funcs.
+        func_kwargs : dict, optional
+            Keyword arguments to pass to the funcs.
+        **kwargs : dict
+            Additional arguments to pass to the ``cls.register()``.
+
+        Returns
+        -------
+        The same type as `df`.
+        """
         from modin.pandas import Series
 
         operator = cls.register(func, **kwargs)
