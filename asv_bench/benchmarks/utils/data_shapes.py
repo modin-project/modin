@@ -116,6 +116,7 @@ _DEFAULT_CONFIG_T = [
             # Scalability benchmarks
             "TimeFromPandas",
             "TimeToPandas",
+            "TimeToNumPy",
         ],
     ),
     (
