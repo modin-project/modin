@@ -170,8 +170,8 @@ class HdkOnNativeDataframe(PandasDataframe):
     _force_execution_mode : str or None
         Used by tests to control frame's execution process. Value "lazy"
         is used to raise RuntimeError if execution is triggered for the frame.
-        Value "arrow" is used to raise RuntimeError execution is triggered
-        and cannot be done using Arrow API (have to use HDK for execution).
+        The values "arrow" and "hdk" are used to force the corresponding
+        execution mode.
     """
 
     _query_compiler_cls = DFAlgQueryCompiler
