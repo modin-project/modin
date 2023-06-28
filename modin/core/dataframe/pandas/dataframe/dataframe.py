@@ -2776,12 +2776,19 @@ class PandasDataframe(ClassLogger):
                 self._row_lengths_cache,
                 self._column_widths_cache,
             )
+            columns_cache = self._column_widths_cache
+            if (
+                new_columns is not None
+                and columns_cache is not None
+                and len(new_columns) != sum(columns_cache)
+            ):
+                columns_cache[-1] = columns_cache[-1] + 1
             return self.__constructor__(
                 new_partitions,
                 new_index,
                 new_columns,
                 self._row_lengths_cache,
-                self._column_widths_cache,
+                columns_cache,
             )
 
     @lazy_metadata_decorator(apply_axis="both")

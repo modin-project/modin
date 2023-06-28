@@ -338,6 +338,8 @@ def broadcast_item(
     new_row_len = (
         len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
     )
+    if isinstance(col_lookup, str):
+        col_lookup = [col_lookup]
     new_col_len = (
         len(obj.columns[col_lookup])
         if isinstance(col_lookup, slice)

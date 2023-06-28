@@ -2889,31 +2889,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 
-        def insert(df, internal_indices=[]):  # pragma: no cover
-            """
-            Insert new column to the partition.
-
-            Parameters
-            ----------
-            df : pandas.DataFrame
-                Partition of the self frame.
-            internal_indices : list of ints
-                Positional index of the column in this particular partition
-                to insert new column after.
-            """
-            internal_idx = int(internal_indices[0])
-            df.insert(internal_idx, column, value)
+        def insert(
+            df, row_internal_indices, col_internal_indices, item
+        ):  # pragma: no cover
+            internal_idx = int(col_internal_indices[0])
+            df.insert(internal_idx, column, item)
             return df
 
-        # TODO: rework by passing list-like values to `apply_select_indices`
-        # as an item to distribute
-        new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
-            0,
-            insert,
-            numeric_indices=[loc],
-            keep_remaining=True,
+        new_modin_frame = self._modin_frame.apply_select_indices(
+            axis=None,
+            func=insert,
+            row_labels=slice(None),
+            col_labels=[loc],
             new_index=self.index,
             new_columns=self.columns.insert(loc, column),
+            keep_remaining=True,
+            item_to_distribute=value,
         )
         return self.__constructor__(new_modin_frame)
 

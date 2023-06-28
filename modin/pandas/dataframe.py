@@ -2427,7 +2427,16 @@ class DataFrame(BasePandasDataset):
                 self.columns = prev_index.insert(0, key)
                 return
             # Do new column assignment after error checks and possible value modifications
-            self.insert(loc=len(self.columns), column=key, value=value)
+            item = value
+            if not hasattr(value, "_query_compiler"):
+                item = broadcast_item(
+                    self,
+                    slice(None),
+                    key,
+                    value,
+                    need_columns_reindex=False,
+                )
+            self.insert(loc=len(self.columns), column=key, value=item)
             return
 
         if not hashable(key):
