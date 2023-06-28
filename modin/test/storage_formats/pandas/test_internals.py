@@ -1096,7 +1096,6 @@ class TestOperatorsApply:
             md_df, map_func, reduce_func, by=by_col, groupby_kwargs={"as_index": False}
         )
         pd_res = pd_df.groupby(by_col, as_index=False).count()
-        # breakpoint()
         df_equals(md_res, pd_res)
 
     def test_map(self):
