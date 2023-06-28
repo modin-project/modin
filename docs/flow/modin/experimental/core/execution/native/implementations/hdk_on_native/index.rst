@@ -178,7 +178,7 @@ Arrow execution
 For simple operations which don't include actual computations, execution can use
 Arrow API. We can use it to rename columns, drop columns and concatenate
 frames. Arrow execution is performed if we have an arrow table in the partition
-abd it's preferable since it doesn't require actual data import into HDK.
+and it's preferable since it doesn't require actual data import into HDK.
 
 HDK execution
 '''''''''''''
