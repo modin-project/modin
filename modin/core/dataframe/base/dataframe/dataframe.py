@@ -531,7 +531,7 @@ class ModinDataframe(ABC):
         pass
 
     @abstractmethod
-    def equals_partitioning(self, modin_frame: "ModinDataframe"):
+    def equals_partitioning(self, modin_frame: "ModinDataframe") -> bool:
         """
         Check that the partitioning of `self` and `modin_frame` are the same.
 
