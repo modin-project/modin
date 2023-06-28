@@ -271,6 +271,16 @@ def test_array_where():
     assert_scalar_or_array_equal(modin_result, numpy_result)
 
 
+@pytest.mark.parametrize("method", ["argmax", "argmin"])
+def test_argmax_argmin(method):
+    numpy_arr = numpy.array([[1, 2, 3], [4, 5, np.NaN]])
+    modin_arr = np.array(numpy_arr)
+    assert_scalar_or_array_equal(
+        getattr(np, method)(modin_arr, axis=1),
+        getattr(numpy, method)(numpy_arr, axis=1),
+    )
+
+
 def test_flatten():
     numpy_flat_arr = numpy.random.randint(-100, 100, size=100)
     modin_flat_arr = np.array(numpy_flat_arr)
