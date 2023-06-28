@@ -24,7 +24,6 @@ from modin.pandas.test.utils import (
     io_ops_bad_exc,
     eval_io as general_eval_io,
 )
-from ..df_algebra import FrameNode
 
 
 def eval_io(
@@ -180,14 +179,11 @@ class ForceHdkImport:
             # Append `TransformNode`` selecting all the columns (SELECT * FROM frame_id)
             df = df[df.columns.tolist()]
             modin_frame = df._query_compiler._modin_frame
-            # Forcibly executing plan via HDK. We can't use `modin_frame._execute()` here
-            # as it has a chance of running via pyarrow bypassing HDK
-            new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
-                modin_frame._op,
-                modin_frame._table_cols,
-            )
-            modin_frame._partitions = new_partitions
-            modin_frame._op = FrameNode(modin_frame)
+            # Forcibly executing plan via HDK.
+            mode = modin_frame._force_execution_mode
+            modin_frame._force_execution_mode = "hdk"
+            modin_frame._execute()
+            modin_frame._force_execution_mode = mode
             result.append(df)
         return result
 
