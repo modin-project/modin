@@ -419,7 +419,7 @@ class Binary(Operator):
         cls, left, right, func, axis=0, func_args=None, func_kwargs=None, **kwargs
     ):
         r"""
-        Apply groupby aggregation function using map-reduce pattern.
+        Apply a binary function row-wise or column-wise.
 
         Parameters
         ----------
