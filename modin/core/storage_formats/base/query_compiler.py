@@ -6534,3 +6534,20 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         return new_query_compiler
 
     # End of DataFrame methods
+
+    def equals_partitioning(self, query_compiler):
+        """
+        Check that the partitioning of `self` and `query_compiler` are the same.
+
+        Parameters
+        ----------
+        query_compiler : BaseQueryCompiler
+
+        Returns
+        -------
+        bool
+        """
+        assert isinstance(
+            query_compiler, type(self)
+        ), f"not supported type of query_compiler: {type(query_compiler)=}"
+        return self._modin_frame.equals_partitioning(query_compiler._modin_frame)

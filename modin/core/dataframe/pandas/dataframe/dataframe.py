@@ -3150,6 +3150,20 @@ class PandasDataframe(ClassLogger):
             result.synchronize_labels(axis=1)
         return result
 
+    def equals_partitioning(self, modin_frame):
+        """
+        Check that the partitioning of `self` and `modin_frame` are the same.
+
+        Parameters
+        ----------
+        modin_frame : PandasDataframe
+
+        Returns
+        -------
+        bool
+        """
+        return self._partitions.shape == modin_frame._partitions.shape
+
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two Modin DataFrames.

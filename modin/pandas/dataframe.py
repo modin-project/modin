@@ -465,10 +465,7 @@ class DataFrame(BasePandasDataset):
                 level, by = by, None
             elif level is None:
                 by = self.__getitem__(by)._query_compiler
-                if (
-                    by._modin_frame._partitions.shape
-                    != self._query_compiler._modin_frame._partitions.shape
-                ):
+                if not by.equals_partitioning(self._query_compiler):
                     # this updates '_modin_frame' inplace
                     self._query_compiler._modin_frame._filter_empties(
                         compute_metadata=False

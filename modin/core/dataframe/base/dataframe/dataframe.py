@@ -209,7 +209,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        The user-defined reduce function must reduce each window’s column
+        The user-defined reduce function must reduce each window's column
         (row if axis=1) down to a single value.
         """
         pass
@@ -467,7 +467,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        In the case that the dataframe has hierarchical labels, all label "levels” are inserted into the dataframe
+        In the case that the dataframe has hierarchical labels, all label "levels" are inserted into the dataframe
         in the order they occur in the labels, with the outermost being in position 0.
         """
         pass
@@ -527,5 +527,20 @@ class ModinDataframe(ABC):
         -------
         ModinDataframe
             A new ModinDataframe sorted into lexicographical order by the specified column(s).
+        """
+        pass
+
+    @abstractmethod
+    def equals_partitioning(self, modin_frame):
+        """
+        Check that the partitioning of `self` and `modin_frame` are the same.
+
+        Parameters
+        ----------
+        modin_frame : ModinDataframe
+
+        Returns
+        -------
+        bool
         """
         pass
