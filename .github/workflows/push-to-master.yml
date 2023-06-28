@@ -27,28 +27,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
+        uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
       - name: install Ray nightly build
         # Use --force-reinstall to always reinstall ray and its dependencies.
         # botocore isn't compatible with urllib3>=2; see #6094 for details
@@ -97,32 +78,9 @@ jobs:
     name: test docs
     steps:
       - uses: actions/checkout@v3
+        uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('environment-dev.yml') }}
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Docstring URL validity check
         run: python -m pytest modin/test/test_docstring_urls.py
