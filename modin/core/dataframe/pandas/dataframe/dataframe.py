@@ -2896,20 +2896,6 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
-    def __make_init_labels_args(self, partitions, index, columns) -> dict:
-        kw = {}
-        kw["index"], kw["row_lengths"] = (
-            self._compute_axis_labels_and_lengths(0, partitions)
-            if index is None
-            else (index, None)
-        )
-        kw["columns"], kw["column_widths"] = (
-            self._compute_axis_labels_and_lengths(1, partitions)
-            if columns is None
-            else (columns, None)
-        )
-        return kw
-
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
@@ -2988,9 +2974,9 @@ class PandasDataframe(ClassLogger):
             broadcasted_dict,
             keep_remaining,
         )
-
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
@@ -3615,8 +3601,9 @@ class PandasDataframe(ClassLogger):
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @classmethod
     def from_pandas(cls, df):
