@@ -406,8 +406,7 @@ class array(object):
             where_kwarg = kwargs.get("where", None)
             if where_kwarg is not None:
                 if isinstance(where_kwarg, type(self)):
-                    where_kwarg = where_kwarg._to_numpy()
-                kwargs["where"] = where_kwarg
+                    kwargs["where"] = where_kwarg._to_numpy()
             output = self._to_numpy().__array_ufunc__(ufunc, method, *args, **kwargs)
             if is_scalar(output):
                 return output
