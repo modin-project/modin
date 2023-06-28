@@ -242,7 +242,9 @@ def test_array_where():
     ):
         warnings.filterwarnings("ignore", message="Distributing")
         (modin_flat_arr <= 0).where()
-    with pytest.raises(ValueError, match="either both or neither of x and y should be given"):
+    with pytest.raises(
+        ValueError, match="either both or neither of x and y should be given"
+    ):
         (modin_flat_arr <= 0).where(x=["Should Fail."])
     with pytest.warns(UserWarning, match="np.where not supported when both x and y"):
         warnings.filterwarnings("ignore", message="Distributing")
