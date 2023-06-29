@@ -130,7 +130,10 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         hdk = cls._hdk()
         if query.startswith("execute calcite"):
             ra = hdk._calcite.process(
-                query, db_name="hdk", device_type=cls._preferred_device
+                query,
+                db_name="hdk",
+                legacy_syntax=True,
+                device_type=cls._preferred_device,
             )
         else:
             ra = query
