@@ -37,9 +37,9 @@ class RollingDefault(DefaultMethod):
             Function that takes pandas DataFrame and applies `func` on a rolling window.
         """
 
-        def fn(df, rolling_args, *args, **kwargs):
+        def fn(df, rolling_kwargs, *args, **kwargs):
             """Create rolling window for the passed frame and execute specified `func` on it."""
-            roller = df.rolling(*rolling_args)
+            roller = df.rolling(**rolling_kwargs)
 
             if type(func) == property:
                 return func.fget(roller)
