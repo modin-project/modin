@@ -601,6 +601,8 @@ class GroupByDefault(DefaultMethod):
     #   2. `.apply(func)` applies func to a DataFrames, holding a whole group (group-wise).
     #   3. `.transform(func)` is the same as `.apply()` but also broadcast the `func`
     #      result to the group's original shape.
+    #   4. 'direct' mode means that the passed `func` has to be applied directly
+    #      to the `pandas.DataFrameGroupBy` object.
     _aggregation_methods_dict = {
         "axis_wise": pandas.core.groupby.DataFrameGroupBy.aggregate,
         "group_wise": pandas.core.groupby.DataFrameGroupBy.apply,

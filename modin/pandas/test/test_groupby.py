@@ -2701,11 +2701,7 @@ def test_rolling_int_window(center, closed, as_index):
             "col2": np.arange(10, 160),
         }
     )
-    col_part2 = pd.DataFrame(
-        {
-            "col3": np.arange(20, 170),
-        }
-    )
+    col_part2 = pd.DataFrame({"col3": np.arange(20, 170)})
 
     md_df = pd.concat([col_part1, col_part2], axis=1)
     pd_df = md_df._to_pandas()
@@ -2716,10 +2712,10 @@ def test_rolling_int_window(center, closed, as_index):
     md_window = md_df.groupby("by", as_index=as_index).rolling(
         3, center=center, closed=closed
     )
-    pd_rolling = pd_df.groupby("by", as_index=as_index).rolling(
+    pd_window = pd_df.groupby("by", as_index=as_index).rolling(
         3, center=center, closed=closed
     )
-    eval_rolling(md_window, pd_rolling)
+    eval_rolling(md_window, pd_window)
 
 
 @pytest.mark.parametrize("center", [True, False])
@@ -2734,11 +2730,7 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
             "col2": np.arange(10, 160),
         }
     )
-    col_part2 = pd.DataFrame(
-        {
-            "col3": np.arange(20, 170),
-        }
-    )
+    col_part2 = pd.DataFrame({"col3": np.arange(20, 170)})
 
     if on is not None:
         col_part2[on] = pandas.DatetimeIndex(
@@ -2761,7 +2753,7 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
     md_window = md_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on
     )
-    pd_rolling = pd_df.groupby("by", as_index=as_index).rolling(
+    pd_window = pd_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on
     )
-    eval_rolling(md_window, pd_rolling)
+    eval_rolling(md_window, pd_window)
