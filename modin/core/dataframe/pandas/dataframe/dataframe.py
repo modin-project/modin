@@ -3350,13 +3350,15 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, list_of_right_parts
             )
         )
+        if labels == "drop":
+            joined_index = joined_columns = row_lengths = column_widths = None
 
         return self.__constructor__(
             new_frame,
-            joined_index if labels == "replace" else None,
-            joined_columns if labels == "replace" else None,
-            row_lengths if labels == "replace" else None,
-            column_widths if labels == "replace" else None,
+            joined_index,
+            joined_columns,
+            row_lengths,
+            column_widths,
             dtypes,
         )
 

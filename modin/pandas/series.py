@@ -930,17 +930,22 @@ class Series(BasePandasDataset):
             # Copy into a Modin Series to simplify logic below
             other = self.__constructor__(other)
 
-        if (
-            type(self) != type(other)
-            or not self.name == other.name
-            or not self.index.equals(other.index)
-        ):
+        if type(self) != type(other) or not self.index.equals(other.index):
             return False
 
-        # this function should return only scalar
-        return self.__constructor__(
-            query_compiler=self._query_compiler.equals(other._query_compiler)
-        ).iloc[0]
+        old_name_self = self.name
+        old_name_other = other.name
+        try:
+            self.name = "temp_name_for_equals_op"
+            other.name = "temp_name_for_equals_op"
+            # this function should return only scalar
+            res = self.__constructor__(
+                query_compiler=self._query_compiler.equals(other._query_compiler)
+            )
+        finally:
+            self.name = old_name_self
+            other.name = old_name_other
+        return res.all()
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """

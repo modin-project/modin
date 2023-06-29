@@ -770,8 +770,7 @@ class DataFrame(BasePandasDataset):
         result = self.__constructor__(
             query_compiler=self._query_compiler.equals(other._query_compiler)
         )
-        # this function should return only scalar
-        return result.at[0, 0]
+        return result.all(axis=None)
 
     def _update_var_dicts_in_kwargs(self, expr, kwargs):
         """
