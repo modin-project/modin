@@ -926,11 +926,26 @@ class Series(BasePandasDataset):
         """
         Test whether two objects contain the same elements.
         """
-        return (
-            self.name == other.name
-            and self.index.equals(other.index)
-            and self.eq(other).all()
-        )
+        if isinstance(other, pandas.Series):
+            # Copy into a Modin Series to simplify logic below
+            other = self.__constructor__(other)
+
+        if type(self) != type(other) or not self.index.equals(other.index):
+            return False
+
+        old_name_self = self.name
+        old_name_other = other.name
+        try:
+            self.name = "temp_name_for_equals_op"
+            other.name = "temp_name_for_equals_op"
+            # this function should return only scalar
+            res = self.__constructor__(
+                query_compiler=self._query_compiler.equals(other._query_compiler)
+            )
+        finally:
+            self.name = old_name_self
+            other.name = old_name_other
+        return res.all()
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """

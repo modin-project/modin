@@ -390,6 +390,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
     combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
     eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
+    equals = Binary.register(
+        lambda df, other: pandas.DataFrame([[df.equals(other)]]),
+        join_type=None,
+        labels="drop",
+        infer_dtypes="bool",
+    )
     floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
     ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
     gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
