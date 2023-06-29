@@ -27,7 +27,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
       - uses: actions/checkout@v3
-        uses: ./.github/actions/mamba-env
+      - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
       - name: install Ray nightly build
@@ -78,7 +78,7 @@ jobs:
     name: test docs
     steps:
       - uses: actions/checkout@v3
-        uses: ./.github/actions/mamba-env
+      - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
       - run: sudo apt update && sudo apt install -y libhdf5-dev
