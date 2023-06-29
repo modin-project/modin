@@ -529,18 +529,3 @@ class ModinDataframe(ABC):
             A new ModinDataframe sorted into lexicographical order by the specified column(s).
         """
         pass
-
-    @abstractmethod
-    def equals_partitioning(self, modin_frame: "ModinDataframe") -> bool:
-        """
-        Check that the partitioning of `self` and `modin_frame` are the same.
-
-        Parameters
-        ----------
-        modin_frame : ModinDataframe
-
-        Returns
-        -------
-        bool
-        """
-        pass

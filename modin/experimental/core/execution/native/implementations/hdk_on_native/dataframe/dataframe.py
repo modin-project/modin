@@ -2765,19 +2765,3 @@ class HdkOnNativeDataframe(PandasDataframe):
             and index.min() == 0
             and index.max() == len(index) - 1
         )
-
-    def equals_partitioning(self, modin_frame):
-        """
-        Check that the partitioning of `self` and `modin_frame` are the same.
-
-        Parameters
-        ----------
-        modin_frame : HdkOnNativeDataframe
-
-        Returns
-        -------
-        bool
-        """
-        if self._partitions is not None and modin_frame._partitions is not None:
-            return self._partitions.shape == modin_frame._partitions.shape
-        return self._partitions == modin_frame._partitions

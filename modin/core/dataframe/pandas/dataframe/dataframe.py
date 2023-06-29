@@ -3150,20 +3150,6 @@ class PandasDataframe(ClassLogger):
             result.synchronize_labels(axis=1)
         return result
 
-    def equals_partitioning(self, modin_frame):
-        """
-        Check that the partitioning of `self` and `modin_frame` are the same.
-
-        Parameters
-        ----------
-        modin_frame : PandasDataframe
-
-        Returns
-        -------
-        bool
-        """
-        return self._partitions.shape == modin_frame._partitions.shape
-
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two Modin DataFrames.
@@ -3626,6 +3612,9 @@ class PandasDataframe(ClassLogger):
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
 
+        if by_parts is not None:
+            # inplace operation
+            self._filter_empties(compute_metadata=False)
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
