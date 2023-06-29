@@ -3518,6 +3518,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
+        # 'corr' and 'cov' require knowledge about the whole row axis (all columns have
+        # to be available in the same partitions), this requirement is not being satisfied
+        # in the current groupby implementation
         unsupported_groupby = (
             agg_func in ("corr", "cov") or rolling_kwargs.get("on") is not None
         )
