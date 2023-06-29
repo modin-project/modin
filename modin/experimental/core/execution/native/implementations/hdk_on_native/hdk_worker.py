@@ -123,11 +123,10 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
 
     @classmethod
     def executeDML(cls, query: str):
-        res = cls._hdk().sql(query)
-        return ExecutionResultTable(res)
+        return cls.executeRA(query, True)
 
     @classmethod
-    def executeRA(cls, query: str):
+    def executeRA(cls, query: str, exec_calcite=False):
         hdk = cls._hdk()
         if query.startswith("execute calcite"):
             ra = hdk._calcite.process(
