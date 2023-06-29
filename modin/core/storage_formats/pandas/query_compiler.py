@@ -2470,8 +2470,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.rank(**kwargs),
-            new_index=self.index,
-            new_columns=self.columns if not numeric_only else None,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=self._modin_frame.copy_columns_cache()
+            if not numeric_only
+            else None,
             dtypes=np.float64,
         )
         return self.__constructor__(new_modin_frame)
