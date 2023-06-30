@@ -20,7 +20,7 @@ import re
 
 from pandas._testing import ensure_clean
 
-from modin.config import StorageFormat, DoUseCalcite
+from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
     default_to_pandas_ignore_string,
@@ -1263,19 +1263,7 @@ class TestGroupby:
     @pytest.mark.parametrize("invert", [True, False])
     @pytest.mark.parametrize("select", [True, False])
     @pytest.mark.parametrize("ascending", [None, True, False])
-    @pytest.mark.parametrize(
-        "use_calcite",
-        [
-            False,
-            pytest.param(
-                True,
-                marks=pytest.mark.xfail(
-                    reason="Function ROW_NUMBER() is not yet supported by Calcite"
-                ),
-            ),
-        ],
-    )
-    def test_head_tail(self, op, n, invert, select, ascending, use_calcite):
+    def test_head_tail(self, op, n, invert, select, ascending):
         def head(df, **kwargs):
             if invert:
                 df = df[~df["col3"].isna()]
@@ -1287,13 +1275,8 @@ class TestGroupby:
             df = getattr(df, op)(n)
             return df.sort_values(list(df.columns))
 
-        orig_value = DoUseCalcite.get()
-        DoUseCalcite._value = use_calcite
-        try:
-            # When invert is false, the rowid column is materialized.
-            run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
-        finally:
-            DoUseCalcite._value = orig_value
+        # When invert is false, the rowid column is materialized.
+        run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
 
 
 class TestAgg:
