@@ -737,6 +737,14 @@ def test_groupby_with_empty_partition():
     # check index error due to partitioning missmatching
     grp_obj.count()
 
+    md_df = construct_modin_df_by_scheme(
+        pandas_df=pandas.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]}),
+        partitioning_scheme={"row_lengths": [2, 2], "column_widths": [2]},
+    )
+    md_res = md_df.query("a > 1")
+    grp_obj = md_res.groupby(md_res["a"])
+    grp_obj.count()
+
 
 @pytest.mark.parametrize("set_num_partitions", [2], indirect=True)
 def test_repartitioning(set_num_partitions):
