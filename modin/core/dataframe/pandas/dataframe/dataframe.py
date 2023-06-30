@@ -3604,6 +3604,9 @@ class PandasDataframe(ClassLogger):
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
 
+        if by_parts is not None:
+            # inplace operation
+            self._filter_empties(compute_metadata=False)
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
