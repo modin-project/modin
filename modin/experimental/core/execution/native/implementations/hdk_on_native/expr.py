@@ -1127,9 +1127,6 @@ class OpExpr(BaseExpr):
                 return OpExpr("IS NOT NULL", op.operands, op._dtype)
             if op.op == "IS NOT NULL":
                 return OpExpr("IS NULL", op.operands, op._dtype)
-            if op.op == "CASE":
-                operands = [op.operands[0], op.operands[2], op.operands[1]]
-                return OpExpr("CASE", operands, op._dtype)
         return self
 
     def _fold_literal(self, op, *args):

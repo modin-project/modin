@@ -16,8 +16,7 @@ from typing import Optional, Tuple, List
 
 import pyarrow as pa
 
-from pyhdk.hdk import HDK
-from pyhdk._sql import ExecutionResult, RelAlgExecutor
+from pyhdk.hdk import HDK, ExecutionResult, RelAlgExecutor
 
 from .base_worker import DbTable, BaseDbWorker
 

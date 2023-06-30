@@ -24,7 +24,7 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk", "pyhdk.hdk", "pyhdk._sql"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk", "pyhdk.hdk"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -39,10 +39,10 @@ if not hasattr(sys.modules["pyhdk"], "PyDbEngine"):
     sys.modules["pyhdk"].PyDbEngine = type("PyDbEngine", (object,), {})
 if not hasattr(sys.modules["pyhdk.hdk"], "HDK"):
     sys.modules["pyhdk.hdk"].HDK = type("HDK", (object,), {})
-if not hasattr(sys.modules["pyhdk._sql"], "ExecutionResult"):
-    sys.modules["pyhdk._sql"].ExecutionResult = type("ExecutionResult", (object,), {})
-if not hasattr(sys.modules["pyhdk._sql"], "RelAlgExecutor"):
-    sys.modules["pyhdk._sql"].RelAlgExecutor = type("RelAlgExecutor", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "ExecutionResult"):
+    sys.modules["pyhdk.hdk"].ExecutionResult = type("ExecutionResult", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):
+    sys.modules["pyhdk.hdk"].RelAlgExecutor = type("RelAlgExecutor", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
