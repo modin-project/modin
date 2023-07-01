@@ -5,7 +5,9 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
-ray_deps = ["ray[default]>=1.13.0", "pyarrow"]
+# ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
+# pydantic<2: https://github.com/modin-project/modin/issues/6336
+ray_deps = ["ray[default]>=1.13.0,!=2.5.0", "pyarrow", "pydantic<2"]
 unidist_deps = ["unidist[mpi]>=0.2.1"]
 remote_deps = ["rpyc==4.1.5", "cloudpickle", "boto3"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
