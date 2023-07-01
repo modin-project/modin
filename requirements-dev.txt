@@ -4,6 +4,8 @@ dask[complete]>=2.22.0
 distributed>=2.22.0
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
 ray[default]>=1.13.0,!=2.5.0
+# https://github.com/modin-project/modin/issues/6336
+pydantic<2
 pyarrow
 psutil
 fsspec
