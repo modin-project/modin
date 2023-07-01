@@ -26,6 +26,9 @@ if (
         + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
 
+# to not pollute namespace
+del version
+
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     from pandas import (
