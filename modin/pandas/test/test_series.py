@@ -2898,6 +2898,12 @@ def test_repeat_lists(data, repeats):
     )
 
 
+def test_clip_4485():
+    modin_result = pd.Series([1]).clip([3])
+    pandas_result = pandas.Series([1]).clip([3])
+    df_equals(modin_result, pandas_result)
+
+
 def test_replace():
     modin_series = pd.Series([0, 1, 2, 3, 4])
     pandas_series = pandas.Series([0, 1, 2, 3, 4])
