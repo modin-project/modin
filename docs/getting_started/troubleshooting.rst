@@ -266,27 +266,6 @@ either by excluding the time of the first iteration from your measurements or ex
 Common errors
 -------------
 
-Error when using HDK engine along with ``pyarrow.gandiva``: ``LLVM ERROR: inconsistency in registered CommandLine options``
-"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-
-This can happen when you use HDK engine along with ``pyarrow.gandiva``:
-
-.. code-block:: python
-
-  import modin.config as cfg
-  cfg.Engine.put("Native")  # The engine would be imported with dlopen flags
-  cfg.StorageFormat.put("Hdk")
-  cfg.IsExperimental.put(True)
-  import modin.pandas as pd
-  import pyarrow.gandiva as gandiva  # Error
-  # CommandLine Error: Option 'enable-vfe' registered more than once!
-  # LLVM ERROR: inconsistency in registered CommandLine options
-  # Aborted (core dumped)
-
-**Solution**
-
-Do not use HDK engine along with ``pyarrow.gandiva``.
-
 Error when using Dask engine: ``RuntimeError: if __name__ == '__main__':``
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
