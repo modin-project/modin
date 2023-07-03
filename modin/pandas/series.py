@@ -1412,6 +1412,22 @@ class Series(BasePandasDataset):
             fill_value=fill_value,
         )
 
+    def rename_axis(
+        self,
+        mapper=no_default,
+        *,
+        index=no_default,
+        axis=0,
+        copy=True,
+        inplace=False,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Set the name of the axis for the index or columns.
+        """
+        return super().rename_axis(
+            mapper=mapper, index=index, axis=axis, copy=copy, inplace=inplace
+        )
+
     def rename(
         self,
         index=None,
