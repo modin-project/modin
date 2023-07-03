@@ -132,17 +132,14 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
     @classmethod
     def executeRA(cls, query: str, exec_calcite=False):
         hdk = cls._hdk()
-        if query.startswith("execute calcite"):
-            ra = hdk._calcite.process(
-                query,
-                db_name="hdk",
-                legacy_syntax=True,
-                device_type=cls._preferred_device,
-            )
+        if exec_calcite or query.startswith("execute calcite"):
+            ra = hdk._calcite.process(query, db_name="hdk", legacy_syntax=True)
         else:
             ra = query
         ra_executor = RelAlgExecutor(hdk._executor, hdk._schema_mgr, hdk._data_mgr, ra)
-        return ExecutionResultTable(ra_executor.execute())
+        return ExecutionResultTable(
+            ra_executor.execute(device_type=cls._preferred_device)
+        )
 
     @classmethod
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
