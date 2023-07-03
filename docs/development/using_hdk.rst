@@ -39,6 +39,7 @@ Running on a GPU
 ----------------
 
 Prerequisites:
+
 * HDK's GPU mode is currently supported on Linux and Intel GPU only.
 * HDK supports Gen9 architecture and higher (including Xe & Arc).
 * HDK's GPU mode requires proper driver installation. Follow this guide_ to set up your system. Make sure to install the compute runtime packages: ``intel-opencl-icd``, ``intel-level-zero-gpu``, ``level-zero``.
