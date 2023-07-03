@@ -3606,7 +3606,8 @@ class PandasDataframe(ClassLogger):
 
         if by_parts is not None:
             # inplace operation
-            self._filter_empties(compute_metadata=False)
+            if by_parts.shape[axis] != self._partitions.shape[axis]:
+                self._filter_empties(compute_metadata=False)
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
