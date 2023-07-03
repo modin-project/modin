@@ -40,20 +40,23 @@ class ExecutionResultTable(DbTable):
     @property
     @_inherit_docstrings(DbTable.shape)
     def shape(self) -> Tuple[int, int]:
-        if (shape := getattr(self, "_shape", None)) is None:
+        shape = getattr(self, "_shape", None)
+        if shape is None:
             self._shape = shape = self.scan().shape
         return shape
 
     @property
     @_inherit_docstrings(DbTable.column_names)
     def column_names(self) -> List[str]:
-        if (names := getattr(self, "_column_names", None)) is None:
+        names = getattr(self, "_column_names", None)
+        if names is None:
             self._column_names = names = list(self.scan().schema)
         return names
 
     @_inherit_docstrings(DbTable.to_arrow)
     def to_arrow(self) -> pa.Table:
-        if (at := getattr(self, "_at", None)) is None:
+        at = getattr(self, "_at", None)
+        if at is None:
             at = self._result.to_arrow()
             if (names := getattr(self, "_column_names", None)) is not None:
                 at = at.rename_columns(names)
@@ -68,7 +71,8 @@ class ExecutionResultTable(DbTable):
         -------
         QueryNode
         """
-        if (scan := getattr(self, "_scan", None)) is None:
+        scan = getattr(self, "_scan", None)
+        if scan is None:
             self._scan = scan = HdkWorker._hdk().scan(self._result.table_name)
         return scan
 
@@ -111,7 +115,8 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
     """PyHDK based wrapper class for HDK storage format."""
 
     def __new__(cls, *args, **kwargs):
-        if (instance := getattr(cls, "_instance", None)) is None:
+        instance = getattr(cls, "_instance", None)
+        if instance is None:
             cls._instance = instance = object.__new__(cls)
         return instance
 
