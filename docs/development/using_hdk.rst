@@ -34,4 +34,22 @@ If for some reasons ``Native`` engine is explicitly set using ``modin.config`` o
    If you encounter ``LLVM ERROR: inconsistency in registered CommandLine options`` error when using HDK,
    please refer to the respective section in :doc:`Troubleshooting </getting_started/troubleshooting>` page to avoid the issue.
 
+
+Running on a GPU
+----------------
+
+Prerequisites:
+
+* HDK's GPU mode is currently supported on Linux and Intel GPU only.
+* HDK supports Gen9 architecture and higher (including Xe & Arc).
+* HDK's GPU mode requires proper driver installation. Follow this guide_ to set up your system. Make sure to install the compute runtime packages: ``intel-opencl-icd``, ``intel-level-zero-gpu``, ``level-zero``.
+* Make sure your GPU is visible and accessible.
+
+.. note::
+   You can use ``hwinfo`` and ``clinfo`` utilities to verify the driver installation and device accessibility.
+
+HDK supports a heterogeneous execution mode (experimental) that is disabled by default in Modin. Starting with pyHDK version 0.7 Modin can run the workload on Intel GPU.
+Run on a GPU via ``MODIN_HDK_LAUNCH_PARAMETERS="cpu_only=0" python <your-script.py>``.
+
 .. _HDK: https://github.com/intel-ai/hdk
+.. _guide: https://dgpu-docs.intel.com/driver/installation.html

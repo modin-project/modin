@@ -30,6 +30,7 @@ class HdkWorker(BaseDbWorker):
     _data_mgr = None
     _calcite = None
     _executor = None
+    _preffered_device = None
 
     @classmethod
     def setup_engine(cls):
@@ -39,8 +40,11 @@ class HdkWorker(BaseDbWorker):
         Do nothing if it is initiliazed already.
         """
         if cls._executor is None:
+            cls._preffered_device = (
+                "CPU" if bool(HdkLaunchParameters.get()["cpu_only"]) else "GPU"
+            )
             cls._config = pyhdk.buildConfig(**HdkLaunchParameters.get())
-            cls._storage = pyhdk.storage.ArrowStorage(1)
+            cls._storage = pyhdk.storage.ArrowStorage(1, cls._config)
             cls._data_mgr = pyhdk.storage.DataMgr(cls._config)
             cls._data_mgr.registerDataProvider(cls._storage)
 
@@ -73,7 +77,7 @@ class HdkWorker(BaseDbWorker):
         rel_alg_executor = pyhdk.sql.RelAlgExecutor(
             cls._executor, cls._storage, cls._data_mgr, ra
         )
-        res = rel_alg_executor.execute()
+        res = rel_alg_executor.execute(device_type=cls._preffered_device)
         return res.to_arrow()
 
     @classmethod
