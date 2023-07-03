@@ -45,6 +45,7 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
 )
 from .utils import (
     ColNameCodec,
+    maybe_range,
     arrow_to_pandas,
     check_join_supported,
     check_cols_to_join,
@@ -431,17 +432,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if row_positions is None:
             return base
 
-        # Check if row_positions could be converted to a range.
-        if len(row_positions) > 2 and not is_range_like(row_positions):
-            diff = row_positions[1] - row_positions[0]
-            is_range = True
-            for i in range(2, len(row_positions)):
-                if (row_positions[i] - row_positions[i - 1]) != diff:
-                    is_range = False
-                    break
-            if is_range:
-                row_positions = range(row_positions[0], row_positions[-1] + diff, diff)
-
+        row_positions = maybe_range(row_positions)
         base = base._maybe_materialize_rowid()
         op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
         base = self.__constructor__(
@@ -519,7 +510,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             super()._maybe_update_proxies(dtypes, new_parent)
         if self._partitions is None:
             return
-        if isinstance(table := self._partitions[0][0].get(), ImportedTable):
+        table = self._partitions[0][0].get()
+        if isinstance(table, ImportedTable):
             table = table.to_arrow()
         if isinstance(table, pyarrow.Table):
             super()._maybe_update_proxies(dtypes, new_parent=table)
