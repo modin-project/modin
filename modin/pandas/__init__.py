@@ -156,6 +156,11 @@ def _update_engine(publisher: Parameter):
 
             initialize_unidist()
     elif publisher.get() == "Cloudray":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         conn = get_connection()
@@ -181,10 +186,20 @@ def _update_engine(publisher: Parameter):
         else:
             get_connection().modules["modin"].set_execution("Ray", StorageFormat.get())
     elif publisher.get() == "Cloudpython":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         get_connection().modules["modin"].set_execution("Python")
     elif publisher.get() == "Cloudnative":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         assert (
