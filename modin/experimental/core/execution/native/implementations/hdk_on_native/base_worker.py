@@ -15,13 +15,11 @@
 
 import abc
 import uuid
-import os
 from typing import Tuple, List
 
 import pyarrow as pa
 import numpy as np
 
-from modin.config import OmnisciFragmentSize, HdkFragmentSize
 from modin.error_message import ErrorMessage
 
 
@@ -240,36 +238,6 @@ class BaseDbWorker(abc.ABC):
                 ) from err
 
         return table
-
-    @classmethod
-    def compute_fragment_size(cls, table):
-        """
-        Compute fragment size to be used for table import.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            A table to import.
-
-        Returns
-        -------
-        int
-            Fragment size to use for import.
-        """
-        fragment_size = HdkFragmentSize.get()
-        if fragment_size is None:
-            fragment_size = OmnisciFragmentSize.get()
-        if fragment_size is None:
-            cpu_count = os.cpu_count()
-            if cpu_count is not None:
-                fragment_size = table.num_rows // cpu_count
-                fragment_size = min(fragment_size, 2**25)
-                fragment_size = max(fragment_size, 2**18)
-            else:
-                fragment_size = 0
-        else:
-            fragment_size = int(fragment_size)
-        return fragment_size
 
     @classmethod
     @abc.abstractmethod
