@@ -939,7 +939,7 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
     @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
-    @pytest.mark.parametrize("agg", ["sum", "size", "mean"])
+    @pytest.mark.parametrize("agg", ["sum", "size", "mean", "median"])
     @pytest.mark.parametrize("as_index", [True, False])
     def test_groupby_agg_by_col(self, by, agg, as_index):
         def simple_agg(df, **kwargs):

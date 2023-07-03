@@ -342,6 +342,7 @@ class CalciteBuilder:
             "min": "MIN",
             "size": "COUNT",
             "count": "COUNT",
+            "median": "APPROX_QUANTILE",
         }
         _no_arg_aggregates = {"size"}
 
