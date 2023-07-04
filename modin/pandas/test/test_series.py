@@ -2424,6 +2424,10 @@ def test_map(data, na_values):
     )
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/intel-ai/hdk/issues/542",
+)
 def test_mask():
     modin_series = pd.Series(np.arange(10))
     m = modin_series % 3 == 0

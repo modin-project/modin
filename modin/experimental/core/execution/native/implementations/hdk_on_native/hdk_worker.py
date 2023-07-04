@@ -12,98 +12,167 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkWorker`` class."""
+from typing import Optional, Tuple, List
 
-import pyhdk
+import pyarrow as pa
 
-from .base_worker import BaseDbWorker
+from pyhdk.hdk import HDK, ExecutionResult, RelAlgExecutor
+
+from .base_worker import DbTable, BaseDbWorker
 
 from modin.utils import _inherit_docstrings
 from modin.config import HdkLaunchParameters
 
 
-@_inherit_docstrings(BaseDbWorker)
-class HdkWorker(BaseDbWorker):
-    """PyHDK based wrapper class for HDK storage format."""
+class ExecutionResultTable(DbTable):
+    """
+    Represents an ExecutionResult table.
 
-    _config = None
-    _storage = None
-    _data_mgr = None
-    _calcite = None
-    _executor = None
-    _preffered_device = None
+    Parameters
+    ----------
+    result : ExecutionResult
+    """
 
-    @classmethod
-    def setup_engine(cls):
+    def __init__(self, result: ExecutionResult):
+        self.name = result.table_name
+        self._result = result
+
+    @property
+    @_inherit_docstrings(DbTable.shape)
+    def shape(self) -> Tuple[int, int]:
+        shape = getattr(self, "_shape", None)
+        if shape is None:
+            self._shape = shape = self.scan().shape
+        return shape
+
+    @property
+    @_inherit_docstrings(DbTable.column_names)
+    def column_names(self) -> List[str]:
+        names = getattr(self, "_column_names", None)
+        if names is None:
+            self._column_names = names = list(self.scan().schema)
+        return names
+
+    @_inherit_docstrings(DbTable.to_arrow)
+    def to_arrow(self) -> pa.Table:
+        at = getattr(self, "_at", None)
+        if at is None:
+            at = self._result.to_arrow()
+            if (names := getattr(self, "_column_names", None)) is not None:
+                at = at.rename_columns(names)
+            self._at = at
+        return at
+
+    def scan(self):
         """
-        Initialize PyHDK.
-
-        Do nothing if it is initiliazed already.
-        """
-        if cls._executor is None:
-            cls._preffered_device = (
-                "CPU" if bool(HdkLaunchParameters.get()["cpu_only"]) else "GPU"
-            )
-            cls._config = pyhdk.buildConfig(**HdkLaunchParameters.get())
-            cls._storage = pyhdk.storage.ArrowStorage(1, cls._config)
-            cls._data_mgr = pyhdk.storage.DataMgr(cls._config)
-            cls._data_mgr.registerDataProvider(cls._storage)
-
-            cls._calcite = pyhdk.sql.Calcite(cls._storage, cls._config)
-            cls._executor = pyhdk.Executor(cls._data_mgr, cls._config)
-
-    def __init__(self):
-        """Initialize HDK storage format."""
-        self.setup_engine()
-
-    @classmethod
-    def dropTable(cls, name):
-        cls._storage.dropTable(name)
-
-    @classmethod
-    def _executeRelAlgJson(cls, ra):
-        """
-        Execute RelAlg JSON query.
-
-        Parameters
-        ----------
-        ra : str
-            RelAlg JSON string.
+        Return a scan query node referencing this table.
 
         Returns
         -------
-        pyarrow.Table
-            Execution result.
+        QueryNode
         """
-        rel_alg_executor = pyhdk.sql.RelAlgExecutor(
-            cls._executor, cls._storage, cls._data_mgr, ra
-        )
-        res = rel_alg_executor.execute(device_type=cls._preffered_device)
-        return res.to_arrow()
+        scan = getattr(self, "_scan", None)
+        if scan is None:
+            self._scan = scan = HdkWorker._hdk().scan(self._result.table_name)
+        return scan
+
+
+class ImportedTable(DbTable):
+    """
+    Represents an imported arrow table.
+
+    Parameters
+    ----------
+    table : pa.Table
+    name : str
+    """
+
+    def __init__(self, table: pa.Table, name: str):
+        self.name = name
+        self._table = table
+
+    def __del__(self):
+        """Drop table."""
+        HdkWorker.dropTable(self.name)
+
+    @property
+    @_inherit_docstrings(DbTable.shape)
+    def shape(self) -> Tuple[int, int]:
+        return (self._table.num_rows, self._table.num_columns)
+
+    @property
+    @_inherit_docstrings(DbTable.column_names)
+    def column_names(self) -> List[str]:
+        return self._table.column_names
+
+    @_inherit_docstrings(DbTable.to_arrow)
+    def to_arrow(self) -> pa.Table:
+        return self._table
+
+
+@_inherit_docstrings(BaseDbWorker)
+class HdkWorker(BaseDbWorker):  # noqa: PR01
+    """PyHDK based wrapper class for HDK storage format."""
+
+    def __new__(cls, *args, **kwargs):
+        instance = getattr(cls, "_instance", None)
+        if instance is None:
+            cls._instance = instance = object.__new__(cls)
+        return instance
 
     @classmethod
-    def executeDML(cls, query):
-        ra = cls._calcite.process(query, db_name="hdk")
-        return cls._executeRelAlgJson(ra)
+    def dropTable(cls, name: str):
+        cls.dropTable = cls._hdk().drop_table
+        cls.dropTable(name)
 
     @classmethod
-    def executeRA(cls, query):
-        if query.startswith("execute relalg"):
-            # 14 == len("execute relalg")
-            ra = query[14:]
+    def executeDML(cls, query: str):
+        return cls.executeRA(query, True)
+
+    @classmethod
+    def executeRA(cls, query: str, exec_calcite=False):
+        hdk = cls._hdk()
+        if exec_calcite or query.startswith("execute calcite"):
+            ra = hdk._calcite.process(query, db_name="hdk", legacy_syntax=True)
         else:
-            assert query.startswith("execute calcite")
-            ra = cls._calcite.process(query, db_name="hdk")
-
-        return cls._executeRelAlgJson(ra)
+            ra = query
+        ra_executor = RelAlgExecutor(hdk._executor, hdk._schema_mgr, hdk._data_mgr, ra)
+        return ExecutionResultTable(
+            ra_executor.execute(device_type=cls._preferred_device)
+        )
 
     @classmethod
-    def import_arrow_table(cls, table, name=None):
+    def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
         name = cls._genName(name)
+        compat_table = cls.cast_to_compatible_types(table)
+        fragment_size = cls.compute_fragment_size(compat_table)
+        cls._hdk().import_arrow(compat_table, name, fragment_size)
+        return ImportedTable(table, name)
 
-        table = cls.cast_to_compatible_types(table)
-        fragment_size = cls.compute_fragment_size(table)
+    @classmethod
+    def _hdk(cls) -> HDK:
+        """
+        Initialize and return an HDK instance.
 
-        opt = pyhdk.storage.TableOptions(fragment_size)
-        cls._storage.importArrowTable(table, name, opt)
+        Returns
+        -------
+        HDK
+        """
+        params = HdkLaunchParameters.get()
+        cls._preferred_device = (
+            "CPU" if bool(HdkLaunchParameters.get()["cpu_only"]) else "GPU"
+        )
+        cls._hdk_instance = HDK(**params)
+        cls._hdk = cls._get_hdk_instance
+        return cls._hdk()
 
-        return name
+    @classmethod
+    def _get_hdk_instance(cls) -> HDK:
+        """
+        Return the initialized HDK instance.
+
+        Returns
+        -------
+        HDK
+        """
+        return cls._hdk_instance

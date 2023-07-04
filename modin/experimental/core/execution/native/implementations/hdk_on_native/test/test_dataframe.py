@@ -1964,16 +1964,7 @@ class TestBinaryOp:
                 force_hdk_execute=force_hdk,
             )
 
-    @pytest.mark.parametrize(
-        "force_hdk",
-        [
-            False,
-            pytest.param(
-                True,
-                marks=pytest.mark.xfail(reason="Invert is not yet supported by HDK"),
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("force_hdk", [False, True])
     def test_invert_op(self, force_hdk):
         def invert(df, **kwargs):
             return ~df

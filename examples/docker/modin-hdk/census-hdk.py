@@ -14,9 +14,6 @@
 import sys
 from utils import measure
 import modin.pandas as pd
-from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
-    DbWorker,
-)
 
 from sklearn import config_context
 import sklearnex
@@ -131,12 +128,8 @@ def read(filename):
         skiprows=1,
     )
 
-    df.shape  # to trigger real execution
-    df._query_compiler._modin_frame._partitions[0][
-        0
-    ].frame_id = DbWorker().import_arrow_table(
-        df._query_compiler._modin_frame._partitions[0][0].get()
-    )  # to trigger real execution
+    # to trigger real execution and table import
+    df._query_compiler._modin_frame.force_import()
     return df
 
 

@@ -69,10 +69,10 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     modin.pandas.DataFrame
         Execution result.
     """
-    worker = HdkWorker()
     if len(kwargs) > 0:
-        query = _build_query(query, kwargs, worker.import_arrow_table)
-    df = from_arrow(worker.executeDML(query))
+        query = _build_query(query, kwargs)
+    table = HdkWorker().executeDML(query)
+    df = from_arrow(table.to_arrow())
     mdf = df._query_compiler._modin_frame
     schema = mdf._partitions[0][0].get().schema
     # HDK returns strings as dictionary. For the proper conversion to
@@ -87,7 +87,7 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
     return df
 
 
-def _build_query(query: str, frames: dict, import_table: callable) -> str:
+def _build_query(query: str, frames: dict) -> str:
     """
     Build query to be executed.
 
@@ -100,8 +100,6 @@ def _build_query(query: str, frames: dict, import_table: callable) -> str:
         SQL query to be processed.
     frames : dict
         DataFrames referenced by the query.
-    import_table : callable
-        Used to import tables and assign the table names.
 
     Returns
     -------
@@ -112,22 +110,14 @@ def _build_query(query: str, frames: dict, import_table: callable) -> str:
     for name, df in frames.items():
         assert isinstance(df._query_compiler, DFAlgQueryCompiler)
         mf = df._query_compiler._modin_frame
-        if not mf._has_arrow_table():
-            mf._execute()
-        assert mf._has_arrow_table()
-        part = mf._partitions[0][0]
-        at = part.get()
-
-        if part.frame_id is None:
-            part.frame_id = import_table(at)
-
+        table = mf.force_import()
         alias.append("WITH " if len(alias) == 0 else "\n),\n")
         alias.extend((name, " AS (\n", "  SELECT\n"))
 
-        for i, col in enumerate(at.column_names):
+        for i, col in enumerate(table.column_names):
             alias.append("    " if i == 0 else ",\n    ")
             alias.extend(('"', col, '"', " AS ", '"', ColNameCodec.decode(col), '"'))
-        alias.extend(("\n  FROM\n    ", part.frame_id))
+        alias.extend(("\n  FROM\n    ", table.name))
 
     alias.extend(("\n)\n", query))
     return "".join(alias)
