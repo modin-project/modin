@@ -227,7 +227,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         )
 
     @classmethod
-    def run_exec_plan(cls, plan, columns):
+    def run_exec_plan(cls, plan):
         """
         Run execution plan in HDK storage format to materialize frame.
 
@@ -235,8 +235,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         ----------
         plan : DFAlgNode
             A root of an execution plan tree.
-        columns : list of str
-            A frame column names.
 
         Returns
         -------
@@ -255,10 +253,6 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         if DoUseCalcite.get():
             calcite_json = "execute calcite " + calcite_json
         table = worker.executeRA(calcite_json)
-
-        # workaround for https://github.com/modin-project/modin/issues/1851
-        if DoUseCalcite.get():
-            table._column_names = [ColNameCodec.encode(c) for c in columns]
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class(table)

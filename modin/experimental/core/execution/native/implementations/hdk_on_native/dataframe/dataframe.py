@@ -2041,9 +2041,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 new_table, unsupported_cols=[], encode_col_names=False
             )[0]
         else:
-            partitions = self._partition_mgr_cls.run_exec_plan(
-                self._op, self._table_cols
-            )
+            partitions = self._partition_mgr_cls.run_exec_plan(self._op)
 
         self._partitions = partitions
         self._op = FrameNode(self)

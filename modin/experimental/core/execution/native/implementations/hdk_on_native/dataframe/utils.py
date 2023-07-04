@@ -429,12 +429,12 @@ def get_data_for_join_by_index(
         index_cols = None
     else:
         index_cols = ColNameCodec.mangle_index_names(merged.index.names)
-        for orig_name, mangled_name in zip(merged.index.names, index_cols):
+        for name in index_cols:
             # Using _dtypes here since it contains all column names,
             # including the index.
-            df = left if mangled_name in left._dtypes else right
-            exprs[orig_name] = df.ref(mangled_name)
-            new_dtypes.append(df._dtypes[mangled_name])
+            df = left if name in left._dtypes else right
+            exprs[name] = df.ref(name)
+            new_dtypes.append(df._dtypes[name])
 
     left_col_names = set(left.columns)
     right_col_names = set(right.columns)
