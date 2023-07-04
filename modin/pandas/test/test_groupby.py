@@ -2651,3 +2651,109 @@ def test_groupby_pct_change_diff_6194():
         df._to_pandas(),
         lambda df: df.groupby(by="by").diff(),
     )
+
+
+def eval_rolling(md_window, pd_window):
+    eval_general(md_window, pd_window, lambda window: window.count())
+    eval_general(md_window, pd_window, lambda window: window.sum())
+    eval_general(md_window, pd_window, lambda window: window.mean())
+    eval_general(md_window, pd_window, lambda window: window.median())
+    eval_general(md_window, pd_window, lambda window: window.var())
+    eval_general(md_window, pd_window, lambda window: window.std())
+    eval_general(md_window, pd_window, lambda window: window.min())
+    eval_general(md_window, pd_window, lambda window: window.max())
+    eval_general(md_window, pd_window, lambda window: window.corr())
+    eval_general(md_window, pd_window, lambda window: window.cov())
+    eval_general(md_window, pd_window, lambda window: window.skew())
+    eval_general(md_window, pd_window, lambda window: window.kurt())
+    eval_general(
+        md_window, pd_window, lambda window: window.apply(lambda df: (df + 10).sum())
+    )
+    eval_general(md_window, pd_window, lambda window: window.agg("sum"))
+    eval_general(md_window, pd_window, lambda window: window.quantile(0.2))
+    eval_general(md_window, pd_window, lambda window: window.rank())
+
+    if not md_window._as_index:
+        # There's a mismatch in group columns when 'as_index=False'
+        # see: https://github.com/modin-project/modin/issues/6291
+        by_cols = list(md_window._groupby_obj._internal_by)
+        eval_general(
+            md_window,
+            pd_window,
+            lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
+        )
+    else:
+        eval_general(
+            md_window,
+            pd_window,
+            lambda window: window.sem(),
+        )
+
+
+@pytest.mark.parametrize("center", [True, False])
+@pytest.mark.parametrize("closed", ["right", "left", "both", "neither"])
+@pytest.mark.parametrize("as_index", [True, False])
+def test_rolling_int_window(center, closed, as_index):
+    col_part1 = pd.DataFrame(
+        {
+            "by": np.tile(np.arange(15), 10),
+            "col1": np.arange(150),
+            "col2": np.arange(10, 160),
+        }
+    )
+    col_part2 = pd.DataFrame({"col3": np.arange(20, 170)})
+
+    md_df = pd.concat([col_part1, col_part2], axis=1)
+    pd_df = md_df._to_pandas()
+
+    if StorageFormat.get() == "Pandas":
+        assert md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+
+    md_window = md_df.groupby("by", as_index=as_index).rolling(
+        3, center=center, closed=closed
+    )
+    pd_window = pd_df.groupby("by", as_index=as_index).rolling(
+        3, center=center, closed=closed
+    )
+    eval_rolling(md_window, pd_window)
+
+
+@pytest.mark.parametrize("center", [True, False])
+@pytest.mark.parametrize("closed", ["right", "left", "both", "neither"])
+@pytest.mark.parametrize("as_index", [True, False])
+@pytest.mark.parametrize("on", [None, "col4"])
+def test_rolling_timedelta_window(center, closed, as_index, on):
+    col_part1 = pd.DataFrame(
+        {
+            "by": np.tile(np.arange(15), 10),
+            "col1": np.arange(150),
+            "col2": np.arange(10, 160),
+        }
+    )
+    col_part2 = pd.DataFrame({"col3": np.arange(20, 170)})
+
+    if on is not None:
+        col_part2[on] = pandas.DatetimeIndex(
+            [
+                datetime.date(2020, 1, 1) + datetime.timedelta(hours=12) * i
+                for i in range(150)
+            ]
+        )
+
+    md_df = pd.concat([col_part1, col_part2], axis=1)
+    md_df.index = pandas.DatetimeIndex(
+        [datetime.date(2020, 1, 1) + datetime.timedelta(days=1) * i for i in range(150)]
+    )
+
+    pd_df = md_df._to_pandas()
+
+    if StorageFormat.get() == "Pandas":
+        assert md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+
+    md_window = md_df.groupby("by", as_index=as_index).rolling(
+        datetime.timedelta(days=3), center=center, closed=closed, on=on
+    )
+    pd_window = pd_df.groupby("by", as_index=as_index).rolling(
+        datetime.timedelta(days=3), center=center, closed=closed, on=on
+    )
+    eval_rolling(md_window, pd_window)

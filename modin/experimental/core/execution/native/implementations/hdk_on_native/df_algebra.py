@@ -30,6 +30,7 @@ from modin.pandas.indexing import is_range_like
 
 from .expr import InputRefExpr, LiteralExpr, OpExpr
 from .dataframe.utils import ColNameCodec, EMPTY_ARROW_TABLE, get_common_arrow_type
+from .db_worker import DbTable
 
 if TYPE_CHECKING:
     from .dataframe.dataframe import HdkOnNativeDataframe
@@ -414,17 +415,14 @@ class FrameNode(DFAlgNode):
 
     @_inherit_docstrings(DFAlgNode.can_execute_arrow)
     def can_execute_arrow(self) -> bool:
-        frame = self.modin_frame
-        return not frame._has_unsupported_data and all(
-            p.arrow_table is not None for p in frame._partitions.flatten()
-        )
+        return self.modin_frame._has_arrow_table()
 
-    def execute_arrow(self, ignore=None) -> Union[pa.Table, pandas.DataFrame]:
+    def execute_arrow(self, ignore=None) -> Union[DbTable, pa.Table, pandas.DataFrame]:
         """
         Materialized frame.
 
         If `can_execute_arrow` returns True, this method returns an arrow table,
-        otherwise - a pandas Dataframe.
+        otherwise - a pandas Dataframe or DbTable.
 
         Parameters
         ----------
@@ -432,10 +430,10 @@ class FrameNode(DFAlgNode):
 
         Returns
         -------
-        pa.Table or pandas.Dataframe
+        DbTable or pa.Table or pandas.Dataframe
         """
         frame = self.modin_frame
-        if frame._partitions is not None and frame._partitions.size != 0:
+        if frame._partitions is not None:
             return frame._partitions[0][0].get()
         if frame._has_unsupported_data:
             return pandas.DataFrame(

@@ -29,6 +29,7 @@ from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 import pyarrow as pa
 from pyarrow.types import is_dictionary
 
+from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 EMPTY_ARROW_TABLE = pa.Table.from_pandas(pandas.DataFrame({}))
@@ -463,6 +464,30 @@ def get_data_for_join_by_index(
         new_dtypes.append(df._dtypes[orig_name])
 
     return index_cols, exprs, new_dtypes, merged.columns
+
+
+def maybe_range(numbers: Union[List[int], range]) -> Union[List[int], range]:
+    """
+    Try to convert the specified sequence of numbers to a range.
+
+    Parameters
+    ----------
+    numbers : list of ints or range
+
+    Returns
+    -------
+    list of ints or range
+    """
+    if len(numbers) > 2 and not is_range_like(numbers):
+        diff = numbers[1] - numbers[0]
+        is_range = True
+        for i in range(2, len(numbers)):
+            if (numbers[i] - numbers[i - 1]) != diff:
+                is_range = False
+                break
+        if is_range:
+            numbers = range(numbers[0], numbers[-1] + diff, diff)
+    return numbers
 
 
 def to_arrow_type(dtype) -> pa.lib.DataType:

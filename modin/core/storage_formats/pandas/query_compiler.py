@@ -21,7 +21,6 @@ queries for the ``PandasDataframe``.
 import re
 import numpy as np
 import pandas
-import functools
 from pandas.api.types import is_scalar
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
@@ -390,6 +389,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
     combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
     eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
+    equals = Binary.register(
+        lambda df, other: pandas.DataFrame([[df.equals(other)]]),
+        join_type=None,
+        labels="drop",
+        infer_dtypes="bool",
+    )
     floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
     ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
     gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
@@ -1378,81 +1383,83 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     window_mean = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).mean(*args, **kwargs)
         )
     )
     window_sum = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).sum(*args, **kwargs)
         )
     )
     window_var = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
     window_std = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
     rolling_count = Fold.register(
-        lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
+        lambda df, rolling_kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).count()
+        )
     )
     rolling_sum = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).sum(*args, **kwargs)
         )
     )
     rolling_sem = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sem(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).sem(*args, **kwargs)
         )
     )
     rolling_mean = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).mean(*args, **kwargs)
         )
     )
     rolling_median = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).median(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).median(**kwargs)
         )
     )
     rolling_var = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
     rolling_std = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
     rolling_min = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).min(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).min(*args, **kwargs)
         )
     )
     rolling_max = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).max(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).max(*args, **kwargs)
         )
     )
     rolling_skew = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).skew(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).skew(**kwargs)
         )
     )
     rolling_kurt = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).kurt(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).kurt(**kwargs)
         )
     )
     rolling_apply = Fold.register(
-        lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).apply(
+        lambda df, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).apply(
                 func=func,
                 raw=raw,
                 engine=engine,
@@ -1463,15 +1470,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
     rolling_quantile = Fold.register(
-        lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).quantile(
+        lambda df, rolling_kwargs, quantile, interpolation, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
             )
         )
     )
     rolling_rank = Fold.register(
-        lambda df, rolling_args, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).rank(
+        lambda df, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
+            df.rolling(**rolling_kwargs).rank(
                 method=method,
                 ascending=ascending,
                 pct=pct,
@@ -1481,43 +1488,43 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
 
-    def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
+    def rolling_corr(self, axis, rolling_kwargs, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
-                lambda df: pandas.DataFrame.rolling(df, *rolling_args).corr(
+                lambda df: pandas.DataFrame.rolling(df, **rolling_kwargs).corr(
                     other=other, pairwise=pairwise, *args, **kwargs
                 )
             )
         else:
             return Fold.register(
                 lambda df: pandas.DataFrame(
-                    df.rolling(*rolling_args).corr(
+                    df.rolling(**rolling_kwargs).corr(
                         other=other, pairwise=pairwise, *args, **kwargs
                     )
                 )
             )(self, axis)
 
-    def rolling_cov(self, axis, rolling_args, other, pairwise, ddof, **kwargs):
+    def rolling_cov(self, axis, rolling_kwargs, other, pairwise, ddof, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
-                lambda df: pandas.DataFrame.rolling(df, *rolling_args).cov(
+                lambda df: pandas.DataFrame.rolling(df, **rolling_kwargs).cov(
                     other=other, pairwise=pairwise, ddof=ddof, **kwargs
                 )
             )
         else:
             return Fold.register(
                 lambda df: pandas.DataFrame(
-                    df.rolling(*rolling_args).cov(
+                    df.rolling(**rolling_kwargs).cov(
                         other=other, pairwise=pairwise, ddof=ddof, **kwargs
                     )
                 )
             )(self, axis)
 
-    def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, axis, rolling_kwargs, func, *args, **kwargs):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(
-                df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+                df.rolling(**rolling_kwargs).aggregate(func=func, *args, **kwargs)
             ),
             new_index=self.index,
         )
@@ -2454,8 +2461,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.rank(**kwargs),
-            new_index=self.index,
-            new_columns=self.columns if not numeric_only else None,
+            new_index=self._modin_frame.copy_index_cache(),
+            new_columns=self._modin_frame.copy_columns_cache()
+            if not numeric_only
+            else None,
             dtypes=np.float64,
         )
         return self.__constructor__(new_modin_frame)
@@ -3439,9 +3448,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             obj = self
 
-        agg_func = functools.partial(
-            GroupByDefault.get_aggregation_method(how), func=agg_func
-        )
+        agg_method = GroupByDefault.get_aggregation_method(how)
+        original_agg_func = agg_func
+
+        def agg_func(grp, *args, **kwargs):
+            return agg_method(grp, original_agg_func, *args, **kwargs)
 
         result = obj._modin_frame.groupby(
             axis=axis,
@@ -3504,6 +3515,51 @@ class PandasQueryCompiler(BaseQueryCompiler):
             drop=drop,
         )
 
+    def groupby_rolling(
+        self,
+        by,
+        agg_func,
+        axis,
+        groupby_kwargs,
+        rolling_kwargs,
+        agg_args,
+        agg_kwargs,
+        drop=False,
+    ):
+        # 'corr' and 'cov' require knowledge about the whole row axis (all columns have
+        # to be available in the same partitions), this requirement is not being satisfied
+        # in the current groupby implementation
+        unsupported_groupby = (
+            agg_func in ("corr", "cov") or rolling_kwargs.get("on") is not None
+        )
+
+        if isinstance(agg_func, str):
+            str_func = agg_func
+
+            def agg_func(window, *args, **kwargs):
+                return getattr(window, str_func)(*args, **kwargs)
+
+        else:
+            assert callable(agg_func)
+
+        if unsupported_groupby:
+            obj = super(PandasQueryCompiler, self)
+        else:
+            obj = self
+
+        return obj.groupby_agg(
+            by=by,
+            agg_func=lambda grp, *args, **kwargs: agg_func(
+                grp.rolling(**rolling_kwargs), *args, **kwargs
+            ),
+            axis=axis,
+            groupby_kwargs=groupby_kwargs,
+            agg_args=agg_args,
+            agg_kwargs=agg_kwargs,
+            how="direct",
+            drop=drop,
+        )
+
     def groupby_agg(
         self,
         by,
@@ -3559,12 +3615,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
         else:
-            agg_func = functools.partial(
-                (
-                    SeriesGroupByDefault if series_groupby else GroupByDefault
-                ).get_aggregation_method(how),
-                func=agg_func,
-            )
+            agg_method = (
+                SeriesGroupByDefault if series_groupby else GroupByDefault
+            ).get_aggregation_method(how)
+
+            def agg_func(grp, *args, **kwargs):
+                return agg_method(grp, original_agg_func, *args, **kwargs)
 
         # since we're going to modify `groupby_kwargs` dict in a `groupby_agg_builder`,
         # we want to copy it to not propagate these changes into source dict, in case

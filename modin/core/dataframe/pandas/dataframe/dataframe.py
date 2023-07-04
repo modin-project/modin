@@ -2896,20 +2896,6 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
-    def __make_init_labels_args(self, partitions, index, columns) -> dict:
-        kw = {}
-        kw["index"], kw["row_lengths"] = (
-            self._compute_axis_labels_and_lengths(0, partitions)
-            if index is None
-            else (index, None)
-        )
-        kw["columns"], kw["column_widths"] = (
-            self._compute_axis_labels_and_lengths(1, partitions)
-            if columns is None
-            else (columns, None)
-        )
-        return kw
-
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
@@ -2988,9 +2974,9 @@ class PandasDataframe(ClassLogger):
             broadcasted_dict,
             keep_remaining,
         )
-
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
@@ -3280,6 +3266,7 @@ class PandasDataframe(ClassLogger):
         right_frames: list,
         join_type="outer",
         copartition_along_columns=True,
+        labels="replace",
         dtypes=None,
     ):
         """
@@ -3296,6 +3283,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
+        labels : {"replace", "drop"}, default: "replace"
+            Whether use labels from joined DataFrame or drop altogether to make
+            them be computed lazily later.
         dtypes : series, default: None
             Dtypes of the resultant dataframe, this argument will be
             received if the resultant dtypes of n-opary operation is precomputed.
@@ -3346,6 +3336,8 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, list_of_right_parts
             )
         )
+        if labels == "drop":
+            joined_index = joined_columns = row_lengths = column_widths = None
 
         return self.__constructor__(
             new_frame,
@@ -3612,11 +3604,16 @@ class PandasDataframe(ClassLogger):
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
 
+        if by_parts is not None:
+            # inplace operation
+            if by_parts.shape[axis] != self._partitions.shape[axis]:
+                self._filter_empties(compute_metadata=False)
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @classmethod
     def from_pandas(cls, df):

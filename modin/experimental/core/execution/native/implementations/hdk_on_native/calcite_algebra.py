@@ -20,6 +20,7 @@ HDK storage format.
 
 import abc
 
+from .db_worker import DbTable
 from .dataframe.utils import ColNameCodec
 from .expr import BaseExpr
 
@@ -180,10 +181,11 @@ class CalciteScanNode(CalciteBaseNode):
     """
 
     def __init__(self, modin_frame):
-        assert modin_frame._partitions.size == 1
-        assert modin_frame._partitions[0][0].frame_id is not None
+        assert modin_frame._partitions is not None
+        table = modin_frame._partitions[0][0].get()
+        assert isinstance(table, DbTable)
         super(CalciteScanNode, self).__init__("EnumerableTableScan")
-        self.table = ["hdk", modin_frame._partitions[0][0].frame_id]
+        self.table = ["hdk", table.name]
         self.fieldNames = [
             ColNameCodec.encode(col) for col in modin_frame._table_cols
         ] + ["rowid"]

@@ -893,6 +893,12 @@ def test_clip(request, data, axis, bound_type):
             modin_df.clip(lower=[1, 2, 3], axis=None)
 
 
+def test_clip_4485():
+    modin_result = pd.DataFrame([1]).clip([3])
+    pandas_result = pandas.DataFrame([1]).clip([3])
+    df_equals(modin_result, pandas_result)
+
+
 def test_drop():
     frame_data = {"A": [1, 2, 3, 4], "B": [0, 1, 2, 3]}
     simple = pandas.DataFrame(frame_data)

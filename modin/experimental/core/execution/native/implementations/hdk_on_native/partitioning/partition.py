@@ -12,44 +12,32 @@
 # governing permissions and limitations under the License.
 
 """Module provides a partition class for ``HdkOnNativeDataframe`` frame."""
+from typing import Union
 
 import pandas
 
+import pyarrow as pa
+
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from ..dataframe.utils import arrow_to_pandas
-from ..db_worker import DbWorker
-import pyarrow
+from ..db_worker import DbTable
 
 
 class HdkOnNativeDataframePartition(PandasDataframePartition):
     """
     A partition of ``HdkOnNativeDataframe`` frame.
 
-    Class holds either a ``pandas.DataFrame`` or ``pyarrow.Table``.
+    Class holds either a ``DbTable`` or ``pandas.DataFrame`` or ``pyarrow.Table``.
 
     Parameters
     ----------
-    frame_id : str, optional
-        A corresponding HDK table name or None.
-    pandas_df : pandas.DataFrame, optional
-        Partition data in pandas format.
-    arrow_table : pyarrow.Table, optional
-        Partition data in Arrow format.
-    length : int, optional
-        Length of the partition.
-    width : int, optional
-        Width of the partition.
+    data :  DbTable or pandas.DataFrame or pyarrow.Table
+        Partition data in either pandas or PyArrow format.
 
     Attributes
     ----------
-    frame_id : str
-        A corresponding HDK table name if partition was imported
-        into HDK. Otherwise None.
-    pandas_df : pandas.DataFrame, optional
-        Partition data in pandas format.
-    arrow_table : pyarrow.Table
-        Partition data in Arrow format. None for partitions holding
-        `pandas.DataFrame`.
+    _data :  DbTable or pandas.DataFrame or pyarrow.Table
+        Partition data in either pandas or PyArrow format.
     _length_cache : int
         Length of the partition.
     _width_cache : int
@@ -57,19 +45,11 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
     """
 
     def __init__(
-        self, frame_id=None, pandas_df=None, arrow_table=None, length=None, width=None
+        self,
+        data: Union[DbTable, pa.Table, pandas.DataFrame],
     ):
-        self.pandas_df = pandas_df
-        self.frame_id = frame_id
-        self.arrow_table = arrow_table
-        self._length_cache = length
-        self._width_cache = width
-        self._server = DbWorker
-
-    def __del__(self):
-        """Deallocate HDK resources related to the partition."""
-        if self.frame_id is not None:
-            self._server.dropTable(self.frame_id)
+        assert isinstance(data, (DbTable, pa.Table, pandas.DataFrame))
+        self._data = data
 
     def to_pandas(self):
         """
@@ -80,9 +60,10 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         pandas.DataFrame
         """
         obj = self.get()
-        if isinstance(obj, (pandas.DataFrame, pandas.Series)):
+        if isinstance(obj, pandas.DataFrame):
             return obj
-        assert isinstance(obj, pyarrow.Table)
+        if isinstance(obj, DbTable):
+            obj = obj.to_arrow()
         return arrow_to_pandas(obj)
 
     def to_numpy(self, **kwargs):
@@ -106,20 +87,18 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        pandas.DataFrame or pyarrow.Table
+        DbTable or pandas.DataFrame or pyarrow.Table
         """
-        if self.arrow_table is not None:
-            return self.arrow_table
-        return self.pandas_df
+        return self._data
 
     @classmethod
     def put(cls, obj):
         """
-        Create partition from ``pandas.DataFrame`` or ``pandas.Series``.
+        Create partition from ``DbTable`` or ``pandas.DataFrame`` or ``pyarrow.Table``.
 
         Parameters
         ----------
-        obj : pandas.Series or pandas.DataFrame
+        obj : DbTable or pandas.DataFrame or pyarrow.Table
             Source frame.
 
         Returns
@@ -127,38 +106,29 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         HdkOnNativeDataframePartition
             The new partition.
         """
-        return cls(pandas_df=obj.copy(), length=len(obj.index), width=len(obj.columns))
+        return cls(obj)
 
-    def wait(self):
+    @property
+    def _length_cache(self):
         """
-        Wait until the partition data is ready for use.
+        Number of rows.
 
         Returns
         -------
-        pandas.DataFrame
-            The partition that is ready to be used.
+        int
         """
-        if self.arrow_table is not None:
-            return self.arrow_table
-        return self.pandas_df
+        return len(self._data)
 
-    @classmethod
-    def put_arrow(cls, obj):
+    @property
+    def _width_cache(self):
         """
-        Create partition from ``pyarrow.Table``.
-
-        Parameters
-        ----------
-        obj : pyarrow.Table
-            Source table.
+        Number of columns.
 
         Returns
         -------
-        HdkOnNativeDataframePartition
-            The new partition.
+        int
         """
-        return cls(
-            arrow_table=obj,
-            length=len(obj),
-            width=len(obj.columns),
-        )
+        if isinstance(self._data, pa.Table):
+            return self._data.num_columns
+        else:
+            return self._data.shape[1]

@@ -45,12 +45,15 @@ from modin.experimental.core.storage_formats.hdk.query_compiler import (
 )
 from .utils import (
     ColNameCodec,
+    maybe_range,
     arrow_to_pandas,
     check_join_supported,
     check_cols_to_join,
     get_data_for_join_by_index,
     build_categorical_from_at,
 )
+from ..db_worker import DbTable
+from ..hdk_worker import ImportedTable
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.error_message import ErrorMessage
@@ -80,6 +83,7 @@ from ..expr import (
     is_cmp_op,
 )
 from modin.pandas.utils import check_both_not_none
+from modin.pandas.indexing import is_range_like
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
 ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME
@@ -167,8 +171,8 @@ class HdkOnNativeDataframe(PandasDataframe):
     _force_execution_mode : str or None
         Used by tests to control frame's execution process. Value "lazy"
         is used to raise RuntimeError if execution is triggered for the frame.
-        Value "arrow" is used to raise RuntimeError execution is triggered
-        and cannot be done using Arrow API (have to use HDK for execution).
+        The values "arrow" and "hdk" are used to force the corresponding
+        execution mode.
     """
 
     _query_compiler_cls = DFAlgQueryCompiler
@@ -191,6 +195,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         has_unsupported_data=False,
     ):
         assert dtypes is not None
+        assert partitions is None or (
+            partitions.size == 1 and partitions[0][0] is not None
+        )
 
         self.id = str(type(self)._next_id[0])
         type(self)._next_id[0] += 1
@@ -236,9 +243,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             self.set_dtypes_cache(dtypes)
 
-        if partitions is not None and partitions.size > 1:
-            self._filter_empties()
-
         self._uses_rowid = uses_rowid
         self._force_execution_mode = force_execution_mode
 
@@ -250,6 +254,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         dtypes=no_default,
         op=no_default,
         index_cols=no_default,
+        uses_rowid=no_default,
     ):
         """
         Copy this DataFrame.
@@ -271,6 +276,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         index_cols : list of str, optional
             A list of columns included into the frame's index. None value means
             a default index (row id is used as an index).
+        uses_rowid : bool, optional
+            True for frames which require access to the virtual 'rowid' column
+            for its execution.
 
         Returns
         -------
@@ -289,6 +297,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             dtypes = self.copy_dtypes_cache()
         if index_cols is no_default:
             index_cols = self._index_cols
+        if uses_rowid is no_default:
+            uses_rowid = self._uses_rowid
         return self.__constructor__(
             partitions=partitions,
             index=index,
@@ -298,7 +308,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             dtypes=dtypes,
             op=op,
             index_cols=index_cols,
-            uses_rowid=self._uses_rowid,
+            uses_rowid=uses_rowid,
             force_execution_mode=self._force_execution_mode,
             has_unsupported_data=self._has_unsupported_data,
         )
@@ -419,15 +429,50 @@ class HdkOnNativeDataframe(PandasDataframe):
         if row_labels is not None:
             raise NotImplementedError("Row labels masking is not yet supported")
 
-        if row_positions is not None:
-            base = base._maybe_materialize_rowid()
-            op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
-            return self.__constructor__(
-                columns=base.columns,
-                dtypes=base.copy_dtypes_cache(),
-                op=op,
-                index_cols=base._index_cols,
-                force_execution_mode=base._force_execution_mode,
+        if row_positions is None:
+            return base
+
+        row_positions = maybe_range(row_positions)
+        base = base._maybe_materialize_rowid()
+        op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
+        base = self.__constructor__(
+            columns=base.columns,
+            dtypes=base.copy_dtypes_cache(),
+            op=op,
+            index_cols=base._index_cols,
+            force_execution_mode=base._force_execution_mode,
+        )
+
+        # Reverse the frame rows, if performing a reverse order selection via HDK.
+        if (
+            is_range_like(row_positions) and row_positions.step < 0
+        ) and not base._can_execute_arrow():
+            cols = base.columns
+            table_cols = base._table_cols
+            # Add the rowid column
+            rowid_col = "__tmp_rowid__"
+            while rowid_col in table_cols:
+                rowid_col += "1"
+            exprs = base._index_exprs()
+            exprs[rowid_col] = base.ref(ROWID_COL_NAME)
+            for col in cols:
+                exprs[col] = base.ref(col)
+            base = base.copy(
+                columns=[rowid_col] + base.columns.tolist(),
+                dtypes=base._dtypes_for_exprs(exprs),
+                op=TransformNode(base, exprs),
+                uses_rowid=True,
+            )
+            # Sort by the rowid column
+            base = base.copy(op=SortNode(base, [rowid_col], [False], "last"))
+            # Remove the rowid column
+            exprs = OrderedDict()
+            for col in table_cols:
+                exprs[col] = base.ref(col)
+            base = base.copy(
+                columns=cols,
+                dtypes=base._dtypes_for_exprs(exprs),
+                op=TransformNode(base, exprs),
             )
 
         return base
@@ -440,10 +485,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
-        if self._partitions is None or not isinstance(self._op, FrameNode):
-            return False
-        return self._partitions.size > 0 and all(
-            p.arrow_table is not None for p in self._partitions.flatten()
+        return self._partitions is not None and isinstance(
+            self._partitions[0][0].get(), pyarrow.Table
         )
 
     def _dtypes_for_exprs(self, exprs):
@@ -465,8 +508,12 @@ class HdkOnNativeDataframe(PandasDataframe):
     def _maybe_update_proxies(self, dtypes, new_parent=None):
         if new_parent is not None:
             super()._maybe_update_proxies(dtypes, new_parent)
-        elif self._has_arrow_table():
-            table = self._partitions[0, 0].get()
+        if self._partitions is None:
+            return
+        table = self._partitions[0][0].get()
+        if isinstance(table, ImportedTable):
+            table = table.to_arrow()
+        if isinstance(table, pyarrow.Table):
             super()._maybe_update_proxies(dtypes, new_parent=table)
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
@@ -1375,10 +1422,15 @@ class HdkOnNativeDataframe(PandasDataframe):
         if all(
             f._index_cols is None
             # Make sure all the frames have an arrow table in partitions.
-            and isinstance(f._execute(), pyarrow.Table)
+            and isinstance(f._execute(), (DbTable, pyarrow.Table))
             for f in frames
         ):
-            tables = [f._partitions[0][0].get() for f in frames]
+            tables = [
+                t
+                if isinstance(t := f._partitions[0][0].get(), pyarrow.Table)
+                else t.to_arrow()
+                for f in frames
+            ]
             column_names = [c for t in tables for c in t.column_names]
             if len(column_names) != len(set(column_names)):
                 raise NotImplementedError("Duplicate column names")
@@ -1820,6 +1872,20 @@ class HdkOnNativeDataframe(PandasDataframe):
             force_execution_mode=self._force_execution_mode,
         )
 
+    def force_import(self) -> DbTable:
+        """
+        Force table import.
+
+        Returns
+        -------
+        DbTable
+            The imported table.
+        """
+        if self._has_unsupported_data:
+            raise NotImplementedError("Unable to import a frame with unsupported data")
+        self._execute()
+        return self._partition_mgr_cls.import_table(self)
+
     def _maybe_materialize_rowid(self):
         """
         Materialize virtual 'rowid' column if frame uses it as an index.
@@ -1925,7 +1991,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         Returns
         -------
-        pyarrow.Table or pandas.Dataframe
+        DbTable or pyarrow.Table or pandas.Dataframe
         """
         if isinstance(self._op, FrameNode):
             return self._op.execute_arrow()
@@ -1940,7 +2006,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             if isinstance(frame._op, FrameNode):
                 result = frame._op.execute_arrow()
                 continue
-            if not frame._op.can_execute_hdk():
+            if not frame._op.can_execute_hdk() and stack[-1] != frame._materialize:
                 stack.append(frame._materialize)
             if frame._uses_rowid or frame._op.require_executed_base():
                 for i in reversed(frame._op.input):
@@ -1957,22 +2023,24 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         Returns
         -------
-        pyarrow.Table
+        DbTable or pyarrow.Table
         """
-        assert (
-            self._force_execution_mode != "lazy"
-        ), "Unexpected execution triggered on lazy frame!"
+        mode = self._force_execution_mode
+        assert mode != "lazy", "Unexpected execution triggered on lazy frame!"
 
-        if self._force_execution_mode != "hdk" and self._can_execute_arrow():
+        if isinstance(self._op, FrameNode):
+            return self._op.execute_arrow()
+
+        if (
+            mode == "arrow"
+            or not self._op.can_execute_hdk()
+            or (self._can_execute_arrow() and mode != "hdk")
+        ):
             new_table = self._execute_arrow()
-            partitions = np.empty((1, 1), dtype=np.dtype(object))
-            partitions[0][0] = self._partition_mgr_cls._partition_class.put_arrow(
-                new_table
-            )
+            partitions = self._partition_mgr_cls.from_arrow(
+                new_table, unsupported_cols=[], encode_col_names=False
+            )[0]
         else:
-            assert (
-                self._force_execution_mode != "arrow"
-            ), "Forced arrow execution failed!"
             partitions = self._partition_mgr_cls.run_exec_plan(
                 self._op, self._table_cols
             )
@@ -1992,6 +2060,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         bool
         """
+        if self._force_execution_mode == "hdk":
+            return False
+
         stack = [self]
         while stack:
             op = stack.pop()._op
@@ -2017,7 +2088,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             frame = stack.pop()
 
             if callable(frame):
-                result = frame(result)
+                if isinstance(result := frame(result), DbTable):
+                    result = result.to_arrow()
             elif input := getattr(frame._op, "input", None):
                 if len(input) == 1:
                     stack.append(frame._op.execute_arrow)
@@ -2048,46 +2120,37 @@ class HdkOnNativeDataframe(PandasDataframe):
                             return result
 
                     to_arrow(result)
-            else:
-                result = frame._op.execute_arrow(result)
+            elif isinstance(result := frame._op.execute_arrow(result), DbTable):
+                result = result.to_arrow()
 
         return result
 
     def _build_index_cache(self):
-        """
-        Materialize index and store it in the cache.
+        """Materialize index and store it in the cache."""
+        obj = self._execute()
 
-        Can only be called for materialized frames.
-        """
-        assert isinstance(self._op, FrameNode)
-
-        if self._partitions.size == 0:
-            self.set_index_cache(Index.__new__(Index))
+        if self._index_cols is None:
+            self.set_index_cache(Index.__new__(RangeIndex, data=range(len(obj))))
+            return
+        if isinstance(obj, DbTable):
+            # TODO: Get the index columns only
+            obj = obj.to_arrow()
+        if isinstance(obj, pyarrow.Table):
+            # The index columns must be in the beginning of the list
+            col_names = obj.column_names[len(self._index_cols) :]
+            index_at = obj.drop(col_names)
+            index_df = index_at.to_pandas()
+            index_df.set_index(self._index_cols, inplace=True)
+            idx = index_df.index
+            idx.rename(demangle_index_names(self._index_cols), inplace=True)
+            if (
+                isinstance(idx, (pd.DatetimeIndex, pd.TimedeltaIndex))
+                and len(idx) >= 3  # infer_freq() requires at least 3 values
+            ):
+                idx.freq = pd.infer_freq(idx)
+            self.set_index_cache(idx)
         else:
-            assert self._partitions.size == 1
-            obj = self._partitions[0][0].get()
-            if isinstance(obj, (pd.DataFrame, pd.Series)):
-                self.set_index_cache(obj.index)
-            else:
-                assert isinstance(obj, pyarrow.Table)
-                if self._index_cols is None:
-                    self.set_index_cache(
-                        Index.__new__(RangeIndex, data=range(obj.num_rows))
-                    )
-                else:
-                    # The index columns must be in the beginning of the list
-                    col_names = obj.column_names[len(self._index_cols) :]
-                    index_at = obj.drop(col_names)
-                    index_df = index_at.to_pandas()
-                    index_df.set_index(self._index_cols, inplace=True)
-                    idx = index_df.index
-                    idx.rename(demangle_index_names(self._index_cols), inplace=True)
-                    if (
-                        isinstance(idx, (pd.DatetimeIndex, pd.TimedeltaIndex))
-                        and len(idx) >= 3  # infer_freq() requires at least 3 values
-                    ):
-                        idx.freq = pd.infer_freq(idx)
-                    self.set_index_cache(idx)
+            self.set_index_cache(obj.index)
 
     def _get_index(self):
         """
@@ -2099,7 +2162,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         pandas.Index
         """
-        self._execute()
         if not self.has_index_cache:
             self._build_index_cache()
         return self._index_cache.get()
@@ -2124,15 +2186,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             )
 
         obj = self._execute()
-        assert self._partitions.size == 1
         if isinstance(obj, pd.DataFrame):
             raise NotImplementedError(
                 "HdkOnNativeDataframe._set_index is not yet suported"
             )
         else:
-            assert isinstance(obj, pyarrow.Table)
-
-            at = obj
+            at = obj if isinstance(obj, pyarrow.Table) else obj.to_arrow()
             if self._index_cols:
                 at = at.drop(self._index_cols)
 
@@ -2493,21 +2552,19 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         pandas.DataFrame
         """
-        self._execute()
-
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
-        if len(self._partitions) == 0:
-            return pd.DataFrame(columns=self.columns, index=self.index)
+        obj = self._execute()
 
-        if self._has_arrow_table():
+        if isinstance(obj, DbTable):
+            obj = obj.to_arrow()
+        if isinstance(obj, pyarrow.Table):
             # If the table is exported from HDK, the string columns are converted
             # to dictionary. On conversion to pandas, these columns will be of type
             # Categorical, that is not correct. To make the valid conversion, these
             # fields are cast to string.
-            at = self._partitions[0][0].get()
-            schema = at.schema
+            schema = obj.schema
             cast = {
                 idx: arrow_type.name
                 for idx, (arrow_type, pandas_type) in enumerate(
@@ -2519,12 +2576,12 @@ class HdkOnNativeDataframe(PandasDataframe):
             if cast:
                 for idx, new_type in cast.items():
                     schema = schema.set(idx, pyarrow.field(new_type, pyarrow.string()))
-                at = at.cast(schema)
+                obj = obj.cast(schema)
             # concatenate() is called by _partition_mgr_cls.to_pandas
             # to preserve the categorical dtypes
-            df = concatenate([arrow_to_pandas(at)])
+            df = concatenate([arrow_to_pandas(obj)])
         else:
-            df = self._partition_mgr_cls.to_pandas(self._partitions)
+            df = obj.copy()
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.

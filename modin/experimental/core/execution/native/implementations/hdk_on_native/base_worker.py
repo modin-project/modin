@@ -15,13 +15,68 @@
 
 import abc
 import uuid
-import os
+from typing import Tuple, List
 
 import pyarrow as pa
 import numpy as np
 
-from modin.config import OmnisciFragmentSize, HdkFragmentSize
 from modin.error_message import ErrorMessage
+
+
+class DbTable(abc.ABC):
+    """
+    Base class, representing a table in the HDK database.
+
+    Attributes
+    ----------
+    name : str
+        Table name.
+    """
+
+    @property
+    @abc.abstractmethod
+    def shape(self) -> Tuple[int, int]:
+        """
+        Return a tuple with the number of rows and columns.
+
+        Returns
+        -------
+        tuple of int
+        """
+        pass
+
+    @property
+    @abc.abstractmethod
+    def column_names(self) -> List[str]:
+        """
+        Return a list of the table column names.
+
+        Returns
+        -------
+        tuple of str
+        """
+        pass
+
+    @abc.abstractmethod
+    def to_arrow(self) -> pa.Table:
+        """
+        Convert this table to arrow.
+
+        Returns
+        -------
+        pyarrow.Table
+        """
+        pass
+
+    def __len__(self):
+        """
+        Return the number of rows in the table.
+
+        Returns
+        -------
+        int
+        """
+        return self.shape[0]
 
 
 class BaseDbWorker(abc.ABC):
@@ -53,7 +108,7 @@ class BaseDbWorker(abc.ABC):
 
         Returns
         -------
-        pyarrow.Table
+        DbTable
             Execution result.
         """
         pass
@@ -71,7 +126,7 @@ class BaseDbWorker(abc.ABC):
 
         Returns
         -------
-        pyarrow.Table
+        DbTable
             Execution result.
         """
         pass
@@ -185,36 +240,6 @@ class BaseDbWorker(abc.ABC):
         return table
 
     @classmethod
-    def compute_fragment_size(cls, table):
-        """
-        Compute fragment size to be used for table import.
-
-        Parameters
-        ----------
-        table : pyarrow.Table
-            A table to import.
-
-        Returns
-        -------
-        int
-            Fragment size to use for import.
-        """
-        fragment_size = HdkFragmentSize.get()
-        if fragment_size is None:
-            fragment_size = OmnisciFragmentSize.get()
-        if fragment_size is None:
-            cpu_count = os.cpu_count()
-            if cpu_count is not None:
-                fragment_size = table.num_rows // cpu_count
-                fragment_size = min(fragment_size, 2**25)
-                fragment_size = max(fragment_size, 2**18)
-            else:
-                fragment_size = 0
-        else:
-            fragment_size = int(fragment_size)
-        return fragment_size
-
-    @classmethod
     @abc.abstractmethod
     def import_arrow_table(cls, table, name=None):
         """
@@ -229,8 +254,8 @@ class BaseDbWorker(abc.ABC):
 
         Returns
         -------
-        str
-            Imported table name.
+        DbTable
+            Imported table.
         """
         pass
 
@@ -248,7 +273,7 @@ class BaseDbWorker(abc.ABC):
 
         Returns
         -------
-        str
-            Imported table name.
+        DbTable
+            Imported table.
         """
         return cls.import_arrow_table(pa.Table.from_pandas(df), name=name)
