@@ -5,39 +5,38 @@ pandas>=2,<2.1
 psutil
 
 ## optional dependencies
-Jinja2
-connectorx>=0.2.6a4
-dask[complete]>=2.22.0
-distributed>=2.22.0
-fastparquet<2023.1.0
-feather-format
-flask-cors
-# Latest modin-spreadsheet with widget fix
-git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-lxml
-matplotlib
-msgpack
-openpyxl
-pandas_gbq
-pandas-stubs
-psycopg2
-pyarrow
-# https://github.com/modin-project/modin/issues/6336
-pydantic<2
-pymssql
-tables
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
 ray[default]>=1.13.0,!=2.5.0
-s3fs>=2021.8
-scikit-learn
+# https://github.com/modin-project/modin/issues/6336
+pydantic<2
+pyarrow
+dask[complete]>=2.22.0
+distributed>=2.22.0
+xarray
+Jinja2
 scipy
+s3fs>=2021.8
+feather-format
+lxml
+openpyxl
+xlrd
+matplotlib
 sqlalchemy>=1.4.0,<1.4.46
-tqdm
+pandas-gbq
+tables
+msgpack
+scikit-learn
+pymssql
+psycopg2
+connectorx>=0.2.6a4
+fastparquet<2023.1.0
+flask-cors
 # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
 # when we use collective instead of rabit.
 xgboost>=1.7.1,<2.0.0
-xlrd
-xarray
+tqdm
+# Latest modin-spreadsheet with widget fix
+git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 
 ## modin in the cloud dependencies
 boto3
@@ -67,3 +66,4 @@ flake8>=6.0.0
 flake8-no-implicit-concat>=0.3.4
 flake8-print>=5.0.0
 mypy>=1.0.0
+pandas-stubs>=2.0.0

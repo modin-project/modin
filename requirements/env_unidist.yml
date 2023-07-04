@@ -13,27 +13,26 @@ dependencies:
   - unidist-mpi>=0.2.1
 
   # optional dependencies
-  - Jinja2
-  - fastparquet<2023.1.0
-  - feather-format
-  - lxml
-  - matplotlib
-  - msgpack-python
-  - openpyxl
-  - pandas-gbq
-  - pandas-stubs
-  - psycopg2
   - pyarrow
-  - pymssql
-  - pytables
-  - s3fs>=2021.8
-  - scikit-learn
-  - scipy
-  - sqlalchemy>=1.4.0,<1.4.46
-  - tqdm
-  - xlrd
   # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
+  - Jinja2
+  - scipy
+  - s3fs>=2021.8
+  - feather-format
+  - lxml
+  - openpyxl
+  - xlrd
+  - matplotlib
+  - sqlalchemy>=1.4.0,<1.4.46
+  - pandas-gbq
+  - pytables
+  - msgpack-python
+  - scikit-learn
+  - pymssql
+  - psycopg2
+  - fastparquet<2023.1.0
+  - tqdm
 
   # modin in the cloud dependencies
   - boto3
@@ -57,6 +56,7 @@ dependencies:
   - flake8-no-implicit-concat>=0.3.4
   - flake8-print>=5.0.0
   - mypy>=1.0.0
+  - pandas-stubs>=2.0.0
 
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.

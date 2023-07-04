@@ -10,25 +10,25 @@ dependencies:
   - psutil
 
   # optional dependencies
+  - pyarrow
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
   - Jinja2
+  - scipy
+  - s3fs>=2021.8
   - feather-format
   - lxml
-  - matplotlib
-  - msgpack-python
   - openpyxl
-  - pandas-gbq
-  - pyarrow
-  - pytables
-  - s3fs>=2021.8
-  - scipy
+  - xlrd
+  - matplotlib
   - sqlalchemy>=1.4.0,<1.4.46
-  - tqdm
+  - pandas-gbq
+  - pytables
+  - msgpack-python
   # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
   # when we use collective instead of rabit.
   - xgboost>=1.7.1,<2.0.0
-  - xlrd
-  # TODO: uncomment after Modin switch to python>=3.9
-  # - xarray
+  - tqdm
 
   # modin in the cloud dependencies
   - boto3

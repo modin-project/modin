@@ -12,18 +12,18 @@ dependencies:
   - pyhdk==0.7
 
   # optional dependencies
-  - fastparquet
-  - matplotlib
+  - s3fs>=2021.8
   - openpyxl
-  - pytables
+  - xlrd
   - sqlalchemy>=1.4.0,<1.4.46
   - scipy
-  - scikit-learn-intelex
-  - s3fs>=2021.8
   - xgboost>=1.7.1,<2.0.0
-  - xlrd
+  - scikit-learn-intelex
+  - matplotlib
   # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
+  - pytables
+  - fastparquet
 
   # dependencies for making release
   - pygithub

@@ -12,39 +12,38 @@ dependencies:
   - psutil
 
   # optional dependencies
-  - Jinja2
-  - dask>=2.22.0
-  - distributed>=2.22.0
-  - fastparquet<2023.1.0
-  - feather-format
+  # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
+  - ray-default>=1.13.0,!=2.5.0
+  # https://github.com/modin-project/modin/issues/6336
+  - pydantic<2
+  - pyarrow
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
   - grpcio!=1.46.*
-  - lxml
-  - matplotlib
-  - msgpack-python
-  - openpyxl
-  - pandas-gbq
-  - pandas-stubs
-  - psycopg2
-  - pyarrow
-  # https://github.com/modin-project/modin/issues/6336
-  - pydantic<2
-  - pymssql
-  - pytables
-  # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
-  - ray-default>=1.13.0,!=2.5.0
-  - s3fs>=2021.8
-  - scikit-learn
+  - dask>=2.22.0
+  - distributed>=2.22.0
+  # TODO: uncomment after Modin switch to python>=3.9
+  # - xarray
+  - Jinja2
   - scipy
+  - s3fs>=2021.8
+  - feather-format
+  - lxml
+  - openpyxl
+  - xlrd
+  - matplotlib
   - sqlalchemy>=1.4.0,<1.4.46
-  - tqdm
+  - pandas-gbq
+  - pytables
+  - msgpack-python
+  - scikit-learn
+  - pymssql
+  - psycopg2
+  - fastparquet<2023.1.0
   # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
   # when we use collective instead of rabit.
   - xgboost>=1.7.1,<2.0.0
-  - xlrd
-  # TODO: uncomment after Modin switch to python>=3.9
-  # - xarray
+  - tqdm
 
   ## modin in the cloud dependencies
   - boto3
@@ -69,6 +68,7 @@ dependencies:
   - flake8-no-implicit-concat>=0.3.4
   - flake8-print>=5.0.0
   - mypy>=1.0.0
+  - pandas-stubs>=2.0.0
 
   - pip:
       # no conda package for windows so we install it with pip
