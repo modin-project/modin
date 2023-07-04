@@ -15,13 +15,14 @@
 from typing import Optional, Tuple, List
 
 import pyarrow as pa
+import os
 
 from pyhdk.hdk import HDK, ExecutionResult, RelAlgExecutor
 
 from .base_worker import DbTable, BaseDbWorker
 
 from modin.utils import _inherit_docstrings
-from modin.config import HdkLaunchParameters
+from modin.config import HdkLaunchParameters, OmnisciFragmentSize, HdkFragmentSize
 
 
 class ExecutionResultTable(DbTable):
@@ -148,6 +149,39 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         fragment_size = cls.compute_fragment_size(compat_table)
         cls._hdk().import_arrow(compat_table, name, fragment_size)
         return ImportedTable(table, name)
+
+    @classmethod
+    def compute_fragment_size(cls, table):
+        """
+        Compute fragment size to be used for table import.
+
+        Parameters
+        ----------
+        table : pyarrow.Table
+            A table to import.
+
+        Returns
+        -------
+        int
+            Fragment size to use for import.
+        """
+        fragment_size = HdkFragmentSize.get()
+        if fragment_size is None:
+            fragment_size = OmnisciFragmentSize.get()
+        if fragment_size is None:
+            if bool(HdkLaunchParameters.get()["cpu_only"]):
+                cpu_count = os.cpu_count()
+                if cpu_count is not None:
+                    fragment_size = table.num_rows // cpu_count
+                    fragment_size = min(fragment_size, 2**25)
+                    fragment_size = max(fragment_size, 2**18)
+                else:
+                    fragment_size = 0
+            else:
+                fragment_size = 2**25
+        else:
+            fragment_size = int(fragment_size)
+        return fragment_size
 
     @classmethod
     def _hdk(cls) -> HDK:
