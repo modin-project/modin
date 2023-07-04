@@ -131,4 +131,4 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         if isinstance(self._data, pa.Table):
             return self._data.num_columns
         else:
-            return self._data.shape[0]
+            return self._data.shape[1]
