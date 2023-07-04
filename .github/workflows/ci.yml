@@ -493,9 +493,11 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
-        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
-        if: matrix.os == 'windows' && steps.cache-conda.outputs.cache-hit == 'true'
+      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
+        run: |
+          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
+          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
+        if: matrix.os == 'windows'
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
