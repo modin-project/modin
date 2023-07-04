@@ -1083,8 +1083,6 @@ class BasePandasDataset(ClassLogger):
         if upper is not None and np.any(np.isnan(upper)):
             upper = None
         if is_list_like(lower) or is_list_like(upper):
-            if axis is None:
-                raise ValueError("Must specify axis = 0 or 1")
             lower = self._validate_other(lower, axis)
             upper = self._validate_other(upper, axis)
         # FIXME: Judging by pandas docs `*args` and `**kwargs` serves only compatibility
