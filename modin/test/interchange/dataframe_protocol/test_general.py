@@ -82,6 +82,13 @@ def test_na_float(df_from_dict):
     assert colX.null_count == 1
 
 
+def test_na_float_series():
+    ser = pd.Series([1.0, math.nan, 2.0], name="a")
+    dfX = ser.__dataframe__()
+    colX = dfX.get_column_by_name("a")
+    assert colX.null_count == 1
+
+
 def test_noncategorical(df_from_dict):
     df = df_from_dict({"a": [1, 2, 3]})
     dfX = df.__dataframe__()

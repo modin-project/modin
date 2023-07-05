@@ -48,3 +48,6 @@ def test_basic_io(get_unique_base_execution):
 
     with pytest.raises(TestPassed):
         pd.DataFrame([[1]]).__dataframe__()
+
+    with pytest.raises(TestPassed):
+        pd.Series([[1]]).__dataframe__()
