@@ -499,11 +499,14 @@ jobs:
           find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
         if: matrix.os == 'windows'
 
-  test-sanity-linux:
+  test-sanity:
     needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine, execution-filter]
     if: github.event_name == 'pull_request'
     strategy:
       matrix:
+        os:
+          - ubuntu
+          - windows
         python-version: ["3.8"]
         execution:
           - name: ray
@@ -522,10 +525,10 @@ jobs:
     env:
       MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
-    name: test-ubuntu-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
+    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
-        image: motoserver/moto
+        image: ${{ matrix.os != 'windows' && 'motoserver/moto' || '' }}
         ports:
           - 5000:5000
         env:
@@ -540,9 +543,22 @@ jobs:
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
+        if: matrix.os != 'windows'
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
-        if: matrix.execution.name == 'ray'
+        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - name: Start local ray cluster
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: ray start --head --port=6379 --object-store-memory=1000000000
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
       - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
       - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_repartition.py
       - run: ${{ matrix.execution.shell-ex }} modin/test/test_partition_api.py
@@ -550,17 +566,21 @@ jobs:
           ${{ matrix.execution.shell-ex }} modin/experimental/xgboost/test/test_default.py \
                                            modin/experimental/xgboost/test/test_xgboost.py \
                                            modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/batch/test/test_pipeline.py
+        if: matrix.os != 'windows' && matrix.execution.name != 'unidist'
       - run: |
           ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_binary.py \
                                            modin/pandas/test/dataframe/test_default.py \
                                            modin/pandas/test/dataframe/test_indexing.py \
                                            modin/pandas/test/dataframe/test_iter.py
+        if: matrix.os != 'windows'
       - run: |
           ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_reduce.py \
                                            modin/pandas/test/dataframe/test_udf.py \
                                            modin/pandas/test/dataframe/test_window.py \
                                            modin/pandas/test/dataframe/test_pickle.py
+        if: matrix.os != 'windows'
       - run: |
           ${{ matrix.execution.shell-ex }} modin/pandas/test/test_series.py \
                                            modin/pandas/test/dataframe/test_map_metadata.py
@@ -570,15 +590,20 @@ jobs:
                                            modin/pandas/test/test_reshape.py \
                                            modin/pandas/test/test_general.py \
                                            modin/pandas/test/test_concat.py
+        if: matrix.os != 'windows'
       - run: ${{ matrix.execution.shell-ex }} modin/numpy/test
-      - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: ./.github/workflows/sql_server/set_up_sql_server.sh
-      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_io.py --verbose
-      - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
-      - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
+      - run: ${{ matrix.execution.shell-ex }} -n 1 modin/pandas/test/test_io.py --verbose
+      - run: ${{ matrix.execution.shell-ex }} -n 1 modin/experimental/pandas/test/test_io_exp.py
       - run: ${{ matrix.execution.shell-ex }} modin/test/interchange/dataframe_protocol/test_general.py
       - run: ${{ matrix.execution.shell-ex }} modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
-
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
+        run: |
+          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
+          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
+        if: matrix.os == 'windows'
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
