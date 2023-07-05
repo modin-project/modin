@@ -442,8 +442,6 @@ class Binary(Operator):
         -------
         The same type as `df`.
         """
-        from modin.pandas import Series
-
         operator = cls.register(func, **kwargs)
 
         func_args = tuple() if func_args is None else func_args
@@ -451,7 +449,7 @@ class Binary(Operator):
         qc_result = operator(
             left._query_compiler,
             right._query_compiler,
-            broadcast=isinstance(right, Series),
+            broadcast=right.ndim == 1,
             *func_args,
             axis=axis,
             **func_kwargs,

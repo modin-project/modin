@@ -81,14 +81,12 @@ class TreeReduce(Operator):
         -------
         modin.pandas.Series
         """
-        from modin.pandas import Series
-
-        return super().apply(
+        result = super().apply(
             df,
             map_function,
             func_args,
             func_kwargs,
             reduce_function=reduce_function,
             axis=axis,
-            _return_type=Series,
         )
+        return result if result.ndim == 1 else result.squeeze(axis)

@@ -62,9 +62,7 @@ class Operator(object):
         return 0 if axis is None else axis
 
     @classmethod
-    def apply(
-        cls, df, func, func_args=None, func_kwargs=None, _return_type=None, **kwargs
-    ):
+    def apply(cls, df, func, func_args=None, func_kwargs=None, **kwargs):
         r"""
         Apply a function to a Modin DataFrame using the operators scheme.
 
@@ -78,9 +76,6 @@ class Operator(object):
             Positional arguments to pass to the `func`.
         func_kwargs : dict, optional
             Keyword arguments to pass to the `func`.
-        _return_type : type, optional
-            A class that takes the ``query_compiler`` keyword argument. If not specified
-            will be identical to the type of the passed `df`.
         **kwargs : dict
             Aditional arguments to pass to the ``cls.register()``.
 
@@ -94,8 +89,4 @@ class Operator(object):
         func_kwargs = dict() if func_kwargs is None else func_kwargs
 
         qc_result = operator(df._query_compiler, *func_args, **func_kwargs)
-
-        if _return_type is None:
-            _return_type = type(df)
-
-        return _return_type(query_compiler=qc_result)
+        return type(df)(query_compiler=qc_result)

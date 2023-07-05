@@ -73,8 +73,5 @@ class Reduce(Operator):
         -------
         modin.pandas.Series
         """
-        from modin.pandas import Series
-
-        return super().apply(
-            df, func, func_args, func_kwargs, axis=axis, _return_type=Series
-        )
+        result = super().apply(df, func, func_args, func_kwargs, axis=axis)
+        return result if result.ndim == 1 else result.squeeze(axis)
