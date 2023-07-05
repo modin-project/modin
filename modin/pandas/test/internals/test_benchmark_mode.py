@@ -13,9 +13,10 @@
 
 import unittest.mock as mock
 
+import pytest
+
 import modin.pandas as pd
-from modin.pandas.test.utils import test_data_values
-from modin.config import BenchmarkMode, Engine
+from modin.config import Engine
 
 
 engine = Engine.get()
@@ -46,26 +47,17 @@ else:
     )
 
 
-def test_from_environment_variable():
-    assert BenchmarkMode.get()
-    with mock.patch(wait_method) as wait:
-        pd.DataFrame(test_data_values[0]).mean()
-
-    wait.assert_called()
-
-
-def test_turn_off():
+@pytest.mark.parametrize("set_benchmark_mode", [False], indirect=True)
+def test_turn_off(set_benchmark_mode):
     df = pd.DataFrame([0])
-    BenchmarkMode.put(False)
     with mock.patch(wait_method) as wait:
         df.dropna()
     wait.assert_not_called()
 
 
-def test_turn_on():
-    BenchmarkMode.put(False)
+@pytest.mark.parametrize("set_benchmark_mode", [True], indirect=True)
+def test_turn_on(set_benchmark_mode):
     df = pd.DataFrame([0])
-    BenchmarkMode.put(True)
     with mock.patch(wait_method) as wait:
         df.dropna()
     wait.assert_called()
