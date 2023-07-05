@@ -12,13 +12,18 @@
 # governing permissions and limitations under the License.
 from __future__ import annotations
 
-import math
-from typing import Iterable, Sequence, Hashable
+from typing import Hashable, Iterable, Protocol, Sequence, Type
 
-import numpy as np
 from pandas import DataFrame
-
+from torch.utils.data import SequentialSampler
 from modin.pandas import DataFrame as ModinDataFrame
+from abc import abstractmethod
+
+
+class Sampler(Protocol):
+    @abstractmethod
+    def __iter__(self) -> Iterable[int]:
+        ...
 
 
 class ModinDataLoader:
@@ -29,6 +34,7 @@ class ModinDataLoader:
         df: DataFrame | ModinDataFrame,
         batch_size: int,
         features: Sequence[Hashable] = (),
+        sampler: Type[Sampler] | Sampler = SequentialSampler,
     ) -> None:
         """
         Converts a Pandas/Modin DataFrame into a torch DataLoader.
@@ -44,37 +50,45 @@ class ModinDataLoader:
         features : Sequence[Hashable], default: ()
             If specified, only these features will be used.
 
+        sampler: Type[Sampler] | Sampler, default: SequentialSampler
+            The sampler to use. By default, iterates over the DataFrame in order.
+
         Returns
         -------
         DataLoader
             DataLoader object backed by desired data.
         """
 
-        self._batch_size = batch_size
-
         if features:
             df = df[features]
 
+        if isinstance(sampler, type):
+            sampler = sampler(df)
+
         self._df = df
+        self._batch_size = batch_size
+        self._sampler = sampler
 
     def __len__(self):
-        "Batched so the length is reduced."
-        return math.ceil(len(self._df) / self._batch_size)
-
-    def __getitem__(self, idx: int):
-        "Using iloc to perform batched query."
-
-        idx_start = idx * self._batch_size
-        idx_end = min((idx + 1) * self._batch_size, len(self._df))
-        return self._df.iloc[idx_start:idx_end].to_numpy()
+        # Sampler length is always valid.
+        return len(self._sampler)
 
     def __iter__(self):
-        for i in range(len(self)):
-            yield self[i]
+        idx_buffer = []
+
+        for cnt, idx in enumerate(self._sampler):
+            idx_buffer.append(idx)
+
+            if self._end_of_batch(cnt):
+                yield self._df.iloc[idx_buffer].to_numpy()
+                idx_buffer = []
+
+    def _end_of_batch(self, counter: int):
+        return (
+            False
+            or counter % self._batch_size == self._batch_size - 1
+            or counter == len(self._sampler) - 1
+        )
 
 
 PandasDataLoader = ModinDataLoader
-
-
-def to_dataloader(df: DataFrame | ModinDataFrame, batch_size: int = 1) -> Iterable:
-    return ModinDataLoader(df, batch_size=batch_size)

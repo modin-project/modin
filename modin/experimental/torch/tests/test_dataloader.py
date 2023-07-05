@@ -12,15 +12,13 @@
 # governing permissions and limitations under the License.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from types import ModuleType
 
 import pandas as pd
-from torch import Tensor
+from torch.utils.data import RandomSampler
 
+from modin import pandas as mpd
 from modin.experimental.torch.datasets import ModinDataLoader
-
-if TYPE_CHECKING:
-    from typing import ModuleType
 
 
 def _load_test_dataframe(pandas: ModuleType):
@@ -49,6 +47,28 @@ def _test_torch_dataloader(pandas: ModuleType):
         assert batch.shape[1] == 6, batch.shape
 
 
-def test_pandas_torch_dataloader():
-    _test_torch_dataloader(pd, False)
-    _test_torch_dataloader(pd, True)
+def test_torch_dataloader():
+    _test_torch_dataloader(pd)
+    _test_torch_dataloader(mpd)
+
+
+def test_random():
+    df = pd.read_csv(
+        "https://raw.githubusercontent.com/ponder-org/ponder-datasets/main/USA_Housing.csv"
+    )
+    loader = ModinDataLoader(
+        df,
+        batch_size=16,
+        features=[
+            "AVG_AREA_INCOME",
+            "AVG_AREA_HOUSE_AGE",
+            "AVG_AREA_NUM_ROOMS",
+            "AVG_AREA_NUM_BEDROOMS",
+            "POPULATION",
+            "PRICE",
+        ],
+        sampler=RandomSampler,
+    )
+    for batch in loader:
+        assert batch.shape[0] <= 16, batch.shape
+        assert batch.shape[1] == 6, batch.shape
