@@ -113,14 +113,26 @@ class GitWrapper:
     def is_on_master(self):
         return self.repo.references["refs/heads/master"] == self.repo.head
 
+    @staticmethod
+    def __get_tag_version(entry):
+        try:
+            return version.parse(entry.lstrip("refs/tags/"))
+        except version.InvalidVersion as ex:
+            return f'<bad version "{entry}": {ex}>'
+
     def get_previous_release(self, rel_type):
         tags = [
-            (entry, version.parse(entry.lstrip("refs/tags/")))
+            (entry, self.__get_tag_version(entry))
             for entry in self.repo.references
             if entry.startswith("refs/tags/")
         ]
-        # filter away legacy versions (which aren't following the proper naming schema)
-        tags = [(entry, ver) for entry, ver in tags if isinstance(ver, version.Version)]
+        # filter away legacy versions (which aren't following the proper naming schema);
+        # also skip pre-releases
+        tags = [
+            (entry, ver)
+            for entry, ver in tags
+            if isinstance(ver, version.Version) and not ver.pre
+        ]
         if rel_type == "minor":
             # leave only minor releases
             tags = [(entry, ver) for entry, ver in tags if ver.micro == 0]
