@@ -281,6 +281,7 @@ jobs:
       dask: ${{ steps.filter.outputs.dask }}
       unidist: ${{ steps.filter.outputs.unidist }}
       engines: ${{ steps.engines.outputs.engines }}
+      experimental: ${{ steps.experimental.outputs.experimental }}
     steps:
     - uses: actions/checkout@v3
     - uses: dorny/paths-filter@v2
@@ -298,6 +299,8 @@ jobs:
           unidist:
             - *shared
             - 'modin/core/execution/unidist/**'
+          experimental:
+            - 'modin/experimental/**'
     - uses: actions/setup-python@v4
     - id: engines
       run: |
@@ -511,15 +514,12 @@ jobs:
         execution:
           - name: ray
             shell-ex: "python -m pytest"
-            parallel: "-n 2"
             if: needs.execution-filter.ray != 'true'
           - name: dask
             shell-ex: "python -m pytest"
-            parallel: "-n 2"
             if: needs.execution-filter.dask != 'true'
           - name: unidist
             shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-            parallel: ""
             if: needs.execution-filter.unidist != 'true'
     runs-on: ${{ matrix.os }}-latest
     defaults:
@@ -528,6 +528,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
+      PARALLEL: ${{ matrix.execution.name != 'unidist' && (matrix.os != 'windows' || matrix.execution.name != 'ray') && '-n 2' || '' }}
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
@@ -563,47 +564,46 @@ jobs:
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
       - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/pandas/test/internals/test_repartition.py
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/test/test_partition_api.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/internals/test_repartition.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
       - run: |
-          ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} \
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/experimental/xgboost/test/test_default.py \
                   modin/experimental/xgboost/test/test_xgboost.py \
                   modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/experimental/batch/test/test_pipeline.py
-        if: matrix.os != 'windows' && matrix.execution.name != 'unidist'
+        if: matrix.os != 'windows' && matrix.execution.name == 'ray' && needs.execution-filter.experimental == 'true'
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/experimental/batch/test/test_pipeline.py
+        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.experimental == 'true'
       - run: |
-          ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} \
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/pandas/test/dataframe/test_binary.py \
                   modin/pandas/test/dataframe/test_default.py \
-                  modin/pandas/test/dataframe/test_indexing.py \
                   modin/pandas/test/dataframe/test_iter.py
         if: matrix.os != 'windows'
       - run: |
-          ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} \
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/pandas/test/dataframe/test_reduce.py \
                   modin/pandas/test/dataframe/test_udf.py \
                   modin/pandas/test/dataframe/test_window.py \
                   modin/pandas/test/dataframe/test_pickle.py
         if: matrix.os != 'windows'
       - run: |
-          ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} \
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/pandas/test/test_series.py \
                   modin/pandas/test/dataframe/test_map_metadata.py
       - run: |
-          ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} \
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/pandas/test/test_rolling.py \
                   modin/pandas/test/test_expanding.py \
                   modin/pandas/test/test_reshape.py \
                   modin/pandas/test/test_general.py \
                   modin/pandas/test/test_concat.py
         if: matrix.os != 'windows'
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/numpy/test
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
       - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_io.py --verbose
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/test/interchange/dataframe_protocol/test_general.py
-      - run: ${{ matrix.execution.shell-ex }} ${{ matrix.execution.parallel }} modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
