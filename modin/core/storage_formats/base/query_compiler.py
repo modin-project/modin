@@ -4366,10 +4366,27 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             New QueryCompiler with updated values.
         """
+        from modin.pandas.utils import _broadcast_to_numpy
+
         if not isinstance(row_numeric_index, slice):
             row_numeric_index = list(row_numeric_index)
         if not isinstance(col_numeric_index, slice):
             col_numeric_index = list(col_numeric_index)
+
+        if isinstance(broadcasted_items, BaseQueryCompiler):
+            new_row_len = (
+                len(self.index[row_numeric_index])
+                if isinstance(row_numeric_index, slice)
+                else len(row_numeric_index)
+            )
+            new_col_len = (
+                len(self.columns[col_numeric_index])
+                if isinstance(col_numeric_index, slice)
+                else len(col_numeric_index)
+            )
+            broadcasted_items = _broadcast_to_numpy(
+                broadcasted_items.to_pandas(), (new_row_len, new_col_len)
+            )
 
         def write_items(df, broadcasted_items):
             if isinstance(df.iloc[row_numeric_index, col_numeric_index], pandas.Series):

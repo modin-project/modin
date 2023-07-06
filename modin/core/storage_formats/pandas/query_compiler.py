@@ -68,6 +68,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
 from .utils import get_group_names, merge_partitioning
 from .groupby import GroupbyReduceImpl
 from .aggregations import CorrCovBuilder
+from modin.pandas.utils import _broadcast_to_numpy
 
 
 def _get_axis(axis):
@@ -4097,6 +4098,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             partition = partition.copy()
             partition.iloc[row_internal_indices, col_internal_indices] = item
             return partition
+
+        if isinstance(broadcasted_items, BaseQueryCompiler):
+            new_row_len = (
+                len(self.index[row_numeric_index])
+                if isinstance(row_numeric_index, slice)
+                else len(row_numeric_index)
+            )
+            new_col_len = (
+                len(self.columns[col_numeric_index])
+                if isinstance(col_numeric_index, slice)
+                else len(col_numeric_index)
+            )
+            broadcasted_items = _broadcast_to_numpy(
+                broadcasted_items.to_pandas(), (new_row_len, new_col_len)
+            )
 
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,

@@ -330,33 +330,6 @@ def broadcast_item(
     -----
     NumPy is memory efficient, there shouldn't be performance issue.
     """
-    new_row_len = (
-        len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
-    )
-    new_col_len = (
-        len(obj.columns[col_lookup])
-        if isinstance(col_lookup, slice)
-        else len(col_lookup)
-    )
-    to_shape = new_row_len, new_col_len
-
-    item = _maybe_reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex)
-
-    try:
-        item = np.array(item)
-        if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
-        else:
-            return np.broadcast_to(item, to_shape)
-    except ValueError:
-        from_shape = np.array(item).shape
-        raise ValueError(
-            f"could not broadcast input array from shape {from_shape} into shape "
-            + f"{to_shape}"
-        )
-
-
-def _maybe_reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex=True):
     # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
     # the target the user is trying to overwrite.
     from .dataframe import DataFrame
@@ -376,7 +349,35 @@ def _maybe_reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex=
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
 
-    return item
+    # Allow the query_compiler to dictate what to do instead of materializing the data
+    if isinstance(item, (DataFrame, Series)):
+        return item._query_compiler
+
+    new_row_len = (
+        len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
+    )
+    new_col_len = (
+        len(obj.columns[col_lookup])
+        if isinstance(col_lookup, slice)
+        else len(col_lookup)
+    )
+    to_shape = new_row_len, new_col_len
+    return _broadcast_to_numpy(item, to_shape)
+
+
+def _broadcast_to_numpy(item, to_shape: Tuple[int, int]):
+    try:
+        item = np.array(item)
+        if np.prod(to_shape) == np.prod(item.shape):
+            return item.reshape(to_shape)
+        else:
+            return np.broadcast_to(item, to_shape)
+    except ValueError:
+        from_shape = np.array(item).shape
+        raise ValueError(
+            f"could not broadcast input array from shape {from_shape} into shape "
+            + f"{to_shape}"
+        )
 
 
 def _walk_aggregation_func(
