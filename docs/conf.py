@@ -13,6 +13,7 @@ import types
 
 import ray
 
+
 # stub ray.remote to be a no-op so it doesn't shadow docstrings
 def noop_decorator(*args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
@@ -43,6 +44,9 @@ if not hasattr(sys.modules["pyhdk.hdk"], "ExecutionResult"):
     sys.modules["pyhdk.hdk"].ExecutionResult = type("ExecutionResult", (object,), {})
 if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):
     sys.modules["pyhdk.hdk"].RelAlgExecutor = type("RelAlgExecutor", (object,), {})
+if not hasattr(sys.modules["pyhdk"], "__version__"):
+    # Show all known pyhdk config options in documentation
+    sys.modules["pyhdk"].__version__ = "999"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
