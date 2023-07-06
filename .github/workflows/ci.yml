@@ -515,7 +515,7 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: python -m pytest modin/pandas/test/test_io.py --verbose -s
         timeout-minutes: 60
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py

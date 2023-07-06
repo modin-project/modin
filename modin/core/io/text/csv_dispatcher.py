@@ -139,7 +139,7 @@ class CSVDispatcher(TextFileDispatcher):
 
         # signaling that the partition with id==0 can be written to the file
         cls.materialize(cls.call_future(signals.send, 0))
-        # Ensure that the metadata is syncrhonized
+        # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
             axis=1,
@@ -150,6 +150,5 @@ class CSVDispatcher(TextFileDispatcher):
             enumerate_partitions=True,
             max_retries=0,
         )
-        cls.materialize(cls.call_future(signals.wait, len(qc._modin_frame._partitions)))
         # pending completion
         cls.materialize([part.list_of_blocks[0] for row in result for part in row])
