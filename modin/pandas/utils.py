@@ -330,11 +330,6 @@ def broadcast_item(
     -----
     NumPy is memory efficient, there shouldn't be performance issue.
     """
-    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
-    # the target the user is trying to overwrite.
-    from .dataframe import DataFrame
-    from .series import Series
-
     new_row_len = (
         len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
     )
@@ -344,6 +339,28 @@ def broadcast_item(
         else len(col_lookup)
     )
     to_shape = new_row_len, new_col_len
+
+    item = _maybe_reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex)
+
+    try:
+        item = np.array(item)
+        if np.prod(to_shape) == np.prod(item.shape):
+            return item.reshape(to_shape)
+        else:
+            return np.broadcast_to(item, to_shape)
+    except ValueError:
+        from_shape = np.array(item).shape
+        raise ValueError(
+            f"could not broadcast input array from shape {from_shape} into shape "
+            + f"{to_shape}"
+        )
+
+
+def _maybe_reindex_item(obj, row_lookup, col_lookup, item, need_columns_reindex=True):
+    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+    # the target the user is trying to overwrite.
+    from .dataframe import DataFrame
+    from .series import Series
 
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as pandas reindex expects them to be so
@@ -358,18 +375,8 @@ def broadcast_item(
         # New value for columns/index make that reindex add NaN values
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
-    try:
-        item = np.array(item)
-        if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
-        else:
-            return np.broadcast_to(item, to_shape)
-    except ValueError:
-        from_shape = np.array(item).shape
-        raise ValueError(
-            f"could not broadcast input array from shape {from_shape} into shape "
-            + f"{to_shape}"
-        )
+
+    return item
 
 
 def _walk_aggregation_func(

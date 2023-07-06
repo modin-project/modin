@@ -56,6 +56,7 @@ from .utils import (
     from_pandas,
     from_non_pandas,
     broadcast_item,
+    _maybe_reindex_item,
     cast_function_modin2pandas,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
@@ -2451,13 +2452,22 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self,
-                    slice(None),
-                    key,
-                    value,
-                    need_columns_reindex=False,
-                )
+
+                # If we have a modin Series or DataFrame, let's not convert it to
+                # a numpy array if we can help it.
+                if isinstance(value, (DataFrame, Series)):
+                    item = _maybe_reindex_item(
+                        self, slice(None), key, value, need_columns_reindex=False
+                    )
+                else:
+                    item = broadcast_item(
+                        self,
+                        slice(None),
+                        key,
+                        value,
+                        need_columns_reindex=False,
+                    )
+
                 new_qc = self._query_compiler.write_items(
                     slice(None), self.columns.get_indexer_for(key), item
                 )
