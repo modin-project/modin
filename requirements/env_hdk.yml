@@ -5,11 +5,12 @@ dependencies:
   - pip
 
   # required dependencies
-  - fsspec
-  - numpy>=1.18.5
   - pandas>=2,<2.1
-  - psutil
+  - numpy>=1.18.5
   - pyhdk==0.7
+  - fsspec
+  - packaging
+  - psutil
 
   # optional dependencies
   - s3fs>=2021.8

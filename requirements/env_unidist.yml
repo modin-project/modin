@@ -5,12 +5,12 @@ dependencies:
   - pip
 
   # required dependencies
-  - fsspec
-  - numpy>=1.18.5
-  - packaging
   - pandas>=2,<2.1
-  - psutil
+  - numpy>=1.18.5
   - unidist-mpi>=0.2.1
+  - fsspec
+  - packaging
+  - psutil
 
   # optional dependencies
   - pyarrow

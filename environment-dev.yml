@@ -5,10 +5,10 @@ dependencies:
   - pip
 
   # required dependencies
-  - fsspec
-  - numpy>=1.18.5
-  - packaging
   - pandas>=2,<2.1
+  - numpy>=1.18.5
+  - fsspec
+  - packaging
   - psutil
 
   # optional dependencies
