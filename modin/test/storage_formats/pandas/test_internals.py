@@ -17,13 +17,14 @@ from modin.pandas.test.utils import (
     test_data_values,
     df_equals,
 )
-from modin.config import NPartitions, Engine, MinPartitionSize
+from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 
 import numpy as np
 import pandas
 import pytest
+import unittest.mock as mock
 
 NPartitions.put(4)
 
@@ -1089,3 +1090,22 @@ def test_setitem_bool_preserve_dtypes():
     # scalar as a col_loc
     df.loc[indexer, "a"] = 2.0
     assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_groupby_size_shuffling(modify_config):
+    # verifies that 'groupby.size()' works with reshuffling implementation
+    # https://github.com/modin-project/modin/issues/6367
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    modin_frame = df._query_compiler._modin_frame
+
+    with mock.patch.object(
+        modin_frame,
+        "_apply_func_to_range_partitioning",
+        wraps=modin_frame._apply_func_to_range_partitioning,
+    ) as shuffling_method:
+        repr(df.groupby("a").size())
+
+    shuffling_method.assert_called()

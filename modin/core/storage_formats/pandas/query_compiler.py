@@ -3460,7 +3460,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
         original_agg_func = agg_func
 
         def agg_func(grp, *args, **kwargs):
-            return agg_method(grp, original_agg_func, *args, **kwargs)
+            result = agg_method(grp, original_agg_func, *args, **kwargs)
+
+            # Convert Series to DataFrame
+            if result.ndim == 1:
+                result = result.to_frame(
+                    MODIN_UNNAMED_SERIES_LABEL if result.name is None else result.name
+                )
+
+            return result
 
         result = obj._modin_frame.groupby(
             axis=axis,
