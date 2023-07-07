@@ -528,7 +528,7 @@ jobs:
     env:
       MODIN_ENGINE: ${{ matrix.execution.name }}
       UNIDIST_BACKEND: "mpi"
-      PARALLEL: ${{ matrix.execution.name != 'unidist' && (matrix.os != 'windows' || matrix.execution.name != 'ray') && '-n 2' || '' }}
+      PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
     name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
     services:
       moto:
