@@ -145,14 +145,21 @@ class CSVDispatcher(TextFileDispatcher):
         cls.materialize(cls.call_future(signals.send, 0))
         # Ensure that the metadata is synchronized
         qc._modin_frame._propagate_index_objs(axis=None)
-        result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
-            axis=1,
-            partitions=qc._modin_frame._partitions,
-            map_func=func,
-            keep_partitioning=True,
-            lengths=None,
-            enumerate_partitions=True,
-            max_retries=0,
-        )
-        # pending completion
-        cls.materialize([part.list_of_blocks[0] for row in result for part in row])
+        try:
+            result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
+                axis=1,
+                partitions=qc._modin_frame._partitions,
+                map_func=func,
+                keep_partitioning=True,
+                lengths=None,
+                enumerate_partitions=True,
+                max_retries=0,
+            )
+            # pending completion
+            cls.materialize([part.list_of_blocks[0] for row in result for part in row])
+        except BaseException:
+            # `signals` methods are called in a separate thread, in case of any errors
+            # they need to be properly released so that the code does not hang.
+            for i in range(len(qc._modin_frame._partitions) + 1):
+                cls.materialize(cls.call_future(signals.send, i))
+            raise
