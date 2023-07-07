@@ -727,7 +727,7 @@ jobs:
 
   upload-coverage:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud]
-    if: github.event_name == 'push'
+    if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -746,4 +746,4 @@ jobs:
         run: python -m coverage xml
       - uses: codecov/codecov-action@v3
         with:
-          fail_ci_if_error: true
+          fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
