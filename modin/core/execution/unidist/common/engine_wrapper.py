@@ -84,6 +84,10 @@ class UnidistWrapper:
         return future.remote(*args, **kwargs)
 
     @classmethod
+    def num_cores(cls):  # noqa: GL08
+        return sum(v["CPU"] for v in unidist.cluster_resources().values())
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the value of object from the object store.

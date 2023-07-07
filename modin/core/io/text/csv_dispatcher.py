@@ -75,6 +75,10 @@ class CSVDispatcher(TextFileDispatcher):
         if not cls._to_csv_check_support(kwargs):
             return cls.base_io.to_csv(qc, **kwargs)
 
+        if len(qc._modin_frame._partitions) > (num_cores := cls.num_cores()):
+            # Otherwise the code hangs.
+            qc = qc.repartition(axis=0, num_splits=num_cores)
+
         signals = cls.deploy(
             cls.signal_actor,
             (len(qc._modin_frame._partitions) + 1,),

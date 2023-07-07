@@ -85,6 +85,10 @@ class RayWrapper:
         return future.remote(*args, **kwargs)
 
     @classmethod
+    def num_cores(cls):  # noqa: GL08
+        return int(ray.cluster_resources()["CPU"])
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the value of object from the Plasma store.

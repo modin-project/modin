@@ -46,6 +46,12 @@ class PythonWrapper:
         return future(*args, **kwargs)
 
     @classmethod
+    def num_cores(cls):  # noqa: GL08
+        from modin.config import CpuCount
+
+        return CpuCount.get()
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the data from the data storage.

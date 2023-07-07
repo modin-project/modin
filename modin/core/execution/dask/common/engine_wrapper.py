@@ -103,6 +103,11 @@ class DaskWrapper:
         return future(*args, **kwargs)
 
     @classmethod
+    def num_cores(cls):  # noqa: GL08
+        client = default_client()
+        return len(client.ncores())
+
+    @classmethod
     def materialize(cls, future):
         """
         Materialize data matching `future` object.

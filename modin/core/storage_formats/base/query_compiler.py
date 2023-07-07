@@ -6560,7 +6560,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             result_names=result_names,
         )
 
-    def repartition(self, axis=None):
+    def repartition(self, axis=None, num_splits=None):
         """
         Repartitioning QueryCompiler objects to get ideal partitions inside.
 
@@ -6572,6 +6572,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         axis : {0, 1, None}, optional
             The axis along which the repartitioning occurs.
             `None` is used for repartitioning along both axes.
+        num_splits : int, optional
+            The number of partitions to split the result into across the `axis`. If None, then the number
+            of splits will be infered automatically.
 
         Returns
         -------
@@ -6595,6 +6598,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     new_columns=self._modin_frame.copy_columns_cache(),
                     keep_partitioning=False,
                     sync_labels=False,
+                    num_splits=num_splits,
                 )
             )
         return new_query_compiler
