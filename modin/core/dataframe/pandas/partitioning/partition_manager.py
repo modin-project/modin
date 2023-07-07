@@ -1553,6 +1553,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return new_partitions, lengths
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def shuffle_partitions(
         cls, partitions, index, shuffle_functions, final_shuffle_func
     ):
