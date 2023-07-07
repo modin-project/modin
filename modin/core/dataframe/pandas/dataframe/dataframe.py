@@ -3725,7 +3725,7 @@ class PandasDataframe(ClassLogger):
         df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
-            if self.has_materialized_dtypes:
+            if len(df.columns) and self.has_materialized_dtypes:
                 df = df.astype(self.dtypes)
         else:
             for axis, has_external_index in enumerate(
