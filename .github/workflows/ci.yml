@@ -600,7 +600,7 @@ jobs:
                   modin/pandas/test/test_concat.py
         if: matrix.os != 'windows'
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
-      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_io.py --verbose
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
