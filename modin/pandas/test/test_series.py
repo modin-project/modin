@@ -1409,6 +1409,12 @@ def test_copy(data):
     df_equals(modin_series.copy(), pandas_series.copy())
 
 
+def test_copy_empty_series():
+    ser = pd.Series(range(3))
+    res = ser[:0].copy()
+    assert res.dtype == ser.dtype
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_corr(data):
     modin_series, pandas_series = create_test_series(data)
