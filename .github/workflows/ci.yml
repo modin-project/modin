@@ -590,11 +590,8 @@ jobs:
                   modin/pandas/test/dataframe/test_window.py \
                   modin/pandas/test/dataframe/test_pickle.py
         if: matrix.os != 'windows'
-      - name: "test DF metadata, series"
-        run: |
-          ${{ matrix.execution.shell-ex }} $PARALLEL \
-                  modin/pandas/test/test_series.py \
-                  modin/pandas/test/dataframe/test_map_metadata.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/test_series.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/dataframe/test_map_metadata.py
       - name: "test rolling, expanding, reshape, general, concat"
         run: |
           ${{ matrix.execution.shell-ex }} $PARALLEL \
