@@ -316,7 +316,7 @@ def broadcast_item(
 
     Returns
     -------
-    np.ndarray
+    np.ndarray or BaseQueryCompiler
         `item` after it was broadcasted to `to_shape`.
 
     Raises
