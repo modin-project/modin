@@ -23,7 +23,11 @@ import pandas
 import datetime
 from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import Index, RangeIndex
-from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
+from pandas.core.dtypes.common import (
+    is_numeric_dtype,
+    is_list_like,
+    is_categorical_dtype,
+)
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
@@ -3536,7 +3540,7 @@ class PandasDataframe(ClassLogger):
             by = [by]
 
         def apply_func(df):  # pragma: no cover
-            if any(dtype == "category" for dtype in df.dtypes[by].values):
+            if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"

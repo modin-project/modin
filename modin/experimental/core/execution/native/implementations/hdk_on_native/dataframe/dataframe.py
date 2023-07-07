@@ -1670,7 +1670,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         assert len(self.columns) == 1
-        assert self._dtypes[-1] == "category"
+        assert is_categorical_dtype(self._dtypes[-1])
 
         exprs = self._index_exprs()
         col_expr = self.ref(self.columns[-1])
