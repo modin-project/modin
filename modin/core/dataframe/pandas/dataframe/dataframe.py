@@ -3556,7 +3556,7 @@ class PandasDataframe(ClassLogger):
 
         return result
 
-    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby_reduce(
         self,
         axis,
