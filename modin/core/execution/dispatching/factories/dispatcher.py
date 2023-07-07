@@ -155,7 +155,16 @@ class FactoryDispatcher(object):
                 raise FactoryNotFoundError(msg.format(factory_name))
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
-            cls.__factory.prepare()
+            try:
+                cls.__factory.prepare()
+            except ModuleNotFoundError as err:
+                # incorrectly initialized, should be reset to None again
+                # so that an unobvious error does not appear in the following code:
+                # "AttributeError: 'NoneType' object has no attribute 'from_non_pandas'"
+                cls.__factory = None
+                raise ModuleNotFoundError(
+                    f"Make sure all required packages are installed: {str(err)}"
+                ) from err
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_pandas)
