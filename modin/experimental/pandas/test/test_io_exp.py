@@ -135,12 +135,7 @@ class TestCsvGlob:
     def test_read_csv_glob_4373(self):
         columns, filename = ["col0"], "1x1.csv"
         df = pd.DataFrame([[1]], columns=columns)
-        with (
-            warns_that_defaulting_to_pandas()
-            if Engine.get() == "Dask"
-            else nullcontext()
-        ):
-            df.to_csv(filename)
+        df.to_csv(filename)
 
         kwargs = {"filepath_or_buffer": filename, "usecols": columns}
         modin_df = pd.read_csv_glob(**kwargs)
