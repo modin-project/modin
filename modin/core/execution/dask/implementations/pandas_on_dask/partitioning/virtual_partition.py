@@ -112,6 +112,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         *partitions,
         lengths=None,
         manual_partition=False,
+        fifo_timeout="100ms",
     ):
         """
         Deploy a function along a full axis.
@@ -137,6 +138,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             The list of lengths to shuffle the partition into.
         manual_partition : bool, default: False
             If True, partition the result with `lengths`.
+        fifo_timeout : str, default: "100ms"
+            Allowed amount of time between calls to consider the same priority.
 
         Returns
         -------
@@ -162,6 +165,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             },
             num_returns=result_num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,
+            fifo_timeout=fifo_timeout,
         )
 
     @classmethod

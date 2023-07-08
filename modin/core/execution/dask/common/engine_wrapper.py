@@ -54,6 +54,7 @@ class DaskWrapper:
         num_returns=1,
         pure=True,
         deploy_as_actor=False,
+        fifo_timeout="100ms",
     ):
         """
         Deploy a function in a worker process.
@@ -72,6 +73,8 @@ class DaskWrapper:
             Whether or not `func` is pure. See `Client.submit` for details.
         deploy_as_actor : bool, default: False
             Whether or not `func` is a Actor.
+        fifo_timeout : str, default: "100ms"
+            Allowed amount of time between calls to consider the same priority.
 
         Returns
         -------
@@ -85,15 +88,27 @@ class DaskWrapper:
             # https://distributed.dask.org/en/stable/actors.html?highlight=actor#call-remote-methods
             return client.submit(func, *args, actors=True, **kwargs).result()
         if callable(func):
-            remote_task_future = client.submit(func, *args, pure=pure, **kwargs)
+            remote_task_future = client.submit(
+                func, *args, pure=pure, fifo_timeout=fifo_timeout, **kwargs
+            )
         else:
             # for the case where type(func) is distributed.Future
             remote_task_future = client.submit(
-                _deploy_dask_func, func, *args, pure=pure, **kwargs
+                _deploy_dask_func,
+                func,
+                *args,
+                pure=pure,
+                fifo_timeout=fifo_timeout,
+                **kwargs,
             )
         if num_returns != 1:
             return [
-                client.submit(lambda tup, i: tup[i], remote_task_future, i)
+                client.submit(
+                    lambda tup, i: tup[i],
+                    remote_task_future,
+                    i,
+                    fifo_timeout=fifo_timeout,
+                )
                 for i in range(num_returns)
             ]
         return remote_task_future

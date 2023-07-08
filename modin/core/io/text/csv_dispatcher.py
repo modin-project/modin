@@ -153,7 +153,10 @@ class CSVDispatcher(TextFileDispatcher):
                 keep_partitioning=True,
                 lengths=None,
                 enumerate_partitions=True,
+                # ray & unidist specific
                 max_retries=0,
+                # dask specific
+                fifo_timeout="0ms",
             )
             # pending completion
             cls.materialize([part.list_of_blocks[0] for row in result for part in row])
