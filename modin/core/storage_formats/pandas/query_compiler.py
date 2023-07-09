@@ -1410,317 +1410,317 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     old_window_mean = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).mean(*args, **kwargs)
         )
     )
 
-    def window_mean(self, axis, window_args, *args, **kwargs):
-        window = window_args[0]
-        center = window_args[2]
-        win_type = window_args[3]
+    def window_mean(self, axis, window_kwargs, *args, **kwargs):
+        window = window_kwargs["window"]
+        center = window_kwargs["center"]
+        win_type = window_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_args).mean(*args, **kwargs),
+                    lambda df: df.rolling(*window_kwargs).mean(*args, **kwargs),
                 )
             )
         else:
-            return self.old_window_mean(axis, window_args, *args, **kwargs)
+            return self.old_window_mean(axis, window_kwargs, *args, **kwargs)
 
     old_window_sum = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).sum(*args, **kwargs)
         )
     )
 
-    def window_sum(self, axis, window_args, *args, **kwargs):
-        window = window_args[0]
-        center = window_args[2]
-        win_type = window_args[3]
+    def window_sum(self, axis, window_kwargs, *args, **kwargs):
+        window = window_kwargs["window"]
+        center = window_kwargs["center"]
+        win_type = window_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_args).sum(*args, **kwargs),
+                    lambda df: df.rolling(*window_kwargs).sum(*args, **kwargs),
                 )
             )
         else:
-            return self.old_window_sum(axis, window_args, *args, **kwargs)
+            return self.old_window_sum(axis, window_kwargs, *args, **kwargs)
 
     old_window_var = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
 
-    def window_var(self, axis, window_args, ddof, *args, **kwargs):
-        window = window_args[0]
-        center = window_args[2]
-        win_type = window_args[3]
+    def window_var(self, axis, window_kwargs, ddof, *args, **kwargs):
+        window = window_kwargs["window"]
+        center = window_kwargs["center"]
+        win_type = window_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_args).var(ddof, *args, **kwargs),
+                    lambda df: df.rolling(*window_kwargs).var(ddof, *args, **kwargs),
                 )
             )
         else:
-            return self.old_window_var(axis, window_args, ddof, *args, **kwargs)
+            return self.old_window_var(axis, window_kwargs, ddof, *args, **kwargs)
 
     old_window_std = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
 
-    def window_std(self, axis, window_args, ddof, *args, **kwargs):
-        window = window_args[0]
-        center = window_args[2]
-        win_type = window_args[3]
+    def window_std(self, axis, window_kwargs, ddof, *args, **kwargs):
+        window = window_kwargs["window"]
+        center = window_kwargs["center"]
+        win_type = window_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_args).std(ddof=ddof, *args, **kwargs),
+                    lambda df: df.rolling(*window_kwargs).std(ddof=ddof, *args, **kwargs),
                 )
             )
         else:
-            return self.old_window_std(axis, window_args, ddof, *args, **kwargs)
+            return self.old_window_std(axis, window_kwargs, ddof, *args, **kwargs)
 
     old_rolling_count = Fold.register(
-        lambda df, rolling_args: pandas.DataFrame(df.rolling(*rolling_args).count())
+        lambda df, rolling_kwargs: pandas.DataFrame(df.rolling(*rolling_kwargs).count())
     )
 
-    def rolling_count(self, axis, rolling_args):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_count(self, axis, rolling_kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_args).count()
+                    axis, window, lambda df: df.rolling(*rolling_kwargs).count()
                 )
             )
         else:
-            return self.old_rolling_count(axis, rolling_args)
+            return self.old_rolling_count(axis, rolling_kwargs)
 
     old_rolling_sum = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sum(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).sum(*args, **kwargs)
         )
     )
 
-    def rolling_sum(self, axis, rolling_args, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_sum(self, axis, rolling_kwargs, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).sum(*args, **kwargs),
+                    lambda df: df.rolling(*rolling_kwargs).sum(*args, **kwargs),
                 )
             )
         else:
-            return self.old_rolling_sum(axis, rolling_args, *args, **kwargs)
+            return self.old_rolling_sum(axis, rolling_kwargs, *args, **kwargs)
 
     old_rolling_sem = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).sem(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).sem(*args, **kwargs)
         )
     )
 
-    def rolling_sem(self, axis, rolling_args, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_sem(self, axis, rolling_kwargs, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).sem(*args, **kwargs),
+                    lambda df: df.rolling(*rolling_kwargs).sem(*args, **kwargs),
                 )
             )
         else:
-            return self.old_rolling_sem(axis, rolling_args, *args, **kwargs)
+            return self.old_rolling_sem(axis, rolling_kwargs, *args, **kwargs)
 
     old_rolling_mean = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).mean(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).mean(*args, **kwargs)
         )
     )
 
-    def rolling_mean(self, axis, rolling_args, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_mean(self, axis, rolling_kwargs, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).mean(*args, **kwargs),
+                    lambda df: df.rolling(*rolling_kwargs).mean(*args, **kwargs),
                 )
             )
         else:
-            return self.old_rolling_mean(axis, rolling_args, *args, **kwargs)
+            return self.old_rolling_mean(axis, rolling_kwargs, *args, **kwargs)
 
     old_rolling_median = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).median(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).median(**kwargs)
         )
     )
 
-    def rolling_median(self, axis, rolling_args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_median(self, axis, rolling_kwargs, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_args).median(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_kwargs).median(**kwargs)
                 )
             )
         else:
-            return self.old_rolling_median(axis, rolling_args, **kwargs)
+            return self.old_rolling_median(axis, rolling_kwargs, **kwargs)
 
     old_rolling_var = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).var(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
 
-    def rolling_var(self, axis, rolling_args, ddof, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_var(self, axis, rolling_kwargs, ddof, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).var(
+                    lambda df: df.rolling(*rolling_kwargs).var(
                         ddof=ddof, *args, **kwargs
                     ),
                 )
             )
         else:
-            return self.old_rolling_var(axis, rolling_args, ddof, *args, **kwargs)
+            return self.old_rolling_var(axis, rolling_kwargs, ddof, *args, **kwargs)
 
     old_rolling_std = Fold.register(
-        lambda df, rolling_args, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).std(ddof=ddof, *args, **kwargs)
+        lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
 
-    def rolling_std(self, axis, rolling_args, ddof, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_std(self, axis, rolling_kwargs, ddof, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).std(
+                    lambda df: df.rolling(*rolling_kwargs).std(
                         ddof=ddof, *args, **kwargs
                     ),
                 )
             )
         else:
-            return self.old_rolling_std(axis, rolling_args, ddof, *args, **kwargs)
+            return self.old_rolling_std(axis, rolling_kwargs, ddof, *args, **kwargs)
 
     old_rolling_min = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).min(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).min(*args, **kwargs)
         )
     )
 
-    def rolling_min(self, axis, rolling_args, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_min(self, axis, rolling_kwargs, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).min(*args, **kwargs),
+                    lambda df: df.rolling(*rolling_kwargs).min(*args, **kwargs),
                 )
             )
         else:
-            return self.old_rolling_min(axis, rolling_args, *args, **kwargs)
+            return self.old_rolling_min(axis, rolling_kwargs, *args, **kwargs)
 
     old_rolling_max = Fold.register(
-        lambda df, rolling_args, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).max(*args, **kwargs)
+        lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).max(*args, **kwargs)
         )
     )
 
-    def rolling_max(self, axis, rolling_args, *args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_max(self, axis, rolling_kwargs, *args, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).max(*args, **kwargs),
+                    lambda df: df.rolling(*rolling_kwargs).max(*args, **kwargs),
                 )
             )
         else:
-            return self.old_rolling_max(axis, rolling_args, *args, **kwargs)
+            return self.old_rolling_max(axis, rolling_kwargs, *args, **kwargs)
 
     old_rolling_skew = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).skew(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).skew(**kwargs)
         )
     )
 
-    def rolling_skew(self, axis, rolling_args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_skew(self, axis, rolling_kwargs, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_args).skew(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_kwargs).skew(**kwargs)
                 )
             )
         else:
-            return self.old_rolling_skew(axis, rolling_args, **kwargs)
+            return self.old_rolling_skew(axis, rolling_kwargs, **kwargs)
 
     old_rolling_kurt = Fold.register(
-        lambda df, rolling_args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).kurt(**kwargs)
+        lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).kurt(**kwargs)
         )
     )
 
-    def rolling_kurt(self, axis, rolling_args, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_kurt(self, axis, rolling_kwargs, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_args).kurt(**kwargs)
+                    axis, window, lambda df: df.rolling(*rolling_kwargs).kurt(**kwargs)
                 )
             )
         else:
-            return self.old_rolling_kurt(axis, rolling_args, **kwargs)
+            return self.old_rolling_kurt(axis, rolling_kwargs, **kwargs)
 
     old_rolling_apply = Fold.register(
-        lambda df, rolling_args, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).apply(
+        lambda df, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).apply(
                 func=func,
                 raw=raw,
                 engine=engine,
@@ -1732,17 +1732,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     def rolling_apply(
-        self, axis, rolling_args, func, raw, engine, engine_kwargs, args, kwargs
+        self, axis, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs
     ):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).apply(
+                    lambda df: df.rolling(*rolling_kwargs).apply(
                         func=func,
                         raw=raw,
                         engine=engine,
@@ -1755,7 +1755,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             return self.old_rolling_apply(
                 axis,
-                rolling_args,
+                rolling_kwargs,
                 func,
                 raw,
                 engine,
@@ -1765,8 +1765,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
     old_rolling_rank = Fold.register(
-        lambda df, rolling_args, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).rank(
+        lambda df, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).rank(
                 method=method,
                 ascending=ascending,
                 pct=pct,
@@ -1777,17 +1777,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
     )
 
     def rolling_rank(
-        self, axis, rolling_args, method, ascending, pct, numeric_only, **kwargs
+        self, axis, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs
     ):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).rank(
+                    lambda df: df.rolling(*rolling_kwargs).rank(
                         method=method,
                         ascending=ascending,
                         pct=pct,
@@ -1798,45 +1798,45 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         else:
             return self.old_rolling_rank(
-                axis, rolling_args, method, ascending, pct, numeric_only, **kwargs
+                axis, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs
             )
 
     old_rolling_quantile = Fold.register(
-        lambda df, rolling_args, quantile, interpolation, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).quantile(
+        lambda df, rolling_kwargs, quantile, interpolation, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
             )
         )
     )
 
-    def rolling_quantile(self, axis, rolling_args, quantile, interpolation, **kwargs):
-        window = rolling_args[0]
-        center = rolling_args[2]
-        win_type = rolling_args[3]
+    def rolling_quantile(self, axis, rolling_kwargs, quantile, interpolation, **kwargs):
+        window = rolling_kwargs["window"]
+        center = rolling_kwargs["center"]
+        win_type = rolling_kwargs["win_type"]
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_args).quantile(
+                    lambda df: df.rolling(*rolling_kwargs).quantile(
                         quantile=quantile, interpolation=interpolation, **kwargs
                     ),
                 )
             )
         else:
             return self.old_rolling_quantile(
-                axis, rolling_args, quantile, interpolation, **kwargs
+                axis, rolling_kwargs, quantile, interpolation, **kwargs
             )
 
     old_rolling_corr = Fold.register(
-        lambda df, rolling_args, other, pairwise, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).corr(
+        lambda df, rolling_kwargs, other, pairwise, *args, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).corr(
                 other=other, pairwise=pairwise, *args, **kwargs
             )
         )
     )
 
-    def rolling_corr(self, axis, rolling_args, other, pairwise, *args, **kwargs):
+    def rolling_corr(self, axis, rolling_kwargs, other, pairwise, *args, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.rolling(df, **rolling_kwargs).corr(
@@ -1844,33 +1844,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            window = rolling_args[0]
-            center = rolling_args[2]
-            win_type = rolling_args[3]
+            window = rolling_kwargs["window"]
+            center = rolling_kwargs["center"]
+            win_type = rolling_kwargs["win_type"]
             if _can_use_cell_wise_window(center, window, win_type):
                 return self.__constructor__(
                     self._modin_frame.window(
                         axis,
                         window,
-                        lambda df: df.rolling(*rolling_args).corr(
+                        lambda df: df.rolling(*rolling_kwargs).corr(
                             other=other, pairwise=pairwise, *args, **kwargs
                         ),
                     )
                 )
             else:
                 return self.old_rolling_corr(
-                    axis, rolling_args, other, pairwise, *args, **kwargs
+                    axis, rolling_kwargs, other, pairwise, *args, **kwargs
                 )
 
     old_rolling_cov = Fold.register(
-        lambda df, rolling_args, other, pairwise, ddof, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_args).cov(
+        lambda df, rolling_kwargs, other, pairwise, ddof, **kwargs: pandas.DataFrame(
+            df.rolling(*rolling_kwargs).cov(
                 other=other, pairwise=pairwise, ddof=ddof, **kwargs
             )
         )
     )
 
-    def rolling_cov(self, axis, rolling_args, other, pairwise, ddof, **kwargs):
+    def rolling_cov(self, axis, rolling_kwargs, other, pairwise, ddof, **kwargs):
         if len(self.columns) > 1:
             return self.default_to_pandas(
                 lambda df: pandas.DataFrame.rolling(df, **rolling_kwargs).cov(
@@ -1878,9 +1878,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
         else:
-            window = rolling_args[0]
-            center = rolling_args[2]
-            win_type = rolling_args[3]
+            window = rolling_kwargs["window"]
+            center = rolling_kwargs["center"]
+            win_type = rolling_kwargs["win_type"]
             if _can_use_cell_wise_window(
                 center,
                 window,
@@ -1890,23 +1890,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     self._modin_frame.window(
                         axis,
                         window,
-                        lambda df: df.rolling(*rolling_args).cov(
+                        lambda df: df.rolling(*rolling_kwargs).cov(
                             other=other, pairwise=pairwise, **kwargs
                         ),
                     )
                 )
             else:
                 return self.old_rolling_cov(
-                    axis, rolling_args, other, pairwise, ddof, **kwargs
+                    axis, rolling_kwargs, other, pairwise, ddof, **kwargs
                 )
 
-    def rolling_aggregate(self, axis, rolling_args, func, *args, **kwargs):
+    def rolling_aggregate(self, axis, rolling_kwargs, func, *args, **kwargs):
         # note that we can't use the modin frame's window(), which assumes that the
         # metadata doesn't change.
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(
-                df.rolling(*rolling_args).aggregate(func=func, *args, **kwargs)
+                df.rolling(*rolling_kwargs).aggregate(func=func, *args, **kwargs)
             ),
             new_index=self.index,
         )
