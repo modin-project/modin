@@ -2757,3 +2757,29 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
         datetime.timedelta(days=3), center=center, closed=closed, on=on
     )
     eval_rolling(md_window, pd_window)
+
+
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param("sum", id="map_reduce_func"),
+        pytest.param("median", id="full_axis_func"),
+    ],
+)
+def test_groupby_deferred_index(func):
+    # the test is copied from the issue:
+    # https://github.com/modin-project/modin/issues/6368
+
+    def perform(lib):
+        df1 = lib.DataFrame({"a": [1, 1, 2, 2]})
+        df2 = lib.DataFrame({"b": [3, 4, 5, 6], "c": [7, 5, 4, 3]})
+
+        df = lib.concat([df1, df2], axis=1)
+        df.index = [10, 11, 12, 13]
+
+        grp = df.groupby("a")
+        grp.indices
+
+        return getattr(grp, func)()
+
+    eval_general(pd, pandas, perform)
