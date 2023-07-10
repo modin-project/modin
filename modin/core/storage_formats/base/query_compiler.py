@@ -6593,6 +6593,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                     lambda df: df,
                     new_index=self._modin_frame.copy_index_cache(),
                     new_columns=self._modin_frame.copy_columns_cache(),
+                    dtypes=self._modin_frame.copy_dtypes_cache(),
                     keep_partitioning=False,
                     sync_labels=False,
                 )
