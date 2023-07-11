@@ -45,6 +45,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     execution_wrapper = RayWrapper
 
+    # these variables are intentionally initialized at runtime
+    # so as not to initialize the engine during import
+    _ILOC_FUNC = None
+
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
         assert isinstance(data, ObjectIDType)
         self._data = data
@@ -173,9 +177,21 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             call_queue=self.call_queue,
         )
 
-    # If Ray has not been initialized yet by Modin,
-    # it will be initialized when calling `RayWrapper.put`.
-    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
+    @classmethod
+    def _get_iloc_func(cls):
+        """
+        Places `_iloc` function into the storage to speed up remote function calls and caches the result.
+
+        It also postpones engine initialization, which happens implicitly when function `put` is called.
+
+        Returns
+        -------
+        ray.ObjectID
+            Reference to `_iloc` function in the storage.
+        """
+        if cls._ILOC_FUNC is None:
+            cls._ILOC_FUNC = cls.execution_wrapper.put(PandasDataframePartition._iloc)
+        return cls._ILOC_FUNC
 
     def mask(self, row_labels, col_labels):
         """

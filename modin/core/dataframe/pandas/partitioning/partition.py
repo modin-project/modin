@@ -198,6 +198,18 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """Perform `iloc` on dataframes wrapped in partitions (helper function)."""
         return df.iloc[row_labels, col_labels]
 
+    @classmethod
+    def _get_iloc_func(cls):
+        """
+        Allow specific implementations to have a more optimal way to get `iloc` function.
+
+        Returns
+        -------
+        callable
+            `iloc` function
+        """
+        return cls._iloc
+
     def mask(self, row_labels, col_labels):
         """
         Lazily create a mask that extracts the indices provided.
@@ -236,7 +248,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         ):
             return copy(self)
 
-        new_obj = self.add_to_apply_calls(self._iloc, row_labels, col_labels)
+        new_obj = self.add_to_apply_calls(self._get_iloc_func(), row_labels, col_labels)
 
         def try_recompute_cache(indices, previous_cache):
             """Compute new axis-length cache for the masked frame based on its previous cache."""
