@@ -43,6 +43,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     execution_wrapper = DaskWrapper
 
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        super().__init__()
         assert isinstance(data, Future)
         self._data = data
         if call_queue is None:

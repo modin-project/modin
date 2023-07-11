@@ -44,11 +44,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
 
     execution_wrapper = UnidistWrapper
 
-    # these variables are intentionally initialized at runtime
-    # so as not to initialize the engine during import
-    _ILOC_FUNC = None
-
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        super().__init__()
         assert unidist.is_object_ref(data)
         self._data = data
         self.call_queue = call_queue if call_queue is not None else []
@@ -153,22 +150,6 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
         UnidistWrapper.wait(self._data)
-
-    @classmethod
-    def _get_iloc_func(cls):
-        """
-        Places `_iloc` function into the storage to speed up remote function calls and caches the result.
-
-        It also postpones engine initialization, which happens implicitly when function `put` is called.
-
-        Returns
-        -------
-        unidist.ObjectRef
-            Reference to `_iloc` function in the storage.
-        """
-        if cls._ILOC_FUNC is None:
-            cls._ILOC_FUNC = cls.execution_wrapper.put(PandasDataframePartition._iloc)
-        return cls._ILOC_FUNC
 
     def mask(self, row_labels, col_labels):
         """
