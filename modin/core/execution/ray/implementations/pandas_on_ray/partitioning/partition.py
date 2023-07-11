@@ -46,6 +46,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     execution_wrapper = RayWrapper
 
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        super().__init__()
         assert isinstance(data, ObjectIDType)
         self._data = data
         if call_queue is None:
@@ -172,10 +173,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             ip=self._ip_cache,
             call_queue=self.call_queue,
         )
-
-    # If Ray has not been initialized yet by Modin,
-    # it will be initialized when calling `RayWrapper.put`.
-    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """
