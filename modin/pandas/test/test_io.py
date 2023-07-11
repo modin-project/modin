@@ -950,6 +950,7 @@ class TestCsv:
             ],
         ],
     )
+    @pytest.mark.exclude_in_sanity
     def test_read_csv_parse_dates(
         self, names, header, index_col, parse_dates, encoding, encoding_errors
     ):
@@ -1124,6 +1125,7 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
+    @pytest.mark.exclude_in_sanity
     def test_to_csv(
         self,
         tmp_path,
@@ -1474,6 +1476,7 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
+    @pytest.mark.exclude_in_sanity
     def test_read_parquet_directory(
         self, engine, make_parquet_dir, columns, row_group_size, rows_per_file
     ):

@@ -567,12 +567,14 @@ def test___repr__4186():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.exclude_in_sanity
 def test___round__(data):
     modin_series, pandas_series = create_test_series(data)
     df_equals(round(modin_series), round(pandas_series))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.exclude_in_sanity
 def test___setitem__(data):
     modin_series, pandas_series = create_test_series(data)
     for key in modin_series.keys():
@@ -2002,6 +2004,7 @@ def test_ffill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("reindex", [None, 2, -2])
 @pytest.mark.parametrize("limit", [None, 1, 2, 0.5, -1, -2, 1.5])
+@pytest.mark.exclude_in_sanity
 def test_fillna(data, reindex, limit):
     modin_series, pandas_series = create_test_series(data)
     index = pandas_series.index
@@ -2923,6 +2926,7 @@ def test_replace():
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
 @pytest.mark.parametrize("level", [None, 1])
+@pytest.mark.exclude_in_sanity
 def test_resample(closed, label, level):
     rule = "5T"
     freq = "H"
@@ -3108,6 +3112,7 @@ def test_sample(data):
 @pytest.mark.parametrize("values_number", [1, 2, 5])
 @pytest.mark.parametrize("side", ["left", "right"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.exclude_in_sanity
 def test_searchsorted(
     data, side, values_number, sorter, use_multiindex, single_value_data
 ):
@@ -3370,6 +3375,7 @@ def test_subtract(data):
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
+@pytest.mark.exclude_in_sanity
 def test_sum(data, axis, skipna, numeric_only, min_count):
     eval_general(
         *create_test_series(data),
@@ -3728,6 +3734,7 @@ def test_update(data, other_data):
     ],
 )
 @pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.exclude_in_sanity
 def test_value_counts(sort, normalize, bins, dropna, ascending):
     def sort_sensitive_comparator(df1, df2):
         # We sort indices for Modin and pandas result because of issue #1650
