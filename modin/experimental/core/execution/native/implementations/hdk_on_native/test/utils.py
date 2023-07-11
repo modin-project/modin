@@ -52,6 +52,15 @@ def eval_io(
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             df1, df2 = align_datetime_dtypes(df1, df2)
+
+            # 1. Replace NA with empty strings. HDK treats empty strings and NA equally.
+            # 2. HdkWorker.cast_to_compatible_types() converts all categorical columns to string.
+            for dtype in ("object", "category"):
+                for df in (df1, df2):
+                    sdf = df.select_dtypes(dtype)
+                    if len(sdf.columns) != 0:
+                        sdf = sdf.fillna("") if dtype == "object" else sdf.astype(str)
+                        df[sdf.columns] = sdf[sdf.columns]
             comparator(df1, df2, **kwargs)
 
     general_eval_io(

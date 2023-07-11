@@ -224,9 +224,6 @@ class TestCSV:
             with ForceHdkImport(exp):
                 exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
-            # The arrow table contains empty strings, when reading as category.
-            assert all(v == "" for v in exp["c"])
-            exp["c"] = None
 
         df_equals(ref, exp)
 
