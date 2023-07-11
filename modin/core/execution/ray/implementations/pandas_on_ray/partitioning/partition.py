@@ -186,7 +186,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        ray.ObjectID
+        ray.ObjectRef
             Reference to `_iloc` function in the storage.
         """
         if cls._ILOC_FUNC is None:

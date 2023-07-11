@@ -206,7 +206,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         Returns
         -------
         callable
-            `iloc` function
+            `iloc` function.
         """
         return cls._iloc
 
