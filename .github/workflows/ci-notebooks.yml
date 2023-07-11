@@ -7,6 +7,7 @@ on:
       - .github/workflows/ci-notebooks.yml
       - setup.cfg
       - setup.py
+      - requirements/env_hdk.yml
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
@@ -26,41 +27,19 @@ jobs:
         execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 1
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.8.x"
-          architecture: "x64"
+      - uses: ./.github/actions/python-only
         if: matrix.execution != 'hdk_on_native'
-      - name: Cache conda
-        uses: actions/cache@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          path: |
-            ~/conda_pkgs_dir
-            ~/.cache/pip
-          key:
-            ${{ runner.os }}-conda-${{ hashFiles('requirements/env_hdk.yml') }}
-        if: matrix.execution == 'hdk_on_native'
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          miniforge-variant: Mambaforge
-          miniforge-version: latest
-          use-mamba: true
-          activate-environment: modin_on_hdk
           environment-file: requirements/env_hdk.yml
-          python-version: 3.8
-          channel-priority: strict
-          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
-          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
-          use-only-tar-bz2: false
+          activate-environment: modin_on_hdk
         if: matrix.execution == 'hdk_on_native'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
           path: taxi.csv
           # update cache only if notebooks require it to be changed
-          key: hashFiles("examples/tutorial/jupyter/**")
+          key: taxi-csv-dataset-${{ hashFiles('examples/tutorial/jupyter/**') }}
       # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
       # `pandas_on_dask` since we need Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
