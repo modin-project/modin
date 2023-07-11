@@ -45,6 +45,7 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
     execution_wrapper = UnidistWrapper
 
     def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+        super().__init__()
         assert unidist.is_object_ref(data)
         self._data = data
         self.call_queue = call_queue if call_queue is not None else []
@@ -149,11 +150,6 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
         UnidistWrapper.wait(self._data)
-
-    # If unidist has not been initialized yet by Modin,
-    # unidist itself handles initialization when calling `unidist.put`,
-    # which is called inside of `UnidistWrapper.put`.
-    _iloc = execution_wrapper.put(PandasDataframePartition._iloc)
 
     def mask(self, row_labels, col_labels):
         """

@@ -45,6 +45,7 @@ class PandasOnPythonDataframePartition(PandasDataframePartition):
     execution_wrapper = PythonWrapper
 
     def __init__(self, data, length=None, width=None, call_queue=None):
+        super().__init__()
         if hasattr(data, "copy"):
             data = data.copy()
         self._data = data
