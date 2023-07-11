@@ -48,6 +48,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         self,
         data: Union[DbTable, pa.Table, pandas.DataFrame],
     ):
+        super().__init__()
         assert isinstance(data, (DbTable, pa.Table, pandas.DataFrame))
         self._data = data
 
