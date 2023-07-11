@@ -1110,14 +1110,22 @@ class PandasDataframe(ClassLogger):
             row_order_mapping = dict(
                 zip(sorted_row_positions, range(len(row_positions)))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
+            new_row_order = np.fromiter(
+                (row_order_mapping[idx] for idx in row_positions),
+                dtype="int64",
+                count=len(row_positions),
+            )
         else:
             new_row_order = None
         if col_positions is not None:
             col_order_mapping = dict(
                 zip(sorted_col_positions, range(len(col_positions)))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
+            new_col_order = np.fromiter(
+                (col_order_mapping[idx] for idx in col_positions),
+                dtype="int64",
+                count=len(col_positions),
+            )
         else:
             new_col_order = None
         return intermediate._reorder_labels(
