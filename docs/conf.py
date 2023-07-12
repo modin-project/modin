@@ -40,6 +40,8 @@ if not hasattr(sys.modules["pyhdk"], "PyDbEngine"):
     sys.modules["pyhdk"].PyDbEngine = type("PyDbEngine", (object,), {})
 if not hasattr(sys.modules["pyhdk.hdk"], "HDK"):
     sys.modules["pyhdk.hdk"].HDK = type("HDK", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "QueryNode"):
+    sys.modules["pyhdk.hdk"].QueryNode = type("QueryNode", (object,), {})
 if not hasattr(sys.modules["pyhdk.hdk"], "ExecutionResult"):
     sys.modules["pyhdk.hdk"].ExecutionResult = type("ExecutionResult", (object,), {})
 if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):

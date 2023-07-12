@@ -53,7 +53,6 @@ from .utils import (
     build_categorical_from_at,
 )
 from ..db_worker import DbTable
-from ..hdk_worker import ImportedTable
 from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.error_message import ErrorMessage
@@ -511,8 +510,6 @@ class HdkOnNativeDataframe(PandasDataframe):
         if self._partitions is None:
             return
         table = self._partitions[0][0].get()
-        if isinstance(table, ImportedTable):
-            table = table.to_arrow()
         if isinstance(table, pyarrow.Table):
             super()._maybe_update_proxies(dtypes, new_parent=table)
 

@@ -12,12 +12,12 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkWorker`` class."""
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 
 import pyarrow as pa
 import os
 
-from pyhdk.hdk import HDK, ExecutionResult, RelAlgExecutor
+from pyhdk.hdk import HDK, QueryNode, ExecutionResult, RelAlgExecutor
 
 from .base_worker import DbTable, BaseDbWorker
 
@@ -25,18 +25,24 @@ from modin.utils import _inherit_docstrings
 from modin.config import HdkLaunchParameters, OmnisciFragmentSize, HdkFragmentSize
 
 
-class ExecutionResultTable(DbTable):
+class HdkTable(DbTable):
     """
-    Represents an ExecutionResult table.
+    Represents a table in the HDK database.
 
     Parameters
     ----------
-    result : ExecutionResult
+    table : QueryNode or ExecutionResult
     """
 
-    def __init__(self, result: ExecutionResult):
-        self.name = result.table_name
-        self._result = result
+    def __init__(self, table: Union[QueryNode, ExecutionResult]):
+        self.name = table.table_name
+        self._table = table
+
+    def __del__(self):
+        """Drop table."""
+        # The ExecutionResults are cleared by HDK.
+        if not isinstance(self._table, ExecutionResult):
+            HdkWorker.dropTable(self.name)
 
     @property
     @_inherit_docstrings(DbTable.shape)
@@ -56,13 +62,11 @@ class ExecutionResultTable(DbTable):
 
     @_inherit_docstrings(DbTable.to_arrow)
     def to_arrow(self) -> pa.Table:
-        at = getattr(self, "_at", None)
-        if at is None:
-            at = self._result.to_arrow()
-            if (names := getattr(self, "_column_names", None)) is not None:
-                at = at.rename_columns(names)
-            self._at = at
-        return at
+        return (
+            self._table.to_arrow()
+            if isinstance(self._table, ExecutionResult)
+            else self._table.run().to_arrow()
+        )
 
     def scan(self):
         """
@@ -72,43 +76,12 @@ class ExecutionResultTable(DbTable):
         -------
         QueryNode
         """
+        if isinstance(self._table, QueryNode):
+            return self._table
         scan = getattr(self, "_scan", None)
         if scan is None:
-            self._scan = scan = HdkWorker._hdk().scan(self._result.table_name)
+            self._scan = scan = HdkWorker._hdk().scan(self.name)
         return scan
-
-
-class ImportedTable(DbTable):
-    """
-    Represents an imported arrow table.
-
-    Parameters
-    ----------
-    table : pa.Table
-    name : str
-    """
-
-    def __init__(self, table: pa.Table, name: str):
-        self.name = name
-        self._table = table
-
-    def __del__(self):
-        """Drop table."""
-        HdkWorker.dropTable(self.name)
-
-    @property
-    @_inherit_docstrings(DbTable.shape)
-    def shape(self) -> Tuple[int, int]:
-        return (self._table.num_rows, self._table.num_columns)
-
-    @property
-    @_inherit_docstrings(DbTable.column_names)
-    def column_names(self) -> List[str]:
-        return self._table.column_names
-
-    @_inherit_docstrings(DbTable.to_arrow)
-    def to_arrow(self) -> pa.Table:
-        return self._table
 
 
 @_inherit_docstrings(BaseDbWorker)
@@ -138,17 +111,14 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         else:
             ra = query
         ra_executor = RelAlgExecutor(hdk._executor, hdk._schema_mgr, hdk._data_mgr, ra)
-        return ExecutionResultTable(
-            ra_executor.execute(device_type=cls._preferred_device)
-        )
+        return HdkTable(ra_executor.execute(device_type=cls._preferred_device))
 
     @classmethod
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
         name = cls._genName(name)
-        compat_table = cls.cast_to_compatible_types(table)
-        fragment_size = cls.compute_fragment_size(compat_table)
-        cls._hdk().import_arrow(compat_table, name, fragment_size)
-        return ImportedTable(table, name)
+        table = cls.cast_to_compatible_types(table)
+        fragment_size = cls.compute_fragment_size(table)
+        return HdkTable(cls._hdk().import_arrow(table, name, fragment_size))
 
     @classmethod
     def compute_fragment_size(cls, table):
