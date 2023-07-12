@@ -18,13 +18,6 @@ from utils import measure
 import modin.pandas as pd
 
 import numpy as np
-import xgboost as xgb
-
-import sklearnex
-
-sklearnex.patch_sklearn()
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 
 ################ helper functions ###############################
@@ -81,6 +74,9 @@ def all_etl(train, train_meta, test, test_meta):
 
 
 def split_step(train_final, test_final):
+    from sklearn.model_selection import train_test_split
+    from sklearn.preprocessing import LabelEncoder
+
     X = train_final.drop(["object_id", "target"], axis=1).values
     Xt = test_final.drop(["object_id"], axis=1).values
 
@@ -197,6 +193,13 @@ def etl(df, df_meta):
 
 
 def ml(train_final, test_final):
+    # to not install ML dependencies unless required
+    import xgboost as xgb
+    import sklearnex
+
+    sklearnex.patch_sklearn()
+
+
     X_train, y_train, X_test, y_test, Xt, classes, class_weights = split_step(
         train_final, test_final
     )
