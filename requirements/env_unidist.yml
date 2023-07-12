@@ -2,16 +2,22 @@ name: modin_on_unidist
 channels:
   - conda-forge
 dependencies:
-  - unidist-mpi>=0.2.1
+  - pip
+
+  # required dependencies
   - pandas>=2,<2.1
   - numpy>=1.18.5
-  - pyarrow
+  - unidist-mpi>=0.2.1
   - fsspec
+  - packaging
+  - psutil
+
+  # optional dependencies
+  - pyarrow
   # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
   - Jinja2
   - scipy
-  - pip
   - s3fs>=2021.8
   - feather-format
   - lxml
@@ -22,32 +28,36 @@ dependencies:
   - pandas-gbq
   - pytables
   - msgpack-python
-  - psutil
-  - pytest>=6.0.1
-  - pytest-benchmark
-  - pytest-cov>=2.10.1
-  - pytest-xdist>=2.1.0
-  - packaging
-  - coverage
-  - pygithub
-  - rpyc==4.1.5
-  - cloudpickle
-  - boto3
   - scikit-learn
   - pymssql
   - psycopg2
-  - mypy
-  - pandas-stubs
   - fastparquet<2023.1.0
   - tqdm
-  # for release script
-  - pygit2
+
+  # modin in the cloud dependencies
+  - boto3
+  - cloudpickle
+  - rpyc==4.1.5
+
+  # dependencies for making release
+  - pygithub>=v1.58.0
+  - pygit2>=1.9.2
+
+  # test dependencies
+  - coverage>=7.1.0
+  - moto>=4.1.0
+  - pytest>=7.2.1
+  - pytest-cov>=4.0.0
+  - pytest-xdist>=3.2.0
+
   # code linters
-  - black
-  - flake8
-  - flake8-no-implicit-concat
-  - flake8-print
-  - moto
+  - black>=23.1.0
+  - flake8>=6.0.0
+  - flake8-no-implicit-concat>=0.3.4
+  - flake8-print>=5.0.0
+  - mypy>=1.0.0
+  - pandas-stubs>=2.0.0
+
   - pip:
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5

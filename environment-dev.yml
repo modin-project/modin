@@ -2,8 +2,16 @@ name: modin
 channels:
   - conda-forge
 dependencies:
+  - pip
+
+  # required dependencies
   - pandas>=2,<2.1
   - numpy>=1.18.5
+  - fsspec
+  - packaging
+  - psutil
+
+  # optional dependencies
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
   - ray-default>=1.13.0,!=2.5.0
   # https://github.com/modin-project/modin/issues/6336
@@ -14,12 +22,10 @@ dependencies:
   - grpcio!=1.46.*
   - dask>=2.22.0
   - distributed>=2.22.0
-  - fsspec
   # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
   - Jinja2
   - scipy
-  - pip
   - s3fs>=2021.8
   - feather-format
   - lxml
@@ -30,43 +36,47 @@ dependencies:
   - pandas-gbq
   - pytables
   - msgpack-python
-  - psutil
-  - pytest>=6.0.1
-  - pytest-benchmark
-  - pytest-cov>=2.10.1
-  - pytest-xdist>=2.1.0
-  - packaging
-  - coverage
-  - pygithub
-  - rpyc==4.1.5
-  - cloudpickle
-  - boto3
-  - moto
   - scikit-learn
   - pymssql
   - psycopg2
-  # Mypy 0.990 doesn't work: https://github.com/modin-project/modin/issues/5206  
-  - mypy!=0.990
-  - pandas-stubs
   - fastparquet<2023.1.0
-  # for release script
-  - pygit2
   # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
   # when we use collective instead of rabit.
   - xgboost>=1.7.1,<2.0.0
   - tqdm
+
+  ## modin in the cloud dependencies
+  - boto3
+  - cloudpickle
+  - rpyc==4.1.5
+
+  # dependencies for making release
+  - pygithub>=v1.58.0
+  - pygit2>=1.9.2
+
+  # test dependencies
+  - coverage>=7.1.0
+  - moto>=4.1.0
+  - pytest>=7.2.1
+  - pytest-benchmark>=4.0.0
+  - pytest-cov>=4.0.0
+  - pytest-xdist>=3.2.0
+
   # code linters
-  - black
-  - flake8
-  - flake8-no-implicit-concat
-  - flake8-print
+  - black>=23.1.0
+  - flake8>=6.0.0
+  - flake8-no-implicit-concat>=0.3.4
+  - flake8-print>=5.0.0
+  - mypy>=1.0.0
+  - pandas-stubs>=2.0.0
+
   - pip:
+      # no conda package for windows so we install it with pip
+      - connectorx>=0.2.6a4
+      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
+      - fuzzydata>=0.0.6
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
-      # no conda package for windows so we install it with pip
-      - connectorx>=0.2.6a4
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
-      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
-      - fuzzydata>=0.0.6

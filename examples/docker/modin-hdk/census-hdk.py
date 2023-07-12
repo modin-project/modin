@@ -15,12 +15,7 @@ import sys
 from utils import measure
 import modin.pandas as pd
 
-from sklearn import config_context
-import sklearnex
 
-sklearnex.patch_sklearn()
-from sklearn.model_selection import train_test_split
-import sklearn.linear_model as lm
 import numpy as np
 
 
@@ -196,6 +191,14 @@ def cod(y_test, y_pred):
 
 
 def ml(X, y, random_state, n_runs, test_size):
+    # to not install ML dependencies unless required
+    from sklearn import config_context
+    import sklearnex
+
+    sklearnex.patch_sklearn()
+    from sklearn.model_selection import train_test_split
+    import sklearn.linear_model as lm
+
     clf = lm.Ridge()
 
     X = np.ascontiguousarray(X, dtype=np.float64)
