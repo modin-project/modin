@@ -62,6 +62,7 @@ from modin.config import (  # noqa: E402
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     AsyncReadMode,
+    BenchmarkMode,
 )
 import uuid  # noqa: E402
 
@@ -556,6 +557,14 @@ def set_num_partitions(request):
     NPartitions.put(request.param)
     yield
     NPartitions.put(old_num_partitions)
+
+
+@pytest.fixture()
+def set_benchmark_mode(request):
+    old_benchmark_mode = BenchmarkMode.get()
+    BenchmarkMode.put(request.param)
+    yield
+    BenchmarkMode.put(old_benchmark_mode)
 
 
 @pytest.fixture
