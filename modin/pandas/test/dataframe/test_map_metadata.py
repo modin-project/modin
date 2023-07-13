@@ -320,6 +320,12 @@ def test_copy(data):
     df_equals(modin_df, modin_df_cp)
 
 
+def test_copy_empty_dataframe():
+    df = pd.DataFrame(range(3))
+    res = df[:0].copy()
+    assert res.dtypes.equals(df.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dtypes(data):
     modin_df = pd.DataFrame(data)
