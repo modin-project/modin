@@ -1412,7 +1412,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_window_mean = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).mean(*args, **kwargs)
+            df.rolling(**rolling_kwargs).mean(*args, **kwargs)
         )
     )
 
@@ -1425,7 +1425,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_kwargs).mean(*args, **kwargs),
+                    lambda df: df.rolling(**window_kwargs).mean(*args, **kwargs),
                 )
             )
         else:
@@ -1433,7 +1433,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_window_sum = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).sum(*args, **kwargs)
+            df.rolling(**rolling_kwargs).sum(*args, **kwargs)
         )
     )
 
@@ -1446,7 +1446,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_kwargs).sum(*args, **kwargs),
+                    lambda df: df.rolling(**window_kwargs).sum(*args, **kwargs),
                 )
             )
         else:
@@ -1454,7 +1454,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_window_var = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).var(ddof=ddof, *args, **kwargs)
+            df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
 
@@ -1467,7 +1467,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_kwargs).var(ddof, *args, **kwargs),
+                    lambda df: df.rolling(**window_kwargs).var(ddof, *args, **kwargs),
                 )
             )
         else:
@@ -1475,7 +1475,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_window_std = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).std(ddof=ddof, *args, **kwargs)
+            df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
 
@@ -1488,14 +1488,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*window_kwargs).std(ddof=ddof, *args, **kwargs),
+                    lambda df: df.rolling(**window_kwargs).std(ddof=ddof, *args, **kwargs),
                 )
             )
         else:
             return self.old_window_std(axis, window_kwargs, ddof, *args, **kwargs)
 
     old_rolling_count = Fold.register(
-        lambda df, rolling_kwargs: pandas.DataFrame(df.rolling(*rolling_kwargs).count())
+        lambda df, rolling_kwargs: pandas.DataFrame(df.rolling(**rolling_kwargs).count())
     )
 
     def rolling_count(self, axis, rolling_kwargs):
@@ -1505,7 +1505,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_kwargs).count()
+                    axis, window, lambda df: df.rolling(**rolling_kwargs).count()
                 )
             )
         else:
@@ -1513,7 +1513,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_sum = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).sum(*args, **kwargs)
+            df.rolling(**rolling_kwargs).sum(*args, **kwargs)
         )
     )
 
@@ -1526,7 +1526,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).sum(*args, **kwargs),
+                    lambda df: df.rolling(**rolling_kwargs).sum(*args, **kwargs),
                 )
             )
         else:
@@ -1534,7 +1534,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_sem = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).sem(*args, **kwargs)
+            df.rolling(**rolling_kwargs).sem(*args, **kwargs)
         )
     )
 
@@ -1547,7 +1547,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).sem(*args, **kwargs),
+                    lambda df: df.rolling(**rolling_kwargs).sem(*args, **kwargs),
                 )
             )
         else:
@@ -1555,7 +1555,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_mean = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).mean(*args, **kwargs)
+            df.rolling(**rolling_kwargs).mean(*args, **kwargs)
         )
     )
 
@@ -1568,7 +1568,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).mean(*args, **kwargs),
+                    lambda df: df.rolling(**rolling_kwargs).mean(*args, **kwargs),
                 )
             )
         else:
@@ -1576,7 +1576,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_median = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).median(**kwargs)
+            df.rolling(**rolling_kwargs).median(**kwargs)
         )
     )
 
@@ -1587,7 +1587,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_kwargs).median(**kwargs)
+                    axis, window, lambda df: df.rolling(**rolling_kwargs).median(**kwargs)
                 )
             )
         else:
@@ -1595,7 +1595,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_var = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).var(ddof=ddof, *args, **kwargs)
+            df.rolling(**rolling_kwargs).var(ddof=ddof, *args, **kwargs)
         )
     )
 
@@ -1608,7 +1608,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).var(
+                    lambda df: df.rolling(**rolling_kwargs).var(
                         ddof=ddof, *args, **kwargs
                     ),
                 )
@@ -1618,7 +1618,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_std = Fold.register(
         lambda df, rolling_kwargs, ddof, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).std(ddof=ddof, *args, **kwargs)
+            df.rolling(**rolling_kwargs).std(ddof=ddof, *args, **kwargs)
         )
     )
 
@@ -1631,7 +1631,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).std(
+                    lambda df: df.rolling(**rolling_kwargs).std(
                         ddof=ddof, *args, **kwargs
                     ),
                 )
@@ -1641,7 +1641,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_min = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).min(*args, **kwargs)
+            df.rolling(**rolling_kwargs).min(*args, **kwargs)
         )
     )
 
@@ -1654,7 +1654,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).min(*args, **kwargs),
+                    lambda df: df.rolling(**rolling_kwargs).min(*args, **kwargs),
                 )
             )
         else:
@@ -1662,7 +1662,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_max = Fold.register(
         lambda df, rolling_kwargs, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).max(*args, **kwargs)
+            df.rolling(**rolling_kwargs).max(*args, **kwargs)
         )
     )
 
@@ -1675,7 +1675,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).max(*args, **kwargs),
+                    lambda df: df.rolling(**rolling_kwargs).max(*args, **kwargs),
                 )
             )
         else:
@@ -1683,7 +1683,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_skew = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).skew(**kwargs)
+            df.rolling(**rolling_kwargs).skew(**kwargs)
         )
     )
 
@@ -1694,7 +1694,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_kwargs).skew(**kwargs)
+                    axis, window, lambda df: df.rolling(**rolling_kwargs).skew(**kwargs)
                 )
             )
         else:
@@ -1702,7 +1702,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_kurt = Fold.register(
         lambda df, rolling_kwargs, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).kurt(**kwargs)
+            df.rolling(**rolling_kwargs).kurt(**kwargs)
         )
     )
 
@@ -1713,7 +1713,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if _can_use_cell_wise_window(center, window, win_type):
             return self.__constructor__(
                 self._modin_frame.window(
-                    axis, window, lambda df: df.rolling(*rolling_kwargs).kurt(**kwargs)
+                    axis, window, lambda df: df.rolling(**rolling_kwargs).kurt(**kwargs)
                 )
             )
         else:
@@ -1721,7 +1721,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_apply = Fold.register(
         lambda df, rolling_kwargs, func, raw, engine, engine_kwargs, args, kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).apply(
+            df.rolling(**rolling_kwargs).apply(
                 func=func,
                 raw=raw,
                 engine=engine,
@@ -1743,7 +1743,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).apply(
+                    lambda df: df.rolling(**rolling_kwargs).apply(
                         func=func,
                         raw=raw,
                         engine=engine,
@@ -1767,7 +1767,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_rank = Fold.register(
         lambda df, rolling_kwargs, method, ascending, pct, numeric_only, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).rank(
+            df.rolling(**rolling_kwargs).rank(
                 method=method,
                 ascending=ascending,
                 pct=pct,
@@ -1788,7 +1788,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).rank(
+                    lambda df: df.rolling(**rolling_kwargs).rank(
                         method=method,
                         ascending=ascending,
                         pct=pct,
@@ -1804,7 +1804,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_quantile = Fold.register(
         lambda df, rolling_kwargs, quantile, interpolation, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).quantile(
+            df.rolling(**rolling_kwargs).quantile(
                 quantile=quantile, interpolation=interpolation, **kwargs
             )
         )
@@ -1819,7 +1819,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.window(
                     axis,
                     window,
-                    lambda df: df.rolling(*rolling_kwargs).quantile(
+                    lambda df: df.rolling(**rolling_kwargs).quantile(
                         quantile=quantile, interpolation=interpolation, **kwargs
                     ),
                 )
@@ -1831,7 +1831,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_corr = Fold.register(
         lambda df, rolling_kwargs, other, pairwise, *args, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).corr(
+            df.rolling(**rolling_kwargs).corr(
                 other=other, pairwise=pairwise, *args, **kwargs
             )
         )
@@ -1853,7 +1853,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     self._modin_frame.window(
                         axis,
                         window,
-                        lambda df: df.rolling(*rolling_kwargs).corr(
+                        lambda df: df.rolling(**rolling_kwargs).corr(
                             other=other, pairwise=pairwise, *args, **kwargs
                         ),
                     )
@@ -1865,7 +1865,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     old_rolling_cov = Fold.register(
         lambda df, rolling_kwargs, other, pairwise, ddof, **kwargs: pandas.DataFrame(
-            df.rolling(*rolling_kwargs).cov(
+            df.rolling(**rolling_kwargs).cov(
                 other=other, pairwise=pairwise, ddof=ddof, **kwargs
             )
         )
@@ -1891,7 +1891,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     self._modin_frame.window(
                         axis,
                         window,
-                        lambda df: df.rolling(*rolling_kwargs).cov(
+                        lambda df: df.rolling(**rolling_kwargs).cov(
                             other=other, pairwise=pairwise, **kwargs
                         ),
                     )
@@ -1907,7 +1907,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: pandas.DataFrame(
-                df.rolling(*rolling_kwargs).aggregate(func=func, *args, **kwargs)
+                df.rolling(**rolling_kwargs).aggregate(func=func, *args, **kwargs)
             ),
             new_index=self.index,
         )
