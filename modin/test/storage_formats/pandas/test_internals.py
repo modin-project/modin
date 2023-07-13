@@ -1067,6 +1067,8 @@ def test_concat_dont_materialize_opposite_axis(axis):
     df1, df2 = remove_cache(df1, axis), remove_cache(df2, axis)
 
     df_concated = pd.concat((df1, df2), axis=axis)
+    assert_no_cache(df1, axis)
+    assert_no_cache(df2, axis)
     assert_no_cache(df_concated, axis)
 
 
