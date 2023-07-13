@@ -3437,7 +3437,7 @@ class PandasDataframe(ClassLogger):
         new_index = None
         new_columns = None
         if axis == Axis.ROW_WISE:
-            if all((obj.has_materialized_index for obj in (self, *others))):
+            if all(obj.has_materialized_index for obj in (self, *others)):
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
@@ -3465,7 +3465,7 @@ class PandasDataframe(ClassLogger):
                             new_lengths = None
                             break
         else:
-            if all((obj.has_materialized_columns for obj in (self, *others))):
+            if all(obj.has_materialized_columns for obj in (self, *others)):
                 new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
             if self.has_materialized_dtypes and all(
