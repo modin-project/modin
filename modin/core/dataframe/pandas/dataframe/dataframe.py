@@ -131,7 +131,11 @@ class PandasDataframe(ClassLogger):
 
     def _validate_axes_lengths(self):
         """Validate that labels are split correctly if split is known."""
-        if self._row_lengths_cache is not None and len(self.index) > 0:
+        if (
+            self._row_lengths_cache is not None
+            and self.has_materialized_index
+            and len(self.index) > 0
+        ):
             # An empty frame can have 0 rows but a nonempty index. If the frame
             # does have rows, the number of rows must equal the size of the
             # index.
@@ -145,7 +149,11 @@ class PandasDataframe(ClassLogger):
                 any(val < 0 for val in self._row_lengths_cache),
                 f"Row lengths cannot be negative: {self._row_lengths_cache}",
             )
-        if self._column_widths_cache is not None and len(self.columns) > 0:
+        if (
+            self._column_widths_cache is not None
+            and self.has_materialized_columns
+            and len(self.columns) > 0
+        ):
             # An empty frame can have 0 column but a nonempty column index. If
             # the frame does have columns, the number of columns must equal the
             # size of the columns.
