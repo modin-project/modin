@@ -183,7 +183,7 @@ class Rolling(ClassLogger):
     def mean(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.rolling_mean(
-                self.axis, rolling_args=self.rolling_kwargs, *args, **kwargs
+                self.axis, self.rolling_kwargs, *args, **kwargs
             )
         )    
 
