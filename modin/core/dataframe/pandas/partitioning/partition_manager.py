@@ -241,6 +241,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
 
         if by is not None:
+            # need to make sure that the partitioning of the following objects
+            # coincides in the required axis, because `partition_manager.broadcast_apply`
+            # doesn't call `_copartition` unlike `modin_frame.broadcast_apply`
+            assert partitions.shape[axis] == by.shape[axis], (
+                f"the number of partitions along {axis=} is not equal: "
+                + f"{partitions.shape[axis]} != {by.shape[axis]}"
+            )
             mapped_partitions = cls.broadcast_apply(
                 axis, map_func, left=partitions, right=by
             )
@@ -1546,6 +1553,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return new_partitions, lengths
 
     @classmethod
+    @wait_computations_if_benchmark_mode
     def shuffle_partitions(
         cls, partitions, index, shuffle_functions, final_shuffle_func
     ):

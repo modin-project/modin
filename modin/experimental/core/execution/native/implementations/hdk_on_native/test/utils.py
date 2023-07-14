@@ -18,17 +18,11 @@ import pandas
 import datetime
 import numpy as np
 from pandas.api.types import is_datetime64_any_dtype
-import pyarrow as pa
 
 from modin.pandas.test.utils import (
     df_equals,
     io_ops_bad_exc,
     eval_io as general_eval_io,
-)
-from ..df_algebra import FrameNode
-
-from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (
-    DbWorker,
 )
 
 
@@ -58,6 +52,15 @@ def eval_io(
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
             df1, df2 = align_datetime_dtypes(df1, df2)
+
+            # 1. Replace NA with empty strings. HDK treats empty strings and NA equally.
+            # 2. HdkWorker.cast_to_compatible_types() converts all categorical columns to string.
+            for dtype in ("object", "category"):
+                for df in (df1, df2):
+                    sdf = df.select_dtypes(dtype)
+                    if len(sdf.columns) != 0:
+                        sdf = sdf.fillna("") if dtype == "object" else sdf.astype(str)
+                        df[sdf.columns] = sdf[sdf.columns]
             comparator(df1, df2, **kwargs)
 
     general_eval_io(
@@ -158,27 +161,14 @@ class ForceHdkImport:
         for df in dfs:
             if not isinstance(df, (pd.DataFrame, pd.Series)):
                 continue
-            df.shape  # to trigger real execution
             if df.empty:
                 continue
-            modin_frame = df._query_compiler._modin_frame
-            partition = modin_frame._partitions[0][0]
-            if partition.frame_id is not None:
-                continue
-            frame = partition.get()
-            if isinstance(frame, (pandas.DataFrame, pandas.Series)):
-                frame = pa.Table.from_pandas(frame)
-            if isinstance(frame, pa.Table):
-                _, cols = modin_frame._partition_mgr_cls._get_unsupported_cols(frame)
-                if len(cols) != 0:
-                    continue
-                frame_id = DbWorker().import_arrow_table(frame)
-            else:
-                raise TypeError(
-                    f"Unexpected storage format, expected pandas.DataFrame or pyarrow.Table, got: {type(frame)}."
-                )
-            partition.frame_id = frame_id
-            self._imported_frames.append((df, frame_id))
+            try:
+                modin_frame = df._query_compiler._modin_frame
+                modin_frame.force_import()
+                self._imported_frames.append(df)
+            except NotImplementedError:
+                ...
 
     def __enter__(self):
         return self
@@ -194,28 +184,20 @@ class ForceHdkImport:
             that was just exported from HDK.
         """
         result = []
-        for df, frame_id in self._imported_frames:
+        for df in self._imported_frames:
             # Append `TransformNode`` selecting all the columns (SELECT * FROM frame_id)
             df = df[df.columns.tolist()]
             modin_frame = df._query_compiler._modin_frame
-            # Forcibly executing plan via HDK. We can't use `modin_frame._execute()` here
-            # as it has a chance of running via pyarrow bypassing HDK
-            new_partitions = modin_frame._partition_mgr_cls.run_exec_plan(
-                modin_frame._op,
-                modin_frame._table_cols,
-            )
-            modin_frame._partitions = new_partitions
-            modin_frame._op = FrameNode(modin_frame)
+            # Forcibly executing plan via HDK.
+            mode = modin_frame._force_execution_mode
+            modin_frame._force_execution_mode = "hdk"
+            modin_frame._execute()
+            modin_frame._force_execution_mode = mode
             result.append(df)
         return result
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for df, frame_id in self._imported_frames:
-            actual_frame_id = df._query_compiler._modin_frame._partitions[0][0].frame_id
-            DbWorker().dropTable(frame_id)
-            if actual_frame_id == frame_id:
-                df._query_compiler._modin_frame._partitions[0][0].frame_id = None
-        self._imported_frames = []
+        self._imported_frames.clear()
 
 
 def set_execution_mode(frame, mode, recursive=False):

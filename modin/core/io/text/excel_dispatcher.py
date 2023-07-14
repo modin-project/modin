@@ -147,7 +147,7 @@ class ExcelDispatcher(TextFileDispatcher):
                 ex.shared_strings,
                 False,
             )
-            if cls.need_rich_text_param:
+            if cls.need_rich_text_param():
                 reader = WorksheetReader(*common_args, rich_text=False)
             else:
                 reader = WorksheetReader(*common_args)

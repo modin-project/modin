@@ -23,6 +23,7 @@ from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
+    is_categorical_dtype,
 )
 from pandas.core.series import _coerce_method
 from pandas._libs.lib import no_default, NoDefault
@@ -421,7 +422,7 @@ class Series(BasePandasDataset):
         if (
             isinstance(temp_df, pandas.Series)
             and temp_df.name is not None
-            and temp_df.dtype == "category"
+            and is_categorical_dtype(temp_df.dtype)
         ):
             maxsplit = 2
         return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
@@ -926,11 +927,26 @@ class Series(BasePandasDataset):
         """
         Test whether two objects contain the same elements.
         """
-        return (
-            self.name == other.name
-            and self.index.equals(other.index)
-            and self.eq(other).all()
-        )
+        if isinstance(other, pandas.Series):
+            # Copy into a Modin Series to simplify logic below
+            other = self.__constructor__(other)
+
+        if type(self) != type(other) or not self.index.equals(other.index):
+            return False
+
+        old_name_self = self.name
+        old_name_other = other.name
+        try:
+            self.name = "temp_name_for_equals_op"
+            other.name = "temp_name_for_equals_op"
+            # this function should return only scalar
+            res = self.__constructor__(
+                query_compiler=self._query_compiler.equals(other._query_compiler)
+            )
+        finally:
+            self.name = old_name_self
+            other.name = old_name_other
+        return res.all()
 
     def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
         """
@@ -1395,6 +1411,22 @@ class Series(BasePandasDataset):
             limit=limit,
             tolerance=tolerance,
             fill_value=fill_value,
+        )
+
+    def rename_axis(
+        self,
+        mapper=no_default,
+        *,
+        index=no_default,
+        axis=0,
+        copy=True,
+        inplace=False,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Set the name of the axis for the index or columns.
+        """
+        return super().rename_axis(
+            mapper=mapper, index=index, axis=axis, copy=copy, inplace=inplace
         )
 
     def rename(

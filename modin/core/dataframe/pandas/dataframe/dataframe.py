@@ -23,7 +23,11 @@ import pandas
 import datetime
 from pandas.api.types import is_object_dtype
 from pandas.core.indexes.api import Index, RangeIndex
-from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
+from pandas.core.dtypes.common import (
+    is_numeric_dtype,
+    is_list_like,
+    is_categorical_dtype,
+)
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
@@ -2896,20 +2900,6 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
-    def __make_init_labels_args(self, partitions, index, columns) -> dict:
-        kw = {}
-        kw["index"], kw["row_lengths"] = (
-            self._compute_axis_labels_and_lengths(0, partitions)
-            if index is None
-            else (index, None)
-        )
-        kw["columns"], kw["column_widths"] = (
-            self._compute_axis_labels_and_lengths(1, partitions)
-            if columns is None
-            else (columns, None)
-        )
-        return kw
-
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
@@ -2988,9 +2978,9 @@ class PandasDataframe(ClassLogger):
             broadcasted_dict,
             keep_remaining,
         )
-
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_full_axis(
@@ -3280,6 +3270,7 @@ class PandasDataframe(ClassLogger):
         right_frames: list,
         join_type="outer",
         copartition_along_columns=True,
+        labels="replace",
         dtypes=None,
     ):
         """
@@ -3296,6 +3287,9 @@ class PandasDataframe(ClassLogger):
         copartition_along_columns : bool, default: True
             Whether to perform copartitioning along columns or not.
             For some ops this isn't needed (e.g., `fillna`).
+        labels : {"replace", "drop"}, default: "replace"
+            Whether use labels from joined DataFrame or drop altogether to make
+            them be computed lazily later.
         dtypes : series, default: None
             Dtypes of the resultant dataframe, this argument will be
             received if the resultant dtypes of n-opary operation is precomputed.
@@ -3346,6 +3340,8 @@ class PandasDataframe(ClassLogger):
                 left_parts, op, list_of_right_parts
             )
         )
+        if labels == "drop":
+            joined_index = joined_columns = row_lengths = column_widths = None
 
         return self.__constructor__(
             new_frame,
@@ -3544,7 +3540,7 @@ class PandasDataframe(ClassLogger):
             by = [by]
 
         def apply_func(df):  # pragma: no cover
-            if any(dtype == "category" for dtype in df.dtypes[by].values):
+            if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"
@@ -3564,7 +3560,7 @@ class PandasDataframe(ClassLogger):
 
         return result
 
-    @lazy_metadata_decorator(apply_axis="opposite", axis_arg=0)
+    @lazy_metadata_decorator(apply_axis="both")
     def groupby_reduce(
         self,
         axis,
@@ -3612,11 +3608,16 @@ class PandasDataframe(ClassLogger):
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
 
+        if by_parts is not None:
+            # inplace operation
+            if by_parts.shape[axis] != self._partitions.shape[axis]:
+                self._filter_empties(compute_metadata=False)
         new_partitions = self._partition_mgr_cls.groupby_reduce(
             axis, self._partitions, by_parts, map_func, reduce_func, apply_indices
         )
-        kw = self.__make_init_labels_args(new_partitions, new_index, new_columns)
-        return self.__constructor__(new_partitions, **kw)
+        return self.__constructor__(
+            new_partitions, index=new_index, columns=new_columns
+        )
 
     @classmethod
     def from_pandas(cls, df):
@@ -3724,6 +3725,8 @@ class PandasDataframe(ClassLogger):
         df = self._partition_mgr_cls.to_pandas(self._partitions)
         if df.empty:
             df = pandas.DataFrame(columns=self.columns, index=self.index)
+            if len(df.columns) and self.has_materialized_dtypes:
+                df = df.astype(self.dtypes)
         else:
             for axis, has_external_index in enumerate(
                 ["has_materialized_index", "has_materialized_columns"]

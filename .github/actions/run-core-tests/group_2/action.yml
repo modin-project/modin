@@ -1,0 +1,22 @@
+name: "Run core Modin tests - group 2"
+description: "Run core Modin tests like dataframe or groupby"
+inputs:
+  runner:
+    description: "Runner for tests"
+    default: "python -m pytest"
+  parallel:
+    description: "How to run tests in parallel"
+    default: "-n 2"
+
+runs:
+  using: "composite"
+  steps:
+      - run: |
+          echo "::group::Running dataframe tests (group 2)..."
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_join_sort.py \
+                                                      modin/pandas/test/dataframe/test_reduce.py \
+                                                      modin/pandas/test/dataframe/test_udf.py \
+                                                      modin/pandas/test/dataframe/test_window.py \
+                                                      modin/pandas/test/dataframe/test_pickle.py
+          echo "::endgroup::"
+        shell: bash -l {0}

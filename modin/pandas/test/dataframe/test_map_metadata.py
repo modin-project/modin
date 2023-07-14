@@ -320,6 +320,12 @@ def test_copy(data):
     df_equals(modin_df, modin_df_cp)
 
 
+def test_copy_empty_dataframe():
+    df = pd.DataFrame(range(3))
+    res = df[:0].copy()
+    assert res.dtypes.equals(df.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dtypes(data):
     modin_df = pd.DataFrame(data)
@@ -757,6 +763,7 @@ def test_infer_objects_single_partition():
 @pytest.mark.parametrize(
     "convert_floating", bool_arg_values, ids=arg_keys("convert_floating", bool_arg_keys)
 )
+@pytest.mark.exclude_in_sanity
 def test_convert_dtypes_single_partition(
     infer_objects, convert_string, convert_integer, convert_boolean, convert_floating
 ):
@@ -844,6 +851,7 @@ def test_convert_dtypes_5653():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("bound_type", ["list", "series"], ids=["list", "series"])
+@pytest.mark.exclude_in_sanity
 def test_clip(request, data, axis, bound_type):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
@@ -891,6 +899,12 @@ def test_clip(request, data, axis, bound_type):
 
         with pytest.raises(ValueError):
             modin_df.clip(lower=[1, 2, 3], axis=None)
+
+
+def test_clip_4485():
+    modin_result = pd.DataFrame([1]).clip([3])
+    pandas_result = pandas.DataFrame([1]).clip([3])
+    df_equals(modin_result, pandas_result)
 
 
 def test_drop():
@@ -1037,6 +1051,7 @@ def test_droplevel():
     ids=["None", "string", "name", "tuple", "list"],
 )
 @pytest.mark.parametrize("ignore_index", [True, False], ids=["True", "False"])
+@pytest.mark.exclude_in_sanity
 def test_drop_duplicates(data, keep, subset, ignore_index):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
@@ -1690,6 +1705,7 @@ def test___round__():
     ],
 )
 @pytest.mark.parametrize("dtype", [None, "str"])
+@pytest.mark.exclude_in_sanity
 def test_constructor_from_modin_series(get_index, get_columns, dtype):
     modin_df, pandas_df = create_test_dfs(test_data_values[0])
 

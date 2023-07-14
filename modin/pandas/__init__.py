@@ -13,14 +13,21 @@
 
 import pandas
 import warnings
+from packaging import version
 
-__pandas_version__ = "2.0.2"
+__pandas_version__ = "2.0"
 
-if pandas.__version__ != __pandas_version__:
+if (
+    version.parse(pandas.__version__).release[:2]
+    != version.parse(__pandas_version__).release[:2]
+):
     warnings.warn(
         f"The pandas version installed ({pandas.__version__}) does not match the supported pandas version in"
-        + f" Modin ({__pandas_version__}). This may cause undesired side effects!"
+        + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
+
+# to not pollute namespace
+del version
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -149,6 +156,11 @@ def _update_engine(publisher: Parameter):
 
             initialize_unidist()
     elif publisher.get() == "Cloudray":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         conn = get_connection()
@@ -174,10 +186,20 @@ def _update_engine(publisher: Parameter):
         else:
             get_connection().modules["modin"].set_execution("Ray", StorageFormat.get())
     elif publisher.get() == "Cloudpython":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         get_connection().modules["modin"].set_execution("Python")
     elif publisher.get() == "Cloudnative":
+        warnings.warn(
+            "Cloud feature is deprecated and will be removed in 0.24.0 release",
+            DeprecationWarning,
+        )
+
         from modin.experimental.cloud import get_connection
 
         assert (

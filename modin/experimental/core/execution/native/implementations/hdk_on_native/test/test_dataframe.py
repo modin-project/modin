@@ -20,7 +20,7 @@ import re
 
 from pandas._testing import ensure_clean
 
-from modin.config import StorageFormat, DoUseCalcite
+from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     io_ops_bad_exc,
     default_to_pandas_ignore_string,
@@ -53,6 +53,9 @@ from modin.experimental.core.execution.native.implementations.hdk_on_native.part
 )
 from modin.experimental.core.execution.native.implementations.hdk_on_native.df_algebra import (
     FrameNode,
+)
+from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
+    CalciteSerializer,
 )
 
 
@@ -221,9 +224,6 @@ class TestCSV:
             with ForceHdkImport(exp):
                 exp = to_pandas(exp)
             exp["c"] = exp["c"].astype("string")
-            # The arrow table contains empty strings, when reading as category.
-            assert all(v == "" for v in exp["c"])
-            exp["c"] = None
 
         df_equals(ref, exp)
 
@@ -939,7 +939,7 @@ class TestGroupby:
         run_and_compare(groupby, data=self.data)
 
     @pytest.mark.parametrize("by", [["a"], ["a", "b", "c"]])
-    @pytest.mark.parametrize("agg", ["sum", "size", "mean"])
+    @pytest.mark.parametrize("agg", ["sum", "size", "mean", "median"])
     @pytest.mark.parametrize("as_index", [True, False])
     def test_groupby_agg_by_col(self, by, agg, as_index):
         def simple_agg(df, **kwargs):
@@ -1263,19 +1263,7 @@ class TestGroupby:
     @pytest.mark.parametrize("invert", [True, False])
     @pytest.mark.parametrize("select", [True, False])
     @pytest.mark.parametrize("ascending", [None, True, False])
-    @pytest.mark.parametrize(
-        "use_calcite",
-        [
-            False,
-            pytest.param(
-                True,
-                marks=pytest.mark.xfail(
-                    reason="Function ROW_NUMBER() is not yet supported by Calcite"
-                ),
-            ),
-        ],
-    )
-    def test_head_tail(self, op, n, invert, select, ascending, use_calcite):
+    def test_head_tail(self, op, n, invert, select, ascending):
         def head(df, **kwargs):
             if invert:
                 df = df[~df["col3"].isna()]
@@ -1287,13 +1275,8 @@ class TestGroupby:
             df = getattr(df, op)(n)
             return df.sort_values(list(df.columns))
 
-        orig_value = DoUseCalcite.get()
-        DoUseCalcite._value = use_calcite
-        try:
-            # When invert is false, the rowid column is materialized.
-            run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
-        finally:
-            DoUseCalcite._value = orig_value
+        # When invert is false, the rowid column is materialized.
+        run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
 
 
 class TestAgg:
@@ -1978,16 +1961,7 @@ class TestBinaryOp:
                 force_hdk_execute=force_hdk,
             )
 
-    @pytest.mark.parametrize(
-        "force_hdk",
-        [
-            False,
-            pytest.param(
-                True,
-                marks=pytest.mark.xfail(reason="Invert is not yet supported by HDK"),
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("force_hdk", [False, True])
     def test_invert_op(self, force_hdk):
         def invert(df, **kwargs):
             return ~df
@@ -2036,6 +2010,33 @@ class TestDateTime:
             return df["d"].dt.hour
 
         run_and_compare(dt_hour, data=self.datetime_data)
+
+    @pytest.mark.parametrize("cast", [True, False])
+    @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())
+    def test_dt_serialization(self, cast, unit):
+        fill_value = np.datetime64(3, unit)
+
+        def serialize(df, **kwargs):
+            if cast:
+                df = df.astype(f"datetime64[{unit}]")
+            return df.fillna(fill_value)
+
+        def cmp(df1, df2):
+            assert df1["date"].max().asm8 == fill_value
+            assert df2["date"].max().asm8 == fill_value
+            df_equals(df1, df2)
+
+        run_and_compare(
+            serialize,
+            data={
+                "date": [
+                    np.datetime64(1, unit),
+                    np.datetime64(2, unit),
+                    None,
+                ]
+            },
+            comparator=cmp,
+        )
 
 
 class TestCategory:

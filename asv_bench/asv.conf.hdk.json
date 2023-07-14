@@ -25,6 +25,10 @@
     // variable.
     "environment_type": "conda",
 
+    // timeout in seconds for installing any dependencies in environment
+    // defaults to 10 min
+    "install_timeout": 6000,
+
     // the base URL to show a commit for the project.
     "show_commit_url": "https://github.com/modin-project/modin/commit/",
 

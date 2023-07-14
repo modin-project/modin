@@ -517,14 +517,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
 
     varname = "MODIN_HDK_LAUNCH_PARAMETERS"
-    default = {
-        "enable_union": 1,
-        "enable_columnar_output": 1,
-        "enable_lazy_fetch": 0,
-        "null_div_by_zero": 1,
-        "enable_watchdog": 0,
-        "enable_thrift_logs": 0,
-    }
 
     @classmethod
     def get(cls) -> dict:
@@ -557,11 +549,43 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
             Decoded and verified config value.
         """
         custom_parameters = super().get()
-        result = cls.default.copy()
+        result = cls._get_default().copy()
         result.update(
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+    @classmethod
+    def _get_default(cls) -> Any:
+        """
+        Get default value of the config. Checks the pyhdk version and omits variables unsupported in prior versions.
+
+        Returns
+        -------
+        dict
+            Config keys and corresponding values.
+        """
+        if (default := getattr(cls, "default", None)) is None:
+            cls.default = default = {
+                "enable_union": 1,
+                "enable_columnar_output": 1,
+                "enable_lazy_fetch": 0,
+                "null_div_by_zero": 1,
+                "enable_watchdog": 0,
+                "enable_thrift_logs": 0,
+                "cpu_only": 1,
+            }
+
+            try:
+                import pyhdk
+
+                if version.parse(pyhdk.__version__) >= version.parse("0.6.1"):
+                    default["enable_lazy_dict_materialization"] = 0
+                    default["log_dir"] = "pyhdk_log"
+            except ImportError:
+                # if pyhdk is not available, do not show any additional options
+                pass
+        return default
 
 
 class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):

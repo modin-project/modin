@@ -210,6 +210,8 @@ class HdkProtocolDataframe(ProtocolDataframe):
         pyarrow.Table
         """
         at = self._df._execute()
+        if not isinstance(at, pa.Table):
+            at = at.to_arrow()
         assert at is not None
         return at
 

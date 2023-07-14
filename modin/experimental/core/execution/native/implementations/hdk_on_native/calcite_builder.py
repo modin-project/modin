@@ -342,6 +342,7 @@ class CalciteBuilder:
             "min": "MIN",
             "size": "COUNT",
             "count": "COUNT",
+            "median": "APPROX_QUANTILE",
         }
         _no_arg_aggregates = {"size"}
 
@@ -737,6 +738,18 @@ class CalciteBuilder:
         node : CalciteBaseNode
             A node to add.
         """
+        if (
+            len(self.res) != 0
+            and isinstance(node, CalciteProjectionNode)
+            and isinstance(self.res[-1], CalciteProjectionNode)
+            and all(isinstance(expr, CalciteInputRefExpr) for expr in node.exprs)
+        ):
+            # Replace the last CalciteProjectionNode with this one and
+            # translate the input refs.
+            exprs = self.res.pop().exprs
+            node = CalciteProjectionNode(
+                node.fields, [exprs[expr.input] for expr in node.exprs]
+            )
         self.res.append(node)
 
     def _last(self):

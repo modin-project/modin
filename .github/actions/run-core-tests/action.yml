@@ -1,0 +1,29 @@
+name: "Run core Modin tests"
+description: "Run core Modin tests like dataframe or groupby"
+inputs:
+  runner:
+    description: "Runner for tests"
+    default: "python -m pytest"
+  parallel:
+    description: "How to run tests in parallel"
+    default: "-n 2"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: ./.github/actions/run-core-tests/group_1
+      with:
+        runner: ${{ inputs.runner }}
+        parallel: ${{ inputs.parallel }}
+    - uses: ./.github/actions/run-core-tests/group_2
+      with:
+        runner: ${{ inputs.runner }}
+        parallel: ${{ inputs.parallel }}
+    - uses: ./.github/actions/run-core-tests/group_3
+      with:
+        runner: ${{ inputs.runner }}
+        parallel: ${{ inputs.parallel }}
+    - uses: ./.github/actions/run-core-tests/group_4
+      with:
+        runner: ${{ inputs.runner }}
+        parallel: ${{ inputs.parallel }}

@@ -13,6 +13,7 @@ import types
 
 import ray
 
+
 # stub ray.remote to be a no-op so it doesn't shadow docstrings
 def noop_decorator(*args, **kwargs):
     if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
@@ -24,7 +25,7 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk", "pyhdk.hdk"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -37,6 +38,17 @@ if not hasattr(sys.modules["cupy"], "ndarray"):
     sys.modules["cupy"].ndarray = type("ndarray", (object,), {})
 if not hasattr(sys.modules["pyhdk"], "PyDbEngine"):
     sys.modules["pyhdk"].PyDbEngine = type("PyDbEngine", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "HDK"):
+    sys.modules["pyhdk.hdk"].HDK = type("HDK", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "QueryNode"):
+    sys.modules["pyhdk.hdk"].QueryNode = type("QueryNode", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "ExecutionResult"):
+    sys.modules["pyhdk.hdk"].ExecutionResult = type("ExecutionResult", (object,), {})
+if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):
+    sys.modules["pyhdk.hdk"].RelAlgExecutor = type("RelAlgExecutor", (object,), {})
+if not hasattr(sys.modules["pyhdk"], "__version__"):
+    # Show all known pyhdk config options in documentation
+    sys.modules["pyhdk"].__version__ = "999"
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin

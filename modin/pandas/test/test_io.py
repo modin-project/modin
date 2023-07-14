@@ -950,6 +950,7 @@ class TestCsv:
             ],
         ],
     )
+    @pytest.mark.exclude_in_sanity
     def test_read_csv_parse_dates(
         self, names, header, index_col, parse_dates, encoding, encoding_errors
     ):
@@ -1124,6 +1125,7 @@ class TestCsv:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
     )
+    @pytest.mark.exclude_in_sanity
     def test_to_csv(
         self,
         tmp_path,
@@ -1337,6 +1339,16 @@ class TestCsv:
         if not AsyncReadMode.get():
             df_equals(expected_pandas_df, actual_pandas_df)
 
+    @pytest.mark.parametrize("usecols", [None, [0, 1, 2, 3, 4]])
+    def test_read_csv_1930(self, usecols):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="modin/pandas/test/data/issue_1930.csv",
+            names=["c1", "c2", "c3", "c4", "c5"],
+            usecols=usecols,
+        )
+
 
 class TestTable:
     def test_read_table(self, make_csv_file):
@@ -1474,6 +1486,7 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
+    @pytest.mark.exclude_in_sanity
     def test_read_parquet_directory(
         self, engine, make_parquet_dir, columns, row_group_size, rows_per_file
     ):
@@ -2032,10 +2045,6 @@ class TestExcel:
             io="modin/pandas/test/data/every_other_row_nan.xlsx",
         )
 
-    @pytest.mark.xfail(
-        StorageFormat.get() == "Hdk",
-        reason="The frame contains different dtypes in the same column and could not be converted to arrow",
-    )
     @check_file_leaks
     def test_read_excel_header_none(self):
         eval_io(

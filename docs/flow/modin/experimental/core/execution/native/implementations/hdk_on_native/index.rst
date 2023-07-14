@@ -46,12 +46,16 @@ engine itself and we don't need to manage multiple partitions.
 :py:class:`~modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.dataframe.HdkOnNativeDataframe`
 always has a single partition.
 
-A partition holds data in either ``pandas.DataFrame`` or ``pyarrow.Table``
+A partition holds data in either ``pandas.DataFrame``, ``pyarrow.Table`` or ``DbTable``
 format. ``pandas.DataFrame`` is preferred only when we detect unsupported
 data type and therefore have to use ``pandas`` framework for processing.
-In other cases ``pyarrow.Table`` format is preferred. Arrow tables can be
-zero-copy imported into HDK. A query execution result is also
-returned as an Arrow table.
+The ``pyarrow.Table`` format is used when a ``DataFrame`` is created and until the
+table is imported into HDK. When it's imported, the partition data is replaced with
+a ``DbTable``. ``DbTable`` represents a table in the HDK database and provides basic
+information about the table: table name, column names, shape. It also allows
+exporting the data into the ``pyarrow.Table`` format. Depending on the data types,
+a ``pyarrow.Table`` import/export could be performed zero-copy. A query execution
+result is also returned as a ``DbTable``.
 
 Data Ingress
 ------------
@@ -173,15 +177,15 @@ Arrow execution
 
 For simple operations which don't include actual computations, execution can use
 Arrow API. We can use it to rename columns, drop columns and concatenate
-frames. Arrow execution is preferable since it doesn't require actual data import/export
-from/to HDK.
+frames. Arrow execution is performed if we have an arrow table in the partition
+and it's preferable since it doesn't require actual data import into HDK.
 
 HDK execution
 '''''''''''''
 
 To execute a query in the HDK engine we need to import data first. We should
 find all leaves of an operation tree and import their Arrow tables. Partitions
-with imported tables hold corresponding table names used to refer to them in
+with ``DbTable`` hold corresponding table names used to refer to them in
 queries.
 
 HDK executes queries expressed in HDK-specific intermediate representation (IR) format.
@@ -215,9 +219,9 @@ The building of Calcite query (starting from the conversion to the Calcite Algeb
 the forming JSON query) is orchestrated by 
 :py:class:`~modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager.HdkOnNativeDataframePartitionManager`.
 
-An execution result is a new Arrow table which is used to form a new
-partition. This partition is assigned to the executed frame. The frame's
-operation tree is replaced with
+An execution result is a new table in the HDK database, that is represented by ``DbTable``,
+which is used to form a new partition. This partition is assigned to the executed frame.
+The frame's operation tree is replaced with
 :py:class:`~modin.experimental.core.execution.native.implementations.hdk_on_native.df_algebra.FrameNode` operation.
 
 Rowid column and sub-queries
@@ -261,11 +265,11 @@ class.
 Column name mangling
 """"""""""""""""""""
 
-In ``pandas.DataFrame`` columns might have names not allowed in SQL (e. g.
-an empty string). To handle this we simply add '`F_`' prefix to
-column names. Index labels are more tricky because they might be non-unique.
-Indexes are represented as regular columns, and we have to perform a special
-mangling to get valid and unique column names. Demangling is done when we
+In ``pandas.DataFrame`` columns might have names of non-string types or not allowed
+in SQL (e. g. an empty string). To handle this we use an internal encoder, that
+makes the names SQL-compatible. Index labels are more tricky because they might be
+non-unique. Indexes are represented as regular columns, and we have to perform a
+special mangling to get valid and unique column names. Demangling is done when we
 transform our frame (i.e. its Arrow table) into ``pandas.DataFrame`` format.
 
 .. toctree::

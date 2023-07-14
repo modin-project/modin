@@ -162,6 +162,7 @@ class PandasParser(ClassLogger):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", 0)
+        common_dtypes = kwargs.pop("common_dtypes", None)
         encoding = kwargs.get("encoding", None)
         callback = kwargs.pop("callback")
         if start is None or end is None:
@@ -208,6 +209,8 @@ class PandasParser(ClassLogger):
         if "memory_map" in kwargs:
             kwargs = kwargs.copy()
             del kwargs["memory_map"]
+        if common_dtypes is not None:
+            kwargs["dtype"] = common_dtypes
         pandas_df = callback(BytesIO(to_read), **kwargs)
         index = (
             pandas_df.index
@@ -557,8 +560,8 @@ class PandasExcelParser(PandasParser):
 
         return cell.value
 
-    @property
-    def need_rich_text_param(self):
+    @staticmethod
+    def need_rich_text_param():
         """
         Determine whether a required `rich_text` parameter should be specified for the ``WorksheetReader`` constructor.
 

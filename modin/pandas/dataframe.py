@@ -759,11 +759,18 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, pandas.DataFrame):
             # Copy into a Modin DataFrame to simplify logic below
             other = self.__constructor__(other)
-        return (
-            self.index.equals(other.index)
-            and self.columns.equals(other.columns)
-            and self.eq(other).all().all()
+
+        if (
+            type(self) != type(other)
+            or not self.index.equals(other.index)
+            or not self.columns.equals(other.columns)
+        ):
+            return False
+
+        result = self.__constructor__(
+            query_compiler=self._query_compiler.equals(other._query_compiler)
         )
+        return result.all(axis=None)
 
     def _update_var_dicts_in_kwargs(self, expr, kwargs):
         """
