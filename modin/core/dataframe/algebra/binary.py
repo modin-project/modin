@@ -444,14 +444,12 @@ class Binary(Operator):
         """
         operator = cls.register(func, **kwargs)
 
-        func_args = tuple() if func_args is None else func_args
-        func_kwargs = dict() if func_kwargs is None else func_kwargs
         qc_result = operator(
             left._query_compiler,
             right._query_compiler,
             broadcast=right.ndim == 1,
-            *func_args,
+            *(func_args or ()),
             axis=axis,
-            **func_kwargs,
+            **(func_kwargs or {}),
         )
-        return type(left)(query_compiler=qc_result)
+        return left.__constructor__(query_compiler=qc_result)

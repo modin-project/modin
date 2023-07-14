@@ -84,9 +84,7 @@ class Operator(object):
         return_type
         """
         operator = cls.register(func, **kwargs)
-
-        func_args = tuple() if func_args is None else func_args
-        func_kwargs = dict() if func_kwargs is None else func_kwargs
-
-        qc_result = operator(df._query_compiler, *func_args, **func_kwargs)
-        return type(df)(query_compiler=qc_result)
+        qc_result = operator(
+            df._query_compiler, *(func_args or ()), **(func_kwargs or {})
+        )
+        return df.__constructor__(query_compiler=qc_result)

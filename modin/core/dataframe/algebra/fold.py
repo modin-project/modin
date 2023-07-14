@@ -89,8 +89,5 @@ class Fold(Operator):
         -------
         the same type as `df`
         """
-        func_args = tuple() if func_args is None else func_args
-        func_kwargs = dict() if func_kwargs is None else func_kwargs
-        func_args = (fold_axis,) + func_args
-
-        return super().apply(df, func, func_args, func_kwargs)
+        func_args = (fold_axis,) + (func_args or ())
+        return super().apply(df, func, func_args, func_kwargs or {})
