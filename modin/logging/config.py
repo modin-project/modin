@@ -120,6 +120,10 @@ def _create_logger(
     log_filename = f".modin/logs/job_{job_id}/{log_name}.log"
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
 
+    # Add gitignore to the log directory.
+    with open(".modin/.gitignore", "w+") as f:
+        f.write("*")
+
     logger = logging.getLogger(namespace)
     logfile = RotatingFileHandler(
         filename=log_filename,
