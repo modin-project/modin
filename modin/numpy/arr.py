@@ -397,10 +397,29 @@ class array(object):
                 if isinstance(input, pd.Series):
                     input = input._query_compiler.to_numpy().flatten()
                 args += [input]
+            out_kwarg = kwargs.get("out", None)
+            if out_kwarg is not None:
+                # If `out` is a modin.numpy.array, `kwargs.get("out")` returns a 1-tuple
+                # whose only element is that array, so we need to unwrap it from the tuple.
+                out_kwarg = out_kwarg[0]
+            kwargs.pop("out", None)
+            where_kwarg = kwargs.get("where", None)
+            if where_kwarg is not None:
+                if isinstance(where_kwarg, type(self)):
+                    kwargs["where"] = where_kwarg._to_numpy()
             output = self._to_numpy().__array_ufunc__(ufunc, method, *args, **kwargs)
             if is_scalar(output):
                 return output
-            return array(output)
+            if out_kwarg is None:
+                return array(output)
+            else:
+                return fix_dtypes_and_determine_return(
+                    array(output)._query_compiler,
+                    len(output.shape),
+                    dtype=kwargs.get("dtype", None),
+                    out=out_kwarg,
+                    where=True,
+                )
         args = []
         for input in inputs:
             input = try_convert_from_interoperable_type(input)
@@ -414,16 +433,14 @@ class array(object):
             # If `out` is a modin.numpy.array, `kwargs.get("out")` returns a 1-tuple
             # whose only element is that array, so we need to unwrap it from the tuple.
             out_kwarg = out_kwarg[0]
-        where_kwarg = kwargs.get("where", True)
         kwargs["out"] = None
-        kwargs["where"] = True
         result = new_ufunc(*args, **kwargs)
         return fix_dtypes_and_determine_return(
             result,
             out_ndim,
             dtype=kwargs.get("dtype", None),
             out=out_kwarg,
-            where=where_kwarg,
+            where=True,
         )
 
     def __array_function__(self, func, types, args, kwargs):
@@ -437,11 +454,17 @@ class array(object):
             modin_func = getattr(shaping, func_name)
         elif hasattr(creation, func_name):
             modin_func = getattr(creation, func_name)
+        if func_name == "where":
+            return self.where(*args[1:])
         if modin_func is None:
             return NotImplemented
         return modin_func(*args, **kwargs)
 
     def where(self, x=None, y=None):
+        x_specified = x is not None
+        y_specified = y is not None
+        if x_specified != y_specified:
+            raise ValueError("either both or neither of x and y should be given")
         if not is_bool_dtype(self.dtype):
             raise NotImplementedError(
                 "Modin currently only supports where on condition arrays with boolean dtype."
@@ -2599,4 +2622,10 @@ class array(object):
         arr = self._query_compiler.to_numpy()
         if self._ndim == 1:
             arr = arr.flatten()
+        return arr
+
+    def __array__(self, dtype=None):
+        arr = self._to_numpy()
+        if dtype is not None:
+            return arr.astype(dtype)
         return arr
