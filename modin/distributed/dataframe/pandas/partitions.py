@@ -24,11 +24,11 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
 
 if TYPE_CHECKING:
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
-        PandasOnDaskDataframePartition,
-    )
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframePartition,
+    )
+    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
+        PandasOnDaskDataframePartition,
     )
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
         PandasOnUnidistDataframePartition,
@@ -80,6 +80,10 @@ def _ray_from_modin_non_partition(api_layer_object: DataFrame | Series):
 
     @remote
     def store_range(api_layer_object: DataFrame | Series, part_idx: int):
+        """
+        This function stores chunks of the `api_layer_object` into Ray's distributed object store.
+        Since ray automatically puts objects into shared memory, the "upload" is done implicitly.
+        """
         start_idx = part_idx * part_size
         end_idx = (part_idx + 1) * part_size
         return pd.DataFrame(api_layer_object.iloc[start_idx:end_idx])
