@@ -64,7 +64,7 @@ def _ray_from_modin_non_partition(api_layer_object: DataFrame | Series):
     A list of Ray.ObjectRef that can be combined into the original ``api_layer_object``
     """
 
-    import pandas as pd
+    import pandas
     import ray
     from ray import remote
 
