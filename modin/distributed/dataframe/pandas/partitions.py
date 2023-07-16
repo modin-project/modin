@@ -86,7 +86,7 @@ def _ray_from_modin_non_partition(api_layer_object: DataFrame | Series):
         """
         start_idx = part_idx * part_size
         end_idx = (part_idx + 1) * part_size
-        return pd.DataFrame(api_layer_object.iloc[start_idx:end_idx])
+        return pandas.DataFrame(api_layer_object.iloc[start_idx:end_idx])
 
     # Store things into ray.
     return [store_range.remote(api_layer_object, i) for i in range(num_parts)]
