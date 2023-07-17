@@ -1075,11 +1075,6 @@ class PandasDataframe(ClassLogger):
         -------
         PandasDataframe
         """
-        # if positions are plain lists or tuples, convert them to numpy for faster operations
-        if isinstance(row_positions, (list, tuple)):
-            row_positions = np.asarray(row_positions, dtype=np.intp)
-        if isinstance(col_positions, (list, tuple)):
-            col_positions = np.asarray(col_positions, dtype=np.intp)
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
         if (
@@ -1113,12 +1108,16 @@ class PandasDataframe(ClassLogger):
                 # do not need to re-order positive-step-ranges
                 new_row_order = pandas.RangeIndex(len(row_positions) - 1, -1, -1)
         elif row_positions is not None:
-            new_row_order = np.argsort(np.argsort(row_positions))
+            new_row_order = np.argsort(
+                np.argsort(np.asarray(row_positions, dtype=np.intp))
+            )
         if is_range_like(col_positions):
             if col_positions.step < 0:
                 new_col_order = pandas.RangeIndex(len(col_positions) - 1, -1, -1)
         elif col_positions is not None:
-            new_col_order = np.argsort(np.argsort(col_positions))
+            new_col_order = np.argsort(
+                np.argsort(np.asarray(col_positions, dtype=np.intp))
+            )
         return intermediate._reorder_labels(
             row_positions=new_row_order, col_positions=new_col_order
         )
