@@ -1075,10 +1075,10 @@ class PandasDataframe(ClassLogger):
         -------
         PandasDataframe
         """
-        # ensure that `row_positions` and `col_positions` are  either None or np.array for efficiency
-        if row_positions is not None:
+        # if positions are plain lists or tuples, convert them to numpy for faster operations
+        if isinstance(row_positions, (list, tuple)):
             row_positions = np.asarray(row_positions, dtype=np.intp)
-        if col_positions is not None:
+        if isinstance(col_positions, (list, tuple)):
             col_positions = np.asarray(col_positions, dtype=np.intp)
         # Check if monotonically increasing, return if it is. Fast track code path for
         # common case to keep it fast.
