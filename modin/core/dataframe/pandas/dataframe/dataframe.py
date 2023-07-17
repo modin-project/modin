@@ -1108,9 +1108,16 @@ class PandasDataframe(ClassLogger):
         # First argsort brings us to the proper "index space" (according to smaller labels count),
         # and the second re-orders them to match the original data.
         new_row_order, new_col_order = None, None
-        if row_positions is not None:
+        if is_range_like(row_positions):
+            if row_positions.step < 0:
+                # do not need to re-order positive-step-ranges
+                new_row_order = pandas.RangeIndex(len(row_positions) - 1, -1, -1)
+        elif row_positions is not None:
             new_row_order = np.argsort(np.argsort(row_positions))
-        if col_positions is not None:
+        if is_range_like(col_positions):
+            if col_positions.step < 0:
+                new_col_order = pandas.RangeIndex(len(col_positions) - 1, -1, -1)
+        elif col_positions is not None:
             new_col_order = np.argsort(np.argsort(col_positions))
         return intermediate._reorder_labels(
             row_positions=new_row_order, col_positions=new_col_order
