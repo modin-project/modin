@@ -1045,6 +1045,33 @@ def test_binary_op_preserve_dtypes():
     assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
 
 
+@pytest.mark.parametrize("axis", [0, 1])
+def test_concat_dont_materialize_opposite_axis(axis):
+    data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
+    df1, df2 = pd.DataFrame(data), pd.DataFrame(data)
+
+    def assert_no_cache(df, axis):
+        if axis:
+            assert not df._query_compiler._modin_frame.has_materialized_columns
+        else:
+            assert not df._query_compiler._modin_frame.has_materialized_index
+
+    def remove_cache(df, axis):
+        if axis:
+            df._query_compiler._modin_frame.set_columns_cache(None)
+        else:
+            df._query_compiler._modin_frame.set_index_cache(None)
+        assert_no_cache(df, axis)
+        return df
+
+    df1, df2 = remove_cache(df1, axis), remove_cache(df2, axis)
+
+    df_concated = pd.concat((df1, df2), axis=axis)
+    assert_no_cache(df1, axis)
+    assert_no_cache(df2, axis)
+    assert_no_cache(df_concated, axis)
+
+
 def test_setitem_bool_preserve_dtypes():
     df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
     indexer = pd.Series([True, False, True, False])
