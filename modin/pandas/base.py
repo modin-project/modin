@@ -3104,11 +3104,23 @@ class BasePandasDataset(ClassLogger):
             storage_options=storage_options,
         )
 
-    def to_numpy(
+    def _to_bare_numpy(
         self, dtype=None, copy=False, na_value=no_default
     ):  # noqa: PR01, RT01, D200
         """
         Convert the `BasePandasDataset` to a NumPy array.
+        """
+        return self._query_compiler.to_numpy(
+            dtype=dtype,
+            copy=copy,
+            na_value=na_value,
+        )
+
+    def to_numpy(
+        self, dtype=None, copy=False, na_value=no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Convert the `BasePandasDataset` to a NumPy array or a Modin wrapper for NumPy array.
         """
         from modin.config import ExperimentalNumPyAPI
 
@@ -3117,7 +3129,7 @@ class BasePandasDataset(ClassLogger):
 
             return array(self, copy=copy)
 
-        return self._query_compiler.to_numpy(
+        return self._to_bare_numpy(
             dtype=dtype,
             copy=copy,
             na_value=na_value,
@@ -3438,8 +3450,7 @@ class BasePandasDataset(ClassLogger):
         arr : np.ndarray
             NumPy representation of Modin object.
         """
-        arr = self.to_numpy(dtype)
-        return arr
+        return self._to_bare_numpy(dtype)
 
     def __copy__(self, deep=True):
         """
