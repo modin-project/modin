@@ -272,16 +272,8 @@ class cuDFOnRayDataframe(PandasOnRayDataframe):
             new_dtypes,
         )
 
-        sorted_row_positions = sorted_col_positions = None
-        if row_positions is not None:
-            sorted_row_positions = sorted(row_positions)
-        if col_positions is not None:
-            sorted_col_positions = sorted(col_positions)
-
         return self._maybe_reorder_labels(
             intermediate,
             row_positions,
-            sorted_row_positions,
             col_positions,
-            sorted_col_positions,
         )

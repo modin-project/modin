@@ -1059,18 +1059,14 @@ class PandasDataframe(ClassLogger):
         return self._maybe_reorder_labels(
             intermediate,
             row_positions,
-            sorted_row_positions,
             col_positions,
-            sorted_col_positions,
         )
 
     def _maybe_reorder_labels(
         self,
         intermediate: "PandasDataframe",
         row_positions,
-        sorted_row_positions,
         col_positions,
-        sorted_col_positions,
     ) -> "PandasDataframe":
         """
         Call re-order labels on take_2d_labels_or_positional result if necessary.
@@ -1080,12 +1076,8 @@ class PandasDataframe(ClassLogger):
         intermediate : PandasDataFrame
         row_positions : list-like of ints, optional
             The row positions to extract.
-        sorted_row_positions : list-like of ints, optional
-            Sorted version of row_positions.
         col_positions : list-like of ints, optional
             The column positions to extract.
-        sorted_col_positions : list-like of ints, optional
-            Sorted version of col_positions.
 
         Returns
         -------
@@ -1111,23 +1103,29 @@ class PandasDataframe(ClassLogger):
         # The new labels are often smaller than the old labels, so we can't reuse the
         # original order values because those were mapped to the original data. We have
         # to reorder here based on the expected order from within the data.
-        # We create a dictionary mapping the position of the numeric index with respect
-        # to all others, then recreate that order by mapping the new order values from
-        # the old. This information is sent to `_reorder_labels`.
-        if row_positions is not None:
-            row_order_mapping = dict(
-                zip(sorted_row_positions, range(len(row_positions)))
+        # To do so, we "unsort" the indices by using np.argsort() twice, as inspired by
+        # https://stackoverflow.com/questions/2483696/undo-or-reverse-argsort-python,
+        # meaning that `new_row_order` must be so `np.sort(row_positions)[new_row_order] == row_positions`
+        # This is achieved by first calculating the indices which would sort `row_positions`,
+        # and then by calculating new indices that would sort "sorting indices" themselves.
+        # First argsort brings us to the proper "index space" (according to smaller labels count),
+        # and the second re-orders them to match the original data.
+        new_row_order, new_col_order = None, None
+        if is_range_like(row_positions):
+            if row_positions.step < 0:
+                # do not need to re-order positive-step-ranges
+                new_row_order = pandas.RangeIndex(len(row_positions) - 1, -1, -1)
+        elif row_positions is not None:
+            new_row_order = np.argsort(
+                np.argsort(np.asarray(row_positions, dtype=np.intp))
             )
-            new_row_order = [row_order_mapping[idx] for idx in row_positions]
-        else:
-            new_row_order = None
-        if col_positions is not None:
-            col_order_mapping = dict(
-                zip(sorted_col_positions, range(len(col_positions)))
+        if is_range_like(col_positions):
+            if col_positions.step < 0:
+                new_col_order = pandas.RangeIndex(len(col_positions) - 1, -1, -1)
+        elif col_positions is not None:
+            new_col_order = np.argsort(
+                np.argsort(np.asarray(col_positions, dtype=np.intp))
             )
-            new_col_order = [col_order_mapping[idx] for idx in col_positions]
-        else:
-            new_col_order = None
         return intermediate._reorder_labels(
             row_positions=new_row_order, col_positions=new_col_order
         )
