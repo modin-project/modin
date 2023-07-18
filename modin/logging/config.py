@@ -117,7 +117,6 @@ def _create_logger(
     Logger
         Logger object configured per Modin settings.
     """
-
     # Pathlib makes it OS agnostic.
     modin_path = Path(".modin")
     modin_path.mkdir(exist_ok=True)
