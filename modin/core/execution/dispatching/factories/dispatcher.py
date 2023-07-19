@@ -165,6 +165,9 @@ class FactoryDispatcher(object):
                 raise ModuleNotFoundError(
                     f"Make sure all required packages are installed: {str(err)}"
                 ) from err
+            except BaseException:
+                cls.__factory = None
+                raise
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._from_pandas)
