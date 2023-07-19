@@ -1385,6 +1385,19 @@ def test_insert_4407():
         )
 
 
+def test_insert_modin_array():
+    from modin.numpy import array
+
+    data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
+    modin_df1, modin_df2 = pd.DataFrame(data), pd.DataFrame(data)
+    np_value = np.array([7, 7, 7])
+    md_np_value = array(np_value)
+
+    modin_df1.insert(1, "new_col", np_value)
+    modin_df2.insert(1, "new_col", md_np_value)
+    df_equals(modin_df1, modin_df2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ndim(data):
     modin_df = pd.DataFrame(data)
