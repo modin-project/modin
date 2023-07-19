@@ -1990,16 +1990,17 @@ class array(object):
             if apply_axis == 1:
                 raise numpy.AxisError(1, 1)
             target = where.where(self, 0) if isinstance(where, array) else self
-            result = target._query_compiler.astype(
-                {col_name: out_dtype for col_name in target._query_compiler.columns}
-            ).sum(axis=0, skipna=False)
-            result = result.add(initial)
+            if target.dtype != out_dtype:
+                target = target.astype(out_dtype)
+            result = target._query_compiler.sum(axis=0, skipna=False)
+            if initial != 0:
+                result = result.add(initial)
             if keepdims:
                 if out is not None:
                     out._update_inplace(
-                        (numpy.ones_like(out, dtype=out_dtype) * initial)
-                        .astype(out_dtype)
-                        ._query_compiler
+                        (
+                            numpy.ones_like(out, dtype=out_dtype) * initial
+                        )._query_compiler
                     )
                 if out is not None and out.shape != (1,):
                     raise ValueError(
@@ -2013,16 +2014,16 @@ class array(object):
                     return array([initial], dtype=out_dtype)
             return result.to_numpy()[0, 0] if truthy_where else initial
         if apply_axis is None:
-            result = self
-            if isinstance(where, array):
-                result = where.where(self, 0)
+            target = where.where(self, 0) if isinstance(where, array) else self
+            if target.dtype != out_dtype:
+                target = target.astype(out_dtype)
             result = (
-                result.astype(out_dtype)
-                ._query_compiler.sum(axis=1, skipna=False)
+                target._query_compiler.sum(axis=1, skipna=False)
                 .sum(axis=0, skipna=False)
                 .to_numpy()[0, 0]
             )
-            result += initial
+            if initial != 0:
+                result += initial
             if keepdims:
                 if out is not None and out.shape != (1, 1):
                     raise ValueError(
@@ -2030,9 +2031,9 @@ class array(object):
                     )
                 if out is not None:
                     out._update_inplace(
-                        (numpy.ones_like(out) * initial)
-                        .astype(out_dtype)
-                        ._query_compiler
+                        (
+                            numpy.ones_like(out, dtype=out_dtype) * initial
+                        )._query_compiler
                     )
                 if truthy_where or out is not None:
                     return fix_dtypes_and_determine_return(
@@ -2048,10 +2049,11 @@ class array(object):
         if apply_axis > 1:
             raise numpy.AxisError(axis, 2)
         target = where.where(self, 0) if isinstance(where, array) else self
-        result = target._query_compiler.astype(
-            {col_name: out_dtype for col_name in target._query_compiler.columns}
-        ).sum(axis=apply_axis, skipna=False)
-        result = result.add(initial)
+        if target.dtype != out_dtype:
+            target = target.astype(out_dtype)
+        result = target._query_compiler.sum(axis=apply_axis, skipna=False)
+        if initial != 0:
+            result = result.add(initial)
         new_ndim = self._ndim - 1 if not keepdims else self._ndim
         if new_ndim == 0:
             return result.to_numpy()[0, 0] if truthy_where else initial
@@ -2059,7 +2061,7 @@ class array(object):
             result = result.transpose()
         if out is not None:
             out._update_inplace(
-                (numpy.ones_like(out) * initial).astype(out_dtype)._query_compiler
+                (numpy.ones_like(out, dtype=out_dtype) * initial)._query_compiler
             )
         if truthy_where or out is not None:
             return fix_dtypes_and_determine_return(
