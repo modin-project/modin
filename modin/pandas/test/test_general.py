@@ -39,6 +39,10 @@ from .utils import (
 
 if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+else:
+    pytestmark = pytest.mark.filterwarnings(
+        "default:`DataFrame.insert` for empty DataFrame is not currently supported.*:UserWarning"
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -967,3 +971,78 @@ def test_series_to_timedelta(data):
 def test_get(key):
     modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
     eval_general(modin_df, pandas_df, lambda df: df.get(key))
+
+
+@pytest.mark.parametrize(
+    "data", [None, {"A": range(10)}, pandas.DataFrame({"A": range(10)})]
+)
+@pytest.mark.parametrize(
+    "index", [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)]
+)
+@pytest.mark.parametrize("value", [list(range(10)), pandas.Series(range(10))])
+@pytest.mark.parametrize(
+    "part_type", [None, "arrow", "hdk"] if StorageFormat.get() == "Hdk" else [None]
+)
+@pytest.mark.parametrize("insert_scalar", [True, False])
+def test_insert_list(data, index, value, part_type, insert_scalar):
+    def create():
+        mdf, pdf = create_test_dfs(data, index=index)
+        if part_type == "arrow":  # Make sure the partition contains an arrow table
+            mdf._query_compiler._modin_frame._partitions[0][0].get(True)
+        elif part_type == "hdk":
+            mdf._query_compiler._modin_frame.force_import()
+        return mdf, pdf
+
+    def insert(loc, name, value):
+        nonlocal mdf, pdf
+        mdf.insert(loc, name, value)
+        pdf.insert(loc, name, value)
+        if insert_scalar:
+            mdf[f"S{loc}"] = 1
+            pdf[f"S{loc}"] = 1
+
+    niter = 3
+
+    mdf, pdf = create()
+    for i in range(niter):
+        insert(len(pdf.columns), f"B{i}", value)
+    df_equals(mdf, pdf)
+
+    mdf, pdf = create()
+    for i in range(niter):
+        insert(0, f"C{i}", value)
+    df_equals(mdf, pdf)
+
+    mdf, pdf = create()
+    for i in range(niter):
+        insert(len(pdf.columns), f"B{i}", value)
+        insert(0, f"C{i}", value)
+        insert(len(pdf.columns) // 2, f"D{i}", value)
+    df_equals(mdf, pdf)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        None,
+        {"A": range(10)},
+        pandas.Series(range(10)),
+        pandas.DataFrame({"A": range(10)}),
+    ],
+)
+@pytest.mark.parametrize(
+    "index", [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)]
+)
+@pytest.mark.parametrize("columns", [None, ["A"], ["A", "B", "C"]])
+@pytest.mark.parametrize("dtype", [None, float])
+def test_df_constructor(data, index, columns, dtype):
+    if (
+        isinstance(data, pandas.Series)
+        and data.name is None
+        and columns is not None
+        and len(columns) > 1
+    ):
+        data = data.copy()
+        data.name = "D"
+    mdf, pdf = create_test_dfs(data, index=index, columns=columns, dtype=dtype)
+    df_equals(mdf, pdf)

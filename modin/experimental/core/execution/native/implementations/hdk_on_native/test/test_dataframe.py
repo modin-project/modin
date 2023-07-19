@@ -2496,13 +2496,11 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = HdkOnNativeDataframePartitionManager._get_unsupported_cols(
-            pandas_df
-        )
+        bad_cols = HdkOnNativeDataframePartitionManager._get_unsupported_cols(pandas_df)
         if is_good:
-            assert obj and not bad_cols
+            assert not bad_cols
         else:
-            assert not obj and bad_cols == ["col"]
+            assert bad_cols == ["col"]
 
 
 class TestConstructor:

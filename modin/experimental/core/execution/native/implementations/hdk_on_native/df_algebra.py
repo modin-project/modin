@@ -430,7 +430,9 @@ class FrameNode(DFAlgNode):
         """
         frame = self.modin_frame
         if frame._partitions is not None:
-            return frame._partitions[0][0].get()
+            part = frame._partitions[0][0]
+            to_arrow = part.raw and not frame._has_unsupported_data
+            return part.get(to_arrow)
         if frame._has_unsupported_data:
             return pandas.DataFrame(
                 index=frame._index_cache, columns=frame._columns_cache
@@ -831,6 +833,48 @@ class JoinNode(DFAlgNode):
         self.how = how
         self.exprs = exprs
         self.condition = condition
+
+    @property
+    def by_rowid(self):
+        """
+        Return True if this is a join by the rowid column.
+
+        Returns
+        -------
+        bool
+        """
+        return (
+            isinstance(self.condition, OpExpr)
+            and self.condition.op == "="
+            and all(
+                isinstance(o, InputRefExpr) and o.column == ColNameCodec.ROWID_COL_NAME
+                for o in self.condition.operands
+            )
+        )
+
+    @_inherit_docstrings(DFAlgNode.require_executed_base)
+    def require_executed_base(self) -> bool:
+        return self.by_rowid and any(
+            not isinstance(i._op, FrameNode) for i in self.input
+        )
+
+    @_inherit_docstrings(DFAlgNode.can_execute_arrow)
+    def can_execute_arrow(self) -> bool:
+        return self.by_rowid and all(
+            isinstance(e, InputRefExpr) for e in self.exprs.values()
+        )
+
+    @_inherit_docstrings(DFAlgNode.execute_arrow)
+    def execute_arrow(self, tables: List[pa.Table]) -> pa.Table:
+        t1 = tables[0]
+        t2 = tables[1]
+        cols1 = t1.column_names
+        cols = [
+            (t1 if (col := ColNameCodec.encode(e.column)) in cols1 else t2).column(col)
+            for e in self.exprs.values()
+        ]
+        names = [ColNameCodec.encode(c) for c in self.exprs]
+        return pa.table(cols, names)
 
     def copy(self):
         """
