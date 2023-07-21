@@ -1583,6 +1583,22 @@ def test_diff(data, periods):
         df_equals(modin_result, pandas_result)
 
 
+def test_diff_with_dates():
+    data = pandas.date_range("2018-01-01", periods=15, freq="H").values
+    pandas_series = pandas.Series(data)
+    modin_series = pd.Series(pandas_series)
+
+    # Check that `diff` with datetime types works correctly.
+    pandas_result = pandas_series.diff()
+    modin_result = modin_series.diff()
+    df_equals(modin_result, pandas_result)
+
+    # Check that `diff` with timedelta types works correctly.
+    td_pandas_result = pandas_result.diff()
+    td_modin_result = modin_result.diff()
+    df_equals(td_modin_result, td_pandas_result)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_div(data):
     modin_series, pandas_series = create_test_series(data)
