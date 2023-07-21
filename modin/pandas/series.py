@@ -31,6 +31,7 @@ from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
 
+from modin.logging import disable_logging
 from modin.utils import (
     _inherit_docstrings,
     to_pandas,
@@ -294,6 +295,7 @@ class Series(BasePandasDataset):
     def __rfloordiv__(self, right):
         return self.rfloordiv(right)
 
+    @disable_logging
     def __getattr__(self, key):
         """
         Return item identified by `key`.
