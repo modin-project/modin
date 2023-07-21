@@ -695,31 +695,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             dataset, columns, index_columns, dtype_backend=dtype_backend, **kwargs
         )
 
-    @staticmethod
-    def _to_parquet_check_support(kwargs):
-        """
-        Check if parallel version of `to_parquet` could be used.
-
-        Parameters
-        ----------
-        kwargs : dict
-            Keyword arguments passed to `.to_parquet()`.
-
-        Returns
-        -------
-        bool
-            Whether parallel version of `to_parquet` is applicable.
-        """
-        path = kwargs["path"]
-        compression = kwargs["compression"]
-        if not isinstance(path, str):
-            return False
-        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        if compression is None or not compression == "snappy":
-            return False
-        return True
-
     @classmethod
     def write(cls, qc, **kwargs):
         """
@@ -732,10 +707,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         **kwargs : dict
             Parameters for `pandas.to_parquet(**kwargs)`.
         """
-        if not cls._to_parquet_check_support(kwargs):
-            return cls.base_io.to_parquet(qc, **kwargs)
-
         output_path = kwargs["path"]
+        if not isinstance(output_path, str):
+            return cls.base_io.to_parquet(qc, **kwargs)
         client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)
