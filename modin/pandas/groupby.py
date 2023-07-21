@@ -25,7 +25,7 @@ from types import BuiltinFunctionType
 from collections.abc import Iterable
 
 from modin.error_message import ErrorMessage
-from modin.logging import ClassLogger
+from modin.logging import ClassLogger, disable_logging
 from modin.utils import (
     _inherit_docstrings,
     try_cast_to_pandas,
@@ -161,6 +161,7 @@ class DataFrameGroupBy(ClassLogger):
         new_kw.update(kwargs)
         return type(self)(**new_kw)
 
+    @disable_logging
     def __getattr__(self, key):
         """
         Alter regular attribute access, looks up the name in the columns.
