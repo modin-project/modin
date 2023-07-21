@@ -417,11 +417,10 @@ default to pandas.
 | ``to_orc``                 | `to_orc`_                 | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_parquet``             | `to_parquet`_             | P                      | **Ray/Dask/Unidist**: Parallel implementation only |
-|                            |                           |                        | if path parameter is a string that does not end    |
-|                            |                           |                        | with ".gz", ".bz2", ".zip", or ".xz". In these     |
-|                            |                           |                        | cases, the ``path`` parameter specifies a directory|
-|                            |                           |                        | where one file is written per row partition of the |
-|                            |                           |                        | Modin dataframe.                                   |
+|                            |                           |                        | if path parameter is a string. In that case, the   |
+|                            |                           |                        | ``path`` parameter specifies a directory where one |
+|                            |                           |                        | file is written per row partition of the Modin     |
+|                            |                           |                        | dataframe.                                         |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+

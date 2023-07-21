@@ -1720,14 +1720,15 @@ class TestParquet:
             pytest.param({"compression": "brotli"}, id="compression=brotli"),
         ],
     )
-    def test_to_parquet(self, tmp_path, engine, compression_kwargs):
+    @pytest.mark.parametrize("extension", ["parquet", ".gz", ".bz2", ".zip", ".xz"])
+    def test_to_parquet(self, tmp_path, engine, compression_kwargs, extension):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         parquet_eval_to_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
-            extension="parquet",
+            extension=extension,
             engine=engine,
             **compression_kwargs,
         )
