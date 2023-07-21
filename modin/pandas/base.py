@@ -1237,7 +1237,7 @@ class BasePandasDataset(ClassLogger):
 
         # Attempting to match pandas error behavior here
         for dtype in self._get_dtypes():
-            if not is_numeric_dtype(dtype):
+            if not (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype)):
                 raise TypeError(f"unsupported operand type for -: got {dtype}")
 
         axis = self._get_axis_number(axis)
