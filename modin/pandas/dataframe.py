@@ -42,6 +42,7 @@ import sys
 from typing import IO, Optional, Union, Iterator, Hashable, Sequence
 import warnings
 
+from modin.logging import disable_logging
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -2342,6 +2343,7 @@ class DataFrame(BasePandasDataset):
             s._parent_axis = 1
         return s
 
+    @disable_logging
     def __getattr__(self, key):
         """
         Return item identified by `key`.
