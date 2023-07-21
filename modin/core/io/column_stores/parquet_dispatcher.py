@@ -711,12 +711,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Whether parallel version of `to_parquet` is applicable.
         """
         path = kwargs["path"]
-        compression = kwargs["compression"]
         if not isinstance(path, str):
             return False
         if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        if compression is None or not compression == "snappy":
             return False
         return True
 

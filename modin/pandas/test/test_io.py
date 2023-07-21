@@ -1710,7 +1710,17 @@ class TestParquet:
         condition="config.getoption('--simulate-cloud').lower() != 'off'",
         reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
-    def test_to_parquet(self, tmp_path, engine):
+    @pytest.mark.parametrize(
+        "compression_kwargs",
+        [
+            pytest.param({}, id="no_compression_kwargs"),
+            pytest.param({"compression": None}, id="compression=None"),
+            pytest.param({"compression": "gzip"}, id="compression=gzip"),
+            pytest.param({"compression": "snappy"}, id="compression=snappy"),
+            pytest.param({"compression": "brotli"}, id="compression=brotli"),
+        ],
+    )
+    def test_to_parquet(self, tmp_path, engine, compression_kwargs):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         parquet_eval_to_file(
             tmp_path,
@@ -1719,6 +1729,7 @@ class TestParquet:
             fn="to_parquet",
             extension="parquet",
             engine=engine,
+            **compression_kwargs,
         )
 
     def test_to_parquet_keep_index(self, tmp_path, engine):
