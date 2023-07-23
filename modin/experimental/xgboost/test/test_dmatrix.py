@@ -19,6 +19,7 @@ from sklearn.datasets import load_breast_cancer
 import xgboost as xgb
 
 import modin.pandas as pd
+from modin.config import Engine
 import modin.experimental.xgboost as mxgb
 
 
@@ -76,6 +77,10 @@ def test_dmatrix_feature_names_and_feature_types(data, feature_names, feature_ty
     check_dmatrix(data, feature_names=feature_names, feature_types=feature_types)
 
 
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="implemented only for Ray engine.",
+)
 def test_feature_names():
     dataset = load_breast_cancer()
     X = dataset.data

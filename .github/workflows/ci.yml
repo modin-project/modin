@@ -453,12 +453,16 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/test/test_partition_api.py
         if: matrix.engine != 'python' && matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.os == 'ubuntu' && matrix.engine == 'ray' && matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          python -m pytest -n 2 \
+                  modin/experimental/xgboost/test/test_default.py \
+                  modin/experimental/xgboost/test/test_xgboost.py \
+                  modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.os != 'windows' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
@@ -568,11 +572,14 @@ jobs:
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
       - name: xgboost tests
         run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
           ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/experimental/xgboost/test/test_default.py \
                   modin/experimental/xgboost/test/test_xgboost.py \
                   modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.os != 'windows' && matrix.execution.name == 'ray' && needs.execution-filter.experimental == 'true'
+        if: matrix.os != 'windows' && needs.execution-filter.experimental == 'true'
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/experimental/batch/test/test_pipeline.py
         if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.experimental == 'true'
       - name: "test DF: binary, default, iter"

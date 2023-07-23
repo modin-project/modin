@@ -24,9 +24,6 @@ dependencies:
   - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq>=0.15.0
   - pytables>=3.6.1
-  # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-  # when we use collective instead of rabit.
-  - xgboost>=1.7.1,<2.0.0
   - tqdm>=4.60.0
 
   # modin in the cloud dependencies

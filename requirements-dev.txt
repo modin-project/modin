@@ -29,9 +29,6 @@ psycopg2>=2.8.6
 connectorx>=0.2.6a4
 fastparquet>=0.6.3,<2023.1.0
 flask-cors
-# TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
-# when we use collective instead of rabit.
-xgboost>=1.7.1,<2.0.0
 tqdm>=4.60.0
 # Latest modin-spreadsheet with widget fix
 git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5

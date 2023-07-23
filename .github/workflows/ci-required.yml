@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
-      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
+      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0
       - run: python -m pytest scripts/test
       - run: pip install -e ".[all]"
       - run: |
