@@ -23,6 +23,13 @@ from modin.config import Engine
 import modin.experimental.xgboost as mxgb
 
 
+if Engine.get() == "Python":
+    pytest.skip(
+        "Modin' xgboost extension doesn't work with python engine.",
+        allow_module_level=True,
+    )
+
+
 rng = np.random.RandomState(1994)
 
 

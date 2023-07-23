@@ -142,7 +142,12 @@ jobs:
           environment-file: environment-dev.yml
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
       - uses: ./.github/actions/run-core-tests
         with:
