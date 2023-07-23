@@ -533,6 +533,7 @@ def monkeypatching():
     # enable docs testing on windows
     sys.getdlopenflags = Mock()
     sys.setdlopenflags = Mock()
+    sys.modules["xgboost"] = Mock()
 
 
 def validate(
