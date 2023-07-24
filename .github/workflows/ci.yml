@@ -111,7 +111,7 @@ jobs:
         with:
           environment-file: environment-dev.yml
       - name: Internals tests
-        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py modin/experimental/cloud/test/test_cloud.py
+        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py
       - run: python -m pytest modin/config/test
       - run: python -m pytest modin/test/test_envvar_catcher.py
       - run: python -m pytest modin/test/storage_formats/base/test_internals.py
@@ -651,37 +651,6 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: ./.github/actions/upload-coverage
 
-  test-cloud:
-    needs: [lint-flake8, lint-black]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    env:
-      MODIN_ENGINE: "python"
-      MODIN_EXPERIMENTAL: "True"
-    name: test cloud
-    services:
-      moto:
-        image: motoserver/moto
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-        # TODO(https://github.com/modin-project/modin/issues/4004): Re-add
-        # "python -m pytest --simulate-cloud=normal modin/pandas/test/test_io.py --verbose"
-        # once that test stops crashing.
-      - run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_default.py::test_kurt_kurtosis --verbose
-      - # When running without parameters, some of the tests fail
-        run: python -m pytest --simulate-cloud=normal modin/pandas/test/dataframe/test_binary.py::test_math_functions[add-rows-scalar]
-      - uses: ./.github/actions/upload-coverage
-
   test-pyarrow:
     needs: [lint-flake8, lint-black]
     runs-on: ubuntu-latest
@@ -735,7 +704,7 @@ jobs:
       - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
 
   upload-coverage:
-    needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-cloud, test-sanity]
+    needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-sanity]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
     defaults:

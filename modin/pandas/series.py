@@ -37,7 +37,7 @@ from modin.utils import (
     to_pandas,
     MODIN_UNNAMED_SERIES_LABEL,
 )
-from modin.config import IsExperimental, PersistentPickle
+from modin.config import PersistentPickle
 from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
 from .iterator import PartitionIterator
 from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
@@ -2445,9 +2445,3 @@ class Series(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, self.name)
 
     # Persistance support methods - END
-
-
-if IsExperimental.get():
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(Series, "make_series_wrapper")
