@@ -40,8 +40,19 @@ dependencies:
   - pandas-stubs
   - fastparquet<2023.1.0
   - tqdm
-  # for release script
-  - pygit2
+
+  # dependencies for making release
+  - pygithub>=v1.58.0
+  - pygit2>=1.9.2
+
+  # test dependencies
+  - boto3
+  - coverage>=7.1.0
+  - moto>=4.1.0
+  - pytest>=7.2.1
+  - pytest-cov>=4.0.0
+  - pytest-xdist>=3.2.0
+
   # code linters
   - black
   - flake8

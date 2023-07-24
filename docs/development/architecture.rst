@@ -338,7 +338,6 @@ details. The documentation covers most modules, with more docs being added every
    │   │   ├───dataframe
    │   │   │   └─── :doc:`pandas </flow/modin/distributed/dataframe/pandas>`
    │   ├─── :doc:`experimental </flow/modin/experimental/index>`
-   │   │   ├───cloud
    │   │   ├───core
    │   │   │   ├───execution
    │   │   │   │   ├───native
