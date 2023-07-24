@@ -12,12 +12,14 @@
 # governing permissions and limitations under the License.
 from __future__ import annotations
 
+import math
+from abc import abstractmethod
 from typing import Hashable, Iterable, Protocol, Sequence, Type
 
 from pandas import DataFrame
 from torch.utils.data import SequentialSampler
+
 from modin.pandas import DataFrame as ModinDataFrame
-from abc import abstractmethod
 
 
 class Sampler(Protocol):
@@ -71,7 +73,7 @@ class ModinDataLoader:
 
     def __len__(self):
         # Sampler length is always valid.
-        return len(self._sampler)
+        return math.ceil(len(self._sampler) / self._batch_size)
 
     def __iter__(self):
         idx_buffer = []
