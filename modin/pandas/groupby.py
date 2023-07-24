@@ -1850,9 +1850,3 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
 
     agg = aggregate
-
-
-if IsExperimental.get():
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(DataFrameGroupBy, "make_dataframe_groupby_wrapper")

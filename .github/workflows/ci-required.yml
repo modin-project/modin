@@ -29,5 +29,77 @@ jobs:
           cache-dependency-path: '**/requirements-doc.txt'
       - run: pip install -r docs/requirements-doc.txt
       - run: cd docs && sphinx-build -T -E -W -b html . build
-env:
-  MODIN_GITHUB_CI: true
+
+  lint-pydocstyle:
+    name: lint (pydocstyle)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/python-only
+      # The `numpydoc` version here MUST match the versions in the dev requirements files.
+      - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0 xgboost
+      - run: python -m pytest scripts/test
+      - run: pip install -e ".[all]"
+      - run: |
+          python scripts/doc_checker.py --add-ignore=D101,D102,D103,D105 --disable-numpydoc \
+            modin/pandas/dataframe.py modin/pandas/series.py \
+            modin/pandas/groupby.py \
+            modin/pandas/series_utils.py modin/pandas/general.py \
+            modin/pandas/plotting.py modin/pandas/utils.py \
+            modin/pandas/iterator.py modin/pandas/indexing.py \
+      - run: python scripts/doc_checker.py modin/core/dataframe
+      - run: python scripts/doc_checker.py modin/core/execution/dask
+      - run: |
+          python scripts/doc_checker.py \
+            modin/pandas/accessor.py modin/pandas/general.py \
+            modin/pandas/groupby.py modin/pandas/indexing.py \
+            modin/pandas/iterator.py modin/pandas/plotting.py \
+            modin/pandas/series_utils.py modin/pandas/utils.py \
+            modin/pandas/base.py \
+            modin/pandas/io.py \
+            asv_bench/benchmarks/utils \
+            asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
+            asv_bench/benchmarks/scalability/__init__.py \
+            modin/core/io \
+            modin/experimental/core/execution/ray/implementations/pandas_on_ray \
+            modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
+            modin/pandas/series.py \
+            modin/core/execution/python \
+            modin/pandas/dataframe.py \
+            modin/config/__init__.py \
+            modin/config/__main__.py \
+            modin/config/envvars.py \
+            modin/config/pubsub.py
+      - run: python scripts/doc_checker.py modin/distributed
+      - run: python scripts/doc_checker.py modin/utils.py
+      - run: python scripts/doc_checker.py modin/experimental/sklearn
+      - run: |
+          python scripts/doc_checker.py modin/experimental/xgboost/__init__.py \
+            modin/experimental/xgboost/utils.py modin/experimental/xgboost/xgboost.py \
+            modin/experimental/xgboost/xgboost_ray.py
+      - run: python scripts/doc_checker.py modin/core/execution/ray
+      - run: |
+          python scripts/doc_checker.py modin/core/execution/dispatching/factories/factories.py \
+            modin/core/execution/dispatching/factories/dispatcher.py                            \
+      - run: python scripts/doc_checker.py scripts/doc_checker.py
+      - run: |
+          python scripts/doc_checker.py modin/experimental/pandas/io.py \
+            modin/experimental/pandas/__init__.py
+      - run: python scripts/doc_checker.py modin/core/storage_formats/base
+      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/pyarrow
+      - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
+      - run: |
+          python scripts/doc_checker.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/dataframe \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/io \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/partitioning \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_algebra.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_builder.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/calcite_serializer.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/df_algebra.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/expr.py \
+            modin/experimental/core/execution/native/implementations/hdk_on_native/hdk_worker.py \
+      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/hdk
+      - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/hdk_on_native/interchange/dataframe_protocol
+      - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
+      - run: python scripts/doc_checker.py modin/logging

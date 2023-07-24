@@ -85,12 +85,6 @@ from modin.pandas.test.utils import (  # noqa: E402
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--simulate-cloud",
-        action="store",
-        default="off",
-        help="simulate cloud for testing: off|normal|experimental",
-    )
-    parser.addoption(
         "--execution",
         action="store",
         default=None,
@@ -133,48 +127,7 @@ class Patcher:
 
 
 def set_experimental_env(mode):
-    from modin.config import IsExperimental
-
     IsExperimental.put(mode == "experimental")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def simulate_cloud(request):
-    mode = request.config.getoption("--simulate-cloud").lower()
-    if mode == "off":
-        yield
-        return
-    if (
-        request.config.getoption("usepdb")
-        and request.config.getoption("capture") != "no"
-    ):
-        with request.config.pluginmanager.getplugin(
-            "capturemanager"
-        ).global_and_fixture_disabled():
-            sys.stderr.write(
-                "WARNING! You're running tests in simulate-cloud mode. "
-                + "To enable pdb in remote side please disable output capturing "
-                + "by passing '-s' or '--capture=no' to pytest command line\n"
-            )
-
-    if mode not in ("normal", "experimental"):
-        raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
-    assert IsExperimental.get(), "Simulated cloud must be started in experimental mode"
-
-    from modin.experimental.cloud import create_cluster, get_connection
-    import modin.pandas.test.utils
-
-    with create_cluster("local", cluster_type="local"):
-        get_connection().teleport(set_experimental_env)(mode)
-        with Patcher(
-            get_connection(),
-            (modin.pandas.test.utils, "assert_index_equal"),
-            (modin.pandas.test.utils, "assert_series_equal"),
-            (modin.pandas.test.utils, "assert_frame_equal"),
-            (modin.pandas.test.utils, "assert_extension_array_equal"),
-            (modin.pandas.test.utils, "assert_empty_frame_equal"),
-        ):
-            yield
 
 
 @pytest.fixture(scope="session", autouse=True)
