@@ -13,26 +13,40 @@
 from __future__ import annotations
 
 from types import ModuleType
+from typing import Type
 
-import pandas as pd
-from torch.utils.data import RandomSampler
+import numpy as np
+import pandas
+import pytest
+import ray
+from torch.utils.data import RandomSampler, Sampler, SequentialSampler
 
-from modin import pandas as mpd
+import modin.pandas as pd
 from modin.experimental.torch.datasets import ModinDataLoader
 
 
-def _load_test_dataframe(pandas: ModuleType):
-    df = pandas.read_csv(
+@pytest.fixture(scope="module", autouse=True)
+def ray_fix():
+    ray.init(num_cpus=1)
+    yield None
+    ray.shutdown()
+
+
+def _load_test_dataframe(lib: ModuleType):
+    df = lib.read_csv(
         "https://raw.githubusercontent.com/ponder-org/ponder-datasets/main/USA_Housing.csv"
     )
     return df
 
 
-def _test_torch_dataloader(pandas: ModuleType):
-    df = _load_test_dataframe(pandas)
+@pytest.mark.parametrize("lib", [pandas, pd])
+@pytest.mark.parametrize("sampler_cls", [RandomSampler, SequentialSampler])
+@pytest.mark.parametrize("batch_size", [16, 37])
+def test_torch_dataloader(lib: ModuleType, sampler_cls: Type[Sampler], batch_size: int):
+    df = _load_test_dataframe(lib)
     loader = ModinDataLoader(
         df,
-        batch_size=16,
+        batch_size=batch_size,
         features=[
             "AVG_AREA_INCOME",
             "AVG_AREA_HOUSE_AGE",
@@ -41,34 +55,24 @@ def _test_torch_dataloader(pandas: ModuleType):
             "POPULATION",
             "PRICE",
         ],
+        sampler=sampler_cls,
     )
+
+    outputs = []
     for batch in loader:
-        assert batch.shape[0] <= 16, batch.shape
+        assert batch.shape[0] <= batch_size, batch.shape
         assert batch.shape[1] == 6, batch.shape
 
+        outputs.append(batch)
 
-def test_torch_dataloader():
-    _test_torch_dataloader(pd)
-    _test_torch_dataloader(mpd)
+    return outputs
 
 
-def test_random():
-    df = pd.read_csv(
-        "https://raw.githubusercontent.com/ponder-org/ponder-datasets/main/USA_Housing.csv"
-    )
-    loader = ModinDataLoader(
-        df,
-        batch_size=16,
-        features=[
-            "AVG_AREA_INCOME",
-            "AVG_AREA_HOUSE_AGE",
-            "AVG_AREA_NUM_ROOMS",
-            "AVG_AREA_NUM_BEDROOMS",
-            "POPULATION",
-            "PRICE",
-        ],
-        sampler=RandomSampler,
-    )
-    for batch in loader:
-        assert batch.shape[0] <= 16, batch.shape
-        assert batch.shape[1] == 6, batch.shape
+@pytest.mark.parametrize("sampler_cls", [RandomSampler, SequentialSampler])
+def compare_dataloaders(sampler_cls: Type[Sampler]):
+    by_modin = test_torch_dataloader(pd, sampler_cls)
+    by_pandas = test_torch_dataloader(pandas, sampler_cls)
+
+    assert len(by_modin) == len(by_pandas)
+    for tensor_by_modin, tensor_by_pandas in zip(by_modin, by_pandas):
+        assert np.allclose(tensor_by_modin, tensor_by_pandas)

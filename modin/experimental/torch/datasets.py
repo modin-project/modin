@@ -87,10 +87,6 @@ class ModinDataLoader:
 
     def _end_of_batch(self, counter: int):
         return (
-            False
-            or counter % self._batch_size == self._batch_size - 1
+            counter % self._batch_size == self._batch_size - 1
             or counter == len(self._sampler) - 1
         )
-
-
-PandasDataLoader = ModinDataLoader
