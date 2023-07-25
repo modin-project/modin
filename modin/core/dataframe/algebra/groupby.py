@@ -736,3 +736,51 @@ class GroupByReduce(TreeReduce):
             return result
 
         return _map, _reduce
+
+    @classmethod
+    def apply(
+        cls,
+        df,
+        map_func,
+        reduce_func,
+        by,
+        groupby_kwargs=None,
+        agg_args=None,
+        agg_kwargs=None,
+    ):
+        """
+        Apply groupby aggregation function using map-reduce pattern.
+
+        Parameters
+        ----------
+        df : modin.pandas.DataFrame or modin.pandas.Series
+            A source DataFrame to group.
+        map_func : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            A map function to apply to a groupby object in every partition.
+        reduce_func : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
+            A reduction function to apply to the results of the map functions.
+        by : label or list of labels
+            Columns of the `df` to group on.
+        groupby_kwargs : dict, optional
+            Keyword arguments matching the signature of ``pandas.DataFrame.groupby``.
+        agg_args : tuple, optional
+            Positional arguments to pass to the funcs.
+        agg_kwargs : dict, optional
+            Keyword arguments to pass to the funcs.
+
+        Returns
+        -------
+        The same type as `df`.
+        """
+        operator = cls.register(map_func, reduce_func)
+        qc_result = operator(
+            df._query_compiler,
+            df[by]._query_compiler,
+            axis=0,
+            groupby_kwargs=groupby_kwargs or {},
+            agg_args=agg_args or (),
+            agg_kwargs=agg_kwargs or {},
+            drop=True,
+        )
+
+        return df.__constructor__(query_compiler=qc_result)

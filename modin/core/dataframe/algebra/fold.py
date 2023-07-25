@@ -65,3 +65,29 @@ class Fold(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(cls, df, func, fold_axis=0, func_args=None, func_kwargs=None):
+        r"""
+        Apply a Fold (full-axis) function to the dataframe.
+
+        Parameters
+        ----------
+        df : modin.pandas.DataFrame or modin.pandas.Series
+            DataFrame object to apply the operator against.
+        func : callable(pandas.DataFrame[NxM], \*args, \*\*kwargs) -> pandas.DataFrame[NxM]
+            A function to apply to every partition. Note that the function shouldn't change
+            the shape of the dataframe.
+        fold_axis : int, default: 0
+            Whether to apply the function across rows (``axis=0``) or across columns (``axis=1``).
+        func_args : tuple, optional
+            Positional arguments to pass to the funcs.
+        func_kwargs : dict, optional
+            Keyword arguments to pass to the funcs.
+
+        Returns
+        -------
+        the same type as `df`
+        """
+        func_args = (fold_axis,) + (func_args or ())
+        return super().apply(df, func, func_args, func_kwargs or {})

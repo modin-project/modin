@@ -54,3 +54,39 @@ class TreeReduce(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(
+        cls, df, map_function, reduce_function, axis=0, func_args=None, func_kwargs=None
+    ):
+        r"""
+        Apply a map-reduce function to the dataframe.
+
+        Parameters
+        ----------
+        df : modin.pandas.DataFrame or modin.pandas.Series
+            DataFrame object to apply the operator against.
+        map_function : callable(pandas.DataFrame, \*args, \*\*kwargs) -> pandas.DataFrame
+            A map function to apply to every partition.
+        reduce_function : callable(pandas.DataFrame, \*args, \*\*kwargs) -> Union[pandas.Series, pandas.DataFrame[1xN]]
+            A reduction function to apply to the results of the map functions.
+        axis : int, default: 0
+            Whether to apply the reduce function across rows (``axis=0``) or across columns (``axis=1``).
+        func_args : tuple, optional
+            Positional arguments to pass to the funcs.
+        func_kwargs : dict, optional
+            Keyword arguments to pass to the funcs.
+
+        Returns
+        -------
+        modin.pandas.Series
+        """
+        result = super().apply(
+            df,
+            map_function,
+            func_args,
+            func_kwargs,
+            reduce_function=reduce_function,
+            axis=axis,
+        )
+        return result if result.ndim == 1 else result.squeeze(axis)

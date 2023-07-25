@@ -1089,3 +1089,101 @@ def test_setitem_bool_preserve_dtypes():
     # scalar as a col_loc
     df.loc[indexer, "a"] = 2.0
     assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+class TestOperatorsApply:
+    def test_binary(self):
+        from modin.core.dataframe.algebra import Binary
+
+        md_df1, pd_df1 = create_test_dfs(test_data_values[0])
+        md_df2, pd_df2 = md_df1 // 2, pd_df1 // 2
+
+        def func(df, other, value, axis=None):
+            return df * other + value
+
+        # DataFrame case
+        md_res = Binary.apply(md_df1, md_df2, func, func_args=(10,))
+        pd_res = func(pd_df1, pd_df2, 10)
+        df_equals(md_res, pd_res)
+
+        # Series case
+        md_res = Binary.apply(md_df1, md_df2.iloc[0, :], func, axis=1, func_args=(10,))
+        pd_res = func(pd_df1, pd_df2.iloc[0, :], 10)
+        df_equals(md_res, pd_res)
+
+    def test_fold(self):
+        from modin.core.dataframe.algebra import Fold
+
+        md_df, pd_df = create_test_dfs(test_data_values[0])
+
+        def func(df, value, axis):
+            return (df + value).cumsum(axis)
+
+        md_res = Fold.apply(md_df, func, fold_axis=0, func_args=(10, 0))
+        pd_res = func(pd_df, 10, 0)
+        df_equals(md_res, pd_res)
+
+        md_res = Fold.apply(md_df, func, fold_axis=1, func_args=(10, 1))
+        pd_res = func(pd_df, 10, 1)
+        df_equals(md_res, pd_res)
+
+    def test_groupby(self):
+        from modin.core.dataframe.algebra import GroupByReduce
+
+        md_df, pd_df = create_test_dfs(test_data_values[0])
+        by_col = md_df.columns[0]
+
+        def map_func(grp):
+            return grp.count()
+
+        def reduce_func(grp):
+            return grp.sum()
+
+        md_res = GroupByReduce.apply(
+            md_df, map_func, reduce_func, by=by_col, groupby_kwargs={"as_index": False}
+        )
+        pd_res = pd_df.groupby(by_col, as_index=False).count()
+        df_equals(md_res, pd_res)
+
+    def test_map(self):
+        from modin.core.dataframe.algebra import Map
+
+        md_df, pd_df = create_test_dfs(test_data_values[0])
+
+        def func(df, value):
+            return df**value
+
+        md_res = Map.apply(md_df, func, func_args=(3,))
+        pd_res = func(pd_df, 3)
+        df_equals(md_res, pd_res)
+
+    def test_reduce(self):
+        from modin.core.dataframe.algebra import Reduce
+
+        md_df, pd_df = create_test_dfs(test_data_values[0])
+
+        def func(df, value, axis):
+            return (df**value).sum(axis)
+
+        md_res = Reduce.apply(md_df, func, func_args=(3, 0))
+        pd_res = func(pd_df, 3, 0)
+        df_equals(md_res, pd_res)
+
+        md_res = Reduce.apply(md_df, func, axis=1, func_args=(3, 1))
+        pd_res = func(pd_df, 3, 1)
+        df_equals(md_res, pd_res)
+
+    def test_tree_reduce(self):
+        from modin.core.dataframe.algebra import TreeReduce
+
+        md_df, pd_df = create_test_dfs(test_data_values[0])
+
+        def map_func(df):
+            return df.count()
+
+        def reduce_func(df):
+            return df.sum()
+
+        md_res = TreeReduce.apply(md_df, map_func, reduce_func)
+        pd_res = pd_df.count()
+        df_equals(md_res, pd_res)

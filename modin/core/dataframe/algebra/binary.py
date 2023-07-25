@@ -297,7 +297,7 @@ class Binary(Operator):
         """
 
         def caller(
-            query_compiler, other, broadcast=False, *args, dtypes=None, **kwargs
+            query_compiler, other, *args, broadcast=False, dtypes=None, **kwargs
         ):
             """
             Apply binary `func` to passed operands.
@@ -414,3 +414,43 @@ class Binary(Operator):
                 )
 
         return caller
+
+    @classmethod
+    def apply(
+        cls, left, right, func, axis=0, func_args=None, func_kwargs=None, **kwargs
+    ):
+        r"""
+        Apply a binary function row-wise or column-wise.
+
+        Parameters
+        ----------
+        left : modin.pandas.DataFrame or modin.pandas.Series
+            Left operand.
+        right : modin.pandas.DataFrame or modin.pandas.Series
+            Right operand.
+        func : callable(pandas.DataFrame, pandas.DataFrame, \*args, axis, \*\*kwargs) -> pandas.DataFrame
+            A binary function to apply `left` and `right`.
+        axis : int, default: 0
+            Whether to apply the function across rows (``axis=0``) or across columns (``axis=1``).
+        func_args : tuple, optional
+            Positional arguments to pass to the funcs.
+        func_kwargs : dict, optional
+            Keyword arguments to pass to the funcs.
+        **kwargs : dict
+            Additional arguments to pass to the ``cls.register()``.
+
+        Returns
+        -------
+        The same type as `df`.
+        """
+        operator = cls.register(func, **kwargs)
+
+        qc_result = operator(
+            left._query_compiler,
+            right._query_compiler,
+            broadcast=right.ndim == 1,
+            *(func_args or ()),
+            axis=axis,
+            **(func_kwargs or {}),
+        )
+        return left.__constructor__(query_compiler=qc_result)

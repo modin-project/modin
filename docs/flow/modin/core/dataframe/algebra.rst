@@ -33,6 +33,9 @@ Uniformly apply a function argument to each partition in parallel.
 .. figure:: /img/map_evaluation.svg
     :align: center
 
+.. autoclass:: modin.core.dataframe.algebra.map.Map
+  :members: register, apply
+
 Reduce operator
 ---------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
@@ -43,12 +46,18 @@ that the reduce function returns a one dimensional frame.
 .. figure:: /img/reduce_evaluation.svg
     :align: center
 
+.. autoclass:: modin.core.dataframe.algebra.reduce.Reduce
+  :members: register, apply
+
 TreeReduce operator
 -------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
 in parallel, then concatenates resulted partitions along the specified axis and applies reduce
 function. In contrast with `Map function` template, here you're allowed to change partition shape
 in the map phase. Note that the execution engine expects that the reduce function returns a one dimensional frame.
+
+.. autoclass:: modin.core.dataframe.algebra.tree_reduce.TreeReduce
+  :members: register, apply
 
 Binary operator
 ---------------
@@ -65,23 +74,32 @@ the right operand to the left.
     it automatically but note that this requires repartitioning, which is a much 
     more expensive operation than the binary function itself.
 
+.. autoclass:: modin.core.dataframe.algebra.binary.Binary
+  :members: register, apply
+
 Fold operator
 -------------
 Applies an argument function that requires knowledge of the whole axis. Be aware that providing this knowledge may be
 expensive because the execution engine has to concatenate partitions along the specified axis.
+
+.. autoclass:: modin.core.dataframe.algebra.fold.Fold
+  :members: register, apply
 
 GroupBy operator
 ----------------
 Evaluates GroupBy aggregation for that type of functions that can be executed via TreeReduce approach.
 To be able to form groups engine broadcasts ``by`` partitions to each partition of the source frame.
 
+.. autoclass:: modin.core.dataframe.algebra.groupby.GroupByReduce
+  :members: register, apply
+
 Default-to-pandas operator
 --------------------------
 Do :doc:`fallback to pandas </supported_apis/defaulting_to_pandas>` for passed function.
 
 
-How to register your own function
-'''''''''''''''''''''''''''''''''
+How to use UDFs with these operators
+''''''''''''''''''''''''''''''''''''
 Let's examine an example of how to use the algebra module to create your own
 new functions.
 
@@ -95,34 +113,39 @@ Let's implement a function that counts non-NA values for each column or row
 TreeReduce approach would be great: in a map phase, we'll count non-NA cells in each
 partition in parallel and then just sum its results in the reduce phase.
 
-To define the TreeReduce function that does `count` + `sum` we just need to register the
-appropriate functions and then assign the result to the picked `QueryCompiler`
-(`PandasQueryCompiler` in our case):
+To execute a TreeReduce function that does `count` + `sum` you can simply use the operator's ``.apply(...)``
+method that takes and outputs a :py:class:`~modin.pandas.dataframe.DataFrame`:
 
 .. code-block:: python
 
-    from modin.core.storage_formats import PandasQueryCompiler
     from modin.core.dataframe.algebra import TreeReduce
 
-    PandasQueryCompiler.custom_count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
+    res_df = TreeReduce.apply(
+        df,
+        map_func=lambda df: df.count(),
+        reduce_function=lambda df: df.sum()
+    )
 
-Then, we want to handle it from the :py:class:`~modin.pandas.dataframe.DataFrame`, so we need to create a way to do that:
+If you're going to use your custom-defined function quite often you may want
+to wrap it into a separate function or assign it as a DataFrame's method:
 
 .. code-block:: python
 
     import modin.pandas as pd
 
-    def count_func(self, **kwargs):
-        # The constructor allows you to pass in a query compiler as a keyword argument
-        return self.__constructor__(query_compiler=self._query_compiler.custom_count(**kwargs))
+    def count_func(self):
+        return TreeReduce.apply(
+            self,
+            map_func=lambda df: df.count(),
+            reduce_function=lambda df: df.sum()
+        )
 
+    # you can then use the function as is
+    res = count_func(df)
+
+    # or assign it to the DataFrame's class and use it as a method
     pd.DataFrame.count_custom = count_func
-
-And then you can use it like you usually would:
-
-.. code-block:: python
-
-    df.count_custom(axis=1)
+    res = df.count_custom()
 
 Many of the `pandas` API functions can be easily implemented this way, so if you find
 out that one of your favorite function is still defaulted to pandas and decide to

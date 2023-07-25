@@ -50,3 +50,28 @@ class Reduce(Operator):
             )
 
         return caller
+
+    @classmethod
+    def apply(cls, df, func, axis=0, func_args=None, func_kwargs=None):
+        r"""
+        Apply a reduction function to each row/column partition of the dataframe.
+
+        Parameters
+        ----------
+        df : modin.pandas.DataFrame or modin.pandas.Series
+            DataFrame object to apply the operator against.
+        func : callable(pandas.DataFrame, \*args, \*\*kwargs) -> Union[pandas.Series, pandas.DataFrame[1xN]]
+            A function to apply.
+        axis : int, default: 0
+            Whether to apply the function across rows (``axis=0``) or across columns (``axis=1``).
+        func_args : tuple, optional
+            Positional arguments to pass to the `func`.
+        func_kwargs : dict, optional
+            Keyword arguments to pass to the `func`.
+
+        Returns
+        -------
+        modin.pandas.Series
+        """
+        result = super().apply(df, func, func_args, func_kwargs, axis=axis)
+        return result if result.ndim == 1 else result.squeeze(axis)
