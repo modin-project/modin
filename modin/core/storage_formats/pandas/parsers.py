@@ -891,7 +891,12 @@ class PandasFeatherParser(PandasParser):
             fname,
             **(kwargs.pop("storage_options", None) or {}),
         ) as file:
-            df = feather.read_feather(file, **kwargs, **to_pandas_kwargs)
+            if not to_pandas_kwargs:
+                # `read_feather` doesn't accept `types_mapper` if pyarrow<11.0
+                df = feather.read_feather(file, **kwargs)
+            else:
+                pa_table = feather.read_table(file, **kwargs)
+                df = pa_table.to_pandas(**to_pandas_kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 
