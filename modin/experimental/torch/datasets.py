@@ -13,19 +13,12 @@
 from __future__ import annotations
 
 import math
-from abc import abstractmethod
-from typing import Hashable, Iterable, Protocol, Sequence, Type
+from typing import Hashable, Sequence, Type
 
 from pandas import DataFrame
-from torch.utils.data import SequentialSampler
+from torch.utils.data import Sampler, SequentialSampler
 
 from modin.pandas import DataFrame as ModinDataFrame
-
-
-class Sampler(Protocol):
-    @abstractmethod
-    def __iter__(self) -> Iterable[int]:
-        ...
 
 
 class ModinDataLoader:
