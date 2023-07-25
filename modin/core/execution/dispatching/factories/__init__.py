@@ -12,21 +12,3 @@
 # governing permissions and limitations under the License.
 
 """Factories responsible for dispatching to specific execution."""
-
-from . import factories
-
-
-def _get_remote_engines():
-    """Yield engines of all of the experimental remote factories."""
-    for name in dir(factories):
-        obj = getattr(factories, name)
-        if isinstance(obj, type) and issubclass(
-            obj, factories.ExperimentalRemoteFactory
-        ):
-            try:
-                yield obj.get_info().engine
-            except factories.NotRealFactory:
-                pass
-
-
-REMOTE_ENGINES = set(_get_remote_engines())

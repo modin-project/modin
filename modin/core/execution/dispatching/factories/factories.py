@@ -611,65 +611,6 @@ class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
         cls.io_cls = PyarrowOnRayIO
 
 
-@doc(_doc_abstract_factory_class, role="experimental remote")
-class ExperimentalRemoteFactory(ExperimentalBaseFactory):
-    wrapped_factory = BaseFactory
-
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="an underlying remote")
-    def prepare(cls):
-        # query_compiler import is needed so remote PandasQueryCompiler
-        # has an imported local counterpart;
-        # if there isn't such counterpart rpyc generates some bogus
-        # class type which raises TypeError()
-        # upon checking its isinstance() or issubclass()
-        import modin.core.storage_formats.pandas.query_compiler  # noqa: F401
-        from modin.experimental.cloud import get_connection
-
-        # import a numpy overrider if it wasn't already imported
-        import modin.experimental.pandas.numpy_wrap  # noqa: F401
-
-        class WrappedIO:
-            def __init__(self, conn, factory):
-                self.__conn = conn
-                remote_factory = getattr(
-                    conn.modules[factory.__module__], factory.__name__
-                )
-                remote_factory.prepare()
-                self.__io_cls = remote_factory.io_cls
-                self.__reads = {
-                    name for name in BaseIO.__dict__ if name.startswith("read_")
-                }
-                self.__wrappers = {}
-
-            def __getattr__(self, name):
-                if name in self.__reads:
-                    try:
-                        wrap = self.__wrappers[name]
-                    except KeyError:
-
-                        def wrap(*a, _original=getattr(self.__io_cls, name), **kw):
-                            a, kw = self.__conn.deliver(a, kw)
-                            return _original(*a, **kw)
-
-                        self.__wrappers[name] = wrap
-                else:
-                    wrap = getattr(self.__io_cls, name)
-                return wrap
-
-        cls.io_cls = WrappedIO(get_connection(), cls.wrapped_factory)
-
-
-@doc(_doc_factory_class, execution_name="experimental remote PandasOnRay")
-class ExperimentalPandasOnCloudrayFactory(ExperimentalRemoteFactory):
-    wrapped_factory = PandasOnRayFactory
-
-
-@doc(_doc_factory_class, execution_name="experimental remote PandasOnPython")
-class ExperimentalPandasOnCloudpythonFactory(ExperimentalRemoteFactory):
-    wrapped_factory = PandasOnPythonFactory
-
-
 @doc(_doc_factory_class, execution_name="experimental HdkOnNative")
 class ExperimentalHdkOnNativeFactory(BaseFactory):
     @classmethod
@@ -680,11 +621,6 @@ class ExperimentalHdkOnNativeFactory(BaseFactory):
         )
 
         cls.io_cls = HdkOnNativeIO
-
-
-@doc(_doc_factory_class, execution_name="experimental remote HdkOnNative")
-class ExperimentalHdkOnCloudnativeFactory(ExperimentalRemoteFactory):
-    wrapped_factory = ExperimentalHdkOnNativeFactory
 
 
 @doc(_doc_factory_class, execution_name="PandasOnUnidist")

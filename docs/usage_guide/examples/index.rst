@@ -2,7 +2,7 @@ Modin Usage Examples
 ====================
 
 This section shows Modin usage examples in different scenarios like Modin on a local/remote cluster,
-Modin in the cloud, the use of Modin spreadsheet.
+the use of Modin spreadsheet.
 
 Tutorials
 '''''''''
@@ -28,11 +28,6 @@ Data Science Benchmarks
 - Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi.ipynb>`__]
 - Using Modin with the Census Dataset (coming soon...)
 - Using Modin with the Plasticc Dataset (coming soon...)
-
-Modin in the Cloud
-''''''''''''''''''
-
-- Using Experimental Modin in the cloud with the NYC Taxi Dataset on an AWS cluster [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/NYC_Taxi_cloud.ipynb>`__]
 
 Modin Spreadsheets
 ''''''''''''''''''

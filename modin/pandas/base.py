@@ -61,7 +61,6 @@ from modin.utils import try_cast_to_pandas, _inherit_docstrings
 from modin.error_message import ErrorMessage
 from modin import pandas as pd
 from modin.pandas.utils import is_scalar
-from modin.config import IsExperimental
 from modin.logging import disable_logging, ClassLogger
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
@@ -70,7 +69,7 @@ sentinel = object()
 
 # Do not lookup certain attributes in columns or index, as they're used for some
 # special purposes, like serving remote context
-_ATTRS_NO_LOOKUP = {"____id_pack__", "__name__", "_cache"}
+_ATTRS_NO_LOOKUP = {"__name__", "_cache"}
 
 _DEFAULT_BEHAVIOUR = {
     "__init__",
@@ -3899,9 +3898,3 @@ class BasePandasDataset(ClassLogger):
 
                 return default_handler
         return attr
-
-
-if IsExperimental.get():
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(BasePandasDataset, "make_base_dataset_wrapper")

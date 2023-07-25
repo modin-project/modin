@@ -89,7 +89,7 @@ jobs:
       - run: python scripts/doc_checker.py scripts/doc_checker.py
       - run: |
           python scripts/doc_checker.py modin/experimental/pandas/io.py \
-            modin/experimental/pandas/numpy_wrap.py modin/experimental/pandas/__init__.py
+            modin/experimental/pandas/__init__.py
       - run: python scripts/doc_checker.py modin/core/storage_formats/base
       - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/pyarrow
       - run: python scripts/doc_checker.py modin/core/storage_formats/pandas

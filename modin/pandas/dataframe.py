@@ -52,7 +52,7 @@ from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     try_cast_to_pandas,
 )
-from modin.config import IsExperimental, PersistentPickle
+from modin.config import PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -2999,9 +2999,3 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler,)
 
     # Persistance support methods - END
-
-
-if IsExperimental.get():
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(DataFrame, "make_dataframe_wrapper")
