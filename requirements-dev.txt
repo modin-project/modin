@@ -10,7 +10,7 @@ psutil
 ray[default]>=1.13.0,!=2.5.0
 # https://github.com/modin-project/modin/issues/6336
 pydantic<2
-pyarrow==6.0.2
+pyarrow==7.0.0
 dask[complete]>=2.22.0
 distributed>=2.22.0
 xarray

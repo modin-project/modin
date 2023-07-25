@@ -11,7 +11,7 @@ dependencies:
   - psutil
 
   # optional dependencies
-  - pyarrow==6.0.2
+  - pyarrow==7.0.0
   # TODO: uncomment after Modin switch to python>=3.9
   # - xarray
   - Jinja2
