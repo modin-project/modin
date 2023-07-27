@@ -891,6 +891,8 @@ class PandasFeatherParser(PandasParser):
             fname,
             **(kwargs.pop("storage_options", None) or {}),
         ) as file:
+            # The implementation is as close as possible to the one in pandas.
+            # For reference see `read_feather` in pandas/io/feather_format.py.
             if not to_pandas_kwargs:
                 df = feather.read_feather(file, **kwargs)
             else:
