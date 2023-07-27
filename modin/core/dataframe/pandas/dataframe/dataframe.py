@@ -990,6 +990,19 @@ class PandasDataframe(ClassLogger):
         if col_positions is None and row_positions is None:
             return self.copy()
 
+        if col_positions is None and row_positions is not None:
+            # fast path
+            all_rows = None
+            if self.has_materialized_index:
+                all_rows = len(self.index)
+            elif self._row_lengths_cache:
+                all_rows = sum(self._row_lengths_cache)
+            if all_rows:
+                if len(row_positions) > int(0.9 * all_rows):
+                    return self._reorder_labels(
+                        row_positions=row_positions, col_positions=col_positions
+                    )
+
         sorted_row_positions = sorted_col_positions = None
 
         if row_positions is not None:
