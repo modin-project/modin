@@ -17,6 +17,7 @@ import pytest
 import modin
 import modin.experimental.xgboost as xgb
 import modin.pandas as pd
+from modin.config import Engine
 import numpy as np
 import xgboost
 
@@ -33,6 +34,9 @@ from sklearn.metrics import accuracy_score, mean_squared_error
 import multiprocessing as mp
 import ray
 
+
+if Engine.get() != "Ray":
+    pytest.skip("Implemented only for Ray engine.", allow_module_level=True)
 
 ray.init(log_to_driver=False)
 
