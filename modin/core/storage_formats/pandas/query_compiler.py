@@ -859,7 +859,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # should be defined for each Modin's function.
         return find_common_type(dtypes.tolist())
 
-    sum = TreeReduce.register(pandas.DataFrame.sum, dtypes=_dtypes_sum)
+    sum = TreeReduce.register(pandas.DataFrame.sum, compute_dtypes=_dtypes_sum)
     prod = TreeReduce.register(pandas.DataFrame.prod)
     any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)

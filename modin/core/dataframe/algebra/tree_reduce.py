@@ -20,7 +20,9 @@ class TreeReduce(Operator):
     """Builder class for TreeReduce operator."""
 
     @classmethod
-    def register(cls, map_function, reduce_function=None, axis=None, dtypes=None):
+    def register(
+        cls, map_function, reduce_function=None, axis=None, compute_dtypes=None
+    ):
         """
         Build TreeReduce operator.
 
@@ -32,7 +34,7 @@ class TreeReduce(Operator):
             Source reduce function.
         axis : int, optional
             Specifies axis to apply function along.
-        dtypes : callable(pandas.Series, *func_args, **func_kwargs) -> np.dtype, optional
+        compute_dtypes : callable(pandas.Series, *func_args, **func_kwargs) -> np.dtype, optional
             Callable for computing dtypes.
 
         Returns
@@ -49,8 +51,8 @@ class TreeReduce(Operator):
             _axis = kwargs.get("axis") if axis is None else axis
 
             new_dtypes = None
-            if dtypes and query_compiler._modin_frame.has_materialized_dtypes:
-                new_dtypes = str(dtypes(query_compiler.dtypes, *args, **kwargs))
+            if compute_dtypes and query_compiler._modin_frame.has_materialized_dtypes:
+                new_dtypes = str(compute_dtypes(query_compiler.dtypes, *args, **kwargs))
 
             return query_compiler.__constructor__(
                 query_compiler._modin_frame.tree_reduce(
