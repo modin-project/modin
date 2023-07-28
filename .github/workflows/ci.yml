@@ -216,7 +216,12 @@ jobs:
           environment-file: environment-dev.yml
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
       - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
       - uses: ./.github/actions/run-core-tests
         with:
@@ -492,12 +497,16 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - run: python -m pytest modin/test/test_partition_api.py
         if: matrix.engine != 'python' && matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_default.py
-        if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_xgboost.py
-        if: matrix.os == 'ubuntu' && matrix.engine == 'ray' && matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          python -m pytest -n 2 \
+                  modin/experimental/xgboost/test/test_default.py \
+                  modin/experimental/xgboost/test/test_xgboost.py \
+                  modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.os != 'windows' && matrix.test_task == 'group_1'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
@@ -535,9 +544,134 @@ jobs:
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - name: Rename the folder with conda packages so it won't be deleted, it's too slow on Windows.
-        run: mv "${CONDA_PKGS_DIR}" "${CONDA_PKGS_DIR}_do_not_cache"
-        if: matrix.os == 'windows' && steps.cache-conda.outputs.cache-hit == 'true'
+      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
+        run: |
+          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
+          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
+        if: matrix.os == 'windows'
+
+  test-sanity:
+    needs: [lint-flake8, lint-black, execution-filter]
+    if: github.event_name == 'pull_request'
+    strategy:
+      matrix:
+        os:
+          - ubuntu
+          - windows
+        python-version: ["3.8"]
+        execution:
+          - name: ray
+            shell-ex: "python -m pytest"
+            if: needs.execution-filter.ray != 'true'
+          - name: dask
+            shell-ex: "python -m pytest"
+            if: needs.execution-filter.dask != 'true'
+          - name: unidist
+            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
+            if: needs.execution-filter.unidist != 'true'
+    runs-on: ${{ matrix.os }}-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    env:
+      MODIN_ENGINE: ${{ matrix.execution.name }}
+      UNIDIST_BACKEND: "mpi"
+      PARALLEL: ${{ matrix.execution.name != 'unidist' && matrix.os != 'windows' && '-n 2' || '' }}
+    name: test-${{ matrix.os }}-sanity (engine ${{ matrix.execution.name }}, python ${{matrix.python-version}})
+    services:
+      moto:
+        image: ${{ matrix.os != 'windows' && 'motoserver/moto' || '' }}
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: ${{ matrix.execution.name == 'unidist' && 'requirements/env_unidist.yml' || 'environment-dev.yml' }}
+          activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
+          python-version: ${{matrix.python-version}}
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
+        if: matrix.os != 'windows'
+      - name: Limit ray memory
+        run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
+        if: matrix.os != 'windows' && matrix.execution.name == 'ray'
+      - name: Tell Modin to use existing ray cluster
+        run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - name: Start local ray cluster
+        # Try a few times to start ray to work around
+        # https://github.com/modin-project/modin/issues/4562
+        uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 5
+          max_attempts: 5
+          command: ray start --head --port=6379 --object-store-memory=1000000000
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/internals/test_repartition.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
+      - name: xgboost tests
+        run: |
+          # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
+          # when we use collective instead of rabit.
+          mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/experimental/xgboost/test/test_default.py \
+                  modin/experimental/xgboost/test/test_xgboost.py \
+                  modin/experimental/xgboost/test/test_dmatrix.py
+        if: matrix.os != 'windows' && needs.execution-filter.experimental == 'true'
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/experimental/batch/test/test_pipeline.py
+        if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.experimental == 'true'
+      - name: "test DF: binary, default, iter"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/pandas/test/dataframe/test_binary.py \
+                  modin/pandas/test/dataframe/test_default.py \
+                  modin/pandas/test/dataframe/test_iter.py
+        if: matrix.os != 'windows'
+      - name: "test DF: reduce, udf, window, pickle"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/pandas/test/dataframe/test_reduce.py \
+                  modin/pandas/test/dataframe/test_udf.py \
+                  modin/pandas/test/dataframe/test_window.py \
+                  modin/pandas/test/dataframe/test_pickle.py
+        if: matrix.os != 'windows'
+      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_series.py
+        if: matrix.execution.name == 'ray'
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_series.py
+        if: matrix.execution.name != 'ray'
+      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.execution.name == 'ray'
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/dataframe/test_map_metadata.py
+        if: matrix.execution.name != 'ray'
+      - name: "test rolling, expanding, reshape, general, concat"
+        run: |
+          ${{ matrix.execution.shell-ex }} $PARALLEL \
+                  modin/pandas/test/test_rolling.py \
+                  modin/pandas/test/test_expanding.py \
+                  modin/pandas/test/test_reshape.py \
+                  modin/pandas/test/test_general.py \
+                  modin/pandas/test/test_concat.py
+        if: matrix.os != 'windows'
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+      - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - name: Stop local ray cluster
+        run: ray stop
+        if: matrix.os == 'windows' && matrix.execution.name == 'ray'
+      - name: Rename the dirs with conda packages so it won't be deleted, it's too slow on Windows.
+        run: |
+          mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
+          find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
+        if: matrix.os == 'windows'
+      - uses: ./.github/actions/upload-coverage
 
   test-experimental:
     needs: [lint-flake8, lint-black, lint-mypy, test-api-and-no-engine]
