@@ -1,7 +1,7 @@
-fsspec
+fsspec>=2021.07.0
 jupyterlab
 ipywidgets
-tqdm
+tqdm>=4.60.0
 modin[ray]
 # https://github.com/modin-project/modin/issues/6336
 pydantic<2
