@@ -385,7 +385,7 @@ jobs:
           - ubuntu
           - windows
         python-version: ["3.8"]
-        engine: ${{ fromJSON( github.event_name == 'pull_request' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
+        engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
           - group_2
