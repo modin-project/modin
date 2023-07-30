@@ -3862,7 +3862,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new Core Modin Dataframe object.
         """
-        if type(df) == cls:
+        if type(df) is cls:
             return df
 
         if not hasattr(df, "__dataframe__"):

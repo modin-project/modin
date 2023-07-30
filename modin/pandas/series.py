@@ -933,7 +933,7 @@ class Series(BasePandasDataset):
             # Copy into a Modin Series to simplify logic below
             other = self.__constructor__(other)
 
-        if type(self) != type(other) or not self.index.equals(other.index):
+        if type(self) is not type(other) or not self.index.equals(other.index):
             return False
 
         old_name_self = self.name
