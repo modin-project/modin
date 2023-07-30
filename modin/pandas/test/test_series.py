@@ -237,7 +237,7 @@ def test_to_list(data):
     modin_series, pandas_series = create_test_series(data)
     pd_res = pandas_series.to_list()
     md_res = modin_series.to_list()
-    assert type(pd_res) == type(md_res)
+    assert type(pd_res) is type(md_res)
     assert np.array_equal(pd_res, md_res, equal_nan=True)
 
 

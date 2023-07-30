@@ -797,7 +797,7 @@ class DataFrameGroupBy(ClassLogger):
 
             if relabeling_required:
 
-                def do_relabel(obj_to_relabel):
+                def do_relabel(obj_to_relabel):  # noqa: F811
                     new_order, new_columns_idx = order, pandas.Index(new_columns)
                     if not self._as_index:
                         nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)

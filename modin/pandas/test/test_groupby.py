@@ -2276,7 +2276,7 @@ def test_validate_by():
     """Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.validate_by``."""
 
     def compare(obj1, obj2):
-        assert type(obj1) == type(
+        assert type(obj1) is type(
             obj2
         ), f"Both objects must be instances of the same type: {type(obj1)} != {type(obj2)}."
         if isinstance(obj1, list):

@@ -364,7 +364,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
             # TODO: this for-loop is slow; can be implemented in Cython/C/C++ later
             for i in range(buf.size):
-                if type(buf[i]) == str:
+                if type(buf[i]) is str:
                     b.extend(buf[i].encode(encoding="utf-8"))
 
             # Convert the byte array to a pandas "buffer" using a NumPy array as the backing store
@@ -413,7 +413,7 @@ class PandasProtocolColumn(ProtocolColumn):
             # Determine the encoding for valid values
             valid = 1 if invalid == 0 else 0
 
-            mask = [valid if type(buf[i]) == str else invalid for i in range(buf.size)]
+            mask = [valid if type(buf[i]) is str else invalid for i in range(buf.size)]
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
             buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
@@ -459,7 +459,7 @@ class PandasProtocolColumn(ProtocolColumn):
             offsets = [ptr] + [None] * len(values)
             for i, v in enumerate(values):
                 # For missing values (in this case, `np.nan` values), we don't increment the pointer)
-                if type(v) == str:
+                if type(v) is str:
                     b = v.encode(encoding="utf-8")
                     ptr += len(b)
 
