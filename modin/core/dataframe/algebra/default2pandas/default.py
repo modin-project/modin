@@ -103,7 +103,7 @@ class DefaultMethod(Operator):
         else:
             fn = func
 
-        if type(fn) == property:
+        if type(fn) is property:
             fn = cls.build_property_wrapper(fn)
 
         def applyier(df, *args, **kwargs):
