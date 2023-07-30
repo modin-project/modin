@@ -41,7 +41,7 @@ class RollingDefault(DefaultMethod):
             """Create rolling window for the passed frame and execute specified `func` on it."""
             roller = df.rolling(**rolling_kwargs)
 
-            if type(func) == property:
+            if type(func) is property:
                 return func.fget(roller)
 
             return func(roller, *args, **kwargs)
@@ -100,7 +100,7 @@ class ExpandingDefault(DefaultMethod):
                 df = df.squeeze(axis=1)
             roller = df.expanding(*rolling_args)
 
-            if type(func) == property:
+            if type(func) is property:
                 return func.fget(roller)
 
             return func(roller, *args, **kwargs)
