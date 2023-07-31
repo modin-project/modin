@@ -32,6 +32,7 @@ dependencies:
   - pygit2>=1.9.2
 
   # test dependencies
+  - asv==0.5.1
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1
@@ -49,6 +50,5 @@ dependencies:
       - connectorx>=0.2.6a4
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-      - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0
