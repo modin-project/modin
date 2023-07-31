@@ -58,9 +58,14 @@ def eval_io(
             for dtype in ("object", "category"):
                 for df in (df1, df2):
                     sdf = df.select_dtypes(dtype)
-                    if len(sdf.columns) != 0:
-                        sdf = sdf.fillna("") if dtype == "object" else sdf.astype(str)
-                        df[sdf.columns] = sdf[sdf.columns]
+                    if len(sdf.columns) == 0:
+                        continue
+                    elif dtype == "object":
+                        df1[sdf.columns] = df1[sdf.columns].fillna("")
+                        df2[sdf.columns] = df2[sdf.columns].fillna("")
+                    else:
+                        df1[sdf.columns] = df1[sdf.columns].astype(str)
+                        df2[sdf.columns] = df2[sdf.columns].astype(str)
             comparator(df1, df2, **kwargs)
 
     general_eval_io(
