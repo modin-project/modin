@@ -23,7 +23,8 @@ matplotlib>=3.6.1
 sqlalchemy>=1.4.0,<1.4.46
 pandas-gbq>=0.15.0
 tables>=3.6.1
-pymssql>=2.1.5
+# pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
+pymssql>=2.1.5,!=2.2.8
 psycopg2>=2.8.6
 connectorx>=0.2.6a4
 fastparquet>=0.6.3,<2023.1.0
