@@ -784,28 +784,77 @@ class ParquetFileToRead(NamedTuple):
 class PandasParquetParser(PandasParser):
     @staticmethod
     def _read_row_group_chunk(
-        f, row_group_start, row_group_end, columns, engine, to_pandas_kwargs
+        f, row_group_start, row_group_end, columns, filters, engine, to_pandas_kwargs
     ):  # noqa: GL08
         if engine == "pyarrow":
-            from pyarrow.parquet import ParquetFile
+            if filters is not None:
+                import pyarrow.dataset as ds
+                from pyarrow.parquet import filters_to_expression
 
-            return (
-                ParquetFile(f)
-                .read_row_groups(
-                    range(
+                parquet_format = ds.ParquetFileFormat()
+                fragment = parquet_format.make_fragment(
+                    f,
+                    row_groups=range(
                         row_group_start,
                         row_group_end,
                     ),
-                    columns=columns,
-                    use_pandas_metadata=True,
                 )
-                .to_pandas(**to_pandas_kwargs)
-            )
+                dataset = ds.FileSystemDataset(
+                    [fragment],
+                    schema=fragment.physical_schema,
+                    format=parquet_format,
+                    filesystem=fragment.filesystem,
+                )
+
+                # This lower-level API doesn't have the ability to automatically handle pandas metadata
+                # The following code inspired by
+                # https://github.com/apache/arrow/blob/f44e28fa03a64ae5b3d9352d21aee2cc84f9af6c/python/pyarrow/parquet/core.py#L2619-L2628
+
+                # if use_pandas_metadata, we need to include index columns in the
+                # column selection, to be able to restore those in the pandas DataFrame
+                metadata = dataset.schema.metadata or {}
+
+                if metadata and b"pandas" in metadata and columns is not None:
+                    import json
+
+                    index_columns = json.loads(metadata[b"pandas"].decode("utf8"))[
+                        "index_columns"
+                    ]
+                    # RangeIndex can be represented as dict instead of column name
+                    index_columns = [
+                        col for col in index_columns if not isinstance(col, dict)
+                    ]
+                    columns = list(columns) + list(set(index_columns) - set(columns))
+
+                return dataset.to_table(
+                    columns=columns,
+                    filter=filters_to_expression(filters),
+                ).to_pandas(**to_pandas_kwargs)
+            else:
+                from pyarrow.parquet import ParquetFile
+
+                return (
+                    ParquetFile(f)
+                    .read_row_groups(
+                        range(
+                            row_group_start,
+                            row_group_end,
+                        ),
+                        columns=columns,
+                        use_pandas_metadata=True,
+                    )
+                    .to_pandas(**to_pandas_kwargs)
+                )
         elif engine == "fastparquet":
             from fastparquet import ParquetFile
 
             return ParquetFile(f)[row_group_start:row_group_end].to_pandas(
-                columns=columns
+                columns=columns,
+                filters=filters,
+                # Setting row_filter=True would perform filtering at the row level, which is more correct
+                # (in line with pyarrow)
+                # However, it doesn't work: https://github.com/dask/fastparquet/issues/873
+                # Also, this would create incompatibility with pandas
             )
         else:
             # We shouldn't ever come to this case, so something went wrong
@@ -824,6 +873,7 @@ engine : str
     )
     def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
+        filters = kwargs.get("filters", None)
         storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path or path-like object
@@ -843,6 +893,7 @@ engine : str
                     file_for_parser.row_group_start,
                     file_for_parser.row_group_end,
                     columns,
+                    filters,
                     engine,
                     to_pandas_kwargs,
                 )

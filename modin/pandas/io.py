@@ -278,6 +278,7 @@ def read_parquet(
     storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = no_default,
     dtype_backend=no_default,
+    filters: list[tuple[Any]] | None = None,
     **kwargs,
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -292,6 +293,7 @@ def read_parquet(
             path=path,
             engine=engine,
             columns=columns,
+            filters=filters,
             storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
             dtype_backend=dtype_backend,

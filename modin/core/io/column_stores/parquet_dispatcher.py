@@ -492,7 +492,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, dataset, partition_ids, index_columns):
+    def build_index(cls, dataset, partition_ids, index_columns, filters):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
@@ -504,6 +504,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Array with references to the partitions data.
         index_columns : list
             List of index columns specified by pandas metadata.
+        filters : list
+            List of filters to be used in reading the Parquet file/files.
 
         Returns
         -------
@@ -532,7 +534,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
-        if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
+        if (range_index and filters is None) or (
+            len(partition_ids) == 0 and len(column_names_to_read) != 0
+        ):
             complete_index = dataset.to_pandas_dataframe(
                 columns=column_names_to_read
             ).index
@@ -542,7 +546,18 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         else:
             index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
             index_objs = cls.materialize(index_ids)
-            complete_index = index_objs[0].append(index_objs[1:])
+            if range_index and filters is not None:
+                # Had to materialize in order to determine how large the ranges actually are
+                complete_index = index_objs[0]
+                for index_part in index_objs[1:]:
+                    complete_index = complete_index.append(
+                        pandas.RangeIndex(
+                            start=complete_index.stop,
+                            stop=complete_index.stop + len(index_part),
+                        )
+                    )
+            else:
+                complete_index = index_objs[0].append(index_objs[1:])
         return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
@@ -567,11 +582,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Query compiler with imported data for further processing.
         """
         storage_options = kwargs.pop("storage_options", {}) or {}
+        filters = kwargs.get("filters", None)
+
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(
             dataset, col_partitions, storage_options, **kwargs
         )
-        index, sync_index = cls.build_index(dataset, partition_ids, index_columns)
+        index, sync_index = cls.build_index(
+            dataset, partition_ids, index_columns, filters
+        )
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -618,7 +637,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         if (
-            any(arg not in ("storage_options",) for arg in kwargs)
+            any(arg not in ("storage_options", "filters") for arg in kwargs)
             or use_nullable_dtypes != lib.no_default
         ):
             return cls.single_worker_read(
@@ -630,6 +649,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 reason="Parquet options that are not currently supported",
                 **kwargs,
             )
+
         path = stringify_path(path)
         if isinstance(path, list):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
