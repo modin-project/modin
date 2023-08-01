@@ -27,7 +27,7 @@ from .base_worker import DbTable, BaseDbWorker
 from modin.utils import _inherit_docstrings
 from modin.config import HdkLaunchParameters, OmnisciFragmentSize, HdkFragmentSize
 
-_CAST_DICT = version.parse(getattr(pyhdk, "__version__", "0")) <= version.parse("0.7.0")
+_CAST_DICT = version.parse(pyhdk.__version__) <= version.parse("0.7.0")
 
 
 class HdkTable(DbTable):
