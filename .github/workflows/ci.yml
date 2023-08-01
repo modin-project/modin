@@ -269,6 +269,7 @@ jobs:
               mamba env create -f ../requirements/env_hdk.yml
               conda activate modin_on_hdk
               pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
+              pip install ..
 
               # check Modin on HDK
               MODIN_ENGINE=native MODIN_STORAGE_FORMAT=hdk MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
