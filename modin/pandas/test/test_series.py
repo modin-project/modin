@@ -4309,8 +4309,6 @@ def test_str_find(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.find(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4324,8 +4322,6 @@ def test_str_rfind(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rfind(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4339,8 +4335,6 @@ def test_str_index(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4354,8 +4348,6 @@ def test_str_rindex(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 

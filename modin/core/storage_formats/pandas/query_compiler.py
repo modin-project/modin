@@ -1803,10 +1803,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
     str_count = Map.register(_str_map("count"), dtypes=int)
     str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
-    str_find = Map.register(_str_map("find"), dtypes="copy")
+    str_find = Map.register(_str_map("find"), dtypes=np.int64)
     str_findall = Map.register(_str_map("findall"), dtypes="copy")
     str_get = Map.register(_str_map("get"), dtypes="copy")
-    str_index = Map.register(_str_map("index"), dtypes="copy")
+    str_index = Map.register(_str_map("index"), dtypes=np.int64)
     str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool_)
     str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool_)
     str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool_)
@@ -1846,8 +1846,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return qc
 
     str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
-    str_rfind = Map.register(_str_map("rfind"), dtypes="copy", shape_hint="column")
-    str_rindex = Map.register(_str_map("rindex"), dtypes="copy", shape_hint="column")
+    str_rfind = Map.register(_str_map("rfind"), dtypes=np.int64, shape_hint="column")
+    str_rindex = Map.register(_str_map("rindex"), dtypes=np.int64, shape_hint="column")
     str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
     _str_rpartition = Map.register(
         _str_map("rpartition"), dtypes="copy", shape_hint="column"
