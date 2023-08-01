@@ -265,7 +265,7 @@ jobs:
               sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
               sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
 
-              # TODO: Remove manual environment creation after merge https://github.com/airspeed-velocity/asv/issues/1310
+              # TODO: Remove manual environment creation after fix https://github.com/airspeed-velocity/asv/issues/1310
               mamba env create -f ../requirements/env_hdk.yml
               conda activate modin_on_hdk
               pip install git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
