@@ -248,11 +248,21 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         for frame in frames:
             cls.import_table(frame, worker)
 
-        calcite_plan = CalciteBuilder().build(plan)
+        builder = CalciteBuilder()
+        calcite_plan = builder.build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
         if DoUseCalcite.get():
+            exec_calcite = True
             calcite_json = "execute calcite " + calcite_json
-        table = worker.executeRA(calcite_json)
+        else:
+            exec_calcite = False
+        if builder.has_groupby == builder.has_join:
+            exec_args = {}
+        elif builder.has_groupby:
+            exec_args = {"enable_lazy_fetch": 0, "enable_columnar_output": 0}
+        elif builder.has_join:
+            exec_args = {"enable_lazy_fetch": 1, "enable_columnar_output": 1}
+        table = worker.executeRA(calcite_json, exec_calcite, **exec_args)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class(table)

@@ -583,6 +583,8 @@ class CalciteBuilder:
 
     def __init__(self):
         self._input_ctx_stack = []
+        self.has_join = False
+        self.has_groupby = False
 
     def build(self, op):
         """
@@ -880,6 +882,7 @@ class CalciteBuilder:
         op : GroupbyAggNode
             An operation to translate.
         """
+        self.has_groupby = True
         frame = op.input[0]
 
         # Aggregation's input should always be a projection and
@@ -957,6 +960,7 @@ class CalciteBuilder:
         op : JoinNode
             An operation to translate.
         """
+        self.has_join = True
         node = CalciteJoinNode(
             left_id=self._input_node(0).id,
             right_id=self._input_node(1).id,

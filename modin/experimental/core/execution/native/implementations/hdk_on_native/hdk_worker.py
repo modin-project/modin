@@ -104,14 +104,15 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         return cls.executeRA(query, True)
 
     @classmethod
-    def executeRA(cls, query: str, exec_calcite=False):
+    def executeRA(cls, query: str, exec_calcite=False, **exec_args):
         hdk = cls._hdk()
         if exec_calcite or query.startswith("execute calcite"):
             ra = hdk._calcite.process(query, db_name="hdk", legacy_syntax=True)
         else:
             ra = query
         ra_executor = RelAlgExecutor(hdk._executor, hdk._schema_mgr, hdk._data_mgr, ra)
-        return HdkTable(ra_executor.execute(device_type=cls._preferred_device))
+        table = ra_executor.execute(device_type=cls._preferred_device, **exec_args)
+        return HdkTable(table)
 
     @classmethod
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
@@ -163,9 +164,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         HDK
         """
         params = HdkLaunchParameters.get()
-        cls._preferred_device = (
-            "CPU" if bool(HdkLaunchParameters.get()["cpu_only"]) else "GPU"
-        )
+        cls._preferred_device = "CPU" if bool(params["cpu_only"]) else "GPU"
         cls._hdk_instance = HDK(**params)
         cls._hdk = cls._get_hdk_instance
         return cls._hdk()
