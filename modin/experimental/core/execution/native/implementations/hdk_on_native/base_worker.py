@@ -178,14 +178,15 @@ class BaseDbWorker(abc.ABC):
         """
         schema = table.schema
         new_schema = schema
-        need_cast = [False]
-        uint_to_int_cast = [False]
+        need_cast = False
+        uint_to_int_cast = False
 
         for i, field in enumerate(schema):
             if pa.types.is_dictionary(field.type):
+                value_type = field.type.value_type
                 # Conversion for dictionary of null type to string is not supported
                 # in Arrow. Build new column for this case for now.
-                if pa.types.is_null(field.type.value_type):
+                if pa.types.is_null(value_type):
                     mask = np.full(table.num_rows, True, dtype=bool)
                     new_col_data = np.empty(table.num_rows, dtype=str)
                     new_col = pa.array(new_col_data, pa.string(), mask)
@@ -193,31 +194,30 @@ class BaseDbWorker(abc.ABC):
                         field.name, pa.string(), field.nullable, field.metadata
                     )
                     table = table.set_column(i, new_field, new_col)
-                elif pa.types.is_string(field.type.value_type):
+                elif pa.types.is_string(value_type):
                     if cast_dict:
-                        need_cast[0] = True
+                        need_cast = True
                         new_field = pa.field(
                             field.name, pa.string(), field.nullable, field.metadata
                         )
                     else:
                         new_field = field
                 else:
-                    new_field = cls._convert_field(
-                        field, field.type.value_type, need_cast, uint_to_int_cast
-                    )
+                    new_field, int_cast = cls._convert_field(field, value_type)
+                    need_cast = True
+                    uint_to_int_cast = uint_to_int_cast or int_cast
                     if new_field == field:
                         new_field = pa.field(
                             field.name,
-                            field.type.value_type,
+                            value_type,
                             field.nullable,
                             field.metadata,
                         )
-                        need_cast[0] = True
                 new_schema = new_schema.set(i, new_field)
             else:
-                new_field = cls._convert_field(
-                    field, field.type, need_cast, uint_to_int_cast
-                )
+                new_field, int_cast = cls._convert_field(field, field.type)
+                need_cast = need_cast or new_field is not field
+                uint_to_int_cast = uint_to_int_cast or int_cast
                 new_schema = new_schema.set(i, new_field)
 
         # Such cast may affect the data, so we have to raise a warning about it
@@ -226,7 +226,7 @@ class BaseDbWorker(abc.ABC):
                 "HDK does not support unsigned integer types, such types will be rounded up to the signed equivalent."
             )
 
-        if need_cast[0]:
+        if need_cast:
             try:
                 table = table.cast(new_schema)
             except pa.lib.ArrowInvalid as err:
@@ -238,7 +238,7 @@ class BaseDbWorker(abc.ABC):
         return table
 
     @staticmethod
-    def _convert_field(field, field_type, need_cast, uint_to_int_cast):
+    def _convert_field(field, field_type):
         """
         Convert the specified arrow field, if required.
 
@@ -246,31 +246,31 @@ class BaseDbWorker(abc.ABC):
         ----------
         field : pyarrow.Field
         field_type : pyarrow.DataType
-        need_cast : list of bool
-        uint_to_int_cast : list of bool
 
         Returns
         -------
-        pyarrow.Field
+        Tuple[pyarrow.Field, boolean]
+            A tuple, containing (new_field, uint_to_int_cast)
         """
         if pa.types.is_date(field_type):
             # Arrow's date is the number of days since the UNIX-epoch, so we can convert it
             # to a timestamp[s] (number of seconds since the UNIX-epoch) without losing precision
-            need_cast[0] = True
-            return pa.field(
-                field.name, pa.timestamp("s"), field.nullable, field.metadata
+            return (
+                pa.field(field.name, pa.timestamp("s"), field.nullable, field.metadata),
+                False,
             )
         elif pa.types.is_unsigned_integer(field_type):
             # HDK doesn't support unsigned types
-            need_cast[0] = True
-            uint_to_int_cast[0] = True
-            return pa.field(
-                field.name,
-                _UINT_TO_INT_MAP[field_type],
-                field.nullable,
-                field.metadata,
+            return (
+                pa.field(
+                    field.name,
+                    _UINT_TO_INT_MAP[field_type],
+                    field.nullable,
+                    field.metadata,
+                ),
+                True,
             )
-        return field
+        return field, False
 
     @classmethod
     @abc.abstractmethod
