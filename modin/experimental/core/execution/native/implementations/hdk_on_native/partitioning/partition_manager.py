@@ -256,11 +256,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             calcite_json = "execute calcite " + calcite_json
         else:
             exec_calcite = False
-        if builder.has_groupby == builder.has_join:
-            exec_args = {}
-        elif builder.has_groupby:
+        exec_args = {}
+        if builder.has_groupby and not builder.has_join:
             exec_args = {"enable_lazy_fetch": 0, "enable_columnar_output": 0}
-        elif builder.has_join:
+        elif not builder.has_groupby and builder.has_join:
             exec_args = {"enable_lazy_fetch": 1, "enable_columnar_output": 1}
         table = worker.executeRA(calcite_json, exec_calcite, **exec_args)
 
