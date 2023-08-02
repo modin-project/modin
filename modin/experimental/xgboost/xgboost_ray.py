@@ -268,10 +268,17 @@ def create_actors(num_actors):
         List of pairs (ip, actor).
     """
     num_cpus_per_actor = _get_cpus_per_actor(num_actors)
+    # starting from ray 2.6 there is a new field: 'node:__internal_head__'
+    # example:
+    # >>> ray.cluster_resources()
+    # {'object_store_memory': 1036438732.0, 'memory': 2072877467.0, 'node:127.0.0.1': 1.0, 'CPU': 8.0, 'node:__internal_head__': 1.0}
     node_ips = [
-        key for key in ray.cluster_resources().keys() if key.startswith("node:")
+        key
+        for key in ray.cluster_resources().keys()
+        if key.startswith("node:") and "__internal_head__" not in key
     ]
-    num_actors_per_node = num_actors // len(node_ips)
+
+    num_actors_per_node = max(num_actors // len(node_ips), 1)
     actors_ips = [ip for ip in node_ips for _ in range(num_actors_per_node)]
 
     actors = [
