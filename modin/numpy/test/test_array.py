@@ -338,5 +338,5 @@ def test__array__():
     modin_arr = np.array(numpy_arr)
     # this implicitly calls `__array__`
     converted_array = numpy.array(modin_arr)
-    assert type(converted_array) == type(numpy_arr)
+    assert type(converted_array) is type(numpy_arr)
     assert_scalar_or_array_equal(converted_array, numpy_arr)

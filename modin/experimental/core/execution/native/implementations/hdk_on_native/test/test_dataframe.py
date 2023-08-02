@@ -2726,7 +2726,7 @@ class TestFromArrow:
         assert str(mdt) == str(pdt)
 
         # Make sure the lazy proxy dtype is not materialized yet.
-        assert type(mdt) != pandas.CategoricalDtype
+        assert type(mdt) is not pandas.CategoricalDtype
         assert mdt._parent is not None
         assert mdt._update_proxy(at, at.column(0)._name) is mdt
         assert mdt._update_proxy(at, at.column(2)._name) is not mdt
