@@ -6,7 +6,3 @@
 # of Modin.
 /modin/experimental/core/storage_formats/hdk/**    @modin-project/modin-hdk
 /modin/experimental/core/execution/native/implementations/hdk_on_native/**    @modin-project/modin-hdk
-
-# These owners will review everything related to the xgboost implementation
-# in Modin
-/modin/experimental/xgboost/**  @modin-project/modin-xgboost
