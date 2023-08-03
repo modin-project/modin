@@ -62,7 +62,7 @@ configs_file_path = os.path.abspath(
 export_config_help(configs_file_path)
 
 project = "Modin"
-copyright = "2018-2022, Modin Developers."
+copyright = "2018-2023, Modin Developers."
 author = "Modin contributors"
 
 # The short X.Y version
