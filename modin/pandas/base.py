@@ -57,7 +57,7 @@ import warnings
 
 
 from .utils import is_full_grab_slice, _doc_binary_op
-from modin.utils import try_cast_to_pandas, _inherit_docstrings
+from modin.utils import try_cast_to_pandas, _inherit_docstrings, expanduser_path_arg
 from modin.error_message import ErrorMessage
 from modin import pandas as pd
 from modin.pandas.utils import is_scalar
@@ -2866,6 +2866,7 @@ class BasePandasDataset(ClassLogger):
         """
         return self._default_to_pandas("to_clipboard", excel=excel, sep=sep, **kwargs)
 
+    @expanduser_path_arg("path_or_buf")
     def to_csv(
         self,
         path_or_buf=None,
@@ -2919,6 +2920,7 @@ class BasePandasDataset(ClassLogger):
             storage_options=storage_options,
         )
 
+    @expanduser_path_arg("excel_writer")
     def to_excel(
         self,
         excel_writer,
@@ -2962,6 +2964,7 @@ class BasePandasDataset(ClassLogger):
     def to_dict(self, orient="dict", into=dict, index=True):
         return self._query_compiler.dataframe_to_dict(orient, into, index)
 
+    @expanduser_path_arg("path_or_buf")
     def to_hdf(
         self, path_or_buf, key, format="table", **kwargs
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
@@ -2972,6 +2975,7 @@ class BasePandasDataset(ClassLogger):
             "to_hdf", path_or_buf, key, format=format, **kwargs
         )
 
+    @expanduser_path_arg("path_or_buf")
     def to_json(
         self,
         path_or_buf=None,
@@ -3008,6 +3012,7 @@ class BasePandasDataset(ClassLogger):
             mode=mode,
         )
 
+    @expanduser_path_arg("buf")
     def to_latex(
         self,
         buf=None,
@@ -3060,6 +3065,7 @@ class BasePandasDataset(ClassLogger):
             position=position,
         )
 
+    @expanduser_path_arg("buf")
     def to_markdown(
         self,
         buf=None,
@@ -3080,6 +3086,7 @@ class BasePandasDataset(ClassLogger):
             **kwargs,
         )
 
+    @expanduser_path_arg("path")
     def to_pickle(
         self,
         path,
@@ -3140,6 +3147,7 @@ class BasePandasDataset(ClassLogger):
         """
         return self._default_to_pandas("to_period", freq=freq, axis=axis, copy=copy)
 
+    @expanduser_path_arg("buf")
     def to_string(
         self,
         buf=None,
