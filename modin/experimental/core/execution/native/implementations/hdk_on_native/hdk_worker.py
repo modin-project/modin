@@ -118,8 +118,9 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
         name = cls._genName(name)
         table = cls.cast_to_compatible_types(table)
+        hdk = cls._hdk()
         fragment_size = cls.compute_fragment_size(table)
-        return HdkTable(cls._hdk().import_arrow(table, name, fragment_size))
+        return HdkTable(hdk.import_arrow(table, name, fragment_size))
 
     @classmethod
     def compute_fragment_size(cls, table):
@@ -140,7 +141,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         if fragment_size is None:
             fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:
-            if bool(HdkLaunchParameters.get()["cpu_only"]):
+            if cls._preferred_device == "CPU":
                 cpu_count = os.cpu_count()
                 if cpu_count is not None:
                     fragment_size = table.num_rows // cpu_count
@@ -164,7 +165,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         HDK
         """
         params = HdkLaunchParameters.get()
-        cls._preferred_device = "CPU" if bool(params["cpu_only"]) else "GPU"
+        cls._preferred_device = "CPU" if params["cpu_only"] else "GPU"
         cls._hdk_instance = HDK(**params)
         cls._hdk = cls._get_hdk_instance
         return cls._hdk()
