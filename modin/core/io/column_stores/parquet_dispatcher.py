@@ -546,16 +546,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         else:
             index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
             index_objs = cls.materialize(index_ids)
-            if range_index and filters is not None:
-                # Had to materialize in order to determine how large the ranges actually are
-                complete_index = index_objs[0]
-                for index_part in index_objs[1:]:
-                    complete_index = complete_index.append(
-                        pandas.RangeIndex(
-                            start=complete_index.stop,
-                            stop=complete_index.stop + len(index_part),
-                        )
-                    )
+            if range_index:
+                # There are filters, so we had to materialize in order to
+                # determine how many items there actually are
+                start = index_objs[0].start
+                total_length = sum([len(index_part) for index_part in index_objs])
+                complete_index = pandas.RangeIndex(
+                    start=start,
+                    stop=start + total_length,
+                )
             else:
                 complete_index = index_objs[0].append(index_objs[1:])
         return complete_index, range_index or (len(index_columns) == 0)
