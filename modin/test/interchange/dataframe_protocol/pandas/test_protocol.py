@@ -54,3 +54,9 @@ def test_categorical_from_dataframe():
         {"foo": pd.Series(["0", "1", "2", "3", "0", "3", "2", "3"], dtype="category")}
     )
     eval_df_protocol(modin_df)
+
+
+def test_from_dataframe_with_empty_dataframe():
+    modin_df = pd.DataFrame({"foo_col": pd.Series([], dtype="int64")})
+    with warns_that_defaulting_to_pandas():
+        eval_df_protocol(modin_df)
