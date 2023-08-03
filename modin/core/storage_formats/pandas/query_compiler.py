@@ -852,7 +852,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # TreeReduce operations
     count = TreeReduce.register(pandas.DataFrame.count, pandas.DataFrame.sum)
-    sum = TreeReduce.register(pandas.DataFrame.sum)
+
+    def _dtypes_sum(dtypes: pandas.Series, *func_args, **func_kwargs):  # noqa: GL08
+        # The common type evaluation for `TreeReduce` operator may differ depending
+        # on the pandas function, so it's better to pass a evaluation function that
+        # should be defined for each Modin's function.
+        return find_common_type(dtypes.tolist())
+
+    sum = TreeReduce.register(pandas.DataFrame.sum, compute_dtypes=_dtypes_sum)
     prod = TreeReduce.register(pandas.DataFrame.prod)
     any = TreeReduce.register(pandas.DataFrame.any, pandas.DataFrame.any)
     all = TreeReduce.register(pandas.DataFrame.all, pandas.DataFrame.all)
