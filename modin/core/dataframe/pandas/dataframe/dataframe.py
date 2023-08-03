@@ -991,7 +991,10 @@ class PandasDataframe(ClassLogger):
             return self.copy()
 
         if col_positions is None and row_positions is not None:
-            # fast path
+            # This way tries to eliminate the optimization that first takes part of the data using
+            # the mask operation, so that later less data is concated into a whole column.
+            # Note: in the case where a small part of the data is discarded, the overhead of the
+            # engines (for putting data in and out of storage) can exceed the resulting speedup.
             all_rows = None
             if self.has_materialized_index:
                 all_rows = len(self.index)
