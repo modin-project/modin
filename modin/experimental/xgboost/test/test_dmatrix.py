@@ -23,9 +23,9 @@ from modin.config import Engine
 import modin.experimental.xgboost as mxgb
 
 
-if Engine.get() == "Python":
+if Engine.get() != "Ray":
     pytest.skip(
-        "Modin' xgboost extension doesn't work with python engine.",
+        "Modin' xgboost extension works only with Ray engine.",
         allow_module_level=True,
     )
 
