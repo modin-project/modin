@@ -854,11 +854,8 @@ class BasePandasDataset(ClassLogger):
         self,
         func,
         axis,
-        broadcast,
         raw,
-        reduce,
         result_type,
-        convert_dtype,
         args,
         **kwds,
     ):  # noqa: PR01, RT01, D200

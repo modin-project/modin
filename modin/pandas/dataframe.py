@@ -394,11 +394,8 @@ class DataFrame(BasePandasDataset):
         query_compiler = super(DataFrame, self).apply(
             func,
             axis=axis,
-            broadcast=None,
             raw=raw,
-            reduce=None,
             result_type=result_type,
-            convert_dtype=None,
             args=args,
             **kwargs,
         )

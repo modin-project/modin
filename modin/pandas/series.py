@@ -604,11 +604,8 @@ class Series(BasePandasDataset):
             result = super(Series, self).apply(
                 func,
                 axis=0,
-                broadcast=None,
                 raw=False,
-                reduce=None,
                 result_type=None,
-                convert_dtype=convert_dtype,
                 args=args,
                 **kwargs,
             )
