@@ -399,7 +399,7 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         -----
         The logic gets really complicated if we try to use the `TextFileDispatcher.partitioned_file`.
         """
-        if type(files) != list:
+        if type(files) is not list:
             files = [files]
 
         if num_partitions is None:

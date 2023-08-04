@@ -20,4 +20,3 @@ pydantic<2
 git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
 sphinxcontrib_plantuml
 sphinx-issues
-xgboost>=1.7.1,<2.0.0

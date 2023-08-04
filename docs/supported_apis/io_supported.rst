@@ -42,7 +42,9 @@ default to pandas.
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_table`_      | Y                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
-| `read_parquet`_    | Y                               |                                                    |
+| `read_parquet`_    | P                               | Any additional parameters passed via ``**kwargs``  |
+|                    |                                 | and ``use_nullable_dtypes`` == True are not        |
+|                    |                                 | supported                                          |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_json`_       | P                               | Implemented for ``lines=True``                     |
 +--------------------+---------------------------------+----------------------------------------------------+
@@ -55,8 +57,6 @@ default to pandas.
 | `read_hdf`_        | D                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_feather`_    | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_msgpack`_    | D                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
 | `read_stata`_      | D                               |                                                    |
 +--------------------+---------------------------------+----------------------------------------------------+
@@ -78,7 +78,6 @@ default to pandas.
 .. _`read_excel`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html#pandas.read_excel
 .. _`read_hdf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html#pandas.read_hdf
 .. _`read_feather`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_feather.html#pandas.read_feather
-.. _`read_msgpack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_msgpack.html#pandas.read_msgpack
 .. _`read_stata`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_stata.html#pandas.read_stata
 .. _`read_sas`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_sas.html#pandas.read_sas
 .. _`read_pickle`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_pickle.html#pandas.read_pickle

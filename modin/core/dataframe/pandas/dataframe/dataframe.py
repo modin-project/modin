@@ -1936,7 +1936,9 @@ class PandasDataframe(ClassLogger):
         reduce_parts = self._partition_mgr_cls.map_axis_partitions(
             axis.value, map_parts, reduce_func
         )
-        return self._compute_tree_reduce_metadata(axis.value, reduce_parts)
+        return self._compute_tree_reduce_metadata(
+            axis.value, reduce_parts, dtypes=dtypes
+        )
 
     @lazy_metadata_decorator(apply_axis=None)
     def map(
@@ -3862,7 +3864,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new Core Modin Dataframe object.
         """
-        if type(df) == cls:
+        if type(df) is cls:
             return df
 
         if not hasattr(df, "__dataframe__"):

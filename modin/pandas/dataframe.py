@@ -394,11 +394,8 @@ class DataFrame(BasePandasDataset):
         query_compiler = super(DataFrame, self).apply(
             func,
             axis=axis,
-            broadcast=None,
             raw=raw,
-            reduce=None,
             result_type=result_type,
-            convert_dtype=None,
             args=args,
             **kwargs,
         )
@@ -762,7 +759,7 @@ class DataFrame(BasePandasDataset):
             other = self.__constructor__(other)
 
         if (
-            type(self) != type(other)
+            type(self) is not type(other)
             or not self.index.equals(other.index)
             or not self.columns.equals(other.columns)
         ):

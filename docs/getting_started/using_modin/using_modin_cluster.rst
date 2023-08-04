@@ -55,8 +55,6 @@ Modin:
    ray.shutdown()
 
 Congratualions! You have successfully connected to the Ray cluster.
-See more on the :doc:`Modin in the Cloud </usage_guide/advanced_usage/modin_in_the_cloud>`
-documentation page.
 
 Using Modin on a Ray Cluster
 ----------------------------
