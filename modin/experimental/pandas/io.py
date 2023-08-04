@@ -177,6 +177,8 @@ def _make_parser_func(sep: str, funcname: str) -> Callable:
     ----------
     sep : str
         The separator default to use for the parser.
+    funcname : str
+        The name of the generated parser function.
 
     Returns
     -------

@@ -460,9 +460,9 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
         Decorator which performs the replacement.
     """
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapped(*_args, **_kw):
+        def wrapped(*_args: Any, **_kw: Any) -> Any:
             kwargs = dict(locals())
             kwargs.pop("_args", None)
             kwargs.pop("_kw", None)
