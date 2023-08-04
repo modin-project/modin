@@ -991,7 +991,7 @@ class PandasDataframe(ClassLogger):
             return self.copy()
 
         if col_positions is None and row_positions is not None:
-            # Check if the optimization that first takes part of the data using the mask 
+            # Check if the optimization that first takes part of the data using the mask
             # operation so that later less data is concatenated into a whole column is useful.
             # In the case when only a small portion of the data is discarded, the overhead of the
             # engine (for putting data in and out of storage) can exceed the resulting speedup.
