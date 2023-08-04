@@ -25,7 +25,7 @@ def noop_decorator(*args, **kwargs):
 ray.remote = noop_decorator
 
 # fake modules if they're missing
-for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk", "pyhdk.hdk"):
+for mod_name in ("cudf", "cupy", "pyarrow.gandiva", "pyhdk", "pyhdk.hdk", "xgboost"):
     try:
         __import__(mod_name)
     except ImportError:
@@ -49,6 +49,8 @@ if not hasattr(sys.modules["pyhdk.hdk"], "RelAlgExecutor"):
 if not hasattr(sys.modules["pyhdk"], "__version__"):
     # Show all known pyhdk config options in documentation
     sys.modules["pyhdk"].__version__ = "999"
+if not hasattr(sys.modules["xgboost"], "Booster"):
+    sys.modules["xgboost"].Booster = type("Booster", (object,), {})
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
