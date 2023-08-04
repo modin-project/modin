@@ -248,7 +248,7 @@ def _make_parser_func(sep: str, funcname: str) -> Callable:
 
     parser_func.__doc__ = _read.__doc__
     parser_func.__name__ = funcname
-    return expanduser_path_arg()(enable_logging(parser_func))
+    return expanduser_path_arg("filepath_or_buffer")(enable_logging(parser_func))
 
 
 def _read(**kwargs) -> DataFrame:
