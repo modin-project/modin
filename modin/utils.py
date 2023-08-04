@@ -14,6 +14,7 @@
 """Collection of general utility functions, mostly for internal use."""
 
 import importlib
+import inspect
 import os
 from pathlib import Path
 import types
@@ -461,17 +462,18 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     """
 
     def decorator(func: Callable) -> Callable:
+        signature = inspect.signature(func)
+
         @functools.wraps(func)
-        def wrapped(*_args: Any, **_kw: Any) -> Any:
-            kwargs = dict(locals())
-            kwargs.pop("_args", None)
-            kwargs.pop("_kw", None)
-            patharg = kwargs[argname]
+        def wrapped(*args: Any, **kw: Any) -> Any:
+            params = signature.bind(*args, **kw)
+            params.apply_defaults()
+            patharg = params.arguments[argname]
             if isinstance(patharg, str) and patharg.startswith("~"):
-                kwargs[argname] = os.path.expanduser(patharg)
+                params.arguments[argname] = os.path.expanduser(patharg)
             elif isinstance(patharg, Path):
-                kwargs[argname] = patharg.expanduser()
-            return func(**kwargs)
+                params.arguments[argname] = patharg.expanduser()
+            return func(**params.arguments)
 
         return wrapped
 
