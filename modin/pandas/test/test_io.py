@@ -1561,10 +1561,11 @@ class TestParquet:
                 # These private APIs broke in pandas 2.
                 # https://github.com/dask/fastparquet/commit/cf60ae0e9a9ca57afc7a8da98d8c0423db1c0c53
                 if (
-                    col == "idx_categorical" and
-                    engine == "fastparquet" and
-                    version.parse(fastparquet.__version__) < version.parse("2023.1.0") and
-                    version.parse(pandas.__version__) >= version.parse("2.0.0")
+                    col == "idx_categorical"
+                    and engine == "fastparquet"
+                    and version.parse(fastparquet.__version__)
+                    < version.parse("2023.1.0")
+                    and version.parse(pandas.__version__) >= version.parse("2.0.0")
                 ):
                     continue
 
