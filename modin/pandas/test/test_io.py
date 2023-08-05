@@ -42,6 +42,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
+import fastparquet
 import os
 from scipy import sparse
 import sys
@@ -1555,6 +1556,18 @@ class TestParquet:
 
         for col in pandas_df.columns:
             if col.startswith("idx"):
+                # Before this commit, first released in version 2023.1.0, fastparquet relied
+                # on pandas private APIs to handle Categorical indices.
+                # These private APIs broke in pandas 2.
+                # https://github.com/dask/fastparquet/commit/cf60ae0e9a9ca57afc7a8da98d8c0423db1c0c53
+                if (
+                    col == "idx_categorical" and
+                    engine == "fastparquet" and
+                    version.parse(fastparquet.__version__) < version.parse("2023.1.0") and
+                    version.parse(pandas.__version__) >= version.parse("2.0.0")
+                ):
+                    continue
+
                 with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
