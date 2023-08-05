@@ -550,7 +550,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 # There are filters, so we had to materialize in order to
                 # determine how many items there actually are
                 start = index_objs[0].start
-                total_length = sum([len(index_part) for index_part in index_objs])
+                total_length = sum(len(index_part) for index_part in index_objs)
                 complete_index = pandas.RangeIndex(
                     start=start,
                     stop=start + total_length,

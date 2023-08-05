@@ -40,6 +40,7 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 import os
+import json
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
@@ -814,9 +815,7 @@ class PandasParquetParser(PandasParser):
                 # column selection, to be able to restore those in the pandas DataFrame
                 metadata = dataset.schema.metadata or {}
 
-                if metadata and b"pandas" in metadata and columns is not None:
-                    import json
-
+                if b"pandas" in metadata and columns is not None:
                     index_columns = json.loads(metadata[b"pandas"].decode("utf8"))[
                         "index_columns"
                     ]
