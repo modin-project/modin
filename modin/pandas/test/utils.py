@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from contextlib import contextmanager
 import re
 from pathlib import Path
 from typing import Union
@@ -863,6 +864,18 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
+@contextmanager
+def materializer():
+    from modin.config import BenchmarkMode
+
+    old_benchmark_mode = BenchmarkMode.get()
+    BenchmarkMode.put(True)
+    try:
+        yield
+    finally:
+        BenchmarkMode.put(old_benchmark_mode)
+
+
 def eval_general(
     modin_df,
     pandas_df,
@@ -889,8 +902,8 @@ def eval_general(
             if check_exception_type is None:
                 return None
             with pytest.raises(Exception) as md_e:
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
+                with materializer():
+                    fn(modin_df, **md_kwargs)
             if check_exception_type:
                 assert isinstance(
                     md_e.value, type(pd_e)

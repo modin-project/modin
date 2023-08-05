@@ -1632,14 +1632,7 @@ def test___neg__(request, data):
 def test___invert__(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
-    try:
-        pandas_result = ~pandas_df
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(~modin_df)
-    else:
-        modin_result = ~modin_df
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: ~df)
 
 
 def test___invert___bool():

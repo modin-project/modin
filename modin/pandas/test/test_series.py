@@ -134,7 +134,9 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(4))  # repr to force materialization
+            res = modin_attr(4)
+            if hasattr(res, "_to_pandas"):
+                res._to_pandas()
     else:
         modin_result = modin_attr(4)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -143,7 +145,9 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4.0)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(4.0))  # repr to force materialization
+            res = modin_attr(4.0)
+            if hasattr(res, "_to_pandas"):
+                res._to_pandas()
     else:
         modin_result = modin_attr(4.0)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -165,35 +169,34 @@ def inter_df_math_helper_one_side(
     ]:
         return
 
-    try:
-        pandas_result = pandas_attr(pandas_series)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_attr(modin_series))  # repr to force materialization
-    else:
-        modin_result = modin_attr(modin_series)
-        df_equals(modin_result, pandas_result, **comparator_kwargs)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda df: pandas_attr(df) if isinstance(pandas.Series) else modin_attr(df),
+        **comparator_kwargs,
+    )
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
         pandas_result = pandas_attr(list_test)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(list_test))  # repr to force materialization
+            res = modin_attr(list_test)
+            if hasattr(res, "_to_pandas"):
+                res._to_pandas()
     else:
         modin_result = modin_attr(list_test)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     series_test_modin = pd.Series(list_test, index=modin_series.index)
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
-    try:
-        pandas_result = pandas_attr(series_test_pandas)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_attr(series_test_modin))  # repr to force materialization
-    else:
-        modin_result = modin_attr(series_test_modin)
-        df_equals(modin_result, pandas_result, **comparator_kwargs)
+
+    eval_general(
+        series_test_modin,
+        series_test_pandas,
+        lambda df: pandas_attr(df) if isinstance(pandas.Series) else modin_attr(df),
+        **comparator_kwargs,
+    )
 
     # Level test
     new_idx = pandas.MultiIndex.from_tuples(
@@ -440,13 +443,7 @@ def test___float__(count_elements):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___invert__(data):
     modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.__invert__()
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.__invert__())
-    else:
-        df_equals(modin_series.__invert__(), pandas_result)
+    eval_general(modin_series, pandas_series, lambda ser: ser.__invert__())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -507,13 +504,7 @@ def test___ne__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___neg__(request, data):
     modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.__neg__()
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.__neg__())
-    else:
-        df_equals(modin_series.__neg__(), pandas_result)
+    eval_general(modin_series, pandas_series, lambda ser: ser.__neg__())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1108,35 +1099,11 @@ def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
     series_name = "test_series"
     modin_series.name = pandas_series.name = series_name
-    try:
-        pandas_result = pandas_series.astype(str)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(str))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(str), pandas_result)
 
-    try:
-        pandas_result = pandas_series.astype(np.int64)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(np.int64))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(np.int64), pandas_result)
-
-    try:
-        pandas_result = pandas_series.astype(np.float64)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(np.float64))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(np.float64), pandas_result)
-
-    df_equals(
-        modin_series.astype({series_name: str}),
-        pandas_series.astype({series_name: str}),
-    )
-
+    eval_general(modin_series, pandas_series, lambda df: df.astype(str))
+    eval_general(modin_series, pandas_series, lambda df: df.astype(np.int64))
+    eval_general(modin_series, pandas_series, lambda df: df.astype(np.float64))
+    eval_general(modin_series, pandas_series, lambda df: df.astype({series_name: str}))
     eval_general(modin_series, pandas_series, lambda df: df.astype({"wrong_name": str}))
 
     # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
