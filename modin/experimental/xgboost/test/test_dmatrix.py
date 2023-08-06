@@ -130,7 +130,7 @@ def test_feature_names():
     with pytest.raises(ValueError):
         booster.predict(dm)
     with pytest.raises(ValueError):
-        repr(md_booster.predict(md_dm))
+        _ = md_booster.predict(md_dm)._to_pandas()
 
 
 def test_feature_weights():

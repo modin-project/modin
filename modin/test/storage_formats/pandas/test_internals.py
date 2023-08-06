@@ -183,7 +183,7 @@ def test_aligning_blocks():
     accm["T"] = pd.Series(["24.67\n"] * 145)
 
     # see #2322 for details
-    repr(accm)
+    _ = accm._to_pandas()
 
 
 def test_aligning_blocks_with_duplicated_index():
@@ -197,7 +197,7 @@ def test_aligning_blocks_with_duplicated_index():
     df1 = pd.concat((pd.DataFrame(data11), pd.DataFrame(data12)))
     df2 = pd.concat((pd.DataFrame(data21), pd.DataFrame(data22)))
 
-    repr(df1 - df2)
+    _ = (df1 - df2)._to_pandas()
 
 
 def test_aligning_partitions():
@@ -208,7 +208,7 @@ def test_aligning_partitions():
     modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
-    repr(modin_df2)
+    _ = modin_df2._to_pandas()
 
 
 @pytest.mark.parametrize("row_labels", [None, [("a", "")], ["a"]])
