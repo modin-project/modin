@@ -13,12 +13,16 @@
 
 """Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
+import os
+from io import BytesIO, StringIO
+
 import pandas
 import re
 import warnings
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions
+from modin.pandas.io import ExcelFile
 
 EXCEL_READ_BLOCK_SIZE = 4096
 
@@ -52,6 +56,21 @@ class ExcelDispatcher(TextFileDispatcher):
                 reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
                 + "use Modin's parallel implementation.",
+                **kwargs
+            )
+
+        if isinstance(io, bytes):
+            io = BytesIO(io)
+
+        # isinstance(ExcelFile, os.PathLike) == True
+        if not isinstance(io, (str, os.PathLike, BytesIO, StringIO)) or isinstance(
+            io, (ExcelFile, pandas.ExcelFile)
+        ):
+            if isinstance(io, ExcelFile):
+                io._set_pandas_mode()
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` the following types of `io`: str.",
                 **kwargs
             )
 
@@ -96,8 +115,6 @@ class ExcelDispatcher(TextFileDispatcher):
 
         pandas_kw = dict(kwargs)  # preserve original kwargs
         with ZipFile(io) as z:
-            from io import BytesIO
-
             # Convert index to sheet name in file
             if isinstance(sheet_name, int):
                 sheet_name = "sheet{}".format(sheet_name + 1)
