@@ -70,7 +70,8 @@ class ExcelDispatcher(TextFileDispatcher):
                 io._set_pandas_mode()
             return cls.single_worker_read(
                 io,
-                reason="Modin only implements parallel `read_excel` the following types of `io`: str.",
+                reason="Modin only implements parallel `read_excel` the following types of `io`: "
+                + "str, os.PathLike, io.BytesIO, io.StringIO.",
                 **kwargs
             )
 
@@ -98,7 +99,7 @@ class ExcelDispatcher(TextFileDispatcher):
 
         # NOTE: ExcelReader() in read-only mode does not close file handle by itself
         # work around that by passing file object if we received some path
-        io_file = open(io, "rb") if isinstance(io, str) else io
+        io_file = open(io, "rb") if isinstance(io, (str, os.PathLike)) else io
         try:
             ex = ExcelReader(io_file, read_only=True)
             ex.read()
@@ -109,7 +110,7 @@ class ExcelDispatcher(TextFileDispatcher):
             ex.read_strings()
             ws = Worksheet(wb)
         finally:
-            if isinstance(io, str):
+            if isinstance(io, (str, os.PathLike)):
                 # close only if it were us who opened the object
                 io_file.close()
 
