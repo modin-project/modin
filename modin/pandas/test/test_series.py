@@ -172,7 +172,7 @@ def inter_df_math_helper_one_side(
     eval_general(
         modin_series,
         pandas_series,
-        lambda df: pandas_attr(df) if isinstance(pandas.Series) else modin_attr(df),
+        lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
         **comparator_kwargs,
     )
 
@@ -194,7 +194,7 @@ def inter_df_math_helper_one_side(
     eval_general(
         series_test_modin,
         series_test_pandas,
-        lambda df: pandas_attr(df) if isinstance(pandas.Series) else modin_attr(df),
+        lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
         **comparator_kwargs,
     )
 
