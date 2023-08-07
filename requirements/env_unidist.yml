@@ -29,7 +29,7 @@ dependencies:
   # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
   - pymssql>=2.1.5,!=2.2.8
   - psycopg2>=2.8.6
-  - fastparquet>=0.6.3,<2023.1.0
+  - fastparquet>=0.6.3
   - tqdm>=4.60.0
 
   # dependencies for making release
