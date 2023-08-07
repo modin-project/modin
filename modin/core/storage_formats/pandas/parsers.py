@@ -808,7 +808,7 @@ class PandasParquetParser(PandasParser):
                 )
 
                 # This lower-level API doesn't have the ability to automatically handle pandas metadata
-                # The following code inspired by
+                # The following code is based on
                 # https://github.com/apache/arrow/blob/f44e28fa03a64ae5b3d9352d21aee2cc84f9af6c/python/pyarrow/parquet/core.py#L2619-L2628
 
                 # if use_pandas_metadata, we need to include index columns in the
@@ -819,7 +819,13 @@ class PandasParquetParser(PandasParser):
                     index_columns = json.loads(metadata[b"pandas"].decode("utf8"))[
                         "index_columns"
                     ]
-                    # RangeIndex can be represented as dict instead of column name
+                    # In the pandas metadata, the index columns can either be string column names,
+                    # or a dictionary that describes a RangeIndex.
+                    # Here, we are finding the real data columns that need to be read to become part
+                    # of the pandas Index, so we can skip the RangeIndex.
+                    # Not only can a RangeIndex be trivially reconstructed later, but we actually
+                    # ignore partition-level range indices, because we want to have a single Modin
+                    # RangeIndex that spans all partitions.
                     index_columns = [
                         col for col in index_columns if not isinstance(col, dict)
                     ]

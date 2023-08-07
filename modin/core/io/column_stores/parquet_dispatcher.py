@@ -532,6 +532,17 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             elif column["name"] is not None:
                 column_names_to_read.append(column["name"])
 
+        # When the index has meaningful values, stored in a column, we will replicate those
+        # exactly in the Modin dataframe's index. This index may have repeated values, be unsorted,
+        # etc. This is all fine.
+        # A range index is the special case: we want the Modin dataframe to have a single range,
+        # not a range that keeps restarting. i.e. if the partitions have index 0-9, 0-19, 0-29,
+        # we want our Modin dataframe to have 0-59.
+        # When there are no filters, it is relatively trivial to construct the index by
+        # actually reading in the necessary data, here in the main process.
+        # When there are filters, we let the workers materialize the indices before combining to
+        # get a single range.
+
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
         if (range_index and filters is None) or (
