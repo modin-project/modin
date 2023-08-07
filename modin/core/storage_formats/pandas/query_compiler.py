@@ -647,6 +647,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             self._modin_frame.has_materialized_dtypes
             and kwargs.get("method", None) is None
         ):
+            # For columns, defining types is easier because we don't have to calculate the common
+            # type, since the entire column is filled. A simple `reindex` covers our needs.
+            # For rows, we can avoid calculating common types if we know that no new strings of
+            # arbitrary type have been added (this information is in `indexer`).
             dtype = pandas.Index([kwargs.get("fill_value", np.nan)]).dtype
             if axis == 0:
                 new_dtypes = self.dtypes.copy()
