@@ -653,8 +653,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # "-1" means that the required labels are missing in the dataframe and the
                 # corresponding rows will be filled with "fill_value" that may change the column type.
                 if indexer is not None and -1 in indexer:
-                    for col in new_dtypes.keys():
-                        new_dtypes[col] = find_common_type((new_dtypes[col], dtype))
+                    for col, col_dtype in new_dtypes.items():
+                        new_dtypes[col] = find_common_type((col_dtype, dtype))
             else:
                 new_dtypes = self.dtypes.reindex(labels, fill_value=dtype)
         new_modin_frame = self._modin_frame.apply_full_axis(
