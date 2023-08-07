@@ -1301,6 +1301,22 @@ class TestCsv:
         )
 
 
+def _check_relative_io(fn_name, unique_filename, path_arg):
+    # Windows can be funny at where it searches for ~; besides, Python >= 3.8 no longer honors %HOME%
+    pinned_home = {
+        varname: os.path.dirname(unique_filename)
+        for varname in ("HOME", "USERPROFILE", "HOMEPATH")
+    }
+    with mock.patch.dict(os.environ, pinned_home):
+        with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
+            relative_df = eval_io(
+                fn_name=fn_name,
+                **{path_arg: f"~/{os.path.basename(unique_filename)}"},
+            )
+    # read without $HOME patched to ensure we have equivalent results
+    df_equals(relative_df, getattr(pandas, fn_name)(**{path_arg: unique_filename}))
+
+
 # Leave this test apart from the test classes, which skip the default to pandas
 # warning check. We want to make sure we are NOT defaulting to pandas for a
 # path relative to user home.
@@ -1309,13 +1325,7 @@ class TestCsv:
 def test_read_csv_relative_to_user_home(make_csv_file):
     with ensure_clean(".csv") as unique_filename:
         make_csv_file(filename=unique_filename)
-
-        with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
-            with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
-                eval_io(
-                    fn_name="read_csv",
-                    filepath_or_buffer=f"~/{os.path.basename(unique_filename)}",
-                )
+        _check_relative_io("read_csv", unique_filename, "filepath_or_buffer")
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -1750,13 +1760,7 @@ class TestParquet:
 def test_read_parquet_relative_to_user_home(make_parquet_file):
     with ensure_clean(".parquet") as unique_filename:
         make_parquet_file(filename=unique_filename)
-
-        with mock.patch.dict(os.environ, {"HOME": os.path.dirname(unique_filename)}):
-            with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
-                eval_io(
-                    fn_name="read_parquet",
-                    path=f"~/{os.path.basename(unique_filename)}",
-                )
+        _check_relative_io("read_parquet", unique_filename, "path")
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
