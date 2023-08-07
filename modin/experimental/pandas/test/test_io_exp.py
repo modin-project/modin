@@ -30,6 +30,7 @@ from modin.pandas.test.utils import (
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
+from modin.utils import try_cast_to_pandas
 
 
 @pytest.mark.skipif(
@@ -159,8 +160,7 @@ class TestCsvGlob:
                 modin_df = pd.read_csv_glob(
                     time_parsing_csv_path, parse_dates=parse_dates
                 )
-                # Call _to_pandas on the modin df to force it to materialize.
-                _ = modin_df._to_pandas()
+                try_cast_to_pandas(modin_df)  # force materialization
             assert isinstance(
                 modin_exception.value, type(pandas_exception)
             ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(

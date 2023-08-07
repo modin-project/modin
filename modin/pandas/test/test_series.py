@@ -26,7 +26,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 
-from modin.utils import get_current_execution
+from modin.utils import get_current_execution, try_cast_to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from modin.utils import to_pandas
@@ -134,9 +134,7 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4)
     except Exception as err:
         with pytest.raises(type(err)):
-            res = modin_attr(4)
-            if hasattr(res, "_to_pandas"):
-                res._to_pandas()
+            try_cast_to_pandas(modin_attr(4))  # force materialization
     else:
         modin_result = modin_attr(4)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -145,9 +143,7 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4.0)
     except Exception as err:
         with pytest.raises(type(err)):
-            res = modin_attr(4.0)
-            if hasattr(res, "_to_pandas"):
-                res._to_pandas()
+            try_cast_to_pandas(modin_attr(4.0))  # force materialization
     else:
         modin_result = modin_attr(4.0)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -181,9 +177,7 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(list_test)
     except Exception as err:
         with pytest.raises(type(err)):
-            res = modin_attr(list_test)
-            if hasattr(res, "_to_pandas"):
-                res._to_pandas()
+            try_cast_to_pandas(modin_attr(list_test))  # force materialization
     else:
         modin_result = modin_attr(list_test)
         df_equals(modin_result, pandas_result, **comparator_kwargs)

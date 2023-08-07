@@ -29,6 +29,8 @@ import unittest.mock as mock
 import functools
 import sys
 
+from modin.utils import try_cast_to_pandas
+
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
@@ -183,7 +185,7 @@ def test_aligning_blocks():
     accm["T"] = pd.Series(["24.67\n"] * 145)
 
     # see #2322 for details
-    _ = accm._to_pandas()
+    try_cast_to_pandas(accm)  # force materialization
 
 
 def test_aligning_blocks_with_duplicated_index():
@@ -197,7 +199,7 @@ def test_aligning_blocks_with_duplicated_index():
     df1 = pd.concat((pd.DataFrame(data11), pd.DataFrame(data12)))
     df2 = pd.concat((pd.DataFrame(data21), pd.DataFrame(data22)))
 
-    _ = (df1 - df2)._to_pandas()
+    try_cast_to_pandas(df1 - df2)  # force materialization
 
 
 def test_aligning_partitions():
@@ -208,7 +210,7 @@ def test_aligning_partitions():
     modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
-    _ = modin_df2._to_pandas()
+    try_cast_to_pandas(modin_df2)  # force materialization
 
 
 @pytest.mark.parametrize("row_labels", [None, [("a", "")], ["a"]])
