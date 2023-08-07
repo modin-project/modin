@@ -26,10 +26,8 @@ from . import DataFrame
 from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
 from modin.utils import expanduser_path_arg
-from modin.logging import enable_logging
 
 
-@enable_logging
 def read_sql(
     sql,
     con,
@@ -123,7 +121,6 @@ def read_sql(
 
 
 @expanduser_path_arg("filepath_or_buffer")
-@enable_logging
 def read_custom_text(
     filepath_or_buffer,
     columns,
@@ -250,7 +247,7 @@ def _make_parser_func(sep: str, funcname: str) -> Callable:
 
     parser_func.__doc__ = _read.__doc__
     parser_func.__name__ = funcname
-    return expanduser_path_arg("filepath_or_buffer")(enable_logging(parser_func))
+    return expanduser_path_arg("filepath_or_buffer")(parser_func)
 
 
 def _read(**kwargs) -> DataFrame:
@@ -308,7 +305,6 @@ read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
 @expanduser_path_arg("filepath_or_buffer")
-@enable_logging
 def read_pickle_distributed(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
@@ -356,7 +352,6 @@ def read_pickle_distributed(
 
 
 @expanduser_path_arg("filepath_or_buffer")
-@enable_logging
 def to_pickle_distributed(
     self,
     filepath_or_buffer,

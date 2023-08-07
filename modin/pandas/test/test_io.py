@@ -1303,18 +1303,21 @@ class TestCsv:
 
 def _check_relative_io(fn_name, unique_filename, path_arg):
     # Windows can be funny at where it searches for ~; besides, Python >= 3.8 no longer honors %HOME%
-    pinned_home = {
-        varname: os.path.dirname(unique_filename)
-        for varname in ("HOME", "USERPROFILE", "HOMEPATH")
-    }
+    dirname, basename = os.path.split(unique_filename)
+    pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
+    should_default = Engine.get() == "Python" or StorageFormat.get() == "Hdk"
     with mock.patch.dict(os.environ, pinned_home):
-        with warns_that_defaulting_to_pandas() if Engine.get() == "Python" else _nullcontext():
-            relative_df = eval_io(
+        with warns_that_defaulting_to_pandas() if should_default else _nullcontext():
+            eval_io(
                 fn_name=fn_name,
-                **{path_arg: f"~/{os.path.basename(unique_filename)}"},
+                **{path_arg: f"~/{basename}"},
             )
-    # read without $HOME patched to ensure we have equivalent results
-    df_equals(relative_df, getattr(pandas, fn_name)(**{path_arg: unique_filename}))
+        # check that when read without $HOME patched we have equivalent results
+        eval_general(
+            f"~/{basename}",
+            unique_filename,
+            lambda fname: getattr(pandas, fn_name)(**{path_arg: fname}),
+        )
 
 
 # Leave this test apart from the test classes, which skip the default to pandas

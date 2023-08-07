@@ -928,7 +928,6 @@ def eval_general(
     )
     if values is not None:
         comparator(*values, **(comparator_kwargs or {}))
-        return values[0]
 
 
 def eval_io(
@@ -978,7 +977,7 @@ def eval_io(
         return result
 
     def call_eval_general():
-        return eval_general(
+        eval_general(
             pd,
             pandas,
             applyier,
@@ -994,9 +993,9 @@ def eval_io(
     warn_match = modin_warning_str_match if modin_warning is not None else None
     if modin_warning:
         with pytest.warns(modin_warning, match=warn_match):
-            return call_eval_general()
+            call_eval_general()
     else:
-        return call_eval_general()
+        call_eval_general()
 
 
 def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
