@@ -461,21 +461,24 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
         Decorator which performs the replacement.
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Fn) -> Fn:
         signature = inspect.signature(func)
+        assert (
+            getattr(signature.parameters.get(argname), "name", None) == argname
+        ), f"Function {func} does not take '{argname}' as argument"
 
         @functools.wraps(func)
-        def wrapped(*args: Any, **kw: Any) -> Any:
+        def wrapped(*args: tuple, **kw: dict) -> Any:
             params = signature.bind(*args, **kw)
-            params.apply_defaults()
-            patharg = params.arguments[argname]
-            if isinstance(patharg, str) and patharg.startswith("~"):
-                params.arguments[argname] = os.path.expanduser(patharg)
-            elif isinstance(patharg, Path):
-                params.arguments[argname] = patharg.expanduser()
-            return func(**params.arguments)
+            if patharg := params.arguments.get(argname, None):
+                if isinstance(patharg, str) and patharg.startswith("~"):
+                    params.arguments[argname] = os.path.expanduser(patharg)
+                elif isinstance(patharg, Path):
+                    params.arguments[argname] = patharg.expanduser()
+                return func(*params.args, **params.kwargs)
+            return func(*args, **kw)
 
-        return wrapped
+        return wrapped  # type: ignore[return-value]
 
     return decorator
 
