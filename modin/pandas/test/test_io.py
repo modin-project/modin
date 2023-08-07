@@ -1565,7 +1565,6 @@ class TestParquet:
                     and engine == "fastparquet"
                     and version.parse(fastparquet.__version__)
                     < version.parse("2023.1.0")
-                    and version.parse(pandas.__version__) >= version.parse("2.0.0")
                 ):
                     continue
 
