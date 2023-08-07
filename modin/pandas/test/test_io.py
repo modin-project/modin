@@ -1301,11 +1301,11 @@ class TestCsv:
         )
 
 
-def _check_relative_io(fn_name, unique_filename, path_arg):
+def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
     # Windows can be funny at where it searches for ~; besides, Python >= 3.8 no longer honors %HOME%
     dirname, basename = os.path.split(unique_filename)
     pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
-    should_default = Engine.get() == "Python" or StorageFormat.get() == "Hdk"
+    should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
     with mock.patch.dict(os.environ, pinned_home):
         with warns_that_defaulting_to_pandas() if should_default else _nullcontext():
             eval_io(
@@ -1763,7 +1763,9 @@ class TestParquet:
 def test_read_parquet_relative_to_user_home(make_parquet_file):
     with ensure_clean(".parquet") as unique_filename:
         make_parquet_file(filename=unique_filename)
-        _check_relative_io("read_parquet", unique_filename, "path")
+        _check_relative_io(
+            "read_parquet", unique_filename, "path", storage_default=("Hdk",)
+        )
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
