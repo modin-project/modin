@@ -45,7 +45,7 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import get_dtype
+from pandas.core.dtypes.common import get_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -581,6 +581,13 @@ class CalciteBuilder:
         bool: "BOOLEAN",
     }
 
+    # The following aggregates require boolean columns to be cast.
+    _bool_cast_aggregates = {
+        "sum": get_dtype(int),
+        "mean": get_dtype(float),
+        "median": get_dtype(float),
+    }
+
     def __init__(self):
         self._input_ctx_stack = []
         self.has_join = False
@@ -891,10 +898,29 @@ class CalciteBuilder:
         for col in frame._table_cols:
             if col not in op.by:
                 proj_cols.append(col)
-        proj_exprs = [self._ref(frame, col) for col in proj_cols]
+
+        # Cast boolean columns, if required
+        agg_exprs = op.agg_exprs
+        cast_agg = self._bool_cast_aggregates
+        if any(v.agg in cast_agg for v in agg_exprs.values()) and (
+            bool_cols := {
+                c: cast_agg[agg_exprs[c].agg]
+                for c, t in frame.dtypes.items()
+                if is_bool_dtype(t) and agg_exprs[c].agg in cast_agg
+            }
+        ):
+            trans = self._input_ctx()._maybe_copy_and_translate_expr
+            proj_exprs = [
+                trans(frame.ref(c).cast(bool_cols[c]))
+                if c in bool_cols
+                else self._ref(frame, c)
+                for c in proj_cols
+            ]
+        else:
+            proj_exprs = [self._ref(frame, col) for col in proj_cols]
         # Add expressions required for compound aggregates
         compound_aggs = {}
-        for agg, expr in op.agg_exprs.items():
+        for agg, expr in agg_exprs.items():
             if expr.agg in self._compound_aggregates:
                 compound_aggs[agg] = self._compound_aggregates[expr.agg](
                     self, expr.operands[0]
@@ -910,7 +936,7 @@ class CalciteBuilder:
         group = [self._ref_idx(frame, col) for col in op.by]
         fields = op.by.copy()
         aggs = []
-        for agg, expr in op.agg_exprs.items():
+        for agg, expr in agg_exprs.items():
             if agg in compound_aggs:
                 extra_aggs = compound_aggs[agg].gen_agg_exprs()
                 fields.extend(extra_aggs.keys())
@@ -925,8 +951,8 @@ class CalciteBuilder:
             self._input_ctx().replace_input_node(frame, node, fields)
             proj_cols = op.by.copy()
             proj_exprs = [self._ref(frame, col) for col in proj_cols]
-            proj_cols.extend(op.agg_exprs.keys())
-            for agg in op.agg_exprs:
+            proj_cols.extend(agg_exprs.keys())
+            for agg in agg_exprs:
                 if agg in compound_aggs:
                     proj_exprs.append(compound_aggs[agg].gen_reduce_expr())
                 else:
