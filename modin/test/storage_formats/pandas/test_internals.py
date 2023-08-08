@@ -1062,3 +1062,14 @@ def test_setitem_bool_preserve_dtypes():
     # scalar as a col_loc
     df.loc[indexer, "a"] = 2.0
     assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [dict(axis=0, labels=[]), dict(axis=1, labels=["a"]), dict(axis=1, labels=[])],
+)
+def test_reindex_preserve_dtypes(kwargs):
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+
+    reindexed_df = df.reindex(**kwargs)
+    assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
