@@ -20,6 +20,7 @@ from modin.pandas.test.utils import (
 from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.utils import try_cast_to_pandas
 
 import numpy as np
 import pandas
@@ -1106,6 +1107,6 @@ def test_groupby_size_shuffling(modify_config):
         "_apply_func_to_range_partitioning",
         wraps=modin_frame._apply_func_to_range_partitioning,
     ) as shuffling_method:
-        repr(df.groupby("a").size())
+        try_cast_to_pandas(df.groupby("a").size())
 
     shuffling_method.assert_called()
