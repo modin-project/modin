@@ -844,6 +844,7 @@ class TestGroupby:
         "a": [1, 1, 2, 2, 2, 1],
         "b": [11, 21, 12, 22, 32, 11],
         "c": [101, 201, 202, 202, 302, 302],
+        "d": [True, True, False, True, False, True],
     }
     cols_value = ["a", ["a", "b"]]
 
@@ -911,7 +912,7 @@ class TestGroupby:
         index = generate_multiindex(len(self.data["a"]))
 
         def groupby(df, *args, **kwargs):
-            df = df + 1
+            df = df[["a", "b", "c"]] + 1
             return df.groupby("a").agg({"b": "size"})
 
         run_and_compare(groupby, data=self.data, constructor_kwargs={"index": index})
@@ -1288,6 +1289,7 @@ class TestAgg:
         "b": [10, 20, None, 20, 10, None],
         "c": [None, 200, None, 400, 500, 600],
         "d": [11, 22, 33, 22, 33, 22],
+        "e": [True, True, False, True, False, True],
     }
     int_data = pandas.DataFrame(data).fillna(0).astype("int").to_dict()
 
