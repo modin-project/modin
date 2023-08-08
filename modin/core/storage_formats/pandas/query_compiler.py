@@ -2828,6 +2828,53 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Drop/Dropna
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
+        if kwargs.get("axis", 0) == 1 and kwargs.get("thresh", no_default) in (
+            no_default,
+            None,
+        ):
+            how = kwargs.get("how", "any")
+            subset = kwargs.get("subset")
+            how = "any" if how in (no_default, None) else how
+            condition = lambda df: getattr(df, how)()  # noqa: E731 (lambda assignment)
+
+            def mapper(df: pandas.DataFrame):
+                if subset is not None:
+                    subset_mask = condition(
+                        df.loc[df.index.intersection(subset)].isna()
+                    )
+                    mask = pandas.Series(
+                        np.zeros(df.shape[1], dtype=bool), index=df.columns
+                    )
+                    mask.update(subset_mask)
+                else:
+                    mask = condition(df.isna())
+                return mask.to_frame().T
+
+            masks = self._modin_frame.apply_full_axis(
+                func=mapper, axis=1, keep_partitioning=True
+            )
+
+            def reduce(df: pandas.DataFrame, mask: pandas.DataFrame):
+                to_take_mask = ~condition(mask)
+
+                to_take = []
+                for col, value in to_take_mask.items():
+                    if value and col in df:
+                        to_take.append(col)
+
+                return df[to_take]
+
+            result = self._modin_frame.broadcast_apply(
+                # 'masks' have identical partitioning as we specified 'keep_partitioning=True' before,
+                # this means that we can safely skip the 'co-partitioning' stage
+                axis=1,
+                func=reduce,
+                other=masks,
+                copartition=False,
+                labels="drop",
+            )
+            return self.__constructor__(result)
+
         return self.__constructor__(
             self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
