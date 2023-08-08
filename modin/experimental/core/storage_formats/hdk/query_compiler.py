@@ -857,9 +857,10 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._modin_frame.dtypes
 
 
-_SUPPORTED_NUM_TYPE_CODES = set(np.typecodes["AllInteger"] + np.typecodes["Float"]) - {
-    np.dtype(np.float16).char
-}
+# "?" is the boolean type code.
+_SUPPORTED_NUM_TYPE_CODES = set(
+    np.typecodes["AllInteger"] + np.typecodes["Float"] + "?"
+) - {np.dtype(np.float16).char}
 
 
 def _check_int_or_float(op, dtypes):  # noqa: GL08
