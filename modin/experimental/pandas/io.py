@@ -25,6 +25,7 @@ from pandas._typing import CompressionOptions, StorageOptions
 from . import DataFrame
 from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
+from modin.utils import expanduser_path_arg
 
 
 def read_sql(
@@ -119,6 +120,7 @@ def read_sql(
     return (DataFrame(query_compiler=qc) for qc in result)
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def read_custom_text(
     filepath_or_buffer,
     columns,
@@ -164,7 +166,7 @@ def read_custom_text(
 
 
 # CSV and table
-def _make_parser_func(sep: str) -> Callable:
+def _make_parser_func(sep: str, funcname: str) -> Callable:
     """
     Create a parser function from the given sep.
 
@@ -172,6 +174,8 @@ def _make_parser_func(sep: str) -> Callable:
     ----------
     sep : str
         The separator default to use for the parser.
+    funcname : str
+        The name of the generated parser function.
 
     Returns
     -------
@@ -242,7 +246,8 @@ def _make_parser_func(sep: str) -> Callable:
         return _read(**kwargs)
 
     parser_func.__doc__ = _read.__doc__
-    return parser_func
+    parser_func.__name__ = funcname
+    return expanduser_path_arg("filepath_or_buffer")(parser_func)
 
 
 def _read(**kwargs) -> DataFrame:
@@ -296,9 +301,10 @@ def _read(**kwargs) -> DataFrame:
     return DataFrame(query_compiler=pd_obj)
 
 
-read_csv_glob = _make_parser_func(sep=",")
+read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def read_pickle_distributed(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
@@ -345,6 +351,7 @@ def read_pickle_distributed(
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def to_pickle_distributed(
     self,
     filepath_or_buffer,
