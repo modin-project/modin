@@ -237,7 +237,7 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        axis : int, default 0
+        axis : int, default: 0
             0 - get row lengths cache, 1 - get column widths cache.
 
         Returns
