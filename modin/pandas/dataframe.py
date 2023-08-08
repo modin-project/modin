@@ -51,6 +51,7 @@ from modin.utils import (
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
     try_cast_to_pandas,
+    expanduser_path_arg,
 )
 from modin.config import PersistentPickle
 from .utils import (
@@ -1966,6 +1967,7 @@ class DataFrame(BasePandasDataset):
             )
         )
 
+    @expanduser_path_arg("path")
     def to_feather(self, path, **kwargs):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to the binary Feather format.
@@ -2002,6 +2004,7 @@ class DataFrame(BasePandasDataset):
             credentials=credentials,
         )
 
+    @expanduser_path_arg("path")
     def to_orc(self, path=None, *, engine="pyarrow", index=None, engine_kwargs=None):
         return self._default_to_pandas(
             pandas.DataFrame.to_orc,
@@ -2011,6 +2014,7 @@ class DataFrame(BasePandasDataset):
             engine_kwargs=engine_kwargs,
         )
 
+    @expanduser_path_arg("buf")
     def to_html(
         self,
         buf=None,
@@ -2067,6 +2071,7 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
+    @expanduser_path_arg("path")
     def to_parquet(
         self,
         path=None,
@@ -2113,6 +2118,7 @@ class DataFrame(BasePandasDataset):
             index_dtypes=index_dtypes,
         )
 
+    @expanduser_path_arg("path")
     def to_stata(
         self,
         path: FilePath | WriteBuffer[bytes],
@@ -2145,6 +2151,7 @@ class DataFrame(BasePandasDataset):
             value_labels=value_labels,
         )
 
+    @expanduser_path_arg("path_or_buffer")
     def to_xml(
         self,
         path_or_buffer=None,
