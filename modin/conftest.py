@@ -99,34 +99,6 @@ def pytest_addoption(parser):
     )
 
 
-class Patcher:
-    def __init__(self, conn, *pairs):
-        self.pairs = pairs
-        self.originals = None
-        self.conn = conn
-
-    def __wrap(self, func):
-        def wrapper(*a, **kw):
-            return func(
-                *(tuple(self.conn.obtain(x) for x in a)),
-                **({k: self.conn.obtain(v) for k, v in kw.items()}),
-            )
-
-        return func, wrapper
-
-    def __enter__(self):
-        self.originals = []
-        for module, attrname in self.pairs:
-            orig, wrapped = self.__wrap(getattr(module, attrname))
-            self.originals.append((module, attrname, orig))
-            setattr(module, attrname, wrapped)
-        return self
-
-    def __exit__(self, *a, **kw):
-        for module, attrname, orig in self.originals:
-            setattr(module, attrname, orig)
-
-
 def set_experimental_env(mode):
     IsExperimental.put(mode == "experimental")
 
