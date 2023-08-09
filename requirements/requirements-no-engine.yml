@@ -25,6 +25,8 @@ dependencies:
   - pandas-gbq>=0.15.0
   - pytables>=3.6.1
   - tqdm>=4.60.0
+  # pandas isn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
+  - numexpr<2.8.5
 
   # dependencies for making release
   - pygithub>=v1.58.0

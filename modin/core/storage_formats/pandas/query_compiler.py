@@ -640,13 +640,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Reindex/reset_index (may shuffle data)
     def reindex(self, axis, labels, **kwargs):
-        new_index, _ = (self.index, None) if axis else self.index.reindex(labels)
+        new_index, indexer = (self.index, None) if axis else self.index.reindex(labels)
         new_columns, _ = self.columns.reindex(labels) if axis else (self.columns, None)
+        new_dtypes = None
+        if (
+            self._modin_frame.has_materialized_dtypes
+            and kwargs.get("method", None) is None
+        ):
+            # For columns, defining types is easier because we don't have to calculate the common
+            # type, since the entire column is filled. A simple `reindex` covers our needs.
+            # For rows, we can avoid calculating common types if we know that no new strings of
+            # arbitrary type have been added (this information is in `indexer`).
+            dtype = pandas.Index([kwargs.get("fill_value", np.nan)]).dtype
+            if axis == 0:
+                new_dtypes = self.dtypes.copy()
+                # "-1" means that the required labels are missing in the dataframe and the
+                # corresponding rows will be filled with "fill_value" that may change the column type.
+                if indexer is not None and -1 in indexer:
+                    for col, col_dtype in new_dtypes.items():
+                        new_dtypes[col] = find_common_type((col_dtype, dtype))
+            else:
+                new_dtypes = self.dtypes.reindex(labels, fill_value=dtype)
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.reindex(labels=labels, axis=axis, **kwargs),
             new_index=new_index,
             new_columns=new_columns,
+            dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 

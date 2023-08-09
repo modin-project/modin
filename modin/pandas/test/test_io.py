@@ -42,6 +42,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
+import fastparquet
 import os
 from scipy import sparse
 import sys
@@ -92,13 +93,6 @@ except ImportError:
 
 
 from modin.config import NPartitions
-
-# Our configuration in pytest.ini requires that we explicitly catch all
-# instances of defaulting to pandas, but some test modules, like this one,
-# have too many such instances.
-# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
-# of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 NPartitions.put(4)
 
@@ -269,6 +263,7 @@ def make_parquet_dir(tmp_path):
     IsExperimental.get() and StorageFormat.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
 )
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestCsv:
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
@@ -1307,6 +1302,37 @@ class TestCsv:
         )
 
 
+def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
+    # Windows can be funny at where it searches for ~; besides, Python >= 3.8 no longer honors %HOME%
+    dirname, basename = os.path.split(unique_filename)
+    pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
+    should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
+    with mock.patch.dict(os.environ, pinned_home):
+        with warns_that_defaulting_to_pandas() if should_default else _nullcontext():
+            eval_io(
+                fn_name=fn_name,
+                **{path_arg: f"~/{basename}"},
+            )
+        # check that when read without $HOME patched we have equivalent results
+        eval_general(
+            f"~/{basename}",
+            unique_filename,
+            lambda fname: getattr(pandas, fn_name)(**{path_arg: fname}),
+        )
+
+
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# commment once we turn all default to pandas messages into errors.
+def test_read_csv_relative_to_user_home(make_csv_file):
+    with ensure_clean(".csv") as unique_filename:
+        make_csv_file(filename=unique_filename)
+        _check_relative_io("read_csv", unique_filename, "filepath_or_buffer")
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestTable:
     def test_read_table(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1358,6 +1384,7 @@ class TestTable:
 
 
 @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
@@ -1394,6 +1421,36 @@ class TestParquet:
                 engine=engine,
                 path=unique_filename,
                 dtype_backend=dtype_backend,
+                comparator=comparator,
+            )
+
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
+    )
+    def test_read_parquet_filters(self, engine, make_parquet_file, filters):
+        if engine == "pyarrow" and filters == []:
+            # pyarrow, and therefore pandas using pyarrow, errors in this case.
+            # Modin correctly replicates this behavior; however error cases
+            # cause race conditions with ensure_clean on Windows.
+            # TODO: Remove this once https://github.com/modin-project/modin/issues/6460 is fixed.
+            pytest.xfail(
+                "Skipping empty filters error case to avoid race condition - see #6460"
+            )
+
+        with ensure_clean(".parquet") as unique_filename:
+            make_parquet_file(filename=unique_filename, row_group_size=100)
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                filters=filters,
                 comparator=comparator,
             )
 
@@ -1460,8 +1517,12 @@ class TestParquet:
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
+    )
     def test_read_parquet_partitioned_directory(
-        self, tmp_path, make_parquet_file, columns, engine
+        self, tmp_path, make_parquet_file, columns, filters, engine
     ):
         unique_filename = get_unique_filename(extension=None, data_dir=tmp_path)
         make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
@@ -1472,9 +1533,24 @@ class TestParquet:
             engine=engine,
             path=unique_filename,
             columns=columns,
+            filters=filters,
         )
 
-    def test_read_parquet_pandas_index(self, engine):
+    @pytest.mark.parametrize(
+        "filters",
+        [
+            None,
+            [],
+            [("B", "==", "a")],
+            [
+                ("B", "==", "a"),
+                ("A", ">=", 50_000),
+                ("idx", "<=", 30_000),
+                ("idx_categorical", "==", "y"),
+            ],
+        ],
+    )
+    def test_read_parquet_pandas_index(self, engine, filters):
         if (
             version.parse(pa.__version__) >= version.parse("12.0.0")
             and version.parse(pd.__version__) < version.parse("2.0.0")
@@ -1515,6 +1591,18 @@ class TestParquet:
 
         for col in pandas_df.columns:
             if col.startswith("idx"):
+                # Before this commit, first released in version 2023.1.0, fastparquet relied
+                # on pandas private APIs to handle Categorical indices.
+                # These private APIs broke in pandas 2.
+                # https://github.com/dask/fastparquet/commit/cf60ae0e9a9ca57afc7a8da98d8c0423db1c0c53
+                if (
+                    col == "idx_categorical"
+                    and engine == "fastparquet"
+                    and version.parse(fastparquet.__version__)
+                    < version.parse("2023.1.0")
+                ):
+                    continue
+
                 with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
@@ -1523,6 +1611,7 @@ class TestParquet:
                         # read_parquet kwargs
                         path=unique_filename,
                         engine=engine,
+                        filters=filters,
                     )
 
         with ensure_clean(".parquet") as unique_filename:
@@ -1532,9 +1621,19 @@ class TestParquet:
                 # read_parquet kwargs
                 path=unique_filename,
                 engine=engine,
+                filters=filters,
             )
 
-    def test_read_parquet_pandas_index_partitioned(self, tmp_path, engine):
+    @pytest.mark.parametrize(
+        "filters",
+        [
+            None,
+            [],
+            [("B", "==", "a")],
+            [("B", "==", "a"), ("A", ">=", 5), ("idx", "<=", 30_000)],
+        ],
+    )
+    def test_read_parquet_pandas_index_partitioned(self, tmp_path, engine, filters):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         pandas_df = pandas.DataFrame(
             {
@@ -1552,6 +1651,7 @@ class TestParquet:
             # read_parquet kwargs
             path=unique_filename,
             engine=engine,
+            filters=filters,
         )
 
     def test_read_parquet_hdfs(self, engine):
@@ -1589,7 +1689,11 @@ class TestParquet:
                 engine=engine,
             )
 
-    def test_read_parquet_without_metadata(self, tmp_path, engine):
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("idx", "<=", 30_000)], [("idx", "<=", 30_000), ("A", ">=", 5)]],
+    )
+    def test_read_parquet_without_metadata(self, tmp_path, engine, filters):
         """Test that Modin can read parquet files not written by pandas."""
         from pyarrow import csv
         from pyarrow import parquet
@@ -1614,6 +1718,7 @@ class TestParquet:
             # read_parquet kwargs
             path=parquet_fname,
             engine=engine,
+            filters=filters,
         )
 
     def test_read_empty_parquet_file(self, tmp_path, engine):
@@ -1701,22 +1806,6 @@ class TestParquet:
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
-    def test_read_parquet_5509(self, tmp_path, engine):
-        test_df = pandas.DataFrame({"col_a": [1, 2, 3], "col_b": ["a", "b", "c"]})
-
-        path = tmp_path / "data"
-        path.mkdir()
-        file_name = "5509.parquet"
-        test_df.to_parquet(path / file_name)
-        with warns_that_defaulting_to_pandas():
-            eval_io(
-                fn_name="read_parquet",
-                path=str(path / file_name),
-                columns=["col_b"],
-                engine=engine,
-                filters=[[("col_a", "==", 1)]],
-            )
-
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
         # https://github.com/modin-project/modin/issues/4636
@@ -1729,6 +1818,20 @@ class TestParquet:
         )
 
 
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# commment once we turn all default to pandas messages into errors.
+def test_read_parquet_relative_to_user_home(make_parquet_file):
+    with ensure_clean(".parquet") as unique_filename:
+        make_parquet_file(filename=unique_filename)
+        _check_relative_io(
+            "read_parquet", unique_filename, "path", storage_default=("Hdk",)
+        )
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
     def test_read_json(self, make_json_file, lines):
@@ -1838,6 +1941,7 @@ class TestJson:
         assert parts_width_cached == parts_width_actual
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestExcel:
     @check_file_leaks
     def test_read_excel(self, make_excel_file):
@@ -2018,6 +2122,7 @@ class TestExcel:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
     def test_read_hdf(self, make_hdf_file, format):
@@ -2072,6 +2177,7 @@ class TestHdf:
         df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSql:
     @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
     def test_read_sql(self, tmp_path, make_sql_connection, read_sql_engine):
@@ -2246,6 +2352,7 @@ class TestSql:
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
@@ -2262,6 +2369,7 @@ class TestHtml:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFwf:
     def test_fwf_file(self, make_fwf_file):
         fwf_data = (
@@ -2489,6 +2597,7 @@ class TestFwf:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestGbq:
     @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
@@ -2519,6 +2628,7 @@ class TestGbq:
         read_gbq.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestStata:
     def test_read_stata(self, make_stata_file):
         eval_io(
@@ -2538,6 +2648,7 @@ class TestStata:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSas:
     def test_read_sas(self):
         eval_io(
@@ -2547,6 +2658,7 @@ class TestSas:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFeather:
     def test_read_feather(self, make_feather_file):
         eval_io(
@@ -2611,6 +2723,7 @@ class TestFeather:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestClipboard:
     @pytest.mark.skip(reason="No clipboard in CI")
     def test_read_clipboard(self):
@@ -2631,6 +2744,7 @@ class TestClipboard:
         assert modin_as_clip.equals(pandas_as_clip)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestPickle:
     def test_read_pickle(self, make_pickle_file):
         eval_io(
@@ -2650,6 +2764,7 @@ class TestPickle:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
     def test_read_xml(self):
         # example from pandas
@@ -2669,6 +2784,7 @@ class TestXml:
         eval_io("read_xml", path_or_buffer=data)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestOrc:
     # It's not easy to add infrastructure for `orc` format.
     # In case of defaulting to pandas, it's enough
@@ -2687,6 +2803,7 @@ class TestOrc:
         read_orc.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSpss:
     # It's not easy to add infrastructure for `spss` format.
     # In case of defaulting to pandas, it's enough
@@ -2703,6 +2820,7 @@ class TestSpss:
         read_spss.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_json_normalize():
     # example from pandas
     data = [
@@ -2713,12 +2831,14 @@ def test_json_normalize():
     eval_io("json_normalize", data=data)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_spmatrix():
     data = sparse.eye(3)
     with pytest.warns(UserWarning, match="defaulting to pandas.*"):
@@ -2727,12 +2847,14 @@ def test_from_spmatrix():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dense():
     data = {"col1": pandas.arrays.SparseArray([0, 1, 0])}
     modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dict_dataframe():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
@@ -2747,6 +2869,7 @@ def test_to_dict_dataframe():
         pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
     ],
 )
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dict_series(kwargs):
     eval_general(
         *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
@@ -2757,11 +2880,13 @@ def test_to_dict_series(kwargs):
     )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_latex():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_period():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
