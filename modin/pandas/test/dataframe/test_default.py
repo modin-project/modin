@@ -46,7 +46,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -850,7 +850,20 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
 @pytest.mark.parametrize("rule", ["5T"])
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
-@pytest.mark.parametrize("on", [None, "DateColumn"])
+@pytest.mark.parametrize(
+    "on",
+    [
+        None,
+        pytest.param(
+            "DateColumn",
+            marks=pytest.mark.xfail(
+                condition=Engine.get() in ("Ray", "Unidist", "Dask", "Python")
+                and StorageFormat.get() != "Base",
+                reason="https://github.com/modin-project/modin/issues/6399",
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("level", [None, 1])
 def test_resample_specific(rule, closed, label, on, level):
     data, index = (

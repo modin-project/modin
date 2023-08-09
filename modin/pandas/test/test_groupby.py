@@ -2748,7 +2748,11 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
     pd_df = md_df._to_pandas()
 
     if StorageFormat.get() == "Pandas":
-        assert md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+        assert (
+            md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+            if on is None
+            else 3
+        )
 
     md_window = md_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on

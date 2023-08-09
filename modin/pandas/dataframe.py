@@ -2511,7 +2511,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical, np.ndarray)):
+            if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
