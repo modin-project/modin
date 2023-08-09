@@ -31,7 +31,7 @@ connectorx>=0.2.6a4
 fastparquet>=0.6.3
 flask-cors
 tqdm>=4.60.0
-# pandas doesn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
+# pandas isn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
 numexpr<2.8.5
 # Latest modin-spreadsheet with widget fix
 git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
