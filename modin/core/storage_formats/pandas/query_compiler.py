@@ -43,7 +43,7 @@ import hashlib
 from pandas.core.groupby.base import transformation_kernels
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import ExperimentalGroupbyImpl
+from modin.config import ExperimentalGroupbyImpl, CpuCount
 from modin.error_message import ErrorMessage
 from modin.utils import (
     try_cast_to_pandas,
@@ -2828,10 +2828,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # Drop/Dropna
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
-        if kwargs.get("axis", 0) == 1 and kwargs.get("thresh", no_default) in (
+        is_column_wise = kwargs.get("axis", 0) == 1
+        no_thresh_passed = kwargs.get("thresh", no_default) in (
             no_default,
             None,
-        ):
+        )
+        # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
+        # if there are too many partitions then all non-full-axis implementations start acting very badly.
+        # The here threshold is pretty random though it works fine on simple scenarios
+        processable_amount_of_partitions = (
+            np.prod(self._modin_frame._partitions.shape) < CpuCount.get() * 32
+        )
+
+        if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
             how = kwargs.get("how", "any")
             subset = kwargs.get("subset")
             how = "any" if how in (no_default, None) else how
