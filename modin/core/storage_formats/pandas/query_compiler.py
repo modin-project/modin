@@ -687,7 +687,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df
 
             if self._modin_frame.has_columns_cache and kwargs["drop"]:
-                new_columns = self._modin_frame.copy_columns_cache()
+                new_columns = self._modin_frame.copy_columns_cache(copy_lengths=True)
             else:
                 new_columns = None
 
@@ -2489,8 +2489,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.rank(**kwargs),
-            new_index=self._modin_frame.copy_index_cache(),
-            new_columns=self._modin_frame.copy_columns_cache()
+            new_index=self._modin_frame.copy_index_cache(copy_lengths=True),
+            new_columns=self._modin_frame.copy_columns_cache(copy_lengths=True)
             if not numeric_only
             else None,
             dtypes=np.float64,
@@ -2680,7 +2680,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame.copy_index_cache(),
+            new_index=self._modin_frame.copy_index_cache(copy_lengths=True),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
             dtypes=new_dtypes,
