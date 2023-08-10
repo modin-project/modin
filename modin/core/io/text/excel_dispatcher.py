@@ -14,7 +14,7 @@
 """Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
 import os
-from io import BytesIO, StringIO
+from io import BytesIO
 
 import pandas
 import re
@@ -63,7 +63,7 @@ class ExcelDispatcher(TextFileDispatcher):
             io = BytesIO(io)
 
         # isinstance(ExcelFile, os.PathLike) == True
-        if not isinstance(io, (str, os.PathLike, BytesIO, StringIO)) or isinstance(
+        if not isinstance(io, (str, os.PathLike, BytesIO)) or isinstance(
             io, (ExcelFile, pandas.ExcelFile)
         ):
             if isinstance(io, ExcelFile):
@@ -71,7 +71,7 @@ class ExcelDispatcher(TextFileDispatcher):
             return cls.single_worker_read(
                 io,
                 reason="Modin only implements parallel `read_excel` the following types of `io`: "
-                + "str, os.PathLike, io.BytesIO, io.StringIO.",
+                + "str, os.PathLike, io.BytesIO.",
                 **kwargs
             )
 

@@ -2102,7 +2102,7 @@ class TestExcel:
         df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
         assert isinstance(modin_excel_file, pd.ExcelFile)
 
-    def test_read_excel_from_ExcelFile(self, make_excel_file):
+    def test_read_excel_ExcelFile(self, make_excel_file):
         unique_filename = make_excel_file()
         with open(unique_filename, mode="rb") as f:
             content = f.read()
@@ -2113,7 +2113,7 @@ class TestExcel:
         df_equals(pd.read_excel(modin_excel_file), pandas.read_excel(pandas_excel_file))
 
     @pytest.mark.parametrize("use_bytes_io", [False, True])
-    def test_read_excel_from_bytes(self, use_bytes_io, make_excel_file):
+    def test_read_excel_bytes(self, use_bytes_io, make_excel_file):
         unique_filename = make_excel_file()
         with open(unique_filename, mode="rb") as f:
             io_bytes = f.read()
@@ -2127,7 +2127,7 @@ class TestExcel:
             io=io_bytes,
         )
 
-    def test_read_excel_from_file_handle(self, make_excel_file):
+    def test_read_excel_file_handle(self, make_excel_file):
         unique_filename = make_excel_file()
         with open(unique_filename, mode="rb") as f:
             eval_io(
