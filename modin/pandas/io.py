@@ -837,7 +837,8 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
 
     _behave_like_pandas = False
 
-    def _set_pandas_mode(self):
+    def _set_pandas_mode(self):  # noqa
+        # disable Modin behavior to be able to pass object to `pandas.read_excel`
         self._behave_like_pandas = True
 
     def __getattribute__(self, item):
