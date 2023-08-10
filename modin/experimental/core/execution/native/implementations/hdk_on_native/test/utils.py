@@ -12,12 +12,18 @@
 # governing permissions and limitations under the License.
 
 import pytest
+
+import pandas
+from pandas.core.dtypes.common import (
+    is_object_dtype,
+    is_categorical_dtype,
+    is_datetime64_any_dtype,
+)
+
 import modin.pandas as pd
 from modin.utils import try_cast_to_pandas
-import pandas
 import datetime
 import numpy as np
-from pandas.api.types import is_datetime64_any_dtype
 
 from modin.pandas.test.utils import (
     df_equals,
@@ -51,17 +57,23 @@ def eval_io(
         with ForceHdkImport(df1, df2):
             # Aligning DateTime dtypes because of the bug related to the `parse_dates` parameter:
             # https://github.com/modin-project/modin/issues/3485
-            df1, df2 = align_datetime_dtypes(df1, df2)
+            dfs = align_datetime_dtypes(df1, df2)
 
             # 1. Replace NA with empty strings. HDK treats empty strings and NA equally.
+            cols = {c for df in dfs for c, t in df.dtypes.items() if is_object_dtype(t)}
+            if len(cols) != 0:
+                cols = pandas.Index(cols)
+                for df in dfs:
+                    df[cols] = df[cols].fillna("")
             # 2. HdkWorker.cast_to_compatible_types() converts all categorical columns to string.
-            for dtype in ("object", "category"):
-                for df in (df1, df2):
-                    sdf = df.select_dtypes(dtype)
-                    if len(sdf.columns) != 0:
-                        sdf = sdf.fillna("") if dtype == "object" else sdf.astype(str)
-                        df[sdf.columns] = sdf[sdf.columns]
-            comparator(df1, df2, **kwargs)
+            cols = {
+                c for df in dfs for c, t in df.dtypes.items() if is_categorical_dtype(t)
+            }
+            if len(cols) != 0:
+                cols = pandas.Index(cols)
+                for df in dfs:
+                    df[cols] = df[cols].astype(str)
+                comparator(*dfs, **kwargs)
 
     general_eval_io(
         fn_name,
