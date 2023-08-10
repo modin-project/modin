@@ -963,16 +963,8 @@ class DataFrameGroupBy(ClassLogger):
                 idx_name=self._idx_name,
                 **self._kwargs,
             ).size()
-        work_object = type(self)(
-            self._df,
-            self._by,
-            self._axis,
-            drop=False,
-            idx_name=None,
-            **self._kwargs,
-        )
-        result = work_object._wrap_aggregation(
-            type(work_object._query_compiler).groupby_size,
+        result = self._wrap_aggregation(
+            type(self._query_compiler).groupby_size,
             numeric_only=False,
         )
         if not isinstance(result, Series):
