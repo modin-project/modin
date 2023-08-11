@@ -452,6 +452,11 @@ class PandasDataframe(ClassLogger):
         """
         Copy the index cache.
 
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword parameters to pass to the ``ModinIndex.copy()``.
+
         Returns
         -------
         pandas.Index, callable or None
@@ -491,6 +496,11 @@ class PandasDataframe(ClassLogger):
         """
         Copy the columns cache.
 
+        Parameters
+        ----------
+        **kwargs : dict
+            Keyword parameters to pass to the ``ModinIndex.copy()``.
+
         Returns
         -------
         pandas.Index or None
@@ -508,6 +518,8 @@ class PandasDataframe(ClassLogger):
         Parameters
         ----------
         axis : int, default: 0
+        **kwargs : dict
+            Keyword parameters to pass to the ``ModinIndex.copy()``.
 
         Returns
         -------
