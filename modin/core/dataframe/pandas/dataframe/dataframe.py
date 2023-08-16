@@ -639,6 +639,7 @@ class PandasDataframe(ClassLogger):
         List of int
             Size of partitions alongside specified `axis`.
         """
+
         if partitions is None:
             partitions = self._partitions
         new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)

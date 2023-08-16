@@ -2401,7 +2401,8 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings", "_cache") or key in self.__dict__:
             pass
-        elif key in self and key not in dir(self):
+        # we have to check for the key in `dir(self)` first in order not to trigger columns computation
+        elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
             # Note: return immediately so we don't keep this `key` as dataframe state.
             # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
