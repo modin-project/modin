@@ -1100,3 +1100,54 @@ def test_reindex_preserve_dtypes(kwargs):
 
     reindexed_df = df.reindex(**kwargs)
     assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+def remove_cache(df, axis=0):
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        mf.set_index_cache(None)
+        mf._row_lengths_cache = None
+    else:
+        mf.set_columns_cache(None)
+        mf._column_widths_cache = None
+
+def assert_has_no_cache(df, axis=0):
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        assert not mf.has_materialized_index and mf._row_lengths_cache is None
+    else:
+        assert not mf.has_materialized_columns and mf._columns_widths_cache is None
+
+
+@pytest.mark.parametrize("same_column_name", [True, False])
+def test_setitem_without_copartition(same_column_name):
+    src_col, dest_col = ("col0", "col0") if same_column_name else ("col10", "col20")
+
+    # simple insertion
+    df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+    remove_cache(df)
+
+    col = df[src_col]
+    assert_has_no_cache(col)
+    assert_has_no_cache(df)
+
+    df[dest_col] = col
+    # check that no cache computation was triggered
+    assert_has_no_cache(df)
+    assert_has_no_cache(col)
+
+    # insertion with few map operations
+    df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+    remove_cache(df)
+
+    col = df[src_col]
+    col = pd.to_datetime(col * 2 + 10)
+    assert_has_no_cache(col)
+    assert_has_no_cache(df)
+
+    df[dest_col] = col
+    # check that no cache computation was triggered
+    assert_has_no_cache(df)
+    assert_has_no_cache(col)
+
+

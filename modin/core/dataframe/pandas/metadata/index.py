@@ -53,7 +53,7 @@ class ModinIndex:
         """
         return self._value_ref is not None
 
-    def update_ref(self, new_ref):
+    def update_ref(self, new_ref) -> "ModinIndex":
         """
         Update/set an argument to be passed to the lambda computing actual indices.
 
@@ -61,7 +61,9 @@ class ModinIndex:
         ----------
         new_ref : object
         """
-        self._value_ref = new_ref
+        new_index = self.copy(copy_lengths=True)
+        new_index._value_ref = new_ref
+        return new_index
 
     @property
     def is_materialized(self) -> bool:
@@ -73,6 +75,10 @@ class ModinIndex:
         bool
         """
         return isinstance(self._value, pandas.Index)
+
+    def invalidate_lengths(self):
+        self._lengths_cache = None
+        self._lengths_id = uuid.uuid4()
 
     def get(self, return_lengths=False) -> pandas.Index:
         """
@@ -90,6 +96,7 @@ class ModinIndex:
         pandas.Index
         """
         if not self.is_materialized:
+            # breakpoint()
             if callable(self._value):
                 index, self._lengths_cache = (
                     self._value(self._value_ref)
@@ -119,7 +126,7 @@ class ModinIndex:
         bool
             The result of the comparison.
         """
-        if self._id == other._id:
+        if self._index_id == other._index_id:
             return True
 
         if not self.is_materialized:

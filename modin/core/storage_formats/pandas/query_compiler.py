@@ -1014,7 +1014,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 lambda df, *args, **kwargs: pandas.to_datetime(
                     df.squeeze(axis=1), *args, **kwargs
                 ).to_frame()
-            )(self, *args, **kwargs)
+            )(self, *args, **kwargs, shape_hint="column")
         else:
             return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
 
@@ -2923,6 +2923,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # update.
     def insert(self, loc, column, value):
         if isinstance(value, type(self)):
+            breakpoint()
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 

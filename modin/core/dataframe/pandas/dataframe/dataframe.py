@@ -402,7 +402,7 @@ class PandasDataframe(ClassLogger):
             self._columns_cache = ModinIndex(
                 lambda obj: obj._compute_axis_labels_and_lengths(axis=1), value_ref=self
             )
-        if isinstance(columns, ModinIndex):
+        elif isinstance(columns, ModinIndex):
             self._columns_cache = (
                 columns.update_ref(self) if columns.has_value_ref else columns
             )
@@ -643,6 +643,8 @@ class PandasDataframe(ClassLogger):
            The new column labels.
         """
         if self.has_materialized_columns:
+            if self.columns.equals(new_columns) or (isinstance(new_columns, list) and np.all(self.columns.values == new_columns)):
+                return
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self.has_materialized_dtypes:
                 self.dtypes.index = new_columns
@@ -702,7 +704,7 @@ class PandasDataframe(ClassLogger):
         new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)
         return new_index, list(map(len, internal_idx))
 
-    def _filter_empties(self, compute_metadata=True):
+    def _filter_empties(self, compute_metadata=True, axis=None):
         """
         Remove empty partitions from `self._partitions` to avoid triggering excess computation.
 
@@ -710,35 +712,59 @@ class PandasDataframe(ClassLogger):
         ----------
         compute_metadata : bool, default: True
             Trigger the computations for partition sizes and labels if they're not done already.
+        axis : int, optional
         """
-        if not compute_metadata and (
-            not self.has_materialized_index
-            or not self.has_materialized_columns
-            or self._row_lengths_cache is None
-            or self._column_widths_cache is None
-        ):
-            # do not trigger the computations
-            return
+        axis = (0, 1) if axis is None else (axis,)
 
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
-            # This is the case for an empty frame. We don't want to completely remove
-            # all metadata and partitions so for the moment, we won't prune if the frame
-            # is empty.
-            # TODO: Handle empty dataframes better
-            return
-        self._partitions = np.array(
-            [
+        if not compute_metadata:
+            if 0 in axis and (not self.has_materialized_index or self._row_lengths_cache is None):
+                # do not trigger the computations
+                return
+            if 1 in axis and (not self.has_materialized_columns or self._column_widths_cache is None):
+                # do not trigger the computations
+                return
+
+        for ax in axis:
+            if len(self.get_axis(ax)) == 0:
+                # This is the case for an empty frame. We don't want to completely remove
+                # all metadata and partitions so for the moment, we won't prune if the frame
+                # is empty.
+                # TODO: Handle empty dataframes better
+                return
+
+        if 0 in axis:
+            self._partitions = np.array(
                 [
-                    self._partitions[i][j]
-                    for j in range(len(self._partitions[i]))
-                    if j < len(self.column_widths) and self.column_widths[j] != 0
+                    [
+                        self._partitions[i][j]
+                        for j in range(len(self._partitions[i]))
+                    ]
+                    for i in range(len(self._partitions))
+                    if i < len(self.row_lengths) and self.row_lengths[i] != 0
                 ]
-                for i in range(len(self._partitions))
-                if i < len(self.row_lengths) and self.row_lengths[i] != 0
-            ]
-        )
-        self._column_widths_cache = [w for w in self.column_widths if w != 0]
-        self._row_lengths_cache = [r for r in self.row_lengths if r != 0]
+            )
+            new_row_lengths = [r for r in self.row_lengths if r != 0]
+            if len(new_row_lengths) != len(self.row_lengths):
+                if isinstance(self._index_cache, ModinIndex):
+                    self._index_cache.invalidate_lengths()
+                self._row_lengths_cache = new_row_lengths
+        if 1 in axis:
+            self._partitions = np.array(
+                [
+                    [
+                        self._partitions[i][j]
+                        for j in range(len(self._partitions[i]))
+                        if j < len(self.column_widths) and self.column_widths[j] != 0
+                    ]
+                    for i in range(len(self._partitions))
+                ]
+            )
+            new_column_widths = [w for w in self.column_widths if w != 0]
+            if len(new_column_widths) != len(self.column_widths):
+                if isinstance(self._columns_cache, ModinIndex):
+                    self._columns_cache.invalidate_lengths()
+                self._column_widths_cache = new_column_widths
+
 
     def synchronize_labels(self, axis=None):
         """
@@ -770,11 +796,16 @@ class PandasDataframe(ClassLogger):
         axis : int, default: None
             The axis to apply to. If it's None applies to both axes.
         """
-        self._filter_empties()
+        self._filter_empties(axis=axis)
         if axis is None or axis == 0:
             cum_row_lengths = np.cumsum([0] + self.row_lengths)
         if axis is None or axis == 1:
             cum_col_widths = np.cumsum([0] + self.column_widths)
+
+        def get_cache(partition, idx, axis):
+            if axis == 0:
+                return partition._length_cache if self._row_lengths_cache is None else self.row_lengths[idx]
+            return partition._width_cache if self._column_widths_cache is None else self.column_widths[idx] 
 
         if axis is None:
 
@@ -792,8 +823,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
-                            length=self.row_lengths[i],
-                            width=self.column_widths[j],
+                            length=get_cache(self._partitions[i, j], i, axis=0),
+                            width=get_cache(self._partitions[i, j], j, axis=1),
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -815,8 +846,8 @@ class PandasDataframe(ClassLogger):
                             idx=self.index[
                                 slice(cum_row_lengths[i], cum_row_lengths[i + 1])
                             ],
-                            length=self.row_lengths[i],
-                            width=self.column_widths[j],
+                            length=get_cache(self._partitions[i, j], i, axis=0),
+                            width=get_cache(self._partitions[i, j], j, axis=1),
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -837,8 +868,8 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
-                            length=self.row_lengths[i],
-                            width=self.column_widths[j],
+                            length=get_cache(self._partitions[i, j], i, axis=0),
+                            width=get_cache(self._partitions[i, j], j, axis=1),
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -3495,6 +3526,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             New Modin DataFrame.
         """
+        # breakpoint()
         axis = Axis(axis)
         new_widths = None
         new_lengths = None
