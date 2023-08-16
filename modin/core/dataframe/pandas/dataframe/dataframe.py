@@ -581,9 +581,22 @@ class PandasDataframe(ClassLogger):
         if self.has_materialized_columns:
             # do not set new columns if they're identical to the previous ones
             if (
-                isinstance(new_columns, pandas.Index)
-                and self.columns.equals(new_columns)
-            ) or np.array_equal(self.columns.values, new_columns):
+                # `Index.equals()` doesn't compare metadata, thus we have to compare
+                # it manually. Here we process the simpliest and the most common case only
+                # (when index the index is a 'pandas.Index' dtype). Other cases are not that
+                # common and we can omit them
+                type(new_columns) in (pandas.Index, pandas.MultiIndex)
+                and (
+                    type(new_columns)
+                    is type(self.columns)  # noqa; here we need exact types comparison
+                )
+                and new_columns.name == self.columns.name
+                and new_columns.names == self.columns.names
+                and new_columns.equals(self.columns)
+            ) or (
+                not isinstance(new_columns, pandas.Index)
+                and np.array_equal(self.columns.values, new_columns)
+            ):
                 return
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self.has_materialized_dtypes:
@@ -639,7 +652,6 @@ class PandasDataframe(ClassLogger):
         List of int
             Size of partitions alongside specified `axis`.
         """
-
         if partitions is None:
             partitions = self._partitions
         new_index, internal_idx = self._partition_mgr_cls.get_indices(axis, partitions)
