@@ -44,6 +44,10 @@ class ModinIndex:
         """
         return isinstance(self._value, pandas.Index)
 
+    def invalidate_lengths(self):
+        """Drop the partition's lengths cache."""
+        self._lengths_cache = None
+
     def get(self, return_lengths=False) -> pandas.Index:
         """
         Get the materialized internal representation.

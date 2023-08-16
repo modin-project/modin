@@ -148,6 +148,42 @@ def validate_partitions_cache(df):
             assert df._partitions[i, j].width() == column_widths[j]
 
 
+def remove_axis_cache(df, axis, remove_lengths=True):
+    """
+    Remove index/columns cache for the passed dataframe.
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int
+        0 - remove index cache, 1 - remove columns cache.
+    remove_lengths : bool, default: True
+        Whether to remove row lengths/column widths cache.
+    """
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        mf.set_index_cache(None)
+        if remove_lengths:
+            mf._row_lengths_cache = None
+    else:
+        mf.set_columns_cache(None)
+        if remove_lengths:
+            mf._column_widths_cache = None
+
+
+def has_axis_cache(df, axis, check_lengths=False):
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        result = mf.has_materialized_index
+        if check_lengths:
+            result &= mf._row_lengths_cache is not None
+        return result
+    else:
+        result = mf.has_materialized_columns
+        if check_lengths:
+            result &= mf._column_widths_cache is not None
+        return result
+
+
 def test_aligning_blocks():
     # Test problem when modin frames have the same number of rows, but different
     # blocks (partition.list_of_blocks). See #2322 for details
@@ -1121,3 +1157,17 @@ def test_reindex_preserve_dtypes(kwargs):
 
     reindexed_df = df.reindex(**kwargs)
     assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_computation_free_index_propagation(axis):
+    df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [3, 4, 5, 6]})
+
+    remove_axis_cache(df, axis ^ 1)
+    if axis == 1:
+        df.columns = ["e", "f"]
+    else:
+        df.index = [1, 2, 3, 4]
+
+    df._query_compiler._modin_frame._propagate_index_objs(axis)
+    assert not has_axis_cache(df, axis ^ 1, check_lengths=True)
