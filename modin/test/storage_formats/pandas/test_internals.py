@@ -148,9 +148,10 @@ def validate_partitions_cache(df):
             assert df._partitions[i, j].width() == column_widths[j]
 
 
-def remove_axis_cache(df, axis, remove_lengths=True):
+def remove_axis_cache(df: pd.DataFrame, axis: int, remove_lengths: bool = True):
     """
     Remove index/columns cache for the passed dataframe.
+
     Parameters
     ----------
     df : modin.pandas.DataFrame
@@ -170,7 +171,22 @@ def remove_axis_cache(df, axis, remove_lengths=True):
             mf._column_widths_cache = None
 
 
-def has_axis_cache(df, axis, check_lengths=False):
+def has_axis_cache(df: pd.DataFrame, axis: int, check_lengths: bool = False) -> bool:
+    """
+    Check whether the passed dataframe has cached information about the specified axis (index/columns cache).
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int
+        0 - check rows cache, 1 - check columns cache.
+    check_lengths : bool, default: False
+        Also check whether the frame has row lengths/column widths cache.
+
+    Returns
+    -------
+    bool
+    """
     mf = df._query_compiler._modin_frame
     if axis == 0:
         result = mf.has_materialized_index
@@ -1161,6 +1177,7 @@ def test_reindex_preserve_dtypes(kwargs):
 
 @pytest.mark.parametrize("axis", [0, 1])
 def test_computation_free_index_propagation(axis):
+    """Verify that setting new index/columns doesn't trigger the deferred computation of the opposite axis."""
     df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [3, 4, 5, 6]})
 
     remove_axis_cache(df, axis ^ 1)
