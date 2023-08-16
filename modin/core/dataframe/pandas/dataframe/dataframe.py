@@ -579,6 +579,12 @@ class PandasDataframe(ClassLogger):
            The new column labels.
         """
         if self.has_materialized_columns:
+            # do not set new columns if they're identical to the previous ones
+            if (
+                isinstance(new_columns, pandas.Index)
+                and self.columns.equals(new_columns)
+            ) or np.array_equal(self.columns.values, new_columns):
+                return
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
             if self.has_materialized_dtypes:
                 self.dtypes.index = new_columns
