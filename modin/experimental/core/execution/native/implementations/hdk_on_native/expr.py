@@ -77,7 +77,7 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
     )
 
 
-_aggs_preserving_numeric_type = {"sum", "min", "max"}
+_aggs_preserving_numeric_type = {"sum", "min", "max", "nlargest", "nsmallest"}
 _aggs_with_int_result = {"count", "size"}
 _aggs_with_float_result = {"mean", "median", "std", "skew"}
 
@@ -1257,7 +1257,7 @@ class AggregateExpr(BaseExpr):
     ----------
     agg : str
         Aggregate name.
-    op : BaseExpr
+    op : BaseExpr or list of BaseExpr
         Aggregate operand.
     distinct : bool, default: False
         Distinct modifier for 'count' aggregate.
@@ -1283,9 +1283,11 @@ class AggregateExpr(BaseExpr):
         else:
             self.agg = agg
             self.distinct = distinct
-        self.operands = [op]
+        self.operands = op if isinstance(op, list) else [op]
         self._dtype = (
-            dtype if dtype else _agg_dtype(self.agg, op._dtype if op else None)
+            dtype
+            if dtype
+            else _agg_dtype(self.agg, self.operands[0]._dtype if op else None)
         )
         assert self._dtype is not None
 

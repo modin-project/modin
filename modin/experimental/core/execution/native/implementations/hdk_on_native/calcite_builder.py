@@ -45,6 +45,7 @@ from .expr import (
     AggregateExpr,
     InputRefExpr,
     LiteralExpr,
+    OpExpr,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
@@ -307,7 +308,79 @@ class CalciteBuilder:
                 skew_expr._dtype,
             )
 
-    _compound_aggregates = {"std": StdAggregate, "skew": SkewAggregate}
+    class TopkAggregate(CompoundAggregate):
+        """
+        A TOP_K aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : BaseExpr
+            An aggregated value.
+        """
+
+        def __init__(self, builder, arg):
+            assert isinstance(arg, OpExpr)
+            super().__init__(builder, arg)
+            self._frame = arg.operands[0].modin_frame
+            self._column = arg.operands[0].column
+            self._agg_column = f"{self._column}__top_k__"
+            self._dtype = arg.operands[0]._dtype
+            self._literal = arg.operands[1]
+
+        def gen_proj_exprs(self):
+            """
+            Generate values required for intermediate aggregates computation.
+
+            Returns
+            -------
+            dict
+                New column expressions mapped to their names.
+            """
+            return {self._agg_column: self._literal}
+
+        def gen_agg_exprs(self):
+            """
+            Generate intermediate aggregates required for a compound aggregate computation.
+
+            Returns
+            -------
+            dict
+                New aggregate expressions mapped to their names.
+            """
+            return {
+                self._agg_column: AggregateExpr(
+                    "TOP_K",
+                    [
+                        self._builder._ref_idx(self._frame, self._column),
+                        self._builder._ref_idx(self._frame, self._agg_column),
+                    ],
+                    dtype=self._dtype,
+                )
+            }
+
+        def gen_reduce_expr(self):
+            """
+            Generate an expression for a compound aggregate.
+
+            Returns
+            -------
+            BaseExpr
+                A final compound aggregate expression.
+            """
+            return OpExpr(
+                "PG_UNNEST",
+                [self._builder._ref(self._frame, self._agg_column)],
+                self._dtype,
+            )
+
+    _compound_aggregates = {
+        "std": StdAggregate,
+        "skew": SkewAggregate,
+        "nlargest": TopkAggregate,
+        "nsmallest": TopkAggregate,
+    }
 
     class InputContext:
         """
