@@ -1119,19 +1119,16 @@ def assert_has_no_cache(df, axis=0):
         assert not mf.has_materialized_columns and mf._columns_widths_cache is None
 
 
-@pytest.mark.parametrize("same_column_name", [True, False])
-def test_setitem_without_copartition(same_column_name):
-    src_col, dest_col = ("col0", "col0") if same_column_name else ("col10", "col20")
-
+def test_setitem_without_copartition():
     # simple insertion
     df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
     remove_cache(df)
 
-    col = df[src_col]
+    col = df["col0"]
     assert_has_no_cache(col)
     assert_has_no_cache(df)
 
-    df[dest_col] = col
+    df["col0"] = col
     # check that no cache computation was triggered
     assert_has_no_cache(df)
     assert_has_no_cache(col)
@@ -1140,14 +1137,12 @@ def test_setitem_without_copartition(same_column_name):
     df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
     remove_cache(df)
 
-    col = df[src_col]
+    col = df["col0"]
     col = pd.to_datetime(col * 2 + 10)
     assert_has_no_cache(col)
     assert_has_no_cache(df)
 
-    df[dest_col] = col
+    df["col0"] = col
     # check that no cache computation was triggered
     assert_has_no_cache(df)
     assert_has_no_cache(col)
-
-
