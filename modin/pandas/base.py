@@ -3916,9 +3916,9 @@ class BasePandasDataset(ClassLogger):
             The NumPy ufunc to apply.
         method : str
             The method to apply.
-        inputs : tuple
+        *inputs : tuple
             The inputs to the ufunc.
-        kwargs : dict
+        **kwargs : dict
             Additional keyword arguments.
 
         Returns
