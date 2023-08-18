@@ -1642,6 +1642,15 @@ def test___invert__(data):
         df_equals(modin_result, pandas_result)
 
 
+def test___invert___bool():
+    data = [False]
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = ~modin_df
+    pandas_result = ~pandas_df
+    df_equals(modin_result, pandas_result)
+
+
 def test___hash__():
     data = test_data_values[0]
     pandas_df = pandas.DataFrame(data)

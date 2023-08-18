@@ -20,6 +20,8 @@ from pandas.core.methods.describe import refine_percentiles
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
+    is_bool_dtype,
+    is_integer_dtype,
     is_numeric_dtype,
     is_datetime_or_timedelta_dtype,
     is_dtype_equal,
@@ -3693,10 +3695,14 @@ class BasePandasDataset(ClassLogger):
         BasePandasDataset
             New BasePandasDataset containing bitwise inverse to each value.
         """
-        if not all(is_numeric_dtype(d) for d in self._get_dtypes()):
+        if not all(is_bool_dtype(d) or is_integer_dtype(d) for d in self._get_dtypes()):
             raise TypeError(
                 "bad operand type for unary ~: '{}'".format(
-                    next(d for d in self._get_dtypes() if not is_numeric_dtype(d))
+                    next(
+                        d
+                        for d in self._get_dtypes()
+                        if not (is_bool_dtype(d) or is_integer_dtype(d))
+                    )
                 )
             )
         return self.__constructor__(query_compiler=self._query_compiler.invert())
