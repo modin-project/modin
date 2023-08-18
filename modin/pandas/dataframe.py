@@ -1550,6 +1550,12 @@ class DataFrame(BasePandasDataset):
             method=method,
         )
 
+    # methods and fields we need to use pandas.DataFrame.query
+    _AXIS_ORDERS = ["index", "columns"]
+    _get_index_resolvers = pandas.DataFrame._get_index_resolvers
+    _get_axis_resolvers = pandas.DataFrame._get_axis_resolvers
+    _get_cleaned_column_resolvers = pandas.DataFrame._get_cleaned_column_resolvers
+
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
