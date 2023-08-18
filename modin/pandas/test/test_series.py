@@ -4815,3 +4815,21 @@ def test_apply_return_df(data):
             lambda x: pandas.Series([x + i for i in range(100)])
         ),
     )
+
+
+@pytest.mark.parametrize(
+    "function",
+    [
+        np.abs,
+        np.sin,
+    ],
+)
+def test_unary_numpy_universal_function_issue_6483(function):
+    eval_general(*create_test_series(test_data["float_nan_data"]), function)
+
+
+def test_binary_numpy_universal_function_issue_6483():
+    eval_general(
+        *create_test_series(test_data["float_nan_data"]),
+        lambda series: np.arctan2(series, np.sin(series)),
+    )
