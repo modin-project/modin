@@ -169,6 +169,17 @@ class PandasDataframe(ClassLogger):
             )
 
     @property
+    def num_parts(self) -> int:
+        """
+        Get the total number of partitions for this frame.
+
+        Returns
+        -------
+        int
+        """
+        return np.prod(self._partitions.shape)
+
+    @property
     def row_lengths(self):
         """
         Compute the row partitions lengths if they are not cached.

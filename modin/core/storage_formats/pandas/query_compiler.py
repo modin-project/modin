@@ -2837,7 +2837,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # if there are too many partitions then all non-full-axis implementations start acting very badly.
         # The here threshold is pretty random though it works fine on simple scenarios
         processable_amount_of_partitions = (
-            np.prod(self._modin_frame._partitions.shape) < CpuCount.get() * 32
+            self._modin_frame.num_parts < CpuCount.get() * 32
         )
 
         if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
@@ -2847,16 +2847,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             condition = lambda df: getattr(df, how)()  # noqa: E731 (lambda assignment)
 
             def mapper(df: pandas.DataFrame):
+                """Compute a mask indicating whether there are all/any NaN values in each column."""
                 if subset is not None:
                     subset_mask = condition(
                         df.loc[df.index.intersection(subset)].isna()
                     )
+                    # we have to keep other columns so setting their mask
+                    # values with `False`
                     mask = pandas.Series(
                         np.zeros(df.shape[1], dtype=bool), index=df.columns
                     )
                     mask.update(subset_mask)
                 else:
                     mask = condition(df.isna())
+                # for proper partitioning at the 'reduce' phase each partition has to
+                # represent a one-row frame rather than a one-column frame, so calling `.T` here
                 return mask.to_frame().T
 
             masks = self._modin_frame.apply_full_axis(
@@ -2864,6 +2869,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
             def reduce(df: pandas.DataFrame, mask: pandas.DataFrame):
+                """Drop columns from `df` that satisfy the NaN `mask`."""
+                # `mask` here consists of several rows each representing the masks result
+                # for a certain row partition:
+                #     col1  col2   col3
+                # 0   True  True  False                         col1     True
+                # 1  False  True  False  ---> mask.any() --->   col2     True
+                # 2   True  True  False                         col3    False
+                # in order to get the proper 1D mask we have to reduce the partition's
+                # results by applying the condition one more time
                 to_take_mask = ~condition(mask)
 
                 to_take = []
