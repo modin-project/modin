@@ -382,11 +382,9 @@ class PandasDataframe(ClassLogger):
         index : sequence, callable or None
         """
         if index is None:
-            self._index_cache = ModinIndex(
-                lambda obj: obj._compute_axis_labels_and_lengths(axis=0), value_ref=self
-            )
+            self._index_cache = ModinIndex(self, axis=0)
         elif isinstance(index, ModinIndex):
-            self._index_cache = index.update_ref(self) if index.has_value_ref else index
+            self._index_cache = index.maybe_specify_new_frame_ref(self, axis=0)
         else:
             self._index_cache = ModinIndex(index)
 
@@ -399,13 +397,9 @@ class PandasDataframe(ClassLogger):
         columns : sequence, callable or None
         """
         if columns is None:
-            self._columns_cache = ModinIndex(
-                lambda obj: obj._compute_axis_labels_and_lengths(axis=1), value_ref=self
-            )
+            self._columns_cache = ModinIndex(self, axis=1)
         elif isinstance(columns, ModinIndex):
-            self._columns_cache = (
-                columns.update_ref(self) if columns.has_value_ref else columns
-            )
+            self._columns_cache = columns.maybe_specify_new_frame_ref(self, axis=1)
         else:
             self._columns_cache = ModinIndex(columns)
 

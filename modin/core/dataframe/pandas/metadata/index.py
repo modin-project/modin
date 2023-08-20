@@ -24,45 +24,64 @@ class ModinIndex:
 
     Parameters
     ----------
-    value : sequence or callable
-    value_ref : optional
-        If `value` is a callable that takes an actual object to retrieve index labels from,
-        then you can specify this lambda argument via this parameter.
+    value : sequence, PandasDataframe or callable() -> (pandas.Index, list of ints)
+        If a sequence passed this will be considered as the index values.
+        If a ``PandasDataframe`` passed then it will be used to lazily extract indices
+        when required, note that the `axis` parameter must be passed in this case.
+        If a callable passed then it's expected to return a pandas Index and a list of
+        partition lengths along the index axis.
+    axis : int, optional
+        Specifies an axis the object represents, serves as an optional hint. This parameter
+        must be passed in case value is a ``PandasDataframe``.
     """
 
-    def __init__(self, value, value_ref=None):
+    def __init__(self, value, axis=None):
+        from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+        self._default_callable = False
+        self._axis = axis
+
         if callable(value):
             self._value = value
+        elif isinstance(value, PandasDataframe):
+            assert axis is not None
+            self._value = self._get_default_callable(value, axis)
+            self._default_callable = True
         else:
             self._value = ensure_index(value)
-        self._value_ref = value_ref
+        
         self._lengths_cache = None
         # index/lengths ID's for faster comparison between other ModinIndex objects,
         # these should be propagated to the copies of the index
         self._index_id = uuid.uuid4()
         self._lengths_id = uuid.uuid4()
 
-    @property
-    def has_value_ref(self) -> bool:
-        """
-        Check whether the stored lambda requires an object to be passed.
+    @staticmethod
+    def _get_default_callable(dataframe_obj, axis):
+        return lambda: dataframe_obj._compute_axis_labels_and_lengths(axis)
 
-        Returns
-        -------
-        bool
+    def maybe_specify_new_frame_ref(self, value, axis) -> "ModinIndex":
         """
-        return self._value_ref is not None
+        Set a reference for a new frame used to lazily extract index labels.
 
-    def update_ref(self, new_ref) -> "ModinIndex":
-        """
-        Update/set an argument to be passed to the lambda computing actual indices.
+        The function does nothing if it's unnecessary to update the reference.
 
         Parameters
         ----------
-        new_ref : object
+        value : PandasDataframe
+        axis : int
+
+        Returns
+        -------
+        ModinIndex
+            New ModinIndex with the reference updated.
         """
+        if not callable(self._value) or not self._is_default_callable:
+            return self
+
         new_index = self.copy(copy_lengths=True)
-        new_index._value_ref = new_ref
+        new_index._axis = axis
+        new_index._value = self._get_default_callable(value, new_index._axis)
         return new_index
 
     @property
@@ -75,10 +94,6 @@ class ModinIndex:
         bool
         """
         return isinstance(self._value, pandas.Index)
-
-    def invalidate_lengths(self):
-        self._lengths_cache = None
-        self._lengths_id = uuid.uuid4()
 
     def get(self, return_lengths=False) -> pandas.Index:
         """
@@ -96,13 +111,8 @@ class ModinIndex:
         pandas.Index
         """
         if not self.is_materialized:
-            # breakpoint()
             if callable(self._value):
-                index, self._lengths_cache = (
-                    self._value(self._value_ref)
-                    if self.has_value_ref
-                    else self._value()
-                )
+                index, self._lengths_cache = self._value()
                 self._value = ensure_index(index)
                 # release the reference to be garbage collected
                 self._value_ref = None
@@ -200,9 +210,15 @@ class ModinIndex:
         during the construction of the object, `__getattr__` function is called, which
         is not intended to be used in situations where the object is not initialized.
         """
-        if self._lengths_cache is not None:
-            return (self.__class__, (lambda: (self._value, self._lengths_vache),))
-        return (self.__class__, (self._value,))
+        def builder(value, lengths_cache, index_id, lengths_id, is_default_callable):
+            result = self.__class__(value)
+            result._lengths_cache = lengths_cache
+            result._index_id = index_id
+            result._lengths_id = lengths_id
+            result._is_default_callable = is_default_callable
+            return result
+
+        return (builder, (self._value, self._lengths_cache, self._index_id, self._lengths_id, self._is_default_callable))
 
     def __getattr__(self, name):
         """
@@ -247,8 +263,9 @@ class ModinIndex:
         idx_cache = self._value
         if not callable(idx_cache):
             idx_cache = idx_cache.copy()
-        result = ModinIndex(idx_cache, value_ref=self._value_ref)
+        result = ModinIndex(idx_cache, axis=self._axis)
         result._index_id = self._index_id
+        result._is_default_callable = self._is_default_callable
         if copy_lengths:
             result._lengths_cache = self._lengths_cache
             result._lengths_id = self._lengths_id
