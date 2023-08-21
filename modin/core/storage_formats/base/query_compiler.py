@@ -2343,25 +2343,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(fillna)(self, **kwargs)
 
-    @doc_utils.add_refer_to("DataFrame.query")
-    def query(self, expr, **kwargs):
-        """
-        Query columns of the QueryCompiler with a boolean expression.
-
-        Parameters
-        ----------
-        expr : str
-        **kwargs : dict
-
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler containing the rows where the boolean expression is satisfied.
-        """
-        return DataFrameDefault.register(pandas.DataFrame.query)(
-            self, expr=expr, **kwargs
-        )
-
     @doc_utils.add_refer_to("DataFrame.rank")
     def rank(self, **kwargs):  # noqa: PR02
         """
