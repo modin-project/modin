@@ -2122,13 +2122,40 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return result
 
-    def _build_index_cache(self):
-        """Materialize index and store it in the cache."""
+    def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
+        """
+        Compute the labels for specific `axis`.
+
+        Parameters
+        ----------
+        axis : int
+            Axis to compute labels along.
+        partitions : np.ndarray, optional
+            This parameter serves compatibility purpose and must always be ``None``.
+
+        Returns
+        -------
+        pandas.Index
+            Labels for the specified `axis`.
+        List of int
+            Size of partitions alongside specified `axis`.
+        """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=partitions is not None,
+            extra_log="'._compute_axis_labels_and_lengths(partitions)' is not yet supported for HDK backend",
+        )
+
         obj = self._execute()
 
+        if axis == 1:
+            cols = self._table_cols
+            if self._index_cols is not None:
+                cols = cols[len(self._index_cols) :]
+            return (cols, [len(cols)])
+
         if self._index_cols is None:
-            self.set_index_cache(Index.__new__(RangeIndex, data=range(len(obj))))
-            return
+            index = Index.__new__(RangeIndex, data=range(len(obj)))
+            return (index, [len(index)])
         if isinstance(obj, DbTable):
             # TODO: Get the index columns only
             obj = obj.to_arrow()
@@ -2145,9 +2172,14 @@ class HdkOnNativeDataframe(PandasDataframe):
                 and len(idx) >= 3  # infer_freq() requires at least 3 values
             ):
                 idx.freq = pd.infer_freq(idx)
-            self.set_index_cache(idx)
+            return (idx, [len(idx)])
         else:
-            self.set_index_cache(obj.index)
+            return (obj.index, [len(obj.index)])
+
+    def _build_index_cache(self):
+        """Materialize index and store it in the cache."""
+        index, _ = self._compute_axis_labels_and_lengths(axis=0)
+        self.set_index_cache(index)
 
     def _get_index(self):
         """
