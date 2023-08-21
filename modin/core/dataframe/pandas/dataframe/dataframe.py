@@ -384,6 +384,7 @@ class PandasDataframe(ClassLogger):
         if index is None:
             self._index_cache = ModinIndex(self, axis=0)
         elif isinstance(index, ModinIndex):
+            # update reference with the new frame to not pollute memory
             self._index_cache = index.maybe_specify_new_frame_ref(self, axis=0)
         else:
             self._index_cache = ModinIndex(index)
@@ -399,6 +400,7 @@ class PandasDataframe(ClassLogger):
         if columns is None:
             self._columns_cache = ModinIndex(self, axis=1)
         elif isinstance(columns, ModinIndex):
+            # update reference with the new frame to not pollute memory
             self._columns_cache = columns.maybe_specify_new_frame_ref(self, axis=1)
         else:
             self._columns_cache = ModinIndex(columns)
@@ -3489,7 +3491,6 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             New Modin DataFrame.
         """
-        # breakpoint()
         axis = Axis(axis)
         new_widths = None
         new_lengths = None

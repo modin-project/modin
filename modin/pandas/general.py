@@ -571,7 +571,6 @@ def to_datetime(
     """
     Convert argument to datetime.
     """
-    # breakpoint()
     if not hasattr(arg, "_to_datetime"):
         return pandas.to_datetime(
             arg,

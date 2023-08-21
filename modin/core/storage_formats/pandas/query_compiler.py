@@ -2923,7 +2923,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # update.
     def insert(self, loc, column, value):
         if isinstance(value, type(self)):
-            # breakpoint()
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
 

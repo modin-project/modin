@@ -4298,7 +4298,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         assert isinstance(value, type(self))
 
-        # breakpoint()
         def mask(idx):
             if len(idx) == len(self.get_axis(axis)):
                 return self
