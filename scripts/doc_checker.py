@@ -528,6 +528,7 @@ def monkeypatching():
 
     # for testing hdk-engine docs without `pyhdk` installation
     sys.modules["pyhdk"] = Mock()
+    sys.modules["pyhdk"].__version__ = "999"
     sys.modules["pyhdk.hdk"] = Mock()
     sys.modules["pyhdk._sql"] = Mock()
     # enable docs testing on windows

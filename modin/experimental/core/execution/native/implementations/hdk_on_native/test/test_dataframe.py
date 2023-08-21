@@ -1633,6 +1633,7 @@ class TestMerge:
             on_columns="A",
             constructor_kwargs={"dtype": "category"},
             comparator=lambda df1, df2: df_equals(df1.astype(float), df2.astype(float)),
+            force_lazy=False,
         )
 
     def test_merge_date(self):

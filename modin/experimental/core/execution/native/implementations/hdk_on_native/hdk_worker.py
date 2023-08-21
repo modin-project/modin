@@ -14,15 +14,20 @@
 """Module provides ``HdkWorker`` class."""
 from typing import Optional, Tuple, List, Union
 
+from packaging import version
+
 import pyarrow as pa
 import os
 
+import pyhdk
 from pyhdk.hdk import HDK, QueryNode, ExecutionResult, RelAlgExecutor
 
 from .base_worker import DbTable, BaseDbWorker
 
 from modin.utils import _inherit_docstrings
 from modin.config import HdkLaunchParameters, OmnisciFragmentSize, HdkFragmentSize
+
+_CAST_DICT = version.parse(pyhdk.__version__) <= version.parse("0.7.0")
 
 
 class HdkTable(DbTable):
@@ -117,7 +122,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
     @classmethod
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
         name = cls._genName(name)
-        table = cls.cast_to_compatible_types(table)
+        table = cls.cast_to_compatible_types(table, _CAST_DICT)
         hdk = cls._hdk()
         fragment_size = cls.compute_fragment_size(table)
         return HdkTable(hdk.import_arrow(table, name, fragment_size))

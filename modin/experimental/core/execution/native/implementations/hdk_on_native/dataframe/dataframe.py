@@ -1069,11 +1069,13 @@ class HdkOnNativeDataframe(PandasDataframe):
         for left_col, right_col in zip(left_on, right_on):
             left_dt = self._dtypes[left_col]
             right_dt = other._dtypes[right_col]
+            if is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt):
+                left_dt = left_dt.categories.dtype
+                right_dt = right_dt.categories.dtype
             if not (
                 (is_any_int_dtype(left_dt) and is_any_int_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
                 or (is_datetime64_dtype(left_dt) and is_datetime64_dtype(right_dt))
-                or (is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt))
             ):
                 raise NotImplementedError(
                     f"Join on columns of '{left_dt}' and '{right_dt}' dtypes"
