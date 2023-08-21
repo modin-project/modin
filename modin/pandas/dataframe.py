@@ -16,6 +16,7 @@
 from __future__ import annotations
 import pandas
 from pandas.core.common import apply_if_callable, get_cython_func
+from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -812,23 +813,18 @@ class DataFrame(BasePandasDataset):
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
-        self._validate_eval_query(expr, **kwargs)
-        inplace = validate_bool_kwarg(inplace, "inplace")
         self._update_var_dicts_in_kwargs(expr, kwargs)
-        new_query_compiler = self._query_compiler.eval(expr, **kwargs)
-        return_type = type(
-            pandas.DataFrame(columns=self.columns)
-            .astype(self.dtypes)
-            .eval(expr, **kwargs)
-        ).__name__
-        if return_type == type(self).__name__:
-            return self._create_or_update_from_compiler(new_query_compiler, inplace)
-        else:
-            if inplace:
-                raise ValueError("Cannot operate inplace if there is no assignment")
-            return getattr(sys.modules[self.__module__], return_type)(
-                query_compiler=new_query_compiler
+        if _check_engine(kwargs.get("engine", None)) == "numexpr":
+            # on numexpr engine, pandas.eval returns np.array if input is not of pandas
+            # type, so we can't use pandas eval [1]. Even if we could, pandas eval seems
+            # to convert all the data to numpy and then do the numexpr add, which is
+            # slow for modin. The user would not really be getting the benefit of
+            # numexpr.
+            # [1] https://github.com/pandas-dev/pandas/blob/934eebb532cf50e872f40638a788000be6e4dda4/pandas/core/computation/align.py#L78
+            return self._default_to_pandas(
+                pandas.DataFrame.eval, expr, inplace=inplace, **kwargs
             )
+        return pandas.DataFrame.eval(self, expr, inplace=inplace, **kwargs)
 
     def fillna(
         self,
@@ -1554,14 +1550,21 @@ class DataFrame(BasePandasDataset):
             method=method,
         )
 
+    # methods and fields we need to use pandas.DataFrame.query
+    _AXIS_ORDERS = ["index", "columns"]
+    _get_index_resolvers = pandas.DataFrame._get_index_resolvers
+    _get_axis_resolvers = pandas.DataFrame._get_axis_resolvers
+    _get_cleaned_column_resolvers = pandas.DataFrame._get_cleaned_column_resolvers
+
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
-        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_query_compiler = self._query_compiler.query(expr, **kwargs)
+        new_query_compiler = pandas.DataFrame.query(
+            self, expr, inplace=False, **kwargs
+        )._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
