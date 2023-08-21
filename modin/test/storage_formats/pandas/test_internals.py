@@ -26,6 +26,8 @@ import numpy as np
 import pandas
 import pytest
 import unittest.mock as mock
+import functools
+import sys
 
 NPartitions.put(4)
 
@@ -146,6 +148,45 @@ def validate_partitions_cache(df):
         for j in range(df._partitions.shape[1]):
             assert df._partitions[i, j].length() == row_lengths[i]
             assert df._partitions[i, j].width() == column_widths[j]
+
+
+def assert_has_no_cache(df, axis=0):
+    """
+    Assert that the passed dataframe has no labels and no lengths cache along the specified axis.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int, default: 0
+    """
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        assert not mf.has_materialized_index and mf._row_lengths_cache is None
+    else:
+        assert not mf.has_materialized_columns and mf._column_widths_cache is None
+
+
+def remove_axis_cache(df, axis=0, remove_lengths=True):
+    """
+    Remove index/columns cache for the passed dataframe.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int, default: 0
+        0 - remove index cache, 1 - remove columns cache.
+    remove_lengths : bool, default: True
+        Whether to remove row lengths/column widths cache.
+    """
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        mf.set_index_cache(None)
+        if remove_lengths:
+            mf._row_lengths_cache = None
+    else:
+        mf.set_columns_cache(None)
+        if remove_lengths:
+            mf._column_widths_cache = None
 
 
 def test_aligning_blocks():
@@ -1123,54 +1164,120 @@ def test_reindex_preserve_dtypes(kwargs):
     assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
 
 
-def remove_cache(df, axis=0):
-    mf = df._query_compiler._modin_frame
-    if axis == 0:
-        mf.set_index_cache(None)
-        mf._row_lengths_cache = None
-    else:
-        mf.set_columns_cache(None)
-        mf._column_widths_cache = None
-
-
-def assert_has_no_cache(df, axis=0):
-    mf = df._query_compiler._modin_frame
-    if axis == 0:
-        assert not mf.has_materialized_index and mf._row_lengths_cache is None
-    else:
-        assert not mf.has_materialized_columns and mf._columns_widths_cache is None
-
-
 class TestModinIndexIds:
-    def _wrap_patch(df):
-        modin_frame = df._query_compiler._modin_frame
-
-        # with mock.patch.object(modin_frame, "_get_index", wraps=modin_frame._get_index) as get_index_method:
+    @staticmethod
+    def _patch_get_index(df, axis=0):
+        """Patch the ``.index``/``.columns`` attribute of the passed dataframe."""
+        if axis == 0:
+            return mock.patch.object(
+                type(df),
+                "index",
+                new_callable=mock.PropertyMock,
+                wraps=functools.partial(type(df).index.__get__, df),
+            )
+        else:
+            return mock.patch.object(
+                type(df),
+                "columns",
+                new_callable=mock.PropertyMock,
+                wraps=functools.partial(type(df).columns.__get__, df),
+            )
 
     def test_setitem_without_copartition(self):
+        """Test that setitem for identical indices works without materializing the axis."""
         # simple insertion
         df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
-        remove_cache(df)
+        remove_axis_cache(df)
 
         col = df["col0"]
         assert_has_no_cache(col)
         assert_has_no_cache(df)
 
-        df["col0"] = col
-        # check that no cache computation was triggered
-        assert_has_no_cache(df)
-        assert_has_no_cache(col)
+        # insert the column back and check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_patch:
+            df["col0"] = col
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col)
+        get_index_patch.assert_not_called()
 
         # insertion with few map operations
         df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
-        remove_cache(df)
+        remove_axis_cache(df)
 
         col = df["col0"]
+        # perform some operations that doesn't modify index labels and partitioning
         col = pd.to_datetime(col * 2 + 10)
         assert_has_no_cache(col)
         assert_has_no_cache(df)
 
-        df["col0"] = col
-        # check that no cache computation was triggered
-        assert_has_no_cache(df)
-        assert_has_no_cache(col)
+        # insert the modified column back and check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_patch:
+            df["col0"] = col
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col)
+        get_index_patch.assert_not_called()
+
+    @pytest.mark.parametrize("axis", [0, 1])
+    def test_concat_without_copartition(self, axis):
+        """Test that concatenation for frames with identical indices works without materializing the axis."""
+        df1 = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df1, axis)
+
+        # perform some operations that doesn't modify index labels and partitioning
+        df2 = df1.abs().applymap(lambda df: df * 2)
+
+        with self._patch_get_index(df1, axis) as get_index_patch:
+            res = pd.concat([df1, df2], axis=axis ^ 1)
+            # check that no cache computation was triggered
+            assert_has_no_cache(df1, axis)
+            assert_has_no_cache(df2, axis)
+            assert_has_no_cache(res, axis)
+        get_index_patch.assert_not_called()
+
+    def test_index_updates_ref(self):
+        """Test that copying the default ModinIndex to a new frame updates frame reference with the new one."""
+        df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        remove_axis_cache(df1)
+
+        modin_frame1 = df1._query_compiler._modin_frame
+        # verify that index cache is 'default' and so holds a reference to the `modin_frame`
+        assert modin_frame1._index_cache._is_default_callable
+
+        ref_count_before = sys.getrefcount(modin_frame1)
+
+        df2 = df1 + 1
+        modin_frame2 = df2._query_compiler._modin_frame
+        # verify that new index cache is also the 'default' one
+        assert modin_frame2._index_cache._is_default_callable
+        # verify that there's no new references being created to the old frame
+        assert sys.getrefcount(modin_frame1) == ref_count_before
+
+    def test_index_updates_axis(self):
+        """Verify that the ModinIndex `axis` attribute is updated when copied to a new frame but for an opposit axis."""
+        df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        remove_axis_cache(df1)
+
+        # now index becomes columns and vice-versa, this means that the 'default callable'
+        # of the ModinIndex now has to update its axis
+        df2 = df1.T
+
+        idx1 = df1._query_compiler._modin_frame._index_cache
+        idx2 = df2._query_compiler._modin_frame._index_cache
+
+        cols1 = df1._query_compiler._modin_frame._columns_cache
+        cols2 = df2._query_compiler._modin_frame._columns_cache
+
+        # check that we can compare df.index == df.T.columns & df.columns == df.T.index
+        # without triggering any axis materialization
+        assert (
+            idx1._index_id == cols2._index_id and idx1._lengths_id == cols2._lengths_id
+        )
+        assert (
+            cols1._index_id == idx2._index_id and cols1._lengths_id == idx2._lengths_id
+        )
+
+        # check that when the materialization is triggered for the transposed frame it produces proper labels
+        assert df2.index.equals(pandas.Index(["a", "b"]))
+        assert df2.columns.equals(pandas.Index([0, 1, 2]))

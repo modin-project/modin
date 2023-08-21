@@ -58,18 +58,38 @@ class ModinIndex:
 
     @staticmethod
     def _get_default_callable(dataframe_obj, axis):
+        """
+        Build a callable extracting index labels and partitions lengths for the specified axis.
+
+        Parameters
+        ----------
+        dataframe_obj : PandasDataframe
+        axis : int
+            0 - extract indices, 1 - extract columns.
+
+        Returns
+        -------
+        callable() -> tuple(pandas.Index, list[ints])
+        """
         return lambda: dataframe_obj._compute_axis_labels_and_lengths(axis)
 
     def maybe_specify_new_frame_ref(self, value, axis) -> "ModinIndex":
         """
-        Set a reference for a new frame used to lazily extract index labels.
+        Set a new reference for a frame used to lazily extract index labels if it's needed.
 
-        The function does nothing if it's unnecessary to update the reference.
+        The method sets a new reference only if the indices are not yet materialized and
+        if a PandasDataframe was originally passed to construct this index (so the ModinIndex
+        object holds a reference to it). The reason the reference should be updated is that
+        we don't want to hold in memory those frames that are already not needed. Once the
+        reference is updated, the old frame will be garbage collected if there are no
+        more references to it.
 
         Parameters
         ----------
         value : PandasDataframe
+            New dataframe to reference.
         axis : int
+            Axis to extract labels from.
 
         Returns
         -------
