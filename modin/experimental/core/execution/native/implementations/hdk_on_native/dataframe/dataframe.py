@@ -1220,8 +1220,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             if (
                 join == "inner"
                 or len(frame.columns) != 0
-                or (frame.has_index_cache and len(frame.index) != 0)
-                or (not frame.has_index_cache and frame.index_cols)
+                or (frame.has_materialized_index and len(frame.index) != 0)
+                or (not frame.has_materialized_index and frame.index_cols)
             ):
                 if isinstance(frame._op, UnionNode):
                     frames.extend(frame._op.input)
@@ -1910,7 +1910,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        name = self._index_cache.get().name if self.has_index_cache else None
+        name = self._index_cache.get().name if self.has_materialized_index else None
         name = mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref(ROWID_COL_NAME)
@@ -2472,7 +2472,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
-        if self.has_index_cache:
+        if self.has_materialized_index:
             return self._index_cache.get().name
         if self._index_cols is None:
             return None
@@ -2530,7 +2530,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
-        if self.has_index_cache:
+        if self.has_materialized_index:
             return self._index_cache.get().names
         if self.has_multiindex():
             return self._index_cols.copy()
