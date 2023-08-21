@@ -169,6 +169,17 @@ class PandasDataframe(ClassLogger):
             )
 
     @property
+    def num_parts(self) -> int:
+        """
+        Get the total number of partitions for this frame.
+
+        Returns
+        -------
+        int
+        """
+        return np.prod(self._partitions.shape)
+
+    @property
     def row_lengths(self):
         """
         Compute the row partitions lengths if they are not cached.
@@ -230,6 +241,22 @@ class PandasDataframe(ClassLogger):
             self._row_lengths_cache = value
         else:
             self._column_widths_cache = value
+
+    def _get_axis_lengths_cache(self, axis=0):
+        """
+        Get partition's shape caches along the specified axis if avaliable.
+
+        Parameters
+        ----------
+        axis : int, default: 0
+            0 - get row lengths cache, 1 - get column widths cache.
+
+        Returns
+        -------
+        list of ints or None
+            If the cache is computed return a list of ints, ``None`` otherwise.
+        """
+        return self._row_lengths_cache if axis == 0 else self._column_widths_cache
 
     @property
     def has_dtypes_cache(self):
@@ -2823,7 +2850,14 @@ class PandasDataframe(ClassLogger):
 
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply(
-        self, axis, func, other, join_type="left", labels="keep", dtypes=None
+        self,
+        axis,
+        func,
+        other,
+        join_type="left",
+        copartition=True,
+        labels="keep",
+        dtypes=None,
     ):
         """
         Broadcast axis partitions of `other` to partitions of `self` and apply a function.
@@ -2838,6 +2872,13 @@ class PandasDataframe(ClassLogger):
             Modin DataFrame to broadcast.
         join_type : str, default: "left"
             Type of join to apply.
+        copartition : bool, default: True
+            Whether to align indices/partitioning of the `self` and `other` frame.
+            Disabling this may save some time, however, you have to be 100% sure that
+            the indexing and partitioning are identical along the broadcasting axis,
+            this might be the case for example if `other` is a projection of the `self`
+            or vice-versa. If copartitioning is disabled and partitioning/indexing are
+            incompatible then you may end up with undefined behavior.
         labels : {"keep", "replace", "drop"}, default: "keep"
             Whether keep labels from `self` Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
@@ -2849,17 +2890,28 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             New Modin DataFrame.
         """
-        # Only sort the indices if they do not match
-        (
-            left_parts,
-            right_parts,
-            joined_index,
-            partition_sizes_along_axis,
-        ) = self._copartition(
-            axis, other, join_type, sort=not self.axes[axis].equals(other.axes[axis])
-        )
-        # unwrap list returned by `copartition`.
-        right_parts = right_parts[0]
+        if copartition:
+            # Only sort the indices if they do not match
+            (
+                left_parts,
+                right_parts,
+                joined_index,
+                partition_sizes_along_axis,
+            ) = self._copartition(
+                axis,
+                other,
+                join_type,
+                sort=not self.axes[axis].equals(other.axes[axis]),
+            )
+            # unwrap list returned by `copartition`.
+            right_parts = right_parts[0]
+        else:
+            left_parts = self._partitions
+            right_parts = other._partitions
+            partition_sizes_along_axis, joined_index = self._get_axis_lengths_cache(
+                axis
+            ), self.copy_axis_cache(axis)
+
         new_frame = self._partition_mgr_cls.broadcast_apply(
             axis, func, left_parts, right_parts
         )
@@ -2877,13 +2929,19 @@ class PandasDataframe(ClassLogger):
         if axis == 0:
             # Pass shape caches instead of values in order to not trigger shape computation.
             new_index, new_row_lengths = _pick_axis(
-                self._get_index, self._row_lengths_cache
+                self.copy_index_cache, self._row_lengths_cache
             )
-            new_columns, new_column_widths = self.columns, self._column_widths_cache
+            new_columns, new_column_widths = (
+                self.copy_columns_cache(),
+                self._column_widths_cache,
+            )
         else:
-            new_index, new_row_lengths = self.index, self._row_lengths_cache
+            new_index, new_row_lengths = (
+                self.copy_index_cache(),
+                self._row_lengths_cache,
+            )
             new_columns, new_column_widths = _pick_axis(
-                self._get_columns, self._column_widths_cache
+                self.copy_columns_cache, self._column_widths_cache
             )
 
         return self.__constructor__(
