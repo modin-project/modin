@@ -1111,6 +1111,7 @@ def remove_cache(df, axis=0):
         mf.set_columns_cache(None)
         mf._column_widths_cache = None
 
+
 def assert_has_no_cache(df, axis=0):
     mf = df._query_compiler._modin_frame
     if axis == 0:
@@ -1119,30 +1120,36 @@ def assert_has_no_cache(df, axis=0):
         assert not mf.has_materialized_columns and mf._columns_widths_cache is None
 
 
-def test_setitem_without_copartition():
-    # simple insertion
-    df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
-    remove_cache(df)
+class TestModinIndexIds:
+    def _wrap_patch(df):
+        modin_frame = df._query_compiler._modin_frame
 
-    col = df["col0"]
-    assert_has_no_cache(col)
-    assert_has_no_cache(df)
+        # with mock.patch.object(modin_frame, "_get_index", wraps=modin_frame._get_index) as get_index_method:
 
-    df["col0"] = col
-    # check that no cache computation was triggered
-    assert_has_no_cache(df)
-    assert_has_no_cache(col)
+    def test_setitem_without_copartition(self):
+        # simple insertion
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_cache(df)
 
-    # insertion with few map operations
-    df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
-    remove_cache(df)
+        col = df["col0"]
+        assert_has_no_cache(col)
+        assert_has_no_cache(df)
 
-    col = df["col0"]
-    col = pd.to_datetime(col * 2 + 10)
-    assert_has_no_cache(col)
-    assert_has_no_cache(df)
+        df["col0"] = col
+        # check that no cache computation was triggered
+        assert_has_no_cache(df)
+        assert_has_no_cache(col)
 
-    df["col0"] = col
-    # check that no cache computation was triggered
-    assert_has_no_cache(df)
-    assert_has_no_cache(col)
+        # insertion with few map operations
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_cache(df)
+
+        col = df["col0"]
+        col = pd.to_datetime(col * 2 + 10)
+        assert_has_no_cache(col)
+        assert_has_no_cache(df)
+
+        df["col0"] = col
+        # check that no cache computation was triggered
+        assert_has_no_cache(df)
+        assert_has_no_cache(col)

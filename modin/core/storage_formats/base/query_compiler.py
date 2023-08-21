@@ -4297,6 +4297,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             New QueryCompiler with inserted values.
         """
         assert isinstance(value, type(self))
+
         # breakpoint()
         def mask(idx):
             if len(idx) == len(self.get_axis(axis)):

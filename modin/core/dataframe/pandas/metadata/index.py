@@ -38,7 +38,7 @@ class ModinIndex:
     def __init__(self, value, axis=None):
         from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
-        self._default_callable = False
+        self._is_default_callable = False
         self._axis = axis
 
         if callable(value):
@@ -46,10 +46,10 @@ class ModinIndex:
         elif isinstance(value, PandasDataframe):
             assert axis is not None
             self._value = self._get_default_callable(value, axis)
-            self._default_callable = True
+            self._is_default_callable = True
         else:
             self._value = ensure_index(value)
-        
+
         self._lengths_cache = None
         # index/lengths ID's for faster comparison between other ModinIndex objects,
         # these should be propagated to the copies of the index
@@ -114,8 +114,6 @@ class ModinIndex:
             if callable(self._value):
                 index, self._lengths_cache = self._value()
                 self._value = ensure_index(index)
-                # release the reference to be garbage collected
-                self._value_ref = None
             else:
                 raise NotImplementedError(type(self._value))
         if return_lengths:
@@ -210,15 +208,16 @@ class ModinIndex:
         during the construction of the object, `__getattr__` function is called, which
         is not intended to be used in situations where the object is not initialized.
         """
-        def builder(value, lengths_cache, index_id, lengths_id, is_default_callable):
-            result = self.__class__(value)
-            result._lengths_cache = lengths_cache
-            result._index_id = index_id
-            result._lengths_id = lengths_id
-            result._is_default_callable = is_default_callable
-            return result
-
-        return (builder, (self._value, self._lengths_cache, self._index_id, self._lengths_id, self._is_default_callable))
+        return (
+            self.__class__,
+            (self._value, self._axis),
+            {
+                "_lengths_cache": self._lengths_cache,
+                "_index_id": self._index_id,
+                "_lengths_id": self._lengths_id,
+                "_is_default_callable": self._is_default_callable,
+            },
+        )
 
     def __getattr__(self, name):
         """
