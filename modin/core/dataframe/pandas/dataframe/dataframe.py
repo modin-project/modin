@@ -242,6 +242,22 @@ class PandasDataframe(ClassLogger):
         else:
             self._column_widths_cache = value
 
+    def _get_axis_lengths_cache(self, axis=0):
+        """
+        Get partition's shape caches along the specified axis if avaliable.
+
+        Parameters
+        ----------
+        axis : int, default: 0
+            0 - get row lengths cache, 1 - get column widths cache.
+
+        Returns
+        -------
+        list of ints or None
+            If the cache is computed return a list of ints, ``None`` otherwise.
+        """
+        return self._row_lengths_cache if axis == 0 else self._column_widths_cache
+
     def _get_axis_lengths(self, axis: int = 0) -> List[int]:
         """
         Get row lengths/column widths.
