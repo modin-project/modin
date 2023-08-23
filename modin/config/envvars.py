@@ -573,6 +573,7 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
                 "null_div_by_zero": 1,
                 "enable_watchdog": 0,
                 "enable_thrift_logs": 0,
+                "enable_multifrag_execution_result": 1,
                 "cpu_only": 1,
             }
 
