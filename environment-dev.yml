@@ -46,7 +46,7 @@ dependencies:
   - pygit2>=1.9.2
 
   # test dependencies
-  - asv==0.5.1
+  - asv==0.6.0
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1

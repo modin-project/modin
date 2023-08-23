@@ -234,7 +234,7 @@ jobs:
           miniforge-version: latest
           use-mamba: true
       - name: ASV installation
-        run: pip install asv==0.5.1
+        run: pip install asv==0.6.0
       - name: Running benchmarks
         run: |
           git remote add upstream https://github.com/modin-project/modin.git
@@ -261,6 +261,7 @@ jobs:
               sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
               sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
 
+<<<<<<< HEAD
               # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
               # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
               rm -f -R .asv/env/
@@ -271,9 +272,11 @@ jobs:
               pip install asv==0.5.1
               pip install ..
 
+=======
+>>>>>>> 75001653d (update asv to 0.6.0)
               # check Modin on HDK
               MODIN_ENGINE=native MODIN_STORAGE_FORMAT=hdk MODIN_EXPERIMENTAL=true asv run --quick --strict --show-stderr \
-                --launch-method=forkserver --python=same --config asv.conf.hdk.json \
+                --launch-method=forkserver --config asv.conf.hdk.json \
                 -b ^hdk | tee benchmarks.log
           else
               echo "Benchmarks did not run, no changes detected"
