@@ -3562,7 +3562,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         result_qc = self.__constructor__(result)
 
-        if not is_transform and not groupby_kwargs.get("as_index", True):
+        if not is_transform and not groupby_kwargs.get("as_index", True) and groupby_kwargs.get("group_keys", True):
             return result_qc.reset_index(drop=True)
 
         return result_qc

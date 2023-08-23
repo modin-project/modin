@@ -2369,7 +2369,7 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
-        if self.dtypes[key_column] == object:
+        if not is_numeric_dtype(self.dtypes[key_column]):
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
             method = "inverted_cdf"
@@ -3646,6 +3646,48 @@ class PandasDataframe(ClassLogger):
             key_column=by[0],
             func=apply_func,
         )
+
+        align_columns = True
+
+        if align_columns:
+            some = True
+            if some:
+                def get_common_columns(*dfs):
+                    non_empty_dfs = [df for df in dfs if not df.empty]
+                    if len(non_empty_dfs) == 0 and len(dfs) != 0:
+                        non_empty_dfs = dfs
+
+                    return pandas.concat(
+                        [df.iloc[:0] for df in non_empty_dfs], axis=0, join="outer"
+                    ).columns
+                # breakpoint()
+                parts = result._partitions.flatten()
+                joined_columns = parts[0].apply(
+                    get_common_columns, *[part._data for part in parts[1:]]
+                )
+
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    lambda df, columns: df.reindex(columns=columns),
+                    func_args=(joined_columns._data,),
+                )
+            else:
+                def join_cols(df, *cols):
+                    result_col = pandas.concat([pandas.DataFrame(col) for col in cols if col is not None], axis=0)
+                    return df.reindex(columns=result_col)
+
+                cols = [part.apply(lambda df: None if df.empty else df.columns)._data for part in result._partitions.flatten()]
+
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    join_cols,
+                    func_args=cols,
+                )
+            result = self.__constructor__(
+                new_partitions,
+                index=result.copy_index_cache(),
+                row_lengths=result._row_lengths_cache,
+            )
 
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)

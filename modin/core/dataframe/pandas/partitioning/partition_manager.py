@@ -530,7 +530,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def lazy_map_partitions(cls, partitions, map_func):
+    def lazy_map_partitions(cls, partitions, map_func, func_args=None):
         """
         Apply `map_func` to every partition in `partitions` *lazily*.
 
@@ -549,7 +549,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
             [
-                [part.add_to_apply_calls(preprocessed_map_func) for part in row]
+                [
+                    part.add_to_apply_calls(preprocessed_map_func, *(tuple() if func_args is None else func_args))
+                    for part in row
+                ]
                 for row in partitions
             ]
         )
@@ -1603,14 +1606,20 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for partition in row_partitions
                 ]
             ).T
+            full_row_partitions = [
+                cls._column_partitions_class(row_partition, full_axis=False)
+                for row_partition in split_row_partitions
+            ]
+            # filter_empty_bins = True
+            # if filter_empty_bins:
+            #     lengths = [part.apply(lambda df: len(df)) for part in full_row_partitions]
+            #     lengths = lengths[0].execution_wrapper.materialize([part._data for part in lengths])
+            #     full_row_partitions = [part for part, length in zip(full_row_partitions, lengths) if length > 0]
+
             # We need to convert every partition that came from the splits into a full-axis column partition.
             new_partitions = [
-                [
-                    cls._column_partitions_class(row_partition, full_axis=False).apply(
-                        final_shuffle_func
-                    )
-                ]
-                for row_partition in split_row_partitions
+                [row_partition.apply(final_shuffle_func)]
+                for row_partition in full_row_partitions
             ]
             return np.array(new_partitions)
         else:
