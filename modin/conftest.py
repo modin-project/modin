@@ -693,3 +693,28 @@ def s3_resource(s3_base):
         if not cli.list_buckets()["Buckets"]:
             break
         time.sleep(0.1)
+
+
+@pytest.fixture
+def modify_config(request):
+    values = request.param
+    old_values = {}
+
+    for key, value in values.items():
+        old_values[key] = key.get()
+        key.put(value)
+
+    yield  # waiting for the test to be completed
+    # restoring old parameters
+    for key, value in old_values.items():
+        try:
+            key.put(value)
+        except ValueError as e:
+            # sometimes bool env variables have 'None' as a default value, which
+            # causes a ValueError when we try to set this value back, as technically,
+            # only bool values are allowed (and 'None' is not a bool), in this case
+            # we try to set 'False' instead
+            if key.type == bool and value is None:
+                key.put(False)
+            else:
+                raise e

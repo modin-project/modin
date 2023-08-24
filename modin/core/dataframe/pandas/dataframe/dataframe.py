@@ -3589,6 +3589,7 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
+        align_result_columns=False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3606,6 +3607,10 @@ class PandasDataframe(ClassLogger):
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+        align_columns : bool, default: False
+            Whether to manually align columns between all the resulted row partitions.
+            This flag is helpful when dealing with UDFs as they can change the partition's shape
+            and labeling unpredictably, resulting in an invalid dataframe.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
@@ -3648,38 +3653,71 @@ class PandasDataframe(ClassLogger):
             func=apply_func,
         )
 
-        align_columns = True
+        # no need aligning columns if there's only one row partition
+        if align_result_columns and result._partitions.shape[0] > 1:
+            # FIXME: the current reshuffling implementation guarantees us that there's only one column
+            # partition in the result, so we should never hit this exception for now, however
+            # in the future, we might want to make this implementation more broader
+            if result._partitions.shape[1] > 1:
+                raise NotImplementedError(
+                    "Aligning columns is not yet implemented for multiple column partitions."
+                )
 
-        if align_columns and result._partitions.shape[0] > 1:
-            some = True
-            if some:
-                def get_common_columns(*dfs):
+            # There're two implementations:
+            #   1. The first one work faster, but may stress the network a lot in cluster mode since
+            #      it gathers all the dataframes in a single ray-kernel.
+            #   2. The second one works slower, but only gathers light pandas.Index objects,
+            #      so there should be less stress on the network.
+            if not cfg.IsRayCluster.get():
+
+                def compute_aligned_columns(*dfs):
+                    """Take row partitions, filter empty ones, and return joined columns for them."""
                     non_empty_dfs = [df for df in dfs if not df.empty]
                     if len(non_empty_dfs) == 0 and len(dfs) != 0:
                         non_empty_dfs = dfs
 
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
                     return pandas.concat(
                         [df.iloc[:0] for df in non_empty_dfs], axis=0, join="outer"
                     ).columns
-                # if cfg.AsyncReadMode.get():
-                #     breakpoint()
+
+                # Passing all partitions to the 'compute_aligned_columns' kernel to get
+                # aligned columns
                 parts = result._partitions.flatten()
-                joined_columns = parts[0].apply(
-                    get_common_columns, *[part._data for part in parts[1:]]
+                aligned_columns = parts[0].apply(
+                    compute_aligned_columns, *[part._data for part in parts[1:]]
                 )
 
+                # Lazily applying aligned columns to partitions
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                     result._partitions,
                     lambda df, columns: df.reindex(columns=columns),
-                    func_args=(joined_columns._data,),
+                    func_args=(aligned_columns._data,),
                 )
             else:
+
                 def join_cols(df, *cols):
-                    result_col = pandas.concat([pandas.DataFrame(col) for col in cols if col is not None], axis=0)
+                    """Join `cols` and apply the joined columns to `df`."""
+                    valid_cols = [
+                        pandas.DataFrame(columns=col) for col in cols if col is not None
+                    ]
+                    if len(valid_cols) == 0:
+                        return df
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
+                    result_col = pandas.concat(valid_cols, axis=0, join="outer").columns
                     return df.reindex(columns=result_col)
 
-                cols = [part.apply(lambda df: None if df.empty else df.columns)._data for part in result._partitions.flatten()]
+                # Getting futures for columns of non-empty partitions
+                cols = [
+                    part.apply(lambda df: None if df.empty else df.columns)._data
+                    for part in result._partitions.flatten()
+                ]
 
+                # Lazily joining and applying the aligned columns
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                     result._partitions,
                     join_cols,

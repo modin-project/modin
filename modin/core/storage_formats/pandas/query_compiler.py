@@ -3558,11 +3558,19 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=axis,
             by=by,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
+            # that's why we have to align the partition's shapes/labeling across different
+            # row partitions
+            align_result_columns=how == "group_wise",
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)
 
-        if not is_transform and not groupby_kwargs.get("as_index", True) and groupby_kwargs.get("group_keys", True):
+        if (
+            not is_transform
+            and not groupby_kwargs.get("as_index", True)
+            and groupby_kwargs.get("group_keys", True)
+        ):
             return result_qc.reset_index(drop=True)
 
         return result_qc

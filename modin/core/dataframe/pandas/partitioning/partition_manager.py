@@ -550,7 +550,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return np.array(
             [
                 [
-                    part.add_to_apply_calls(preprocessed_map_func, *(tuple() if func_args is None else func_args))
+                    part.add_to_apply_calls(
+                        preprocessed_map_func,
+                        *(tuple() if func_args is None else func_args),
+                    )
                     for part in row
                 ]
                 for row in partitions
