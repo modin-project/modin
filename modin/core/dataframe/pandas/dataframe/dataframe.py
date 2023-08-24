@@ -19,6 +19,7 @@ for pandas storage format.
 """
 from collections import OrderedDict
 import numpy as np
+import modin.config as cfg
 import pandas
 import datetime
 from pandas.api.types import is_object_dtype
@@ -3649,7 +3650,7 @@ class PandasDataframe(ClassLogger):
 
         align_columns = True
 
-        if align_columns:
+        if align_columns and result._partitions.shape[0] > 1:
             some = True
             if some:
                 def get_common_columns(*dfs):
@@ -3660,7 +3661,8 @@ class PandasDataframe(ClassLogger):
                     return pandas.concat(
                         [df.iloc[:0] for df in non_empty_dfs], axis=0, join="outer"
                     ).columns
-                # breakpoint()
+                # if cfg.AsyncReadMode.get():
+                #     breakpoint()
                 parts = result._partitions.flatten()
                 joined_columns = parts[0].apply(
                     get_common_columns, *[part._data for part in parts[1:]]

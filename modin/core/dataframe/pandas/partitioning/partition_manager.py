@@ -1592,6 +1592,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
         row_partitions = cls.row_partitions(partitions)
         if len(pivots):
+            # import modin.config as cfg
+            # if cfg.AsyncReadMode.get():
+            #     breakpoint()
             # Gather together all of the sub-partitions
             split_row_partitions = np.array(
                 [
@@ -1606,20 +1609,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for partition in row_partitions
                 ]
             ).T
-            full_row_partitions = [
-                cls._column_partitions_class(row_partition, full_axis=False)
-                for row_partition in split_row_partitions
-            ]
-            # filter_empty_bins = True
-            # if filter_empty_bins:
-            #     lengths = [part.apply(lambda df: len(df)) for part in full_row_partitions]
-            #     lengths = lengths[0].execution_wrapper.materialize([part._data for part in lengths])
-            #     full_row_partitions = [part for part, length in zip(full_row_partitions, lengths) if length > 0]
-
             # We need to convert every partition that came from the splits into a full-axis column partition.
             new_partitions = [
-                [row_partition.apply(final_shuffle_func)]
-                for row_partition in full_row_partitions
+                [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func
+                    )
+                ]
+                for row_partition in split_row_partitions
             ]
             return np.array(new_partitions)
         else:
