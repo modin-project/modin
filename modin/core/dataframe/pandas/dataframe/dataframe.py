@@ -3606,7 +3606,7 @@ class PandasDataframe(ClassLogger):
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
-        align_columns : bool, default: False
+        align_result_columns : bool, default: False
             Whether to manually align columns between all the resulted row partitions.
             This flag is helpful when dealing with UDFs as they can change the partition's shape
             and labeling unpredictably, resulting in an invalid dataframe.
