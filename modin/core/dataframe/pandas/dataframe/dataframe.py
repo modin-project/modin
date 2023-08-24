@@ -19,7 +19,6 @@ for pandas storage format.
 """
 from collections import OrderedDict
 import numpy as np
-import modin.config as cfg
 import pandas
 import datetime
 from pandas.api.types import is_object_dtype
@@ -32,7 +31,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
-from modin.config import Engine
+from modin.config import Engine, IsRayCluster
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -2370,7 +2369,7 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
-        if not is_numeric_dtype(self.dtypes[key_column]):
+        if self.dtypes[key_column] == object:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
             method = "inverted_cdf"
@@ -3668,7 +3667,7 @@ class PandasDataframe(ClassLogger):
             #      it gathers all the dataframes in a single ray-kernel.
             #   2. The second one works slower, but only gathers light pandas.Index objects,
             #      so there should be less stress on the network.
-            if not cfg.IsRayCluster.get():
+            if not IsRayCluster.get():
 
                 def compute_aligned_columns(*dfs):
                     """Take row partitions, filter empty ones, and return joined columns for them."""

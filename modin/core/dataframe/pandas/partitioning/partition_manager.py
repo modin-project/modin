@@ -540,6 +540,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
+        func_args : iterable, optional
+            Positional arguments for the 'map_func'.
 
         Returns
         -------
@@ -1595,9 +1597,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
         row_partitions = cls.row_partitions(partitions)
         if len(pivots):
-            # import modin.config as cfg
-            # if cfg.AsyncReadMode.get():
-            #     breakpoint()
             # Gather together all of the sub-partitions
             split_row_partitions = np.array(
                 [
