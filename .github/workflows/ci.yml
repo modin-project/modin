@@ -265,6 +265,10 @@ jobs:
               sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
               sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
 
+              # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
+              # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
+              rm -f -R .asv/env/
+
               # TODO: Remove manual environment creation after fix https://github.com/airspeed-velocity/asv/issues/1310
               mamba env create -f ../requirements/env_hdk.yml
               conda activate modin_on_hdk
