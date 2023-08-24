@@ -2751,6 +2751,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
+        if axis == 1:
+            value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
     def _setitem(self, axis, key, value, how="inner"):
@@ -2986,6 +2988,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # return a new one from here and let the front end handle the inplace
     # update.
     def insert(self, loc, column, value):
+        value = self._wrap_column_data(value)
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
@@ -3017,6 +3020,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=self.columns.insert(loc, column),
         )
         return self.__constructor__(new_modin_frame)
+
+    def _wrap_column_data(self, data):
+        """
+        If the data is list-like, create a single column query compiler.
+
+        Parameters
+        ----------
+        data : any
+
+        Returns
+        -------
+        data or PandasQueryCompiler
+        """
+        if is_list_like(data):
+            return self.from_pandas(
+                pandas.DataFrame(pandas.Series(data, index=self.index)),
+                data_cls=type(self._modin_frame),
+            )
+        return data
 
     # END Insert
 
