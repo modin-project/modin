@@ -2788,7 +2788,12 @@ def test_groupby_deferred_index(func):
 # there are two different implementations of partitions aligning for cluster and non-cluster mode,
 # here we want to test both of them, so simply modifying the config for this test
 @pytest.mark.parametrize(
-    "modify_config", [{IsRayCluster: True}, {IsRayCluster: False}], indirect=True
+    "modify_config",
+    [
+        {ExperimentalGroupbyImpl: True, IsRayCluster: True},
+        {ExperimentalGroupbyImpl: True, IsRayCluster: False},
+    ],
+    indirect=True,
 )
 def test_shape_changing_udf(modify_config):
     modin_df, pandas_df = create_test_dfs(
@@ -2832,4 +2837,17 @@ def test_shape_changing_udf(modify_config):
         modin_df.groupby("by_col1"),
         pandas_df.groupby("by_col1"),
         lambda df: df.apply(func2),
+    )
+
+    def func3(group):
+        # one of the groups produce an empty dataframe, in the result we should
+        # have joined columns of both of these dataframes
+        if group.iloc[0, 0] == 1:
+            return pandas.DataFrame([[1, 2, 3]], index=["col1", "col2", "col3"])
+        return pandas.DataFrame(columns=["col2", "col3", "col4", "col5"])
+
+    eval_general(
+        modin_df.groupby("by_col1"),
+        pandas_df.groupby("by_col1"),
+        lambda df: df.apply(func3),
     )

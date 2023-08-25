@@ -3639,13 +3639,23 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
+        skip_on_aligning_flag = "__skip_me_on_aligning__"
+
         def apply_func(df):  # pragma: no cover
             if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"
                 )
-            return operator(df.groupby(by, **kwargs))
+            result = operator(df.groupby(by, **kwargs))
+            if align_result_columns and df.empty and result.empty and df.equals(result):
+                # We want to align columns only of those frames that actually performed
+                # some groupby aggregation, if an empty frame was originally passed
+                # (an empty bin on reshuffling was created) then there were no groupby
+                # executed over this partition and so it has incorrect columns
+                # that shouldn't be considered on the aligning phase
+                result.attrs[skip_on_aligning_flag] = True
+            return result
 
         result = self._apply_func_to_range_partitioning(
             key_column=by[0],
@@ -3671,15 +3681,19 @@ class PandasDataframe(ClassLogger):
 
                 def compute_aligned_columns(*dfs):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
-                    non_empty_dfs = [df for df in dfs if not df.empty]
-                    if len(non_empty_dfs) == 0 and len(dfs) != 0:
-                        non_empty_dfs = dfs
+                    valid_dfs = [
+                        df
+                        for df in dfs
+                        if not df.attrs.get(skip_on_aligning_flag, False)
+                    ]
+                    if len(valid_dfs) == 0 and len(dfs) != 0:
+                        valid_dfs = dfs
 
                     # Using '.concat()' on empty-slices instead of 'Index.join()'
                     # in order to get identical behavior to pandas when it joins
                     # results of different groups
                     return pandas.concat(
-                        [df.iloc[:0] for df in non_empty_dfs], axis=0, join="outer"
+                        [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
                     ).columns
 
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
@@ -3712,7 +3726,11 @@ class PandasDataframe(ClassLogger):
 
                 # Getting futures for columns of non-empty partitions
                 cols = [
-                    part.apply(lambda df: None if df.empty else df.columns)._data
+                    part.apply(
+                        lambda df: None
+                        if df.attrs.get(skip_on_aligning_flag, False)
+                        else df.columns
+                    )._data
                     for part in result._partitions.flatten()
                 ]
 
