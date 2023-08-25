@@ -63,5 +63,5 @@ setup(
         "sql": sql_deps,
         "all": all_deps,
     },
-    python_requires=">=3.8",
+    python_requires=">=3.9",
 )

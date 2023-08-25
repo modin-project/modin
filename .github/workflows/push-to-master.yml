@@ -99,7 +99,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py

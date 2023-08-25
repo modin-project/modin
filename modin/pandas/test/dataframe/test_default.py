@@ -11,7 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import sys
 import pytest
 import numpy as np
 import pandas
@@ -79,8 +78,6 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
-    if op == "to_xarray" and sys.version_info < (3, 9):
-        pytest.skip("xarray doesn't support pandas>=2.0 for python 3.8")
     with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:

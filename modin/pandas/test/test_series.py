@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import sys
 import pytest
 import unittest.mock as mock
 import numpy as np
@@ -3539,10 +3538,6 @@ def test_to_timestamp():
         series.to_period().to_timestamp()
 
 
-@pytest.mark.skipif(
-    condition=sys.version_info < (3, 9),
-    reason="xarray doesn't support pandas>=2.0 for python 3.8",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
