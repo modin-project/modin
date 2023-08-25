@@ -3648,7 +3648,12 @@ class PandasDataframe(ClassLogger):
                     + "https://github.com/modin-project/modin/issues/5925"
                 )
             result = operator(df.groupby(by, **kwargs))
-            if align_result_columns and df.empty and result.empty and df.equals(result):
+            if (
+                align_result_columns
+                and df.empty
+                and result.empty
+                and df.columns.equals(result.columns)
+            ):
                 # We want to align columns only of those frames that actually performed
                 # some groupby aggregation, if an empty frame was originally passed
                 # (an empty bin on reshuffling was created) then there were no groupby
