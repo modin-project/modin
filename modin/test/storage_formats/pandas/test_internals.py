@@ -117,21 +117,6 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-@pytest.fixture
-def modify_config(request):
-    values = request.param
-    old_values = {}
-
-    for key, value in values.items():
-        old_values[key] = key.get()
-        key.put(value)
-
-    yield  # waiting for the test to be completed
-    # restoring old parameters
-    for key, value in old_values.items():
-        key.put(value)
-
-
 def validate_partitions_cache(df):
     """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
     row_lengths = df._row_lengths_cache
