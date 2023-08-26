@@ -16,7 +16,7 @@ import numpy as np
 import pandas
 from pandas.compat import numpy as numpy_compat
 from pandas.core.common import count_not_none, pipe
-from pandas.core.methods.describe import refine_percentiles
+from pandas.core.methods.describe import _refine_percentiles
 from pandas.core.dtypes.common import (
     is_list_like,
     is_dict_like,
@@ -1196,7 +1196,7 @@ class BasePandasDataset(ClassLogger):
         Generate descriptive statistics.
         """
         # copied from pandas.core.describe.describe_ndframe
-        percentiles = refine_percentiles(percentiles)
+        percentiles = _refine_percentiles(percentiles)
         data = self
         if self._is_dataframe:
             # include/exclude arguments are ignored for Series
