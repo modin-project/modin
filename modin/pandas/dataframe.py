@@ -1367,14 +1367,14 @@ class DataFrame(BasePandasDataset):
             )
 
     def pivot(
-        self, *, columns, index=NoDefault, values=NoDefault
+        self, *, columns, index=no_default, values=no_default
     ):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
-        if index is NoDefault:
+        if index is no_default:
             index = None
-        if values is NoDefault:
+        if values is no_default:
             values = None
 
         # if values is not specified, it should be the remaining columns not in

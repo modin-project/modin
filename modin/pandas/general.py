@@ -252,7 +252,7 @@ def pivot_table(
 @_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
 @enable_logging
 def pivot(
-    data, *, columns, index=NoDefault, values=NoDefault
+    data, *, columns, index=no_default, values=no_default
 ):  # noqa: PR01, RT01, D200
     """
     Return reshaped DataFrame organized by given index / column values.

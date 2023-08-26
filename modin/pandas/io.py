@@ -282,6 +282,8 @@ def read_parquet(
     storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = no_default,
     dtype_backend=no_default,
+    filesystem=None,
+    filters=None,
     **kwargs,
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -299,6 +301,8 @@ def read_parquet(
             storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
             dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            filters=filters,
             **kwargs,
         )
     )
@@ -382,6 +386,7 @@ def read_html(
     displayed_only: bool = True,
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    storage_options: StorageOptions = None,
 ) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
@@ -448,6 +453,7 @@ def read_excel(
     skipfooter: int = 0,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    engine_kwargs: Optional[dict] = None,
 ) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -761,6 +767,7 @@ def read_orc(
     path,
     columns: Optional[List[str]] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    filesystem=None,
     **kwargs,
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -768,7 +775,13 @@ def read_orc(
     """
     ErrorMessage.default_to_pandas("read_orc")
     return DataFrame(
-        pandas.read_orc(path, columns=columns, dtype_backend=dtype_backend, **kwargs)
+        pandas.read_orc(
+            path,
+            columns=columns,
+            dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            **kwargs,
+        )
     )
 
 
