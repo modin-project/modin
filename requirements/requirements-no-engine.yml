@@ -1,10 +1,11 @@
 channels:
   - conda-forge
+  - conda-forge/label/pandas_rc
 dependencies:
   - pip
 
   # required dependencies
-  - pandas>=2,<2.1
+  - pandas==2.1.0rc0
   - numpy>=1.20.3
   - fsspec>=2021.07.0
   - packaging>=21.0
