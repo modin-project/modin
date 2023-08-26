@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import pyarrow as pa
-from pandas.core.dtypes.common import get_dtype
+from pandas.core.dtypes.common import _get_dtype
 
 import modin.pandas as pd
 from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
@@ -81,7 +81,7 @@ def hdk_query(query: str, **kwargs) -> pd.DataFrame:
         i for i, col in enumerate(schema) if pa.types.is_dictionary(col.type)
     ]:
         dtypes = mdf._dtypes
-        obj_type = get_dtype(object)
+        obj_type = _get_dtype(object)
         for i in replace:
             dtypes[i] = obj_type
     return df

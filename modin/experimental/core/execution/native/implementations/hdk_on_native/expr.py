@@ -23,7 +23,7 @@ import pyarrow.compute as pc
 import pandas
 from pandas.core.dtypes.common import (
     is_list_like,
-    get_dtype,
+    _get_dtype,
     is_float_dtype,
     is_int64_dtype,
     is_integer_dtype,
@@ -61,19 +61,19 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
     if is_float_dtype(lhs_dtype) and (
         is_float_dtype(rhs_dtype) or is_integer_dtype(rhs_dtype)
     ):
-        return get_dtype(float)
+        return _get_dtype(float)
     if is_float_dtype(rhs_dtype) and (
         is_float_dtype(lhs_dtype) or is_integer_dtype(lhs_dtype)
     ):
-        return get_dtype(float)
+        return _get_dtype(float)
     if is_integer_dtype(lhs_dtype) and is_integer_dtype(rhs_dtype):
-        return get_dtype(int)
+        return _get_dtype(int)
     if is_datetime64_dtype(lhs_dtype) and is_datetime64_dtype(rhs_dtype):
         return np.promote_types(lhs_dtype, rhs_dtype)
     if (is_datetime64_dtype(lhs_dtype) and is_int64_dtype(rhs_dtype)) or (
         is_datetime64_dtype(rhs_dtype) and is_int64_dtype(lhs_dtype)
     ):
-        return get_dtype(int)
+        return _get_dtype(int)
     raise NotImplementedError(
         f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
     )
@@ -103,9 +103,9 @@ def _agg_dtype(agg, dtype):
     if agg in _aggs_preserving_numeric_type:
         return dtype
     elif agg in _aggs_with_int_result:
-        return get_dtype(int)
+        return _get_dtype(int)
     elif agg in _aggs_with_float_result:
-        return get_dtype(float)
+        return _get_dtype(float)
     else:
         raise NotImplementedError(f"unsupported aggregate {agg}")
 
@@ -253,7 +253,7 @@ class BaseExpr(abc.ABC):
         """
         if not isinstance(other, BaseExpr):
             other = LiteralExpr(other)
-        return OpExpr(op, [self, other], get_dtype(bool))
+        return OpExpr(op, [self, other], _get_dtype(bool))
 
     def cast(self, res_type):
         """
@@ -286,7 +286,7 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The NULL check expression.
         """
-        new_expr = OpExpr("IS NULL", [self], get_dtype(bool))
+        new_expr = OpExpr("IS NULL", [self], _get_dtype(bool))
         return new_expr
 
     def is_not_null(self):
@@ -298,7 +298,7 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The NOT NULL check expression.
         """
-        new_expr = OpExpr("IS NOT NULL", [self], get_dtype(bool))
+        new_expr = OpExpr("IS NOT NULL", [self], _get_dtype(bool))
         return new_expr
 
     def bin_op(self, other, op_name):
@@ -326,7 +326,7 @@ class BaseExpr(abc.ABC):
         # True division may require prior cast to float to avoid integer division
         if op_name == "truediv":
             if is_integer_dtype(self._dtype) and is_integer_dtype(other._dtype):
-                other = other.cast(get_dtype(float))
+                other = other.cast(_get_dtype(float))
         res_type = self._get_bin_op_res_type(op_name, self._dtype, other._dtype)
         new_expr = OpExpr(self.binary_operations[op_name], [self, other], res_type)
         # Floor division may require additional FLOOR expr.
@@ -459,7 +459,7 @@ class BaseExpr(abc.ABC):
         BaseExpr
             The resulting floor expression.
         """
-        return OpExpr("FLOOR", [self], get_dtype(int))
+        return OpExpr("FLOOR", [self], _get_dtype(int))
 
     def invert(self) -> "OpExpr":
         """
@@ -490,7 +490,7 @@ class BaseExpr(abc.ABC):
         """
         lhs_dtype_class = self._get_dtype_cmp_class(self._dtype)
         rhs_dtype_class = self._get_dtype_cmp_class(other._dtype)
-        res_dtype = get_dtype(bool)
+        res_dtype = _get_dtype(bool)
         # In HDK comparison with NULL always results in NULL,
         # but in pandas it is True for 'ne' comparison and False
         # for others.
@@ -554,11 +554,11 @@ class BaseExpr(abc.ABC):
         if op_name in self.preserve_dtype_math_ops:
             return _get_common_dtype(lhs_dtype, rhs_dtype)
         elif op_name in self.promote_to_float_math_ops:
-            return get_dtype(float)
+            return _get_dtype(float)
         elif is_cmp_op(op_name):
-            return get_dtype(bool)
+            return _get_dtype(bool)
         elif is_logical_op(op_name):
-            return get_dtype(bool)
+            return _get_dtype(bool)
         else:
             raise NotImplementedError(f"unsupported binary operation {op_name}")
 
@@ -847,10 +847,10 @@ class LiteralExpr(BaseExpr):
         if dtype is not None:
             self._dtype = dtype
         elif val is None:
-            self._dtype = get_dtype(float)
+            self._dtype = _get_dtype(float)
         else:
             self._dtype = (
-                val.dtype if isinstance(val, np.generic) else get_dtype(type(val))
+                val.dtype if isinstance(val, np.generic) else _get_dtype(type(val))
             )
 
     def copy(self):
@@ -1342,12 +1342,12 @@ def build_row_idx_filter_expr(row_idx, row_col):
             step = -step
         exprs = [row_col.ge(start), row_col.le(stop)]
         if step > 1:
-            mod = OpExpr("MOD", [row_col, LiteralExpr(step)], get_dtype(int))
+            mod = OpExpr("MOD", [row_col, LiteralExpr(step)], _get_dtype(int))
             exprs.append(mod.eq(0))
-        return OpExpr("AND", exprs, get_dtype(bool))
+        return OpExpr("AND", exprs, _get_dtype(bool))
 
     exprs = [row_col.eq(idx) for idx in row_idx]
-    return OpExpr("OR", exprs, get_dtype(bool))
+    return OpExpr("OR", exprs, _get_dtype(bool))
 
 
 def build_if_then_else(cond, then_val, else_val, res_type):
@@ -1396,6 +1396,6 @@ def build_dt_expr(dt_operation, col_expr):
     """
     operation = LiteralExpr(dt_operation)
 
-    res = OpExpr("PG_EXTRACT", [operation, col_expr], get_dtype("int32"))
+    res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype("int32"))
 
     return res

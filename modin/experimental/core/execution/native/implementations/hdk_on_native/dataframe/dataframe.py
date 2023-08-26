@@ -26,7 +26,7 @@ import pandas as pd
 from pandas._libs.lib import no_default
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
-    get_dtype,
+    _get_dtype,
     is_list_like,
     is_bool_dtype,
     is_string_dtype,
@@ -357,7 +357,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         InputRefExpr
         """
         if col == ROWID_COL_NAME:
-            return InputRefExpr(self, col, get_dtype(int))
+            return InputRefExpr(self, col, _get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
 
     def take_2d_labels_or_positional(
@@ -726,7 +726,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         order_keys = [base.ref(col) for col in order_keys]
 
         row_num_name = "__HDK_ROW_NUMBER__"
-        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op = OpExpr("ROW_NUMBER", [], _get_dtype(int))
         row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
         exprs = base._index_exprs()
         exprs.update((col, base.ref(col)) for col in base.columns)
@@ -1154,7 +1154,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         condition = (
             condition[0]
             if len(condition) == 1
-            else OpExpr("AND", condition, get_dtype(bool))
+            else OpExpr("AND", condition, _get_dtype(bool))
         )
         return condition
 
@@ -1233,7 +1233,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 dtypes = pd.Series()
             elif ignore_index:
                 index_cols = [UNNAMED_IDX_COL_NAME]
-                dtypes = pd.Series([get_dtype(int)], index=index_cols)
+                dtypes = pd.Series([_get_dtype(int)], index=index_cols)
             else:
                 index_names = ColNameCodec.concat_index_names(frames)
                 index_cols = list(index_names)
@@ -1673,11 +1673,11 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         exprs = self._index_exprs()
         col_expr = self.ref(self.columns[-1])
-        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
         col_name = MODIN_UNNAMED_SERIES_LABEL
         exprs[col_name] = build_if_then_else(
-            col_expr.is_null(), null_val, code_expr, get_dtype("int32")
+            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
         )
         dtypes = [expr._dtype for expr in exprs.values()]
 

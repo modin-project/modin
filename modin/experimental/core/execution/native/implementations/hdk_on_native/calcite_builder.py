@@ -45,7 +45,7 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import get_dtype, is_categorical_dtype, is_bool_dtype
+from pandas.core.dtypes.common import _get_dtype, is_categorical_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -173,7 +173,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -275,7 +275,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -583,9 +583,9 @@ class CalciteBuilder:
 
     # The following aggregates require boolean columns to be cast.
     _bool_cast_aggregates = {
-        "sum": get_dtype(int),
-        "mean": get_dtype(float),
-        "median": get_dtype(float),
+        "sum": _get_dtype(int),
+        "mean": _get_dtype(float),
+        "median": _get_dtype(float),
     }
 
     def __init__(self):
