@@ -22,7 +22,7 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
 import pandas
-from pandas.core.arrays.sparse.dtype import SparseDtype
+from pandas.core.dtypes.dtypes import SparseDtype
 
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
@@ -49,7 +49,7 @@ class BaseSparseAccessor(ClassLogger):
     @classmethod
     def _validate(cls, data):
         """
-        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
         Parameters
         ----------
@@ -91,7 +91,7 @@ class SparseFrameAccessor(BaseSparseAccessor):
     @classmethod
     def _validate(cls, data):
         """
-        Verify that `data` dtypes are compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
         Parameters
         ----------
@@ -130,7 +130,7 @@ class SparseAccessor(BaseSparseAccessor):
     @classmethod
     def _validate(cls, data):
         """
-        Verify that `data` dtype is compatible with `pandas.core.arrays.sparse.dtype.SparseDtype`.
+        Verify that `data` dtype is compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
         Parameters
         ----------
