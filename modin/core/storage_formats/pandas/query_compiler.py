@@ -28,14 +28,13 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
-    is_datetime_or_timedelta_dtype,
     is_datetime64_any_dtype,
     is_bool_dtype,
     is_categorical_dtype,
 )
 from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
-from pandas._libs.lib import no_default
+from pandas._libs import lib
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
@@ -705,9 +704,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
 
-        allow_duplicates = kwargs.pop("allow_duplicates", no_default)
+        allow_duplicates = kwargs.pop("allow_duplicates", lib.no_default)
         names = kwargs.pop("names", None)
-        if allow_duplicates not in (no_default, False) or names is not None:
+        if allow_duplicates not in (lib.no_default, False) or names is not None:
             return self.default_to_pandas(
                 pandas.DataFrame.reset_index,
                 allow_duplicates=allow_duplicates,
@@ -2461,7 +2460,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [
                 col
                 for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
+                if (is_numeric_dtype(dtype) or lib.is_np_dtype(dtype, "mM"))
             ]
         if axis == 1:
             query_compiler = self.getitem_column_array(new_columns)
@@ -2864,8 +2863,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
         is_column_wise = kwargs.get("axis", 0) == 1
-        no_thresh_passed = kwargs.get("thresh", no_default) in (
-            no_default,
+        no_thresh_passed = kwargs.get("thresh", lib.no_default) in (
+            lib.no_default,
             None,
         )
         # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
@@ -2878,7 +2877,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
             how = kwargs.get("how", "any")
             subset = kwargs.get("subset")
-            how = "any" if how in (no_default, None) else how
+            how = "any" if how in (lib.no_default, None) else how
             condition = lambda df: getattr(df, how)()  # noqa: E731 (lambda assignment)
 
             def mapper(df: pandas.DataFrame):

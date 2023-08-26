@@ -23,7 +23,6 @@ from pandas.core.dtypes.common import (
     is_bool_dtype,
     is_integer_dtype,
     is_numeric_dtype,
-    is_datetime_or_timedelta_dtype,
     is_dtype_equal,
     is_object_dtype,
     is_integer,
@@ -37,7 +36,7 @@ from pandas.util._validators import (
     validate_bool_kwarg,
     validate_ascending,
 )
-from pandas._libs.lib import no_default, NoDefault
+from pandas._libs import lib
 from pandas._libs.tslibs import to_offset
 from pandas._typing import (
     IndexKeyFunc,
@@ -371,8 +370,8 @@ class BasePandasDataset(ClassLogger):
                 (is_numeric_dtype(self_dtype) and is_numeric_dtype(other_dtype))
                 or (is_object_dtype(self_dtype) and is_object_dtype(other_dtype))
                 or (
-                    is_datetime_or_timedelta_dtype(self_dtype)
-                    and is_datetime_or_timedelta_dtype(other_dtype)
+                    lib.is_np_dtype(self_dtype, "mM")
+                    and lib.is_np_dtype(self_dtype, "mM")
                 )
                 or is_dtype_equal(self_dtype, other_dtype)
                 for self_dtype, other_dtype in zip(self_dtypes, other_dtypes)
@@ -575,7 +574,7 @@ class BasePandasDataset(ClassLogger):
         int
             0 or 1 - axis index in the array of axes stored in the dataframe.
         """
-        if axis is no_default:
+        if axis is lib.no_default:
             axis = None
 
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
@@ -1235,7 +1234,7 @@ class BasePandasDataset(ClassLogger):
 
         # Attempting to match pandas error behavior here
         for dtype in self._get_dtypes():
-            if not (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype)):
+            if not (is_numeric_dtype(dtype) or lib.is_np_dtype(dtype, "mM")):
                 raise TypeError(f"unsupported operand type for -: got {dtype}")
 
         axis = self._get_axis_number(axis)
@@ -1318,8 +1317,8 @@ class BasePandasDataset(ClassLogger):
         self,
         *,
         axis: Axis = 0,
-        how: str | NoDefault = no_default,
-        thresh: int | NoDefault = no_default,
+        how: str | lib.NoDefault = lib.no_default,
+        thresh: int | lib.NoDefault = lib.no_default,
         subset: IndexLabel = None,
         inplace: bool = False,
         ignore_index: bool = False,
@@ -1333,7 +1332,7 @@ class BasePandasDataset(ClassLogger):
             raise TypeError("supplying multiple axes to axis is no longer supported.")
 
         axis = self._get_axis_number(axis)
-        if how is not None and how not in ["any", "all", no_default]:
+        if how is not None and how not in ["any", "all", lib.no_default]:
             raise ValueError("invalid how option: %s" % how)
         if how is None and thresh is None:
             raise TypeError("must specify how or thresh")
@@ -1817,7 +1816,7 @@ class BasePandasDataset(ClassLogger):
     def mask(
         self,
         cond,
-        other=no_default,
+        other=lib.no_default,
         *,
         inplace: bool = False,
         axis: Optional[Axis] = None,
@@ -2089,7 +2088,7 @@ class BasePandasDataset(ClassLogger):
         axis = self._get_axis_number(axis)
 
         def check_dtype(t):
-            return is_numeric_dtype(t) or is_datetime_or_timedelta_dtype(t)
+            return is_numeric_dtype(t) or lib.is_np_dtype(t, "mM")
 
         if not numeric_only:
             # If not numeric_only and columns, then check all columns are either
@@ -2224,10 +2223,10 @@ class BasePandasDataset(ClassLogger):
 
     def rename_axis(
         self,
-        mapper=no_default,
+        mapper=lib.no_default,
         *,
-        index=no_default,
-        columns=no_default,
+        index=lib.no_default,
+        columns=lib.no_default,
         axis=0,
         copy=None,
         inplace=False,
@@ -2245,7 +2244,7 @@ class BasePandasDataset(ClassLogger):
 
         inplace = validate_bool_kwarg(inplace, "inplace")
 
-        if mapper is not no_default:
+        if mapper is not lib.no_default:
             # Use v0.23 behavior if a scalar or list
             non_mapper = is_scalar(mapper) or (
                 is_list_like(mapper) and not is_dict_like(mapper)
@@ -2260,7 +2259,7 @@ class BasePandasDataset(ClassLogger):
 
             for axis in range(self.ndim):
                 v = axes.get(pandas.DataFrame._get_axis_name(axis))
-                if v is no_default:
+                if v is lib.no_default:
                     continue
                 non_mapper = is_scalar(v) or (is_list_like(v) and not is_dict_like(v))
                 if non_mapper:
@@ -2338,7 +2337,7 @@ class BasePandasDataset(ClassLogger):
         inplace: bool = False,
         col_level: Hashable = 0,
         col_fill: Hashable = "",
-        allow_duplicates=no_default,
+        allow_duplicates=lib.no_default,
         names: Hashable | Sequence[Hashable] = None,
     ):  # noqa: PR01, RT01, D200
         """
@@ -2694,7 +2693,7 @@ class BasePandasDataset(ClassLogger):
         periods: int = 1,
         freq=None,
         axis: Axis = 0,
-        fill_value: Hashable = no_default,
+        fill_value: Hashable = lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
@@ -3110,7 +3109,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def _to_bare_numpy(
-        self, dtype=None, copy=False, na_value=no_default
+        self, dtype=None, copy=False, na_value=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Convert the `BasePandasDataset` to a NumPy array.
@@ -3122,7 +3121,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def to_numpy(
-        self, dtype=None, copy=False, na_value=no_default
+        self, dtype=None, copy=False, na_value=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Convert the `BasePandasDataset` to a NumPy array or a Modin wrapper for NumPy array.
