@@ -2311,12 +2311,12 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
-        if self.dtypes[key_column] == object:
+        if is_numeric_dtype(self.dtypes[key_column]):
+            method = "linear"
+        else:
             # This means we are not sorting numbers, so we need our quantiles to not try
             # arithmetic on the values.
             method = "inverted_cdf"
-        else:
-            method = "linear"
 
         shuffling_functions = build_sort_functions(
             self,

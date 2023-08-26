@@ -712,3 +712,18 @@ def s3_resource(s3_base):
         if not cli.list_buckets()["Buckets"]:
             break
         time.sleep(0.1)
+
+
+@pytest.fixture
+def modify_config(request):
+    values = request.param
+    old_values = {}
+
+    for key, value in values.items():
+        old_values[key] = key.get()
+        key.put(value)
+
+    yield  # waiting for the test to be completed
+    # restoring old parameters
+    for key, value in old_values.items():
+        key.put(value)

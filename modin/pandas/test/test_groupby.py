@@ -2783,3 +2783,20 @@ def test_groupby_deferred_index(func):
         return getattr(grp, func)()
 
     eval_general(pd, pandas, perform)
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_reshuffling_groupby_on_strings(modify_config):
+    # reproducer from https://github.com/modin-project/modin/issues/6509
+    modin_df, pandas_df = create_test_dfs(
+        {"col1": ["a"] * 50 + ["b"] * 50, "col2": range(100)}
+    )
+
+    modin_df = modin_df.astype({"col1": "string"})
+    pandas_df = pandas_df.astype({"col1": "string"})
+
+    eval_general(
+        modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
+    )
