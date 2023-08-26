@@ -30,7 +30,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_bool_dtype,
     is_string_dtype,
-    is_any_int_dtype,
+    is_integer_dtype,
     is_datetime64_dtype,
     is_categorical_dtype,
 )
@@ -1073,7 +1073,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 left_dt = left_dt.categories.dtype
                 right_dt = right_dt.categories.dtype
             if not (
-                (is_any_int_dtype(left_dt) and is_any_int_dtype(right_dt))
+                (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
                 or (is_datetime64_dtype(left_dt) and is_datetime64_dtype(right_dt))
             ):
