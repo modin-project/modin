@@ -31,6 +31,8 @@ from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_ch
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
+from pyhdk import __version__ as hdk_version
+
 StorageFormat.put("hdk")
 
 import modin.pandas as pd
@@ -2117,6 +2119,10 @@ class TestSort:
             ascending=ascending,
         )
 
+    @pytest.mark.skipif(
+        hdk_version == "0.7.0",
+        reason="https://github.com/modin-project/modin/issues/6514",
+    )
     @pytest.mark.parametrize("ascending", ascending_values)
     def test_sort_cols_str(self, ascending):
         def sort(df, ascending, **kwargs):
