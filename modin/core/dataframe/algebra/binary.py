@@ -111,7 +111,8 @@ def maybe_compute_dtypes_common_cast(
                 [np.dtype(type(value)) for value in second]
                 if axis == 1
                 # Here we've been given a column so it has only one dtype,
-                else [np.dtype(type(second))] * len(dtypes_first)
+                # Infering the dtype using `np.array`, TODO: maybe there's more efficient way?
+                else [np.array(second).dtype] * len(dtypes_first)
             )
         elif is_scalar(second) or isinstance(second, np.ndarray):
             second_dtypes_list = [
