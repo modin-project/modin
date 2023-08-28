@@ -1211,6 +1211,51 @@ class Series(BasePandasDataset):
             )
         )
 
+    def sem(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return unbiased standard error of the mean over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "sem", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
+    def std(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return sample standard deviation over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "std", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
+    def var(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return unbiased variance over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "var", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
         """
         Return the memory usage of the Series.
