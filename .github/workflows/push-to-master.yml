@@ -1,5 +1,8 @@
 name: push-to-master
-on: pull_request
+on:
+  push:
+    branches:
+      - master
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
