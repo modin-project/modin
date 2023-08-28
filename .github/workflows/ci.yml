@@ -134,7 +134,7 @@ jobs:
         execution: [BaseOnPython]
     env:
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.8
+    name: Test ${{ matrix.execution }} execution, Python 3.9
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
@@ -164,7 +164,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
-    name: Test HDK storage format, Python 3.8
+    name: Test HDK storage format, Python 3.9
     services:
       moto:
         image: motoserver/moto
@@ -334,7 +334,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         unidist-backend: ["mpi"]
     env:
       MODIN_ENGINE: "Unidist"
@@ -397,7 +397,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
@@ -532,7 +532,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         execution:
           - name: ray
             shell-ex: "python -m pytest"
@@ -684,7 +684,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -714,7 +714,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
