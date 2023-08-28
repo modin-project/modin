@@ -2064,19 +2064,21 @@ class TestCategory:
 
 
 class TestSort:
+    # In order for the row order to be deterministic after sorting,
+    # the `by` columns should not contain duplicate values.
     data = {
-        "a": [1, 2, 5, 2, 5, 4, 4, 5, 2],
+        "a": [1, 2, 5, -2, -5, 4, -4, 6, 3],
         "b": [1, 2, 3, 6, 5, 1, 4, 5, 3],
         "c": [5, 4, 2, 3, 1, 1, 4, 5, 6],
         "d": ["1", "4", "3", "2", "1", "6", "7", "5", "0"],
     }
     data_nulls = {
-        "a": [1, 2, 5, 2, 5, 4, 4, None, 2],
+        "a": [1, 2, 5, -2, -5, 4, -4, None, 3],
         "b": [1, 2, 3, 6, 5, None, 4, 5, 3],
         "c": [None, 4, 2, 3, 1, 1, 4, 5, 6],
     }
     data_multiple_nulls = {
-        "a": [1, 2, None, 2, 5, 4, 4, None, 2],
+        "a": [1, 2, None, -2, 5, 4, -4, None, 3],
         "b": [1, 2, 3, 6, 5, None, 4, 5, None],
         "c": [None, 4, 2, None, 1, 1, 4, 5, 6],
     }
@@ -2094,6 +2096,7 @@ class TestSort:
         def sort(df, cols, ignore_index, index_cols, ascending, **kwargs):
             if index_cols:
                 df = df.set_index(index_cols)
+                df_equals_with_non_stable_indices()
             return df.sort_values(cols, ignore_index=ignore_index, ascending=ascending)
 
         run_and_compare(
