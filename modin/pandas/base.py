@@ -2759,7 +2759,7 @@ class BasePandasDataset(ClassLogger):
 
     def sem(
         self,
-        axis: Optional[Axis] = None,
+        axis: Axis = 0,
         skipna: bool = True,
         ddof: int = 1,
         numeric_only=False,
@@ -2834,10 +2834,22 @@ class BasePandasDataset(ClassLogger):
         freq=None,
         axis: Axis = 0,
         fill_value: Hashable = lib.no_default,
+        suffix=None,
     ):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
+        if suffix:
+            return self._default_to_pandas(
+                lambda df: df.shift(
+                    periods=periods,
+                    freq=freq,
+                    axis=axis,
+                    fill_value=fill_value,
+                    suffix=suffix,
+                )
+            )
+
         if freq is not None and fill_value is not lib.no_default:
             raise ValueError(
                 "Cannot pass both 'freq' and 'fill_value' to "
@@ -2942,7 +2954,7 @@ class BasePandasDataset(ClassLogger):
 
     def std(
         self,
-        axis: Optional[Axis] = None,
+        axis: Axis = 0,
         skipna: bool = True,
         ddof: int = 1,
         numeric_only=False,
@@ -3563,7 +3575,7 @@ class BasePandasDataset(ClassLogger):
 
     def var(
         self,
-        axis: Optional[Axis] = None,
+        axis: Axis = 0,
         skipna: bool = True,
         ddof: int = 1,
         numeric_only=False,

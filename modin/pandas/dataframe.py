@@ -393,11 +393,31 @@ class DataFrame(BasePandasDataset):
         return self.map(func, na_action=na_action, **kwargs)
 
     def apply(
-        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
+        self,
+        func,
+        axis=0,
+        raw=False,
+        result_type=None,
+        args=(),
+        by_row="compat",
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
+        if by_row != "compat":
+            # TODO: add test
+            return self._default_to_pandas(
+                pandas.DataFrame.apply,
+                func=func,
+                axis=axis,
+                raw=raw,
+                result_type=result_type,
+                args=args,
+                by_row=by_row,
+                **kwargs,
+            )
+
         func = cast_function_modin2pandas(func)
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
@@ -432,12 +452,12 @@ class DataFrame(BasePandasDataset):
     def groupby(
         self,
         by=None,
-        axis=0,
+        axis=lib.no_default,
         level=None,
         as_index=True,
         sort=True,
         group_keys=True,
-        observed=False,
+        observed=lib.no_default,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1518,7 +1538,7 @@ class DataFrame(BasePandasDataset):
 
     def prod(
         self,
-        axis=None,
+        axis=0,
         skipna=True,
         numeric_only=False,
         min_count=0,
@@ -1918,10 +1938,27 @@ class DataFrame(BasePandasDataset):
         else:
             return self.copy()
 
-    def stack(self, level=-1, dropna=True):  # noqa: PR01, RT01, D200
+    def stack(
+        self, level=-1, dropna=lib.no_default, sort=lib.no_default, future_stack=False
+    ):  # noqa: PR01, RT01, D200
         """
         Stack the prescribed level(s) from columns to index.
         """
+        if future_stack:
+            return self._default_to_pandas(
+                pandas.DataFrame.stack,
+                level=level,
+                dropna=dropna,
+                sort=sort,
+                future_stack=future_stack,
+            )
+
+        # FutureWarnings only needed if future_stack == True
+        if dropna is lib.no_default:
+            dropna = True
+        if sort is lib.no_default:
+            sort = True
+
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.columns.names) > 1
         if not is_multiindex or (
@@ -1954,7 +1991,7 @@ class DataFrame(BasePandasDataset):
 
     def sum(
         self,
-        axis=None,
+        axis=0,
         skipna=True,
         numeric_only=False,
         min_count=0,
@@ -2272,7 +2309,7 @@ class DataFrame(BasePandasDataset):
     def where(
         self,
         cond,
-        other=lib.no_default,
+        other=np.nan,
         *,
         inplace=False,
         axis=None,
