@@ -751,8 +751,8 @@ def df_equals(df1, df2, check_dtypes=True):
     ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
-    elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
-        assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
+    elif isinstance(df1, pandas.core.arrays.NumpyExtensionArray):
+        assert isinstance(df2, pandas.core.arrays.NumpyExtensionArray)
         assert df1 == df2
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
