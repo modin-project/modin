@@ -31,7 +31,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
-from modin.config import Engine
+from modin.config import Engine, IsRayCluster
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -3495,6 +3495,7 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
+        align_result_columns=False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3512,6 +3513,10 @@ class PandasDataframe(ClassLogger):
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+        align_result_columns : bool, default: False
+            Whether to manually align columns between all the resulted row partitions.
+            This flag is helpful when dealing with UDFs as they can change the partition's shape
+            and labeling unpredictably, resulting in an invalid dataframe.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
@@ -3541,18 +3546,117 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
+        skip_on_aligning_flag = "__skip_me_on_aligning__"
+
         def apply_func(df):  # pragma: no cover
             if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"
                 )
-            return operator(df.groupby(by, **kwargs))
+            result = operator(df.groupby(by, **kwargs))
+            if (
+                align_result_columns
+                and df.empty
+                and result.empty
+                and df.columns.equals(result.columns)
+            ):
+                # We want to align columns only of those frames that actually performed
+                # some groupby aggregation, if an empty frame was originally passed
+                # (an empty bin on reshuffling was created) then there were no groupby
+                # executed over this partition and so it has incorrect columns
+                # that shouldn't be considered on the aligning phase
+                result.attrs[skip_on_aligning_flag] = True
+            return result
 
         result = self._apply_func_to_range_partitioning(
             key_column=by[0],
             func=apply_func,
         )
+
+        # no need aligning columns if there's only one row partition
+        if align_result_columns and result._partitions.shape[0] > 1:
+            # FIXME: the current reshuffling implementation guarantees us that there's only one column
+            # partition in the result, so we should never hit this exception for now, however
+            # in the future, we might want to make this implementation more broader
+            if result._partitions.shape[1] > 1:
+                raise NotImplementedError(
+                    "Aligning columns is not yet implemented for multiple column partitions."
+                )
+
+            # There're two implementations:
+            #   1. The first one work faster, but may stress the network a lot in cluster mode since
+            #      it gathers all the dataframes in a single ray-kernel.
+            #   2. The second one works slower, but only gathers light pandas.Index objects,
+            #      so there should be less stress on the network.
+            if not IsRayCluster.get():
+
+                def compute_aligned_columns(*dfs):
+                    """Take row partitions, filter empty ones, and return joined columns for them."""
+                    valid_dfs = [
+                        df
+                        for df in dfs
+                        if not df.attrs.get(skip_on_aligning_flag, False)
+                    ]
+                    if len(valid_dfs) == 0 and len(dfs) != 0:
+                        valid_dfs = dfs
+
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
+                    return pandas.concat(
+                        [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
+                    ).columns
+
+                # Passing all partitions to the 'compute_aligned_columns' kernel to get
+                # aligned columns
+                parts = result._partitions.flatten()
+                aligned_columns = parts[0].apply(
+                    compute_aligned_columns, *[part._data for part in parts[1:]]
+                )
+
+                # Lazily applying aligned columns to partitions
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    lambda df, columns: df.reindex(columns=columns),
+                    func_args=(aligned_columns._data,),
+                )
+            else:
+
+                def join_cols(df, *cols):
+                    """Join `cols` and apply the joined columns to `df`."""
+                    valid_cols = [
+                        pandas.DataFrame(columns=col) for col in cols if col is not None
+                    ]
+                    if len(valid_cols) == 0:
+                        return df
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
+                    result_col = pandas.concat(valid_cols, axis=0, join="outer").columns
+                    return df.reindex(columns=result_col)
+
+                # Getting futures for columns of non-empty partitions
+                cols = [
+                    part.apply(
+                        lambda df: None
+                        if df.attrs.get(skip_on_aligning_flag, False)
+                        else df.columns
+                    )._data
+                    for part in result._partitions.flatten()
+                ]
+
+                # Lazily joining and applying the aligned columns
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    join_cols,
+                    func_args=cols,
+                )
+            result = self.__constructor__(
+                new_partitions,
+                index=result.copy_index_cache(),
+                row_lengths=result._row_lengths_cache,
+            )
 
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)
