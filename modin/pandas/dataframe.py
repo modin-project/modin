@@ -26,7 +26,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.info import DataFrameInfo
-from pandas._libs.lib import no_default, NoDefault
+from pandas._libs import lib
 from pandas._typing import (
     CompressionOptions,
     WriteBuffer,
@@ -376,7 +376,7 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.add_suffix(suffix, axis)
         )
 
-    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
+    def map(self, func, na_action: Optional[str] = None, **kwargs):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return self.__constructor__(
@@ -384,6 +384,13 @@ class DataFrame(BasePandasDataset):
                 func, na_action=na_action, **kwargs
             )
         )
+
+    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
+        warnings.warn(
+            "DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
+            FutureWarning,
+        )
+        return self.map(func, na_action=na_action, **kwargs)
 
     def apply(
         self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
@@ -436,6 +443,23 @@ class DataFrame(BasePandasDataset):
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
+        if axis is not lib.no_default:
+            axis = self._get_axis_number(axis)
+            if axis == 1:
+                warnings.warn(
+                    "DataFrame.groupby with axis=1 is deprecated. Do "
+                    + "`frame.T.groupby(...)` without axis instead.",
+                    FutureWarning,
+                )
+            else:
+                warnings.warn(
+                    "The 'axis' keyword in DataFrame.groupby is deprecated and "
+                    + "will be removed in a future version.",
+                    FutureWarning,
+                )
+        else:
+            axis = 0
+
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -834,7 +858,7 @@ class DataFrame(BasePandasDataset):
         axis=None,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Fill NA/NaN values using the specified method.
@@ -981,7 +1005,7 @@ class DataFrame(BasePandasDataset):
         )
 
     def insert(
-        self, loc, column, value, allow_duplicates=no_default
+        self, loc, column, value, allow_duplicates=lib.no_default
     ):  # noqa: PR01, D200
         """
         Insert column into ``DataFrame`` at specified location.
@@ -1349,10 +1373,16 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
+    def unstack(self, level=-1, fill_value=None, sort=True):  # noqa: PR01, RT01, D200
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
+        if not sort:
+            # TODO: it should be easy to add support for sort == Falses
+            return self._default_to_pandas(
+                pandas.DataFrame.unstack, level=level, fill_value=fill_value, sort=sort
+            )
+
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.index.names) > 1
         if not is_multiindex or (
@@ -1367,14 +1397,14 @@ class DataFrame(BasePandasDataset):
             )
 
     def pivot(
-        self, *, columns, index=no_default, values=no_default
+        self, *, columns, index=lib.no_default, values=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
-        if index is no_default:
+        if index is lib.no_default:
             index = None
-        if values is no_default:
+        if values is lib.no_default:
             values = None
 
         # if values is not specified, it should be the remaining columns not in
@@ -1649,12 +1679,12 @@ class DataFrame(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=no_default,
+        value=lib.no_default,
         *,
         inplace: bool = False,
         limit=None,
         regex: bool = False,
-        method: str | NoDefault = no_default,
+        method: str | lib.NoDefault = lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -2242,7 +2272,7 @@ class DataFrame(BasePandasDataset):
     def where(
         self,
         cond,
-        other=no_default,
+        other=lib.no_default,
         *,
         inplace=False,
         axis=None,
@@ -2306,9 +2336,9 @@ class DataFrame(BasePandasDataset):
             1  1  5
             0  8  4
             """
-            # _get_axis_number interprets no_default as None, but where doesn't
-            # accept no_default.
-            if axis == no_default:
+            # _get_axis_number interprets lib.no_default as None, but where doesn't
+            # accept lib.no_default.
+            if axis == lib.no_default:
                 raise ValueError(
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )

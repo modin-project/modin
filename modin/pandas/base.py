@@ -739,14 +739,53 @@ class BasePandasDataset(ClassLogger):
         level=None,
         copy=None,
         fill_value=None,
-        method=None,
-        limit=None,
-        fill_axis=0,
-        broadcast_axis=None,
+        method=lib.no_default,
+        limit=lib.no_default,
+        fill_axis=lib.no_default,
+        broadcast_axis=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Align two objects on their axes with the specified join method.
         """
+        if (
+            method is not lib.no_default
+            or limit is not lib.no_default
+            or fill_axis is not lib.no_default
+        ):
+            warnings.warn(
+                "The 'method', 'limit', and 'fill_axis' keywords in "
+                + f"{type(self).__name__}.align are deprecated and will be removed "
+                + "in a future version. Call fillna directly on the returned objects "
+                + "instead.",
+                FutureWarning,
+            )
+        if fill_axis is lib.no_default:
+            fill_axis = 0
+        if method is lib.no_default:
+            method = None
+        if limit is lib.no_default:
+            limit = None
+
+        if broadcast_axis is not lib.no_default:
+            msg = (
+                f"The 'broadcast_axis' keyword in {type(self).__name__}.align is "
+                + "deprecated and will be removed in a future version."
+            )
+            if broadcast_axis is not None:
+                if self.ndim == 1 and other.ndim == 2:
+                    msg += (
+                        " Use left = DataFrame({col: left for col in right.columns}, "
+                        + "index=right.index) before calling `left.align(right)` instead."
+                    )
+                elif self.ndim == 2 and other.ndim == 1:
+                    msg += (
+                        " Use right = DataFrame({col: right for col in left.columns}, "
+                        + "index=left.index) before calling `left.align(right)` instead"
+                    )
+            warnings.warn(msg, FutureWarning)
+        else:
+            broadcast_axis = None
+
         left, right = self._query_compiler.align(
             other._query_compiler,
             join=join,
@@ -764,7 +803,7 @@ class BasePandasDataset(ClassLogger):
         )
 
     def all(
-        self, axis=0, bool_only=None, skipna=True, **kwargs
+        self, axis=0, bool_only=False, skipna=True, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Return whether all elements are True, potentially over an axis.
@@ -809,7 +848,7 @@ class BasePandasDataset(ClassLogger):
             return result
 
     def any(
-        self, *, axis=0, bool_only=None, skipna=True, **kwargs
+        self, *, axis=0, bool_only=False, skipna=True, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Return whether any element is True, potentially over an axis.
@@ -1034,12 +1073,27 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
+    def _deprecate_downcast(self, downcast, method_name: str):
+        if downcast is not lib.no_default:
+            warnings.warn(
+                f"The 'downcast' keyword in {method_name} is deprecated and "
+                + "will be removed in a future version. Use "
+                + "res.infer_objects(copy=False) to infer non-object dtype, or "
+                + "pd.to_numeric with the 'downcast' keyword to downcast numeric "
+                + "results.",
+                FutureWarning,
+            )
+        else:
+            downcast = None
+        return downcast
+
     def bfill(
-        self, *, axis=None, inplace=False, limit=None, downcast=None
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
+        downcast = self._deprecate_downcast(downcast, "bfill")
         return self.fillna(
             method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -1443,7 +1497,7 @@ class BasePandasDataset(ClassLogger):
         min_periods: "int | None" = 0,
         adjust: bool = True,
         ignore_na: bool = False,
-        axis: "Axis" = 0,
+        axis: "Axis" = lib.no_default,
         times: "str | np.ndarray | BasePandasDataset | None" = None,
         method: "str" = "single",
     ) -> pandas.core.window.ewm.ExponentialMovingWindow:  # noqa: PR01, RT01, D200
@@ -1465,12 +1519,32 @@ class BasePandasDataset(ClassLogger):
         )
 
     def expanding(
-        self, min_periods=1, axis=0, method="single"
+        self, min_periods=1, axis=lib.no_default, method="single"
     ):  # noqa: PR01, RT01, D200
         """
         Provide expanding window calculations.
         """
         from .window import Expanding
+
+        if axis is not lib.no_default:
+            axis = self._get_axis_number(axis)
+            name = "expanding"
+            if axis == 1:
+                warnings.warn(
+                    f"Support for axis=1 in {type(self).__name__}.{name} is "
+                    + "deprecated and will be removed in a future version. "
+                    + f"Use obj.T.{name}(...) instead",
+                    FutureWarning,
+                )
+            else:
+                warnings.warn(
+                    f"The 'axis' keyword in {type(self).__name__}.{name} is "
+                    + "deprecated and will be removed in a future version. "
+                    + "Call the method without the axis keyword instead.",
+                    FutureWarning,
+                )
+        else:
+            axis = 0
 
         return Expanding(
             self,
@@ -1480,11 +1554,12 @@ class BasePandasDataset(ClassLogger):
         )
 
     def ffill(
-        self, *, axis=None, inplace=False, limit=None, downcast=None
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
+        downcast = self._deprecate_downcast(downcast, "ffill")
         return self.fillna(
             method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
         )
@@ -1500,7 +1575,7 @@ class BasePandasDataset(ClassLogger):
         axis=None,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):
         """
         Fill NA/NaN values using the specified method.
@@ -1546,6 +1621,7 @@ class BasePandasDataset(ClassLogger):
         Series, DataFrame or None
             Object with missing values filled or None if ``inplace=True``.
         """
+        downcast = self._deprecate_downcast(downcast, "fillna")
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
         if isinstance(value, (list, tuple)):
@@ -2031,11 +2107,38 @@ class BasePandasDataset(ClassLogger):
         )
 
     def pct_change(
-        self, periods=1, fill_method="pad", limit=None, freq=None, **kwargs
+        self,
+        periods=1,
+        fill_method=lib.no_default,
+        limit=lib.no_default,
+        freq=None,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Percentage change between the current and a prior element.
         """
+        if fill_method is not lib.no_default or limit is not lib.no_default:
+            warnings.warn(
+                "The 'fill_method' and 'limit' keywords in "
+                + f"{type(self).__name__}.pct_change are deprecated and will be "
+                + "removed in a future version. Call "
+                + f"{'bfill' if fill_method in ('backfill', 'bfill') else 'ffill'} "
+                + "before calling pct_change instead.",
+                FutureWarning,
+            )
+        if fill_method is lib.no_default:
+            if self.isna().values.any():
+                warnings.warn(
+                    "The default fill_method='pad' in "
+                    + f"{type(self).__name__}.pct_change is deprecated and will be "
+                    + "removed in a future version. Call ffill before calling "
+                    + "pct_change to retain current behavior and silence this warning.",
+                    FutureWarning,
+                )
+            fill_method = "pad"
+        if limit is lib.no_default:
+            limit = None
+
         # Attempting to match pandas error behavior here
         if not isinstance(periods, int):
             raise ValueError(f"periods must be an int. got {type(periods)} instead")
@@ -2298,7 +2401,7 @@ class BasePandasDataset(ClassLogger):
     def resample(
         self,
         rule,
-        axis: Axis = 0,
+        axis: Axis = lib.no_default,
         closed: Optional[str] = None,
         label: Optional[str] = None,
         convention: str = "start",
@@ -2313,6 +2416,23 @@ class BasePandasDataset(ClassLogger):
         Resample time-series data.
         """
         from .resample import Resampler
+
+        if axis is not lib.no_default:
+            axis = self._get_axis_number(axis)
+            if axis == 1:
+                warnings.warn(
+                    "DataFrame.resample with axis=1 is deprecated. Do "
+                    + "`frame.T.resample(...)` without axis instead.",
+                    FutureWarning,
+                )
+            else:
+                warnings.warn(
+                    f"The 'axis' keyword in {type(self).__name__}.resample is "
+                    + "deprecated and will be removed in a future version.",
+                    FutureWarning,
+                )
+        else:
+            axis = 0
 
         return Resampler(
             dataframe=self,
@@ -2411,7 +2531,7 @@ class BasePandasDataset(ClassLogger):
         center: bool = False,
         win_type: str | None = None,
         on: str | None = None,
-        axis: Axis = 0,
+        axis: Axis = lib.no_default,
         closed: str | None = None,
         step: int | None = None,
         method: str = "single",
@@ -2419,6 +2539,26 @@ class BasePandasDataset(ClassLogger):
         """
         Provide rolling window calculations.
         """
+        if axis is not lib.no_default:
+            axis = self._get_axis_number(axis)
+            name = "rolling"
+            if axis == 1:
+                warnings.warn(
+                    f"Support for axis=1 in {type(self).__name__}.{name} is "
+                    + "deprecated and will be removed in a future version. "
+                    + f"Use obj.T.{name}(...) instead",
+                    FutureWarning,
+                )
+            else:
+                warnings.warn(
+                    f"The 'axis' keyword in {type(self).__name__}.{name} is "
+                    + "deprecated and will be removed in a future version. "
+                    + "Call the method without the axis keyword instead.",
+                    FutureWarning,
+                )
+        else:
+            axis = 0
+
         if win_type is not None:
             from .window import Window
 
@@ -2698,6 +2838,12 @@ class BasePandasDataset(ClassLogger):
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
+        if freq is not None and fill_value is not lib.no_default:
+            raise ValueError(
+                "Cannot pass both 'freq' and 'fill_value' to "
+                + f"{type(self).__name__}.shift"
+            )
+
         if periods == 0:
             # Check obvious case first
             return self.copy()
@@ -2939,6 +3085,7 @@ class BasePandasDataset(ClassLogger):
         inf_rep="inf",
         freeze_panes=None,
         storage_options: StorageOptions = None,
+        engine_kwargs=None,
     ):  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write object to an Excel sheet.
@@ -2960,6 +3107,7 @@ class BasePandasDataset(ClassLogger):
             inf_rep=inf_rep,
             freeze_panes=freeze_panes,
             storage_options=storage_options,
+            engine_kwargs=engine_kwargs,
         )
 
     def to_dict(self, orient="dict", into=dict, index=True):
@@ -2988,7 +3136,7 @@ class BasePandasDataset(ClassLogger):
         default_handler=None,
         lines=False,
         compression="infer",
-        index=True,
+        index=None,
         indent=None,
         storage_options: StorageOptions = None,
         mode="w",
@@ -3350,9 +3498,19 @@ class BasePandasDataset(ClassLogger):
         inplace=False,
         limit_direction: Optional[str] = None,
         limit_area=None,
-        downcast=None,
+        downcast=lib.no_default,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
+        if downcast is not lib.no_default:
+            warnings.warn(
+                f"The 'downcast' keyword in {type(self).__name__}.interpolate "
+                + "is deprecated and will be removed in a future version. "
+                + "Call result.infer_objects(copy=False) on the result instead.",
+                FutureWarning,
+            )
+        else:
+            downcast = None
+
         return self._create_or_update_from_compiler(
             self._query_compiler.interpolate(
                 method=method,

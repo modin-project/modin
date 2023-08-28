@@ -26,7 +26,7 @@ from pandas.core.dtypes.common import (
     is_categorical_dtype,
 )
 from pandas.core.series import _coerce_method
-from pandas._libs.lib import no_default, NoDefault
+from pandas._libs import lib
 from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
@@ -563,11 +563,32 @@ class Series(BasePandasDataset):
     agg = aggregate
 
     def apply(
-        self, func, convert_dtype=True, args=(), **kwargs
+        self, func, convert_dtype=lib.no_default, args=(), by_row="compat", **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Invoke function on values of Series.
         """
+        if by_row != "compat":
+            # TODO: add test
+            return self._default_to_pandas(
+                pandas.Series.apply,
+                func=func,
+                convert_dtype=convert_dtype,
+                args=args,
+                by_row=by_row,
+                **kwargs,
+            )
+
+        if convert_dtype is lib.no_default:
+            convert_dtype = True
+        else:
+            warnings.warn(
+                "the convert_dtype parameter is deprecated and will be removed in a "
+                + "future version.  Do ``ser.astype(object).apply()`` "
+                + "instead if you want ``convert_dtype=False``.",
+                FutureWarning,
+            )
+
         func = cast_function_modin2pandas(func)
         self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
@@ -974,7 +995,7 @@ class Series(BasePandasDataset):
         axis=None,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Fill NaNs inside of a Series object.
@@ -1021,7 +1042,7 @@ class Series(BasePandasDataset):
         as_index=True,
         sort=True,
         group_keys=True,
-        observed=False,
+        observed=lib.no_default,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1267,22 +1288,39 @@ class Series(BasePandasDataset):
         )
 
     def shift(
-        self, periods=1, freq=None, axis=0, fill_value=None
+        self,
+        periods=1,
+        freq=None,
+        axis=0,
+        fill_value=lib.no_default,
+        suffix=None,
     ):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
+        # pandas 2.1.0rc0 ignores suffix parameter
+        if freq is not None and fill_value is not lib.no_default:
+            raise ValueError(
+                "Cannot pass both 'freq' and 'fill_value' to "
+                + f"{type(self).__name__}.shift"
+            )
         if axis == 1:
             raise ValueError(f"No axis named {axis} for object type {type(self)}")
         return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )
 
-    def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
+    def unstack(self, level=-1, fill_value=None, sort=True):  # noqa: PR01, RT01, D200
         """
         Unstack, also known as pivot, Series with MultiIndex to produce DataFrame.
         """
         from .dataframe import DataFrame
+
+        if not sort:
+            # TODO: it should be easy to add support for sort == Falses
+            return self._default_to_pandas(
+                pandas.Series.unstack, level=level, fill_value=fill_value, sort=sort
+            )
 
         # We can't unstack a Series object, if we don't have a MultiIndex.
         if len(self.index.names) > 1:
@@ -1414,9 +1452,9 @@ class Series(BasePandasDataset):
 
     def rename_axis(
         self,
-        mapper=no_default,
+        mapper=lib.no_default,
         *,
-        index=no_default,
+        index=lib.no_default,
         axis=0,
         copy=True,
         inplace=False,
@@ -1474,14 +1512,14 @@ class Series(BasePandasDataset):
         level=None,
         *,
         drop=False,
-        name=no_default,
+        name=lib.no_default,
         inplace=False,
         allow_duplicates=False,
     ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
-        if name is no_default:
+        if name is lib.no_default:
             # For backwards compatibility, keep columns as [0] instead of
             #  [None] when self.name is None
             name = 0 if self.name is None else self.name
@@ -1604,12 +1642,12 @@ class Series(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=no_default,
+        value=lib.no_default,
         *,
         inplace=False,
         limit=None,
         regex=False,
-        method: str | NoDefault = no_default,
+        method: str | lib.NoDefault = lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1785,7 +1823,7 @@ class Series(BasePandasDataset):
         return self._query_compiler.series_to_dict(into)
 
     def to_frame(
-        self, name: Hashable = no_default
+        self, name: Hashable = lib.no_default
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
@@ -1793,10 +1831,10 @@ class Series(BasePandasDataset):
         from .dataframe import DataFrame
 
         if name is None:
-            name = no_default
+            name = lib.no_default
 
         self_cp = self.copy()
-        if name is not no_default:
+        if name is not lib.no_default:
             self_cp.name = name
 
         return DataFrame(self_cp)
@@ -1808,7 +1846,7 @@ class Series(BasePandasDataset):
         return self._query_compiler.to_list()
 
     def to_numpy(
-        self, dtype=None, copy=False, na_value=no_default, **kwargs
+        self, dtype=None, copy=False, na_value=lib.no_default, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Return the NumPy ndarray representing the values in this Series or Index.
@@ -1953,7 +1991,7 @@ class Series(BasePandasDataset):
     def where(
         self,
         cond,
-        other=no_default,
+        other=np.nan,
         *,
         inplace=False,
         axis=None,

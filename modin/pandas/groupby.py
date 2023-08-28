@@ -13,13 +13,15 @@
 
 """Implement GroupBy public API as pandas does."""
 
+import warnings
+
 import numpy as np
 import pandas
 from pandas.core.apply import reconstruct_func
 from pandas.errors import SpecificationError
 import pandas.core.groupby
 from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
-from pandas._libs.lib import no_default
+from pandas._libs import lib
 import pandas.core.common as com
 from types import BuiltinFunctionType
 from collections.abc import Iterable
@@ -212,10 +214,10 @@ class DataFrameGroupBy(ClassLogger):
     def ngroups(self):
         return len(self)
 
-    def skew(self, axis=no_default, skipna=True, numeric_only=False, **kwargs):
+    def skew(self, axis=lib.no_default, skipna=True, numeric_only=False, **kwargs):
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
-        if axis is None or axis is no_default:
+        if axis is None or axis is lib.no_default:
             axis = self._axis
 
         if axis != 0 or not skipna:
@@ -278,7 +280,7 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def mean(self, numeric_only=False, engine="cython", engine_kwargs=None):
+    def mean(self, numeric_only=False, engine=None, engine_kwargs=None):
         if engine not in ("cython", None) and engine_kwargs is not None:
             return self._default_to_pandas(
                 lambda df: df.mean(
@@ -290,9 +292,7 @@ class DataFrameGroupBy(ClassLogger):
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_mean,
-                agg_kwargs=dict(
-                    numeric_only=None if numeric_only is no_default else numeric_only,
-                ),
+                agg_kwargs=dict(numeric_only=numeric_only),
                 numeric_only=numeric_only,
             )
         )
@@ -337,13 +337,13 @@ class DataFrameGroupBy(ClassLogger):
         """
         return self._default_to_pandas(lambda df: df.__bytes__())
 
-    _groups_cache = no_default
+    _groups_cache = lib.no_default
 
     # TODO: since python 3.9:
     # @cached_property
     @property
     def groups(self):
-        if self._groups_cache is not no_default:
+        if self._groups_cache is not lib.no_default:
             return self._groups_cache
 
         self._groups_cache = self._compute_index_grouped(numerical=False)
@@ -381,10 +381,12 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    def idxmax(self, axis=None, skipna=True, numeric_only=False):
+    def idxmax(self, axis=lib.no_default, skipna=True, numeric_only=False):
+        if axis is lib.no_default:
+            self._deprecate_axis(axis, "idxmax")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
-        if axis is None:
+        if axis is None or axis is lib.no_default:
             axis = self._axis
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmax,
@@ -392,10 +394,12 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    def idxmin(self, axis=None, skipna=True, numeric_only=False):
+    def idxmin(self, axis=lib.no_default, skipna=True, numeric_only=False):
+        if axis is lib.no_default:
+            self._deprecate_axis(axis, "idxmin")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
-        if axis is None:
+        if axis is None or axis is lib.no_default:
             axis = self._axis
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmin,
@@ -419,7 +423,30 @@ class DataFrameGroupBy(ClassLogger):
         """
         return 2  # ndim is always 2 for DataFrames
 
-    def shift(self, periods=1, freq=None, axis=0, fill_value=None):
+    def shift(
+        self,
+        periods=1,
+        freq=None,
+        axis=lib.no_default,
+        fill_value=lib.no_default,
+        suffix=None,
+    ):
+        if suffix:
+            return self._default_to_pandas(
+                lambda df: df.shift(
+                    periods=periods,
+                    freq=freq,
+                    axis=axis,
+                    fill_value=fill_value,
+                    suffix=suffix,
+                )
+            )
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "shift")
+        else:
+            axis = 0
+
         def _shift(data, periods, freq, axis, fill_value, is_set_nan_rows=True):
             from .dataframe import DataFrame
 
@@ -462,6 +489,8 @@ class DataFrameGroupBy(ClassLogger):
             else:
                 result = result.sort_index()
         else:
+            if fill_value is lib.no_default:
+                fill_value = None
             result = self._check_index_name(
                 self._wrap_aggregation(
                     type(self._query_compiler).groupby_shift,
@@ -497,7 +526,12 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def cumsum(self, axis=0, *args, **kwargs):
+    def cumsum(self, axis=lib.no_default, *args, **kwargs):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "cumsum")
+        else:
+            axis = 0
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumsum,
@@ -506,21 +540,56 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    _indices_cache = no_default
+    _indices_cache = lib.no_default
 
     # TODO: since python 3.9:
     # @cached_property
     @property
     def indices(self):
-        if self._indices_cache is not no_default:
+        if self._indices_cache is not lib.no_default:
             return self._indices_cache
 
         self._indices_cache = self._compute_index_grouped(numerical=True)
         return self._indices_cache
 
     @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy.pct_change)
-    def pct_change(self, periods=1, fill_method="ffill", limit=None, freq=None, axis=0):
+    def pct_change(
+        self,
+        periods=1,
+        fill_method=lib.no_default,
+        limit=lib.no_default,
+        freq=None,
+        axis=lib.no_default,
+    ):
         from .dataframe import DataFrame
+
+        if fill_method is not lib.no_default or limit is not lib.no_default:
+            warnings.warn(
+                "The 'fill_method' and 'limit' keywords in "
+                + f"{type(self).__name__}.pct_change are deprecated and will be "
+                + "removed in a future version. Call "
+                + f"{'bfill' if fill_method in ('backfill', 'bfill') else 'ffill'} "
+                + "before calling pct_change instead.",
+                FutureWarning,
+            )
+        if fill_method is lib.no_default:
+            if any(grp.isna().values.any() for _, grp in self):
+                warnings.warn(
+                    "The default fill_method='ffill' in "
+                    + f"{type(self).__name__}.pct_change is deprecated and will be "
+                    + "removed in a future version. Call ffill before calling "
+                    + "pct_change to retain current behavior and silence this warning.",
+                    FutureWarning,
+                )
+            fill_method = "ffill"
+        if limit is lib.no_default:
+            limit = None
+
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "pct_change")
+        else:
+            axis = 0
 
         # Should check for API level errors
         # Attempting to match pandas error behavior here
@@ -559,7 +628,28 @@ class DataFrameGroupBy(ClassLogger):
             lambda df: df.filter(func, dropna=dropna, *args, **kwargs)
         )
 
-    def cummax(self, axis=0, numeric_only=False, **kwargs):
+    def _deprecate_axis(self, axis: int, name: str) -> None:
+        if axis == 1:
+            warnings.warn(
+                f"{type(self).__name__}.{name} with axis=1 is deprecated and "
+                + "will be removed in a future version. Operate on the un-grouped "
+                + "DataFrame instead",
+                FutureWarning,
+            )
+        else:
+            warnings.warn(
+                f"The 'axis' keyword in {type(self).__name__}.{name} is deprecated "
+                + "and will be removed in a future version. "
+                + "Call without passing 'axis' instead.",
+                FutureWarning,
+            )
+
+    def cummax(self, axis=lib.no_default, numeric_only=False, **kwargs):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "cummax")
+        else:
+            axis = 0
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummax,
@@ -609,7 +699,7 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    _internal_by_cache = no_default
+    _internal_by_cache = lib.no_default
 
     # TODO: since python 3.9:
     # @cached_property
@@ -622,7 +712,7 @@ class DataFrameGroupBy(ClassLogger):
         -------
         tuple of labels
         """
-        if self._internal_by_cache is not no_default:
+        if self._internal_by_cache is not lib.no_default:
             return self._internal_by_cache
 
         internal_by = tuple()
@@ -730,7 +820,12 @@ class DataFrameGroupBy(ClassLogger):
             **kwargs,
         )
 
-    def cummin(self, axis=0, numeric_only=False, **kwargs):
+    def cummin(self, axis=lib.no_default, numeric_only=False, **kwargs):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "cummin")
+        else:
+            axis = 0
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cummin,
@@ -893,8 +988,23 @@ class DataFrameGroupBy(ClassLogger):
     agg = aggregate
 
     def rank(
-        self, method="average", ascending=True, na_option="keep", pct=False, axis=0
+        self,
+        method="average",
+        ascending=True,
+        na_option="keep",
+        pct=False,
+        axis=lib.no_default,
     ):
+        if na_option not in {"keep", "top", "bottom"}:
+            msg = "na_option must be one of 'keep', 'top', or 'bottom'"
+            raise ValueError(msg)
+
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "rank")
+        else:
+            axis = 0
+
         result = self._wrap_aggregation(
             type(self._query_compiler).groupby_rank,
             agg_kwargs=dict(
@@ -1084,7 +1194,12 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def cumprod(self, axis=0, *args, **kwargs):
+    def cumprod(self, axis=lib.no_default, *args, **kwargs):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "cumprod")
+        else:
+            axis = 0
         return self._check_index_name(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_cumprod,
@@ -1133,14 +1248,17 @@ class DataFrameGroupBy(ClassLogger):
         self,
         value=None,
         method=None,
-        axis=None,
+        axis=lib.no_default,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):
+        if axis is lib.no_default:
+            self._deprecate_axis(axis, "fillna")
+
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
-        if axis is None or axis is no_default:
+        if axis is None or axis is lib.no_default:
             axis = self._axis
 
         new_groupby_kwargs = self._kwargs.copy()
@@ -1263,8 +1381,14 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def diff(self, periods=1, axis=0):
+    def diff(self, periods=1, axis=lib.no_default):
         from .dataframe import DataFrame
+
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "diff")
+        else:
+            axis = 0
 
         # Should check for API level errors
         # Attempting to match pandas error behavior here
@@ -1295,7 +1419,7 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def take(self, indices, axis=0, **kwargs):
+    def take(self, indices, axis=lib.no_default, **kwargs):
         return self._default_to_pandas(lambda df: df.take(indices, axis=axis, **kwargs))
 
     @property
@@ -1725,13 +1849,23 @@ class SeriesGroupBy(DataFrameGroupBy):
     def describe(self, **kwargs):
         return self._default_to_pandas(lambda df: df.describe(**kwargs))
 
-    def idxmax(self, axis=0, skipna=True):
+    def idxmax(self, axis=lib.no_default, skipna=True):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "idxmax")
+        else:
+            axis = 0
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmax,
             agg_kwargs=dict(axis=axis, skipna=skipna),
         )
 
-    def idxmin(self, axis=0, skipna=True):
+    def idxmin(self, axis=lib.no_default, skipna=True):
+        if axis is not lib.no_default:
+            axis = self._df._get_axis_number(axis)
+            self._deprecate_axis(axis, "idxmin")
+        else:
+            axis = 0
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_idxmin,
             agg_kwargs=dict(axis=axis, skipna=skipna),
