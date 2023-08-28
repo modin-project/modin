@@ -2677,7 +2677,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # we would like to convert it and get its proper internal dtype
                 item_type = item.to_numpy().dtype
             else:
-                item_type = type(item)
+                item_type = np.dtype(type(item))
 
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
