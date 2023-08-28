@@ -1580,7 +1580,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         masked_partitions = partitions[:, index]
         # Sample each partition
         sample_func = cls.preprocess_func(shuffle_functions.sample_function)
-        samples = [partition.apply(sample_func) for partition in masked_partitions]
+        if masked_partitions.ndim == 1:
+            samples = [partition.apply(sample_func) for partition in masked_partitions]
+        else:
+            breakpoint()
+            samples = [
+                cls._row_partition_class(row_part, full_axis=False).apply(sample_func)
+                for row_part in masked_partitions
+            ]
         # Get each sample to pass in to the pivot function
         samples = cls.get_objects_from_partitions(samples)
         pivots = np.unique(shuffle_functions.pivot_function(samples))

@@ -2323,15 +2323,15 @@ class PandasDataframe(ClassLogger):
         )
 
     def _apply_func_to_range_partitioning(
-        self, key_column, func, ascending=True, **kwargs
+        self, key_columns, func, ascending=True, **kwargs
     ):
         """
         Reshuffle data so it would be range partitioned and then apply the passed function row-wise.
 
         Parameters
         ----------
-        key_column : hashable
-            Column name to build the range partitioning for.
+        key_columns : hashable or list of hashables
+            Column/columns to build the range partitioning for.
         func : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply against partitions.
         ascending : bool, default: True
@@ -2369,17 +2369,9 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
-        if is_numeric_dtype(self.dtypes[key_column]):
-            method = "linear"
-        else:
-            # This means we are not sorting numbers, so we need our quantiles to not try
-            # arithmetic on the values.
-            method = "inverted_cdf"
-
         shuffling_functions = build_sort_functions(
             self,
-            key_column,
-            method,
+            key_columns,
             ascending[0] if is_list_like(ascending) else ascending,
             ideal_num_new_partitions,
             **kwargs,
@@ -2408,17 +2400,17 @@ class PandasDataframe(ClassLogger):
         else:
             new_partitions = self._partitions
 
-        major_col_partition_index = self.columns.get_loc(key_column)
-        cols_seen = 0
-        index = -1
-        for i, length in enumerate(self.column_widths):
-            cols_seen += length
-            if major_col_partition_index < cols_seen:
-                index = i
-                break
+        key_indices = self.columns.get_indexer_for(key_columns)
+        partition_indices = set()
+        indices = np.cumsum([0] + self.column_widths)
+        for i in range(len(indices) - 1):
+            for key_idx in key_indices:
+                if key_idx >= indices[i] and key_idx < indices[i + 1]:
+                    partition_indices.add(i)
+
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
             new_partitions,
-            index,
+            sorted(partition_indices),
             shuffling_functions,
             func,
         )
@@ -2480,7 +2472,7 @@ class PandasDataframe(ClassLogger):
             )
 
         result = self._apply_func_to_range_partitioning(
-            key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
+            key_columns=columns, func=sort_function, ascending=ascending, **kwargs
         )
 
         result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)
@@ -3643,7 +3635,7 @@ class PandasDataframe(ClassLogger):
             return operator(df.groupby(by, **kwargs))
 
         result = self._apply_func_to_range_partitioning(
-            key_column=by[0],
+            key_columns=by,
             func=apply_func,
         )
 

@@ -17,6 +17,9 @@ import numpy as np
 import pandas
 from typing import Callable, Union, Optional, TYPE_CHECKING
 from collections import namedtuple
+from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
+
+from modin.error_message import ErrorMessage
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -29,8 +32,7 @@ ShuffleFunctions = namedtuple(
 
 def build_sort_functions(
     modin_frame: "PandasDataframe",
-    column: str,
-    method: str,
+    columns: Union[str, list],
     ascending: Union[list, bool],
     ideal_num_new_partitions: int,
     **kwargs: dict,
@@ -42,10 +44,8 @@ def build_sort_functions(
     ----------
     modin_frame : PandasDataframe
         The frame calling these sort functions.
-    column : str
-        The major column name to sort by.
-    method : str
-        The method to use for picking quantiles.
+    columns : str or list of strings
+        The column/columns to sort by.
     ascending : bool
         The ascending flag.
     ideal_num_new_partitions : int
@@ -59,245 +59,352 @@ def build_sort_functions(
         A named tuple containing the functions to pick quantiles, choose pivot points, and split
         partitions for sorting.
     """
-    frame_len = len(modin_frame.index)
-    is_column_numeric = pandas.api.types.is_numeric_dtype(modin_frame.dtypes[column])
-
-    def sample_fn(partition):
-        return pick_samples_for_quantiles(
-            partition[column], ideal_num_new_partitions, frame_len
-        )
-
-    def pivot_fn(samples):
-        key = kwargs.get("key", None)
-        return pick_pivots_from_samples_for_sort(
-            samples, ideal_num_new_partitions, method, key
-        )
-
-    def split_fn(partition, pivots):
-        return split_partitions_using_pivots_for_sort(
-            partition, column, is_column_numeric, pivots, ascending, **kwargs
-        )
+    sort_fns = ShuffleSortFunctions(
+        modin_frame, columns, ascending, ideal_num_new_partitions, **kwargs
+    )
 
     return ShuffleFunctions(
-        sample_function=sample_fn, pivot_function=pivot_fn, split_function=split_fn
+        sample_function=sort_fns.sample_fn,
+        pivot_function=sort_fns.pivot_fn,
+        split_function=sort_fns.split_fn,
     )
 
 
-def _find_quantiles(
-    df: Union[pandas.DataFrame, pandas.Series], quantiles: list, method: str
-) -> np.ndarray:
+class ShuffleSortFunctions:
     """
-    Find quantiles of a given dataframe using the specified method.
-
-    We use this method to provide backwards compatibility with NumPy versions < 1.23 (e.g. when
-    the user is using Modin in compat mode). This is basically a wrapper around `np.quantile` that
-    ensures we provide the correct `method` argument - i.e. if we are dealing with objects (which
-    may or may not support algebra), we do not want to use a method to find quantiles that will
-    involve algebra operations (e.g. mean) between the objects, since that may fail.
+    Perform the sampling, quantiles picking, and the splitting stages for the range-partitioning building.
 
     Parameters
     ----------
-    df : pandas.DataFrame or pandas.Series
-        The data to pick quantiles from.
-    quantiles : list[float]
-        The quantiles to compute.
-    method : str
-        The method to use. `linear` if dealing with numeric types, otherwise `inverted_cdf`.
-
-    Returns
-    -------
-    np.ndarray
-        A NumPy array with the quantiles of the data.
-    """
-    if method == "linear":
-        # This is the default method for finding quantiles, so it does not need to be specified,
-        # which keeps backwards compatibility with older versions of NumPy that do not have a
-        # `method` keyword argument in np.quantile.
-        return np.quantile(df, quantiles)
-    else:
-        try:
-            return np.quantile(df, quantiles, method=method)
-        except Exception:
-            # In this case, we're dealing with an array of objects, but the current version of
-            # NumPy does not have a `method` kwarg. We need to use the older kwarg, `interpolation`
-            # instead.
-            return np.quantile(df, quantiles, interpolation="lower")
-
-
-def pick_samples_for_quantiles(
-    df: pandas.DataFrame,
-    num_partitions: int,
-    length: int,
-) -> np.ndarray:
-    """
-    Pick samples over the given partition.
-
-    This function picks samples from the given partition using the TeraSort algorithm - each
-    value is sampled with probability 1 / m * ln(n * t) where m = total_length / num_partitions,
-    t = num_partitions, and n = total_length.
-
-    Parameters
-    ----------
-    df : pandas.Dataframe
-        The masked dataframe to pick samples from.
-    num_partitions : int
-        The number of partitions.
-    length : int
-        The total length.
-
-    Returns
-    -------
-    np.ndarray:
-        The samples for the partition.
-
-    Notes
-    -----
-    This sampling algorithm is inspired by TeraSort. You can find more information about TeraSort
-    and the sampling algorithm at https://www.cse.cuhk.edu.hk/~taoyf/paper/sigmod13-mr.pdf.
-    """
-    m = length / num_partitions
-    probability = (1 / m) * np.log(num_partitions * length)
-    return df.sample(frac=probability).to_numpy()
-
-
-def pick_pivots_from_samples_for_sort(
-    samples: "list[np.ndarray]",
-    ideal_num_new_partitions: int,
-    method: str = "linear",
-    key: Optional[Callable] = None,
-) -> np.ndarray:
-    """
-    Determine quantiles from the given samples.
-
-    This function takes as input the quantiles calculated over all partitions from
-    `sample_func` defined above, and determines a final NPartitions.get() quantiles
-    to use to roughly sort the entire dataframe. It does so by collating all the samples
-    and computing NPartitions.get() quantiles for the overall set.
-
-    Parameters
-    ----------
-    samples : list[np.ndarray]
-        The samples computed by ``get_partition_quantiles_for_sort``.
-    ideal_num_new_partitions : int
-        The ideal number of new partitions.
-    method : str, default: linear
-        The method to use when picking quantiles.
-    key : Callable, default: None
-        The key to use on the samples when picking pivots.
-
-    Returns
-    -------
-    np.ndarray
-        A list of overall quantiles.
-    """
-    # We don't call `np.unique` on the samples, since if a quantile shows up in multiple
-    # partition's samples, this is probably an indicator of skew in the dataset, and we
-    # want our final partitions to take this into account.
-    # We need to use numpy to concatenate the samples since the sample from each partition is
-    # a NumPy array, and we want one flattened array of samples.
-    all_pivots = np.concatenate(samples).flatten()
-    if key is not None:
-        all_pivots = key(all_pivots)
-    # We don't want to pick very many quantiles if we have a very small dataframe.
-    num_quantiles = ideal_num_new_partitions
-    quantiles = [i / num_quantiles for i in range(1, num_quantiles)]
-    # If we only desire 1 partition, we need to ensure that we're not trying to find quantiles
-    # from an empty list of pivots.
-    if len(quantiles) > 0:
-        return _find_quantiles(all_pivots, quantiles, method)
-    return np.array([])
-
-
-def split_partitions_using_pivots_for_sort(
-    df: pandas.DataFrame,
-    column: str,
-    is_numeric_column: bool,
-    pivots: np.ndarray,
-    ascending: bool,
-    **kwargs: dict,
-) -> "tuple[pandas.DataFrame, ...]":
-    """
-    Split the given dataframe into the partitions specified by `pivots`.
-
-    This function takes as input a row-axis partition, as well as the quantiles determined
-    by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get()
-    dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
-    by the quantiles we're using.
-
-    Parameters
-    ----------
-    df : pandas.Dataframe
-        The partition to split.
-    column : str
-        The major column to sort by.
-    is_numeric_column : bool
-        Whether the passed `column` has numeric type (int, float).
-    pivots : np.ndarray
-        The quantiles to use to split the data.
+    modin_frame : PandasDataframe
+        The frame to build the range-partitioning for.
+    columns : str or list of strings
+        The column/columns to use as a key.
     ascending : bool
-        The ascending flag.
+        Whether the ranges should be in ascending or descending order.
+    ideal_num_new_partitions : int
+        The ideal number of bins.
     **kwargs : dict
         Additional keyword arguments.
-
-    Returns
-    -------
-    tuple[pandas.DataFrame]
-        A tuple of the splits from this partition.
     """
-    if len(pivots) == 0:
-        # We can return the dataframe with zero changes if there were no pivots passed
-        return (df,)
-    # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
-    # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
-    # which breaks when we reverse the pivots.
-    if not ascending and is_numeric_column:
-        # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
-        pivots = pivots[::-1]
-    key = kwargs.pop("key", None)
-    na_index = df[column].isna()
-    na_rows = df[na_index]
-    non_na_rows = df[~na_index]
-    cols_to_digitize = non_na_rows[column]
-    if key is not None:
-        cols_to_digitize = key(cols_to_digitize)
 
-    if is_numeric_column:
-        groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
-        # `np.digitize` returns results based off of the sort order of the pivots it is passed.
-        # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
-        # are sorted in ascending order, and gives us results based off of that assumption - so if
-        # we actually want to sort in descending order, we need to swap the new indices.
-        if not ascending and len(np.unique(pivots)) == 1:
-            groupby_col = len(pivots) - groupby_col
-    else:
-        groupby_col = np.searchsorted(pivots, cols_to_digitize.squeeze(), side="right")
-        # Since np.searchsorted requires the pivots to be in ascending order, if we want to sort
-        # in descending order, we need to swap the new indices.
-        if not ascending:
-            groupby_col = len(pivots) - groupby_col
-    if len(non_na_rows) == 1:
-        groups = [
-            # taking an empty slice for an index's metadata
-            pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(df.dtypes)
-            if i != groupby_col
-            else non_na_rows
-            for i in range(len(pivots) + 1)
-        ]
-    else:
-        grouped = non_na_rows.groupby(groupby_col)
-        groups = [
-            grouped.get_group(i) if i in grouped.keys
-            # taking an empty slice for an index's metadata
-            else pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
-                df.dtypes
+    def __init__(
+        self,
+        modin_frame: "PandasDataframe",
+        columns: Union[str, list],
+        ascending: Union[list, bool],
+        ideal_num_new_partitions: int,
+        **kwargs: dict,
+    ):
+        self.frame_len = len(modin_frame.index)
+        self.ideal_num_new_partitions = ideal_num_new_partitions
+        self.columns = columns if is_list_like(columns) else [columns]
+        self.ascending = ascending
+        self.kwargs = kwargs.copy()
+        self.is_key_numeric = None
+        self.key_column = None
+
+    def sample_fn(self, partition: pandas.DataFrame) -> pandas.DataFrame:
+        """
+        Pick samples over the given partition.
+
+        Parameters
+        ----------
+        partition : pandas.DataFrame
+
+        Returns
+        -------
+        pandas.DataFrame:
+            The samples for the partition.
+        """
+        return self.pick_samples_for_quantiles(
+            partition[self.columns], self.ideal_num_new_partitions, self.frame_len
+        )
+
+    def pivot_fn(self, samples: "list[pandas.DataFrame]") -> np.ndarray:
+        """
+        Determine quantiles from the given samples.
+
+        Parameters
+        ----------
+        samples : list of pandas.DataFrames
+
+        Returns
+        -------
+        np.ndarray
+            A list of overall quantiles.
+        """
+        key = self.kwargs.get("key", None)
+        samples = pandas.concat(samples, axis=0, copy=False)
+        if len(samples.columns) > 1:
+            most_unique_column = samples.nunique().idxmax()
+            self.key_column = most_unique_column
+            samples = samples[self.key_column].to_numpy()
+        else:
+            self.key_column = samples.columns[0]
+            samples = samples.squeeze(axis=1).to_numpy()
+
+        self.is_key_numeric = is_numeric_dtype(samples.dtype)
+
+        if self.is_key_numeric:
+            method = "linear"
+        else:
+            # This means we are not sorting numbers, so we need our quantiles to not try
+            # arithmetic on the values.
+            method = "inverted_cdf"
+
+        return self.pick_pivots_from_samples_for_sort(
+            samples, self.ideal_num_new_partitions, method, key
+        )
+
+    def split_fn(
+        self, partition: pandas.DataFrame, pivots: np.ndarray
+    ) -> "tuple[pandas.DataFrame, ...]":
+        """
+        Split the given dataframe into the partitions specified by `pivots`.
+
+        Parameters
+        ----------
+        partition : pandas.DataFrame
+        pivots : np.ndarray
+
+        Returns
+        -------
+        tuple of pandas.DataFrames
+        """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=self.key_column is None or self.is_key_numeric is None,
+            extra_log="The 'split_fn' doesn't have proper metadata, the probable reason is that it was called before 'pivot_fn'",
+        )
+        return self.split_partitions_using_pivots_for_sort(
+            partition,
+            self.key_column,
+            self.is_key_numeric,
+            pivots,
+            self.ascending,
+            **self.kwargs,
+        )
+
+    @staticmethod
+    def _find_quantiles(
+        df: Union[pandas.DataFrame, pandas.Series], quantiles: list, method: str
+    ) -> np.ndarray:
+        """
+        Find quantiles of a given dataframe using the specified method.
+
+        We use this method to provide backwards compatibility with NumPy versions < 1.23 (e.g. when
+        the user is using Modin in compat mode). This is basically a wrapper around `np.quantile` that
+        ensures we provide the correct `method` argument - i.e. if we are dealing with objects (which
+        may or may not support algebra), we do not want to use a method to find quantiles that will
+        involve algebra operations (e.g. mean) between the objects, since that may fail.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame or pandas.Series
+            The data to pick quantiles from.
+        quantiles : list[float]
+            The quantiles to compute.
+        method : str
+            The method to use. `linear` if dealing with numeric types, otherwise `inverted_cdf`.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy array with the quantiles of the data.
+        """
+        if method == "linear":
+            # This is the default method for finding quantiles, so it does not need to be specified,
+            # which keeps backwards compatibility with older versions of NumPy that do not have a
+            # `method` keyword argument in np.quantile.
+            return np.quantile(df, quantiles)
+        else:
+            try:
+                return np.quantile(df, quantiles, method=method)
+            except Exception:
+                # In this case, we're dealing with an array of objects, but the current version of
+                # NumPy does not have a `method` kwarg. We need to use the older kwarg, `interpolation`
+                # instead.
+                return np.quantile(df, quantiles, interpolation="lower")
+
+    @staticmethod
+    def pick_samples_for_quantiles(
+        df: pandas.DataFrame,
+        num_partitions: int,
+        length: int,
+    ) -> pandas.DataFrame:
+        """
+        Pick samples over the given partition.
+
+        This function picks samples from the given partition using the TeraSort algorithm - each
+        value is sampled with probability 1 / m * ln(n * t) where m = total_length / num_partitions,
+        t = num_partitions, and n = total_length.
+
+        Parameters
+        ----------
+        df : pandas.Dataframe
+            The masked dataframe to pick samples from.
+        num_partitions : int
+            The number of partitions.
+        length : int
+            The total length.
+
+        Returns
+        -------
+        pandas.DataFrame:
+            The samples for the partition.
+
+        Notes
+        -----
+        This sampling algorithm is inspired by TeraSort. You can find more information about TeraSort
+        and the sampling algorithm at https://www.cse.cuhk.edu.hk/~taoyf/paper/sigmod13-mr.pdf.
+        """
+        m = length / num_partitions
+        probability = (1 / m) * np.log(num_partitions * length)
+        return df.sample(frac=probability)
+
+    @classmethod
+    def pick_pivots_from_samples_for_sort(
+        cls,
+        samples: np.ndarray,
+        ideal_num_new_partitions: int,
+        method: str = "linear",
+        key: Optional[Callable] = None,
+    ) -> np.ndarray:
+        """
+        Determine quantiles from the given samples.
+
+        This function takes as input the quantiles calculated over all partitions from
+        `sample_func` defined above, and determines a final NPartitions.get() quantiles
+        to use to roughly sort the entire dataframe. It does so by collating all the samples
+        and computing NPartitions.get() quantiles for the overall set.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The samples computed by ``get_partition_quantiles_for_sort``.
+        ideal_num_new_partitions : int
+            The ideal number of new partitions.
+        method : str, default: linear
+            The method to use when picking quantiles.
+        key : Callable, default: None
+            The key to use on the samples when picking pivots.
+
+        Returns
+        -------
+        np.ndarray
+            A list of overall quantiles.
+        """
+        # We don't call `np.unique` on the samples, since if a quantile shows up in multiple
+        # partition's samples, this is probably an indicator of skew in the dataset, and we
+        # want our final partitions to take this into account.
+        if key is not None:
+            samples = key(samples)
+        # We don't want to pick very many quantiles if we have a very small dataframe.
+        num_quantiles = ideal_num_new_partitions
+        quantiles = [i / num_quantiles for i in range(1, num_quantiles)]
+        # If we only desire 1 partition, we need to ensure that we're not trying to find quantiles
+        # from an empty list of pivots.
+        if len(quantiles) > 0:
+            return cls._find_quantiles(samples, quantiles, method)
+        return np.array([])
+
+    @staticmethod
+    def split_partitions_using_pivots_for_sort(
+        df: pandas.DataFrame,
+        column: str,
+        is_numeric_column: bool,
+        pivots: np.ndarray,
+        ascending: bool,
+        **kwargs: dict,
+    ) -> "tuple[pandas.DataFrame, ...]":
+        """
+        Split the given dataframe into the partitions specified by `pivots`.
+
+        This function takes as input a row-axis partition, as well as the quantiles determined
+        by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get()
+        dataframes, with the elements in the i-th split belonging to the i-th partition, as determined
+        by the quantiles we're using.
+
+        Parameters
+        ----------
+        df : pandas.Dataframe
+            The partition to split.
+        column : str
+            The major column to sort by.
+        is_numeric_column : bool
+            Whether the passed `column` has numeric type (int, float).
+        pivots : np.ndarray
+            The quantiles to use to split the data.
+        ascending : bool
+            The ascending flag.
+        **kwargs : dict
+            Additional keyword arguments.
+
+        Returns
+        -------
+        tuple[pandas.DataFrame]
+            A tuple of the splits from this partition.
+        """
+        if len(pivots) == 0:
+            # We can return the dataframe with zero changes if there were no pivots passed
+            return (df,)
+        # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
+        # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
+        # which breaks when we reverse the pivots.
+        if not ascending and is_numeric_column:
+            # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
+            pivots = pivots[::-1]
+        key = kwargs.pop("key", None)
+        na_index = df[column].isna()
+        na_rows = df[na_index]
+        non_na_rows = df[~na_index]
+        cols_to_digitize = non_na_rows[column]
+        if key is not None:
+            cols_to_digitize = key(cols_to_digitize)
+
+        if is_numeric_column:
+            groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
+            # `np.digitize` returns results based off of the sort order of the pivots it is passed.
+            # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
+            # are sorted in ascending order, and gives us results based off of that assumption - so if
+            # we actually want to sort in descending order, we need to swap the new indices.
+            if not ascending and len(np.unique(pivots)) == 1:
+                groupby_col = len(pivots) - groupby_col
+        else:
+            groupby_col = np.searchsorted(
+                pivots, cols_to_digitize.squeeze(), side="right"
             )
-            for i in range(len(pivots) + 1)
-        ]
-    index_to_insert_na_vals = -1 if kwargs.get("na_position", "last") == "last" else 0
-    groups[index_to_insert_na_vals] = pandas.concat(
-        [groups[index_to_insert_na_vals], na_rows]
-    ).astype(df.dtypes)
-    return tuple(groups)
+            # Since np.searchsorted requires the pivots to be in ascending order, if we want to sort
+            # in descending order, we need to swap the new indices.
+            if not ascending:
+                groupby_col = len(pivots) - groupby_col
+        if len(non_na_rows) == 1:
+            groups = [
+                # taking an empty slice for an index's metadata
+                pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
+                    df.dtypes
+                )
+                if i != groupby_col
+                else non_na_rows
+                for i in range(len(pivots) + 1)
+            ]
+        else:
+            grouped = non_na_rows.groupby(groupby_col)
+            groups = [
+                grouped.get_group(i) if i in grouped.keys
+                # taking an empty slice for an index's metadata
+                else pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
+                    df.dtypes
+                )
+                for i in range(len(pivots) + 1)
+            ]
+        index_to_insert_na_vals = (
+            -1 if kwargs.get("na_position", "last") == "last" else 0
+        )
+        groups[index_to_insert_na_vals] = pandas.concat(
+            [groups[index_to_insert_na_vals], na_rows]
+        ).astype(df.dtypes)
+        return tuple(groups)
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):

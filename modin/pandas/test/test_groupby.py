@@ -1323,6 +1323,7 @@ def eval___getitem__(md_grp, pd_grp, item):
         lambda grp: grp[item].mean(),
         comparator=build_types_asserter(df_equals),
     )
+    # breakpoint()
     eval_general(
         md_grp,
         pd_grp,
