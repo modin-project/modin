@@ -12,8 +12,7 @@ dependencies:
 
   # optional dependencies
   - pyarrow>=7.0.0
-  # TODO: uncomment after Modin switch to python>=3.9
-  # - xarray
+  - xarray
   - Jinja2>=3.0.0
   - scipy>=1.7.1
   - s3fs>=2021.8
@@ -33,7 +32,6 @@ dependencies:
   - pygit2>=1.9.2
 
   # test dependencies
-  - boto3>=1.26.0
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1

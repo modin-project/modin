@@ -101,18 +101,8 @@ def test_basic_arithmetic_with_broadcast(operand1_shape, operand2_shape, operato
         "__gt__",
         "__lt__",
         "__le__",
-        pytest.param(
-            "__eq__",
-            marks=pytest.mark.xfail(
-                reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
-            ),
-        ),
-        pytest.param(
-            "__ne__",
-            marks=pytest.mark.xfail(
-                reason="numpy behavior on eq/ne is counterintuitive: see GH#5893"
-            ),
-        ),
+        "__eq__",
+        "__ne__",
     ],
 )
 def test_binary_bad_broadcast(matched_axis, operator):

@@ -30,7 +30,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         engine: ["ray", "dask"]
     steps:
       - uses: actions/checkout@v3

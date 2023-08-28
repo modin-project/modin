@@ -2748,7 +2748,11 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
     pd_df = md_df._to_pandas()
 
     if StorageFormat.get() == "Pandas":
-        assert md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+        assert (
+            md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+            if on is None
+            else 3
+        )
 
     md_window = md_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on
@@ -2850,4 +2854,21 @@ def test_shape_changing_udf(modify_config):
         modin_df.groupby("by_col1"),
         pandas_df.groupby("by_col1"),
         lambda df: df.apply(func3),
+    )
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_reshuffling_groupby_on_strings(modify_config):
+    # reproducer from https://github.com/modin-project/modin/issues/6509
+    modin_df, pandas_df = create_test_dfs(
+        {"col1": ["a"] * 50 + ["b"] * 50, "col2": range(100)}
+    )
+
+    modin_df = modin_df.astype({"col1": "string"})
+    pandas_df = pandas_df.astype({"col1": "string"})
+
+    eval_general(
+        modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
     )

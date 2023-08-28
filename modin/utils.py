@@ -25,10 +25,7 @@ import json
 import codecs
 import functools
 
-if sys.version_info < (3, 8):
-    from typing_extensions import Protocol, runtime_checkable
-else:
-    from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from textwrap import dedent, indent
 from packaging import version
