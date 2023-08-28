@@ -3580,6 +3580,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=axis,
             by=by,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
+            # that's why we have to align the partition's shapes/labeling across different
+            # row partitions
+            align_result_columns=how == "group_wise",
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)
