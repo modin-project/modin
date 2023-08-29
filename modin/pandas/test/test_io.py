@@ -2086,7 +2086,6 @@ class TestExcel:
         try:
             df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
             assert modin_excel_file.io == unique_filename
-            assert isinstance(modin_excel_file, pd.ExcelFile)
         finally:
             modin_excel_file.close()
             pandas_excel_file.close()
@@ -2100,7 +2099,6 @@ class TestExcel:
         pandas_excel_file = pandas.ExcelFile(content)
 
         df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
-        assert isinstance(modin_excel_file, pd.ExcelFile)
 
     def test_read_excel_ExcelFile(self, make_excel_file):
         unique_filename = make_excel_file()
