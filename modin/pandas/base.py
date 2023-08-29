@@ -3462,10 +3462,12 @@ class BasePandasDataset(ClassLogger):
             raise
         except Exception as err:
             raise ValueError("Transform function failed") from err
-        try:
-            assert len(result) == len(self)
-        except Exception:
-            raise ValueError("transforms cannot produce aggregated results")
+        if (
+            not hasattr(result, "_pandas_class")
+            or result._pandas_class not in (pandas.Series, pandas.DataFrame)
+            or not result.index.equals(self.index)
+        ):
+            raise ValueError("Function did not transform")
         return result
 
     def tz_convert(self, tz, axis=0, level=None, copy=None):  # noqa: PR01, RT01, D200

@@ -666,6 +666,19 @@ class Series(BasePandasDataset):
             return result.to_pandas().squeeze()
         return result
 
+    def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Call ``func`` on self producing a `BasePandasDataset` with the same axis shape as self.
+        """
+        if isinstance(func, list):
+            # drop nonunique functions
+            unique_func = [func[0]]
+            for one_func in func[1:]:
+                if one_func not in unique_func:
+                    unique_func.append(one_func)
+            func = unique_func
+        return super(Series, self).transform(func, axis, *args, **kwargs)
+
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return int position of the largest value in the Series.
