@@ -471,26 +471,27 @@ class PandasDataframe(ClassLogger):
         """
         return self._index_cache is not None
 
-    def copy_index_cache(self, **kwargs):
+    def copy_index_cache(self, copy_lengths=False):
         """
         Copy the index cache.
 
         Parameters
         ----------
-        **kwargs : dict
-            Keyword parameters to pass to the ``ModinIndex.copy()``.
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
-        pandas.Index, callable or None
+        pandas.Index, callable or ModinIndex
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
         if self.has_index_cache:
-            idx_cache = self._index_cache.copy(**kwargs)
+            idx_cache = self._index_cache.copy(copy_lengths)
         return idx_cache
 
-    def _get_axis_cache(self, axis=0) -> Optional[ModinIndex]:
+    def _get_axis_cache(self, axis=0) -> ModinIndex:
         """
         Get axis cache for the specified axis if available.
 
@@ -500,7 +501,7 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        ModinIndex or None
+        ModinIndex
         """
         return self._index_cache if axis == 0 else self._columns_cache
 
@@ -515,14 +516,15 @@ class PandasDataframe(ClassLogger):
         """
         return self._columns_cache is not None
 
-    def copy_columns_cache(self, **kwargs):
+    def copy_columns_cache(self, copy_lengths=False):
         """
         Copy the columns cache.
 
         Parameters
         ----------
-        **kwargs : dict
-            Keyword parameters to pass to the ``ModinIndex.copy()``.
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
@@ -531,18 +533,19 @@ class PandasDataframe(ClassLogger):
         """
         columns_cache = self._columns_cache
         if columns_cache is not None:
-            columns_cache = columns_cache.copy(**kwargs)
+            columns_cache = columns_cache.copy(copy_lengths)
         return columns_cache
 
-    def copy_axis_cache(self, axis=0, **kwargs):
+    def copy_axis_cache(self, axis=0, copy_lengths=False):
         """
         Copy the axis cache (index or columns).
 
         Parameters
         ----------
         axis : int, default: 0
-        **kwargs : dict
-            Keyword parameters to pass to the ``ModinIndex.copy()``.
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
@@ -550,9 +553,9 @@ class PandasDataframe(ClassLogger):
             If there is an pandas.Index in the cache, then copying occurs.
         """
         if axis == 0:
-            return self.copy_index_cache(**kwargs)
+            return self.copy_index_cache(copy_lengths)
         else:
-            return self.copy_columns_cache(**kwargs)
+            return self.copy_columns_cache(copy_lengths)
 
     @property
     def has_materialized_index(self):
@@ -3291,7 +3294,7 @@ class PandasDataframe(ClassLogger):
 
     def _check_if_axes_identical(self, other: "PandasDataframe", axis: int = 0) -> bool:
         """
-        Check whether indices/partitioning alogn the specified axis are identical when compared with `other`.
+        Check whether indices/partitioning along the specified `axis` are identical when compared with `other`.
 
         Parameters
         ----------
@@ -3304,13 +3307,14 @@ class PandasDataframe(ClassLogger):
         bool
         """
         if self.has_axis_cache(axis) and other.has_axis_cache(axis):
-            equal_indices = self._get_axis_cache(axis).equals(
-                other._get_axis_cache(axis)
+            self_cache, other_cache = self._get_axis_cache(axis), other._get_axis_cache(
+                axis
             )
+            equal_indices = self_cache.equals(other_cache)
             if equal_indices:
-                equal_lengths = self._get_axis_cache(
-                    axis
-                ).compare_partition_lengths_if_possible(other._get_axis_cache(axis))
+                equal_lengths = self_cache.compare_partition_lengths_if_possible(
+                    other_cache
+                )
                 if isinstance(equal_lengths, bool):
                     return equal_lengths
                 return self._get_axis_lengths(axis) == other._get_axis_lengths(axis)

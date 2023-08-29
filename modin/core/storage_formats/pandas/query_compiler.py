@@ -1014,7 +1014,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 lambda df, *args, **kwargs: pandas.to_datetime(
                     df.squeeze(axis=1), *args, **kwargs
                 ).to_frame()
-            )(self, *args, **kwargs, shape_hint="column")
+            )(self, *args, **kwargs)
         else:
             return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
 

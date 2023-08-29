@@ -1207,7 +1207,7 @@ class TestModinIndexIds:
 
         col = df["col0"]
         # perform some operations that doesn't modify index labels and partitioning
-        col = pd.to_datetime(col * 2 + 10)
+        col = col * 2 + 10
         assert_has_no_cache(col)
         assert_has_no_cache(df)
 

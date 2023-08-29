@@ -271,7 +271,7 @@ class ModinIndex:
 
         Parameters
         ----------
-        copy_lengths : bool, default: True
+        copy_lengths : bool, default: False
             Whether to copy the stored partition lengths to the
             new index object.
 
