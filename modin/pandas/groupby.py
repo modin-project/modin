@@ -489,8 +489,6 @@ class DataFrameGroupBy(ClassLogger):
             else:
                 result = result.sort_index()
         else:
-            if fill_value is lib.no_default:
-                fill_value = None
             result = self._check_index_name(
                 self._wrap_aggregation(
                     type(self._query_compiler).groupby_shift,

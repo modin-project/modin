@@ -2838,6 +2838,7 @@ class TestOrc:
         test_kwargs = dict(
             columns=["A"],
             dtype_backend=lib.no_default,
+            filesystem=None,
             fake_kwarg="some_pyarrow_parameter",
         )
         with mock.patch(

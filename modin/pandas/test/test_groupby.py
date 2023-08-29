@@ -449,7 +449,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     if as_index:
-        eval_std(modin_groupby, pandas_groupby)
+        eval_std(modin_groupby, pandas_groupby, numeric_only=True)
         eval_var(modin_groupby, pandas_groupby, numeric_only=True)
         eval_skew(modin_groupby, pandas_groupby, numeric_only=True)
 
