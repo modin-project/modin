@@ -25,6 +25,7 @@ from pandas.api.types import is_scalar
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
+from pandas.core.apply import reconstruct_func
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
@@ -3073,6 +3074,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # convert it to pandas
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
+        _, func, _, _ = reconstruct_func(func, **kwargs)
         if isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
         elif is_list_like(func):
