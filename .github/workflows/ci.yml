@@ -134,7 +134,7 @@ jobs:
         execution: [BaseOnPython]
     env:
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.8
+    name: Test ${{ matrix.execution }} execution, Python 3.9
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
@@ -164,7 +164,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
-    name: Test HDK storage format, Python 3.8
+    name: Test HDK storage format, Python 3.9
     services:
       moto:
         image: motoserver/moto
@@ -265,6 +265,10 @@ jobs:
               sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
               sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
 
+              # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
+              # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
+              rm -f -R .asv/env/
+
               # TODO: Remove manual environment creation after fix https://github.com/airspeed-velocity/asv/issues/1310
               mamba env create -f ../requirements/env_hdk.yml
               conda activate modin_on_hdk
@@ -330,7 +334,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         unidist-backend: ["mpi"]
     env:
       MODIN_ENGINE: "Unidist"
@@ -393,7 +397,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
@@ -528,7 +532,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         execution:
           - name: ray
             shell-ex: "python -m pytest"
@@ -680,7 +684,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -710,7 +714,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"

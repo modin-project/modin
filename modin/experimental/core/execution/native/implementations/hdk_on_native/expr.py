@@ -25,6 +25,7 @@ from pandas.core.dtypes.common import (
     is_list_like,
     get_dtype,
     is_float_dtype,
+    is_int64_dtype,
     is_integer_dtype,
     is_numeric_dtype,
     is_string_dtype,
@@ -69,6 +70,10 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return get_dtype(int)
     if is_datetime64_dtype(lhs_dtype) and is_datetime64_dtype(rhs_dtype):
         return np.promote_types(lhs_dtype, rhs_dtype)
+    if (is_datetime64_dtype(lhs_dtype) and is_int64_dtype(rhs_dtype)) or (
+        is_datetime64_dtype(rhs_dtype) and is_int64_dtype(lhs_dtype)
+    ):
+        return get_dtype(int)
     raise NotImplementedError(
         f"Cannot perform operation on types: {lhs_dtype}, {rhs_dtype}"
     )

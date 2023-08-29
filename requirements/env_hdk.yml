@@ -19,8 +19,7 @@ dependencies:
   - sqlalchemy>=1.4.0,<1.4.46
   - scipy>=1.7.1
   - matplotlib>=3.6.1
-  # TODO: uncomment after Modin switch to python>=3.9
-  # - xarray
+  - xarray
   - pytables>=3.6.1
   - fastparquet>=0.6.3
   # pandas isn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
@@ -30,7 +29,6 @@ dependencies:
   - pygithub>=v1.58.0
 
   # test dependencies
-  - boto3>=1.26.0
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1

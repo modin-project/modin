@@ -119,21 +119,6 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-@pytest.fixture
-def modify_config(request):
-    values = request.param
-    old_values = {}
-
-    for key, value in values.items():
-        old_values[key] = key.get()
-        key.put(value)
-
-    yield  # waiting for the test to be completed
-    # restoring old parameters
-    for key, value in old_values.items():
-        key.put(value)
-
-
 def validate_partitions_cache(df):
     """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
     row_lengths = df._row_lengths_cache
@@ -775,7 +760,7 @@ def test_groupby_with_empty_partition():
         pandas_df=pandas.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]}),
         partitioning_scheme={"row_lengths": [2, 2], "column_widths": [2]},
     )
-    md_res = md_df.query("a > 1")
+    md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby("a")
     # check index error due to partitioning missmatching
     grp_obj.count()
@@ -784,7 +769,7 @@ def test_groupby_with_empty_partition():
         pandas_df=pandas.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]}),
         partitioning_scheme={"row_lengths": [2, 2], "column_widths": [2]},
     )
-    md_res = md_df.query("a > 1")
+    md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby(md_res["a"])
     grp_obj.count()
 

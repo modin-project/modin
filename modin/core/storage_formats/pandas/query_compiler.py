@@ -2477,12 +2477,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result = self.__constructor__(new_modin_frame)
         return result.transpose() if axis == 1 else result
 
-    def query(self, expr, **kwargs):
-        def query_builder(df, **modin_internal_kwargs):
-            return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
-
-        return self.__constructor__(self._modin_frame.filter(1, query_builder))
-
     def rank(self, **kwargs):
         axis = kwargs.get("axis", 0)
         numeric_only = True if axis else kwargs.get("numeric_only", False)
@@ -2757,6 +2751,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
+        if axis == 1:
+            value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
     def _setitem(self, axis, key, value, how="inner"):
@@ -2992,6 +2988,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # return a new one from here and let the front end handle the inplace
     # update.
     def insert(self, loc, column, value):
+        value = self._wrap_column_data(value)
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value, how=None)
@@ -3023,6 +3020,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=self.columns.insert(loc, column),
         )
         return self.__constructor__(new_modin_frame)
+
+    def _wrap_column_data(self, data):
+        """
+        If the data is list-like, create a single column query compiler.
+
+        Parameters
+        ----------
+        data : any
+
+        Returns
+        -------
+        data or PandasQueryCompiler
+        """
+        if is_list_like(data):
+            return self.from_pandas(
+                pandas.DataFrame(pandas.Series(data, index=self.index)),
+                data_cls=type(self._modin_frame),
+            )
+        return data
 
     # END Insert
 
@@ -3564,6 +3580,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=axis,
             by=by,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
+            # that's why we have to align the partition's shapes/labeling across different
+            # row partitions
+            align_result_columns=how == "group_wise",
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)

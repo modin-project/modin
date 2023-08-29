@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import sys
 import pytest
 import unittest.mock as mock
 import numpy as np
@@ -1867,21 +1866,21 @@ def test_dt(timezone):
 
     def dt_with_empty_partition(lib):
         # For context, see https://github.com/modin-project/modin/issues/5112
-        df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
-        df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
-        df = lib.concat([df_a, df_b], axis=1)
-        eval_result = df.eval("B - A", engine="python")
+        df = (
+            pd.concat([pd.DataFrame([None]), pd.DataFrame([pd.TimeDelta(1)])], axis=1)
+            .dropna(axis=1)
+            .squeeze(1)
+        )
         # BaseOnPython ahd HDK had a single partition after the concat, and it
-        # maintains that partition after eval. In other execution modes,
-        # eval() should re-split the result into two column partitions,
-        # one of which is empty.
+        # maintains that partition after dropna and squeeze. In other execution modes,
+        # the series should have two column partitions, one of which is empty.
         if (
             isinstance(df, pd.DataFrame)
             and get_current_execution() != "BaseOnPython"
             and StorageFormat.get() != "Hdk"
         ):
-            assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
-        return eval_result.dt.days
+            assert df._query_compiler._modin_frame._partitions.shape == (1, 2)
+        return df.dt.days
 
     eval_general(pd, pandas, dt_with_empty_partition)
 
@@ -3539,10 +3538,6 @@ def test_to_timestamp():
         series.to_period().to_timestamp()
 
 
-@pytest.mark.skipif(
-    condition=sys.version_info < (3, 9),
-    reason="xarray doesn't support pandas>=2.0 for python 3.8",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
