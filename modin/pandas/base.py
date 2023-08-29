@@ -3458,7 +3458,7 @@ class BasePandasDataset(ClassLogger):
         self._validate_function(func)
         try:
             result = self.agg(func, axis=axis, *args, **kwargs)
-        except TypeError:
+        except (TypeError, pandas.errors.SpecificationError):
             raise
         except Exception as err:
             raise ValueError("Transform function failed") from err
