@@ -752,8 +752,10 @@ class CalciteBuilder:
             and all(isinstance(expr, CalciteInputRefExpr) for expr in node.exprs)
         ):
             # Replace the last CalciteProjectionNode with this one and
-            # translate the input refs.
-            exprs = self.res.pop().exprs
+            # translate the input refs. The `id` attribute is preserved.
+            last = self.res.pop()
+            exprs = last.exprs
+            last.reset_id(int(last.id))
             node = CalciteProjectionNode(
                 node.fields, [exprs[expr.input] for expr in node.exprs]
             )
