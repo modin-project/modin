@@ -757,7 +757,7 @@ class CalciteBuilder:
             # translate the input refs. The `id` attribute is preserved.
             last = self.res.pop()
             exprs = last.exprs
-            type(last).reset_id(int(last.id))
+            last.reset_id(int(last.id))
             node = CalciteProjectionNode(
                 node.fields, [exprs[expr.input] for expr in node.exprs]
             )
