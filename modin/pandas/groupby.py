@@ -996,8 +996,7 @@ class DataFrameGroupBy(ClassLogger):
         axis=lib.no_default,
     ):
         if na_option not in {"keep", "top", "bottom"}:
-            msg = "na_option must be one of 'keep', 'top', or 'bottom'"
-            raise ValueError(msg)
+            raise ValueError("na_option must be one of 'keep', 'top', or 'bottom'")
 
         if axis is not lib.no_default:
             axis = self._df._get_axis_number(axis)

@@ -1398,7 +1398,7 @@ class DataFrame(BasePandasDataset):
         Pivot a level of the (necessarily hierarchical) index labels.
         """
         if not sort:
-            # TODO: it should be easy to add support for sort == Falses
+            # TODO: it should be easy to add support for sort == False
             return self._default_to_pandas(
                 pandas.DataFrame.unstack, level=level, fill_value=fill_value, sort=sort
             )

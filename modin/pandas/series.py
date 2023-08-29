@@ -1343,7 +1343,7 @@ class Series(BasePandasDataset):
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
-        # pandas 2.1.0rc0 ignores suffix parameter
+        # pandas 2.1.0rc0 ignores suffix parameter (https://github.com/pandas-dev/pandas/issues/54806)
         if freq is not None and fill_value is not lib.no_default:
             raise ValueError(
                 "Cannot pass both 'freq' and 'fill_value' to "
@@ -1362,7 +1362,7 @@ class Series(BasePandasDataset):
         from .dataframe import DataFrame
 
         if not sort:
-            # TODO: it should be easy to add support for sort == Falses
+            # TODO: it should be easy to add support for sort == False
             return self._default_to_pandas(
                 pandas.Series.unstack, level=level, fill_value=fill_value, sort=sort
             )
