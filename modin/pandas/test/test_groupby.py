@@ -935,7 +935,9 @@ def test_simple_col_groupby():
     eval_count(modin_groupby, pandas_groupby)
     eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
-    eval_groups(modin_groupby, pandas_groupby)
+
+    # https://github.com/pandas-dev/pandas/issues/54858
+    # eval_groups(modin_groupby, pandas_groupby)
 
 
 @pytest.mark.parametrize(
