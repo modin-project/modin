@@ -972,9 +972,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
+        def compute_dtypes_fn(dtypes, axis, **kwargs):
+            """
+            Compute the resulting Series dtype.
+
+            When computing along rows and there are numeric and boolean columns
+            Pandas returns `object`. In all other cases - `float64`.
+            """
+            if (
+                axis == 1
+                and any(is_bool_dtype(t) for t in dtypes)
+                and any(is_numeric_dtype(t) for t in dtypes)
+            ):
+                return "object"
+            return "float64"
+
         return TreeReduce.register(
             map_fn,
             reduce_fn,
+            compute_dtypes=compute_dtypes_fn,
         )(self, axis=axis, **kwargs)
 
     # END TreeReduce operations
