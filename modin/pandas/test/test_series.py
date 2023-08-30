@@ -2920,7 +2920,6 @@ def test_repeat_lists(data, repeats):
     )
 
 
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54817")
 def test_clip_4485():
     modin_result = pd.Series([1]).clip([3])
     pandas_result = pandas.Series([1]).clip([3])

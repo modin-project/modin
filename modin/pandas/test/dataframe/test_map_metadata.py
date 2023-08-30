@@ -902,7 +902,6 @@ def test_clip(request, data, axis, bound_type):
             modin_df.clip(lower=[1, 2, 3], axis=None)
 
 
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54817")
 def test_clip_4485():
     modin_result = pd.DataFrame([1]).clip([3])
     pandas_result = pandas.DataFrame([1]).clip([3])
