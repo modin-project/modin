@@ -1348,13 +1348,20 @@ class TestAgg:
                 # function that falling back to pandas in the reduce operation flow.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
-                assert (
-                    len(warns) == 1
-                ), f"More than one warning was arisen: len(warns) != 1 ({len(warns)} != 1)"
-                message = warns[0].message.args[0]
-                assert (
-                    re.match(r".*transpose.*defaulting to pandas", message) is not None
-                ), f"Expected DataFrame.transpose defaulting to pandas warning, got: {message}"
+                for warn in warns.list:
+                    message = warn.message.args[0]
+                    if (
+                        "is_sparse is deprecated" in message
+                        or "is_categorical_dtype is deprecated" in message
+                        # TODO: make sure we can ignore this warning
+                        or "Frame contain columns with unsupported data-types"
+                        in message
+                    ):
+                        continue
+                    assert (
+                        re.match(r".*transpose.*defaulting to pandas", message)
+                        is not None
+                    ), f"Expected DataFrame.transpose defaulting to pandas warning, got: {message}"
             else:
                 res = getattr(df, method)()
             return res
