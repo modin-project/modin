@@ -652,7 +652,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 for arg in kwargs
             )
             or use_nullable_dtypes != lib.no_default
-            or kwargs.get("filesystem") != None
+            or kwargs.get("filesystem") is not None
         ):
             return cls.single_worker_read(
                 path,
