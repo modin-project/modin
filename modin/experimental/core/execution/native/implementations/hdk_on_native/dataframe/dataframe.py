@@ -32,7 +32,6 @@ from pandas.core.dtypes.common import (
     is_string_dtype,
     is_integer_dtype,
     is_datetime64_dtype,
-    is_categorical_dtype,
 )
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -1069,7 +1068,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         for left_col, right_col in zip(left_on, right_on):
             left_dt = self._dtypes[left_col]
             right_dt = other._dtypes[right_col]
-            if is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt):
+            if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
+                right_dt, pd.CategoricalDtype
+            ):
                 left_dt = left_dt.categories.dtype
                 right_dt = right_dt.categories.dtype
             if not (
@@ -1669,7 +1670,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         assert len(self.columns) == 1
-        assert is_categorical_dtype(self._dtypes[-1])
+        assert isinstance(self._dtypes[-1], pd.CategoricalDtype)
 
         exprs = self._index_exprs()
         col_expr = self.ref(self.columns[-1])
@@ -2600,7 +2601,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     zip(schema, self._dtypes)
                 )
                 if is_dictionary(arrow_type.type)
-                and not is_categorical_dtype(pandas_type)
+                and not isinstance(pandas_type, pd.CategoricalDtype)
             }
             if cast:
                 for idx, new_type in cast.items():

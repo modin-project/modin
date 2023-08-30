@@ -697,7 +697,6 @@ class TestCategoricalProxyDtype:
         assert lazy_proxy == "category"
         assert isinstance(lazy_proxy, pd.CategoricalDtype)
         assert isinstance(lazy_proxy, pandas.CategoricalDtype)
-        assert pandas.api.types.is_categorical_dtype(lazy_proxy)
         assert str(lazy_proxy) == "category"
         assert str(lazy_proxy) == str(actual_dtype)
         assert not lazy_proxy.ordered

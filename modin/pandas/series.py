@@ -23,7 +23,6 @@ from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
-    is_categorical_dtype,
 )
 from pandas.core.series import _coerce_method
 from pandas._libs import lib
@@ -424,7 +423,7 @@ class Series(BasePandasDataset):
         if (
             isinstance(temp_df, pandas.Series)
             and temp_df.name is not None
-            and is_categorical_dtype(temp_df.dtype)
+            and isinstance(temp_df.dtype, pandas.CategoricalDtype)
         ):
             maxsplit = 2
         return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(

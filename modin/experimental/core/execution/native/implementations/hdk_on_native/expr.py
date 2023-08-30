@@ -29,7 +29,6 @@ from pandas.core.dtypes.common import (
     is_integer_dtype,
     is_numeric_dtype,
     is_string_dtype,
-    is_categorical_dtype,
     is_datetime64_any_dtype,
     is_bool_dtype,
     is_datetime64_dtype,
@@ -528,7 +527,7 @@ class BaseExpr(abc.ABC):
         """
         if is_numeric_dtype(dtype) or is_bool_dtype(dtype):
             return "numeric"
-        if is_string_dtype(dtype) or is_categorical_dtype(dtype):
+        if is_string_dtype(dtype) or isinstance(dtype, pandas.CategoricalDtype):
             return "string"
         if is_datetime64_any_dtype(dtype):
             return "datetime"

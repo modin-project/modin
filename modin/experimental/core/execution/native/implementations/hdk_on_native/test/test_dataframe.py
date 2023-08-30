@@ -1352,7 +1352,6 @@ class TestAgg:
                     message = warn.message.args[0]
                     if (
                         "is_sparse is deprecated" in message
-                        or "is_categorical_dtype is deprecated" in message
                         # TODO: make sure we can ignore this warning
                         or "Frame contain columns with unsupported data-types"
                         in message
@@ -2738,7 +2737,6 @@ class TestFromArrow:
         pdt = pdf.dtypes[0]
         assert mdt == "category"
         assert isinstance(mdt, pandas.CategoricalDtype)
-        assert pandas.api.types.is_categorical_dtype(mdt)
         assert str(mdt) == str(pdt)
 
         # Make sure the lazy proxy dtype is not materialized yet.

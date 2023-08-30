@@ -45,7 +45,8 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import _get_dtype, is_categorical_dtype, is_bool_dtype
+import pandas
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -909,7 +910,7 @@ class CalciteBuilder:
                 c: cast_agg[agg_exprs[c].agg]
                 for c, t in frame.dtypes.items()
                 # Do not call is_bool_dtype() for categorical since it checks all the categories
-                if not is_categorical_dtype(t)
+                if not isinstance(t, pandas.CategoricalDtype)
                 and is_bool_dtype(t)
                 and agg_exprs[c].agg in cast_agg
             }

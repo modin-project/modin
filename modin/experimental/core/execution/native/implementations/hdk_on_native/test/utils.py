@@ -16,7 +16,6 @@ import pytest
 import pandas
 from pandas.core.dtypes.common import (
     is_object_dtype,
-    is_categorical_dtype,
     is_datetime64_any_dtype,
 )
 
@@ -67,7 +66,10 @@ def eval_io(
                     df[cols] = df[cols].fillna("")
             # 2. HdkWorker.cast_to_compatible_types() converts all categorical columns to string.
             cols = {
-                c for df in dfs for c, t in df.dtypes.items() if is_categorical_dtype(t)
+                c
+                for df in dfs
+                for c, t in df.dtypes.items()
+                if isinstance(t, pandas.CategoricalDtype)
             }
             if len(cols) != 0:
                 cols = pandas.Index(cols)

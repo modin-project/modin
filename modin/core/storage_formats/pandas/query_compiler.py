@@ -31,7 +31,6 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_datetime64_any_dtype,
     is_bool_dtype,
-    is_categorical_dtype,
 )
 from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
@@ -3553,7 +3552,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
         # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
         if self._modin_frame._dtypes is not None and any(
-            is_categorical_dtype(dtype) for dtype in self.dtypes[by].values
+            isinstance(dtype, pandas.CategoricalDtype)
+            for dtype in self.dtypes[by].values
         ):
             raise NotImplementedError(
                 "Reshuffling groupby is not yet supported when grouping on a categorical column. "
@@ -4283,7 +4283,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            assert is_categorical_dtype(ser.dtype)
+            assert isinstance(ser.dtype, pandas.CategoricalDtype)
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])

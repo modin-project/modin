@@ -128,7 +128,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         dtype = self._col.dtypes[0]
 
-        if pandas.api.types.is_categorical_dtype(dtype):
+        if isinstance(dtype, pandas.CategoricalDtype):
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             (
