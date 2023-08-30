@@ -784,7 +784,7 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
         return
 
     diff = (modin_df - pandas_df).abs()
-    diff /= pandas_df
+    diff /= pandas_df.abs()
     diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
     assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
 
