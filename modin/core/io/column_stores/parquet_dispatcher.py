@@ -647,8 +647,12 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         if (
-            any(arg not in ("storage_options", "filters") for arg in kwargs)
+            any(
+                arg not in ("storage_options", "filters", "filesystem")
+                for arg in kwargs
+            )
             or use_nullable_dtypes != lib.no_default
+            or kwargs.get("filesystem") != None
         ):
             return cls.single_worker_read(
                 path,
