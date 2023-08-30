@@ -282,11 +282,21 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         if not is_fsspec_url(file_path):
             return len(glob.glob(file_path)) > 0
 
-        from botocore.exceptions import (
-            NoCredentialsError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        )
+        try:
+            from botocore.exceptions import (
+                NoCredentialsError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+        except ModuleNotFoundError:
+            credential_error_type = (PermissionError,)
 
         if storage_options is not None:
             new_storage_options = dict(storage_options)
@@ -298,12 +308,7 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         exists = False
         try:
             exists = fs.exists(file_path)
-        except (
-            NoCredentialsError,
-            PermissionError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        ):
+        except credential_error_type:
             fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
             exists = fs.exists(file_path)
         return exists or len(fs.glob(file_path)) > 0
@@ -328,11 +333,21 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
             abs_paths = [os.path.abspath(path) for path in relative_paths]
             return abs_paths
 
-        from botocore.exceptions import (
-            NoCredentialsError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        )
+        try:
+            from botocore.exceptions import (
+                NoCredentialsError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+        except ModuleNotFoundError:
+            credential_error_type = (PermissionError,)
 
         def get_file_path(fs_handle) -> List[str]:
             file_paths = fs_handle.glob(file_path)
@@ -344,12 +359,7 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         fs, _ = fsspec.core.url_to_fs(file_path)
         try:
             return get_file_path(fs)
-        except (
-            NoCredentialsError,
-            PermissionError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        ):
+        except credential_error_type:
             fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
         return get_file_path(fs)
 
