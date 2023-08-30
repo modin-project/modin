@@ -16,6 +16,7 @@
 import uuid
 import pandas
 from pandas.core.indexes.api import ensure_index
+import functools
 
 
 class ModinIndex:
@@ -71,7 +72,15 @@ class ModinIndex:
         -------
         callable() -> tuple(pandas.Index, list[ints])
         """
-        return lambda: dataframe_obj._compute_axis_labels_and_lengths(axis)
+        # HACK: for an unknown reason, the 'lambda' approach seems to trigger some strange
+        # race conditions in HDK on certain versions of python, causing the tests to fail
+        # (python 3.9.* and 3.10.* are the versions where we saw the problem). That's
+        # really strange, but practically the same code that uses 'functools.partial'
+        # instead of a lambda works absolutely fine.
+        # return lambda: dataframe_obj._compute_axis_labels_and_lengths(axis)
+        return functools.partial(
+            type(dataframe_obj)._compute_axis_labels_and_lengths, dataframe_obj, axis
+        )
 
     def maybe_specify_new_frame_ref(self, value, axis) -> "ModinIndex":
         """
