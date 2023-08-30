@@ -48,7 +48,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "pandas==2.1.0rc0",
+        "pandas>=2.1,<2.2",
         "packaging>=21.0",
         "numpy>=1.20.3",
         "fsspec>=2021.07.0",
