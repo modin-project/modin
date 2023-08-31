@@ -1269,7 +1269,7 @@ class AggregateExpr(BaseExpr):
     agg : str
         Aggregate name.
     operands : list of BaseExpr
-        Aggregate operands. Always has a single operand.
+        Aggregate operands.
     distinct : bool
         Distinct modifier for 'count' aggregate.
     _dtype : dtype
@@ -1299,7 +1299,7 @@ class AggregateExpr(BaseExpr):
         -------
         AggregateExpr
         """
-        return AggregateExpr(self.agg, self.operands[0], self.distinct, self._dtype)
+        return AggregateExpr(self.agg, self.operands, self.distinct, self._dtype)
 
     def __repr__(self):
         """

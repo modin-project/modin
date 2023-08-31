@@ -652,7 +652,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     n = -n
                 n = LiteralExpr(n)
                 for col in agg_cols:
-                    agg_exprs[col] = AggregateExpr(agg, base.ref(col).eq(n))
+                    agg_exprs[col] = AggregateExpr(agg, [base.ref(col), n])
             else:
                 for col in agg_cols:
                     agg_exprs[col] = AggregateExpr(agg, base.ref(col))
