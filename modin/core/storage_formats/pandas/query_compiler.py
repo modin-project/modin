@@ -1029,10 +1029,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # to_datetime has inplace side effects, see GH#3063
                 lambda df, *args, **kwargs: pandas.to_datetime(
                     df.squeeze(axis=1), *args, **kwargs
-                ).to_frame()
+                ).to_frame(),
+                shape_hint="column",
             )(self, *args, **kwargs)
         else:
-            return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
+            return Reduce.register(pandas.to_datetime, axis=1, shape_hint="column")(
+                self, *args, **kwargs
+            )
 
     # END Reduce operations
 
