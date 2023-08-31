@@ -1287,6 +1287,19 @@ class TestGroupby:
 
         run_and_compare(topk, data=self.h2o_data)
 
+    @pytest.mark.parametrize("time", [False, True])
+    @pytest.mark.parametrize("q", [0.1, 0.5, 1.0])
+    @pytest.mark.parametrize(
+        "interpolation", ["linear", "lower", "higher", "midpoint", "nearest"]
+    )
+    def test_quantile(self, time, q, interpolation):
+        def quantile(df, **kwargs):
+            if time:
+                df["v1"] = df["v1"].astype("datetime64[ns]")
+            return df.groupby("id4")[["v1", "v2", "v3"]].quantile(q, interpolation)
+
+        run_and_compare(quantile, data=self.h2o_data)
+
 
 class TestAgg:
     data = {

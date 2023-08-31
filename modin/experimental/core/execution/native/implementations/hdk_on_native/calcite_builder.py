@@ -15,7 +15,7 @@
 from collections import abc
 
 import pandas
-from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype, is_datetime64_dtype
 
 from .calcite_algebra import (
     CalciteAggregateNode,
@@ -377,11 +377,41 @@ class CalciteBuilder:
                 self._dtype,
             )
 
+    class QuantileAggregate(CompoundAggregateWithColArg):
+        """
+        A QUANTILE aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            An aggregated values.
+        """
+
+        def __init__(self, builder, arg):
+            super().__init__(
+                "QUANTILE",
+                builder,
+                arg,
+                arg[0]._dtype
+                if is_datetime64_dtype(arg[0]._dtype)
+                else _get_dtype("float64"),
+            )
+            self._interpolation = arg[2].val.upper()
+
+        def gen_agg_exprs(self):
+            exprs = super().gen_agg_exprs()
+            for expr in exprs.values():
+                expr.interpolation = self._interpolation
+            return exprs
+
     _compound_aggregates = {
         "std": StdAggregate,
         "skew": SkewAggregate,
         "nlargest": TopkAggregate,
         "nsmallest": TopkAggregate,
+        "quantile": QuantileAggregate,
     }
 
     class InputContext:
@@ -419,7 +449,6 @@ class CalciteBuilder:
             "min": "MIN",
             "size": "COUNT",
             "count": "COUNT",
-            "median": "APPROX_QUANTILE",
         }
         _no_arg_aggregates = {"size"}
 
@@ -662,7 +691,7 @@ class CalciteBuilder:
     _bool_cast_aggregates = {
         "sum": _get_dtype(int),
         "mean": _get_dtype(float),
-        "median": _get_dtype(float),
+        "quantile": _get_dtype(float),
     }
 
     def __init__(self):
