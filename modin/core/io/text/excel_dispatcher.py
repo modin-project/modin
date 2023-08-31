@@ -13,12 +13,16 @@
 
 """Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
+import os
+from io import BytesIO
+
 import pandas
 import re
 import warnings
 
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions
+from modin.pandas.io import ExcelFile
 
 EXCEL_READ_BLOCK_SIZE = 4096
 
@@ -55,6 +59,22 @@ class ExcelDispatcher(TextFileDispatcher):
                 **kwargs
             )
 
+        if isinstance(io, bytes):
+            io = BytesIO(io)
+
+        # isinstance(ExcelFile, os.PathLike) == True
+        if not isinstance(io, (str, os.PathLike, BytesIO)) or isinstance(
+            io, (ExcelFile, pandas.ExcelFile)
+        ):
+            if isinstance(io, ExcelFile):
+                io._set_pandas_mode()
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` the following types of `io`: "
+                + "str, os.PathLike, io.BytesIO.",
+                **kwargs
+            )
+
         from zipfile import ZipFile
         from openpyxl.worksheet.worksheet import Worksheet
         from openpyxl.worksheet._reader import WorksheetReader
@@ -79,7 +99,7 @@ class ExcelDispatcher(TextFileDispatcher):
 
         # NOTE: ExcelReader() in read-only mode does not close file handle by itself
         # work around that by passing file object if we received some path
-        io_file = open(io, "rb") if isinstance(io, str) else io
+        io_file = open(io, "rb") if isinstance(io, (str, os.PathLike)) else io
         try:
             ex = ExcelReader(io_file, read_only=True)
             ex.read()
@@ -90,14 +110,12 @@ class ExcelDispatcher(TextFileDispatcher):
             ex.read_strings()
             ws = Worksheet(wb)
         finally:
-            if isinstance(io, str):
+            if isinstance(io, (str, os.PathLike)):
                 # close only if it were us who opened the object
                 io_file.close()
 
         pandas_kw = dict(kwargs)  # preserve original kwargs
         with ZipFile(io) as z:
-            from io import BytesIO
-
             # Convert index to sheet name in file
             if isinstance(sheet_name, int):
                 sheet_name = "sheet{}".format(sheet_name + 1)
