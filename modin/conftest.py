@@ -21,7 +21,6 @@ import platform
 import subprocess
 import time
 
-import shlex
 import requests
 import sys
 import pytest
@@ -610,8 +609,9 @@ def s3_base(worker_id, monkeysession):
         # to do that is to use the `worker_id`, which is unique, to determine what port to point
         # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
         # for each worker, and we never run tests with more than `pytest -n 4`.
-        worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
-        endpoint_port = f"555{worker_id}"
+        endpoint_port = (
+            5500 if worker_id == "master" else (5550 + int(worker_id.lstrip("gw")))
+        )
         endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
 
         # pipe to null to avoid logging in terminal
@@ -620,12 +620,10 @@ def s3_base(worker_id, monkeysession):
         # in the popen command and we throw an error within the body of the context
         # manager, the test just hangs forever.
         with subprocess.Popen(
-            # try this https://stackoverflow.com/a/72084867/17554722 ?
-            shlex.split(f"moto_server s3 -p {endpoint_port}"),
+            ["moto_server", "s3", "-p", str(endpoint_port)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         ) as proc:
-            made_connection = False
             for _ in range(50):
                 try:
                     # OK to go once server is accepting connections
