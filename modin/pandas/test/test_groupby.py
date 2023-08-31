@@ -2091,7 +2091,6 @@ def test_unknown_groupby(columns):
 def test_multi_column_groupby_different_partitions(
     func_to_apply, as_index, by_length, categorical_by, request
 ):
-    # breakpoint()
     if (
         not categorical_by
         and by_length == 1

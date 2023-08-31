@@ -3621,7 +3621,7 @@ class PandasDataframe(ClassLogger):
             frames = [self] + others
             if all(frame.has_materialized_dtypes for frame in frames):
                 all_dtypes = [frame.dtypes for frame in frames]
-                if not all(map(lambda dtypes: dtypes.empty, all_dtypes)):
+                if not all(dtypes.empty for dtypes in all_dtypes):
                     new_dtypes = pandas.concat(all_dtypes, axis=1)
                     # 'nan' value will be placed in a row if a column doesn't exist in all frames;
                     # this value is np.float64 type so we need an explicit conversion

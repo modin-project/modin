@@ -630,12 +630,11 @@ def s3_base(worker_id, monkeysession):
                 try:
                     # OK to go once server is accepting connections
                     if requests.get(endpoint_uri).ok:
-                        made_connection = True
                         break
                 except Exception:
                     # try again while we still have retries
                     time.sleep(0.1)
-            if not made_connection:
+            else:
                 raise RuntimeError("Could not connect to moto server after 50 tries.")
             yield endpoint_uri
 

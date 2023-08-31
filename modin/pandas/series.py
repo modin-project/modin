@@ -1355,7 +1355,7 @@ class Series(BasePandasDataset):
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
-        # pandas 2.1.0rc0 ignores suffix parameter (https://github.com/pandas-dev/pandas/issues/54806)
+        # pandas 2.1.0 ignores suffix parameter (https://github.com/pandas-dev/pandas/issues/54806)
         if freq is not None and fill_value is not lib.no_default:
             raise ValueError(
                 "Cannot pass both 'freq' and 'fill_value' to "

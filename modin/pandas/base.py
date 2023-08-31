@@ -3463,8 +3463,7 @@ class BasePandasDataset(ClassLogger):
         except Exception as err:
             raise ValueError("Transform function failed") from err
         if (
-            not hasattr(result, "_pandas_class")
-            or result._pandas_class not in (pandas.Series, pandas.DataFrame)
+            getattr(result, "_pandas_class", None) not in (pandas.Series, pandas.DataFrame)
             or not result.index.equals(self.index)
         ):
             raise ValueError("Function did not transform")
