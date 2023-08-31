@@ -43,6 +43,7 @@ from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
 import os
+from io import BytesIO, StringIO
 from scipy import sparse
 import sys
 import sqlalchemy as sa
@@ -1005,8 +1006,6 @@ class TestCsv:
             warning_suffix = ""
         with warns_that_defaulting_to_pandas(suffix=warning_suffix):
             # This tests that we default to pandas on a buffer
-            from io import StringIO
-
             with open(pytest.csvs_names["test_read_csv_regular"], "r") as _f:
                 pd.read_csv(StringIO(_f.read()))
 
@@ -1880,11 +1879,13 @@ class TestJson:
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestExcel:
     @check_file_leaks
-    def test_read_excel(self, make_excel_file):
+    @pytest.mark.parametrize("pathlike", [False, True])
+    def test_read_excel(self, pathlike, make_excel_file):
+        unique_filename = make_excel_file()
         eval_io(
             fn_name="read_excel",
             # read_excel kwargs
-            io=make_excel_file(),
+            io=Path(unique_filename) if pathlike else unique_filename,
         )
 
     @check_file_leaks
@@ -2021,10 +2022,53 @@ class TestExcel:
         try:
             df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
             assert modin_excel_file.io == unique_filename
-            assert isinstance(modin_excel_file, pd.ExcelFile)
         finally:
             modin_excel_file.close()
             pandas_excel_file.close()
+
+    def test_ExcelFile_bytes(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            content = f.read()
+
+        modin_excel_file = pd.ExcelFile(content)
+        pandas_excel_file = pandas.ExcelFile(content)
+
+        df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
+
+    def test_read_excel_ExcelFile(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            content = f.read()
+
+        modin_excel_file = pd.ExcelFile(content)
+        pandas_excel_file = pandas.ExcelFile(content)
+
+        df_equals(pd.read_excel(modin_excel_file), pandas.read_excel(pandas_excel_file))
+
+    @pytest.mark.parametrize("use_bytes_io", [False, True])
+    def test_read_excel_bytes(self, use_bytes_io, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            io_bytes = f.read()
+
+        if use_bytes_io:
+            io_bytes = BytesIO(io_bytes)
+
+        eval_io(
+            fn_name="read_excel",
+            # read_excel kwargs
+            io=io_bytes,
+        )
+
+    def test_read_excel_file_handle(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            eval_io(
+                fn_name="read_excel",
+                # read_excel kwargs
+                io=f,
+            )
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self, tmp_path):

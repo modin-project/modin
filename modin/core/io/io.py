@@ -28,6 +28,7 @@ from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.utils import _inherit_docstrings
+from modin.pandas.io import ExcelFile
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -277,6 +278,12 @@ class BaseIO:
     )
     def read_excel(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_excel`")
+        if isinstance(kwargs["io"], ExcelFile):
+            # otherwise, Modin objects may be passed to the pandas context, resulting
+            # in undefined behavior
+            # for example in the case: pd.read_excel(pd.ExcelFile), since reading from
+            # pd.ExcelFile in `read_excel` isn't supported
+            kwargs["io"]._set_pandas_mode()
         intermediate = pandas.read_excel(**kwargs)
         if isinstance(intermediate, (OrderedDict, dict)):
             parsed = type(intermediate)()
