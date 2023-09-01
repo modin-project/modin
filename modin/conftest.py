@@ -587,10 +587,8 @@ def s3_base(worker_id, monkeysession):
             # - GitHub Actions do not support
             #   container services for the above OSs
             pytest.skip(
-                (
-                    "S3 tests do not have a corresponding service in Windows, macOS "
-                    + "or ARM platforms"
-                )
+                "S3 tests do not have a corresponding service in Windows, macOS "
+                + "or ARM platforms"
             )
         else:
             # assume CI has started moto in docker container:
@@ -607,8 +605,7 @@ def s3_base(worker_id, monkeysession):
         # If we hit this else-case, this test is being run locally. In that case, we want
         # each worker to point to a different port for its mock S3 service. The easiest way
         # to do that is to use the `worker_id`, which is unique, to determine what port to point
-        # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
-        # for each worker, and we never run tests with more than `pytest -n 4`.
+        # to.
         endpoint_port = (
             5500 if worker_id == "master" else (5550 + int(worker_id.lstrip("gw")))
         )
@@ -622,7 +619,7 @@ def s3_base(worker_id, monkeysession):
         with subprocess.Popen(
             ["moto_server", "s3", "-p", str(endpoint_port)],
             stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         ) as proc:
             for _ in range(50):
                 try:
@@ -633,7 +630,11 @@ def s3_base(worker_id, monkeysession):
                     # try again while we still have retries
                     time.sleep(0.1)
             else:
-                raise RuntimeError("Could not connect to moto server after 50 tries.")
+                _, errs = proc.communicate()
+                raise RuntimeError(
+                    "Could not connect to moto server after 50 tries. "
+                    + f"See stderr for extra info: {errs}"
+                )
             yield endpoint_uri
 
             proc.terminate()
