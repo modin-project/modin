@@ -2097,7 +2097,10 @@ def test_multi_column_groupby_different_partitions(
         and "custom_aggs_at_same_partition" in request.node.name
         or "renaming_aggs_at_same_partition" in request.node.name
     ):
-        pytest.xfail("AssertionError: 1.0 >= 0.0001 - float comparison problem")
+        pytest.xfail(
+            "After upgrade to pandas 2.1 skew results are different: AssertionError: 1.0 >= 0.0001."
+            + " See https://github.com/modin-project/modin/issues/6530 for details."
+        )
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
