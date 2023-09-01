@@ -38,7 +38,7 @@
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
-    "conda_channels": ["conda-forge"],
+    "conda_channels": ["conda-forge", "defaults"],
 
     "conda_environment_file": "../requirements/env_hdk.yml",
 

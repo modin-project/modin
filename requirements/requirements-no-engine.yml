@@ -32,16 +32,6 @@ dependencies:
   - pygit2>=1.9.2
 
   # test dependencies
-<<<<<<< HEAD
-<<<<<<< HEAD
-  - asv==0.5.1
-=======
-  - asv==0.6.0
-=======
-  - asv==0.5.1
->>>>>>> acf99073c (Revert "update asv to 0.6.0")
-  - boto3>=1.26.0
->>>>>>> 75001653d (update asv to 0.6.0)
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1
@@ -55,6 +45,7 @@ dependencies:
   - flake8-print>=5.0.0
 
   - pip:
+      - asv==0.5.1
       # no conda package for windows
       - connectorx>=0.2.6a4
       # Fixes breaking ipywidgets changes, but didn't release yet.

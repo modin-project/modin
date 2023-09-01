@@ -46,7 +46,6 @@ dependencies:
   - pygit2>=1.9.2
 
   # test dependencies
-  - asv==0.5.1
   - coverage>=7.1.0
   - moto>=4.1.0
   - pytest>=7.2.1
@@ -63,6 +62,7 @@ dependencies:
   - pandas-stubs>=2.0.0
 
   - pip:
+      - asv==0.5.1
       # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
       # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
