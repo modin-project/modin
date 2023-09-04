@@ -29,7 +29,6 @@ import unittest.mock as mock
 import functools
 import sys
 
-from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
 
