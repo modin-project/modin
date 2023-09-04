@@ -601,7 +601,7 @@ jobs:
           ${{ matrix.execution.shell-ex }} $PARALLEL \
                   modin/pandas/test/dataframe/test_binary.py \
                   modin/pandas/test/dataframe/test_default.py \
-                  modin/pandas/test/dataframe/test_iter.py -v
+                  modin/pandas/test/dataframe/test_iter.py
         if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
@@ -613,7 +613,7 @@ jobs:
         if: matrix.os != 'windows'
       - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_series.py
         if: matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_series.py -v
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_series.py
         if: matrix.execution.name != 'ray'
       - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_map_metadata.py
         if: matrix.execution.name == 'ray'
