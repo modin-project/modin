@@ -879,16 +879,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             assert all(
                 [len(partition.list_of_blocks) == 1 for partition in partitions]
             ), "Implementation assumes that each partition contains a single block."
-            blocks_to_materialize = [
-                partition.list_of_blocks[0] for partition in partitions
-            ]
-            try:
-                result = cls._execution_wrapper.materialize(blocks_to_materialize)
-            except Exception:
-                # wait for the end of computations so that the processes free up the resources used
-                cls._execution_wrapper.wait(blocks_to_materialize)
-                raise
-            return result
+            return cls._execution_wrapper.materialize(
+                [partition.list_of_blocks[0] for partition in partitions]
+            )
         return [partition.get() for partition in partitions]
 
     @classmethod
