@@ -707,4 +707,14 @@ def modify_config(request):
     yield  # waiting for the test to be completed
     # restoring old parameters
     for key, value in old_values.items():
-        key.put(value)
+        try:
+            key.put(value)
+        except ValueError as e:
+            # sometimes bool env variables have 'None' as a default value, which
+            # causes a ValueError when we try to set this value back, as technically,
+            # only bool values are allowed (and 'None' is not a bool), in this case
+            # we try to set 'False' instead
+            if key.type == bool and value is None:
+                key.put(False)
+            else:
+                raise e

@@ -31,7 +31,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
-from modin.config import Engine
+from modin.config import Engine, IsRayCluster
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -258,6 +258,20 @@ class PandasDataframe(ClassLogger):
         """
         return self._row_lengths_cache if axis == 0 else self._column_widths_cache
 
+    def _get_axis_lengths(self, axis: int = 0) -> List[int]:
+        """
+        Get row lengths/column widths.
+
+        Parameters
+        ----------
+        axis : int, default: 0
+
+        Returns
+        -------
+        list of ints
+        """
+        return self.row_lengths if axis == 0 else self.column_widths
+
     @property
     def has_dtypes_cache(self):
         """
@@ -394,8 +408,11 @@ class PandasDataframe(ClassLogger):
         ----------
         index : sequence, callable or None
         """
-        if isinstance(index, ModinIndex) or index is None:
-            self._index_cache = index
+        if index is None:
+            self._index_cache = ModinIndex(self, axis=0)
+        elif isinstance(index, ModinIndex):
+            # update reference with the new frame to not pollute memory
+            self._index_cache = index.maybe_specify_new_frame_ref(self, axis=0)
         else:
             self._index_cache = ModinIndex(index)
 
@@ -407,8 +424,11 @@ class PandasDataframe(ClassLogger):
         ----------
         columns : sequence, callable or None
         """
-        if isinstance(columns, ModinIndex) or columns is None:
-            self._columns_cache = columns
+        if columns is None:
+            self._columns_cache = ModinIndex(self, axis=1)
+        elif isinstance(columns, ModinIndex):
+            # update reference with the new frame to not pollute memory
+            self._columns_cache = columns.maybe_specify_new_frame_ref(self, axis=1)
         else:
             self._columns_cache = ModinIndex(columns)
 
@@ -426,6 +446,20 @@ class PandasDataframe(ClassLogger):
         else:
             self.set_columns_cache(value)
 
+    def has_axis_cache(self, axis=0) -> bool:
+        """
+        Check if the cache for the specified axis exists.
+
+        Parameters
+        ----------
+        axis : int, default: 0
+
+        Returns
+        -------
+        bool
+        """
+        return self.has_index_cache if axis == 0 else self.has_columns_cache
+
     @property
     def has_index_cache(self):
         """
@@ -437,19 +471,39 @@ class PandasDataframe(ClassLogger):
         """
         return self._index_cache is not None
 
-    def copy_index_cache(self):
+    def copy_index_cache(self, copy_lengths=False):
         """
         Copy the index cache.
 
+        Parameters
+        ----------
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
+
         Returns
         -------
-        pandas.Index, callable or None
+        pandas.Index, callable or ModinIndex
             If there is an pandas.Index in the cache, then copying occurs.
         """
         idx_cache = self._index_cache
         if self.has_index_cache:
-            idx_cache = self._index_cache.copy()
+            idx_cache = self._index_cache.copy(copy_lengths)
         return idx_cache
+
+    def _get_axis_cache(self, axis=0) -> ModinIndex:
+        """
+        Get axis cache for the specified axis if available.
+
+        Parameters
+        ----------
+        axis : int, default: 0
+
+        Returns
+        -------
+        ModinIndex
+        """
+        return self._index_cache if axis == 0 else self._columns_cache
 
     @property
     def has_columns_cache(self):
@@ -462,9 +516,15 @@ class PandasDataframe(ClassLogger):
         """
         return self._columns_cache is not None
 
-    def copy_columns_cache(self):
+    def copy_columns_cache(self, copy_lengths=False):
         """
         Copy the columns cache.
+
+        Parameters
+        ----------
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
@@ -473,16 +533,19 @@ class PandasDataframe(ClassLogger):
         """
         columns_cache = self._columns_cache
         if columns_cache is not None:
-            columns_cache = columns_cache.copy()
+            columns_cache = columns_cache.copy(copy_lengths)
         return columns_cache
 
-    def copy_axis_cache(self, axis=0):
+    def copy_axis_cache(self, axis=0, copy_lengths=False):
         """
         Copy the axis cache (index or columns).
 
         Parameters
         ----------
         axis : int, default: 0
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
@@ -490,9 +553,9 @@ class PandasDataframe(ClassLogger):
             If there is an pandas.Index in the cache, then copying occurs.
         """
         if axis == 0:
-            return self.copy_index_cache()
+            return self.copy_index_cache(copy_lengths)
         else:
-            return self.copy_columns_cache()
+            return self.copy_columns_cache(copy_lengths)
 
     @property
     def has_materialized_index(self):
@@ -1057,7 +1120,7 @@ class PandasDataframe(ClassLogger):
         else:
             row_partitions_dict = {i: slice(None) for i in range(len(self._partitions))}
             new_row_lengths = self._row_lengths_cache
-            new_index = self.copy_index_cache()
+            new_index = self.copy_index_cache(copy_lengths=True)
 
         if col_positions is not None:
             sorted_col_positions = self._get_sorted_positions(col_positions)
@@ -1085,7 +1148,7 @@ class PandasDataframe(ClassLogger):
                 i: slice(None) for i in range(len(self._partitions.T))
             }
             new_col_widths = self._column_widths_cache
-            new_columns = self.copy_columns_cache()
+            new_columns = self.copy_columns_cache(copy_lengths=True)
             new_dtypes = self.copy_dtypes_cache()
 
         new_partitions = np.array(
@@ -1357,7 +1420,7 @@ class PandasDataframe(ClassLogger):
                 new_lengths = self._row_lengths_cache
         else:
             ordered_rows = self._partitions
-            row_idx = self.index
+            row_idx = self.copy_index_cache(copy_lengths=True)
             new_lengths = self._row_lengths_cache
         if col_positions is not None:
             # We want to preserve the frame's partitioning so passing in ``keep_partitioning=True``
@@ -1387,7 +1450,7 @@ class PandasDataframe(ClassLogger):
                 new_widths = self._column_widths_cache
         else:
             ordered_cols = ordered_rows
-            col_idx = self.columns
+            col_idx = self.copy_columns_cache(copy_lengths=True)
             new_widths = self._column_widths_cache
         return self.__constructor__(
             ordered_cols, row_idx, col_idx, new_lengths, new_widths, new_dtypes
@@ -1405,8 +1468,8 @@ class PandasDataframe(ClassLogger):
         """
         return self.__constructor__(
             self._partitions,
-            self.copy_index_cache(),
-            self.copy_columns_cache(),
+            self.copy_index_cache(copy_lengths=True),
+            self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
             self.copy_dtypes_cache(),
@@ -1491,8 +1554,8 @@ class PandasDataframe(ClassLogger):
             )
         return self.__constructor__(
             new_frame,
-            self.copy_index_cache(),
-            self.copy_columns_cache(),
+            self.copy_index_cache(copy_lengths=True),
+            self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
@@ -2025,7 +2088,7 @@ class PandasDataframe(ClassLogger):
                 self.columns
             ), "New column's length must be identical to the previous columns"
         elif new_columns is None:
-            new_columns = self.copy_columns_cache()
+            new_columns = self.copy_columns_cache(copy_lengths=True)
         if isinstance(dtypes, str) and dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None and not isinstance(dtypes, pandas.Series):
@@ -2037,7 +2100,7 @@ class PandasDataframe(ClassLogger):
             )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(),
+            self.copy_index_cache(copy_lengths=True),
             new_columns,
             self._row_lengths_cache,
             self._column_widths_cache,
@@ -2117,8 +2180,8 @@ class PandasDataframe(ClassLogger):
         )
         return self.__constructor__(
             new_partitions,
-            self.copy_index_cache(),
-            self.copy_columns_cache(),
+            self.copy_index_cache(copy_lengths=True),
+            self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
         )
@@ -2162,8 +2225,8 @@ class PandasDataframe(ClassLogger):
         new_dtypes[col_labels] = new_cols_dtypes
         return self.__constructor__(
             self._partitions,
-            self.copy_index_cache(),
-            self.copy_columns_cache(),
+            self.copy_index_cache(copy_lengths=True),
+            self.copy_columns_cache(copy_lengths=True),
             self._row_lengths_cache,
             self._column_widths_cache,
             new_dtypes,
@@ -2306,7 +2369,7 @@ class PandasDataframe(ClassLogger):
             new_partitions = np.array([[partition] for partition in new_partitions])
             modin_frame = self.__constructor__(
                 new_partitions,
-                self.copy_index_cache(),
+                self.copy_index_cache(copy_lengths=True),
                 self.copy_columns_cache(),
                 self._row_lengths_cache,
                 [len(self.columns)] if self.has_materialized_columns else None,
@@ -2523,9 +2586,7 @@ class PandasDataframe(ClassLogger):
 
         new_axes, new_lengths = [0, 0], [0, 0]
 
-        new_axes[axis.value] = (
-            self.copy_index_cache() if axis.value == 0 else self.copy_columns_cache()
-        )
+        new_axes[axis.value] = self.copy_axis_cache(axis.value, copy_lengths=True)
         new_lengths[axis.value] = (
             self._row_lengths_cache if axis.value == 0 else self._column_widths_cache
         )
@@ -3223,6 +3284,37 @@ class PandasDataframe(ClassLogger):
             result.synchronize_labels(axis=1)
         return result
 
+    def _check_if_axes_identical(self, other: "PandasDataframe", axis: int = 0) -> bool:
+        """
+        Check whether indices/partitioning along the specified `axis` are identical when compared with `other`.
+
+        Parameters
+        ----------
+        other : PandasDataframe
+            Dataframe to compare indices/partitioning with.
+        axis : int, default: 0
+
+        Returns
+        -------
+        bool
+        """
+        if self.has_axis_cache(axis) and other.has_axis_cache(axis):
+            self_cache, other_cache = self._get_axis_cache(axis), other._get_axis_cache(
+                axis
+            )
+            equal_indices = self_cache.equals(other_cache)
+            if equal_indices:
+                equal_lengths = self_cache.compare_partition_lengths_if_possible(
+                    other_cache
+                )
+                if isinstance(equal_lengths, bool):
+                    return equal_lengths
+                return self._get_axis_lengths(axis) == other._get_axis_lengths(axis)
+            return False
+        return self.get_axis(axis).equals(
+            other.get_axis(axis)
+        ) and self._get_axis_lengths(axis) == other._get_axis_lengths(axis)
+
     def _copartition(self, axis, other, how, sort, force_repartition=False):
         """
         Copartition two Modin DataFrames.
@@ -3412,7 +3504,7 @@ class PandasDataframe(ClassLogger):
                 sort=True,
             )
         else:
-            joined_columns = self.copy_columns_cache()
+            joined_columns = self.copy_columns_cache(copy_lengths=True)
             column_widths = self._column_widths_cache
 
         new_frame = (
@@ -3477,21 +3569,17 @@ class PandasDataframe(ClassLogger):
             return widths
 
         # Fast path for equivalent columns and partitioning
-        if (
-            axis == Axis.ROW_WISE
-            and all(o.columns.equals(self.columns) for o in others)
-            and all(o.column_widths == self.column_widths for o in others)
+        if axis == Axis.ROW_WISE and all(
+            o._check_if_axes_identical(self, axis=1) for o in others
         ):
-            joined_index = self.columns
+            joined_index = self.copy_columns_cache(copy_lengths=True)
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_widths = self._column_widths_cache
-        elif (
-            axis == Axis.COL_WISE
-            and all(o.index.equals(self.index) for o in others)
-            and all(o.row_lengths == self.row_lengths for o in others)
+        elif axis == Axis.COL_WISE and all(
+            o._check_if_axes_identical(self, axis=0) for o in others
         ):
-            joined_index = self.index
+            joined_index = self.copy_index_cache(copy_lengths=True)
             left_parts = self._partitions
             right_parts = [o._partitions for o in others]
             new_lengths = self._row_lengths_cache
@@ -3580,6 +3668,7 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
+        align_result_columns=False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3597,6 +3686,10 @@ class PandasDataframe(ClassLogger):
             on the output desired by the user.
         result_schema : dict, optional
             Mapping from column labels to data types that represents the types of the output dataframe.
+        align_result_columns : bool, default: False
+            Whether to manually align columns between all the resulted row partitions.
+            This flag is helpful when dealing with UDFs as they can change the partition's shape
+            and labeling unpredictably, resulting in an invalid dataframe.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
@@ -3626,18 +3719,117 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
+        skip_on_aligning_flag = "__skip_me_on_aligning__"
+
         def apply_func(df):  # pragma: no cover
             if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"
                 )
-            return operator(df.groupby(by, **kwargs))
+            result = operator(df.groupby(by, **kwargs))
+            if (
+                align_result_columns
+                and df.empty
+                and result.empty
+                and df.columns.equals(result.columns)
+            ):
+                # We want to align columns only of those frames that actually performed
+                # some groupby aggregation, if an empty frame was originally passed
+                # (an empty bin on reshuffling was created) then there were no groupby
+                # executed over this partition and so it has incorrect columns
+                # that shouldn't be considered on the aligning phase
+                result.attrs[skip_on_aligning_flag] = True
+            return result
 
         result = self._apply_func_to_range_partitioning(
             key_columns=by,
             func=apply_func,
         )
+
+        # no need aligning columns if there's only one row partition
+        if align_result_columns and result._partitions.shape[0] > 1:
+            # FIXME: the current reshuffling implementation guarantees us that there's only one column
+            # partition in the result, so we should never hit this exception for now, however
+            # in the future, we might want to make this implementation more broader
+            if result._partitions.shape[1] > 1:
+                raise NotImplementedError(
+                    "Aligning columns is not yet implemented for multiple column partitions."
+                )
+
+            # There're two implementations:
+            #   1. The first one work faster, but may stress the network a lot in cluster mode since
+            #      it gathers all the dataframes in a single ray-kernel.
+            #   2. The second one works slower, but only gathers light pandas.Index objects,
+            #      so there should be less stress on the network.
+            if not IsRayCluster.get():
+
+                def compute_aligned_columns(*dfs):
+                    """Take row partitions, filter empty ones, and return joined columns for them."""
+                    valid_dfs = [
+                        df
+                        for df in dfs
+                        if not df.attrs.get(skip_on_aligning_flag, False)
+                    ]
+                    if len(valid_dfs) == 0 and len(dfs) != 0:
+                        valid_dfs = dfs
+
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
+                    return pandas.concat(
+                        [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
+                    ).columns
+
+                # Passing all partitions to the 'compute_aligned_columns' kernel to get
+                # aligned columns
+                parts = result._partitions.flatten()
+                aligned_columns = parts[0].apply(
+                    compute_aligned_columns, *[part._data for part in parts[1:]]
+                )
+
+                # Lazily applying aligned columns to partitions
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    lambda df, columns: df.reindex(columns=columns),
+                    func_args=(aligned_columns._data,),
+                )
+            else:
+
+                def join_cols(df, *cols):
+                    """Join `cols` and apply the joined columns to `df`."""
+                    valid_cols = [
+                        pandas.DataFrame(columns=col) for col in cols if col is not None
+                    ]
+                    if len(valid_cols) == 0:
+                        return df
+                    # Using '.concat()' on empty-slices instead of 'Index.join()'
+                    # in order to get identical behavior to pandas when it joins
+                    # results of different groups
+                    result_col = pandas.concat(valid_cols, axis=0, join="outer").columns
+                    return df.reindex(columns=result_col)
+
+                # Getting futures for columns of non-empty partitions
+                cols = [
+                    part.apply(
+                        lambda df: None
+                        if df.attrs.get(skip_on_aligning_flag, False)
+                        else df.columns
+                    )._data
+                    for part in result._partitions.flatten()
+                ]
+
+                # Lazily joining and applying the aligned columns
+                new_partitions = self._partition_mgr_cls.lazy_map_partitions(
+                    result._partitions,
+                    join_cols,
+                    func_args=cols,
+                )
+            result = self.__constructor__(
+                new_partitions,
+                index=result.copy_index_cache(),
+                row_lengths=result._row_lengths_cache,
+            )
 
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)
@@ -3873,8 +4065,8 @@ class PandasDataframe(ClassLogger):
             new_dtypes = None
         return self.__constructor__(
             new_partitions,
-            self.copy_columns_cache(),
-            self.copy_index_cache(),
+            self.copy_columns_cache(copy_lengths=True),
+            self.copy_index_cache(copy_lengths=True),
             self._column_widths_cache,
             self._row_lengths_cache,
             dtypes=new_dtypes,

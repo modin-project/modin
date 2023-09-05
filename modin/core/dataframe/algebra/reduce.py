@@ -20,7 +20,7 @@ class Reduce(Operator):
     """Builder class for Reduce operator."""
 
     @classmethod
-    def register(cls, reduce_function, axis=None):
+    def register(cls, reduce_function, axis=None, shape_hint=None):
         """
         Build Reduce operator that will be performed across rows/columns.
 
@@ -32,6 +32,8 @@ class Reduce(Operator):
             Source function.
         axis : int, optional
             Axis to apply function along.
+        shape_hint : {"row", "column", None}, default: None
+            Shape hint for the results known to be a column or a row, otherwise None.
 
         Returns
         -------
@@ -46,7 +48,8 @@ class Reduce(Operator):
                 query_compiler._modin_frame.reduce(
                     cls.validate_axis(_axis),
                     lambda x: reduce_function(x, *args, **kwargs),
-                )
+                ),
+                shape_hint=shape_hint,
             )
 
         return caller

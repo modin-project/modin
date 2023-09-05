@@ -835,10 +835,21 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
     Class for parsing tabular excel sheets into DataFrame objects.
     """
 
+    _behave_like_pandas = False
+
+    def _set_pandas_mode(self):  # noqa
+        # disable Modin behavior to be able to pass object to `pandas.read_excel`
+        # otherwise, Modin objects may be passed to the pandas context, resulting
+        # in undefined behavior
+        self._behave_like_pandas = True
+
     def __getattribute__(self, item):
+        if item in ["_set_pandas_mode", "_behave_like_pandas"]:
+            return object.__getattribute__(self, item)
+
         default_behaviors = ["__init__", "__class__"]
         method = super(ExcelFile, self).__getattribute__(item)
-        if item not in default_behaviors:
+        if not self._behave_like_pandas and item not in default_behaviors:
             if callable(method):
 
                 def return_handler(*args, **kwargs):

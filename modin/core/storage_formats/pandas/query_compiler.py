@@ -687,7 +687,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return df
 
             if self._modin_frame.has_columns_cache and kwargs["drop"]:
-                new_columns = self._modin_frame.copy_columns_cache()
+                new_columns = self._modin_frame.copy_columns_cache(copy_lengths=True)
             else:
                 new_columns = None
 
@@ -972,9 +972,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 count_cols = count_cols.sum(axis=axis, skipna=False)
             return sum_cols / count_cols
 
+        def compute_dtypes_fn(dtypes, axis, **kwargs):
+            """
+            Compute the resulting Series dtype.
+
+            When computing along rows and there are numeric and boolean columns
+            Pandas returns `object`. In all other cases - `float64`.
+            """
+            if (
+                axis == 1
+                and any(is_bool_dtype(t) for t in dtypes)
+                and any(is_numeric_dtype(t) for t in dtypes)
+            ):
+                return "object"
+            return "float64"
+
         return TreeReduce.register(
             map_fn,
             reduce_fn,
+            compute_dtypes=compute_dtypes_fn,
         )(self, axis=axis, **kwargs)
 
     # END TreeReduce operations
@@ -1013,10 +1029,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # to_datetime has inplace side effects, see GH#3063
                 lambda df, *args, **kwargs: pandas.to_datetime(
                     df.squeeze(axis=1), *args, **kwargs
-                ).to_frame()
+                ).to_frame(),
+                shape_hint="column",
             )(self, *args, **kwargs)
         else:
-            return Reduce.register(pandas.to_datetime, axis=1)(self, *args, **kwargs)
+            return Reduce.register(pandas.to_datetime, axis=1, shape_hint="column")(
+                self, *args, **kwargs
+            )
 
     # END Reduce operations
 
@@ -2483,8 +2502,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             axis,
             lambda df: df.rank(**kwargs),
-            new_index=self._modin_frame.copy_index_cache(),
-            new_columns=self._modin_frame.copy_columns_cache()
+            new_index=self._modin_frame.copy_index_cache(copy_lengths=True),
+            new_columns=self._modin_frame.copy_columns_cache(copy_lengths=True)
             if not numeric_only
             else None,
             dtypes=np.float64,
@@ -2674,7 +2693,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=1,
             func=_set_item,
             other=row_loc._modin_frame,
-            new_index=self._modin_frame.copy_index_cache(),
+            new_index=self._modin_frame.copy_index_cache(copy_lengths=True),
             new_columns=self._modin_frame.copy_columns_cache(),
             keep_partitioning=False,
             dtypes=new_dtypes,
@@ -3580,6 +3599,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis=axis,
             by=by,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
+            # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
+            # that's why we have to align the partition's shapes/labeling across different
+            # row partitions
+            align_result_columns=how == "group_wise",
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)

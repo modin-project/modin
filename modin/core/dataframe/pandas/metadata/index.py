@@ -13,8 +13,10 @@
 
 """Module contains class ModinIndex."""
 
+import uuid
 import pandas
 from pandas.core.indexes.api import ensure_index
+import functools
 
 
 class ModinIndex:
@@ -23,15 +25,93 @@ class ModinIndex:
 
     Parameters
     ----------
-    value : sequence or callable
+    value : sequence, PandasDataframe or callable() -> (pandas.Index, list of ints)
+        If a sequence passed this will be considered as the index values.
+        If a ``PandasDataframe`` passed then it will be used to lazily extract indices
+        when required, note that the `axis` parameter must be passed in this case.
+        If a callable passed then it's expected to return a pandas Index and a list of
+        partition lengths along the index axis.
+    axis : int, optional
+        Specifies an axis the object represents, serves as an optional hint. This parameter
+        must be passed in case value is a ``PandasDataframe``.
     """
 
-    def __init__(self, value):
+    def __init__(self, value, axis=None):
+        from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+        self._is_default_callable = False
+        self._axis = axis
+
         if callable(value):
             self._value = value
+        elif isinstance(value, PandasDataframe):
+            assert axis is not None
+            self._value = self._get_default_callable(value, axis)
+            self._is_default_callable = True
         else:
             self._value = ensure_index(value)
+
         self._lengths_cache = None
+        # index/lengths ID's for faster comparison between other ModinIndex objects,
+        # these should be propagated to the copies of the index
+        self._index_id = uuid.uuid4()
+        self._lengths_id = uuid.uuid4()
+
+    @staticmethod
+    def _get_default_callable(dataframe_obj, axis):
+        """
+        Build a callable extracting index labels and partitions lengths for the specified axis.
+
+        Parameters
+        ----------
+        dataframe_obj : PandasDataframe
+        axis : int
+            0 - extract indices, 1 - extract columns.
+
+        Returns
+        -------
+        callable() -> tuple(pandas.Index, list[ints])
+        """
+        # HACK: for an unknown reason, the 'lambda' approach seems to trigger some strange
+        # race conditions in HDK on certain versions of python, causing the tests to fail
+        # (python 3.9.* and 3.10.* are the versions where we saw the problem). That's
+        # really strange, but practically the same code that uses 'functools.partial'
+        # instead of a lambda works absolutely fine.
+        # return lambda: dataframe_obj._compute_axis_labels_and_lengths(axis)
+        return functools.partial(
+            type(dataframe_obj)._compute_axis_labels_and_lengths, dataframe_obj, axis
+        )
+
+    def maybe_specify_new_frame_ref(self, value, axis) -> "ModinIndex":
+        """
+        Set a new reference for a frame used to lazily extract index labels if it's needed.
+
+        The method sets a new reference only if the indices are not yet materialized and
+        if a PandasDataframe was originally passed to construct this index (so the ModinIndex
+        object holds a reference to it). The reason the reference should be updated is that
+        we don't want to hold in memory those frames that are already not needed. Once the
+        reference is updated, the old frame will be garbage collected if there are no
+        more references to it.
+
+        Parameters
+        ----------
+        value : PandasDataframe
+            New dataframe to reference.
+        axis : int
+            Axis to extract labels from.
+
+        Returns
+        -------
+        ModinIndex
+            New ModinIndex with the reference updated.
+        """
+        if not callable(self._value) or not self._is_default_callable:
+            return self
+
+        new_index = self.copy(copy_lengths=True)
+        new_index._axis = axis
+        new_index._value = self._get_default_callable(value, new_index._axis)
+        return new_index
 
     @property
     def is_materialized(self) -> bool:
@@ -70,6 +150,63 @@ class ModinIndex:
         else:
             return self._value
 
+    def equals(self, other: "ModinIndex") -> bool:
+        """
+        Check equality of the index values.
+
+        Parameters
+        ----------
+        other : ModinIndex
+
+        Returns
+        -------
+        bool
+            The result of the comparison.
+        """
+        if self._index_id == other._index_id:
+            return True
+
+        if not self.is_materialized:
+            self.get()
+
+        if not other.is_materialized:
+            other.get()
+
+        return self._value.equals(other._value)
+
+    def compare_partition_lengths_if_possible(self, other: "ModinIndex"):
+        """
+        Compare the partition lengths cache for the index being stored if possible.
+
+        The ``ModinIndex`` object may sometimes store the information about partition
+        lengths along the axis the index belongs to. If both `self` and `other` have
+        this information or it can be inferred from them, the method returns
+        a boolean - the result of the comparison, otherwise it returns ``None``
+        as an indication that the comparison cannot be made.
+
+        Parameters
+        ----------
+        other : ModinIndex
+
+        Returns
+        -------
+        bool or None
+            The result of the comparison if both `self` and `other` contain
+            the lengths data, ``None`` otherwise.
+        """
+        if self._lengths_id == other._lengths_id:
+            return True
+
+        can_extract_lengths_from_self = self._lengths_cache is not None or callable(
+            self._value
+        )
+        can_extract_lengths_from_other = other._lengths_cache is not None or callable(
+            other._value
+        )
+        if can_extract_lengths_from_self and can_extract_lengths_from_other:
+            return self.get(return_lengths=True)[1] == other.get(return_lengths=True)[1]
+        return None
+
     def __len__(self):
         """
         Redirect the 'len' request to the internal representation.
@@ -100,9 +237,16 @@ class ModinIndex:
         during the construction of the object, `__getattr__` function is called, which
         is not intended to be used in situations where the object is not initialized.
         """
-        if self._lengths_cache is not None:
-            return (self.__class__, (lambda: (self._value, self._lengths_vache),))
-        return (self.__class__, (self._value,))
+        return (
+            self.__class__,
+            (self._value, self._axis),
+            {
+                "_lengths_cache": self._lengths_cache,
+                "_index_id": self._index_id,
+                "_lengths_id": self._lengths_id,
+                "_is_default_callable": self._is_default_callable,
+            },
+        )
 
     def __getattr__(self, name):
         """
@@ -130,9 +274,15 @@ class ModinIndex:
             self.get()
         return self._value.__getattribute__(name)
 
-    def copy(self) -> "ModinIndex":
+    def copy(self, copy_lengths=False) -> "ModinIndex":
         """
         Copy an object without materializing the internal representation.
+
+        Parameters
+        ----------
+        copy_lengths : bool, default: False
+            Whether to copy the stored partition lengths to the
+            new index object.
 
         Returns
         -------
@@ -141,4 +291,10 @@ class ModinIndex:
         idx_cache = self._value
         if not callable(idx_cache):
             idx_cache = idx_cache.copy()
-        return ModinIndex(idx_cache)
+        result = ModinIndex(idx_cache, axis=self._axis)
+        result._index_id = self._index_id
+        result._is_default_callable = self._is_default_callable
+        if copy_lengths:
+            result._lengths_cache = self._lengths_cache
+            result._lengths_id = self._lengths_id
+        return result

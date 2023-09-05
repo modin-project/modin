@@ -533,7 +533,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
     @classmethod
     @wait_computations_if_benchmark_mode
-    def lazy_map_partitions(cls, partitions, map_func):
+    def lazy_map_partitions(cls, partitions, map_func, func_args=None):
         """
         Apply `map_func` to every partition in `partitions` *lazily*.
 
@@ -543,6 +543,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Partitions of Modin Frame.
         map_func : callable
             Function to apply.
+        func_args : iterable, optional
+            Positional arguments for the 'map_func'.
 
         Returns
         -------
@@ -552,7 +554,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
             [
-                [part.add_to_apply_calls(preprocessed_map_func) for part in row]
+                [
+                    part.add_to_apply_calls(
+                        preprocessed_map_func,
+                        *(tuple() if func_args is None else func_args),
+                    )
+                    for part in row
+                ]
                 for row in partitions
             ]
         )

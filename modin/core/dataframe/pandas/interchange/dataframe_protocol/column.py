@@ -251,7 +251,7 @@ class PandasProtocolColumn(ProtocolColumn):
         # Otherwise, we get mismatching internal and external indices for both axes
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
-        self._null_count_cache = intermediate_df.to_pandas().squeeze()
+        self._null_count_cache = intermediate_df.to_pandas().squeeze(axis=1).item()
         return self._null_count_cache
 
     @property
@@ -411,15 +411,18 @@ class PandasProtocolColumn(ProtocolColumn):
             buf = self._col.to_numpy().flatten()
 
             # Determine the encoding for valid values
-            valid = 1 if invalid == 0 else 0
+            valid = invalid == 0
+            invalid = not valid
 
-            mask = [valid if type(buf[i]) is str else invalid for i in range(buf.size)]
+            mask = np.empty(shape=(len(buf),), dtype=np.bool_)
+            for i, obj in enumerate(buf):
+                mask[i] = valid if isinstance(obj, str) else invalid
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
-            buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
+            buffer = PandasProtocolBuffer(mask)
 
             # Define the dtype of the returned buffer
-            dtype = (DTypeKind.UINT, 8, "C", "=")
+            dtype = (DTypeKind.BOOL, 8, "b", "=")
 
             self._validity_buffer_cache = (buffer, dtype)
             return self._validity_buffer_cache
