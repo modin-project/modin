@@ -670,7 +670,14 @@ class Series(BasePandasDataset):
         Call ``func`` on self producing a `BasePandasDataset` with the same axis shape as self.
         """
         if isinstance(func, list):
-            # drop nonunique functions
+            # drop nonunique functions to align with pandas behavior instead of getting
+            # "pandas.errors.SpecificationError: Function names must be unique..."
+            # Example:
+            # >>> pandas.Series([0., 1., 4.]).transform(["sqrt", "sqrt"])
+            # sqrt
+            # 0   0.0
+            # 1   1.0
+            # 2   2.0
             unique_func = [func[0]]
             for one_func in func[1:]:
                 if one_func not in unique_func:
