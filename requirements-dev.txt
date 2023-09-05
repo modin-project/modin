@@ -16,7 +16,7 @@ distributed>=2.22.0
 xarray>=2022.03.0
 Jinja2>=3.1.2
 scipy>=1.8.1
-s3fs>=2022.05.0
+s3fs>=2022.05.0,<2023.9.0
 lxml>=4.8.0
 openpyxl>=3.0.10
 xlrd>=2.0.1
@@ -41,10 +41,10 @@ PyGithub>=1.58.0
 pygit2>=1.9.2
 
 ## test dependencies
+asv==0.5.1
 coverage>=7.1.0
 # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
 fuzzydata>=0.0.6
-git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
 # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0
 moto>=4.1.0

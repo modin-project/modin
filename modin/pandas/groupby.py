@@ -39,7 +39,6 @@ from modin.utils import (
 from modin.pandas.utils import cast_function_modin2pandas
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from modin.config import IsExperimental
 from .series import Series
 from .window import RollingGroupby
 from .utils import is_label
@@ -184,31 +183,19 @@ class DataFrameGroupBy(ClassLogger):
                 return self.__getitem__(key)
             raise err
 
-    # TODO: `.__getattribute__` overriding is broken in experimental mode. We should
-    # remove this branching one it's fixed:
-    # https://github.com/modin-project/modin/issues/5536
-    if not IsExperimental.get():
+    def __getattribute__(self, item):
+        attr = super().__getattribute__(item)
+        if item not in _DEFAULT_BEHAVIOUR and not self._query_compiler.lazy_execution:
+            # We default to pandas on empty DataFrames. This avoids a large amount of
+            # pain in underlying implementation and returns a result immediately rather
+            # than dealing with the edge cases that empty DataFrames have.
+            if callable(attr) and self._df.empty and hasattr(self._pandas_class, item):
 
-        def __getattribute__(self, item):
-            attr = super().__getattribute__(item)
-            if (
-                item not in _DEFAULT_BEHAVIOUR
-                and not self._query_compiler.lazy_execution
-            ):
-                # We default to pandas on empty DataFrames. This avoids a large amount of
-                # pain in underlying implementation and returns a result immediately rather
-                # than dealing with the edge cases that empty DataFrames have.
-                if (
-                    callable(attr)
-                    and self._df.empty
-                    and hasattr(self._pandas_class, item)
-                ):
+                def default_handler(*args, **kwargs):
+                    return self._default_to_pandas(item, *args, **kwargs)
 
-                    def default_handler(*args, **kwargs):
-                        return self._default_to_pandas(item, *args, **kwargs)
-
-                    return default_handler
-            return attr
+                return default_handler
+        return attr
 
     @property
     def ngroups(self):

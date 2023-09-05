@@ -25,7 +25,7 @@ dependencies:
   - xarray>=2022.03.0
   - jinja2>=3.1.2
   - scipy>=1.8.1
-  - s3fs>=2022.05.0
+  - s3fs>=2022.05.0,<2023.9.0
   - lxml>=4.8.0
   - openpyxl>=3.0.10
   - xlrd>=2.0.1
@@ -62,12 +62,12 @@ dependencies:
   - pandas-stubs>=2.0.0
 
   - pip:
+      - asv==0.5.1
       # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
       # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
       - fuzzydata>=0.0.6
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-      - git+https://github.com/airspeed-velocity/asv.git@ef016e233cb9a0b19d517135104f49e0a3c380e9
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
       - numpydoc==1.1.0

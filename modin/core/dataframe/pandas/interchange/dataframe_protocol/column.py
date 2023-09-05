@@ -251,7 +251,7 @@ class PandasProtocolColumn(ProtocolColumn):
         # Otherwise, we get mismatching internal and external indices for both axes
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
-        self._null_count_cache = intermediate_df.to_pandas().squeeze()
+        self._null_count_cache = intermediate_df.to_pandas().squeeze(axis=1).item()
         return self._null_count_cache
 
     @property
