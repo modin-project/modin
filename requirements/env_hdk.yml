@@ -13,7 +13,7 @@ dependencies:
   - psutil>=5.8.0
 
   # optional dependencies
-  - s3fs>=2021.8
+  - s3fs>=2021.8,<2023.9.0
   - openpyxl>=3.0.10
   - xlrd>=2.0.1
   - sqlalchemy>=1.4.0,<1.4.46
