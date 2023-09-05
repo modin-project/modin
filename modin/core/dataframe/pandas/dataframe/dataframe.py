@@ -31,7 +31,7 @@ from pandas.core.dtypes.common import (
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
 
-from modin.config import Engine, IsRayCluster
+from modin.config import Engine, IsRayCluster, NPartitions
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.storage_formats.pandas.utils import get_length_list
 from modin.error_message import ErrorMessage
@@ -44,7 +44,7 @@ from modin.core.dataframe.base.dataframe.utils import (
     JoinType,
 )
 from modin.core.dataframe.pandas.dataframe.utils import (
-    build_sort_functions,
+    ShuffleSortFunctions,
     lazy_metadata_decorator,
 )
 from modin.core.dataframe.pandas.metadata import (
@@ -2411,7 +2411,10 @@ class PandasDataframe(ClassLogger):
         if self._partitions.shape[0] == 1:
             return self.apply_full_axis(axis=1, func=func)
 
-        ideal_num_new_partitions = len(self._partitions)
+        key_columns = key_columns if isinstance(key_columns, list) else [key_columns]
+
+        # don't want to inherit over-partitioning so doing this 'min' check
+        ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
         m = len(self.index) / ideal_num_new_partitions
         sampling_probability = (1 / m) * np.log(
             ideal_num_new_partitions * len(self.index)
@@ -2432,7 +2435,7 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
-        shuffling_functions = build_sort_functions(
+        shuffling_functions = ShuffleSortFunctions(
             self,
             key_columns,
             ascending[0] if is_list_like(ascending) else ascending,
@@ -2535,7 +2538,7 @@ class PandasDataframe(ClassLogger):
             )
 
         result = self._apply_func_to_range_partitioning(
-            key_columns=columns, func=sort_function, ascending=ascending, **kwargs
+            key_columns=columns[0], func=sort_function, ascending=ascending, **kwargs
         )
 
         result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)

@@ -21,14 +21,32 @@ from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
 import abc
 
 from modin.error_message import ErrorMessage
-import modin.config as cfg
+from modin.utils import _inherit_docstrings
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
-ColumnsInfo = namedtuple("ColumnsInfo", ["name", "pivots", "is_numeric"])
+ColumnInfo = namedtuple("ColumnInfo", ["name", "pivots", "is_numeric"])
+
 
 class ShuffleFunctions:
+    """
+    Defines an interface to perform the sampling, quantiles picking, and the splitting stages for the range-partitioning building.
+
+    Parameters
+    ----------
+    modin_frame : PandasDataframe
+        The frame to build the range-partitioning for.
+    columns : str or list of strings
+        The column/columns to use as a key.
+    ascending : bool
+        Whether the ranges should be in ascending or descending order.
+    ideal_num_new_partitions : int
+        The ideal number of bins.
+    **kwargs : dict
+        Additional keyword arguments.
+    """
+
     def __init__(
         self, modin_frame, columns, ascending, ideal_num_new_partitions, **kwargs
     ):
@@ -36,12 +54,24 @@ class ShuffleFunctions:
 
     @abc.abstractmethod
     def sample_fn(self, partition: pandas.DataFrame) -> pandas.DataFrame:
+        """
+        Pick samples over the given partition.
+
+        Parameters
+        ----------
+        partition : pandas.DataFrame
+
+        Returns
+        -------
+        pandas.DataFrame:
+            The samples for the partition.
+        """
         pass
 
     @abc.abstractmethod
     def pivot_fn(self, samples: "list[pandas.DataFrame]") -> int:
         """
-        Determine quantiles from the given samples.
+        Determine quantiles from the given samples and save it for the future ``.split_fn()`` calls.
 
         Parameters
         ----------
@@ -49,65 +79,32 @@ class ShuffleFunctions:
 
         Returns
         -------
-        np.ndarray
-            A list of overall quantiles.
+        int
+            The number of bins the ``.split_fn()`` will return.
         """
         pass
 
     @abc.abstractmethod
     def split_fn(self, partition: pandas.DataFrame) -> "tuple[pandas.DataFrame, ...]":
         """
-        Split the given dataframe into the partitions specified by `pivots`.
+        Split the given dataframe into the range-partitions defined by the preceding call of the ``.pivot_fn()``.
 
         Parameters
         ----------
         partition : pandas.DataFrame
-        pivots : np.ndarray
 
         Returns
         -------
         tuple of pandas.DataFrames
+
+        Notes
+        -----
+        In order to call this method you must call the ``.pivot_fn()`` first.
         """
         pass
 
 
-
-def build_sort_functions(
-    modin_frame: "PandasDataframe",
-    columns: Union[str, list],
-    ascending: Union[list, bool],
-    ideal_num_new_partitions: int,
-    **kwargs: dict,
-) -> ShuffleFunctions:
-    """
-    Return a named tuple containing the functions necessary to perform a sort.
-
-    Parameters
-    ----------
-    modin_frame : PandasDataframe
-        The frame calling these sort functions.
-    columns : str or list of strings
-        The column/columns to sort by.
-    ascending : bool
-        The ascending flag.
-    ideal_num_new_partitions : int
-        The ideal number of new partitions.
-    **kwargs : dict
-        Additional keyword arguments.
-
-    Returns
-    -------
-    ShuffleFunctions :
-        A named tuple containing the functions to pick quantiles, choose pivot points, and split
-        partitions for sorting.
-    """
-    sort_fns = ShuffleSortFunctions(
-        modin_frame, columns, ascending, ideal_num_new_partitions, **kwargs
-    )
-
-    return sort_fns
-
-
+@_inherit_docstrings(ShuffleFunctions)
 class ShuffleSortFunctions(ShuffleFunctions):
     """
     Perform the sampling, quantiles picking, and the splitting stages for the range-partitioning building.
@@ -135,47 +132,22 @@ class ShuffleSortFunctions(ShuffleFunctions):
         **kwargs: dict,
     ):
         self.frame_len = len(modin_frame.index)
-        self.ideal_num_new_partitions = min(
-            ideal_num_new_partitions, cfg.NPartitions.get()
-        )
+        self.ideal_num_new_partitions = ideal_num_new_partitions
         self.columns = columns if is_list_like(columns) else [columns]
         self.ascending = ascending
         self.kwargs = kwargs.copy()
         self.columns_info = None
 
     def sample_fn(self, partition: pandas.DataFrame) -> pandas.DataFrame:
-        """
-        Pick samples over the given partition.
-
-        Parameters
-        ----------
-        partition : pandas.DataFrame
-
-        Returns
-        -------
-        pandas.DataFrame:
-            The samples for the partition.
-        """
         return self.pick_samples_for_quantiles(
             partition[self.columns], self.ideal_num_new_partitions, self.frame_len
         )
 
     def pivot_fn(self, samples: "list[pandas.DataFrame]") -> int:
-        """
-        Determine quantiles from the given samples.
-
-        Parameters
-        ----------
-        samples : list of pandas.DataFrames
-
-        Returns
-        -------
-        int
-        """
         key = self.kwargs.get("key", None)
         samples = pandas.concat(samples, axis=0, copy=False)
 
-        columns_info : "list[ColumnsInfo]" = []
+        columns_info: "list[ColumnInfo]" = []
         number_of_groups = 1
         cols = []
         for col in samples.columns:
@@ -193,27 +165,18 @@ class ShuffleSortFunctions(ShuffleFunctions):
                 # arithmetic on the values.
                 method = "inverted_cdf"
 
-            pivots = self.pick_pivots_from_samples_for_sort(column_val, num_pivots, method, key)
-            columns_info.append(ColumnsInfo(col, pivots, is_numeric))
+            pivots = self.pick_pivots_from_samples_for_sort(
+                column_val, num_pivots, method, key
+            )
+            columns_info.append(ColumnInfo(col, pivots, is_numeric))
             number_of_groups *= len(pivots) + 1
         self.columns_info = columns_info
         return number_of_groups
 
     def split_fn(
-        self, partition: pandas.DataFrame,
+        self,
+        partition: pandas.DataFrame,
     ) -> "tuple[pandas.DataFrame, ...]":
-        """
-        Split the given dataframe into the partitions specified by `pivots`.
-
-        Parameters
-        ----------
-        partition : pandas.DataFrame
-        pivots : np.ndarray
-
-        Returns
-        -------
-        tuple of pandas.DataFrames
-        """
         ErrorMessage.catch_bugs_and_request_email(
             failure_condition=self.columns_info is None,
             extra_log="The 'split_fn' doesn't have proper metadata, the probable reason is that it was called before 'pivot_fn'",
@@ -351,12 +314,12 @@ class ShuffleSortFunctions(ShuffleFunctions):
     @staticmethod
     def split_partitions_using_pivots_for_sort(
         df: pandas.DataFrame,
-        columns_info: "list[ColumnsInfo]",
+        columns_info: "list[ColumnInfo]",
         ascending: bool,
         **kwargs: dict,
     ) -> "tuple[pandas.DataFrame, ...]":
         """
-        Split the given dataframe into the partitions specified by `pivots`.
+        Split the given dataframe into the partitions specified by `pivots` in `columns_info`.
 
         This function takes as input a row-axis partition, as well as the quantiles determined
         by the `pivot_func` defined above. It then splits the input dataframe into NPartitions.get()
@@ -367,12 +330,8 @@ class ShuffleSortFunctions(ShuffleFunctions):
         ----------
         df : pandas.Dataframe
             The partition to split.
-        column : str
-            The major column to sort by.
-        is_numeric_column : bool
-            Whether the passed `column` has numeric type (int, float).
-        pivots : np.ndarray
-            The quantiles to use to split the data.
+        columns_info : list of ColumnInfo
+            Information regarding keys and pivots for range partitioning.
         ascending : bool
             The ascending flag.
         **kwargs : dict
@@ -386,9 +345,6 @@ class ShuffleSortFunctions(ShuffleFunctions):
         if len(columns_info) == 0:
             # We can return the dataframe with zero changes if there were no pivots passed
             return (df,)
-        # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
-        # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
-        # which breaks when we reverse the pivots.
 
         na_index = (
             df[[col_info.name for col_info in columns_info]].isna().squeeze(axis=1)
@@ -399,6 +355,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         non_na_rows = df[~na_index]
 
         def get_group(grp, key, df):
+            """Get a group with the `key` from the `grp`, if it doesn't exist return an empty slice of `df`."""
             try:
                 return grp.get_group(key)
             except KeyError:
@@ -410,6 +367,11 @@ class ShuffleSortFunctions(ShuffleFunctions):
         group_keys = []
         for col_info in columns_info:
             pivots = col_info.pivots
+            if len(pivots) == 0:
+                continue
+            # If `ascending=False` and we are dealing with a numeric dtype, we can pass in a reversed list
+            # of pivots, and `np.digitize` will work correctly. For object dtypes, we use `np.searchsorted`
+            # which breaks when we reverse the pivots.
             if not ascending and col_info.is_numeric:
                 # `key` is already applied to `pivots` in the `pick_pivots_from_samples_for_sort` function.
                 pivots = pivots[::-1]
@@ -437,10 +399,13 @@ class ShuffleSortFunctions(ShuffleFunctions):
                     groupby_col = len(pivots) - groupby_col
             groupby_codes.append(groupby_col)
 
-        if len(group_keys) > 1:
-            group_keys = pandas.MultiIndex.from_product(group_keys)
-        else:
+        if len(group_keys) == 0:
+            # We can return the dataframe with zero changes if there were no pivots passed
+            return (df,)
+        elif len(group_keys) == 1:
             group_keys = group_keys[0]
+        else:
+            group_keys = pandas.MultiIndex.from_product(group_keys)
 
         if len(non_na_rows) == 1:
             groups = [

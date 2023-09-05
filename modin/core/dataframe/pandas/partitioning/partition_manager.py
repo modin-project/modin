@@ -28,13 +28,14 @@ from typing import TYPE_CHECKING
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode, DoUseCalcite
+from modin.config import NPartitions, ProgressBar, BenchmarkMode
 from modin.logging import ClassLogger
 
 import os
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions
+
 
 def wait_computations_if_benchmark_mode(func):
     """
@@ -1566,7 +1567,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def shuffle_partitions(
-        cls, partitions, index, shuffle_functions : "ShuffleFunctions", final_shuffle_func
+        cls,
+        partitions,
+        index,
+        shuffle_functions: "ShuffleFunctions",
+        final_shuffle_func,
     ):
         """
         Return shuffled partitions.
@@ -1575,10 +1580,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         ----------
         partitions : np.ndarray
             The 2-d array of partitions to shuffle.
-        index : int
-            The index of partitions corresponding to the partitions that contain the column to sample.
+        index : int or list of ints
+            The index(es) of the column partitions corresponding to the partitions that contain the column to sample.
         shuffle_functions : ShuffleFunctions
-            A named tuple containing the functions that we will be using to perform this shuffle.
+            An object implementing the functions that we will be using to perform this shuffle.
         final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
             Function that shuffles the data within each new partition.
 
@@ -1600,18 +1605,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             ]
         # Get each sample to pass in to the pivot function
         samples = cls.get_objects_from_partitions(samples)
-        npivots = shuffle_functions.pivot_fn(samples)
+        num_bins = shuffle_functions.pivot_fn(samples)
         # Convert our list of block partitions to row partitions. We need to create full-axis
         # row partitions since we need to send the whole partition to the split step as otherwise
         # we wouldn't know how to split the block partitions that don't contain the shuffling key.
         row_partitions = cls.row_partitions(partitions)
-        if npivots:
+        if num_bins > 1:
             # Gather together all of the sub-partitions
             split_row_partitions = np.array(
                 [
                     partition.split(
                         shuffle_functions.split_fn,
-                        num_splits=npivots,
+                        num_splits=num_bins,
                         # The partition's metadata will never be accessed for the split partitions,
                         # thus no need to compute it.
                         extract_metadata=False,

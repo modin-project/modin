@@ -841,7 +841,10 @@ def test_split_partitions_kernel(
         Duplicate pivot values cause empty partitions to be produced. This parameter helps
         to verify that the function still behaves correctly in such cases.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import ShuffleSortFunctions
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        ShuffleSortFunctions,
+        ColumnInfo,
+    )
 
     random_state = np.random.RandomState(42)
 
@@ -865,9 +868,13 @@ def test_split_partitions_kernel(
     df = df.reindex(random_state.permutation(df.index))
     bins = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        col_name,
-        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
-        pivots=pivots,
+        [
+            ColumnInfo(
+                name=col_name,
+                is_numeric=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+                pivots=pivots,
+            )
+        ],
         ascending=ascending,
     )
 
@@ -902,7 +909,10 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
     This test verifies that the splitting function performs correctly when an empty pivots list is passed.
     The expected behavior is to return a single split consisting of the exact copy of the input dataframe.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import ShuffleSortFunctions
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        ShuffleSortFunctions,
+        ColumnInfo,
+    )
 
     df = pandas.DataFrame(
         {
@@ -913,9 +923,13 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
 
     result = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        col_name,
-        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
-        pivots=[],
+        [
+            ColumnInfo(
+                name=col_name,
+                is_numeric=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+                pivots=[],
+            )
+        ],
         ascending=ascending,
     )
     # We're expecting to recieve a single split here
@@ -936,12 +950,12 @@ def test_shuffle_partitions_with_empty_pivots(ascending):
     assert modin_frame._partitions.shape == (1, 1)
 
     from modin.core.dataframe.pandas.dataframe.utils import (
-        build_sort_functions,
+        ShuffleSortFunctions,
     )
 
     column_name = modin_frame.columns[1]
 
-    shuffle_functions = build_sort_functions(
+    shuffle_functions = ShuffleSortFunctions(
         # These are the parameters we pass in the `.sort_by()` implementation
         modin_frame,
         columns=column_name,
@@ -968,7 +982,10 @@ def test_split_partition_preserve_names(ascending):
     This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
     preserve their index/column names.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import ShuffleSortFunctions
+    from modin.core.dataframe.pandas.dataframe.utils import (
+        ShuffleSortFunctions,
+        ColumnInfo,
+    )
 
     df = pandas.DataFrame(
         {
@@ -984,9 +1001,7 @@ def test_split_partition_preserve_names(ascending):
     pivots = [2, 2, 5, 7]
     splits = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        column="numeric_col",
-        is_numeric_column=True,
-        pivots=pivots,
+        [ColumnInfo(name="numeric_col", is_numeric=True, pivots=pivots)],
         ascending=ascending,
     )
 

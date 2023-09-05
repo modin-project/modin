@@ -1323,7 +1323,6 @@ def eval___getitem__(md_grp, pd_grp, item):
         lambda grp: grp[item].mean(),
         comparator=build_types_asserter(df_equals),
     )
-    # breakpoint()
     eval_general(
         md_grp,
         pd_grp,
@@ -2103,7 +2102,6 @@ def test_multi_column_groupby_different_partitions(
         md_df.groupby(by, as_index=as_index),
         pd_df.groupby(by, as_index=as_index),
     )
-    # breakpoint()
     eval_general(
         md_grp,
         pd_grp,
