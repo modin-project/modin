@@ -2435,6 +2435,34 @@ class PandasDataframe(ClassLogger):
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
 
+            if ideal_num_new_partitions < len(self._partitions):
+                if len(self._partitions) % ideal_num_new_partitions == 0:
+                    joining_partitions = np.split(
+                        self._partitions, ideal_num_new_partitions
+                    )
+                else:
+                    joining_partitions = np.split(
+                        self._partitions,
+                        range(
+                            0,
+                            len(self._partitions),
+                            round(len(self._partitions) / ideal_num_new_partitions),
+                        )[1:],
+                    )
+
+                new_partitions = np.array(
+                    [
+                        self._partition_mgr_cls.column_partitions(
+                            ptn_grp, full_axis=False
+                        )
+                        for ptn_grp in joining_partitions
+                    ]
+                )
+            else:
+                new_partitions = self._partitions
+        else:
+            new_partitions = self._partitions
+
         shuffling_functions = ShuffleSortFunctions(
             self,
             key_columns,
@@ -2442,29 +2470,6 @@ class PandasDataframe(ClassLogger):
             ideal_num_new_partitions,
             **kwargs,
         )
-        if ideal_num_new_partitions < len(self._partitions):
-            if len(self._partitions) % ideal_num_new_partitions == 0:
-                joining_partitions = np.split(
-                    self._partitions, ideal_num_new_partitions
-                )
-            else:
-                joining_partitions = np.split(
-                    self._partitions,
-                    range(
-                        0,
-                        len(self._partitions),
-                        round(len(self._partitions) / ideal_num_new_partitions),
-                    )[1:],
-                )
-
-            new_partitions = np.array(
-                [
-                    self._partition_mgr_cls.column_partitions(ptn_grp, full_axis=False)
-                    for ptn_grp in joining_partitions
-                ]
-            )
-        else:
-            new_partitions = self._partitions
 
         key_indices = self.columns.get_indexer_for(key_columns)
         partition_indices = set()
