@@ -630,6 +630,7 @@ def s3_base(worker_id, monkeysession):
                     # try again while we still have retries
                     time.sleep(0.1)
             else:
+                proc.terminate()
                 _, errs = proc.communicate()
                 raise RuntimeError(
                     "Could not connect to moto server after 50 tries. "
