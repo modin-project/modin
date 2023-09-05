@@ -449,7 +449,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     if as_index:
-        eval_std(modin_groupby, pandas_groupby)
+        eval_std(modin_groupby, pandas_groupby, numeric_only=True)
         eval_var(modin_groupby, pandas_groupby, numeric_only=True)
         eval_skew(modin_groupby, pandas_groupby, numeric_only=True)
 
@@ -935,7 +935,9 @@ def test_simple_col_groupby():
     eval_count(modin_groupby, pandas_groupby)
     eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
-    eval_groups(modin_groupby, pandas_groupby)
+
+    # https://github.com/pandas-dev/pandas/issues/54858
+    # eval_groups(modin_groupby, pandas_groupby)
 
 
 @pytest.mark.parametrize(
@@ -2087,8 +2089,18 @@ def test_unknown_groupby(columns):
     [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
 )
 def test_multi_column_groupby_different_partitions(
-    func_to_apply, as_index, by_length, categorical_by
+    func_to_apply, as_index, by_length, categorical_by, request
 ):
+    if (
+        not categorical_by
+        and by_length == 1
+        and "custom_aggs_at_same_partition" in request.node.name
+        or "renaming_aggs_at_same_partition" in request.node.name
+    ):
+        pytest.xfail(
+            "After upgrade to pandas 2.1 skew results are different: AssertionError: 1.0 >= 0.0001."
+            + " See https://github.com/modin-project/modin/issues/6530 for details."
+        )
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 

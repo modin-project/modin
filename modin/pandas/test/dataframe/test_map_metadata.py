@@ -697,7 +697,6 @@ class TestCategoricalProxyDtype:
         assert lazy_proxy == "category"
         assert isinstance(lazy_proxy, pd.CategoricalDtype)
         assert isinstance(lazy_proxy, pandas.CategoricalDtype)
-        assert pandas.api.types.is_categorical_dtype(lazy_proxy)
         assert str(lazy_proxy) == "category"
         assert str(lazy_proxy) == str(actual_dtype)
         assert not lazy_proxy.ordered
@@ -817,6 +816,7 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
     StorageFormat.get() == "Hdk",
     reason="HDK does not support columns with different types",
 )
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54848")
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()

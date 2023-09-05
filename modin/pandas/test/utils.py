@@ -31,7 +31,6 @@ from pandas.core.dtypes.common import (
     is_object_dtype,
     is_string_dtype,
     is_bool_dtype,
-    is_categorical_dtype,
     is_datetime64_any_dtype,
     is_timedelta64_dtype,
     is_period_dtype,
@@ -648,7 +647,7 @@ def assert_dtypes_equal(df1, df2):
         is_numeric_dtype,
         lambda obj: is_object_dtype(obj) or is_string_dtype(obj),
         is_bool_dtype,
-        is_categorical_dtype,
+        lambda obj: isinstance(obj, pandas.CategoricalDtype),
         is_datetime64_any_dtype,
         is_timedelta64_dtype,
         is_period_dtype,
@@ -751,8 +750,8 @@ def df_equals(df1, df2, check_dtypes=True):
     ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
-    elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
-        assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
+    elif isinstance(df1, pandas.core.arrays.NumpyExtensionArray):
+        assert isinstance(df2, pandas.core.arrays.NumpyExtensionArray)
         assert df1 == df2
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
@@ -784,7 +783,7 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
         return
 
     diff = (modin_df - pandas_df).abs()
-    diff /= pandas_df
+    diff /= pandas_df.abs()
     diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
     assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
 

@@ -25,17 +25,16 @@ from pandas.api.types import is_scalar
 from pandas.core.common import is_bool_indexer
 from pandas.core.indexing import check_bool_indexer
 from pandas.core.indexes.api import ensure_index_from_sequences
+from pandas.core.apply import reconstruct_func
 from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
-    is_datetime_or_timedelta_dtype,
     is_datetime64_any_dtype,
     is_bool_dtype,
-    is_categorical_dtype,
 )
 from pandas.core.dtypes.cast import find_common_type
 from pandas.errors import DataError, MergeError
-from pandas._libs.lib import no_default
+from pandas._libs import lib
 from collections.abc import Iterable
 from typing import List, Hashable
 import warnings
@@ -705,9 +704,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             )
 
-        allow_duplicates = kwargs.pop("allow_duplicates", no_default)
+        allow_duplicates = kwargs.pop("allow_duplicates", lib.no_default)
         names = kwargs.pop("names", None)
-        if allow_duplicates not in (no_default, False) or names is not None:
+        if allow_duplicates not in (lib.no_default, False) or names is not None:
             return self.default_to_pandas(
                 pandas.DataFrame.reset_index,
                 allow_duplicates=allow_duplicates,
@@ -2461,7 +2460,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [
                 col
                 for col, dtype in zip(self.columns, self.dtypes)
-                if (is_numeric_dtype(dtype) or is_datetime_or_timedelta_dtype(dtype))
+                if (is_numeric_dtype(dtype) or lib.is_np_dtype(dtype, "mM"))
             ]
         if axis == 1:
             query_compiler = self.getitem_column_array(new_columns)
@@ -2678,7 +2677,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # we would like to convert it and get its proper internal dtype
                 item_type = item.to_numpy().dtype
             else:
-                item_type = type(item)
+                item_type = np.dtype(type(item))
 
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
@@ -2864,8 +2863,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # This will change the shape of the resulting data.
     def dropna(self, **kwargs):
         is_column_wise = kwargs.get("axis", 0) == 1
-        no_thresh_passed = kwargs.get("thresh", no_default) in (
-            no_default,
+        no_thresh_passed = kwargs.get("thresh", lib.no_default) in (
+            lib.no_default,
             None,
         )
         # FIXME: this is a naive workaround for this problem: https://github.com/modin-project/modin/issues/5394
@@ -2878,7 +2877,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if is_column_wise and no_thresh_passed and processable_amount_of_partitions:
             how = kwargs.get("how", "any")
             subset = kwargs.get("subset")
-            how = "any" if how in (no_default, None) else how
+            how = "any" if how in (lib.no_default, None) else how
             condition = lambda df: getattr(df, how)()  # noqa: E731 (lambda assignment)
 
             def mapper(df: pandas.DataFrame):
@@ -3074,6 +3073,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # convert it to pandas
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
+        _, func, _, _ = reconstruct_func(func, **kwargs)
         if isinstance(func, dict):
             return self._dict_func(func, axis, *args, **kwargs)
         elif is_list_like(func):
@@ -3552,7 +3552,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
         # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
         if self._modin_frame._dtypes is not None and any(
-            is_categorical_dtype(dtype) for dtype in self.dtypes[by].values
+            isinstance(dtype, pandas.CategoricalDtype)
+            for dtype in self.dtypes[by].values
         ):
             raise NotImplementedError(
                 "Reshuffling groupby is not yet supported when grouping on a categorical column. "
@@ -4282,7 +4283,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def cat_codes(self):
         def func(df: pandas.DataFrame) -> pandas.DataFrame:
             ser = df.iloc[:, 0]
-            assert is_categorical_dtype(ser.dtype)
+            assert isinstance(ser.dtype, pandas.CategoricalDtype)
             return ser.cat.codes.to_frame(name=MODIN_UNNAMED_SERIES_LABEL)
 
         res = self._modin_frame.map(func=func, new_columns=[MODIN_UNNAMED_SERIES_LABEL])

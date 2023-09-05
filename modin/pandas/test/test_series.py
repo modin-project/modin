@@ -922,13 +922,10 @@ def test_apply(data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_apply_except(data, func):
-    # SpecificationError is arisen because we treat a Series as a DataFrame.
-    # See details in pandas issues 36036.
-    with pytest.raises(SpecificationError):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.apply(func),
+    )
 
 
 def test_apply_external_lib():
@@ -965,13 +962,10 @@ def test_apply_numeric(request, data, func):
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_apply_numeric_except(request, data, func):
     if name_contains(request.node.name, numeric_dfs):
-        # SpecificationError is arisen because we treat a Series as a DataFrame.
-        # See details in pandas issues 36036.
-        with pytest.raises(SpecificationError):
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.apply(func),
-            )
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])

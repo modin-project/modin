@@ -6320,9 +6320,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def expanding_quantile(
         self, fold_axis, expanding_args, quantile, interpolation, **kwargs
     ):
-        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.quantile)(
-            self, expanding_args, quantile, interpolation, **kwargs
-        )
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.quantile
+        )(self, expanding_args, quantile, interpolation, **kwargs)
 
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",

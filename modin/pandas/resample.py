@@ -13,12 +13,14 @@
 
 """Implement Resampler public API."""
 
+from typing import Optional
+
 import numpy as np
 import pandas
 import pandas.core.resample
 from pandas.core.dtypes.common import is_list_like
-from pandas._libs.lib import no_default
-from typing import Optional
+from pandas._libs import lib
+
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 from modin.pandas.utils import cast_function_modin2pandas
@@ -39,7 +41,7 @@ class Resampler(ClassLogger):
         level=None,
         origin="start_day",
         offset=None,
-        group_keys=no_default,
+        group_keys=lib.no_default,
     ):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler
@@ -238,7 +240,7 @@ class Resampler(ClassLogger):
         inplace=False,
         limit_direction: Optional[str] = None,
         limit_area=None,
-        downcast=None,
+        downcast=lib.no_default,
         **kwargs,
     ):
         return self._dataframe.__constructor__(

@@ -1,4 +1,4 @@
-fsspec>=2021.07.0
+fsspec>=2022.05.0
 jupyterlab
 ipywidgets
 tqdm>=4.60.0

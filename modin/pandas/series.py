@@ -23,10 +23,9 @@ from pandas.util._validators import validate_bool_kwarg
 from pandas.core.dtypes.common import (
     is_dict_like,
     is_list_like,
-    is_categorical_dtype,
 )
 from pandas.core.series import _coerce_method
-from pandas._libs.lib import no_default, NoDefault
+from pandas._libs import lib
 from pandas._typing import IndexKeyFunc, Axis
 from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
 import warnings
@@ -424,7 +423,7 @@ class Series(BasePandasDataset):
         if (
             isinstance(temp_df, pandas.Series)
             and temp_df.name is not None
-            and is_categorical_dtype(temp_df.dtype)
+            and isinstance(temp_df.dtype, pandas.CategoricalDtype)
         ):
             maxsplit = 2
         return temp_str.rsplit("\n", maxsplit)[0] + "\n{}{}{}{}".format(
@@ -563,11 +562,32 @@ class Series(BasePandasDataset):
     agg = aggregate
 
     def apply(
-        self, func, convert_dtype=True, args=(), **kwargs
+        self, func, convert_dtype=lib.no_default, args=(), by_row="compat", **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Invoke function on values of Series.
         """
+        if by_row != "compat":
+            # TODO: add test
+            return self._default_to_pandas(
+                pandas.Series.apply,
+                func=func,
+                convert_dtype=convert_dtype,
+                args=args,
+                by_row=by_row,
+                **kwargs,
+            )
+
+        if convert_dtype is lib.no_default:
+            convert_dtype = True
+        else:
+            warnings.warn(
+                "the convert_dtype parameter is deprecated and will be removed in a "
+                + "future version.  Do ``ser.astype(object).apply()`` "
+                + "instead if you want ``convert_dtype=False``.",
+                FutureWarning,
+            )
+
         func = cast_function_modin2pandas(func)
         self._validate_function(func)
         # apply and aggregate have slightly different behaviors, so we have to use
@@ -644,6 +664,26 @@ class Series(BasePandasDataset):
             # for sum or count functions)
             return result.to_pandas().squeeze()
         return result
+
+    def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Call ``func`` on self producing a `BasePandasDataset` with the same axis shape as self.
+        """
+        if isinstance(func, list):
+            # drop nonunique functions to align with pandas behavior instead of getting
+            # "pandas.errors.SpecificationError: Function names must be unique..."
+            # Example:
+            # >>> pandas.Series([0., 1., 4.]).transform(["sqrt", "sqrt"])
+            # sqrt
+            # 0   0.0
+            # 1   1.0
+            # 2   2.0
+            unique_func = [func[0]]
+            for one_func in func[1:]:
+                if one_func not in unique_func:
+                    unique_func.append(one_func)
+            func = unique_func
+        return super(Series, self).transform(func, axis, *args, **kwargs)
 
     def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
@@ -974,7 +1014,7 @@ class Series(BasePandasDataset):
         axis=None,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Fill NaNs inside of a Series object.
@@ -1021,7 +1061,7 @@ class Series(BasePandasDataset):
         as_index=True,
         sort=True,
         group_keys=True,
-        observed=False,
+        observed=lib.no_default,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1190,6 +1230,51 @@ class Series(BasePandasDataset):
             )
         )
 
+    def sem(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return unbiased standard error of the mean over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "sem", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
+    def std(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return sample standard deviation over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "std", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
+    def var(
+        self,
+        axis: Optional[Axis] = None,
+        skipna: bool = True,
+        ddof: int = 1,
+        numeric_only=False,
+        **kwargs,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return unbiased variance over requested axis.
+        """
+        return super(Series, self)._stat_operation(
+            "var", axis, skipna, numeric_only, ddof=ddof, **kwargs
+        )
+
     def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
         """
         Return the memory usage of the Series.
@@ -1267,22 +1352,39 @@ class Series(BasePandasDataset):
         )
 
     def shift(
-        self, periods=1, freq=None, axis=0, fill_value=None
+        self,
+        periods=1,
+        freq=None,
+        axis=0,
+        fill_value=lib.no_default,
+        suffix=None,
     ):  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
+        # pandas 2.1.0 ignores suffix parameter (https://github.com/pandas-dev/pandas/issues/54806)
+        if freq is not None and fill_value is not lib.no_default:
+            raise ValueError(
+                "Cannot pass both 'freq' and 'fill_value' to "
+                + f"{type(self).__name__}.shift"
+            )
         if axis == 1:
             raise ValueError(f"No axis named {axis} for object type {type(self)}")
         return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )
 
-    def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
+    def unstack(self, level=-1, fill_value=None, sort=True):  # noqa: PR01, RT01, D200
         """
         Unstack, also known as pivot, Series with MultiIndex to produce DataFrame.
         """
         from .dataframe import DataFrame
+
+        if not sort:
+            # TODO: it should be easy to add support for sort == False
+            return self._default_to_pandas(
+                pandas.Series.unstack, level=level, fill_value=fill_value, sort=sort
+            )
 
         # We can't unstack a Series object, if we don't have a MultiIndex.
         if len(self.index.names) > 1:
@@ -1414,9 +1516,9 @@ class Series(BasePandasDataset):
 
     def rename_axis(
         self,
-        mapper=no_default,
+        mapper=lib.no_default,
         *,
-        index=no_default,
+        index=lib.no_default,
         axis=0,
         copy=True,
         inplace=False,
@@ -1474,14 +1576,14 @@ class Series(BasePandasDataset):
         level=None,
         *,
         drop=False,
-        name=no_default,
+        name=lib.no_default,
         inplace=False,
         allow_duplicates=False,
     ):  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
-        if name is no_default:
+        if name is lib.no_default:
             # For backwards compatibility, keep columns as [0] instead of
             #  [None] when self.name is None
             name = 0 if self.name is None else self.name
@@ -1604,12 +1706,12 @@ class Series(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=no_default,
+        value=lib.no_default,
         *,
         inplace=False,
         limit=None,
         regex=False,
-        method: str | NoDefault = no_default,
+        method: str | lib.NoDefault = lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1785,7 +1887,7 @@ class Series(BasePandasDataset):
         return self._query_compiler.series_to_dict(into)
 
     def to_frame(
-        self, name: Hashable = no_default
+        self, name: Hashable = lib.no_default
     ) -> "DataFrame":  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
@@ -1793,10 +1895,10 @@ class Series(BasePandasDataset):
         from .dataframe import DataFrame
 
         if name is None:
-            name = no_default
+            name = lib.no_default
 
         self_cp = self.copy()
-        if name is not no_default:
+        if name is not lib.no_default:
             self_cp.name = name
 
         return DataFrame(self_cp)
@@ -1808,7 +1910,7 @@ class Series(BasePandasDataset):
         return self._query_compiler.to_list()
 
     def to_numpy(
-        self, dtype=None, copy=False, na_value=no_default, **kwargs
+        self, dtype=None, copy=False, na_value=lib.no_default, **kwargs
     ):  # noqa: PR01, RT01, D200
         """
         Return the NumPy ndarray representing the values in this Series or Index.
@@ -1953,7 +2055,7 @@ class Series(BasePandasDataset):
     def where(
         self,
         cond,
-        other=no_default,
+        other=np.nan,
         *,
         inplace=False,
         axis=None,

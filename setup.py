@@ -48,10 +48,10 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        "pandas>=2,<2.1",
+        "pandas>=2.1,<2.2",
         "packaging>=21.0",
-        "numpy>=1.20.3",
-        "fsspec>=2021.07.0",
+        "numpy>=1.22.4",
+        "fsspec>=2022.05.0",
         "psutil>=5.8.0",
     ],
     extras_require={

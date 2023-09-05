@@ -252,8 +252,8 @@ class Rolling(ClassLogger):
 
     agg = aggregate
 
-    def quantile(self, quantile, interpolation="linear", **kwargs):
-        return self._aggregate("quantile", quantile, interpolation, **kwargs)
+    def quantile(self, q, interpolation="linear", **kwargs):
+        return self._aggregate("quantile", q, interpolation, **kwargs)
 
     def rank(
         self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
@@ -493,10 +493,10 @@ class Expanding(ClassLogger):
             )
         )
 
-    def quantile(self, quantile, interpolation="linear", **kwargs):
+    def quantile(self, q, interpolation="linear", **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.expanding_quantile(
-                self.axis, self.expanding_args, quantile, interpolation, **kwargs
+                self.axis, self.expanding_args, q, interpolation, **kwargs
             )
         )
 

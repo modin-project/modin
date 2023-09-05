@@ -26,13 +26,12 @@ import pandas as pd
 from pandas._libs.lib import no_default
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
-    get_dtype,
+    _get_dtype,
     is_list_like,
     is_bool_dtype,
     is_string_dtype,
-    is_any_int_dtype,
+    is_integer_dtype,
     is_datetime64_dtype,
-    is_categorical_dtype,
 )
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -357,7 +356,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         InputRefExpr
         """
         if col == ROWID_COL_NAME:
-            return InputRefExpr(self, col, get_dtype(int))
+            return InputRefExpr(self, col, _get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
 
     def take_2d_labels_or_positional(
@@ -726,7 +725,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         order_keys = [base.ref(col) for col in order_keys]
 
         row_num_name = "__HDK_ROW_NUMBER__"
-        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op = OpExpr("ROW_NUMBER", [], _get_dtype(int))
         row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
         exprs = base._index_exprs()
         exprs.update((col, base.ref(col)) for col in base.columns)
@@ -1069,11 +1068,13 @@ class HdkOnNativeDataframe(PandasDataframe):
         for left_col, right_col in zip(left_on, right_on):
             left_dt = self._dtypes[left_col]
             right_dt = other._dtypes[right_col]
-            if is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt):
+            if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
+                right_dt, pd.CategoricalDtype
+            ):
                 left_dt = left_dt.categories.dtype
                 right_dt = right_dt.categories.dtype
             if not (
-                (is_any_int_dtype(left_dt) and is_any_int_dtype(right_dt))
+                (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
                 or (is_datetime64_dtype(left_dt) and is_datetime64_dtype(right_dt))
             ):
@@ -1154,7 +1155,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         condition = (
             condition[0]
             if len(condition) == 1
-            else OpExpr("AND", condition, get_dtype(bool))
+            else OpExpr("AND", condition, _get_dtype(bool))
         )
         return condition
 
@@ -1233,7 +1234,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 dtypes = pd.Series()
             elif ignore_index:
                 index_cols = [UNNAMED_IDX_COL_NAME]
-                dtypes = pd.Series([get_dtype(int)], index=index_cols)
+                dtypes = pd.Series([_get_dtype(int)], index=index_cols)
             else:
                 index_names = ColNameCodec.concat_index_names(frames)
                 index_cols = list(index_names)
@@ -1669,15 +1670,15 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         assert len(self.columns) == 1
-        assert is_categorical_dtype(self._dtypes[-1])
+        assert isinstance(self._dtypes[-1], pd.CategoricalDtype)
 
         exprs = self._index_exprs()
         col_expr = self.ref(self.columns[-1])
-        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
         col_name = MODIN_UNNAMED_SERIES_LABEL
         exprs[col_name] = build_if_then_else(
-            col_expr.is_null(), null_val, code_expr, get_dtype("int32")
+            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
         )
         dtypes = [expr._dtype for expr in exprs.values()]
 
@@ -2600,7 +2601,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     zip(schema, self._dtypes)
                 )
                 if is_dictionary(arrow_type.type)
-                and not is_categorical_dtype(pandas_type)
+                and not isinstance(pandas_type, pd.CategoricalDtype)
             }
             if cast:
                 for idx, new_type in cast.items():

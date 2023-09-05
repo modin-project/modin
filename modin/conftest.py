@@ -21,7 +21,6 @@ import platform
 import subprocess
 import time
 
-import shlex
 import requests
 import sys
 import pytest
@@ -555,7 +554,13 @@ def s3_storage_options(worker_id):
 
 
 @pytest.fixture(scope="session")
-def s3_base(worker_id):
+def monkeysession():
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+
+
+@pytest.fixture(scope="session")
+def s3_base(worker_id, monkeysession):
     """
     Fixture for mocking S3 interaction.
 
@@ -567,76 +572,73 @@ def s3_base(worker_id):
         URL for motoserver/moto CI service.
     """
     # copied from pandas conftest.py
-    with pandas._testing.ensure_safe_environment_variables():
-        # still need access keys for https://github.com/getmoto/moto/issues/1924
-        os.environ.setdefault("AWS_ACCESS_KEY_ID", CIAWSAccessKeyID.get())
-        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CIAWSSecretAccessKey.get())
-        os.environ["AWS_REGION"] = "us-west-2"
-        if GithubCI.get():
-            if sys.platform in ("darwin", "win32", "cygwin") or (
-                platform.machine() in ("arm64", "aarch64")
-                or platform.machine().startswith("armv")
-            ):
-                # pandas comments say:
-                # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
-                # - subprocess in CI can cause timeouts
-                # - GitHub Actions do not support
-                #   container services for the above OSs
-                pytest.skip(
-                    (
-                        "S3 tests do not have a corresponding service in Windows, macOS "
-                        + "or ARM platforms"
-                    )
-                )
-            else:
-                # assume CI has started moto in docker container:
-                # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
-                # It would be nice to start moto on another thread as in the
-                # instructions here:
-                # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
-                # but that gives 403 forbidden error when we try to create the bucket
-                yield "http://localhost:5000"
+    # still need access keys for https://github.com/getmoto/moto/issues/1924
+    monkeysession.setenv("AWS_ACCESS_KEY_ID", "foobar_key")
+    monkeysession.setenv("AWS_SECRET_ACCESS_KEY", "foobar_secret")
+    monkeysession.setenv("AWS_REGION", "us-west-2")
+    if GithubCI.get():
+        if sys.platform in ("darwin", "win32", "cygwin") or (
+            platform.machine() in ("arm64", "aarch64")
+            or platform.machine().startswith("armv")
+        ):
+            # pandas comments say:
+            # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
+            # - subprocess in CI can cause timeouts
+            # - GitHub Actions do not support
+            #   container services for the above OSs
+            pytest.skip(
+                "S3 tests do not have a corresponding service in Windows, macOS "
+                + "or ARM platforms"
+            )
         else:
-            # Launching moto in server mode, i.e., as a separate process
-            # with an S3 endpoint on localhost
+            # assume CI has started moto in docker container:
+            # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
+            # It would be nice to start moto on another thread as in the
+            # instructions here:
+            # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
+            # but that gives 403 forbidden error when we try to create the bucket
+            yield "http://localhost:5000"
+    else:
+        # Launching moto in server mode, i.e., as a separate process
+        # with an S3 endpoint on localhost
 
-            # If we hit this else-case, this test is being run locally. In that case, we want
-            # each worker to point to a different port for its mock S3 service. The easiest way
-            # to do that is to use the `worker_id`, which is unique, to determine what port to point
-            # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
-            # for each worker, and we never run tests with more than `pytest -n 4`.
-            worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
-            endpoint_port = f"555{worker_id}"
-            endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
+        # If we hit this else-case, this test is being run locally. In that case, we want
+        # each worker to point to a different port for its mock S3 service. The easiest way
+        # to do that is to use the `worker_id`, which is unique, to determine what port to point
+        # to.
+        endpoint_port = (
+            5500 if worker_id == "master" else (5550 + int(worker_id.lstrip("gw")))
+        )
+        endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
 
-            # pipe to null to avoid logging in terminal
-            # TODO any way to throw the error from here? e.g. i had an annoying problem
-            # where I didn't have flask-cors and moto just failed .if there's an error
-            # in the popen command and we throw an error within the body of the context
-            # manager, the test just hangs forever.
-            with subprocess.Popen(
-                # try this https://stackoverflow.com/a/72084867/17554722 ?
-                shlex.split(f"moto_server s3 -p {endpoint_port}"),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            ) as proc:
-                made_connection = False
-                for _ in range(50):
-                    try:
-                        # OK to go once server is accepting connections
-                        if requests.get(endpoint_uri).ok:
-                            made_connection = True
-                            break
-                    except Exception:
-                        # try again while we still have retries
-                        time.sleep(0.1)
-                if not made_connection:
-                    raise RuntimeError(
-                        "Could not connect to moto server after 50 tries."
-                    )
-                yield endpoint_uri
-
+        # pipe to null to avoid logging in terminal
+        # TODO any way to throw the error from here? e.g. i had an annoying problem
+        # where I didn't have flask-cors and moto just failed .if there's an error
+        # in the popen command and we throw an error within the body of the context
+        # manager, the test just hangs forever.
+        with subprocess.Popen(
+            ["moto_server", "s3", "-p", str(endpoint_port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        ) as proc:
+            for _ in range(50):
+                try:
+                    # OK to go once server is accepting connections
+                    if requests.get(endpoint_uri).ok:
+                        break
+                except Exception:
+                    # try again while we still have retries
+                    time.sleep(0.1)
+            else:
                 proc.terminate()
+                _, errs = proc.communicate()
+                raise RuntimeError(
+                    "Could not connect to moto server after 50 tries. "
+                    + f"See stderr for extra info: {errs}"
+                )
+            yield endpoint_uri
+
+            proc.terminate()
 
 
 @pytest.fixture

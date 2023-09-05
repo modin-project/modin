@@ -45,7 +45,8 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import get_dtype, is_categorical_dtype, is_bool_dtype
+import pandas
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -173,7 +174,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -275,7 +276,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -583,9 +584,9 @@ class CalciteBuilder:
 
     # The following aggregates require boolean columns to be cast.
     _bool_cast_aggregates = {
-        "sum": get_dtype(int),
-        "mean": get_dtype(float),
-        "median": get_dtype(float),
+        "sum": _get_dtype(int),
+        "mean": _get_dtype(float),
+        "median": _get_dtype(float),
     }
 
     def __init__(self):
@@ -909,7 +910,7 @@ class CalciteBuilder:
                 c: cast_agg[agg_exprs[c].agg]
                 for c, t in frame.dtypes.items()
                 # Do not call is_bool_dtype() for categorical since it checks all the categories
-                if not is_categorical_dtype(t)
+                if not isinstance(t, pandas.CategoricalDtype)
                 and is_bool_dtype(t)
                 and agg_exprs[c].agg in cast_agg
             }

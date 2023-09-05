@@ -26,7 +26,6 @@ from pandas.core.indexes.api import Index, RangeIndex
 from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_list_like,
-    is_categorical_dtype,
 )
 from pandas._libs.lib import no_default
 from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
@@ -3622,13 +3621,14 @@ class PandasDataframe(ClassLogger):
             frames = [self] + others
             if all(frame.has_materialized_dtypes for frame in frames):
                 all_dtypes = [frame.dtypes for frame in frames]
-                new_dtypes = pandas.concat(all_dtypes, axis=1)
-                # 'nan' value will be placed in a row if a column doesn't exist in all frames;
-                # this value is np.float64 type so we need an explicit conversion
-                new_dtypes.fillna(np.dtype("float64"), inplace=True)
-                new_dtypes = new_dtypes.apply(
-                    lambda row: find_common_type(row.values), axis=1
-                )
+                if not all(dtypes.empty for dtypes in all_dtypes):
+                    new_dtypes = pandas.concat(all_dtypes, axis=1)
+                    # 'nan' value will be placed in a row if a column doesn't exist in all frames;
+                    # this value is np.float64 type so we need an explicit conversion
+                    new_dtypes.fillna(np.dtype("float64"), inplace=True)
+                    new_dtypes = new_dtypes.apply(
+                        lambda row: find_common_type(row.values), axis=1
+                    )
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
@@ -3730,7 +3730,10 @@ class PandasDataframe(ClassLogger):
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
-            if any(is_categorical_dtype(dtype) for dtype in df.dtypes[by].values):
+            if any(
+                isinstance(dtype, pandas.CategoricalDtype)
+                for dtype in df.dtypes[by].values
+            ):
                 raise NotImplementedError(
                     "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                     + "https://github.com/modin-project/modin/issues/5925"

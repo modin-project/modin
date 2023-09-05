@@ -5,30 +5,30 @@ dependencies:
   - pip
 
   # required dependencies
-  - pandas>=2,<2.1
-  - numpy>=1.20.3
+  - pandas>=2.1,<2.2
+  - numpy>=1.22.4
   - unidist-mpi>=0.2.1
-  - fsspec>=2021.07.0
+  - fsspec>=2022.05.0
   - packaging>=21.0
   - psutil>=5.8.0
 
   # optional dependencies
   - pyarrow>=7.0.0
-  - xarray
-  - Jinja2>=3.0.0
-  - scipy>=1.7.1
-  - s3fs>=2021.8,<2023.9.0
-  - lxml>=4.6.3
-  - openpyxl>=3.0.7
+  - xarray>=2022.03.0
+  - jinja2>=3.1.2
+  - scipy>=1.8.1
+  - s3fs>=2022.05.0,<2023.9.0
+  - lxml>=4.8.0
+  - openpyxl>=3.0.10
   - xlrd>=2.0.1
   - matplotlib>=3.6.1
   - sqlalchemy>=1.4.0,<1.4.46
   - pandas-gbq>=0.15.0
-  - pytables>=3.6.1
+  - pytables>=3.7.0
   # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
   - pymssql>=2.1.5,!=2.2.8
-  - psycopg2>=2.8.6
-  - fastparquet>=0.6.3
+  - psycopg2>=2.9.3
+  - fastparquet>=0.8.1
   - tqdm>=4.60.0
   # pandas isn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
   - numexpr<2.8.5
@@ -40,7 +40,7 @@ dependencies:
   # test dependencies
   - coverage>=7.1.0
   - moto>=4.1.0
-  - pytest>=7.2.1
+  - pytest>=7.3.2
   - pytest-cov>=4.0.0
   - pytest-xdist>=3.2.0
 

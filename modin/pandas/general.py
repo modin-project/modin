@@ -13,6 +13,8 @@
 
 """Implement pandas general API."""
 
+import warnings
+
 import pandas
 import numpy as np
 
@@ -252,7 +254,7 @@ def pivot_table(
 @_inherit_docstrings(pandas.pivot, apilink="pandas.pivot")
 @enable_logging
 def pivot(
-    data, *, columns, index=NoDefault, values=NoDefault
+    data, *, columns, index=no_default, values=no_default
 ):  # noqa: PR01, RT01, D200
     """
     Return reshaped DataFrame organized by given index / column values.
@@ -392,6 +394,11 @@ def value_counts(
     -------
     Series
     """
+    warnings.warn(
+        "pandas.value_counts is deprecated and will be removed in a "
+        + "future version. Use pd.Series(obj).value_counts() instead.",
+        FutureWarning,
+    )
     return Series(values).value_counts(
         sort=sort,
         ascending=ascending,
