@@ -21,6 +21,7 @@ import xgboost as xgb
 import modin.pandas as pd
 from modin.config import Engine
 import modin.experimental.xgboost as mxgb
+from modin.utils import try_cast_to_pandas
 
 
 if Engine.get() != "Ray":
@@ -130,7 +131,7 @@ def test_feature_names():
     with pytest.raises(ValueError):
         booster.predict(dm)
     with pytest.raises(ValueError):
-        repr(md_booster.predict(md_dm))
+        try_cast_to_pandas(md_booster.predict(md_dm))  # force materialization
 
 
 def test_feature_weights():

@@ -889,8 +889,7 @@ def eval_general(
             if check_exception_type is None:
                 return None
             with pytest.raises(Exception) as md_e:
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
+                try_cast_to_pandas(fn(modin_df, **md_kwargs))  # force materialization
             if check_exception_type:
                 assert isinstance(
                     md_e.value, type(pd_e)
