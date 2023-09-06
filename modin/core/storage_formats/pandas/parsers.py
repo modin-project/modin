@@ -652,7 +652,7 @@ class PandasExcelParser(PandasParser):
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         common_args = (ws, bytesio, ex.shared_strings, False)
-        if PandasExcelParser.need_rich_text_param:
+        if PandasExcelParser.need_rich_text_param():
             reader = WorksheetReader(*common_args, rich_text=False)
         else:
             reader = WorksheetReader(*common_args)
