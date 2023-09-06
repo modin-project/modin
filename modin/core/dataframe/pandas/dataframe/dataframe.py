@@ -2393,8 +2393,8 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        key_columns : hashable or list of hashables
-            Column/columns to build the range partitioning for.
+        key_columns : list of hashables
+            Columns to build the range partitioning for.
         func : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply against partitions.
         ascending : bool, default: True
@@ -2410,8 +2410,6 @@ class PandasDataframe(ClassLogger):
         # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:
             return self.apply_full_axis(axis=1, func=func)
-
-        key_columns = key_columns if isinstance(key_columns, list) else [key_columns]
 
         # don't want to inherit over-partitioning so doing this 'min' check
         ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
@@ -2441,13 +2439,10 @@ class PandasDataframe(ClassLogger):
                         self._partitions, ideal_num_new_partitions
                     )
                 else:
+                    step = round(len(self._partitions) / ideal_num_new_partitions)
                     joining_partitions = np.split(
                         self._partitions,
-                        range(
-                            0,
-                            len(self._partitions),
-                            round(len(self._partitions) / ideal_num_new_partitions),
-                        )[1:],
+                        range(step, len(self._partitions), step),
                     )
 
                 new_partitions = np.array(
@@ -2471,10 +2466,18 @@ class PandasDataframe(ClassLogger):
             **kwargs,
         )
 
+        # here we want to get indices of those partitions that hold the key columns;
+        # first we translate column labels into their numeric indices
         key_indices = self.columns.get_indexer_for(key_columns)
-        partition_indices = set()
+        # 'indices' will show us partition boundaries, helping to understand which
+        # column belongs to which partition. For example if 'indices = [0, 5, 10, 15]'
+        # then we know that columns with indices (0-4) are located in part#0;
+        # columns with indices (5-9) are located in part#1 and so on...
         indices = np.cumsum([0] + self.column_widths)
+        # 'partition_indices' will store partition ids that hold the key columns
+        partition_indices = set()
         for i in range(len(indices) - 1):
+            # going through the key columns and check whether they belong to the part#i
             for key_idx in key_indices:
                 if key_idx >= indices[i] and key_idx < indices[i + 1]:
                     partition_indices.add(i)
@@ -2543,7 +2546,7 @@ class PandasDataframe(ClassLogger):
             )
 
         result = self._apply_func_to_range_partitioning(
-            key_columns=columns[0], func=sort_function, ascending=ascending, **kwargs
+            key_columns=[columns[0]], func=sort_function, ascending=ascending, **kwargs
         )
 
         result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)

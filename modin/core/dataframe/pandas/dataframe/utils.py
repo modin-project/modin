@@ -42,7 +42,7 @@ class ShuffleFunctions:
     ascending : bool
         Whether the ranges should be in ascending or descending order.
     ideal_num_new_partitions : int
-        The ideal number of bins.
+        The ideal number of new partitions.
     **kwargs : dict
         Additional keyword arguments.
     """
@@ -118,7 +118,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
     ascending : bool
         Whether the ranges should be in ascending or descending order.
     ideal_num_new_partitions : int
-        The ideal number of bins.
+        The ideal number of new partitions.
     **kwargs : dict
         Additional keyword arguments.
     """
@@ -158,13 +158,8 @@ class ShuffleSortFunctions(ShuffleFunctions):
             cols.append(col)
             is_numeric = is_numeric_dtype(column_val.dtype)
 
-            if is_numeric:
-                method = "linear"
-            else:
-                # This means we are not sorting numbers, so we need our quantiles to not try
-                # arithmetic on the values.
-                method = "inverted_cdf"
-
+            # When we are not sorting numbers, we need our quantiles to not do arithmetic on the values
+            method = "linear" if is_numeric else "inverted_cdf"
             pivots = self.pick_pivots_from_samples_for_sort(
                 column_val, num_pivots, method, key
             )
