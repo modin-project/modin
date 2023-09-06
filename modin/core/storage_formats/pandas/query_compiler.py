@@ -4241,7 +4241,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 Partition data with updated values.
             """
             partition = partition.copy()
-            partition.iloc[row_internal_indices, col_internal_indices] = item
+            try:
+                partition.iloc[row_internal_indices, col_internal_indices] = item
+            except ValueError:
+                # `copy` is needed to avoid "ValueError: buffer source array is read-only" for `item`
+                # because the item may be converted to the type that is in the dataframe.
+                # TODO: in the future we will need to convert to the correct type manually according
+                # to the following warning. Example: "FutureWarning: Setting an item of incompatible
+                # dtype is deprecated and will raise in a future error of pandas. Value '[1.38629436]'
+                # has dtype incompatible with int64, please explicitly cast to a compatible dtype first."
+                partition.iloc[row_internal_indices, col_internal_indices] = item.copy()
             return partition
 
         new_modin_frame = self._modin_frame.apply_select_indices(
