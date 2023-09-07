@@ -530,15 +530,9 @@ jobs:
           - windows
         python-version: ["3.11"]
         execution:
-          - name: ray
-            shell-ex: "python -m pytest"
-            if: 'false'
           - name: dask
             shell-ex: "python -m pytest"
             if: needs.execution-filter.dask != 'true'
-          - name: unidist
-            shell-ex: "mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest"
-            if: 'false'
     runs-on: ${{ matrix.os }}-latest
     defaults:
       run:
