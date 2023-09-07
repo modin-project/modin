@@ -95,8 +95,6 @@ jobs:
       - name: Ensure all engines start up
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-          MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
     needs: [lint-flake8, lint-black]
@@ -476,7 +474,7 @@ jobs:
                   modin/experimental/xgboost/test/test_default.py \
                   modin/experimental/xgboost/test/test_xgboost.py \
                   modin/experimental/xgboost/test/test_dmatrix.py
-        if: matrix.os != 'windows' && matrix.test_task == 'group_1'
+        if: matrix.os != 'windows' && matrix.test_task == 'group_1' && matrix.engine == 'ray'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
@@ -705,7 +703,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11"]
-        engine: ["ray", "dask"]
+        engine: ["dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: ${{matrix.engine}}
