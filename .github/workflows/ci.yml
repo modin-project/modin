@@ -476,7 +476,7 @@ jobs:
                   modin/experimental/xgboost/test/test_dmatrix.py
         if: matrix.os != 'windows' && matrix.test_task == 'group_1' && matrix.engine == 'ray'
       - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
-        if: matrix.engine == 'ray' || matrix.test_task == 'group_1'
+        if: matrix.engine == 'ray' && matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_2
