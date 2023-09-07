@@ -330,7 +330,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.11"]
         unidist-backend: ["mpi"]
     env:
       MODIN_ENGINE: "Unidist"
@@ -393,7 +393,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: ["3.11"]
         engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
@@ -528,7 +528,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: ["3.11"]
         execution:
           - name: ray
             shell-ex: "python -m pytest"
@@ -680,7 +680,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.11"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -710,7 +710,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.11"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
