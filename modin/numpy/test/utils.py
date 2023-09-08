@@ -16,7 +16,7 @@ import numpy
 import modin.numpy as np
 
 
-def assert_scalar_or_array_equal(x1, x2, err_msg=None):
+def assert_scalar_or_array_equal(x1, x2, err_msg=""):
     """
     Assert whether the result of the numpy and modin computations are the same.
 
