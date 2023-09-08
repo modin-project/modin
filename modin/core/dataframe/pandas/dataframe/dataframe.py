@@ -2466,25 +2466,15 @@ class PandasDataframe(ClassLogger):
             **kwargs,
         )
 
-        # here we want to get indices of those partitions that hold the key columns;
-        # first we translate column labels into their numeric indices
+        # here we want to get indices of those partitions that hold the key columns
         key_indices = self.columns.get_indexer_for(key_columns)
-        # 'indices' will show us partition boundaries, helping to understand which
-        # column belongs to which partition. For example if 'indices = [0, 5, 10, 15]'
-        # then we know that columns with indices (0-4) are located in part#0;
-        # columns with indices (5-9) are located in part#1 and so on...
-        indices = np.cumsum([0] + self.column_widths)
-        # 'partition_indices' will store partition ids that hold the key columns
-        partition_indices = set()
-        for i in range(len(indices) - 1):
-            # going through the key columns and check whether they belong to the part#i
-            for key_idx in key_indices:
-                if key_idx >= indices[i] and key_idx < indices[i + 1]:
-                    partition_indices.add(i)
+        partition_indices = np.unique(
+            np.digitize(key_indices, np.cumsum(self.column_widths))
+        )
 
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
             new_partitions,
-            sorted(partition_indices),
+            partition_indices,
             shuffling_functions,
             func,
         )
