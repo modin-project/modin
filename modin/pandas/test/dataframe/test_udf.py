@@ -338,6 +338,18 @@ def test_eval_df_arithmetic_subexpression():
     df_equals(modin_df, df)
 
 
+def test_eval_groupby_transform():
+    # see #5511 for details
+    df = pd.DataFrame({"num": range(1, 1001), "group": ["A"] * 500 + ["B"] * 500})
+    assert df.eval("num.groupby(group).transform('min')").unique().tolist() == [1, 501]
+
+
+def test_eval_scalar():
+    # see #4477 for details
+    df = pd.DataFrame([[2]])
+    assert df.eval("1") == 1
+
+
 TEST_VAR = 2
 
 
