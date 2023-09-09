@@ -42,6 +42,7 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
+import pyarrow.dataset
 import fastparquet
 import os
 from io import BytesIO, StringIO
@@ -1453,6 +1454,65 @@ class TestParquet:
                 comparator=comparator,
             )
 
+    @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    def test_read_parquet_index(
+        self,
+        engine,
+        make_parquet_file,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+    ):
+        if engine == "pyarrow" and filters == []:
+            # pyarrow, and therefore pandas using pyarrow, errors in this case.
+            # Modin correctly replicates this behavior; however error cases
+            # cause race conditions with ensure_clean on Windows.
+            # TODO: Remove this once https://github.com/modin-project/modin/issues/6460 is fixed.
+            pytest.xfail(
+                "Skipping empty filters error case to avoid race condition - see #6460"
+            )
+
+        with ensure_clean(".parquet") as unique_filename:
+            make_parquet_file(
+                filename=unique_filename,
+                range_index_start=range_index_start,
+                range_index_step=range_index_step,
+                range_index_name=range_index_name,
+                row_group_size=100,
+            )
+
+            def comparator(df1, df2):
+                df_equals(df1, df2)
+                df_equals(df1.dtypes, df2.dtypes)
+
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=unique_filename,
+                columns=columns,
+                filters=filters,
+                comparator=comparator,
+            )
+
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
         if engine == "fastparquet" and os.name == "nt":
             pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
@@ -1479,13 +1539,41 @@ class TestParquet:
             parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 3_215), ("col2", ">=", 35)]],
+    )
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
     @pytest.mark.parametrize(
         "rows_per_file", [[1000] * 40, [0, 0, 40_000], [10_000, 10_000] + [100] * 200]
     )
     @pytest.mark.exclude_in_sanity
     def test_read_parquet_directory(
-        self, engine, make_parquet_dir, columns, row_group_size, rows_per_file
+        self, engine, make_parquet_dir, columns, filters, row_group_size, rows_per_file
+    ):
+        self._test_read_parquet_directory(
+            engine=engine,
+            make_parquet_dir=make_parquet_dir,
+            columns=columns,
+            filters=filters,
+            range_index_start=0,
+            range_index_step=1,
+            range_index_name=None,
+            row_group_size=row_group_size,
+            rows_per_file=rows_per_file,
+        )
+
+    def _test_read_parquet_directory(
+        self,
+        engine,
+        make_parquet_dir,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        row_group_size,
+        rows_per_file,
     ):
         num_cols = DATASET_SIZE_DICT.get(
             TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
@@ -1494,9 +1582,25 @@ class TestParquet:
         start_row = 0
         for i, length in enumerate(rows_per_file):
             end_row = start_row + length
-            dfs_by_filename[f"{i}.parquet"] = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)},
             )
+            index = pandas.RangeIndex(
+                start=range_index_start,
+                stop=range_index_start + (length * range_index_step),
+                step=range_index_step,
+                name=range_index_name,
+            )
+            if (
+                range_index_start == 0
+                and range_index_step == 1
+                and range_index_name is None
+            ):
+                assert df.index.equals(index)
+            else:
+                df.index = index
+
+            dfs_by_filename[f"{i}.parquet"] = df
             start_row = end_row
         path = make_parquet_dir(dfs_by_filename, row_group_size)
 
@@ -1513,6 +1617,123 @@ class TestParquet:
             engine=engine,
             path=path,
             columns=columns,
+            filters=filters,
+        )
+
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    @pytest.mark.parametrize("row_group_size", [None, 20])
+    def test_read_parquet_directory_range_index(
+        self,
+        engine,
+        make_parquet_dir,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        row_group_size,
+    ):
+        self._test_read_parquet_directory(
+            engine=engine,
+            make_parquet_dir=make_parquet_dir,
+            columns=None,
+            filters=filters,
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name=range_index_name,
+            row_group_size=row_group_size,
+            # We don't vary rows_per_file, but we choose a
+            # tricky option: uneven with some empty files,
+            # none divisible by the row_group_size.
+            # We use a smaller total size than in other tests
+            # to make this test run faster.
+            rows_per_file=([250] + [0] * 10 + [25] * 10),
+        )
+
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    def test_read_parquet_directory_range_index_consistent_metadata(
+        self,
+        engine,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        tmp_path,
+    ):
+        num_cols = DATASET_SIZE_DICT.get(
+            TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
+        )
+        df = pandas.DataFrame(
+            {f"col{x + 1}": np.arange(0, 500) for x in range(num_cols)},
+        )
+        index = pandas.RangeIndex(
+            start=range_index_start,
+            stop=range_index_start + (len(df) * range_index_step),
+            step=range_index_step,
+            name=range_index_name,
+        )
+        if (
+            range_index_start == 0
+            and range_index_step == 1
+            and range_index_name is None
+        ):
+            assert df.index.equals(index)
+        else:
+            df.index = index
+
+        path = get_unique_filename(extension=None, data_dir=tmp_path)
+
+        table = pa.Table.from_pandas(df)
+        pyarrow.dataset.write_dataset(
+            table,
+            path,
+            format="parquet",
+            max_rows_per_group=35,
+            max_rows_per_file=100,
+        )
+
+        # There are specific files that PyArrow will try to ignore by default
+        # in a parquet directory. One example are files that start with '_'. Our
+        # previous implementation tried to read all files in a parquet directory,
+        # but we now make use of PyArrow to ensure the directory is valid.
+        with open(os.path.join(path, "_committed_file"), "w+") as f:
+            f.write("testingtesting")
+
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=path,
+            filters=filters,
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
@@ -1520,11 +1741,32 @@ class TestParquet:
         "filters",
         [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
     )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
     def test_read_parquet_partitioned_directory(
-        self, tmp_path, make_parquet_file, columns, filters, engine
+        self,
+        tmp_path,
+        make_parquet_file,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        engine,
     ):
         unique_filename = get_unique_filename(extension=None, data_dir=tmp_path)
-        make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
+        make_parquet_file(
+            filename=unique_filename,
+            partitioned_columns=["col1"],
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name="my_index",
+        )
 
         eval_io(
             fn_name="read_parquet",

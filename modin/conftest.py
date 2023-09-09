@@ -385,6 +385,9 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
+        range_index_start=0,
+        range_index_step=1,
+        range_index_name=None,
         partitioned_columns=[],
         row_group_size: Optional[int] = None,
     ):
@@ -402,6 +405,20 @@ def make_parquet_file():
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
+            index = pandas.RangeIndex(
+                start=range_index_start,
+                stop=range_index_start + (nrows * range_index_step),
+                step=range_index_step,
+                name=range_index_name,
+            )
+            if (
+                range_index_start == 0
+                and range_index_step == 1
+                and range_index_name is None
+            ):
+                assert df.index.equals(index)
+            else:
+                df.index = index
             if len(partitioned_columns) > 0:
                 df.to_parquet(
                     filename,
