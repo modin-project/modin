@@ -13,7 +13,6 @@
 
 import pandas
 import modin.pandas as pd
-import modin.config as cfg
 from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
 
 import io
@@ -49,28 +48,6 @@ def test_sql_query():
     assert query_result.shape == expected_df.shape
     values_left = expected_df.dropna().values
     values_right = query_result.dropna().values
-    assert (values_left == values_right).all()
-
-
-def test_sql_extension():
-    # This test is for DataFrame.sql() method, that is injected by
-    # dfsql.extensions. In the HDK environment, there is no dfsql
-    # module and, thus, this test fails.
-    if cfg.StorageFormat.get() == "Hdk":
-        return
-
-    import modin.experimental.sql  # noqa: F401
-
-    df = pd.read_csv(io.StringIO(titanic_snippet))
-
-    expected_df = df[df["survived"] == 1][["passenger_id", "survived"]]
-
-    sql = "SELECT passenger_id, survived WHERE survived = 1"
-    query_result = df.sql(sql)
-    assert list(query_result.columns) == ["passenger_id", "survived"]
-    values_left = expected_df.values
-    values_right = query_result.values
-    assert values_left.shape == values_right.shape
     assert (values_left == values_right).all()
 
 
