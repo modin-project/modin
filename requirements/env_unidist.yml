@@ -8,6 +8,7 @@ dependencies:
   - pandas>=2.1,<2.2
   - numpy>=1.22.4
   - unidist-mpi>=0.2.1
+  - mpich
   - fsspec>=2022.05.0
   - packaging>=21.0
   - psutil>=5.8.0
