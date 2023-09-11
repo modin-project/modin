@@ -1492,7 +1492,7 @@ class TestParquet:
         "range_index_name",
         [None, "my_index"],
     )
-    def test_read_parquet_index(
+    def test_read_parquet_range_index(
         self,
         engine,
         make_parquet_file,
