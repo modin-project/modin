@@ -2017,6 +2017,7 @@ class PandasDataframe(ClassLogger):
 
         # applies reduction function over entire virtual partition
         def window_function_complete(virtual_partition):
+            # have to copy the pandas dataframe on ray because it's immutable
             virtual_partition_copy = virtual_partition.copy()
             window_result = reduce_fn(virtual_partition_copy)
             return window_result
@@ -2092,7 +2093,6 @@ class PandasDataframe(ClassLogger):
                             ]
                         )
                         parts_to_join.append(masked_new_parts)
-                    break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
                     if axis == Axis.COL_WISE:
@@ -2138,7 +2138,7 @@ class PandasDataframe(ClassLogger):
         results = np.array(results)
 
         return self.__constructor__(
-            results, self.index, self.columns, None, None, result_schema
+             np.array(results), self.index, self.columns, None, None, result_schema
         )
 
     @lazy_metadata_decorator(apply_axis="both")
