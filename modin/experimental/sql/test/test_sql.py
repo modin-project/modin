@@ -14,6 +14,7 @@
 import pandas
 import modin.pandas as pd
 from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
+from modin.config import StorageFormat
 
 import io
 import pytest
@@ -33,6 +34,10 @@ titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,tic
 """
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
 def test_sql_query():
     from modin.experimental.sql import query
 
@@ -51,6 +56,10 @@ def test_sql_query():
     assert (values_left == values_right).all()
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
 def test_string_cast():
     from modin.experimental.sql import query
 
