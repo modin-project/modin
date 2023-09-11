@@ -160,109 +160,57 @@ class Rolling(ClassLogger):
         return self._dataframe.__constructor__(query_compiler=qc_result)
 
     def count(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_count(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )
+        return self._aggregate("count")
 
     def sem(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_sem(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )
+        return self._aggregate("sem", *args, **kwargs)
 
     def sum(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_sum(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )
+        return self._aggregate("sum", *args, **kwargs)
 
     def mean(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_mean(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )    
+        return self._aggregate("mean", *args, **kwargs)  
 
     def median(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_median(
-                self.axis, self.rolling_kwargs, **kwargs
-            )
-        )
+        return self._aggregate("median", **kwargs)
 
     def var(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_var(
-                self.axis, self.rolling_kwargs, ddof, *args, **kwargs
-            )
-        )
+        return self._aggregate("var", ddof, *args, **kwargs)
 
     def std(self, ddof=1, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_std(
-                self.axis, self.rolling_kwargs, ddof, *args, **kwargs
-            )
-        )
+        return self._aggregate("std", ddof, *args, **kwargs)
 
     def min(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_min(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )
+        return self._aggregate("min", *args, **kwargs)
 
     def max(self, *args, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_max(
-                self.axis, self.rolling_kwargs, *args, **kwargs
-            )
-        )    
+        return self._aggregate("max", *args, **kwargs)   
 
     def corr(self, other=None, pairwise=None, *args, **kwargs):
         from .dataframe import DataFrame
         from .series import Series
-
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         elif isinstance(other, Series):
             other = other._query_compiler.to_pandas().squeeze()
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_corr(
-                self.axis, self.rolling_kwargs, other, pairwise, *args, **kwargs
-            )
-        )
+
+        return self._aggregate("corr", other, pairwise, *args, **kwargs)
 
     def cov(self, other=None, pairwise=None, ddof: Optional[int] = 1, **kwargs):
         from .dataframe import DataFrame
         from .series import Series
-
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         elif isinstance(other, Series):
             other = other._query_compiler.to_pandas().squeeze()
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_cov(
-                self.axis, self.rolling_kwargs, other, pairwise, ddof, **kwargs
-            )
-        )
+
+        return self._aggregate("cov", other, pairwise, ddof, **kwargs)
 
     def skew(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_skew(
-                self.axis, self.rolling_kwargs, **kwargs
-            )
-        )
+        return self._aggregate("skew", **kwargs)
 
     def kurt(self, **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_kurt(
-                self.axis, self.rolling_kwargs, **kwargs
-            )
-        )
+        return self._aggregate("kurt", **kwargs)
 
     def apply(
         self,
@@ -273,18 +221,8 @@ class Rolling(ClassLogger):
         args=None,
         kwargs=None,
     ):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_apply(
-                self.axis,
-                self.rolling_kwargs,
-                func,
-                raw,
-                engine,
-                engine_kwargs,
-                args,
-                kwargs,
-            )
-        )
+        func = cast_function_modin2pandas(func)
+        return self._aggregate("apply", func, raw, engine, engine_kwargs, args, kwargs)
 
     def aggregate(
         self,
@@ -295,9 +233,8 @@ class Rolling(ClassLogger):
         from .dataframe import DataFrame
 
         dataframe = DataFrame(
-            query_compiler=self._query_compiler.rolling_aggregate(
-                self.axis,
-                self.rolling_kwargs,
+            query_compiler=self._call_qc_method(
+                "aggregate",
                 func,
                 *args,
                 **kwargs,
@@ -314,11 +251,7 @@ class Rolling(ClassLogger):
     agg = aggregate
 
     def quantile(self, quantile, interpolation="linear", **kwargs):
-        return self._dataframe.__constructor__(
-            query_compiler=self._query_compiler.rolling_quantile(
-                self.axis, self.rolling_kwargs, quantile, interpolation, **kwargs
-            )
-        )
+        return self._aggregate("quantile", quantile, interpolation, **kwargs)
 
     def rank(
         self, method="average", ascending=True, pct=False, numeric_only=False, **kwargs
