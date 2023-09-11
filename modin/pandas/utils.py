@@ -302,7 +302,7 @@ def broadcast_item(
 
     Parameters
     ----------
-    obj : DataFrame or Series
+    obj : DataFrame or Series or query compiler
         The object containing the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
@@ -316,8 +316,9 @@ def broadcast_item(
 
     Returns
     -------
-    np.ndarray
-        `item` after it was broadcasted to `to_shape`.
+    (np.ndarray, Optional[Series])
+        * np.ndarray - `item` after it was broadcasted to `to_shape`.
+        * Optional[Series] - item's dtypes, if previously contained.
 
     Raises
     ------
@@ -345,6 +346,7 @@ def broadcast_item(
     )
     to_shape = new_row_len, new_col_len
 
+    dtypes = None
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as pandas reindex expects them to be so
         axes_to_reindex = {}
@@ -358,12 +360,26 @@ def broadcast_item(
         # New value for columns/index make that reindex add NaN values
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
+
+        if (
+            hasattr(item, "_query_compiler")
+            and item._query_compiler._modin_frame.has_materialized_dtypes
+            or hasattr(item, "dtypes")
+        ):
+            dtypes = item.dtypes
+            if not isinstance(dtypes, pandas.Series):
+                dtypes = pandas.Series([dtypes])
+
     try:
+        # Cast to numpy drop information about heterogeneous types (cast to common)
+        # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
+        if dtypes is None:
+            dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
+            return item.reshape(to_shape), dtypes
         else:
-            return np.broadcast_to(item, to_shape)
+            return np.broadcast_to(item, to_shape), dtypes
     except ValueError:
         from_shape = np.array(item).shape
         raise ValueError(

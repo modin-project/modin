@@ -472,22 +472,6 @@ class ArrayIndexer(object):
             axis = None
         return axis
 
-    def _write_items(self, row_lookup, col_lookup, item):
-        """
-        Perform remote write and replace blocks.
-
-        Parameters
-        ----------
-        row_lookup : slice or scalar
-            The global row index to write item to.
-        col_lookup : slice or scalar
-            The global col index to write item to.
-        item : numpy.ndarray
-            The new item value that needs to be assigned to `self`.
-        """
-        new_qc = self.arr._query_compiler.write_items(row_lookup, col_lookup, item)
-        self.arr._update_inplace(new_qc)
-
     def _setitem_positional(self, row_lookup, col_lookup, item, axis=None):
         """
         Assign `item` value to located dataset.
@@ -512,16 +496,9 @@ class ArrayIndexer(object):
             row_lookup = range(len(self.arr._query_compiler.index))[row_lookup]
         if isinstance(col_lookup, slice):
             col_lookup = range(len(self.arr._query_compiler.columns))[col_lookup]
-        if axis is None:
-            if not is_scalar(item):
-                item = broadcast_item(self.arr, row_lookup, col_lookup, item)
-            self.arr._query_compiler = self.arr._query_compiler.write_items(
-                row_lookup, col_lookup, item
-            )
-        else:
-            if not is_scalar(item):
-                item = broadcast_item(self.arr, row_lookup, col_lookup, item)
-            self._write_items(row_lookup, col_lookup, item)
+
+        new_qc = self.arr._query_compiler.write_items(row_lookup, col_lookup, item)
+        self.arr._update_inplace(new_qc)
 
     def __setitem__(self, key, item):
         """

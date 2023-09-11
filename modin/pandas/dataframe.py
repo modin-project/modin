@@ -58,7 +58,6 @@ from modin.config import PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
-    broadcast_item,
     cast_function_modin2pandas,
     SET_DATAFRAME_ATTRIBUTE_WARNING,
 )
@@ -2530,15 +2529,11 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self,
+                new_qc = self._query_compiler.write_items(
                     slice(None),
-                    key,
+                    self.columns.get_indexer_for(key),
                     value,
                     need_columns_reindex=False,
-                )
-                new_qc = self._query_compiler.write_items(
-                    slice(None), self.columns.get_indexer_for(key), item
                 )
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value
