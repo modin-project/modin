@@ -134,7 +134,7 @@ jobs:
         execution: [BaseOnPython]
     env:
       MODIN_TEST_DATASET_SIZE: "small"
-    name: Test ${{ matrix.execution }} execution, Python 3.9
+    name: Test ${{ matrix.execution }} execution, Python 3.10
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
@@ -331,7 +331,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         unidist-backend: ["mpi"]
     env:
       MODIN_ENGINE: "Unidist"
@@ -394,7 +394,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
@@ -529,7 +529,7 @@ jobs:
         os:
           - ubuntu
           - windows
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         execution:
           - name: ray
             shell-ex: "python -m pytest"
@@ -681,7 +681,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
     env:
       MODIN_STORAGE_FORMAT: pyarrow
       MODIN_EXPERIMENTAL: "True"
@@ -711,7 +711,7 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.10"]
         engine: ["ray", "dask"]
     env:
       MODIN_EXPERIMENTAL: "True"
