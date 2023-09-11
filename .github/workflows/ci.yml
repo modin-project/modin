@@ -164,7 +164,7 @@ jobs:
       MODIN_EXPERIMENTAL: "True"
       MODIN_ENGINE: "native"
       MODIN_STORAGE_FORMAT: "hdk"
-    name: Test HDK storage format, Python 3.9
+    name: Test HDK storage format, Python 3.10
     services:
       moto:
         image: motoserver/moto
@@ -179,6 +179,7 @@ jobs:
         with:
           environment-file: requirements/env_hdk.yml
           activate-environment: modin_on_hdk
+          python-version: "3.10"
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
