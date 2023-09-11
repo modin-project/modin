@@ -350,7 +350,14 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
             credential_error_type = (PermissionError,)
 
         def get_file_path(fs_handle) -> List[str]:
-            file_paths = fs_handle.glob(file_path)
+            if "*" in file_path:
+                file_paths = fs_handle.glob(file_path)
+            else:
+                file_paths = [
+                    f
+                    for f in fs_handle.find(file_path)
+                    if not f.endswith("/")  # exclude folder
+                ]
             if len(file_paths) == 0 and not fs_handle.exists(file_path):
                 raise FileNotFoundError(f"Path <{file_path}> isn't available.")
             fs_addresses = [fs_handle.unstrip_protocol(path) for path in file_paths]
