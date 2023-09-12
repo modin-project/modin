@@ -54,10 +54,10 @@ import uuid  # noqa: E402
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
-from modin.config import BenchmarkMode  # noqa: E402
-from modin.config import CIAWSAccessKeyID  # noqa: E402
-from modin.config import (
+from modin.config import (  # noqa: E402
     AsyncReadMode,
+    BenchmarkMode,
+    CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     GithubCI,
     IsExperimental,
@@ -69,11 +69,13 @@ from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
     PandasOnPythonIO,
 )
-from modin.core.storage_formats import BaseQueryCompiler  # noqa: E402
-from modin.core.storage_formats import PandasQueryCompiler
-from modin.pandas.test.utils import _make_csv_file  # noqa: E402
-from modin.pandas.test.utils import (
+from modin.core.storage_formats import (  # noqa: E402
+    BaseQueryCompiler,
+    PandasQueryCompiler,
+)
+from modin.pandas.test.utils import (  # noqa: E402
     NROWS,
+    _make_csv_file,
     get_unique_filename,
     make_default_file,
     teardown_test_files,
