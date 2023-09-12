@@ -11,13 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import pickle
+
 import numpy as np
+import pytest
 
 import modin.pandas as pd
 from modin.config import PersistentPickle
-
 from modin.pandas.test.utils import df_equals
 
 

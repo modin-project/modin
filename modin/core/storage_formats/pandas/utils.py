@@ -13,15 +13,15 @@
 
 """Contains utility functions for frame partitioning."""
 
-import re
-from typing import Hashable, List
 import contextlib
+import re
+from math import ceil
+from typing import Hashable, List
 
 import numpy as np
 import pandas
 
 from modin.config import MinPartitionSize, NPartitions
-from math import ceil
 
 
 @contextlib.contextmanager

@@ -13,23 +13,24 @@
 
 """Module provides a partition manager class for ``HdkOnNativeDataframe`` frame."""
 
-from modin.error_message import ErrorMessage
-from modin.pandas.utils import is_scalar
-import numpy as np
+import re
 
+import numpy as np
+import pandas
+import pyarrow
+
+from modin.config import DoUseCalcite
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from ..dataframe.utils import ColNameCodec
-from ..partitioning.partition import HdkOnNativeDataframePartition
-from ..db_worker import DbTable, DbWorker
+from modin.error_message import ErrorMessage
+from modin.pandas.utils import is_scalar
+
 from ..calcite_builder import CalciteBuilder
 from ..calcite_serializer import CalciteSerializer
-from modin.config import DoUseCalcite
-
-import pyarrow
-import pandas
-import re
+from ..dataframe.utils import ColNameCodec
+from ..db_worker import DbTable, DbWorker
+from ..partitioning.partition import HdkOnNativeDataframePartition
 
 
 class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):

@@ -11,15 +11,17 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe classes related to its partitioning and optimized for cuDF on Ray execution."""
+import warnings
 
-from .gpu_manager import GPUManager
-from .partition import cuDFOnRayDataframePartition
-from .partition_manager import GPU_MANAGERS, cuDFOnRayDataframePartitionManager
+try:
+    # This import is required to inject the DataFrame.sql() method.
+    import dfsql.extensions  # noqa: F401
+    from dfsql import sql_query as dfsql_query
+except ImportError:
+    warnings.warn(
+        "Modin experimental sql interface requires dfsql to be installed."
+        + ' Run `pip install "modin[sql]"` to install it.'
+    )
+    raise
 
-__all__ = [
-    "GPUManager",
-    "GPU_MANAGERS",
-    "cuDFOnRayDataframePartitionManager",
-    "cuDFOnRayDataframePartition",
-]
+__all__ = ["dfsql_query"]

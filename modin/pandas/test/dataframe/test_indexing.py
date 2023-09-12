@@ -11,38 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import numpy as np
-import pandas
-from pandas.testing import assert_index_equal
-from pandas._testing import ensure_clean
-import matplotlib
-import modin.pandas as pd
 import sys
 
+import matplotlib
+import numpy as np
+import pandas
+import pytest
+from pandas._testing import ensure_clean
+from pandas.testing import assert_index_equal
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from modin.pandas.indexing import is_range_like
 from modin.pandas.test.utils import (
     NROWS,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
+    RAND_LOW,
     arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
     axis_keys,
     axis_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    extra_test_parameters,
+    generate_multiindex,
     int_arg_keys,
     int_arg_values,
-    create_test_dfs,
-    eval_general,
-    generate_multiindex,
-    extra_test_parameters,
-    default_to_pandas_ignore_string,
+    name_contains,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
-from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
 

@@ -13,24 +13,24 @@
 
 """Module houses the functions building a ``pandas.DataFrame`` from a DataFrame exchange protocol object."""
 
-import pandas
-import numpy as np
 import ctypes
 import re
-from typing import Optional, Tuple, Any, Union
+from typing import Any, Optional, Tuple, Union
 
+import numpy as np
+import pandas
+
+from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
+    ProtocolBuffer,
+    ProtocolColumn,
+    ProtocolDataframe,
+)
 from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
-    DTypeKind,
-    ColumnNullType,
     ArrowCTypes,
+    ColumnNullType,
+    DTypeKind,
     Endianness,
 )
-from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
-    ProtocolDataframe,
-    ProtocolColumn,
-    ProtocolBuffer,
-)
-
 
 np_types_map = {
     DTypeKind.INT: {8: np.int8, 16: np.int16, 32: np.int32, 64: np.int64},

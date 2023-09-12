@@ -15,28 +15,29 @@
 
 import os
 import sys
-import psutil
-from packaging import version
-from typing import Optional
 import warnings
+from typing import Optional
 
+import psutil
 import ray
+from packaging import version
 
 from modin.config import (
-    StorageFormat,
-    IsRayCluster,
-    RayRedisAddress,
-    RayRedisPassword,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
     CpuCount,
+    GithubCI,
     GpuCount,
+    IsRayCluster,
     Memory,
     NPartitions,
+    RayRedisAddress,
+    RayRedisPassword,
+    StorageFormat,
     ValueSource,
-    GithubCI,
-    CIAWSSecretAccessKey,
-    CIAWSAccessKeyID,
 )
 from modin.error_message import ErrorMessage
+
 from .engine_wrapper import RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
@@ -148,8 +149,8 @@ def initialize_ray(
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
-                GPUManager,
                 GPU_MANAGERS,
+                GPUManager,
             )
 
             # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times

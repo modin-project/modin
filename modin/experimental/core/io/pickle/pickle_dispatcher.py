@@ -18,8 +18,8 @@ import warnings
 
 import pandas
 
-from modin.core.io.file_dispatcher import FileDispatcher
 from modin.config import NPartitions
+from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 

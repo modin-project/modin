@@ -18,11 +18,12 @@ Axis is an enum that represents the `axis` argument for dataframe operations.
 JoinType is an enum that represents the `join_type` or `how` argument for the join algebra operator.
 """
 
-import pandas
-from pandas.api.types import is_scalar
-from pandas._typing import IndexLabel
 from enum import Enum
-from typing import cast, Dict, List, Tuple, Sequence
+from typing import Dict, List, Sequence, Tuple, cast
+
+import pandas
+from pandas._typing import IndexLabel
+from pandas.api.types import is_scalar
 
 
 class Axis(Enum):  # noqa: PR01

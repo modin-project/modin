@@ -11,46 +11,46 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
+import pytest
 from pandas.testing import assert_index_equal, assert_series_equal
-import matplotlib
-import modin.pandas as pd
-from modin.utils import get_current_execution
 
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.test.utils import (
-    random_state,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
-    df_is_empty,
+    RAND_LOW,
     arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    numeric_dfs,
-    test_func_keys,
-    test_func_values,
-    indices_keys,
-    indices_values,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    int_arg_keys,
-    int_arg_values,
-    eval_general,
     create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    df_is_empty,
+    eval_general,
+    indices_keys,
+    indices_values,
+    int_arg_keys,
+    int_arg_values,
+    name_contains,
+    numeric_dfs,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
+    test_func_keys,
+    test_func_values,
 )
-from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -601,6 +601,7 @@ class TestCategoricalProxyDtype:
             return df.dtypes["a"], original_dtype, df
         elif StorageFormat.get() == "Hdk":
             import pyarrow as pa
+
             from modin.pandas.utils import from_arrow
 
             at = pa.concat_tables(

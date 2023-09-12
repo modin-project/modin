@@ -13,10 +13,11 @@
 
 """Module contains class ModinIndex."""
 
+import functools
 import uuid
+
 import pandas
 from pandas.core.indexes.api import ensure_index
-import functools
 
 
 class ModinIndex:

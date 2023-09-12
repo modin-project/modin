@@ -12,54 +12,52 @@
 # governing permissions and limitations under the License.
 
 import os
-import pandas
-import numpy as np
-import pyarrow
-import pytest
 import re
 
+import numpy as np
+import pandas
+import pyarrow
+import pytest
 from pandas._testing import ensure_clean
+from pandas.core.dtypes.common import is_list_like
+from pyhdk import __version__ as hdk_version
 
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
-    io_ops_bad_exc,
     default_to_pandas_ignore_string,
+    io_ops_bad_exc,
     random_state,
     test_data,
 )
 from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_chunks
-from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
-from pandas.core.dtypes.common import is_list_like
 
-from pyhdk import __version__ as hdk_version
+from .utils import ForceHdkImport, eval_io, run_and_compare, set_execution_mode
 
 StorageFormat.put("hdk")
 
 import modin.pandas as pd
-from modin.pandas.test.utils import (
-    df_equals,
-    bool_arg_values,
-    to_pandas,
-    test_data_values,
-    test_data_keys,
-    generate_multiindex,
-    eval_general,
-    df_equals_with_non_stable_indices,
-    time_parsing_csv_path,
-)
-from modin.utils import try_cast_to_pandas
-from modin.pandas.utils import from_arrow
-
-from modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager import (
-    HdkOnNativeDataframePartitionManager,
+from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
+    CalciteSerializer,
 )
 from modin.experimental.core.execution.native.implementations.hdk_on_native.df_algebra import (
     FrameNode,
 )
-from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
-    CalciteSerializer,
+from modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager import (
+    HdkOnNativeDataframePartitionManager,
 )
-
+from modin.pandas.test.utils import (
+    bool_arg_values,
+    df_equals,
+    df_equals_with_non_stable_indices,
+    eval_general,
+    generate_multiindex,
+    test_data_keys,
+    test_data_values,
+    time_parsing_csv_path,
+    to_pandas,
+)
+from modin.pandas.utils import from_arrow
+from modin.utils import try_cast_to_pandas
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,

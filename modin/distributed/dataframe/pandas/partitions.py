@@ -13,7 +13,8 @@
 
 """Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
+
 import numpy as np
 from pandas._typing import Axes
 
@@ -21,11 +22,11 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
 
 if TYPE_CHECKING:
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframePartition,
+    )
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframePartition,
     )
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
         PandasOnUnidistDataframePartition,

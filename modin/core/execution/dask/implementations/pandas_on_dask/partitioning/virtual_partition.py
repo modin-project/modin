@@ -13,17 +13,17 @@
 
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
+import pandas
 from distributed import Future
 from distributed.utils import get_ip
-
-import pandas
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common import DaskWrapper
 from modin.utils import _inherit_docstrings
+
+from .partition import PandasOnDaskDataframePartition
 
 
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):

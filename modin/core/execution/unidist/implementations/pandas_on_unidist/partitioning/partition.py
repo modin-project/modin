@@ -15,11 +15,11 @@
 
 import unidist
 
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.core.execution.unidist.common.utils import deserialize
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 compute_sliced_len = unidist.remote(compute_sliced_len)
 

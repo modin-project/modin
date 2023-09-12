@@ -12,11 +12,11 @@
 # governing permissions and limitations under the License.
 
 import sys
-from utils import measure
-import modin.pandas as pd
-
 
 import numpy as np
+from utils import measure
+
+import modin.pandas as pd
 
 
 def read(filename):
@@ -192,12 +192,12 @@ def cod(y_test, y_pred):
 
 def ml(X, y, random_state, n_runs, test_size):
     # to not install ML dependencies unless required
-    from sklearn import config_context
     import sklearnex
+    from sklearn import config_context
 
     sklearnex.patch_sklearn()
-    from sklearn.model_selection import train_test_split
     import sklearn.linear_model as lm
+    from sklearn.model_selection import train_test_split
 
     clf = lm.Ridge()
 

@@ -13,16 +13,17 @@
 
 """Module houses default GroupBy functions builder class."""
 
-from .default import DefaultMethod
+from typing import Any
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
 # Defines a set of string names of functions that are executed in a transform-way in groupby
 from pandas.core.groupby.base import transformation_kernels
-from typing import Any
 
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
+
+from .default import DefaultMethod
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different

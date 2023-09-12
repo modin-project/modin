@@ -11,10 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import numpy as np
 import pytest
 
+import modin.pandas as pd
 from modin.config import NPartitions
 
 

@@ -13,30 +13,27 @@
 
 """Module provides ``CalciteSerializer`` class."""
 
+import json
+
+import numpy as np
 from pandas.core.dtypes.common import is_datetime64_dtype
 
-from .expr import (
-    BaseExpr,
-    LiteralExpr,
-    OpExpr,
-    AggregateExpr,
-)
+from modin.error_message import ErrorMessage
+
 from .calcite_algebra import (
-    CalciteBaseNode,
-    CalciteInputRefExpr,
-    CalciteInputIdxExpr,
-    CalciteScanNode,
-    CalciteProjectionNode,
-    CalciteFilterNode,
     CalciteAggregateNode,
+    CalciteBaseNode,
     CalciteCollation,
-    CalciteSortNode,
+    CalciteFilterNode,
+    CalciteInputIdxExpr,
+    CalciteInputRefExpr,
     CalciteJoinNode,
+    CalciteProjectionNode,
+    CalciteScanNode,
+    CalciteSortNode,
     CalciteUnionNode,
 )
-from modin.error_message import ErrorMessage
-import json
-import numpy as np
+from .expr import AggregateExpr, BaseExpr, LiteralExpr, OpExpr
 
 
 def _warn_if_unsigned(dtype):  # noqa: GL08

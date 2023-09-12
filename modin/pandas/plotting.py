@@ -15,8 +15,9 @@
 
 from pandas import plotting as pdplot
 
-from modin.utils import instancer, to_pandas
 from modin.logging import ClassLogger
+from modin.utils import instancer, to_pandas
+
 from .dataframe import DataFrame
 
 

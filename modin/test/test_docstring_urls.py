@@ -11,11 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from urllib.request import urlopen
-from urllib.error import HTTPError
-from concurrent.futures import ThreadPoolExecutor
-import pkgutil
 import importlib
+import pkgutil
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import HTTPError
+from urllib.request import urlopen
+
 import pytest
 
 import modin.pandas

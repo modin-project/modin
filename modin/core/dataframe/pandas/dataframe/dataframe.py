@@ -17,40 +17,35 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+import datetime
 from collections import OrderedDict
+from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
+
 import numpy as np
 import pandas
-import datetime
-from pandas.api.types import is_object_dtype
-from pandas.core.indexes.api import Index, RangeIndex
-from pandas.core.dtypes.common import (
-    is_numeric_dtype,
-    is_list_like,
-)
 from pandas._libs.lib import no_default
-from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
+from pandas.api.types import is_object_dtype
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import Engine, IsRayCluster, NPartitions
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.core.storage_formats.pandas.utils import get_length_list
-from modin.error_message import ErrorMessage
-from modin.core.storage_formats.pandas.parsers import (
-    find_common_type_cat as find_common_type,
-)
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.utils import (
-    Axis,
-    JoinType,
-)
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
     lazy_metadata_decorator,
 )
 from modin.core.dataframe.pandas.metadata import (
+    LazyProxyCategoricalDtype,
     ModinDtypes,
     ModinIndex,
-    LazyProxyCategoricalDtype,
 )
+from modin.core.storage_formats.pandas.parsers import (
+    find_common_type_cat as find_common_type,
+)
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.storage_formats.pandas.utils import get_length_list
+from modin.error_message import ErrorMessage
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -58,9 +53,9 @@ if TYPE_CHECKING:
     )
     from pandas._typing import npt
 
-from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import check_both_not_none, is_full_grab_slice
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 

@@ -20,12 +20,13 @@ used as base class for dipatchers of SQL queries.
 """
 
 import math
+
 import numpy as np
 import pandas
 
+from modin.config import NPartitions, ReadSqlEngine
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.db_conn import ModinDatabaseConnection
-from modin.config import NPartitions, ReadSqlEngine
 
 
 class SQLDispatcher(FileDispatcher):

@@ -13,10 +13,11 @@
 
 import numpy
 
-from .arr import array
-from .utils import try_convert_from_interoperable_type
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
+
+from .arr import array
+from .utils import try_convert_from_interoperable_type
 
 
 def _dispatch_math(operator_name, arr_method_name=None):

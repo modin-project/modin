@@ -19,23 +19,24 @@
 # define `MODIN_ASV_USE_IMPL` env var to choose library for using in performance
 # measurements
 
-import numpy as np
-import pandas._testing as tm
 import math
 
+import numpy as np
+import pandas._testing as tm
+
 from .utils import (
-    generate_dataframe,
-    gen_nan_data,
-    RAND_LOW,
-    RAND_HIGH,
-    random_string,
-    random_columns,
-    random_booleans,
     GROUPBY_NGROUPS,
     IMPL,
+    RAND_HIGH,
+    RAND_LOW,
     execute,
-    translator_groupby_ngroups,
+    gen_nan_data,
+    generate_dataframe,
     get_benchmark_shapes,
+    random_booleans,
+    random_columns,
+    random_string,
+    translator_groupby_ngroups,
     trigger_import,
 )
 

@@ -11,41 +11,41 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import re
-from pathlib import Path
-from typing import Union
-import pytest
-import numpy as np
-import math
-import pandas
+import csv
+import functools
 import itertools
-from pandas.testing import (
-    assert_series_equal,
-    assert_frame_equal,
-    assert_index_equal,
-    assert_extension_array_equal,
-)
+import math
+import os
+import re
+from io import BytesIO
+from pathlib import Path
+from string import ascii_letters
+from typing import Union
+
+import numpy as np
+import pandas
+import psutil
+import pytest
 from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
     is_list_like,
     is_numeric_dtype,
     is_object_dtype,
-    is_string_dtype,
-    is_bool_dtype,
-    is_datetime64_any_dtype,
-    is_timedelta64_dtype,
     is_period_dtype,
+    is_string_dtype,
+    is_timedelta64_dtype,
+)
+from pandas.testing import (
+    assert_extension_array_equal,
+    assert_frame_equal,
+    assert_index_equal,
+    assert_series_equal,
 )
 
-from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
 from modin.utils import to_pandas, try_cast_to_pandas
-from modin.config import TestDatasetSize, TrackFileLeaks
-from io import BytesIO
-import os
-from string import ascii_letters
-import csv
-import psutil
-import functools
 
 # Flag activated on command line with "--extra-test-parameters" option.
 # Used in some tests to perform additional parameter combinations.

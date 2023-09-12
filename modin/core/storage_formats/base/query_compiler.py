@@ -18,32 +18,33 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from typing import Hashable, List, Optional
 
+import numpy as np
+import pandas
+import pandas.core.resample
+from pandas._typing import DtypeBackend, IndexLabel, Suffixes
+from pandas.core.dtypes.common import is_number, is_scalar
+
+from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
-    DataFrameDefault,
-    SeriesDefault,
-    DateTimeDefault,
-    StrDefault,
     BinaryDefault,
+    CatDefault,
+    DataFrameDefault,
+    DateTimeDefault,
+    ExpandingDefault,
+    GroupByDefault,
     ResampleDefault,
     RollingDefault,
-    ExpandingDefault,
-    CatDefault,
-    GroupByDefault,
+    SeriesDefault,
     SeriesGroupByDefault,
+    StrDefault,
 )
 from modin.error_message import ErrorMessage
-from . import doc_utils
 from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
-from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar, is_number
-import pandas.core.resample
-import pandas
-from pandas._typing import IndexLabel, Suffixes, DtypeBackend
-import numpy as np
-from typing import List, Hashable, Optional
+from . import doc_utils
 
 
 def _get_axis(axis):
@@ -4144,10 +4145,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         from modin.pandas.indexing import (
+            boolean_mask_to_numeric,
             is_boolean_array,
             is_list_like,
             is_range_like,
-            boolean_mask_to_numeric,
         )
 
         lookups = []

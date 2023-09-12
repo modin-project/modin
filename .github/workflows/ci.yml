@@ -26,16 +26,17 @@ env:
   MODIN_GITHUB_CI: true
 
 jobs:
-  lint-black:
-    name: lint (black)
+  lint-black-isort:
+    name: lint (black and isort)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
-      - run: pip install black
+      - run: pip install black isort>=5.12
       # NOTE: keep the black command here in sync with the pre-commit hook in
       # /contributing/pre-commit
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: isort . --check-only
 
   lint-mypy:
     name: lint (mypy)

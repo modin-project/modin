@@ -11,37 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-from modin.config import MinPartitionSize
-import modin.pandas as pd
-
-from pandas.core.dtypes.common import is_list_like
+import pytest
 from pandas._libs.lib import no_default
+from pandas.core.dtypes.common import is_list_like
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    query_func_keys,
-    query_func_values,
-    agg_func_keys,
-    agg_func_values,
     agg_func_except_keys,
     agg_func_except_values,
-    eval_general,
-    create_test_dfs,
-    udf_func_values,
-    udf_func_keys,
-    test_data,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
     bool_arg_keys,
     bool_arg_values,
-    arg_keys,
+    create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    query_func_keys,
+    query_func_values,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+    udf_func_keys,
+    udf_func_values,
 )
-from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 

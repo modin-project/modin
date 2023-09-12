@@ -11,21 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import numpy as np
 import pandas
+import pytest
+
 import modin.pandas as pd
+from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
-    df_equals,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    eval_general,
     create_test_dfs,
+    df_equals,
+    eval_general,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import NPartitions
 
 NPartitions.put(4)
 
