@@ -7,10 +7,9 @@ due to the architecture of Modin. Currently, Modin has a query compiler that act
 intermediate layer between the query language (e.g. SQL, pandas) and the execution
 (See :doc:`architecture </development/architecture>` documentation for details).
 
-To execute SQL queries, Modin uses either dfsql third-party library or, in case of HDK
-engine (See :doc:`Using HDK </development/using_hdk>` documentation for details)
-the queries are executed directly by HDK. Thus, to execute SQL queries, either dfsql
-or pyhdk module must be installed.
+To execute SQL queries, Modin uses HDK engine
+(See :doc:`Using HDK </development/using_hdk>` documentation for details)
+Thus, to execute SQL queries, pyhdk module must be installed.
 
 
 A Short Example Using the Google Play Store
@@ -41,10 +40,6 @@ App, Category, and Rating, where Price is ‘0’.
     # Or, in this case, where the query only requires one table,
     # you can also ignore the FROM part in the query string:
     sql_str = "SELECT App, Category, Rating WHERE Price = '0' "
-
-    # DataFrame.sql() can take query strings without FROM statement
-    # NOTE: this method required the dfsql module to be installed!
-    result_df = gstore_apps_df.sql(sql_str)
 
 Writing Complex Queries
 """""""""""""""""""""""

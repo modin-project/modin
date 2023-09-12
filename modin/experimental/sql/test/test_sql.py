@@ -13,8 +13,8 @@
 
 import pandas
 import modin.pandas as pd
-import modin.config as cfg
 from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
+from modin.config import StorageFormat
 
 import io
 import pytest
@@ -34,6 +34,10 @@ titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,tic
 """
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
 def test_sql_query():
     from modin.experimental.sql import query
 
@@ -52,28 +56,10 @@ def test_sql_query():
     assert (values_left == values_right).all()
 
 
-def test_sql_extension():
-    # This test is for DataFrame.sql() method, that is injected by
-    # dfsql.extensions. In the HDK environment, there is no dfsql
-    # module and, thus, this test fails.
-    if cfg.StorageFormat.get() == "Hdk":
-        return
-
-    import modin.experimental.sql  # noqa: F401
-
-    df = pd.read_csv(io.StringIO(titanic_snippet))
-
-    expected_df = df[df["survived"] == 1][["passenger_id", "survived"]]
-
-    sql = "SELECT passenger_id, survived WHERE survived = 1"
-    query_result = df.sql(sql)
-    assert list(query_result.columns) == ["passenger_id", "survived"]
-    values_left = expected_df.values
-    values_right = query_result.values
-    assert values_left.shape == values_right.shape
-    assert (values_left == values_right).all()
-
-
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
 def test_string_cast():
     from modin.experimental.sql import query
 
