@@ -20,7 +20,7 @@ _query_impl = None
 
 def query(sql: str, *args, **kwargs) -> pd.DataFrame:
     """
-    Execute SQL query using either HDK engine.
+    Execute SQL query using HDK engine.
 
     Parameters
     ----------
