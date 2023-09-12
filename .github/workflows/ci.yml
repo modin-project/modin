@@ -354,7 +354,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: requirements/env_unidist_ubuntu.yml
+          environment-file: requirements/env_unidist.yml
           activate-environment: modin_on_unidist
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
@@ -561,7 +561,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: ${{ matrix.execution.name == 'unidist' && format('requirements/env_unidist_{0}.yml', matrix.os) || 'environment-dev.yml' }}
+          environment-file: ${{ matrix.execution.name == 'unidist' && 'requirements/env_unidist.yml' || 'environment-dev.yml' }}
           activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
