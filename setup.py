@@ -10,7 +10,6 @@ dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
 ray_deps = ["ray[default]>=1.13.0,!=2.5.0", "pyarrow>=7.0.0", "pydantic<2"]
 unidist_deps = ["unidist[mpi]>=0.2.1"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
-sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + unidist_deps + spreadsheet_deps
 
 # Distribute 'modin-autoimport-pandas.pth' along with binary and source distributions.
@@ -60,7 +59,6 @@ setup(
         "ray": ray_deps,
         "unidist": unidist_deps,
         "spreadsheet": spreadsheet_deps,
-        "sql": sql_deps,
         "all": all_deps,
     },
     python_requires=">=3.9",
