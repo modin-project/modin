@@ -318,7 +318,7 @@ def broadcast_item(
     -------
     (np.ndarray, Optional[Series])
         * np.ndarray - `item` after it was broadcasted to `to_shape`.
-        * Optional[Series] - item's dtypes, if previously contained.
+        * Series - item's dtypes.
 
     Raises
     ------
@@ -361,14 +361,9 @@ def broadcast_item(
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
 
-        if (
-            hasattr(item, "_query_compiler")
-            and item._query_compiler._modin_frame.has_materialized_dtypes
-            or hasattr(item, "dtypes")
-        ):
-            dtypes = item.dtypes
-            if not isinstance(dtypes, pandas.Series):
-                dtypes = pandas.Series([dtypes])
+        dtypes = item.dtypes
+        if not isinstance(dtypes, pandas.Series):
+            dtypes = pandas.Series([dtypes])
 
     try:
         # Cast to numpy drop information about heterogeneous types (cast to common)

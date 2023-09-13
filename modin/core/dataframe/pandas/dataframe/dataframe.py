@@ -2847,7 +2847,9 @@ class PandasDataframe(ClassLogger):
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
         if new_columns is not None and new_dtypes is not None:
-            assert new_dtypes.index.equals(new_columns), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
+            assert new_dtypes.index.equals(
+                new_columns
+            ), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
 
         if axis is not None:
             assert apply_indices is not None

@@ -4277,7 +4277,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
             isinstance(row_numeric_index, slice)
             and row_numeric_index == slice(None)
             and self._modin_frame.has_materialized_dtypes
-            and broadcasted_dtypes is not None
         ):
             new_dtypes = self.dtypes.copy()
             new_dtypes.iloc[col_numeric_index] = broadcasted_dtypes.values
