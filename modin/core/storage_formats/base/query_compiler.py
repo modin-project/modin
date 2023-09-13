@@ -4375,7 +4375,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 need_columns_reindex=need_columns_reindex,
             )
         else:
-            broadcasted_item, _ = item, pandas.Series([np.array(item).dtype])
+            broadcasted_item = item
 
         return DataFrameDefault.register(write_items)(
             self, broadcasted_items=broadcasted_item

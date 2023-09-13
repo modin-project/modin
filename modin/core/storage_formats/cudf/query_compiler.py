@@ -68,7 +68,7 @@ class cuDFQueryCompiler(PandasQueryCompiler):
                 need_columns_reindex=need_columns_reindex,
             )
         else:
-            broadcasted_item, _ = item, pandas.Series([np.array(item).dtype])
+            broadcasted_item = item
 
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,

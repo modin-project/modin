@@ -2826,11 +2826,11 @@ class PandasDataframe(ClassLogger):
             The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
-            The index of the result, we may know this in advance.
+            The index of the result, if known in advance.
         new_columns : list-like, optional
-            The columns of the result, we may know this in advance.
+            The columns of the result, if known in advance.
         new_dtypes : pandas.Series, optional
-            The dtypes of the result, we may know this in advance.
+            The dtypes of the result, if known in advance.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
         item_to_distribute : np.ndarray or scalar, default: no_default
@@ -2847,11 +2847,8 @@ class PandasDataframe(ClassLogger):
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
         if new_columns is not None and new_dtypes is not None:
-            if not new_dtypes.index.equals(new_columns):
-                # sanity check
-                raise ValueError(
-                    f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
-                )
+            assert new_dtypes.index.equals(new_columns), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
+
         if axis is not None:
             assert apply_indices is not None
             # Convert indices to numeric indices
