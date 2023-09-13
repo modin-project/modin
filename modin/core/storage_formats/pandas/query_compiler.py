@@ -4274,7 +4274,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_dtypes = None
         if (
             # compute dtypes only if assigning entire columns
-            row_numeric_index == slice(None)
+            isinstance(row_numeric_index, slice)
+            and row_numeric_index == slice(None)
             and self._modin_frame.has_materialized_dtypes
         ):
             new_dtypes = self.dtypes.copy()
