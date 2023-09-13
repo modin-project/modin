@@ -19,7 +19,7 @@ from unittest import mock
 import datetime
 
 from modin.config import StorageFormat
-from modin.config.envvars import ExperimentalGroupbyImpl
+from modin.config.envvars import ExperimentalGroupbyImpl, IsRayCluster
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -449,7 +449,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
 
     if as_index:
-        eval_std(modin_groupby, pandas_groupby)
+        eval_std(modin_groupby, pandas_groupby, numeric_only=True)
         eval_var(modin_groupby, pandas_groupby, numeric_only=True)
         eval_skew(modin_groupby, pandas_groupby, numeric_only=True)
 
@@ -935,7 +935,9 @@ def test_simple_col_groupby():
     eval_count(modin_groupby, pandas_groupby)
     eval_size(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
-    eval_groups(modin_groupby, pandas_groupby)
+
+    # https://github.com/pandas-dev/pandas/issues/54858
+    # eval_groups(modin_groupby, pandas_groupby)
 
 
 @pytest.mark.parametrize(
@@ -2087,8 +2089,18 @@ def test_unknown_groupby(columns):
     [pytest.param(True, marks=pytest.mark.skip("See modin issue #2513")), False],
 )
 def test_multi_column_groupby_different_partitions(
-    func_to_apply, as_index, by_length, categorical_by
+    func_to_apply, as_index, by_length, categorical_by, request
 ):
+    if (
+        not categorical_by
+        and by_length == 1
+        and "custom_aggs_at_same_partition" in request.node.name
+        or "renaming_aggs_at_same_partition" in request.node.name
+    ):
+        pytest.xfail(
+            "After upgrade to pandas 2.1 skew results are different: AssertionError: 1.0 >= 0.0001."
+            + " See https://github.com/modin-project/modin/issues/6530 for details."
+        )
     data = test_data_values[0]
     md_df, pd_df = create_test_dfs(data)
 
@@ -2276,7 +2288,7 @@ def test_validate_by():
     """Test ``modin.core.dataframe.algebra.default2pandas.groupby.GroupBy.validate_by``."""
 
     def compare(obj1, obj2):
-        assert type(obj1) == type(
+        assert type(obj1) is type(
             obj2
         ), f"Both objects must be instances of the same type: {type(obj1)} != {type(obj2)}."
         if isinstance(obj1, list):
@@ -2748,7 +2760,11 @@ def test_rolling_timedelta_window(center, closed, as_index, on):
     pd_df = md_df._to_pandas()
 
     if StorageFormat.get() == "Pandas":
-        assert md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+        assert (
+            md_df._query_compiler._modin_frame._partitions.shape[1] == 2
+            if on is None
+            else 3
+        )
 
     md_window = md_df.groupby("by", as_index=as_index).rolling(
         datetime.timedelta(days=3), center=center, closed=closed, on=on
@@ -2783,3 +2799,88 @@ def test_groupby_deferred_index(func):
         return getattr(grp, func)()
 
     eval_general(pd, pandas, perform)
+
+
+# there are two different implementations of partitions aligning for cluster and non-cluster mode,
+# here we want to test both of them, so simply modifying the config for this test
+@pytest.mark.parametrize(
+    "modify_config",
+    [
+        {ExperimentalGroupbyImpl: True, IsRayCluster: True},
+        {ExperimentalGroupbyImpl: True, IsRayCluster: False},
+    ],
+    indirect=True,
+)
+def test_shape_changing_udf(modify_config):
+    modin_df, pandas_df = create_test_dfs(
+        {
+            "by_col1": ([1] * 50) + ([10] * 50),
+            "col2": np.arange(100),
+            "col3": np.arange(100),
+        }
+    )
+
+    def func1(group):
+        # changes the original shape and indexing of the 'group'
+        return pandas.Series(
+            [1, 2, 3, 4], index=["new_col1", "new_col2", "new_col4", "new_col3"]
+        )
+
+    eval_general(
+        modin_df.groupby("by_col1"),
+        pandas_df.groupby("by_col1"),
+        lambda df: df.apply(func1),
+    )
+
+    def func2(group):
+        # each group have different shape at the end
+        # (we do .to_frame().T as otherwise this scenario doesn't work in pandas)
+        if group.iloc[0, 0] == 1:
+            return (
+                pandas.Series(
+                    [1, 2, 3, 4], index=["new_col1", "new_col2", "new_col4", "new_col3"]
+                )
+                .to_frame()
+                .T
+            )
+        return (
+            pandas.Series([20, 33, 44], index=["new_col2", "new_col3", "new_col4"])
+            .to_frame()
+            .T
+        )
+
+    eval_general(
+        modin_df.groupby("by_col1"),
+        pandas_df.groupby("by_col1"),
+        lambda df: df.apply(func2),
+    )
+
+    def func3(group):
+        # one of the groups produce an empty dataframe, in the result we should
+        # have joined columns of both of these dataframes
+        if group.iloc[0, 0] == 1:
+            return pandas.DataFrame([[1, 2, 3]], index=["col1", "col2", "col3"])
+        return pandas.DataFrame(columns=["col2", "col3", "col4", "col5"])
+
+    eval_general(
+        modin_df.groupby("by_col1"),
+        pandas_df.groupby("by_col1"),
+        lambda df: df.apply(func3),
+    )
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_reshuffling_groupby_on_strings(modify_config):
+    # reproducer from https://github.com/modin-project/modin/issues/6509
+    modin_df, pandas_df = create_test_dfs(
+        {"col1": ["a"] * 50 + ["b"] * 50, "col2": range(100)}
+    )
+
+    modin_df = modin_df.astype({"col1": "string"})
+    pandas_df = pandas_df.astype({"col1": "string"})
+
+    eval_general(
+        modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
+    )

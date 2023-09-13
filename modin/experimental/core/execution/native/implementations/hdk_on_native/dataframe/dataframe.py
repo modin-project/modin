@@ -26,13 +26,12 @@ import pandas as pd
 from pandas._libs.lib import no_default
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
-    get_dtype,
+    _get_dtype,
     is_list_like,
     is_bool_dtype,
     is_string_dtype,
-    is_any_int_dtype,
+    is_integer_dtype,
     is_datetime64_dtype,
-    is_categorical_dtype,
 )
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -357,7 +356,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         InputRefExpr
         """
         if col == ROWID_COL_NAME:
-            return InputRefExpr(self, col, get_dtype(int))
+            return InputRefExpr(self, col, _get_dtype(int))
         return InputRefExpr(self, col, self.get_dtype(col))
 
     def take_2d_labels_or_positional(
@@ -726,7 +725,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         order_keys = [base.ref(col) for col in order_keys]
 
         row_num_name = "__HDK_ROW_NUMBER__"
-        row_num_op = OpExpr("ROW_NUMBER", [], get_dtype(int))
+        row_num_op = OpExpr("ROW_NUMBER", [], _get_dtype(int))
         row_num_op.set_window_opts(partition_keys, order_keys, ascending, na_pos)
         exprs = base._index_exprs()
         exprs.update((col, base.ref(col)) for col in base.columns)
@@ -1069,11 +1068,15 @@ class HdkOnNativeDataframe(PandasDataframe):
         for left_col, right_col in zip(left_on, right_on):
             left_dt = self._dtypes[left_col]
             right_dt = other._dtypes[right_col]
+            if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
+                right_dt, pd.CategoricalDtype
+            ):
+                left_dt = left_dt.categories.dtype
+                right_dt = right_dt.categories.dtype
             if not (
-                (is_any_int_dtype(left_dt) and is_any_int_dtype(right_dt))
+                (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
                 or (is_datetime64_dtype(left_dt) and is_datetime64_dtype(right_dt))
-                or (is_categorical_dtype(left_dt) and is_categorical_dtype(right_dt))
             ):
                 raise NotImplementedError(
                     f"Join on columns of '{left_dt}' and '{right_dt}' dtypes"
@@ -1152,7 +1155,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         condition = (
             condition[0]
             if len(condition) == 1
-            else OpExpr("AND", condition, get_dtype(bool))
+            else OpExpr("AND", condition, _get_dtype(bool))
         )
         return condition
 
@@ -1218,8 +1221,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             if (
                 join == "inner"
                 or len(frame.columns) != 0
-                or (frame.has_index_cache and len(frame.index) != 0)
-                or (not frame.has_index_cache and frame.index_cols)
+                or (frame.has_materialized_index and len(frame.index) != 0)
+                or (not frame.has_materialized_index and frame.index_cols)
             ):
                 if isinstance(frame._op, UnionNode):
                     frames.extend(frame._op.input)
@@ -1231,7 +1234,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 dtypes = pd.Series()
             elif ignore_index:
                 index_cols = [UNNAMED_IDX_COL_NAME]
-                dtypes = pd.Series([get_dtype(int)], index=index_cols)
+                dtypes = pd.Series([_get_dtype(int)], index=index_cols)
             else:
                 index_names = ColNameCodec.concat_index_names(frames)
                 index_cols = list(index_names)
@@ -1667,15 +1670,15 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         assert len(self.columns) == 1
-        assert is_categorical_dtype(self._dtypes[-1])
+        assert isinstance(self._dtypes[-1], pd.CategoricalDtype)
 
         exprs = self._index_exprs()
         col_expr = self.ref(self.columns[-1])
-        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], get_dtype("int32"))
+        code_expr = OpExpr("KEY_FOR_STRING", [col_expr], _get_dtype("int32"))
         null_val = LiteralExpr(np.int32(-1))
         col_name = MODIN_UNNAMED_SERIES_LABEL
         exprs[col_name] = build_if_then_else(
-            col_expr.is_null(), null_val, code_expr, get_dtype("int32")
+            col_expr.is_null(), null_val, code_expr, _get_dtype("int32")
         )
         dtypes = [expr._dtype for expr in exprs.values()]
 
@@ -1908,7 +1911,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
-        name = self._index_cache.get().name if self.has_index_cache else None
+        name = self._index_cache.get().name if self.has_materialized_index else None
         name = mangle_index_names([name])[0]
         exprs = OrderedDict()
         exprs[name] = self.ref(ROWID_COL_NAME)
@@ -2120,13 +2123,40 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         return result
 
-    def _build_index_cache(self):
-        """Materialize index and store it in the cache."""
+    def _compute_axis_labels_and_lengths(self, axis: int, partitions=None):
+        """
+        Compute the labels for specific `axis`.
+
+        Parameters
+        ----------
+        axis : int
+            Axis to compute labels along.
+        partitions : np.ndarray, optional
+            This parameter serves compatibility purpose and must always be ``None``.
+
+        Returns
+        -------
+        pandas.Index
+            Labels for the specified `axis`.
+        List of int
+            Size of partitions alongside specified `axis`.
+        """
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=partitions is not None,
+            extra_log="'._compute_axis_labels_and_lengths(partitions)' is not yet supported for HDK backend",
+        )
+
         obj = self._execute()
 
+        if axis == 1:
+            cols = self._table_cols
+            if self._index_cols is not None:
+                cols = cols[len(self._index_cols) :]
+            return (cols, [len(cols)])
+
         if self._index_cols is None:
-            self.set_index_cache(Index.__new__(RangeIndex, data=range(len(obj))))
-            return
+            index = Index.__new__(RangeIndex, data=range(len(obj)))
+            return (index, [len(index)])
         if isinstance(obj, DbTable):
             # TODO: Get the index columns only
             obj = obj.to_arrow()
@@ -2143,9 +2173,14 @@ class HdkOnNativeDataframe(PandasDataframe):
                 and len(idx) >= 3  # infer_freq() requires at least 3 values
             ):
                 idx.freq = pd.infer_freq(idx)
-            self.set_index_cache(idx)
+            return (idx, [len(idx)])
         else:
-            self.set_index_cache(obj.index)
+            return (obj.index, [len(obj.index)])
+
+    def _build_index_cache(self):
+        """Materialize index and store it in the cache."""
+        index, _ = self._compute_axis_labels_and_lengths(axis=0)
+        self.set_index_cache(index)
 
     def _get_index(self):
         """
@@ -2438,7 +2473,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         str or None
         """
-        if self.has_index_cache:
+        if self.has_materialized_index:
             return self._index_cache.get().name
         if self._index_cols is None:
             return None
@@ -2496,7 +2531,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         list of str
         """
-        if self.has_index_cache:
+        if self.has_materialized_index:
             return self._index_cache.get().names
         if self.has_multiindex():
             return self._index_cols.copy()
@@ -2566,7 +2601,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     zip(schema, self._dtypes)
                 )
                 if is_dictionary(arrow_type.type)
-                and not is_categorical_dtype(pandas_type)
+                and not isinstance(pandas_type, pd.CategoricalDtype)
             }
             if cast:
                 for idx, new_type in cast.items():

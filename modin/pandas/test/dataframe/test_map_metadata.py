@@ -320,6 +320,12 @@ def test_copy(data):
     df_equals(modin_df, modin_df_cp)
 
 
+def test_copy_empty_dataframe():
+    df = pd.DataFrame(range(3))
+    res = df[:0].copy()
+    assert res.dtypes.equals(df.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_dtypes(data):
     modin_df = pd.DataFrame(data)
@@ -691,7 +697,6 @@ class TestCategoricalProxyDtype:
         assert lazy_proxy == "category"
         assert isinstance(lazy_proxy, pd.CategoricalDtype)
         assert isinstance(lazy_proxy, pandas.CategoricalDtype)
-        assert pandas.api.types.is_categorical_dtype(lazy_proxy)
         assert str(lazy_proxy) == "category"
         assert str(lazy_proxy) == str(actual_dtype)
         assert not lazy_proxy.ordered
@@ -811,6 +816,7 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
     StorageFormat.get() == "Hdk",
     reason="HDK does not support columns with different types",
 )
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54848")
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -1379,6 +1385,19 @@ def test_insert_4407():
         )
 
 
+def test_insert_modin_array():
+    from modin.numpy import array
+
+    data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
+    modin_df1, modin_df2 = pd.DataFrame(data), pd.DataFrame(data)
+    np_value = np.array([7, 7, 7])
+    md_np_value = array(np_value)
+
+    modin_df1.insert(1, "new_col", np_value)
+    modin_df2.insert(1, "new_col", md_np_value)
+    df_equals(modin_df1, modin_df2)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_ndim(data):
     modin_df = pd.DataFrame(data)
@@ -1613,14 +1632,16 @@ def test___neg__(request, data):
 def test___invert__(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
-    try:
-        pandas_result = ~pandas_df
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(~modin_df)
-    else:
-        modin_result = ~modin_df
-        df_equals(modin_result, pandas_result)
+    eval_general(modin_df, pandas_df, lambda df: ~df)
+
+
+def test___invert___bool():
+    data = [False]
+    modin_df = pd.DataFrame(data)
+    pandas_df = pandas.DataFrame(data)
+    modin_result = ~modin_df
+    pandas_result = ~pandas_df
+    df_equals(modin_result, pandas_result)
 
 
 def test___hash__():

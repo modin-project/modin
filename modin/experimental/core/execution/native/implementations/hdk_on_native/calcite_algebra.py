@@ -146,14 +146,19 @@ class CalciteBaseNode(abc.ABC):
         self.relOp = relOp
 
     @classmethod
-    def reset_id(cls):
+    def reset_id(cls, next_id=0):
         """
-        Reset ID to be used for the next new node to 0.
+        Reset ID to be used for the next new node to `next_id`.
 
         Can be used to have a zero-based numbering for each
         generated query.
+
+        Parameters
+        ----------
+        next_id : int, default: 0
+            Next node id.
         """
-        cls._next_id[0] = 0
+        cls._next_id[0] = next_id
 
 
 class CalciteScanNode(CalciteBaseNode):

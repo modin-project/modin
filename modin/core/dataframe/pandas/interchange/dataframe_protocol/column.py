@@ -128,7 +128,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
         dtype = self._col.dtypes[0]
 
-        if pandas.api.types.is_categorical_dtype(dtype):
+        if isinstance(dtype, pandas.CategoricalDtype):
             pandas_series = self._col.to_pandas().squeeze(axis=1)
             codes = pandas_series.values.codes
             (
@@ -251,7 +251,7 @@ class PandasProtocolColumn(ProtocolColumn):
         # Otherwise, we get mismatching internal and external indices for both axes
         intermediate_df.index = pandas.RangeIndex(1)
         intermediate_df.columns = pandas.RangeIndex(1)
-        self._null_count_cache = intermediate_df.to_pandas().squeeze()
+        self._null_count_cache = intermediate_df.to_pandas().squeeze(axis=1).item()
         return self._null_count_cache
 
     @property
@@ -364,7 +364,7 @@ class PandasProtocolColumn(ProtocolColumn):
 
             # TODO: this for-loop is slow; can be implemented in Cython/C/C++ later
             for i in range(buf.size):
-                if type(buf[i]) == str:
+                if type(buf[i]) is str:
                     b.extend(buf[i].encode(encoding="utf-8"))
 
             # Convert the byte array to a pandas "buffer" using a NumPy array as the backing store
@@ -411,15 +411,18 @@ class PandasProtocolColumn(ProtocolColumn):
             buf = self._col.to_numpy().flatten()
 
             # Determine the encoding for valid values
-            valid = 1 if invalid == 0 else 0
+            valid = invalid == 0
+            invalid = not valid
 
-            mask = [valid if type(buf[i]) == str else invalid for i in range(buf.size)]
+            mask = np.empty(shape=(len(buf),), dtype=np.bool_)
+            for i, obj in enumerate(buf):
+                mask[i] = valid if isinstance(obj, str) else invalid
 
             # Convert the mask array to a Pandas "buffer" using a NumPy array as the backing store
-            buffer = PandasProtocolBuffer(np.asarray(mask, dtype="uint8"))
+            buffer = PandasProtocolBuffer(mask)
 
             # Define the dtype of the returned buffer
-            dtype = (DTypeKind.UINT, 8, "C", "=")
+            dtype = (DTypeKind.BOOL, 8, "b", "=")
 
             self._validity_buffer_cache = (buffer, dtype)
             return self._validity_buffer_cache
@@ -459,7 +462,7 @@ class PandasProtocolColumn(ProtocolColumn):
             offsets = [ptr] + [None] * len(values)
             for i, v in enumerate(values):
                 # For missing values (in this case, `np.nan` values), we don't increment the pointer)
-                if type(v) == str:
+                if type(v) is str:
                     b = v.encode(encoding="utf-8")
                     ptr += len(b)
 

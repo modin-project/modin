@@ -14,15 +14,20 @@
 """Module provides ``HdkWorker`` class."""
 from typing import Optional, Tuple, List, Union
 
+from packaging import version
+
 import pyarrow as pa
 import os
 
+import pyhdk
 from pyhdk.hdk import HDK, QueryNode, ExecutionResult, RelAlgExecutor
 
 from .base_worker import DbTable, BaseDbWorker
 
 from modin.utils import _inherit_docstrings
 from modin.config import HdkLaunchParameters, OmnisciFragmentSize, HdkFragmentSize
+
+_CAST_DICT = version.parse(pyhdk.__version__) <= version.parse("0.7.0")
 
 
 class HdkTable(DbTable):
@@ -104,21 +109,23 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         return cls.executeRA(query, True)
 
     @classmethod
-    def executeRA(cls, query: str, exec_calcite=False):
+    def executeRA(cls, query: str, exec_calcite=False, **exec_args):
         hdk = cls._hdk()
         if exec_calcite or query.startswith("execute calcite"):
             ra = hdk._calcite.process(query, db_name="hdk", legacy_syntax=True)
         else:
             ra = query
         ra_executor = RelAlgExecutor(hdk._executor, hdk._schema_mgr, hdk._data_mgr, ra)
-        return HdkTable(ra_executor.execute(device_type=cls._preferred_device))
+        table = ra_executor.execute(device_type=cls._preferred_device, **exec_args)
+        return HdkTable(table)
 
     @classmethod
     def import_arrow_table(cls, table: pa.Table, name: Optional[str] = None):
         name = cls._genName(name)
-        table = cls.cast_to_compatible_types(table)
+        table = cls.cast_to_compatible_types(table, _CAST_DICT)
+        hdk = cls._hdk()
         fragment_size = cls.compute_fragment_size(table)
-        return HdkTable(cls._hdk().import_arrow(table, name, fragment_size))
+        return HdkTable(hdk.import_arrow(table, name, fragment_size))
 
     @classmethod
     def compute_fragment_size(cls, table):
@@ -139,7 +146,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         if fragment_size is None:
             fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:
-            if bool(HdkLaunchParameters.get()["cpu_only"]):
+            if cls._preferred_device == "CPU":
                 cpu_count = os.cpu_count()
                 if cpu_count is not None:
                     fragment_size = table.num_rows // cpu_count
@@ -163,9 +170,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         HDK
         """
         params = HdkLaunchParameters.get()
-        cls._preferred_device = (
-            "CPU" if bool(HdkLaunchParameters.get()["cpu_only"]) else "GPU"
-        )
+        cls._preferred_device = "CPU" if params["cpu_only"] else "GPU"
         cls._hdk_instance = HDK(**params)
         cls._hdk = cls._get_hdk_instance
         return cls._hdk()

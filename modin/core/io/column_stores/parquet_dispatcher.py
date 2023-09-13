@@ -492,7 +492,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         )
 
     @classmethod
-    def build_index(cls, dataset, partition_ids, index_columns):
+    def build_index(cls, dataset, partition_ids, index_columns, filters):
         """
         Compute index and its split sizes of resulting Modin DataFrame.
 
@@ -504,6 +504,8 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Array with references to the partitions data.
         index_columns : list
             List of index columns specified by pandas metadata.
+        filters : list
+            List of filters to be used in reading the Parquet file/files.
 
         Returns
         -------
@@ -519,20 +521,41 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         See `build_partition` for more detail on the contents of partitions_ids.
         """
         range_index = True
+        range_index_metadata = None
         column_names_to_read = []
         for column in index_columns:
-            # According to https://arrow.apache.org/docs/python/generated/pyarrow.Schema.html,
-            # only RangeIndex will be stored as metadata. Otherwise, the default behavior is
-            # to store the index as a column.
+            # https://pandas.pydata.org/docs/development/developer.html#storing-pandas-dataframe-objects-in-apache-parquet-format
+            # describes the format of the index column metadata.
+            # It is a list, where each entry is either a string or a dictionary.
+            # A string means that a column stored in the dataset is (part of) the index.
+            # A dictionary is metadata about a RangeIndex, which is metadata-only and not stored
+            # in the dataset as a column.
+            # There cannot be both for a single dataframe, because a MultiIndex can only contain
+            # "actual data" columns and not RangeIndex objects.
+            # See similar code in pyarrow: https://github.com/apache/arrow/blob/44811ba18477560711d512939535c8389dd7787b/python/pyarrow/pandas_compat.py#L912-L926
+            # and in fastparquet, here is where RangeIndex is handled: https://github.com/dask/fastparquet/blob/df1219300a96bc1baf9ebad85f4f5676a130c9e8/fastparquet/api.py#L809-L815
             if isinstance(column, str):
                 column_names_to_read.append(column)
                 range_index = False
-            elif column["name"] is not None:
-                column_names_to_read.append(column["name"])
+            elif column["kind"] == "range":
+                range_index_metadata = column
+
+        # When the index has meaningful values, stored in a column, we will replicate those
+        # exactly in the Modin dataframe's index. This index may have repeated values, be unsorted,
+        # etc. This is all fine.
+        # A range index is the special case: we want the Modin dataframe to have a single range,
+        # not a range that keeps restarting. i.e. if the partitions have index 0-9, 0-19, 0-29,
+        # we want our Modin dataframe to have 0-59.
+        # When there are no filters, it is relatively cheap to construct the index by
+        # actually reading in the necessary data, here in the main process.
+        # When there are filters, we let the workers materialize the indices before combining to
+        # get a single range.
 
         # For the second check, let us consider the case where we have an empty dataframe,
         # that has a valid index.
-        if range_index or (len(partition_ids) == 0 and len(column_names_to_read) != 0):
+        if (range_index and filters is None) or (
+            len(partition_ids) == 0 and len(column_names_to_read) != 0
+        ):
             complete_index = dataset.to_pandas_dataframe(
                 columns=column_names_to_read
             ).index
@@ -542,7 +565,42 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         else:
             index_ids = [part_id[0][1] for part_id in partition_ids if len(part_id) > 0]
             index_objs = cls.materialize(index_ids)
-            complete_index = index_objs[0].append(index_objs[1:])
+            if range_index:
+                # There are filters, so we had to materialize in order to
+                # determine how many items there actually are
+                total_filtered_length = sum(
+                    len(index_part) for index_part in index_objs
+                )
+
+                metadata_length_mismatch = False
+                if range_index_metadata is not None:
+                    metadata_implied_length = (
+                        range_index_metadata["stop"] - range_index_metadata["start"]
+                    ) / range_index_metadata["step"]
+                    metadata_length_mismatch = (
+                        total_filtered_length != metadata_implied_length
+                    )
+
+                # pyarrow ignores the RangeIndex metadata if it is not consistent with data length.
+                # https://github.com/apache/arrow/blob/44811ba18477560711d512939535c8389dd7787b/python/pyarrow/pandas_compat.py#L924-L926
+                # fastparquet keeps the start and step from the metadata and just adjusts to the length.
+                # https://github.com/dask/fastparquet/blob/df1219300a96bc1baf9ebad85f4f5676a130c9e8/fastparquet/api.py#L815
+                if range_index_metadata is None or (
+                    isinstance(dataset, PyArrowDataset) and metadata_length_mismatch
+                ):
+                    complete_index = pandas.RangeIndex(total_filtered_length)
+                else:
+                    complete_index = pandas.RangeIndex(
+                        start=range_index_metadata["start"],
+                        step=range_index_metadata["step"],
+                        stop=(
+                            range_index_metadata["start"]
+                            + (total_filtered_length * range_index_metadata["step"])
+                        ),
+                        name=range_index_metadata["name"],
+                    )
+            else:
+                complete_index = index_objs[0].append(index_objs[1:])
         return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
@@ -567,11 +625,15 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             Query compiler with imported data for further processing.
         """
         storage_options = kwargs.pop("storage_options", {}) or {}
+        filters = kwargs.get("filters", None)
+
         col_partitions, column_widths = cls.build_columns(columns)
         partition_ids = cls.call_deploy(
             dataset, col_partitions, storage_options, **kwargs
         )
-        index, sync_index = cls.build_index(dataset, partition_ids, index_columns)
+        index, sync_index = cls.build_index(
+            dataset, partition_ids, index_columns, filters
+        )
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
@@ -618,8 +680,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         https://arrow.apache.org/docs/python/parquet.html
         """
         if (
-            any(arg not in ("storage_options",) for arg in kwargs)
+            (set(kwargs) - {"storage_options", "filters", "filesystem"})
             or use_nullable_dtypes != lib.no_default
+            or kwargs.get("filesystem") is not None
         ):
             return cls.single_worker_read(
                 path,
@@ -630,6 +693,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 reason="Parquet options that are not currently supported",
                 **kwargs,
             )
+
         path = stringify_path(path)
         if isinstance(path, list):
             # TODO(https://github.com/modin-project/modin/issues/5723): read all
@@ -695,31 +759,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             dataset, columns, index_columns, dtype_backend=dtype_backend, **kwargs
         )
 
-    @staticmethod
-    def _to_parquet_check_support(kwargs):
-        """
-        Check if parallel version of `to_parquet` could be used.
-
-        Parameters
-        ----------
-        kwargs : dict
-            Keyword arguments passed to `.to_parquet()`.
-
-        Returns
-        -------
-        bool
-            Whether parallel version of `to_parquet` is applicable.
-        """
-        path = kwargs["path"]
-        compression = kwargs["compression"]
-        if not isinstance(path, str):
-            return False
-        if any((path.endswith(ext) for ext in [".gz", ".bz2", ".zip", ".xz"])):
-            return False
-        if compression is None or not compression == "snappy":
-            return False
-        return True
-
     @classmethod
     def write(cls, qc, **kwargs):
         """
@@ -732,10 +771,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         **kwargs : dict
             Parameters for `pandas.to_parquet(**kwargs)`.
         """
-        if not cls._to_parquet_check_support(kwargs):
-            return cls.base_io.to_parquet(qc, **kwargs)
-
         output_path = kwargs["path"]
+        if not isinstance(output_path, str):
+            return cls.base_io.to_parquet(qc, **kwargs)
         client_kwargs = (kwargs.get("storage_options") or {}).get("client_kwargs", {})
         fs, url = fsspec.core.url_to_fs(output_path, client_kwargs=client_kwargs)
         fs.mkdirs(url, exist_ok=True)

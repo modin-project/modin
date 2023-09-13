@@ -89,7 +89,7 @@ class OpenFile:
                 PermissionError,
             )
         except ModuleNotFoundError:
-            credential_error_type = ()
+            credential_error_type = (PermissionError,)
 
         args = (self.file_path, self.mode, self.compression)
 
@@ -257,11 +257,21 @@ class FileDispatcher(ClassLogger):
         if not is_fsspec_url(file_path) and not is_url(file_path):
             return os.path.exists(file_path)
 
-        from botocore.exceptions import (
-            NoCredentialsError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        )
+        try:
+            from botocore.exceptions import (
+                NoCredentialsError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+        except ModuleNotFoundError:
+            credential_error_type = (PermissionError,)
 
         if storage_options is not None:
             new_storage_options = dict(storage_options)
@@ -273,12 +283,7 @@ class FileDispatcher(ClassLogger):
         exists = False
         try:
             exists = fs.exists(file_path)
-        except (
-            NoCredentialsError,
-            PermissionError,
-            EndpointConnectionError,
-            ConnectTimeoutError,
-        ):
+        except credential_error_type:
             fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
             exists = fs.exists(file_path)
 

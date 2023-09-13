@@ -98,7 +98,7 @@ def maybe_compute_dtypes_common_cast(
         # belong to the intersection, these will be NaN columns in the result
         mismatch_columns = columns_first ^ columns_second
     elif isinstance(second, dict):
-        dtypes_second = {key: type(value) for key, value in second.items()}
+        dtypes_second = {key: np.dtype(type(value)) for key, value in second.items()}
         columns_first = set(first.columns)
         columns_second = set(second.keys())
         common_columns = columns_first.intersection(columns_second)
@@ -108,16 +108,16 @@ def maybe_compute_dtypes_common_cast(
     else:
         if isinstance(second, (list, tuple)):
             second_dtypes_list = (
-                [type(value) for value in second]
+                [np.dtype(type(value)) for value in second]
                 if axis == 1
                 # Here we've been given a column so it has only one dtype,
                 # Infering the dtype using `np.array`, TODO: maybe there's more efficient way?
                 else [np.array(second).dtype] * len(dtypes_first)
             )
         elif is_scalar(second) or isinstance(second, np.ndarray):
-            second_dtypes_list = [getattr(second, "dtype", type(second))] * len(
-                dtypes_first
-            )
+            second_dtypes_list = [
+                getattr(second, "dtype", np.dtype(type(second)))
+            ] * len(dtypes_first)
         else:
             raise NotImplementedError(
                 f"Can't compute common type for {type(first)} and {type(second)}."

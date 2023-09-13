@@ -13,7 +13,6 @@
 
 from __future__ import annotations
 
-import sys
 import pytest
 import unittest.mock as mock
 import numpy as np
@@ -27,7 +26,7 @@ import matplotlib
 import modin.pandas as pd
 from numpy.testing import assert_array_equal
 
-from modin.utils import get_current_execution
+from modin.utils import get_current_execution, try_cast_to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from modin.utils import to_pandas
@@ -135,7 +134,7 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(4))  # repr to force materialization
+            try_cast_to_pandas(modin_attr(4))  # force materialization
     else:
         modin_result = modin_attr(4)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -144,7 +143,7 @@ def inter_df_math_helper_one_side(
         pandas_result = pandas_attr(4.0)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(4.0))  # repr to force materialization
+            try_cast_to_pandas(modin_attr(4.0))  # force materialization
     else:
         modin_result = modin_attr(4.0)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
@@ -166,35 +165,32 @@ def inter_df_math_helper_one_side(
     ]:
         return
 
-    try:
-        pandas_result = pandas_attr(pandas_series)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_attr(modin_series))  # repr to force materialization
-    else:
-        modin_result = modin_attr(modin_series)
-        df_equals(modin_result, pandas_result, **comparator_kwargs)
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
+        **comparator_kwargs,
+    )
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
     try:
         pandas_result = pandas_attr(list_test)
     except Exception as err:
         with pytest.raises(type(err)):
-            repr(modin_attr(list_test))  # repr to force materialization
+            try_cast_to_pandas(modin_attr(list_test))  # force materialization
     else:
         modin_result = modin_attr(list_test)
         df_equals(modin_result, pandas_result, **comparator_kwargs)
 
     series_test_modin = pd.Series(list_test, index=modin_series.index)
     series_test_pandas = pandas.Series(list_test, index=pandas_series.index)
-    try:
-        pandas_result = pandas_attr(series_test_pandas)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_attr(series_test_modin))  # repr to force materialization
-    else:
-        modin_result = modin_attr(series_test_modin)
-        df_equals(modin_result, pandas_result, **comparator_kwargs)
+
+    eval_general(
+        series_test_modin,
+        series_test_pandas,
+        lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
+        **comparator_kwargs,
+    )
 
     # Level test
     new_idx = pandas.MultiIndex.from_tuples(
@@ -237,7 +233,7 @@ def test_to_list(data):
     modin_series, pandas_series = create_test_series(data)
     pd_res = pandas_series.to_list()
     md_res = modin_series.to_list()
-    assert type(pd_res) == type(md_res)
+    assert type(pd_res) is type(md_res)
     assert np.array_equal(pd_res, md_res, equal_nan=True)
 
 
@@ -441,13 +437,7 @@ def test___float__(count_elements):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___invert__(data):
     modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.__invert__()
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.__invert__())
-    else:
-        df_equals(modin_series.__invert__(), pandas_result)
+    eval_general(modin_series, pandas_series, lambda ser: ser.__invert__())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -508,13 +498,7 @@ def test___ne__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___neg__(request, data):
     modin_series, pandas_series = create_test_series(data)
-    try:
-        pandas_result = pandas_series.__neg__()
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.__neg__())
-    else:
-        df_equals(modin_series.__neg__(), pandas_result)
+    eval_general(modin_series, pandas_series, lambda ser: ser.__neg__())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -938,13 +922,10 @@ def test_apply(data, func):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_apply_except(data, func):
-    # SpecificationError is arisen because we treat a Series as a DataFrame.
-    # See details in pandas issues 36036.
-    with pytest.raises(SpecificationError):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
+    eval_general(
+        *create_test_series(data),
+        lambda df: df.apply(func),
+    )
 
 
 def test_apply_external_lib():
@@ -981,13 +962,10 @@ def test_apply_numeric(request, data, func):
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_apply_numeric_except(request, data, func):
     if name_contains(request.node.name, numeric_dfs):
-        # SpecificationError is arisen because we treat a Series as a DataFrame.
-        # See details in pandas issues 36036.
-        with pytest.raises(SpecificationError):
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.apply(func),
-            )
+        eval_general(
+            *create_test_series(data),
+            lambda df: df.apply(func),
+        )
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
@@ -1109,35 +1087,11 @@ def test_astype(data):
     modin_series, pandas_series = create_test_series(data)
     series_name = "test_series"
     modin_series.name = pandas_series.name = series_name
-    try:
-        pandas_result = pandas_series.astype(str)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(str))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(str), pandas_result)
 
-    try:
-        pandas_result = pandas_series.astype(np.int64)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(np.int64))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(np.int64), pandas_result)
-
-    try:
-        pandas_result = pandas_series.astype(np.float64)
-    except Exception as err:
-        with pytest.raises(type(err)):
-            repr(modin_series.astype(np.float64))  # repr to force materialization
-    else:
-        df_equals(modin_series.astype(np.float64), pandas_result)
-
-    df_equals(
-        modin_series.astype({series_name: str}),
-        pandas_series.astype({series_name: str}),
-    )
-
+    eval_general(modin_series, pandas_series, lambda df: df.astype(str))
+    eval_general(modin_series, pandas_series, lambda df: df.astype(np.int64))
+    eval_general(modin_series, pandas_series, lambda df: df.astype(np.float64))
+    eval_general(modin_series, pandas_series, lambda df: df.astype({series_name: str}))
     eval_general(modin_series, pandas_series, lambda df: df.astype({"wrong_name": str}))
 
     # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
@@ -1411,6 +1365,12 @@ def test_copy(data):
     df_equals(modin_series.copy(), pandas_series.copy())
 
 
+def test_copy_empty_series():
+    ser = pd.Series(range(3))
+    res = ser[:0].copy()
+    assert res.dtype == ser.dtype
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_corr(data):
     modin_series, pandas_series = create_test_series(data)
@@ -1577,6 +1537,22 @@ def test_diff(data, periods):
     else:
         modin_result = modin_series.T.diff(periods=periods)
         df_equals(modin_result, pandas_result)
+
+
+def test_diff_with_dates():
+    data = pandas.date_range("2018-01-01", periods=15, freq="H").values
+    pandas_series = pandas.Series(data)
+    modin_series = pd.Series(pandas_series)
+
+    # Check that `diff` with datetime types works correctly.
+    pandas_result = pandas_series.diff()
+    modin_result = modin_series.diff()
+    df_equals(modin_result, pandas_result)
+
+    # Check that `diff` with timedelta types works correctly.
+    td_pandas_result = pandas_result.diff()
+    td_modin_result = modin_result.diff()
+    df_equals(td_modin_result, td_pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1845,21 +1821,21 @@ def test_dt(timezone):
 
     def dt_with_empty_partition(lib):
         # For context, see https://github.com/modin-project/modin/issues/5112
-        df_a = lib.DataFrame({"A": [lib.to_datetime("26/10/2020")]})
-        df_b = lib.DataFrame({"B": [lib.to_datetime("27/10/2020")]})
-        df = lib.concat([df_a, df_b], axis=1)
-        eval_result = df.eval("B - A", engine="python")
+        df = (
+            pd.concat([pd.DataFrame([None]), pd.DataFrame([pd.TimeDelta(1)])], axis=1)
+            .dropna(axis=1)
+            .squeeze(1)
+        )
         # BaseOnPython ahd HDK had a single partition after the concat, and it
-        # maintains that partition after eval. In other execution modes,
-        # eval() should re-split the result into two column partitions,
-        # one of which is empty.
+        # maintains that partition after dropna and squeeze. In other execution modes,
+        # the series should have two column partitions, one of which is empty.
         if (
             isinstance(df, pd.DataFrame)
             and get_current_execution() != "BaseOnPython"
             and StorageFormat.get() != "Hdk"
         ):
-            assert eval_result._query_compiler._modin_frame._partitions.shape == (1, 2)
-        return eval_result.dt.days
+            assert df._query_compiler._modin_frame._partitions.shape == (1, 2)
+        return df.dt.days
 
     eval_general(pd, pandas, dt_with_empty_partition)
 
@@ -3517,10 +3493,6 @@ def test_to_timestamp():
         series.to_period().to_timestamp()
 
 
-@pytest.mark.skipif(
-    condition=sys.version_info < (3, 9),
-    reason="xarray doesn't support pandas>=2.0 for python 3.8",
-)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_to_xarray(data):
     modin_series, _ = create_test_series(data)  # noqa: F841
@@ -4316,8 +4288,6 @@ def test_str_find(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.find(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4331,8 +4301,6 @@ def test_str_rfind(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rfind(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4346,8 +4314,6 @@ def test_str_index(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4361,8 +4327,6 @@ def test_str_rindex(data, sub, start, end):
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
-        # https://github.com/modin-project/modin/issues/5972
-        comparator_kwargs={"check_dtypes": False},
     )
 
 
@@ -4800,4 +4764,22 @@ def test_apply_return_df(data):
         lambda series: series.apply(
             lambda x: pandas.Series([x + i for i in range(100)])
         ),
+    )
+
+
+@pytest.mark.parametrize(
+    "function",
+    [
+        np.abs,
+        np.sin,
+    ],
+)
+def test_unary_numpy_universal_function_issue_6483(function):
+    eval_general(*create_test_series(test_data["float_nan_data"]), function)
+
+
+def test_binary_numpy_universal_function_issue_6483():
+    eval_general(
+        *create_test_series(test_data["float_nan_data"]),
+        lambda series: np.arctan2(series, np.sin(series)),
     )

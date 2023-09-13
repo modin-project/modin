@@ -31,7 +31,6 @@ from pandas.core.dtypes.common import (
     is_object_dtype,
     is_string_dtype,
     is_bool_dtype,
-    is_categorical_dtype,
     is_datetime64_any_dtype,
     is_timedelta64_dtype,
     is_period_dtype,
@@ -582,7 +581,7 @@ def assert_empty_frame_equal(df1, df2):
 
     if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
         assert False, "One of the passed frames is empty, when other isn't"
-    elif df1.empty and df2.empty and type(df1) != type(df2):
+    elif df1.empty and df2.empty and type(df1) is not type(df2):
         assert False, f"Empty frames have different types: {type(df1)} != {type(df2)}"
 
 
@@ -608,15 +607,6 @@ def assert_all_act_same(condition, *objs):
 
     assert all(results[0] == res for res in results[1:])
     return results[0]
-
-
-def _maybe_cast_to_pandas_dtype(dtype):
-    """Cast passed `dtype` to according pandas dtype if needed for the sake of equality comparison."""
-    # If we're running in a cloud mode then all the numpy types are substituted with a proxy net-reference,
-    # Such dtypes won't pass equality check with pandas dtypes thus manually converting them to a pure numpy
-    if "netref" in str(type(dtype)):
-        return np.dtype(dtype.name)
-    return dtype
 
 
 def assert_dtypes_equal(df1, df2):
@@ -657,16 +647,15 @@ def assert_dtypes_equal(df1, df2):
         is_numeric_dtype,
         lambda obj: is_object_dtype(obj) or is_string_dtype(obj),
         is_bool_dtype,
-        is_categorical_dtype,
+        lambda obj: isinstance(obj, pandas.CategoricalDtype),
         is_datetime64_any_dtype,
         is_timedelta64_dtype,
         is_period_dtype,
     )
 
     for col in dtypes1.keys():
-        type1, type2 = map(_maybe_cast_to_pandas_dtype, (dtypes1[col], dtypes2[col]))
         for comparator in dtype_comparators:
-            if assert_all_act_same(comparator, type1, type2):
+            if assert_all_act_same(comparator, dtypes1[col], dtypes2[col]):
                 # We met a dtype that both types satisfy, so we can stop iterating
                 # over comparators and compare next dtypes
                 break
@@ -761,8 +750,8 @@ def df_equals(df1, df2, check_dtypes=True):
     ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
-    elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
-        assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
+    elif isinstance(df1, pandas.core.arrays.NumpyExtensionArray):
+        assert isinstance(df2, pandas.core.arrays.NumpyExtensionArray)
         assert df1 == df2
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
@@ -794,7 +783,7 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
         return
 
     diff = (modin_df - pandas_df).abs()
-    diff /= pandas_df
+    diff /= pandas_df.abs()
     diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
     assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
 
@@ -899,8 +888,7 @@ def eval_general(
             if check_exception_type is None:
                 return None
             with pytest.raises(Exception) as md_e:
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
+                try_cast_to_pandas(fn(modin_df, **md_kwargs))  # force materialization
             if check_exception_type:
                 assert isinstance(
                     md_e.value, type(pd_e)

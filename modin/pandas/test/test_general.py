@@ -630,6 +630,7 @@ def test_unique():
     reason="https://github.com/modin-project/modin/issues/2896",
 )
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54857")
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])

@@ -11,18 +11,27 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import warnings
+import pytest
 
-try:
-    from dfsql import sql_query as dfsql_query
+from modin.config import Engine, StorageFormat
 
-    # This import is required to inject the DataFrame.sql() method.
-    import dfsql.extensions  # noqa: F401
-except ImportError:
-    warnings.warn(
-        "Modin experimental sql interface requires dfsql to be installed."
-        + ' Run `pip install "modin[sql]"` to install it.'
-    )
-    raise
 
-__all__ = ["dfsql_query"]
+def pytest_collection_modifyitems(items):
+    try:
+        if (
+            Engine.get() in ("Ray", "Unidist", "Dask", "Python")
+            and StorageFormat.get() != "Base"
+        ):
+            for item in items:
+                if item.name in (
+                    "test_dataframe_dt_index[3s-both-DateCol-0]",
+                    "test_dataframe_dt_index[3s-right-DateCol-0]",
+                ):
+                    item.add_marker(
+                        pytest.mark.xfail(
+                            reason="https://github.com/modin-project/modin/issues/6399"
+                        )
+                    )
+    except ImportError:
+        # No engine
+        ...

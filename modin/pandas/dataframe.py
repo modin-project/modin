@@ -16,6 +16,7 @@
 from __future__ import annotations
 import pandas
 from pandas.core.common import apply_if_callable, get_cython_func
+from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
     infer_dtype_from_object,
     is_dict_like,
@@ -25,7 +26,7 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.frozen import FrozenList
 from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.info import DataFrameInfo
-from pandas._libs.lib import no_default, NoDefault
+from pandas._libs import lib
 from pandas._typing import (
     CompressionOptions,
     WriteBuffer,
@@ -42,6 +43,7 @@ import sys
 from typing import IO, Optional, Union, Iterator, Hashable, Sequence
 import warnings
 
+from modin.logging import disable_logging
 from modin.pandas import Categorical
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -50,8 +52,9 @@ from modin.utils import (
     hashable,
     MODIN_UNNAMED_SERIES_LABEL,
     try_cast_to_pandas,
+    expanduser_path_arg,
 )
-from modin.config import IsExperimental, PersistentPickle
+from modin.config import PersistentPickle
 from .utils import (
     from_pandas,
     from_non_pandas,
@@ -373,7 +376,7 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.add_suffix(suffix, axis)
         )
 
-    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
+    def map(self, func, na_action: Optional[str] = None, **kwargs):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return self.__constructor__(
@@ -382,22 +385,46 @@ class DataFrame(BasePandasDataset):
             )
         )
 
+    def applymap(self, func, na_action: Optional[str] = None, **kwargs):
+        warnings.warn(
+            "DataFrame.applymap has been deprecated. Use DataFrame.map instead.",
+            FutureWarning,
+        )
+        return self.map(func, na_action=na_action, **kwargs)
+
     def apply(
-        self, func, axis=0, raw=False, result_type=None, args=(), **kwargs
+        self,
+        func,
+        axis=0,
+        raw=False,
+        result_type=None,
+        args=(),
+        by_row="compat",
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
+        if by_row != "compat":
+            # TODO: add test
+            return self._default_to_pandas(
+                pandas.DataFrame.apply,
+                func=func,
+                axis=axis,
+                raw=raw,
+                result_type=result_type,
+                args=args,
+                by_row=by_row,
+                **kwargs,
+            )
+
         func = cast_function_modin2pandas(func)
         axis = self._get_axis_number(axis)
         query_compiler = super(DataFrame, self).apply(
             func,
             axis=axis,
-            broadcast=None,
             raw=raw,
-            reduce=None,
             result_type=result_type,
-            convert_dtype=None,
             args=args,
             **kwargs,
         )
@@ -425,17 +452,34 @@ class DataFrame(BasePandasDataset):
     def groupby(
         self,
         by=None,
-        axis=0,
+        axis=lib.no_default,
         level=None,
         as_index=True,
         sort=True,
         group_keys=True,
-        observed=False,
+        observed=lib.no_default,
         dropna: bool = True,
     ):  # noqa: PR01, RT01, D200
         """
         Group ``DataFrame`` using a mapper or by a ``Series`` of columns.
         """
+        if axis is not lib.no_default:
+            axis = self._get_axis_number(axis)
+            if axis == 1:
+                warnings.warn(
+                    "DataFrame.groupby with axis=1 is deprecated. Do "
+                    + "`frame.T.groupby(...)` without axis instead.",
+                    FutureWarning,
+                )
+            else:
+                warnings.warn(
+                    "The 'axis' keyword in DataFrame.groupby is deprecated and "
+                    + "will be removed in a future version.",
+                    FutureWarning,
+                )
+        else:
+            axis = 0
+
         axis = self._get_axis_number(axis)
         idx_name = None
         # Drop here indicates whether or not to drop the data column before doing the
@@ -761,7 +805,7 @@ class DataFrame(BasePandasDataset):
             other = self.__constructor__(other)
 
         if (
-            type(self) != type(other)
+            type(self) is not type(other)
             or not self.index.equals(other.index)
             or not self.columns.equals(other.columns)
         ):
@@ -813,23 +857,18 @@ class DataFrame(BasePandasDataset):
         """
         Evaluate a string describing operations on ``DataFrame`` columns.
         """
-        self._validate_eval_query(expr, **kwargs)
-        inplace = validate_bool_kwarg(inplace, "inplace")
         self._update_var_dicts_in_kwargs(expr, kwargs)
-        new_query_compiler = self._query_compiler.eval(expr, **kwargs)
-        return_type = type(
-            pandas.DataFrame(columns=self.columns)
-            .astype(self.dtypes)
-            .eval(expr, **kwargs)
-        ).__name__
-        if return_type == type(self).__name__:
-            return self._create_or_update_from_compiler(new_query_compiler, inplace)
-        else:
-            if inplace:
-                raise ValueError("Cannot operate inplace if there is no assignment")
-            return getattr(sys.modules[self.__module__], return_type)(
-                query_compiler=new_query_compiler
+        if _check_engine(kwargs.get("engine", None)) == "numexpr":
+            # on numexpr engine, pandas.eval returns np.array if input is not of pandas
+            # type, so we can't use pandas eval [1]. Even if we could, pandas eval seems
+            # to convert all the data to numpy and then do the numexpr add, which is
+            # slow for modin. The user would not really be getting the benefit of
+            # numexpr.
+            # [1] https://github.com/pandas-dev/pandas/blob/934eebb532cf50e872f40638a788000be6e4dda4/pandas/core/computation/align.py#L78
+            return self._default_to_pandas(
+                pandas.DataFrame.eval, expr, inplace=inplace, **kwargs
             )
+        return pandas.DataFrame.eval(self, expr, inplace=inplace, **kwargs)
 
     def fillna(
         self,
@@ -839,7 +878,7 @@ class DataFrame(BasePandasDataset):
         axis=None,
         inplace=False,
         limit=None,
-        downcast=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Fill NA/NaN values using the specified method.
@@ -986,14 +1025,16 @@ class DataFrame(BasePandasDataset):
         )
 
     def insert(
-        self, loc, column, value, allow_duplicates=no_default
+        self, loc, column, value, allow_duplicates=lib.no_default
     ):  # noqa: PR01, D200
         """
         Insert column into ``DataFrame`` at specified location.
         """
+        from modin.numpy import array
+
         if (
             isinstance(value, (DataFrame, pandas.DataFrame))
-            or isinstance(value, np.ndarray)
+            or isinstance(value, (array, np.ndarray))
             and len(value.shape) > 1
         ):
             if value.shape[1] != 1:
@@ -1042,7 +1083,7 @@ class DataFrame(BasePandasDataset):
                 )
             elif loc < 0:
                 raise ValueError("unbounded slice")
-            if isinstance(value, Series):
+            if isinstance(value, (Series, array)):
                 value = value._query_compiler
             new_query_compiler = self._query_compiler.insert(loc, column, value)
 
@@ -1352,10 +1393,16 @@ class DataFrame(BasePandasDataset):
             )
         )
 
-    def unstack(self, level=-1, fill_value=None):  # noqa: PR01, RT01, D200
+    def unstack(self, level=-1, fill_value=None, sort=True):  # noqa: PR01, RT01, D200
         """
         Pivot a level of the (necessarily hierarchical) index labels.
         """
+        if not sort:
+            # TODO: it should be easy to add support for sort == False
+            return self._default_to_pandas(
+                pandas.DataFrame.unstack, level=level, fill_value=fill_value, sort=sort
+            )
+
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.index.names) > 1
         if not is_multiindex or (
@@ -1370,14 +1417,14 @@ class DataFrame(BasePandasDataset):
             )
 
     def pivot(
-        self, *, columns, index=NoDefault, values=NoDefault
+        self, *, columns, index=lib.no_default, values=lib.no_default
     ):  # noqa: PR01, RT01, D200
         """
         Return reshaped ``DataFrame`` organized by given index / column values.
         """
-        if index is NoDefault:
+        if index is lib.no_default:
             index = None
-        if values is NoDefault:
+        if values is lib.no_default:
             values = None
 
         # if values is not specified, it should be the remaining columns not in
@@ -1491,7 +1538,7 @@ class DataFrame(BasePandasDataset):
 
     def prod(
         self,
-        axis=None,
+        axis=0,
         skipna=True,
         numeric_only=False,
         min_count=0,
@@ -1553,14 +1600,21 @@ class DataFrame(BasePandasDataset):
             method=method,
         )
 
+    # methods and fields we need to use pandas.DataFrame.query
+    _AXIS_ORDERS = ["index", "columns"]
+    _get_index_resolvers = pandas.DataFrame._get_index_resolvers
+    _get_axis_resolvers = pandas.DataFrame._get_axis_resolvers
+    _get_cleaned_column_resolvers = pandas.DataFrame._get_cleaned_column_resolvers
+
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
-        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_query_compiler = self._query_compiler.query(expr, **kwargs)
+        new_query_compiler = pandas.DataFrame.query(
+            self, expr, inplace=False, **kwargs
+        )._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
@@ -1645,12 +1699,12 @@ class DataFrame(BasePandasDataset):
     def replace(
         self,
         to_replace=None,
-        value=no_default,
+        value=lib.no_default,
         *,
         inplace: bool = False,
         limit=None,
         regex: bool = False,
-        method: str | NoDefault = no_default,
+        method: str | lib.NoDefault = lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
@@ -1884,10 +1938,27 @@ class DataFrame(BasePandasDataset):
         else:
             return self.copy()
 
-    def stack(self, level=-1, dropna=True):  # noqa: PR01, RT01, D200
+    def stack(
+        self, level=-1, dropna=lib.no_default, sort=lib.no_default, future_stack=False
+    ):  # noqa: PR01, RT01, D200
         """
         Stack the prescribed level(s) from columns to index.
         """
+        if future_stack:
+            return self._default_to_pandas(
+                pandas.DataFrame.stack,
+                level=level,
+                dropna=dropna,
+                sort=sort,
+                future_stack=future_stack,
+            )
+
+        # FutureWarnings only needed if future_stack == True
+        if dropna is lib.no_default:
+            dropna = True
+        if sort is lib.no_default:
+            sort = True
+
         # This ensures that non-pandas MultiIndex objects are caught.
         is_multiindex = len(self.columns.names) > 1
         if not is_multiindex or (
@@ -1920,7 +1991,7 @@ class DataFrame(BasePandasDataset):
 
     def sum(
         self,
-        axis=None,
+        axis=0,
         skipna=True,
         numeric_only=False,
         min_count=0,
@@ -1965,6 +2036,7 @@ class DataFrame(BasePandasDataset):
             )
         )
 
+    @expanduser_path_arg("path")
     def to_feather(self, path, **kwargs):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Write a ``DataFrame`` to the binary Feather format.
@@ -2001,6 +2073,7 @@ class DataFrame(BasePandasDataset):
             credentials=credentials,
         )
 
+    @expanduser_path_arg("path")
     def to_orc(self, path=None, *, engine="pyarrow", index=None, engine_kwargs=None):
         return self._default_to_pandas(
             pandas.DataFrame.to_orc,
@@ -2010,6 +2083,7 @@ class DataFrame(BasePandasDataset):
             engine_kwargs=engine_kwargs,
         )
 
+    @expanduser_path_arg("buf")
     def to_html(
         self,
         buf=None,
@@ -2066,6 +2140,7 @@ class DataFrame(BasePandasDataset):
             encoding=None,
         )
 
+    @expanduser_path_arg("path")
     def to_parquet(
         self,
         path=None,
@@ -2112,6 +2187,7 @@ class DataFrame(BasePandasDataset):
             index_dtypes=index_dtypes,
         )
 
+    @expanduser_path_arg("path")
     def to_stata(
         self,
         path: FilePath | WriteBuffer[bytes],
@@ -2144,6 +2220,7 @@ class DataFrame(BasePandasDataset):
             value_labels=value_labels,
         )
 
+    @expanduser_path_arg("path_or_buffer")
     def to_xml(
         self,
         path_or_buffer=None,
@@ -2232,7 +2309,7 @@ class DataFrame(BasePandasDataset):
     def where(
         self,
         cond,
-        other=no_default,
+        other=np.nan,
         *,
         inplace=False,
         axis=None,
@@ -2296,9 +2373,9 @@ class DataFrame(BasePandasDataset):
             1  1  5
             0  8  4
             """
-            # _get_axis_number interprets no_default as None, but where doesn't
-            # accept no_default.
-            if axis == no_default:
+            # _get_axis_number interprets lib.no_default as None, but where doesn't
+            # accept lib.no_default.
+            if axis == lib.no_default:
                 raise ValueError(
                     "No axis named NoDefault.no_default for object type DataFrame"
                 )
@@ -2342,6 +2419,7 @@ class DataFrame(BasePandasDataset):
             s._parent_axis = 1
         return s
 
+    @disable_logging
     def __getattr__(self, key):
         """
         Return item identified by `key`.
@@ -2393,7 +2471,8 @@ class DataFrame(BasePandasDataset):
         #   before it appears in __dict__.
         if key in ("_query_compiler", "_siblings", "_cache") or key in self.__dict__:
             pass
-        elif key in self and key not in dir(self):
+        # we have to check for the key in `dir(self)` first in order not to trigger columns computation
+        elif key not in dir(self) and key in self:
             self.__setitem__(key, value)
             # Note: return immediately so we don't keep this `key` as dataframe state.
             # `__getattr__` will return the columns not present in `dir(self)`, so we do not need
@@ -2503,7 +2582,7 @@ class DataFrame(BasePandasDataset):
                 value = value.T.reshape(-1)
                 if len(self) > 0:
                     value = value[: len(self)]
-            if not isinstance(value, (Series, Categorical, np.ndarray)):
+            if not isinstance(value, (Series, Categorical, np.ndarray, list, range)):
                 value = list(value)
 
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
@@ -2724,7 +2803,10 @@ class DataFrame(BasePandasDataset):
             If True and non-numeric data is found, exception
             will be raised.
         """
-        dtype = self.dtypes[0]
+        # Series.__getitem__ treating keys as positions is deprecated. In a future version,
+        # integer keys will always be treated as labels (consistent with DataFrame behavior).
+        # To access a value by position, use `ser.iloc[pos]`
+        dtype = self.dtypes.iloc[0]
         for t in self.dtypes:
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
@@ -2995,9 +3077,3 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler,)
 
     # Persistance support methods - END
-
-
-if IsExperimental.get():
-    from modin.experimental.cloud.meta_magic import make_wrapped_class
-
-    make_wrapped_class(DataFrame, "make_dataframe_wrapper")

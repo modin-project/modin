@@ -45,7 +45,8 @@ from .df_algebra import (
 )
 
 from collections import abc
-from pandas.core.dtypes.common import get_dtype
+import pandas
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -173,7 +174,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -275,7 +276,7 @@ class CalciteBuilder:
                 A final compound aggregate expression.
             """
             count_expr = self._builder._ref(self._arg.modin_frame, self._count_name)
-            count_expr._dtype = get_dtype(int)
+            count_expr._dtype = _get_dtype(int)
             sum_expr = self._builder._ref(self._arg.modin_frame, self._sum_name)
             sum_expr._dtype = self._sum_dtype
             qsum_expr = self._builder._ref(self._arg.modin_frame, self._quad_sum_name)
@@ -581,8 +582,17 @@ class CalciteBuilder:
         bool: "BOOLEAN",
     }
 
+    # The following aggregates require boolean columns to be cast.
+    _bool_cast_aggregates = {
+        "sum": _get_dtype(int),
+        "mean": _get_dtype(float),
+        "median": _get_dtype(float),
+    }
+
     def __init__(self):
         self._input_ctx_stack = []
+        self.has_join = False
+        self.has_groupby = False
 
     def build(self, op):
         """
@@ -745,8 +755,10 @@ class CalciteBuilder:
             and all(isinstance(expr, CalciteInputRefExpr) for expr in node.exprs)
         ):
             # Replace the last CalciteProjectionNode with this one and
-            # translate the input refs.
-            exprs = self.res.pop().exprs
+            # translate the input refs. The `id` attribute is preserved.
+            last = self.res.pop()
+            exprs = last.exprs
+            last.reset_id(int(last.id))
             node = CalciteProjectionNode(
                 node.fields, [exprs[expr.input] for expr in node.exprs]
             )
@@ -880,6 +892,7 @@ class CalciteBuilder:
         op : GroupbyAggNode
             An operation to translate.
         """
+        self.has_groupby = True
         frame = op.input[0]
 
         # Aggregation's input should always be a projection and
@@ -888,10 +901,32 @@ class CalciteBuilder:
         for col in frame._table_cols:
             if col not in op.by:
                 proj_cols.append(col)
-        proj_exprs = [self._ref(frame, col) for col in proj_cols]
+
+        # Cast boolean columns, if required
+        agg_exprs = op.agg_exprs
+        cast_agg = self._bool_cast_aggregates
+        if any(v.agg in cast_agg for v in agg_exprs.values()) and (
+            bool_cols := {
+                c: cast_agg[agg_exprs[c].agg]
+                for c, t in frame.dtypes.items()
+                # Do not call is_bool_dtype() for categorical since it checks all the categories
+                if not isinstance(t, pandas.CategoricalDtype)
+                and is_bool_dtype(t)
+                and agg_exprs[c].agg in cast_agg
+            }
+        ):
+            trans = self._input_ctx()._maybe_copy_and_translate_expr
+            proj_exprs = [
+                trans(frame.ref(c).cast(bool_cols[c]))
+                if c in bool_cols
+                else self._ref(frame, c)
+                for c in proj_cols
+            ]
+        else:
+            proj_exprs = [self._ref(frame, col) for col in proj_cols]
         # Add expressions required for compound aggregates
         compound_aggs = {}
-        for agg, expr in op.agg_exprs.items():
+        for agg, expr in agg_exprs.items():
             if expr.agg in self._compound_aggregates:
                 compound_aggs[agg] = self._compound_aggregates[expr.agg](
                     self, expr.operands[0]
@@ -907,7 +942,7 @@ class CalciteBuilder:
         group = [self._ref_idx(frame, col) for col in op.by]
         fields = op.by.copy()
         aggs = []
-        for agg, expr in op.agg_exprs.items():
+        for agg, expr in agg_exprs.items():
             if agg in compound_aggs:
                 extra_aggs = compound_aggs[agg].gen_agg_exprs()
                 fields.extend(extra_aggs.keys())
@@ -922,8 +957,8 @@ class CalciteBuilder:
             self._input_ctx().replace_input_node(frame, node, fields)
             proj_cols = op.by.copy()
             proj_exprs = [self._ref(frame, col) for col in proj_cols]
-            proj_cols.extend(op.agg_exprs.keys())
-            for agg in op.agg_exprs:
+            proj_cols.extend(agg_exprs.keys())
+            for agg in agg_exprs:
                 if agg in compound_aggs:
                     proj_exprs.append(compound_aggs[agg].gen_reduce_expr())
                 else:
@@ -957,6 +992,7 @@ class CalciteBuilder:
         op : JoinNode
             An operation to translate.
         """
+        self.has_join = True
         node = CalciteJoinNode(
             left_id=self._input_node(0).id,
             right_id=self._input_node(1).id,

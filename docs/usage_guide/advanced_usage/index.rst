@@ -10,7 +10,6 @@ Advanced Usage
    progress_bar
    modin_sql
    modin_xgboost
-   modin_in_the_cloud
    modin_logging
    batch
 

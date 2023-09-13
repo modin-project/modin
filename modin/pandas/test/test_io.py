@@ -20,7 +20,6 @@ from packaging import version
 import pandas
 from pandas.errors import ParserWarning
 import pandas._libs.lib as lib
-from pandas.core.dtypes.common import is_list_like
 from pandas._testing import ensure_clean
 from pathlib import Path
 from collections import OrderedDict, defaultdict
@@ -43,7 +42,10 @@ from modin.utils import to_pandas
 from modin.pandas.utils import from_arrow
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 import pyarrow as pa
+import pyarrow.dataset
+import fastparquet
 import os
+from io import BytesIO, StringIO
 from scipy import sparse
 import sys
 import sqlalchemy as sa
@@ -93,13 +95,6 @@ except ImportError:
 
 
 from modin.config import NPartitions
-
-# Our configuration in pytest.ini requires that we explicitly catch all
-# instances of defaulting to pandas, but some test modules, like this one,
-# have too many such instances.
-# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
-# of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 NPartitions.put(4)
 
@@ -270,6 +265,7 @@ def make_parquet_dir(tmp_path):
     IsExperimental.get() and StorageFormat.get() == "Pyarrow",
     reason="Segmentation fault; see PR #2347 ffor details",
 )
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestCsv:
     # delimiter tests
     @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
@@ -432,12 +428,6 @@ class TestCsv:
         names,
         encoding,
     ):
-        if request.config.getoption(
-            "--simulate-cloud"
-        ).lower() != "off" and is_list_like(skiprows):
-            pytest.xfail(
-                reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340"
-            )
         with ensure_clean(".csv") as unique_filename:
             if encoding:
                 make_csv_file(
@@ -623,6 +613,16 @@ class TestCsv:
         pd_df = pd_reader.read()
 
         df_equals(modin_df, pd_df)
+
+        # Tests #6553
+        if iterator:
+            rdf_reader = pd.read_csv(filename, iterator=iterator)
+            pd_reader = pandas.read_csv(filename, iterator=iterator)
+
+            modin_df = rdf_reader.read()
+            pd_df = pd_reader.read()
+
+            df_equals(modin_df, pd_df)
 
     def test_read_csv_encoding_976(self):
         file_name = "modin/pandas/test/data/issue_976.csv"
@@ -817,7 +817,7 @@ class TestCsv:
         raise_exception_case = on_bad_lines is not None
         if (
             not raise_exception_case
-            and Engine.get() not in ["Python", "Cloudpython"]
+            and Engine.get() not in ["Python"]
             and StorageFormat.get() != "Hdk"
         ):
             pytest.xfail("read_csv doesn't raise `bad lines` exceptions - issue #2500")
@@ -1011,10 +1011,6 @@ class TestCsv:
         # won't appear
         return Engine.get() != "Python" and StorageFormat.get() != "Hdk"
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_csv_default_to_pandas(self):
         if self._has_pandas_fallback_reason():
             warning_suffix = "buffers"
@@ -1022,15 +1018,9 @@ class TestCsv:
             warning_suffix = ""
         with warns_that_defaulting_to_pandas(suffix=warning_suffix):
             # This tests that we default to pandas on a buffer
-            from io import StringIO
-
             with open(pytest.csvs_names["test_read_csv_regular"], "r") as _f:
                 pd.read_csv(StringIO(_f.read()))
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_csv_url(self):
         eval_io(
             fn_name="read_csv",
@@ -1075,10 +1065,6 @@ class TestCsv:
             sep=None,
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_read_csv_incorrect_data(self):
         eval_io(
             fn_name="read_csv",
@@ -1121,10 +1107,6 @@ class TestCsv:
     @pytest.mark.parametrize("index", [True, False, "New index"])
     @pytest.mark.parametrize("index_label", [None, False, "New index"])
     @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     @pytest.mark.exclude_in_sanity
     def test_to_csv(
         self,
@@ -1160,10 +1142,6 @@ class TestCsv:
             columns=columns,
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
@@ -1174,10 +1152,6 @@ class TestCsv:
             extension="csv",
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-    )
     def test_series_to_csv(self, tmp_path):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
@@ -1217,13 +1191,7 @@ class TestCsv:
         "read_mode",
         [
             "r",
-            pytest.param(
-                "rb",
-                marks=pytest.mark.xfail(
-                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-                    reason="Cannot pickle file handles. See comments in PR #2625",
-                ),
-            ),
+            "rb",
         ],
     )
     @pytest.mark.parametrize("buffer_start_pos", [0, 10])
@@ -1280,13 +1248,7 @@ class TestCsv:
             lambda x: x < 20,
             lambda x: True,
             lambda x: x in [10, 20],
-            pytest.param(
-                lambda x: x << 10,
-                marks=pytest.mark.skipif(
-                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-                    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #2340",
-                ),
-            ),
+            lambda x: x << 10,
         ],
     )
     @pytest.mark.parametrize("header", ["infer", None, 0, 1, 150])
@@ -1339,7 +1301,48 @@ class TestCsv:
         if not AsyncReadMode.get():
             df_equals(expected_pandas_df, actual_pandas_df)
 
+    @pytest.mark.parametrize("usecols", [None, [0, 1, 2, 3, 4]])
+    def test_read_csv_1930(self, usecols):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer="modin/pandas/test/data/issue_1930.csv",
+            names=["c1", "c2", "c3", "c4", "c5"],
+            usecols=usecols,
+        )
 
+
+def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
+    # Windows can be funny at where it searches for ~; besides, Python >= 3.8 no longer honors %HOME%
+    dirname, basename = os.path.split(unique_filename)
+    pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
+    should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
+    with mock.patch.dict(os.environ, pinned_home):
+        with warns_that_defaulting_to_pandas() if should_default else _nullcontext():
+            eval_io(
+                fn_name=fn_name,
+                **{path_arg: f"~/{basename}"},
+            )
+        # check that when read without $HOME patched we have equivalent results
+        eval_general(
+            f"~/{basename}",
+            unique_filename,
+            lambda fname: getattr(pandas, fn_name)(**{path_arg: fname}),
+        )
+
+
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# commment once we turn all default to pandas messages into errors.
+def test_read_csv_relative_to_user_home(make_csv_file):
+    with ensure_clean(".csv") as unique_filename:
+        make_csv_file(filename=unique_filename)
+        _check_relative_io("read_csv", unique_filename, "filepath_or_buffer")
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestTable:
     def test_read_table(self, make_csv_file):
         with ensure_clean() as unique_filename:
@@ -1391,20 +1394,53 @@ class TestTable:
 
 
 @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestParquet:
     @pytest.mark.parametrize("columns", [None, ["col1"]])
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
     @pytest.mark.parametrize("path_type", [Path, str])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_parquet(
         self, engine, make_parquet_file, columns, row_group_size, path_type
     ):
+        self._test_read_parquet(
+            engine=engine,
+            make_parquet_file=make_parquet_file,
+            columns=columns,
+            filters=None,
+            row_group_size=row_group_size,
+            path_type=path_type,
+        )
+
+    def _test_read_parquet(
+        self,
+        engine,
+        make_parquet_file,
+        columns,
+        filters,
+        row_group_size,
+        path_type=str,
+        range_index_start=0,
+        range_index_step=1,
+        range_index_name=None,
+    ):
+        if engine == "pyarrow" and filters == [] and os.name == "nt":
+            # pyarrow, and therefore pandas using pyarrow, errors in this case.
+            # Modin correctly replicates this behavior; however error cases
+            # cause race conditions with ensure_clean on Windows.
+            # TODO: Remove this once https://github.com/modin-project/modin/issues/6460 is fixed.
+            pytest.xfail(
+                "Skipping empty filters error case to avoid race condition - see #6460"
+            )
+
         with ensure_clean(".parquet") as unique_filename:
             unique_filename = path_type(unique_filename)
-            make_parquet_file(filename=unique_filename, row_group_size=row_group_size)
+            make_parquet_file(
+                filename=unique_filename,
+                row_group_size=row_group_size,
+                range_index_start=range_index_start,
+                range_index_step=range_index_step,
+                range_index_name=range_index_name,
+            )
 
             eval_io(
                 fn_name="read_parquet",
@@ -1412,14 +1448,11 @@ class TestParquet:
                 engine=engine,
                 path=unique_filename,
                 columns=columns,
+                filters=filters,
             )
 
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
-    )
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_dtype_backend(self, engine, make_parquet_file, dtype_backend):
         with ensure_clean(".parquet") as unique_filename:
@@ -1438,6 +1471,59 @@ class TestParquet:
                 comparator=comparator,
             )
 
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
+    )
+    def test_read_parquet_filters(self, engine, make_parquet_file, filters):
+        self._test_read_parquet(
+            engine=engine,
+            make_parquet_file=make_parquet_file,
+            columns=None,
+            filters=filters,
+            row_group_size=100,
+            path_type=str,
+        )
+
+    @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    def test_read_parquet_range_index(
+        self,
+        engine,
+        make_parquet_file,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+    ):
+        self._test_read_parquet(
+            engine=engine,
+            make_parquet_file=make_parquet_file,
+            columns=columns,
+            filters=filters,
+            row_group_size=100,
+            path_type=str,
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name=range_index_name,
+        )
+
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
         if engine == "fastparquet" and os.name == "nt":
             pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
@@ -1448,10 +1534,6 @@ class TestParquet:
                 make_parquet_file(filename=f)
             eval_io(fn_name="read_parquet", path=[f1, f2, f3], engine=engine)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_parquet_indexing_by_column(self, tmp_path, engine, make_parquet_file):
         # Test indexing into a column of Modin with various parquet file row lengths.
         # Specifically, tests for https://github.com/modin-project/modin/issues/3527
@@ -1468,17 +1550,41 @@ class TestParquet:
             parquet_df[col]
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 3_215), ("col2", ">=", 35)]],
+    )
     @pytest.mark.parametrize("row_group_size", [None, 100, 1000, 10_000])
     @pytest.mark.parametrize(
         "rows_per_file", [[1000] * 40, [0, 0, 40_000], [10_000, 10_000] + [100] * 200]
     )
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     @pytest.mark.exclude_in_sanity
     def test_read_parquet_directory(
-        self, engine, make_parquet_dir, columns, row_group_size, rows_per_file
+        self, engine, make_parquet_dir, columns, filters, row_group_size, rows_per_file
+    ):
+        self._test_read_parquet_directory(
+            engine=engine,
+            make_parquet_dir=make_parquet_dir,
+            columns=columns,
+            filters=filters,
+            range_index_start=0,
+            range_index_step=1,
+            range_index_name=None,
+            row_group_size=row_group_size,
+            rows_per_file=rows_per_file,
+        )
+
+    def _test_read_parquet_directory(
+        self,
+        engine,
+        make_parquet_dir,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        row_group_size,
+        rows_per_file,
     ):
         num_cols = DATASET_SIZE_DICT.get(
             TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
@@ -1487,9 +1593,25 @@ class TestParquet:
         start_row = 0
         for i, length in enumerate(rows_per_file):
             end_row = start_row + length
-            dfs_by_filename[f"{i}.parquet"] = pandas.DataFrame(
-                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)}
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(start_row, end_row) for x in range(num_cols)},
             )
+            index = pandas.RangeIndex(
+                start=range_index_start,
+                stop=range_index_start + (length * range_index_step),
+                step=range_index_step,
+                name=range_index_name,
+            )
+            if (
+                range_index_start == 0
+                and range_index_step == 1
+                and range_index_name is None
+            ):
+                assert df.index.equals(index)
+            else:
+                df.index = index
+
+            dfs_by_filename[f"{i}.parquet"] = df
             start_row = end_row
         path = make_parquet_dir(dfs_by_filename, row_group_size)
 
@@ -1506,18 +1628,156 @@ class TestParquet:
             engine=engine,
             path=path,
             columns=columns,
+            filters=filters,
+        )
+
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    @pytest.mark.parametrize("row_group_size", [None, 20])
+    def test_read_parquet_directory_range_index(
+        self,
+        engine,
+        make_parquet_dir,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        row_group_size,
+    ):
+        self._test_read_parquet_directory(
+            engine=engine,
+            make_parquet_dir=make_parquet_dir,
+            columns=None,
+            filters=filters,
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name=range_index_name,
+            row_group_size=row_group_size,
+            # We don't vary rows_per_file, but we choose a
+            # tricky option: uneven with some empty files,
+            # none divisible by the row_group_size.
+            # We use a smaller total size than in other tests
+            # to make this test run faster.
+            rows_per_file=([250] + [0] * 10 + [25] * 10),
+        )
+
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [("col1", "<=", 1_000_000)], [("col1", "<=", 75), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
+    )
+    @pytest.mark.parametrize(
+        "range_index_name",
+        [None, "my_index"],
+    )
+    def test_read_parquet_directory_range_index_consistent_metadata(
+        self,
+        engine,
+        filters,
+        range_index_start,
+        range_index_step,
+        range_index_name,
+        tmp_path,
+    ):
+        num_cols = DATASET_SIZE_DICT.get(
+            TestDatasetSize.get(), DATASET_SIZE_DICT["Small"]
+        )
+        df = pandas.DataFrame(
+            {f"col{x + 1}": np.arange(0, 500) for x in range(num_cols)},
+        )
+        index = pandas.RangeIndex(
+            start=range_index_start,
+            stop=range_index_start + (len(df) * range_index_step),
+            step=range_index_step,
+            name=range_index_name,
+        )
+        if (
+            range_index_start == 0
+            and range_index_step == 1
+            and range_index_name is None
+        ):
+            assert df.index.equals(index)
+        else:
+            df.index = index
+
+        path = get_unique_filename(extension=None, data_dir=tmp_path)
+
+        table = pa.Table.from_pandas(df)
+        pyarrow.dataset.write_dataset(
+            table,
+            path,
+            format="parquet",
+            max_rows_per_group=35,
+            max_rows_per_file=100,
+        )
+
+        # There are specific files that PyArrow will try to ignore by default
+        # in a parquet directory. One example are files that start with '_'. Our
+        # previous implementation tried to read all files in a parquet directory,
+        # but we now make use of PyArrow to ensure the directory is valid.
+        with open(os.path.join(path, "_committed_file"), "w+") as f:
+            f.write("testingtesting")
+
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=path,
+            filters=filters,
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
+    )
+    @pytest.mark.parametrize(
+        "range_index_start",
+        [0, 5_000],
+    )
+    @pytest.mark.parametrize(
+        "range_index_step",
+        [1, 10],
     )
     def test_read_parquet_partitioned_directory(
-        self, tmp_path, make_parquet_file, columns, engine
+        self,
+        tmp_path,
+        make_parquet_file,
+        columns,
+        filters,
+        range_index_start,
+        range_index_step,
+        engine,
     ):
         unique_filename = get_unique_filename(extension=None, data_dir=tmp_path)
-        make_parquet_file(filename=unique_filename, partitioned_columns=["col1"])
+        make_parquet_file(
+            filename=unique_filename,
+            partitioned_columns=["col1"],
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name="my_index",
+        )
 
         eval_io(
             fn_name="read_parquet",
@@ -1525,13 +1785,24 @@ class TestParquet:
             engine=engine,
             path=unique_filename,
             columns=columns,
+            filters=filters,
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    @pytest.mark.parametrize(
+        "filters",
+        [
+            None,
+            [],
+            [("B", "==", "a")],
+            [
+                ("B", "==", "a"),
+                ("A", ">=", 50_000),
+                ("idx", "<=", 30_000),
+                ("idx_categorical", "==", "y"),
+            ],
+        ],
     )
-    def test_read_parquet_pandas_index(self, engine):
+    def test_read_parquet_pandas_index(self, engine, filters):
         if (
             version.parse(pa.__version__) >= version.parse("12.0.0")
             and version.parse(pd.__version__) < version.parse("2.0.0")
@@ -1572,6 +1843,18 @@ class TestParquet:
 
         for col in pandas_df.columns:
             if col.startswith("idx"):
+                # Before this commit, first released in version 2023.1.0, fastparquet relied
+                # on pandas private APIs to handle Categorical indices.
+                # These private APIs broke in pandas 2.
+                # https://github.com/dask/fastparquet/commit/cf60ae0e9a9ca57afc7a8da98d8c0423db1c0c53
+                if (
+                    col == "idx_categorical"
+                    and engine == "fastparquet"
+                    and version.parse(fastparquet.__version__)
+                    < version.parse("2023.1.0")
+                ):
+                    continue
+
                 with ensure_clean(".parquet") as unique_filename:
                     pandas_df.set_index(col).to_parquet(unique_filename)
                     # read the same parquet using modin.pandas
@@ -1580,6 +1863,7 @@ class TestParquet:
                         # read_parquet kwargs
                         path=unique_filename,
                         engine=engine,
+                        filters=filters,
                     )
 
         with ensure_clean(".parquet") as unique_filename:
@@ -1589,13 +1873,19 @@ class TestParquet:
                 # read_parquet kwargs
                 path=unique_filename,
                 engine=engine,
+                filters=filters,
             )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    @pytest.mark.parametrize(
+        "filters",
+        [
+            None,
+            [],
+            [("B", "==", "a")],
+            [("B", "==", "a"), ("A", ">=", 5), ("idx", "<=", 30_000)],
+        ],
     )
-    def test_read_parquet_pandas_index_partitioned(self, tmp_path, engine):
+    def test_read_parquet_pandas_index_partitioned(self, tmp_path, engine, filters):
         # Ensure modin can read parquet files written by pandas with a non-RangeIndex object
         pandas_df = pandas.DataFrame(
             {
@@ -1613,12 +1903,9 @@ class TestParquet:
             # read_parquet kwargs
             path=unique_filename,
             engine=engine,
+            filters=filters,
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_parquet_hdfs(self, engine):
         eval_io(
             fn_name="read_parquet",
@@ -1630,10 +1917,6 @@ class TestParquet:
     @pytest.mark.parametrize(
         "path_type",
         ["object", "directory", "url"],
-    )
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
     )
     def test_read_parquet_s3(self, path_type, engine):
         dataset_url = "s3://modin-datasets/testing/test_data.parquet"
@@ -1658,11 +1941,11 @@ class TestParquet:
                 engine=engine,
             )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    @pytest.mark.parametrize(
+        "filters",
+        [None, [], [("idx", "<=", 30_000)], [("idx", "<=", 30_000), ("A", ">=", 5)]],
     )
-    def test_read_parquet_without_metadata(self, tmp_path, engine):
+    def test_read_parquet_without_metadata(self, tmp_path, engine, filters):
         """Test that Modin can read parquet files not written by pandas."""
         from pyarrow import csv
         from pyarrow import parquet
@@ -1687,6 +1970,7 @@ class TestParquet:
             # read_parquet kwargs
             path=parquet_fname,
             engine=engine,
+            filters=filters,
         )
 
     def test_read_empty_parquet_file(self, tmp_path, engine):
@@ -1696,19 +1980,27 @@ class TestParquet:
         test_df.to_parquet(path / "part-00000.parquet", engine=engine)
         eval_io(fn_name="read_parquet", path=path, engine=engine)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
+    @pytest.mark.parametrize(
+        "compression_kwargs",
+        [
+            pytest.param({}, id="no_compression_kwargs"),
+            pytest.param({"compression": None}, id="compression=None"),
+            pytest.param({"compression": "gzip"}, id="compression=gzip"),
+            pytest.param({"compression": "snappy"}, id="compression=snappy"),
+            pytest.param({"compression": "brotli"}, id="compression=brotli"),
+        ],
     )
-    def test_to_parquet(self, tmp_path, engine):
+    @pytest.mark.parametrize("extension", ["parquet", ".gz", ".bz2", ".zip", ".xz"])
+    def test_to_parquet(self, tmp_path, engine, compression_kwargs, extension):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         parquet_eval_to_file(
             tmp_path,
             modin_obj=modin_df,
             pandas_obj=pandas_df,
             fn="to_parquet",
-            extension="parquet",
+            extension=extension,
             engine=engine,
+            **compression_kwargs,
         )
 
     def test_to_parquet_keep_index(self, tmp_path, engine):
@@ -1748,10 +2040,6 @@ class TestParquet:
         # https://github.com/modin-project/modin/issues/5888
         assert not os.path.isdir(modin_path)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_parquet_2462(self, tmp_path, engine):
         test_df = pandas.DataFrame({"col1": [["ad_1", "ad_2"], ["ad_3"]]})
         path = tmp_path / "data"
@@ -1770,22 +2058,6 @@ class TestParquet:
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
-    def test_read_parquet_5509(self, tmp_path, engine):
-        test_df = pandas.DataFrame({"col_a": [1, 2, 3], "col_b": ["a", "b", "c"]})
-
-        path = tmp_path / "data"
-        path.mkdir()
-        file_name = "5509.parquet"
-        test_df.to_parquet(path / file_name)
-        with warns_that_defaulting_to_pandas():
-            eval_io(
-                fn_name="read_parquet",
-                path=str(path / file_name),
-                columns=["col_b"],
-                engine=engine,
-                filters=[[("col_a", "==", 1)]],
-            )
-
     def test_read_parquet_s3_with_column_partitioning(self, engine):
         # This test case comes from
         # https://github.com/modin-project/modin/issues/4636
@@ -1798,6 +2070,20 @@ class TestParquet:
         )
 
 
+# Leave this test apart from the test classes, which skip the default to pandas
+# warning check. We want to make sure we are NOT defaulting to pandas for a
+# path relative to user home.
+# TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
+# commment once we turn all default to pandas messages into errors.
+def test_read_parquet_relative_to_user_home(make_parquet_file):
+    with ensure_clean(".parquet") as unique_filename:
+        make_parquet_file(filename=unique_filename)
+        _check_relative_io(
+            "read_parquet", unique_filename, "path", storage_default=("Hdk",)
+        )
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestJson:
     @pytest.mark.parametrize("lines", [False, True])
     def test_read_json(self, make_json_file, lines):
@@ -1859,10 +2145,6 @@ class TestJson:
         "data",
         [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
     )
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_json_string_bytes(self, data):
         with warns_that_defaulting_to_pandas():
             modin_df = pd.read_json(data)
@@ -1885,13 +2167,7 @@ class TestJson:
         "read_mode",
         [
             "r",
-            pytest.param(
-                "rb",
-                marks=pytest.mark.xfail(
-                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-                    reason="Cannot pickle file handles. See comments in PR #2625",
-                ),
-            ),
+            "rb",
         ],
     )
     def test_read_json_file_handle(self, make_json_file, read_mode):
@@ -1901,10 +2177,6 @@ class TestJson:
             df_modin = pd.read_json(buf)
             df_equals(df_pandas, df_modin)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_json_metadata(self, make_json_file):
         # `lines=True` is for triggering Modin implementation,
         # `orient="records"` should be set if `lines=True`
@@ -1921,13 +2193,16 @@ class TestJson:
         assert parts_width_cached == parts_width_actual
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestExcel:
     @check_file_leaks
-    def test_read_excel(self, make_excel_file):
+    @pytest.mark.parametrize("pathlike", [False, True])
+    def test_read_excel(self, pathlike, make_excel_file):
+        unique_filename = make_excel_file()
         eval_io(
             fn_name="read_excel",
             # read_excel kwargs
-            io=make_excel_file(),
+            io=Path(unique_filename) if pathlike else unique_filename,
         )
 
     @check_file_leaks
@@ -1948,10 +2223,6 @@ class TestExcel:
         )
 
     @check_file_leaks
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_excel_engine(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
@@ -1962,10 +2233,6 @@ class TestExcel:
         )
 
     @check_file_leaks
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_excel_index_col(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
@@ -1976,10 +2243,6 @@ class TestExcel:
         )
 
     @check_file_leaks
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_excel_all_sheets(self, make_excel_file):
         unique_filename = make_excel_file()
 
@@ -2067,10 +2330,6 @@ class TestExcel:
             comparator_kwargs={"check_dtypes": False},
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="TypeError: Expected list, got type - issue #3284",
-    )
     def test_ExcelFile(self, make_excel_file):
         unique_filename = make_excel_file()
 
@@ -2080,10 +2339,53 @@ class TestExcel:
         try:
             df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
             assert modin_excel_file.io == unique_filename
-            assert isinstance(modin_excel_file, pd.ExcelFile)
         finally:
             modin_excel_file.close()
             pandas_excel_file.close()
+
+    def test_ExcelFile_bytes(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            content = f.read()
+
+        modin_excel_file = pd.ExcelFile(content)
+        pandas_excel_file = pandas.ExcelFile(content)
+
+        df_equals(modin_excel_file.parse(), pandas_excel_file.parse())
+
+    def test_read_excel_ExcelFile(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            content = f.read()
+
+        modin_excel_file = pd.ExcelFile(content)
+        pandas_excel_file = pandas.ExcelFile(content)
+
+        df_equals(pd.read_excel(modin_excel_file), pandas.read_excel(pandas_excel_file))
+
+    @pytest.mark.parametrize("use_bytes_io", [False, True])
+    def test_read_excel_bytes(self, use_bytes_io, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            io_bytes = f.read()
+
+        if use_bytes_io:
+            io_bytes = BytesIO(io_bytes)
+
+        eval_io(
+            fn_name="read_excel",
+            # read_excel kwargs
+            io=io_bytes,
+        )
+
+    def test_read_excel_file_handle(self, make_excel_file):
+        unique_filename = make_excel_file()
+        with open(unique_filename, mode="rb") as f:
+            eval_io(
+                fn_name="read_excel",
+                # read_excel kwargs
+                io=f,
+            )
 
     @pytest.mark.xfail(strict=False, reason="Flaky test, defaults to pandas")
     def test_to_excel(self, tmp_path):
@@ -2106,10 +2408,6 @@ class TestExcel:
         assert assert_files_eq(unique_filename_modin, unique_filename_pandas)
 
     @check_file_leaks
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_excel_empty_frame(self, make_excel_file):
         eval_io(
             fn_name="read_excel",
@@ -2121,12 +2419,9 @@ class TestExcel:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHdf:
     @pytest.mark.parametrize("format", [None, "table"])
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_hdf(self, make_hdf_file, format):
         eval_io(
             fn_name="read_hdf",
@@ -2135,10 +2430,6 @@ class TestHdf:
             key="df",
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_HDFStore(self, tmp_path):
         unique_filename_modin = get_unique_filename(extension="hdf", data_dir=tmp_path)
         unique_filename_pandas = get_unique_filename(extension="hdf", data_dir=tmp_path)
@@ -2171,10 +2462,6 @@ class TestHdf:
             pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_HDFStore_in_read_hdf(self):
         with ensure_clean(".hdf") as filename:
             dfin = pd.DataFrame(np.random.rand(8, 8))
@@ -2187,11 +2474,8 @@ class TestHdf:
         df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSql:
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     @pytest.mark.parametrize("read_sql_engine", ["Pandas", "Connectorx"])
     def test_read_sql(self, tmp_path, make_sql_connection, read_sql_engine):
         filename = get_unique_filename(".db")
@@ -2250,10 +2534,6 @@ class TestSql:
         pandas_df = pandas.read_sql(sql=query, con=sqlalchemy_connection)
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
@@ -2327,10 +2607,6 @@ class TestSql:
         with pytest.raises(UnsupportedDatabaseException):
             ModinDatabaseConnection("unsupported_database")
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_sql_with_chunksize(self, make_sql_connection):
         filename = get_unique_filename(extension="db")
         table = "test_read_sql_with_chunksize"
@@ -2373,6 +2649,7 @@ class TestSql:
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
     def test_read_html(self, make_html_file):
         eval_io(fn_name="read_html", io=make_html_file())
@@ -2389,6 +2666,7 @@ class TestHtml:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFwf:
     def test_fwf_file(self, make_fwf_file):
         fwf_data = (
@@ -2443,7 +2721,26 @@ class TestFwf:
 
         df_equals(modin_df, pandas_df)
 
-    @pytest.mark.parametrize("usecols", [["a"], ["a", "b", "d"], [0, 1, 3]])
+    @pytest.mark.parametrize(
+        "usecols",
+        [
+            ["a"],
+            pytest.param(
+                ["a", "b", "d"],
+                marks=pytest.mark.xfail(
+                    Engine.get() != "Python" and StorageFormat.get() != "Hdk",
+                    reason="https://github.com/pandas-dev/pandas/issues/54868",
+                ),
+            ),
+            pytest.param(
+                [0, 1, 3],
+                marks=pytest.mark.xfail(
+                    Engine.get() != "Python" and StorageFormat.get() != "Hdk",
+                    reason="https://github.com/pandas-dev/pandas/issues/54868",
+                ),
+            ),
+        ],
+    )
     def test_fwf_file_usecols(self, make_fwf_file, usecols):
         fwf_data = (
             "a       b           c          d\n"
@@ -2508,6 +2805,10 @@ class TestFwf:
         df_equals(modin_df, pd_df)
 
     @pytest.mark.parametrize("nrows", [13, None])
+    @pytest.mark.xfail(
+        Engine.get() != "Python" and StorageFormat.get() != "Hdk",
+        reason="https://github.com/pandas-dev/pandas/issues/54868",
+    )
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
@@ -2582,13 +2883,7 @@ class TestFwf:
         "read_mode",
         [
             "r",
-            pytest.param(
-                "rb",
-                marks=pytest.mark.xfail(
-                    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-                    reason="Cannot pickle file handles. See comments in PR #2625",
-                ),
-            ),
+            "rb",
         ],
     )
     def test_read_fwf_file_handle(self, make_fwf_file, read_mode):
@@ -2622,6 +2917,7 @@ class TestFwf:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestGbq:
     @pytest.mark.skip(reason="Can not pass without GBQ access")
     def test_read_gbq(self):
@@ -2652,6 +2948,7 @@ class TestGbq:
         read_gbq.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestStata:
     def test_read_stata(self, make_stata_file):
         eval_io(
@@ -2671,6 +2968,7 @@ class TestStata:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSas:
     def test_read_sas(self):
         eval_io(
@@ -2680,11 +2978,8 @@ class TestSas:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFeather:
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_read_feather(self, make_feather_file):
         eval_io(
             fn_name="read_feather",
@@ -2692,10 +2987,6 @@ class TestFeather:
             path=make_feather_file(),
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
@@ -2712,10 +3003,6 @@ class TestFeather:
             comparator=comparator,
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     @pytest.mark.parametrize(
         "storage_options",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
@@ -2733,10 +3020,6 @@ class TestFeather:
             path=Path(make_feather_file()),
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-    )
     def test_to_feather(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
@@ -2760,6 +3043,7 @@ class TestFeather:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestClipboard:
     @pytest.mark.skip(reason="No clipboard in CI")
     def test_read_clipboard(self):
@@ -2780,6 +3064,7 @@ class TestClipboard:
         assert modin_as_clip.equals(pandas_as_clip)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestPickle:
     def test_read_pickle(self, make_pickle_file):
         eval_io(
@@ -2788,10 +3073,6 @@ class TestPickle:
             filepath_or_buffer=make_pickle_file(),
         )
 
-    @pytest.mark.xfail(
-        condition="config.getoption('--simulate-cloud').lower() != 'off'",
-        reason="There is no point in writing to local files.",
-    )
     def test_to_pickle(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
         eval_to_file(
@@ -2803,6 +3084,7 @@ class TestPickle:
         )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
     def test_read_xml(self):
         # example from pandas
@@ -2822,6 +3104,7 @@ class TestXml:
         eval_io("read_xml", path_or_buffer=data)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestOrc:
     # It's not easy to add infrastructure for `orc` format.
     # In case of defaulting to pandas, it's enough
@@ -2831,6 +3114,7 @@ class TestOrc:
         test_kwargs = dict(
             columns=["A"],
             dtype_backend=lib.no_default,
+            filesystem=None,
             fake_kwarg="some_pyarrow_parameter",
         )
         with mock.patch(
@@ -2840,6 +3124,7 @@ class TestOrc:
         read_orc.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestSpss:
     # It's not easy to add infrastructure for `spss` format.
     # In case of defaulting to pandas, it's enough
@@ -2856,6 +3141,7 @@ class TestSpss:
         read_spss.assert_called_once_with(*test_args, **test_kwargs)
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_json_normalize():
     # example from pandas
     data = [
@@ -2866,20 +3152,14 @@ def test_json_normalize():
     eval_io("json_normalize", data=data)
 
 
-@pytest.mark.xfail(
-    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_arrow():
     _, pandas_df = create_test_dfs(TEST_DATA)
     modin_df = from_arrow(pa.Table.from_pandas(pandas_df))
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.xfail(
-    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_spmatrix():
     data = sparse.eye(3)
     with pytest.warns(UserWarning, match="defaulting to pandas.*"):
@@ -2888,16 +3168,14 @@ def test_from_spmatrix():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.xfail(
-    condition="config.getoption('--simulate-cloud').lower() != 'off'",
-    reason="The reason of tests fail in `cloud` mode is unknown for now - issue #3264",
-)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dense():
     data = {"col1": pandas.arrays.SparseArray([0, 1, 0])}
     modin_df, pandas_df = create_test_dfs(data)
     df_equals(modin_df.sparse.to_dense(), pandas_df.sparse.to_dense())
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dict_dataframe():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_dict() == to_pandas(modin_df).to_dict()
@@ -2912,6 +3190,7 @@ def test_to_dict_dataframe():
         pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
     ],
 )
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_dict_series(kwargs):
     eval_general(
         *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
@@ -2922,11 +3201,13 @@ def test_to_dict_series(kwargs):
     )
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_latex():
     modin_df, _ = create_test_dfs(TEST_DATA)
     assert modin_df.to_latex() == to_pandas(modin_df).to_latex()
 
 
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_period():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))

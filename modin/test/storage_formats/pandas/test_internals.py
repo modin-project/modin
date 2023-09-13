@@ -17,13 +17,22 @@ from modin.pandas.test.utils import (
     test_data_values,
     df_equals,
 )
-from modin.config import NPartitions, Engine, MinPartitionSize
+from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.utils import try_cast_to_pandas
+from modin.core.dataframe.pandas.dataframe.utils import (
+    ShuffleSortFunctions,
+    ColumnInfo,
+)
 
 import numpy as np
 import pandas
 import pytest
+import unittest.mock as mock
+import functools
+import sys
+
 
 NPartitions.put(4)
 
@@ -115,21 +124,6 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-@pytest.fixture
-def modify_config(request):
-    values = request.param
-    old_values = {}
-
-    for key, value in values.items():
-        old_values[key] = key.get()
-        key.put(value)
-
-    yield  # waiting for the test to be completed
-    # restoring old parameters
-    for key, value in old_values.items():
-        key.put(value)
-
-
 def validate_partitions_cache(df):
     """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
     row_lengths = df._row_lengths_cache
@@ -146,6 +140,45 @@ def validate_partitions_cache(df):
             assert df._partitions[i, j].width() == column_widths[j]
 
 
+def assert_has_no_cache(df, axis=0):
+    """
+    Assert that the passed dataframe has no labels and no lengths cache along the specified axis.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int, default: 0
+    """
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        assert not mf.has_materialized_index and mf._row_lengths_cache is None
+    else:
+        assert not mf.has_materialized_columns and mf._column_widths_cache is None
+
+
+def remove_axis_cache(df, axis=0, remove_lengths=True):
+    """
+    Remove index/columns cache for the passed dataframe.
+
+    Parameters
+    ----------
+    df : modin.pandas.DataFrame
+    axis : int, default: 0
+        0 - remove index cache, 1 - remove columns cache.
+    remove_lengths : bool, default: True
+        Whether to remove row lengths/column widths cache.
+    """
+    mf = df._query_compiler._modin_frame
+    if axis == 0:
+        mf.set_index_cache(None)
+        if remove_lengths:
+            mf._row_lengths_cache = None
+    else:
+        mf.set_columns_cache(None)
+        if remove_lengths:
+            mf._column_widths_cache = None
+
+
 def test_aligning_blocks():
     # Test problem when modin frames have the same number of rows, but different
     # blocks (partition.list_of_blocks). See #2322 for details
@@ -155,7 +188,7 @@ def test_aligning_blocks():
     accm["T"] = pd.Series(["24.67\n"] * 145)
 
     # see #2322 for details
-    repr(accm)
+    try_cast_to_pandas(accm)  # force materialization
 
 
 def test_aligning_blocks_with_duplicated_index():
@@ -169,7 +202,7 @@ def test_aligning_blocks_with_duplicated_index():
     df1 = pd.concat((pd.DataFrame(data11), pd.DataFrame(data12)))
     df2 = pd.concat((pd.DataFrame(data21), pd.DataFrame(data22)))
 
-    repr(df1 - df2)
+    try_cast_to_pandas(df1 - df2)  # force materialization
 
 
 def test_aligning_partitions():
@@ -180,7 +213,7 @@ def test_aligning_partitions():
     modin_df2 = pd.concat((modin_df, modin_df))
 
     modin_df2["c"] = modin_df1["b"]
-    repr(modin_df2)
+    try_cast_to_pandas(modin_df2)  # force materialization
 
 
 @pytest.mark.parametrize("row_labels", [None, [("a", "")], ["a"]])
@@ -732,7 +765,7 @@ def test_groupby_with_empty_partition():
         pandas_df=pandas.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]}),
         partitioning_scheme={"row_lengths": [2, 2], "column_widths": [2]},
     )
-    md_res = md_df.query("a > 1")
+    md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby("a")
     # check index error due to partitioning missmatching
     grp_obj.count()
@@ -741,7 +774,7 @@ def test_groupby_with_empty_partition():
         pandas_df=pandas.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]}),
         partitioning_scheme={"row_lengths": [2, 2], "column_widths": [2]},
     )
-    md_res = md_df.query("a > 1")
+    md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby(md_res["a"])
     grp_obj.count()
 
@@ -813,10 +846,6 @@ def test_split_partitions_kernel(
         Duplicate pivot values cause empty partitions to be produced. This parameter helps
         to verify that the function still behaves correctly in such cases.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import (
-        split_partitions_using_pivots_for_sort,
-    )
-
     random_state = np.random.RandomState(42)
 
     df = pandas.DataFrame(
@@ -837,11 +866,15 @@ def test_split_partitions_kernel(
 
     # Randomly reordering rows in the dataframe
     df = df.reindex(random_state.permutation(df.index))
-    bins = split_partitions_using_pivots_for_sort(
+    bins = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        col_name,
-        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
-        pivots=pivots,
+        [
+            ColumnInfo(
+                name=col_name,
+                is_numeric=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+                pivots=pivots,
+            )
+        ],
         ascending=ascending,
     )
 
@@ -876,10 +909,6 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
     This test verifies that the splitting function performs correctly when an empty pivots list is passed.
     The expected behavior is to return a single split consisting of the exact copy of the input dataframe.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import (
-        split_partitions_using_pivots_for_sort,
-    )
-
     df = pandas.DataFrame(
         {
             "numeric_col": range(9),
@@ -887,11 +916,15 @@ def test_split_partitions_with_empty_pivots(col_name, ascending):
         }
     )
 
-    result = split_partitions_using_pivots_for_sort(
+    result = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        col_name,
-        is_numeric_column=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
-        pivots=[],
+        [
+            ColumnInfo(
+                name=col_name,
+                is_numeric=pandas.api.types.is_numeric_dtype(df.dtypes[col_name]),
+                pivots=[],
+            )
+        ],
         ascending=ascending,
     )
     # We're expecting to recieve a single split here
@@ -911,17 +944,12 @@ def test_shuffle_partitions_with_empty_pivots(ascending):
 
     assert modin_frame._partitions.shape == (1, 1)
 
-    from modin.core.dataframe.pandas.dataframe.utils import (
-        build_sort_functions,
-    )
-
     column_name = modin_frame.columns[1]
 
-    shuffle_functions = build_sort_functions(
+    shuffle_functions = ShuffleSortFunctions(
         # These are the parameters we pass in the `.sort_by()` implementation
         modin_frame,
-        column=column_name,
-        method="inverted_cdf",
+        columns=column_name,
         ascending=ascending,
         ideal_num_new_partitions=1,
     )
@@ -945,10 +973,6 @@ def test_split_partition_preserve_names(ascending):
     This test verifies that the dataframes being split by ``split_partitions_using_pivots_for_sort``
     preserve their index/column names.
     """
-    from modin.core.dataframe.pandas.dataframe.utils import (
-        split_partitions_using_pivots_for_sort,
-    )
-
     df = pandas.DataFrame(
         {
             "numeric_col": range(9),
@@ -961,11 +985,9 @@ def test_split_partition_preserve_names(ascending):
 
     # Pivots that contain empty bins
     pivots = [2, 2, 5, 7]
-    splits = split_partitions_using_pivots_for_sort(
+    splits = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
         df,
-        column="numeric_col",
-        is_numeric_column=True,
-        pivots=pivots,
+        [ColumnInfo(name="numeric_col", is_numeric=True, pivots=pivots)],
         ascending=ascending,
     )
 
@@ -1045,6 +1067,33 @@ def test_binary_op_preserve_dtypes():
     assert_cache(setup_cache(df) + setup_cache(other, has_cache=False), has_cache=False)
 
 
+@pytest.mark.parametrize("axis", [0, 1])
+def test_concat_dont_materialize_opposite_axis(axis):
+    data = {"a": [1, 2, 3], "b": [4.0, 5.0, 6.0]}
+    df1, df2 = pd.DataFrame(data), pd.DataFrame(data)
+
+    def assert_no_cache(df, axis):
+        if axis:
+            assert not df._query_compiler._modin_frame.has_materialized_columns
+        else:
+            assert not df._query_compiler._modin_frame.has_materialized_index
+
+    def remove_cache(df, axis):
+        if axis:
+            df._query_compiler._modin_frame.set_columns_cache(None)
+        else:
+            df._query_compiler._modin_frame.set_index_cache(None)
+        assert_no_cache(df, axis)
+        return df
+
+    df1, df2 = remove_cache(df1, axis), remove_cache(df2, axis)
+
+    df_concated = pd.concat((df1, df2), axis=axis)
+    assert_no_cache(df1, axis)
+    assert_no_cache(df2, axis)
+    assert_no_cache(df_concated, axis)
+
+
 def test_setitem_bool_preserve_dtypes():
     df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
     indexer = pd.Series([True, False, True, False])
@@ -1062,3 +1111,202 @@ def test_setitem_bool_preserve_dtypes():
     # scalar as a col_loc
     df.loc[indexer, "a"] = 2.0
     assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_groupby_size_shuffling(modify_config):
+    # verifies that 'groupby.size()' works with reshuffling implementation
+    # https://github.com/modin-project/modin/issues/6367
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+    modin_frame = df._query_compiler._modin_frame
+
+    with mock.patch.object(
+        modin_frame,
+        "_apply_func_to_range_partitioning",
+        wraps=modin_frame._apply_func_to_range_partitioning,
+    ) as shuffling_method:
+        try_cast_to_pandas(df.groupby("a").size())
+
+    shuffling_method.assert_called()
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [dict(axis=0, labels=[]), dict(axis=1, labels=["a"]), dict(axis=1, labels=[])],
+)
+def test_reindex_preserve_dtypes(kwargs):
+    df = pd.DataFrame({"a": [1, 1, 2, 2], "b": [3, 4, 5, 6]})
+
+    reindexed_df = df.reindex(**kwargs)
+    assert reindexed_df._query_compiler._modin_frame.has_materialized_dtypes
+
+
+class TestModinIndexIds:
+    @staticmethod
+    def _patch_get_index(df, axis=0):
+        """Patch the ``.index``/``.columns`` attribute of the passed dataframe."""
+        if axis == 0:
+            return mock.patch.object(
+                type(df),
+                "index",
+                new_callable=mock.PropertyMock,
+                wraps=functools.partial(type(df).index.__get__, df),
+            )
+        else:
+            return mock.patch.object(
+                type(df),
+                "columns",
+                new_callable=mock.PropertyMock,
+                wraps=functools.partial(type(df).columns.__get__, df),
+            )
+
+    def test_setitem_without_copartition(self):
+        """Test that setitem for identical indices works without materializing the axis."""
+        # simple insertion
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df)
+
+        col = df["col0"]
+        assert_has_no_cache(col)
+        assert_has_no_cache(df)
+
+        # insert the column back and check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_patch:
+            df["col0"] = col
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col)
+        get_index_patch.assert_not_called()
+
+        # insertion with few map operations
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df)
+
+        col = df["col0"]
+        # perform some operations that doesn't modify index labels and partitioning
+        col = col * 2 + 10
+        assert_has_no_cache(col)
+        assert_has_no_cache(df)
+
+        # insert the modified column back and check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_patch:
+            df["col0"] = col
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col)
+        get_index_patch.assert_not_called()
+
+    @pytest.mark.parametrize("axis", [0, 1])
+    def test_concat_without_copartition(self, axis):
+        """Test that concatenation for frames with identical indices works without materializing the axis."""
+        df1 = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df1, axis)
+
+        # perform some operations that doesn't modify index labels and partitioning
+        df2 = df1.abs().applymap(lambda df: df * 2)
+
+        with self._patch_get_index(df1, axis) as get_index_patch:
+            res = pd.concat([df1, df2], axis=axis ^ 1)
+            # check that no cache computation was triggered
+            assert_has_no_cache(df1, axis)
+            assert_has_no_cache(df2, axis)
+            assert_has_no_cache(res, axis)
+        get_index_patch.assert_not_called()
+
+    def test_index_updates_ref(self):
+        """Test that copying the default ModinIndex to a new frame updates frame reference with the new one."""
+        df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        remove_axis_cache(df1)
+
+        modin_frame1 = df1._query_compiler._modin_frame
+        # verify that index cache is 'default' and so holds a reference to the `modin_frame`
+        assert modin_frame1._index_cache._is_default_callable
+
+        ref_count_before = sys.getrefcount(modin_frame1)
+
+        df2 = df1 + 1
+        modin_frame2 = df2._query_compiler._modin_frame
+        # verify that new index cache is also the 'default' one
+        assert modin_frame2._index_cache._is_default_callable
+        # verify that there's no new references being created to the old frame
+        assert sys.getrefcount(modin_frame1) == ref_count_before
+
+    def test_index_updates_axis(self):
+        """Verify that the ModinIndex `axis` attribute is updated when copied to a new frame but for an opposit axis."""
+        df1 = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        remove_axis_cache(df1)
+
+        # now index becomes columns and vice-versa, this means that the 'default callable'
+        # of the ModinIndex now has to update its axis
+        df2 = df1.T
+
+        idx1 = df1._query_compiler._modin_frame._index_cache
+        idx2 = df2._query_compiler._modin_frame._index_cache
+
+        cols1 = df1._query_compiler._modin_frame._columns_cache
+        cols2 = df2._query_compiler._modin_frame._columns_cache
+
+        # check that we can compare df.index == df.T.columns & df.columns == df.T.index
+        # without triggering any axis materialization
+        assert (
+            idx1._index_id == cols2._index_id and idx1._lengths_id == cols2._lengths_id
+        )
+        assert (
+            cols1._index_id == idx2._index_id and cols1._lengths_id == idx2._lengths_id
+        )
+
+        # check that when the materialization is triggered for the transposed frame it produces proper labels
+        assert df2.index.equals(pandas.Index(["a", "b"]))
+        assert df2.columns.equals(pandas.Index([0, 1, 2]))
+
+
+def test_skip_set_columns():
+    """
+    Verifies that the mechanism of skipping the actual ``._set_columns()`` call in case
+    the new columns are identical to the previous ones works properly.
+
+    In this test, we rely on the ``modin_frame._deferred_column`` attribute.
+    The new indices propagation is done lazily, and the ``deferred_column`` attribute
+    indicates whether there's a new indices propagation pending.
+    """
+    df = pd.DataFrame({"col1": [1, 2, 3], "col2": [3, 4, 5]})
+    df.columns = ["col1", "col10"]
+    # Verifies that the new columns were successfully set in case they're actually new
+    assert df._query_compiler._modin_frame._deferred_column
+    assert np.all(df.columns.values == ["col1", "col10"])
+
+    df = pd.DataFrame({"col1": [1, 2, 3], "col2": [3, 4, 5]})
+    df.columns = ["col1", "col2"]
+    # Verifies that the new columns weren't set if they're equal to the previous ones
+    assert not df._query_compiler._modin_frame._deferred_column
+
+    df = pd.DataFrame({"col1": [1, 2, 3], "col2": [3, 4, 5]})
+    df.columns = pandas.Index(["col1", "col2"], name="new name")
+    # Verifies that the new columns were successfully set in case they's new metadata
+    assert df.columns.name == "new name"
+
+    df = pd.DataFrame(
+        {("a", "col1"): [1, 2, 3], ("a", "col2"): [3, 4, 5], ("b", "col1"): [6, 7, 8]}
+    )
+    df.columns = df.columns.copy()
+    # Verifies that the new columns weren't set if they're equal to the previous ones
+    assert not df._query_compiler._modin_frame._deferred_column
+
+    df = pd.DataFrame(
+        {("a", "col1"): [1, 2, 3], ("a", "col2"): [3, 4, 5], ("b", "col1"): [6, 7, 8]}
+    )
+    new_cols = df.columns[::-1]
+    df.columns = new_cols
+    # Verifies that the new columns were successfully set in case they're actually new
+    assert df._query_compiler._modin_frame._deferred_column
+    assert df.columns.equals(new_cols)
+
+    df = pd.DataFrame({"col1": [1, 2, 3], "col2": [3, 4, 5]})
+    remove_axis_cache(df, axis=1)
+    df.columns = ["col1", "col2"]
+    # Verifies that the computation of the old columns wasn't triggered for the sake
+    # of equality comparison, in this case the new columns should be set unconditionally,
+    # meaning that the '_deferred_column' has to be True
+    assert df._query_compiler._modin_frame._deferred_column

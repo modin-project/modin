@@ -683,6 +683,9 @@ class TextFileDispatcher(FileDispatcher):
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
 
+        if read_kwargs.get("iterator"):
+            return (False, "`iterator==True` parameter is not supported")
+
         if read_kwargs.get("dialect") is not None:
             return (False, "`dialect` parameter is not supported")
 
@@ -1105,6 +1108,14 @@ class TextFileDispatcher(FileDispatcher):
             if can_compute_metadata_while_skipping_rows:
                 pd_df_metadata = pd_df_metadata_temp
 
+        # compute dtypes if possible
+        common_dtypes = None
+        if kwargs["dtype"] is None:
+            most_common_dtype = (object,)
+            common_dtypes = {}
+            for col, dtype in pd_df_metadata.dtypes.to_dict().items():
+                if dtype in most_common_dtype:
+                    common_dtypes[col] = dtype
         column_names = pd_df_metadata.columns
         column_widths, num_splits = cls._define_metadata(pd_df_metadata, column_names)
         # kwargs that will be passed to the workers
@@ -1117,6 +1128,7 @@ class TextFileDispatcher(FileDispatcher):
             skiprows=None,
             nrows=None,
             compression=compression_infered,
+            common_dtypes=common_dtypes,
         )
         # this is done mostly for performance; see PR#5678 for details
         filepath_or_buffer_md_ref = cls.put(filepath_or_buffer_md)

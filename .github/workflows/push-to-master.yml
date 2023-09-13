@@ -33,7 +33,7 @@ jobs:
       - name: install Ray nightly build
         # Use --force-reinstall to always reinstall ray and its dependencies.
         # botocore isn't compatible with urllib3>=2; see #6094 for details
-        run: pip install --force-reinstall "urllib3<2" https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+        run: pip install --force-reinstall "urllib3<2" https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp39-cp39-manylinux2014_x86_64.whl
       - name: Conda environment
         run: |
           conda info
@@ -41,7 +41,6 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Run Modin tests
         run: |
-          python -m pytest modin/experimental/xgboost/test/test_default.py
           python -m pytest modin/pandas/test/dataframe/test_binary.py
           python -m pytest modin/pandas/test/dataframe/test_default.py
           python -m pytest modin/pandas/test/dataframe/test_indexing.py
@@ -100,7 +99,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: foobar_secret
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py

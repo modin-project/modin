@@ -15,7 +15,7 @@ import pandas
 import warnings
 from packaging import version
 
-__pandas_version__ = "2.0"
+__pandas_version__ = "2.1"
 
 if (
     version.parse(pandas.__version__).release[:2]
@@ -155,58 +155,6 @@ def _update_engine(publisher: Parameter):
             from modin.core.execution.unidist.common import initialize_unidist
 
             initialize_unidist()
-    elif publisher.get() == "Cloudray":
-        warnings.warn(
-            "Cloud feature is deprecated and will be removed in 0.24.0 release",
-            DeprecationWarning,
-        )
-
-        from modin.experimental.cloud import get_connection
-
-        conn = get_connection()
-        if _is_first_update.get("Cloudray", True):
-
-            @conn.teleport
-            def init_remote_ray(partition):
-                from ray import ray_constants
-                import modin
-                from modin.core.execution.ray.common import initialize_ray
-
-                modin.set_execution("Ray", partition)
-                initialize_ray(
-                    override_is_cluster=True,
-                    override_redis_address=f"localhost:{ray_constants.DEFAULT_PORT}",
-                    override_redis_password=ray_constants.REDIS_DEFAULT_PASSWORD,
-                )
-
-            init_remote_ray(StorageFormat.get())
-            # import FactoryDispatcher here to initialize IO class
-            # so it doesn't skew read_csv() timings later on
-            import modin.core.execution.dispatching.factories.dispatcher  # noqa: F401
-        else:
-            get_connection().modules["modin"].set_execution("Ray", StorageFormat.get())
-    elif publisher.get() == "Cloudpython":
-        warnings.warn(
-            "Cloud feature is deprecated and will be removed in 0.24.0 release",
-            DeprecationWarning,
-        )
-
-        from modin.experimental.cloud import get_connection
-
-        get_connection().modules["modin"].set_execution("Python")
-    elif publisher.get() == "Cloudnative":
-        warnings.warn(
-            "Cloud feature is deprecated and will be removed in 0.24.0 release",
-            DeprecationWarning,
-        )
-
-        from modin.experimental.cloud import get_connection
-
-        assert (
-            is_hdk
-        ), f"Storage format should be 'Hdk' with 'Cloudnative' engine, but provided {sfmt}."
-        get_connection().modules["modin"].set_execution("Native", "Hdk")
-
     elif publisher.get() not in Engine.NOINIT_ENGINES:
         raise ImportError("Unrecognized execution engine: {}.".format(publisher.get()))
 

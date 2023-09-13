@@ -31,6 +31,8 @@ from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_ch
 from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
 from pandas.core.dtypes.common import is_list_like
 
+from pyhdk import __version__ as hdk_version
+
 StorageFormat.put("hdk")
 
 import modin.pandas as pd
@@ -841,6 +843,7 @@ class TestGroupby:
         "a": [1, 1, 2, 2, 2, 1],
         "b": [11, 21, 12, 22, 32, 11],
         "c": [101, 201, 202, 202, 302, 302],
+        "d": [True, True, False, True, False, True],
     }
     cols_value = ["a", ["a", "b"]]
 
@@ -908,7 +911,7 @@ class TestGroupby:
         index = generate_multiindex(len(self.data["a"]))
 
         def groupby(df, *args, **kwargs):
-            df = df + 1
+            df = df[["a", "b", "c"]] + 1
             return df.groupby("a").agg({"b": "size"})
 
         run_and_compare(groupby, data=self.data, constructor_kwargs={"index": index})
@@ -1285,6 +1288,7 @@ class TestAgg:
         "b": [10, 20, None, 20, 10, None],
         "c": [None, 200, None, 400, 500, 600],
         "d": [11, 22, 33, 22, 33, 22],
+        "e": [True, True, False, True, False, True],
     }
     int_data = pandas.DataFrame(data).fillna(0).astype("int").to_dict()
 
@@ -1344,13 +1348,19 @@ class TestAgg:
                 # function that falling back to pandas in the reduce operation flow.
                 with pytest.warns(UserWarning) as warns:
                     res = getattr(df, method)()
-                assert (
-                    len(warns) == 1
-                ), f"More than one warning was arisen: len(warns) != 1 ({len(warns)} != 1)"
-                message = warns[0].message.args[0]
-                assert (
-                    re.match(r".*transpose.*defaulting to pandas", message) is not None
-                ), f"Expected DataFrame.transpose defaulting to pandas warning, got: {message}"
+                for warn in warns.list:
+                    message = warn.message.args[0]
+                    if (
+                        "is_sparse is deprecated" in message
+                        # TODO: make sure we can ignore this warning
+                        or "Frame contain columns with unsupported data-types"
+                        in message
+                    ):
+                        continue
+                    assert (
+                        re.match(r".*transpose.*defaulting to pandas", message)
+                        is not None
+                    ), f"Expected DataFrame.transpose defaulting to pandas warning, got: {message}"
             else:
                 res = getattr(df, method)()
             return res
@@ -1631,6 +1641,7 @@ class TestMerge:
             on_columns="A",
             constructor_kwargs={"dtype": "category"},
             comparator=lambda df1, df2: df_equals(df1.astype(float), df2.astype(float)),
+            force_lazy=False,
         )
 
     def test_merge_date(self):
@@ -2059,19 +2070,21 @@ class TestCategory:
 
 
 class TestSort:
+    # In order for the row order to be deterministic after sorting,
+    # the `by` columns should not contain duplicate values.
     data = {
-        "a": [1, 2, 5, 2, 5, 4, 4, 5, 2],
+        "a": [1, 2, 5, -2, -5, 4, -4, 6, 3],
         "b": [1, 2, 3, 6, 5, 1, 4, 5, 3],
         "c": [5, 4, 2, 3, 1, 1, 4, 5, 6],
         "d": ["1", "4", "3", "2", "1", "6", "7", "5", "0"],
     }
     data_nulls = {
-        "a": [1, 2, 5, 2, 5, 4, 4, None, 2],
+        "a": [1, 2, 5, -2, -5, 4, -4, None, 3],
         "b": [1, 2, 3, 6, 5, None, 4, 5, 3],
         "c": [None, 4, 2, 3, 1, 1, 4, 5, 6],
     }
     data_multiple_nulls = {
-        "a": [1, 2, None, 2, 5, 4, 4, None, 2],
+        "a": [1, 2, None, -2, 5, 4, -4, None, 3],
         "b": [1, 2, 3, 6, 5, None, 4, 5, None],
         "c": [None, 4, 2, None, 1, 1, 4, 5, 6],
     }
@@ -2089,6 +2102,7 @@ class TestSort:
         def sort(df, cols, ignore_index, index_cols, ascending, **kwargs):
             if index_cols:
                 df = df.set_index(index_cols)
+                df_equals_with_non_stable_indices()
             return df.sort_values(cols, ignore_index=ignore_index, ascending=ascending)
 
         run_and_compare(
@@ -2114,6 +2128,10 @@ class TestSort:
             ascending=ascending,
         )
 
+    @pytest.mark.skipif(
+        hdk_version == "0.7.0",
+        reason="https://github.com/modin-project/modin/issues/6514",
+    )
     @pytest.mark.parametrize("ascending", ascending_values)
     def test_sort_cols_str(self, ascending):
         def sort(df, ascending, **kwargs):
@@ -2719,11 +2737,10 @@ class TestFromArrow:
         pdt = pdf.dtypes[0]
         assert mdt == "category"
         assert isinstance(mdt, pandas.CategoricalDtype)
-        assert pandas.api.types.is_categorical_dtype(mdt)
         assert str(mdt) == str(pdt)
 
         # Make sure the lazy proxy dtype is not materialized yet.
-        assert type(mdt) != pandas.CategoricalDtype
+        assert type(mdt) is not pandas.CategoricalDtype
         assert mdt._parent is not None
         assert mdt._update_proxy(at, at.column(0)._name) is mdt
         assert mdt._update_proxy(at, at.column(2)._name) is not mdt

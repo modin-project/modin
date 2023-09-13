@@ -19,7 +19,16 @@ from sklearn.datasets import load_breast_cancer
 import xgboost as xgb
 
 import modin.pandas as pd
+from modin.config import Engine
 import modin.experimental.xgboost as mxgb
+from modin.utils import try_cast_to_pandas
+
+
+if Engine.get() != "Ray":
+    pytest.skip(
+        "Modin' xgboost extension works only with Ray engine.",
+        allow_module_level=True,
+    )
 
 
 rng = np.random.RandomState(1994)
@@ -76,6 +85,10 @@ def test_dmatrix_feature_names_and_feature_types(data, feature_names, feature_ty
     check_dmatrix(data, feature_names=feature_names, feature_types=feature_types)
 
 
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="implemented only for Ray engine.",
+)
 def test_feature_names():
     dataset = load_breast_cancer()
     X = dataset.data
@@ -118,7 +131,7 @@ def test_feature_names():
     with pytest.raises(ValueError):
         booster.predict(dm)
     with pytest.raises(ValueError):
-        repr(md_booster.predict(md_dm))
+        try_cast_to_pandas(md_booster.predict(md_dm))  # force materialization
 
 
 def test_feature_weights():

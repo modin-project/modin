@@ -331,3 +331,12 @@ def test_set_shape():
     assert_scalar_or_array_equal(modin_arr, numpy_arr)
     with pytest.raises(ValueError, match="cannot reshape"):
         modin_arr.shape = (4,)
+
+
+def test__array__():
+    numpy_arr = numpy.array([[1, 2, 3], [4, 5, 6]])
+    modin_arr = np.array(numpy_arr)
+    # this implicitly calls `__array__`
+    converted_array = numpy.array(modin_arr)
+    assert type(converted_array) is type(numpy_arr)
+    assert_scalar_or_array_equal(converted_array, numpy_arr)

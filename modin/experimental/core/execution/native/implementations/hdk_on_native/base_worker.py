@@ -22,6 +22,13 @@ import numpy as np
 
 from modin.error_message import ErrorMessage
 
+_UINT_TO_INT_MAP = {
+    pa.uint8(): pa.int16(),
+    pa.uint16(): pa.int32(),
+    pa.uint32(): pa.int64(),
+    pa.uint64(): pa.int64(),  # May cause overflow
+}
+
 
 class DbTable(abc.ABC):
     """
@@ -152,8 +159,8 @@ class BaseDbWorker(abc.ABC):
         # TODO: reword name in case of caller's mistake
         return name
 
-    @staticmethod
-    def cast_to_compatible_types(table):
+    @classmethod
+    def cast_to_compatible_types(cls, table, cast_dict):
         """
         Cast PyArrow table to be fully compatible with HDK.
 
@@ -161,6 +168,8 @@ class BaseDbWorker(abc.ABC):
         ----------
         table : pyarrow.Table
             Source table.
+        cast_dict : bool
+            Cast dictionary columns to string.
 
         Returns
         -------
@@ -171,62 +180,51 @@ class BaseDbWorker(abc.ABC):
         new_schema = schema
         need_cast = False
         uint_to_int_cast = False
-        new_cols = {}
-        uint_to_int_map = {
-            pa.uint8(): pa.int16(),
-            pa.uint16(): pa.int32(),
-            pa.uint32(): pa.int64(),
-            pa.uint64(): pa.int64(),  # May cause overflow
-        }
+
         for i, field in enumerate(schema):
-            # Currently HDK doesn't support Arrow table import with
-            # dictionary columns. Here we cast dictionaries until support
-            # is in place.
-            # https://github.com/modin-project/modin/issues/1738
             if pa.types.is_dictionary(field.type):
+                value_type = field.type.value_type
                 # Conversion for dictionary of null type to string is not supported
                 # in Arrow. Build new column for this case for now.
-                if pa.types.is_null(field.type.value_type):
+                if pa.types.is_null(value_type):
                     mask = np.full(table.num_rows, True, dtype=bool)
                     new_col_data = np.empty(table.num_rows, dtype=str)
                     new_col = pa.array(new_col_data, pa.string(), mask)
-                    new_cols[i] = new_col
+                    new_field = pa.field(
+                        field.name, pa.string(), field.nullable, field.metadata
+                    )
+                    table = table.set_column(i, new_field, new_col)
+                elif pa.types.is_string(value_type):
+                    if cast_dict:
+                        need_cast = True
+                        new_field = pa.field(
+                            field.name, pa.string(), field.nullable, field.metadata
+                        )
+                    else:
+                        new_field = field
                 else:
+                    new_field, int_cast = cls._convert_field(field, value_type)
                     need_cast = True
-                new_field = pa.field(
-                    field.name, pa.string(), field.nullable, field.metadata
-                )
+                    uint_to_int_cast = uint_to_int_cast or int_cast
+                    if new_field == field:
+                        new_field = pa.field(
+                            field.name,
+                            value_type,
+                            field.nullable,
+                            field.metadata,
+                        )
                 new_schema = new_schema.set(i, new_field)
-            # HDK doesn't support importing Arrow's date type:
-            # https://github.com/omnisci/omniscidb/issues/678
-            elif pa.types.is_date(field.type):
-                # Arrow's date is the number of days since the UNIX-epoch, so we can convert it
-                # to a timestamp[s] (number of seconds since the UNIX-epoch) without losing precision
-                new_field = pa.field(
-                    field.name, pa.timestamp("s"), field.nullable, field.metadata
-                )
+            else:
+                new_field, int_cast = cls._convert_field(field, field.type)
+                need_cast = need_cast or new_field is not field
+                uint_to_int_cast = uint_to_int_cast or int_cast
                 new_schema = new_schema.set(i, new_field)
-                need_cast = True
-            # HDK doesn't support unsigned types
-            elif pa.types.is_unsigned_integer(field.type):
-                new_field = pa.field(
-                    field.name,
-                    uint_to_int_map[field.type],
-                    field.nullable,
-                    field.metadata,
-                )
-                new_schema = new_schema.set(i, new_field)
-                need_cast = True
-                uint_to_int_cast = True
 
         # Such cast may affect the data, so we have to raise a warning about it
         if uint_to_int_cast:
             ErrorMessage.single_warning(
                 "HDK does not support unsigned integer types, such types will be rounded up to the signed equivalent."
             )
-
-        for i, col in new_cols.items():
-            table = table.set_column(i, new_schema[i], col)
 
         if need_cast:
             try:
@@ -238,6 +236,41 @@ class BaseDbWorker(abc.ABC):
                 ) from err
 
         return table
+
+    @staticmethod
+    def _convert_field(field, field_type):
+        """
+        Convert the specified arrow field, if required.
+
+        Parameters
+        ----------
+        field : pyarrow.Field
+        field_type : pyarrow.DataType
+
+        Returns
+        -------
+        Tuple[pyarrow.Field, boolean]
+            A tuple, containing (new_field, uint_to_int_cast)
+        """
+        if pa.types.is_date(field_type):
+            # Arrow's date is the number of days since the UNIX-epoch, so we can convert it
+            # to a timestamp[s] (number of seconds since the UNIX-epoch) without losing precision
+            return (
+                pa.field(field.name, pa.timestamp("s"), field.nullable, field.metadata),
+                False,
+            )
+        elif pa.types.is_unsigned_integer(field_type):
+            # HDK doesn't support unsigned types
+            return (
+                pa.field(
+                    field.name,
+                    _UINT_TO_INT_MAP[field_type],
+                    field.nullable,
+                    field.metadata,
+                ),
+                True,
+            )
+        return field, False
 
     @classmethod
     @abc.abstractmethod

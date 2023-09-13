@@ -83,9 +83,9 @@ class HdkProtocolColumn(ProtocolColumn):
 
         if pandas.api.types.is_bool_dtype(dtype):
             return (DTypeKind.BOOL, 1, ArrowCTypes.BOOL, Endianness.NATIVE)
-        elif pandas.api.types.is_datetime64_dtype(
-            dtype
-        ) or pandas.api.types.is_categorical_dtype(dtype):
+        elif pandas.api.types.is_datetime64_dtype(dtype) or isinstance(
+            dtype, pandas.CategoricalDtype
+        ):
             # We can't fully describe an actual underlying type's metadata from pandas dtype,
             # use a `._arrow_dtype` for missing parts of information like datetime resulution,
             # dictionary metadata, etc?...

@@ -40,6 +40,7 @@ Data parsing mechanism differs depending on the data format type:
 """
 
 import os
+import json
 from collections import OrderedDict
 from io import BytesIO, TextIOWrapper, IOBase
 import fsspec
@@ -162,6 +163,7 @@ class PandasParser(ClassLogger):
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
         header_size = kwargs.pop("header_size", 0)
+        common_dtypes = kwargs.pop("common_dtypes", None)
         encoding = kwargs.get("encoding", None)
         callback = kwargs.pop("callback")
         if start is None or end is None:
@@ -208,6 +210,8 @@ class PandasParser(ClassLogger):
         if "memory_map" in kwargs:
             kwargs = kwargs.copy()
             del kwargs["memory_map"]
+        if common_dtypes is not None:
+            kwargs["dtype"] = common_dtypes
         pandas_df = callback(BytesIO(to_read), **kwargs)
         index = (
             pandas_df.index
@@ -648,7 +652,7 @@ class PandasExcelParser(PandasParser):
         bytesio = BytesIO(excel_header + bytes_data + footer)
         # Use openpyxl to read/parse sheet data
         common_args = (ws, bytesio, ex.shared_strings, False)
-        if PandasExcelParser.need_rich_text_param:
+        if PandasExcelParser.need_rich_text_param():
             reader = WorksheetReader(*common_args, rich_text=False)
         else:
             reader = WorksheetReader(*common_args)
@@ -781,28 +785,81 @@ class ParquetFileToRead(NamedTuple):
 class PandasParquetParser(PandasParser):
     @staticmethod
     def _read_row_group_chunk(
-        f, row_group_start, row_group_end, columns, engine, to_pandas_kwargs
+        f, row_group_start, row_group_end, columns, filters, engine, to_pandas_kwargs
     ):  # noqa: GL08
         if engine == "pyarrow":
-            from pyarrow.parquet import ParquetFile
+            if filters is not None:
+                import pyarrow.dataset as ds
+                from pyarrow.parquet import filters_to_expression
 
-            return (
-                ParquetFile(f)
-                .read_row_groups(
-                    range(
+                parquet_format = ds.ParquetFileFormat()
+                fragment = parquet_format.make_fragment(
+                    f,
+                    row_groups=range(
                         row_group_start,
                         row_group_end,
                     ),
-                    columns=columns,
-                    use_pandas_metadata=True,
                 )
-                .to_pandas(**to_pandas_kwargs)
-            )
+                dataset = ds.FileSystemDataset(
+                    [fragment],
+                    schema=fragment.physical_schema,
+                    format=parquet_format,
+                    filesystem=fragment.filesystem,
+                )
+
+                # This lower-level API doesn't have the ability to automatically handle pandas metadata
+                # The following code is based on
+                # https://github.com/apache/arrow/blob/f44e28fa03a64ae5b3d9352d21aee2cc84f9af6c/python/pyarrow/parquet/core.py#L2619-L2628
+
+                # if use_pandas_metadata, we need to include index columns in the
+                # column selection, to be able to restore those in the pandas DataFrame
+                metadata = dataset.schema.metadata or {}
+
+                if b"pandas" in metadata and columns is not None:
+                    index_columns = json.loads(metadata[b"pandas"].decode("utf8"))[
+                        "index_columns"
+                    ]
+                    # In the pandas metadata, the index columns can either be string column names,
+                    # or a dictionary that describes a RangeIndex.
+                    # Here, we are finding the real data columns that need to be read to become part
+                    # of the pandas Index, so we can skip the RangeIndex.
+                    # Not only can a RangeIndex be trivially reconstructed later, but we actually
+                    # ignore partition-level range indices, because we want to have a single Modin
+                    # RangeIndex that spans all partitions.
+                    index_columns = [
+                        col for col in index_columns if not isinstance(col, dict)
+                    ]
+                    columns = list(columns) + list(set(index_columns) - set(columns))
+
+                return dataset.to_table(
+                    columns=columns,
+                    filter=filters_to_expression(filters),
+                ).to_pandas(**to_pandas_kwargs)
+            else:
+                from pyarrow.parquet import ParquetFile
+
+                return (
+                    ParquetFile(f)
+                    .read_row_groups(
+                        range(
+                            row_group_start,
+                            row_group_end,
+                        ),
+                        columns=columns,
+                        use_pandas_metadata=True,
+                    )
+                    .to_pandas(**to_pandas_kwargs)
+                )
         elif engine == "fastparquet":
             from fastparquet import ParquetFile
 
             return ParquetFile(f)[row_group_start:row_group_end].to_pandas(
-                columns=columns
+                columns=columns,
+                filters=filters,
+                # Setting row_filter=True would perform filtering at the row level, which is more correct
+                # (in line with pyarrow)
+                # However, it doesn't work: https://github.com/dask/fastparquet/issues/873
+                # Also, this would create incompatibility with pandas
             )
         else:
             # We shouldn't ever come to this case, so something went wrong
@@ -821,6 +878,7 @@ engine : str
     )
     def parse(files_for_parser, engine, **kwargs):
         columns = kwargs.get("columns", None)
+        filters = kwargs.get("filters", None)
         storage_options = kwargs.get("storage_options", {})
         chunks = []
         # `single_worker_read` just passes in a string path or path-like object
@@ -840,6 +898,7 @@ engine : str
                     file_for_parser.row_group_start,
                     file_for_parser.row_group_end,
                     columns,
+                    filters,
                     engine,
                     to_pandas_kwargs,
                 )
@@ -888,7 +947,14 @@ class PandasFeatherParser(PandasParser):
             fname,
             **(kwargs.pop("storage_options", None) or {}),
         ) as file:
-            df = feather.read_feather(file, **kwargs, **to_pandas_kwargs)
+            # The implementation is as close as possible to the one in pandas.
+            # For reference see `read_feather` in pandas/io/feather_format.py.
+            if not to_pandas_kwargs:
+                df = feather.read_feather(file, **kwargs)
+            else:
+                # `read_feather` doesn't accept `types_mapper` if pyarrow<11.0
+                pa_table = feather.read_table(file, **kwargs)
+                df = pa_table.to_pandas(**to_pandas_kwargs)
         # Append the length of the index here to build it externally
         return _split_result_for_readers(0, num_splits, df) + [len(df.index), df.dtypes]
 

@@ -24,49 +24,50 @@ default to pandas.
     environment variable. Some parameter combinations are not supported and the function
     will be executed in synchronous mode.
 
-+--------------------+---------------------------------+----------------------------------------------------+
-| IO method          | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_csv`_        | Y                               | **Hdk**: ``P``, only basic cases and parameters    |
-|                    |                                 | supported: ``filepath_or_buffer`` can be local file|
-|                    |                                 | only, ``sep``, ``delimiter``,  ``header`` (partly) |
-|                    |                                 | ``names``, ``usecols``, ``dtype``,                 |
-|                    |                                 | ``true/false_values``, ``skiprows`` (partly)       |
-|                    |                                 | ``skip_blank_lines`` (partly), ``parse_dates``     |
-|                    |                                 | (partly), ``compression`` (inferred automatically, |
-|                    |                                 | should not be specified), ``quotechar``,           |
-|                    |                                 | ``escapechar``, ``doublequote``,                   |
-|                    |                                 | ``delim_whitespace``                               |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_fwf`_        | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_table`_      | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_parquet`_    | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_json`_       | P                               | Implemented for ``lines=True``                     |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_html`_       | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_clipboard`_  | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_excel`_      | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_hdf`_        | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_feather`_    | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_msgpack`_    | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_stata`_      | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_sas`_        | D                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_pickle`_     | D                               | Experimental implementation:                       |
-|                    |                                 | read_pickle_distributed                            |
-+--------------------+---------------------------------+----------------------------------------------------+
-| `read_sql`_        | Y                               |                                                    |
-+--------------------+---------------------------------+----------------------------------------------------+
++-------------------+---------------------------------+--------------------------------------------------------+
+| IO method         | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                       |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_csv`_       | Y                               | **Hdk**: ``P``, only basic cases and parameters        |
+|                   |                                 | supported: ``filepath_or_buffer`` can be local file    |
+|                   |                                 | only, ``sep``, ``delimiter``,  ``header`` (partly)     |
+|                   |                                 | ``names``, ``usecols``, ``dtype``,                     |
+|                   |                                 | ``true/false_values``, ``skiprows`` (partly)           |
+|                   |                                 | ``skip_blank_lines`` (partly), ``parse_dates``         |
+|                   |                                 | (partly), ``compression`` (inferred automatically,     |
+|                   |                                 | should not be specified), ``quotechar``,               |
+|                   |                                 | ``escapechar``, ``doublequote``,                       |
+|                   |                                 | ``delim_whitespace``                                   |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_fwf`_       | Y                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_table`_     | Y                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_parquet`_   | P                               | Parameters besides ``filters`` and ``storage_options`` |
+|                   |                                 | passed via ``**kwargs`` are not supported.             |
+|                   |                                 | ``use_nullable_dtypes`` == True is not supported.      |
+|                   |                                 |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_json`_      | P                               | Implemented for ``lines=True``                         |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_html`_      | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_clipboard`_ | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_excel`_     | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_hdf`_       | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_feather`_   | Y                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_stata`_     | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_sas`_       | D                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_pickle`_    | D                               | Experimental implementation:                           |
+|                   |                                 | read_pickle_distributed                                |
++-------------------+---------------------------------+--------------------------------------------------------+
+| `read_sql`_       | Y                               |                                                        |
++-------------------+---------------------------------+--------------------------------------------------------+
 
 .. _`read_csv`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html#pandas.read_csv
 .. _`read_fwf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_fwf.html#pandas.read_fwf
@@ -78,7 +79,6 @@ default to pandas.
 .. _`read_excel`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_excel.html#pandas.read_excel
 .. _`read_hdf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_hdf.html#pandas.read_hdf
 .. _`read_feather`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_feather.html#pandas.read_feather
-.. _`read_msgpack`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_msgpack.html#pandas.read_msgpack
 .. _`read_stata`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_stata.html#pandas.read_stata
 .. _`read_sas`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_sas.html#pandas.read_sas
 .. _`read_pickle`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_pickle.html#pandas.read_pickle

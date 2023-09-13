@@ -46,7 +46,7 @@ class Resampler:
                 df = df.squeeze(axis=1)
             resampler = df.resample(**resample_kwargs)
 
-            if type(func) == property:
+            if type(func) is property:
                 return func.fget(resampler)
 
             return func(resampler, *args, **kwargs)

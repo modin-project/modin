@@ -13,6 +13,8 @@
 
 """Dataframe exchange protocol tests that are specific for pandas storage format implementation."""
 
+import pandas
+
 import modin.pandas as pd
 from modin.pandas.utils import from_dataframe
 from modin.pandas.test.utils import df_equals, test_data
@@ -54,3 +56,15 @@ def test_categorical_from_dataframe():
         {"foo": pd.Series(["0", "1", "2", "3", "0", "3", "2", "3"], dtype="category")}
     )
     eval_df_protocol(modin_df)
+
+
+def test_from_dataframe_with_empty_dataframe():
+    modin_df = pd.DataFrame({"foo_col": pd.Series([], dtype="int64")})
+    with warns_that_defaulting_to_pandas():
+        eval_df_protocol(modin_df)
+
+
+def test_interchange_with_pandas_string():
+    modin_df = pd.DataFrame({"fips": ["01001"]})
+    pandas_df = pandas.api.interchange.from_dataframe(modin_df.__dataframe__())
+    df_equals(modin_df, pandas_df)

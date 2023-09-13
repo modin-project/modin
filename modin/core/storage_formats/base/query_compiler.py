@@ -2343,25 +2343,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(fillna)(self, **kwargs)
 
-    @doc_utils.add_refer_to("DataFrame.query")
-    def query(self, expr, **kwargs):
-        """
-        Query columns of the QueryCompiler with a boolean expression.
-
-        Parameters
-        ----------
-        expr : str
-        **kwargs : dict
-
-        Returns
-        -------
-        BaseQueryCompiler
-            New QueryCompiler containing the rows where the boolean expression is satisfied.
-        """
-        return DataFrameDefault.register(pandas.DataFrame.query)(
-            self, expr=expr, **kwargs
-        )
-
     @doc_utils.add_refer_to("DataFrame.rank")
     def rank(self, **kwargs):  # noqa: PR02
         """
@@ -6339,9 +6320,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def expanding_quantile(
         self, fold_axis, expanding_args, quantile, interpolation, **kwargs
     ):
-        return ExpandingDefault.register(pandas.core.window.rolling.Expanding.quantile)(
-            self, expanding_args, quantile, interpolation, **kwargs
-        )
+        return ExpandingDefault.register(
+            pandas.core.window.expanding.Expanding.quantile
+        )(self, expanding_args, quantile, interpolation, **kwargs)
 
     @doc_utils.doc_window_method(
         window_cls_name="Expanding",
@@ -6591,8 +6572,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 new_query_compiler._modin_frame.apply_full_axis(
                     _ax,
                     lambda df: df,
-                    new_index=self._modin_frame.copy_index_cache(),
-                    new_columns=self._modin_frame.copy_columns_cache(),
+                    new_index=self._modin_frame.copy_index_cache(copy_lengths=_ax == 1),
+                    new_columns=self._modin_frame.copy_columns_cache(
+                        copy_lengths=_ax == 0
+                    ),
+                    dtypes=self._modin_frame.copy_dtypes_cache(),
                     keep_partitioning=False,
                     sync_labels=False,
                 )

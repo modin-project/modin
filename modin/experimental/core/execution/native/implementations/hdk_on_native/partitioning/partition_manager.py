@@ -175,7 +175,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 # The TypeError could be raised when converting a sparse data to
                 # arrow table - https://github.com/apache/arrow/pull/4497. If this
                 # is the case - fall back to pandas, otherwise - rethrow the error.
-                if type(err) == TypeError:
+                if type(err) is TypeError:
                     if any([isinstance(t, pandas.SparseDtype) for t in obj.dtypes]):
                         ErrorMessage.single_warning(
                             "Sparse data is not currently supported!"
@@ -187,7 +187,7 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 # We catch and handle this error here. If there are no duplicates
                 # (is_unique is True), then the error is caused by something different
                 # and we just rethrow it.
-                if (type(err) == ValueError) and obj.columns.is_unique:
+                if (type(err) is ValueError) and obj.columns.is_unique:
                     raise err
 
                 regex = r"Conversion failed for column ([^\W]*)"
@@ -248,11 +248,20 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         for frame in frames:
             cls.import_table(frame, worker)
 
-        calcite_plan = CalciteBuilder().build(plan)
+        builder = CalciteBuilder()
+        calcite_plan = builder.build(plan)
         calcite_json = CalciteSerializer().serialize(calcite_plan)
         if DoUseCalcite.get():
+            exec_calcite = True
             calcite_json = "execute calcite " + calcite_json
-        table = worker.executeRA(calcite_json)
+        else:
+            exec_calcite = False
+        exec_args = {}
+        if builder.has_groupby and not builder.has_join:
+            exec_args = {"enable_lazy_fetch": 0, "enable_columnar_output": 0}
+        elif not builder.has_groupby and builder.has_join:
+            exec_args = {"enable_lazy_fetch": 1, "enable_columnar_output": 1}
+        table = worker.executeRA(calcite_json, exec_calcite, **exec_args)
 
         res = np.empty((1, 1), dtype=np.dtype(object))
         res[0][0] = cls._partition_class(table)

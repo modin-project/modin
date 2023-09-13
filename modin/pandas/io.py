@@ -66,7 +66,7 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from .dataframe import DataFrame
 from .series import Series
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, expanduser_path_arg
 
 
 def _read(**kwargs):
@@ -100,6 +100,7 @@ def _read(**kwargs):
 
 
 @_inherit_docstrings(pandas.read_xml, apilink="pandas.read_xml")
+@expanduser_path_arg("path_or_buffer")
 @enable_logging
 def read_xml(
     path_or_buffer: FilePath | ReadBuffer[bytes] | ReadBuffer[str],
@@ -126,6 +127,7 @@ def read_xml(
 
 
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_csv(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
@@ -197,6 +199,7 @@ def read_csv(
 
 
 @_inherit_docstrings(pandas.read_table, apilink="pandas.read_table")
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_table(
     filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
@@ -270,6 +273,7 @@ def read_table(
 
 
 @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
+@expanduser_path_arg("path")
 @enable_logging
 def read_parquet(
     path,
@@ -278,6 +282,8 @@ def read_parquet(
     storage_options: StorageOptions = None,
     use_nullable_dtypes: bool = no_default,
     dtype_backend=no_default,
+    filesystem=None,
+    filters=None,
     **kwargs,
 ) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -295,12 +301,15 @@ def read_parquet(
             storage_options=storage_options,
             use_nullable_dtypes=use_nullable_dtypes,
             dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            filters=filters,
             **kwargs,
         )
     )
 
 
 @_inherit_docstrings(pandas.read_json, apilink="pandas.read_json")
+@expanduser_path_arg("path_or_buf")
 @enable_logging
 def read_json(
     path_or_buf,
@@ -356,6 +365,7 @@ def read_gbq(
 
 
 @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
+@expanduser_path_arg("io")
 @enable_logging
 def read_html(
     io,
@@ -376,6 +386,7 @@ def read_html(
     displayed_only: bool = True,
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    storage_options: StorageOptions = None,
 ) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
@@ -407,6 +418,7 @@ def read_clipboard(
 
 
 @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
+@expanduser_path_arg("io")
 @enable_logging
 def read_excel(
     io,
@@ -441,6 +453,7 @@ def read_excel(
     skipfooter: int = 0,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    engine_kwargs: Optional[dict] = None,
 ) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
@@ -457,6 +470,7 @@ def read_excel(
 
 
 @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
+@expanduser_path_arg("path_or_buf")
 @enable_logging
 def read_hdf(
     path_or_buf,
@@ -483,6 +497,7 @@ def read_hdf(
 
 
 @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
+@expanduser_path_arg("path")
 @enable_logging
 def read_feather(
     path,
@@ -499,6 +514,7 @@ def read_feather(
 
 
 @_inherit_docstrings(pandas.read_stata)
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_stata(
     filepath_or_buffer,
@@ -523,6 +539,7 @@ def read_stata(
 
 
 @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_sas(
     filepath_or_buffer,
@@ -553,6 +570,7 @@ def read_sas(
 
 
 @_inherit_docstrings(pandas.read_pickle, apilink="pandas.read_pickle")
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_pickle(
     filepath_or_buffer,
@@ -597,6 +615,7 @@ def read_sql(
 
 
 @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def read_fwf(
     filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
@@ -672,6 +691,7 @@ def read_sql_query(
 
 
 @_inherit_docstrings(pandas.to_pickle)
+@expanduser_path_arg("filepath_or_buffer")
 @enable_logging
 def to_pickle(
     obj: Any,
@@ -694,6 +714,7 @@ def to_pickle(
 
 
 @_inherit_docstrings(pandas.read_spss, apilink="pandas.read_spss")
+@expanduser_path_arg("path")
 @enable_logging
 def read_spss(
     path: Union[str, pathlib.Path],
@@ -740,11 +761,13 @@ def json_normalize(
 
 
 @_inherit_docstrings(pandas.read_orc, apilink="pandas.read_orc")
+@expanduser_path_arg("path")
 @enable_logging
 def read_orc(
     path,
     columns: Optional[List[str]] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    filesystem=None,
     **kwargs,
 ) -> DataFrame:  # noqa: PR01, RT01, D200
     """
@@ -752,7 +775,13 @@ def read_orc(
     """
     ErrorMessage.default_to_pandas("read_orc")
     return DataFrame(
-        pandas.read_orc(path, columns=columns, dtype_backend=dtype_backend, **kwargs)
+        pandas.read_orc(
+            path,
+            columns=columns,
+            dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            **kwargs,
+        )
     )
 
 
@@ -819,10 +848,21 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
     Class for parsing tabular excel sheets into DataFrame objects.
     """
 
+    _behave_like_pandas = False
+
+    def _set_pandas_mode(self):  # noqa
+        # disable Modin behavior to be able to pass object to `pandas.read_excel`
+        # otherwise, Modin objects may be passed to the pandas context, resulting
+        # in undefined behavior
+        self._behave_like_pandas = True
+
     def __getattribute__(self, item):
+        if item in ["_set_pandas_mode", "_behave_like_pandas"]:
+            return object.__getattribute__(self, item)
+
         default_behaviors = ["__init__", "__class__"]
         method = super(ExcelFile, self).__getattribute__(item)
-        if item not in default_behaviors:
+        if not self._behave_like_pandas and item not in default_behaviors:
             if callable(method):
 
                 def return_handler(*args, **kwargs):

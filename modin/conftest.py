@@ -21,7 +21,6 @@ import platform
 import subprocess
 import time
 
-import shlex
 import requests
 import sys
 import pytest
@@ -86,12 +85,6 @@ from modin.pandas.test.utils import (  # noqa: E402
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--simulate-cloud",
-        action="store",
-        default="off",
-        help="simulate cloud for testing: off|normal|experimental",
-    )
-    parser.addoption(
         "--execution",
         action="store",
         default=None,
@@ -105,77 +98,8 @@ def pytest_addoption(parser):
     )
 
 
-class Patcher:
-    def __init__(self, conn, *pairs):
-        self.pairs = pairs
-        self.originals = None
-        self.conn = conn
-
-    def __wrap(self, func):
-        def wrapper(*a, **kw):
-            return func(
-                *(tuple(self.conn.obtain(x) for x in a)),
-                **({k: self.conn.obtain(v) for k, v in kw.items()}),
-            )
-
-        return func, wrapper
-
-    def __enter__(self):
-        self.originals = []
-        for module, attrname in self.pairs:
-            orig, wrapped = self.__wrap(getattr(module, attrname))
-            self.originals.append((module, attrname, orig))
-            setattr(module, attrname, wrapped)
-        return self
-
-    def __exit__(self, *a, **kw):
-        for module, attrname, orig in self.originals:
-            setattr(module, attrname, orig)
-
-
 def set_experimental_env(mode):
-    from modin.config import IsExperimental
-
     IsExperimental.put(mode == "experimental")
-
-
-@pytest.fixture(scope="session", autouse=True)
-def simulate_cloud(request):
-    mode = request.config.getoption("--simulate-cloud").lower()
-    if mode == "off":
-        yield
-        return
-    if (
-        request.config.getoption("usepdb")
-        and request.config.getoption("capture") != "no"
-    ):
-        with request.config.pluginmanager.getplugin(
-            "capturemanager"
-        ).global_and_fixture_disabled():
-            sys.stderr.write(
-                "WARNING! You're running tests in simulate-cloud mode. "
-                + "To enable pdb in remote side please disable output capturing "
-                + "by passing '-s' or '--capture=no' to pytest command line\n"
-            )
-
-    if mode not in ("normal", "experimental"):
-        raise ValueError(f"Unsupported --simulate-cloud mode: {mode}")
-    assert IsExperimental.get(), "Simulated cloud must be started in experimental mode"
-
-    from modin.experimental.cloud import create_cluster, get_connection
-    import modin.pandas.test.utils
-
-    with create_cluster("local", cluster_type="local"):
-        get_connection().teleport(set_experimental_env)(mode)
-        with Patcher(
-            get_connection(),
-            (modin.pandas.test.utils, "assert_index_equal"),
-            (modin.pandas.test.utils, "assert_series_equal"),
-            (modin.pandas.test.utils, "assert_frame_equal"),
-            (modin.pandas.test.utils, "assert_extension_array_equal"),
-            (modin.pandas.test.utils, "assert_empty_frame_equal"),
-        ):
-            yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -461,6 +385,9 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
+        range_index_start=0,
+        range_index_step=1,
+        range_index_name=None,
         partitioned_columns=[],
         row_group_size: Optional[int] = None,
     ):
@@ -478,6 +405,20 @@ def make_parquet_file():
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
+            index = pandas.RangeIndex(
+                start=range_index_start,
+                stop=range_index_start + (nrows * range_index_step),
+                step=range_index_step,
+                name=range_index_name,
+            )
+            if (
+                range_index_start == 0
+                and range_index_step == 1
+                and range_index_name is None
+            ):
+                assert df.index.equals(index)
+            else:
+                df.index = index
             if len(partitioned_columns) > 0:
                 df.to_parquet(
                     filename,
@@ -630,7 +571,13 @@ def s3_storage_options(worker_id):
 
 
 @pytest.fixture(scope="session")
-def s3_base(worker_id):
+def monkeysession():
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+
+
+@pytest.fixture(scope="session")
+def s3_base(worker_id, monkeysession):
     """
     Fixture for mocking S3 interaction.
 
@@ -642,76 +589,73 @@ def s3_base(worker_id):
         URL for motoserver/moto CI service.
     """
     # copied from pandas conftest.py
-    with pandas._testing.ensure_safe_environment_variables():
-        # still need access keys for https://github.com/getmoto/moto/issues/1924
-        os.environ.setdefault("AWS_ACCESS_KEY_ID", CIAWSAccessKeyID.get())
-        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", CIAWSSecretAccessKey.get())
-        os.environ["AWS_REGION"] = "us-west-2"
-        if GithubCI.get():
-            if sys.platform in ("darwin", "win32", "cygwin") or (
-                platform.machine() in ("arm64", "aarch64")
-                or platform.machine().startswith("armv")
-            ):
-                # pandas comments say:
-                # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
-                # - subprocess in CI can cause timeouts
-                # - GitHub Actions do not support
-                #   container services for the above OSs
-                pytest.skip(
-                    (
-                        "S3 tests do not have a corresponding service in Windows, macOS "
-                        + "or ARM platforms"
-                    )
-                )
-            else:
-                # assume CI has started moto in docker container:
-                # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
-                # It would be nice to start moto on another thread as in the
-                # instructions here:
-                # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
-                # but that gives 403 forbidden error when we try to create the bucket
-                yield "http://localhost:5000"
+    # still need access keys for https://github.com/getmoto/moto/issues/1924
+    monkeysession.setenv("AWS_ACCESS_KEY_ID", "foobar_key")
+    monkeysession.setenv("AWS_SECRET_ACCESS_KEY", "foobar_secret")
+    monkeysession.setenv("AWS_REGION", "us-west-2")
+    if GithubCI.get():
+        if sys.platform in ("darwin", "win32", "cygwin") or (
+            platform.machine() in ("arm64", "aarch64")
+            or platform.machine().startswith("armv")
+        ):
+            # pandas comments say:
+            # DO NOT RUN on Windows/macOS/ARM, only Ubuntu
+            # - subprocess in CI can cause timeouts
+            # - GitHub Actions do not support
+            #   container services for the above OSs
+            pytest.skip(
+                "S3 tests do not have a corresponding service in Windows, macOS "
+                + "or ARM platforms"
+            )
         else:
-            # Launching moto in server mode, i.e., as a separate process
-            # with an S3 endpoint on localhost
+            # assume CI has started moto in docker container:
+            # https://docs.getmoto.org/en/latest/docs/server_mode.html#run-using-docker
+            # It would be nice to start moto on another thread as in the
+            # instructions here:
+            # https://docs.getmoto.org/en/latest/docs/server_mode.html#start-within-python
+            # but that gives 403 forbidden error when we try to create the bucket
+            yield "http://localhost:5000"
+    else:
+        # Launching moto in server mode, i.e., as a separate process
+        # with an S3 endpoint on localhost
 
-            # If we hit this else-case, this test is being run locally. In that case, we want
-            # each worker to point to a different port for its mock S3 service. The easiest way
-            # to do that is to use the `worker_id`, which is unique, to determine what port to point
-            # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
-            # for each worker, and we never run tests with more than `pytest -n 4`.
-            worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
-            endpoint_port = f"555{worker_id}"
-            endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
+        # If we hit this else-case, this test is being run locally. In that case, we want
+        # each worker to point to a different port for its mock S3 service. The easiest way
+        # to do that is to use the `worker_id`, which is unique, to determine what port to point
+        # to.
+        endpoint_port = (
+            5500 if worker_id == "master" else (5550 + int(worker_id.lstrip("gw")))
+        )
+        endpoint_uri = f"http://127.0.0.1:{endpoint_port}/"
 
-            # pipe to null to avoid logging in terminal
-            # TODO any way to throw the error from here? e.g. i had an annoying problem
-            # where I didn't have flask-cors and moto just failed .if there's an error
-            # in the popen command and we throw an error within the body of the context
-            # manager, the test just hangs forever.
-            with subprocess.Popen(
-                # try this https://stackoverflow.com/a/72084867/17554722 ?
-                shlex.split(f"moto_server s3 -p {endpoint_port}"),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            ) as proc:
-                made_connection = False
-                for _ in range(50):
-                    try:
-                        # OK to go once server is accepting connections
-                        if requests.get(endpoint_uri).ok:
-                            made_connection = True
-                            break
-                    except Exception:
-                        # try again while we still have retries
-                        time.sleep(0.1)
-                if not made_connection:
-                    raise RuntimeError(
-                        "Could not connect to moto server after 50 tries."
-                    )
-                yield endpoint_uri
-
+        # pipe to null to avoid logging in terminal
+        # TODO any way to throw the error from here? e.g. i had an annoying problem
+        # where I didn't have flask-cors and moto just failed .if there's an error
+        # in the popen command and we throw an error within the body of the context
+        # manager, the test just hangs forever.
+        with subprocess.Popen(
+            ["moto_server", "s3", "-p", str(endpoint_port)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+        ) as proc:
+            for _ in range(50):
+                try:
+                    # OK to go once server is accepting connections
+                    if requests.get(endpoint_uri).ok:
+                        break
+                except Exception:
+                    # try again while we still have retries
+                    time.sleep(0.1)
+            else:
                 proc.terminate()
+                _, errs = proc.communicate()
+                raise RuntimeError(
+                    "Could not connect to moto server after 50 tries. "
+                    + f"See stderr for extra info: {errs}"
+                )
+            yield endpoint_uri
+
+            proc.terminate()
 
 
 @pytest.fixture
@@ -768,3 +712,28 @@ def s3_resource(s3_base):
         if not cli.list_buckets()["Buckets"]:
             break
         time.sleep(0.1)
+
+
+@pytest.fixture
+def modify_config(request):
+    values = request.param
+    old_values = {}
+
+    for key, value in values.items():
+        old_values[key] = key.get()
+        key.put(value)
+
+    yield  # waiting for the test to be completed
+    # restoring old parameters
+    for key, value in old_values.items():
+        try:
+            key.put(value)
+        except ValueError as e:
+            # sometimes bool env variables have 'None' as a default value, which
+            # causes a ValueError when we try to set this value back, as technically,
+            # only bool values are allowed (and 'None' is not a bool), in this case
+            # we try to set 'False' instead
+            if key.type == bool and value is None:
+                key.put(False)
+            else:
+                raise e

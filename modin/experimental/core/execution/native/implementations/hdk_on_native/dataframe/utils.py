@@ -23,7 +23,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas
 from pandas import Timestamp
-from pandas.core.dtypes.common import get_dtype, is_string_dtype
+from pandas.core.dtypes.common import _get_dtype, is_string_dtype
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 
 import pyarrow as pa
@@ -275,7 +275,7 @@ class ColNameCodec:
                 names[name] = first.index.dtype
             else:
                 # A trivial index with no name
-                names[name] = get_dtype(int)
+                names[name] = _get_dtype(int)
         return names
 
 
