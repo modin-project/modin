@@ -97,7 +97,7 @@ def unwrap_partitions(
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
             def get_block(partition: PartitionUnionType) -> np.ndarray:
-                if hasattr(partition, "axis"):
+                if hasattr(partition, "force_materialization"):
                     blocks = partition.force_materialization().list_of_blocks
                 else:
                     blocks = partition.list_of_blocks
