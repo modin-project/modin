@@ -381,7 +381,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         part_size = num_row_groups // num_splits
         # If 'num_splits' does not divide 'num_row_groups' then we can't cover all of
         # the row groups using the original 'part_size'. According to the 'reminder'
-        # there has to be that number of partitions that should read 'step + 1'
+        # there has to be that number of partitions that should read 'part_size + 1'
         # number of row groups.
         reminder = num_row_groups % num_splits
         part_sizes = [part_size] * (num_splits - reminder) + [part_size + 1] * reminder
