@@ -249,19 +249,6 @@ jobs:
 
               asv machine --yes
 
-              # check Modin on Ray
-              asv run --quick --strict --show-stderr --launch-method=spawn \
-                -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
-
-              # check pure pandas
-              MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
-                -b ^benchmarks -b ^io | tee benchmarks.log
-
-              # HDK: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query (MODIN#4270)
-              # just disable test for testing - it works well in a machine with more memory
-              sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
-              sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
-
               # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
               # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
               rm -f -R .asv/env/
