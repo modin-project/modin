@@ -613,6 +613,16 @@ class TestCsv:
 
         df_equals(modin_df, pd_df)
 
+        # Tests #6553
+        if iterator:
+            rdf_reader = pd.read_csv(filename, iterator=iterator)
+            pd_reader = pandas.read_csv(filename, iterator=iterator)
+
+            modin_df = rdf_reader.read()
+            pd_df = pd_reader.read()
+
+            df_equals(modin_df, pd_df)
+
     def test_read_csv_encoding_976(self):
         file_name = "modin/pandas/test/data/issue_976.csv"
         names = [str(i) for i in range(11)]

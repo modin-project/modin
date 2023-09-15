@@ -2799,6 +2799,7 @@ class PandasDataframe(ClassLogger):
         col_labels=None,
         new_index=None,
         new_columns=None,
+        new_dtypes=None,
         keep_remaining=False,
         item_to_distribute=no_default,
     ):
@@ -2820,11 +2821,11 @@ class PandasDataframe(ClassLogger):
             The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
-            The index of the result. We may know this in advance,
-            and if not provided it must be computed.
+            The index of the result, if known in advance.
         new_columns : list-like, optional
-            The columns of the result. We may know this in
-            advance, and if not provided it must be computed.
+            The columns of the result, if known in advance.
+        new_dtypes : pandas.Series, optional
+            The dtypes of the result, if known in advance.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
         item_to_distribute : np.ndarray or scalar, default: no_default
@@ -2840,6 +2841,11 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
+        if new_columns is not None and new_dtypes is not None:
+            assert new_dtypes.index.equals(
+                new_columns
+            ), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
+
         if axis is not None:
             assert apply_indices is not None
             # Convert indices to numeric indices
@@ -2867,7 +2873,12 @@ class PandasDataframe(ClassLogger):
                 axis ^ 1: [self.row_lengths, self.column_widths][axis ^ 1],
             }
             return self.__constructor__(
-                new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
+                new_partitions,
+                new_index,
+                new_columns,
+                lengths_objs[0],
+                lengths_objs[1],
+                new_dtypes,
             )
         else:
             # We are applying over both axes here, so make sure we have all the right
@@ -2894,6 +2905,7 @@ class PandasDataframe(ClassLogger):
                 new_columns,
                 self._row_lengths_cache,
                 self._column_widths_cache,
+                new_dtypes,
             )
 
     @lazy_metadata_decorator(apply_axis="both")
