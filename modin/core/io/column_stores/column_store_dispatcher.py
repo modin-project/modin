@@ -174,10 +174,10 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             num_remaining_parts = round(NPartitions.get() / num_row_parts)
             min_block_size = min(
-                len(columns) // num_remaining_parts, MinPartitionSize.get()
+                columns_length // num_remaining_parts, MinPartitionSize.get()
             )
         column_splits = compute_chunksize(
-            len(columns), NPartitions.get(), max(1, min_block_size)
+            columns_length, NPartitions.get(), max(1, min_block_size)
         )
         col_partitions = [
             columns[i : i + column_splits]

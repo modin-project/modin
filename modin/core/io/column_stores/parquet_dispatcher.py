@@ -370,6 +370,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         """
         from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
+        parquet_files = dataset.files
         row_groups_per_file = dataset.row_groups_per_file
         num_row_groups = sum(row_groups_per_file)
 
@@ -377,14 +378,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             return []
 
         num_splits = min(NPartitions.get(), num_row_groups)
-        parquet_files = dataset.files
-        step = num_row_groups // num_splits
+        part_size = num_row_groups // num_splits
         # If 'num_splits' does not divide 'num_row_groups' then we can't cover all of
-        # the row groups using the original 'step'. According to the 'reminder'
+        # the row groups using the original 'part_size'. According to the 'reminder'
         # there has to be that number of partitions that should read 'step + 1'
         # number of row groups.
         reminder = num_row_groups % num_splits
-        part_sizes = [step] * (num_splits - reminder) + [step + 1] * reminder
+        part_sizes = [part_size] * (num_splits - reminder) + [part_size + 1] * reminder
 
         partition_files = []
         file_idx = 0
