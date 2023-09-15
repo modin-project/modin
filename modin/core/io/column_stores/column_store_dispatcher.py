@@ -22,7 +22,7 @@ used as base class for dipatchers of specific columnar store formats.
 import numpy as np
 import pandas
 
-from modin.config import NPartitions, MinPartitionSize
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 
