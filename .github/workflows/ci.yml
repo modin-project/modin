@@ -249,6 +249,14 @@ jobs:
 
               asv machine --yes
 
+              # check Modin on Ray
+              asv run --quick --strict --show-stderr --launch-method=spawn \
+                -b ^benchmarks -b ^io -b ^scalability | tee benchmarks.log
+
+              # check pure pandas
+              MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
+                -b ^benchmarks -b ^io | tee benchmarks.log
+
               # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
               # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
               rm -f -R .asv/env/
