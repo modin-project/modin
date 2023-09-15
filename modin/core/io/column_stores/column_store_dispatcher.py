@@ -22,9 +22,9 @@ used as base class for dipatchers of specific columnar store formats.
 import numpy as np
 import pandas
 
-from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.core.io.file_dispatcher import FileDispatcher
 from modin.config import NPartitions
+from modin.core.io.file_dispatcher import FileDispatcher
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 
 
 class ColumnStoreDispatcher(FileDispatcher):

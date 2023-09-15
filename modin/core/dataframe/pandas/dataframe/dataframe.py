@@ -17,40 +17,35 @@ Module contains class PandasDataframe.
 PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
+import datetime
 from collections import OrderedDict
+from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
+
 import numpy as np
 import pandas
-import datetime
-from pandas.api.types import is_object_dtype
-from pandas.core.indexes.api import Index, RangeIndex
-from pandas.core.dtypes.common import (
-    is_numeric_dtype,
-    is_list_like,
-)
 from pandas._libs.lib import no_default
-from typing import List, Hashable, Optional, Callable, Union, Dict, TYPE_CHECKING
+from pandas.api.types import is_object_dtype
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import Engine, IsRayCluster, NPartitions
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.core.storage_formats.pandas.utils import get_length_list
-from modin.error_message import ErrorMessage
-from modin.core.storage_formats.pandas.parsers import (
-    find_common_type_cat as find_common_type,
-)
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.utils import (
-    Axis,
-    JoinType,
-)
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
     lazy_metadata_decorator,
 )
 from modin.core.dataframe.pandas.metadata import (
+    LazyProxyCategoricalDtype,
     ModinDtypes,
     ModinIndex,
-    LazyProxyCategoricalDtype,
 )
+from modin.core.storage_formats.pandas.parsers import (
+    find_common_type_cat as find_common_type,
+)
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.storage_formats.pandas.utils import get_length_list
+from modin.error_message import ErrorMessage
 
 if TYPE_CHECKING:
     from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -58,9 +53,9 @@ if TYPE_CHECKING:
     )
     from pandas._typing import npt
 
-from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import is_full_grab_slice, check_both_not_none
 from modin.logging import ClassLogger
+from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import check_both_not_none, is_full_grab_slice
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -2804,6 +2799,7 @@ class PandasDataframe(ClassLogger):
         col_labels=None,
         new_index=None,
         new_columns=None,
+        new_dtypes=None,
         keep_remaining=False,
         item_to_distribute=no_default,
     ):
@@ -2825,11 +2821,11 @@ class PandasDataframe(ClassLogger):
             The column labels to apply over. Must be provided
             with `row_labels` to apply over both axes.
         new_index : list-like, optional
-            The index of the result. We may know this in advance,
-            and if not provided it must be computed.
+            The index of the result, if known in advance.
         new_columns : list-like, optional
-            The columns of the result. We may know this in
-            advance, and if not provided it must be computed.
+            The columns of the result, if known in advance.
+        new_dtypes : pandas.Series, optional
+            The dtypes of the result, if known in advance.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
         item_to_distribute : np.ndarray or scalar, default: no_default
@@ -2845,6 +2841,11 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
+        if new_columns is not None and new_dtypes is not None:
+            assert new_dtypes.index.equals(
+                new_columns
+            ), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
+
         if axis is not None:
             assert apply_indices is not None
             # Convert indices to numeric indices
@@ -2872,7 +2873,12 @@ class PandasDataframe(ClassLogger):
                 axis ^ 1: [self.row_lengths, self.column_widths][axis ^ 1],
             }
             return self.__constructor__(
-                new_partitions, new_index, new_columns, lengths_objs[0], lengths_objs[1]
+                new_partitions,
+                new_index,
+                new_columns,
+                lengths_objs[0],
+                lengths_objs[1],
+                new_dtypes,
             )
         else:
             # We are applying over both axes here, so make sure we have all the right
@@ -2899,6 +2905,7 @@ class PandasDataframe(ClassLogger):
                 new_columns,
                 self._row_lengths_cache,
                 self._column_widths_cache,
+                new_dtypes,
             )
 
     @lazy_metadata_decorator(apply_axis="both")

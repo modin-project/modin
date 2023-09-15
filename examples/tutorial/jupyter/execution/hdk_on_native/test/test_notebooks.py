@@ -21,8 +21,8 @@ MODIN_DIR = os.path.abspath(
 )
 sys.path.insert(0, MODIN_DIR)
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
-    _replace_str,
     _execute_notebook,
+    _replace_str,
 )
 
 local_notebooks_dir = "examples/tutorial/jupyter/execution/hdk_on_native/local"

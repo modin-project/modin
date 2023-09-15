@@ -17,9 +17,9 @@ Contain IO dispatcher class.
 Dispatcher routes the work to execution-specific functions.
 """
 
-from modin.config import Engine, StorageFormat, IsExperimental
+from modin.config import Engine, IsExperimental, StorageFormat
 from modin.core.execution.dispatching.factories import factories
-from modin.utils import get_current_execution, _inherit_docstrings
+from modin.utils import _inherit_docstrings, get_current_execution
 
 
 class FactoryNotFoundError(AttributeError):

@@ -14,23 +14,21 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
-
 import typing
-from typing import TYPE_CHECKING, List, Dict, Union
 from collections import OrderedDict
-
-import pandas
-from pandas.core.dtypes.common import is_string_dtype
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
+import pandas
 import pyarrow as pa
+from pandas.core.dtypes.common import is_string_dtype
 
-from modin.utils import _inherit_docstrings
 from modin.pandas.indexing import is_range_like
+from modin.utils import _inherit_docstrings
 
-from .expr import InputRefExpr, LiteralExpr, OpExpr
-from .dataframe.utils import ColNameCodec, EMPTY_ARROW_TABLE, get_common_arrow_type
+from .dataframe.utils import EMPTY_ARROW_TABLE, ColNameCodec, get_common_arrow_type
 from .db_worker import DbTable
+from .expr import InputRefExpr, LiteralExpr, OpExpr
 
 if TYPE_CHECKING:
     from .dataframe.dataframe import HdkOnNativeDataframe

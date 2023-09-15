@@ -13,16 +13,17 @@
 
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
+from modin.core.execution.modin_aqp import progress_bar_wrapper
+from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
-from modin.core.execution.ray.common import RayWrapper
+
+from .partition import PandasOnRayDataframePartition
 from .virtual_partition import (
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
 )
-from .partition import PandasOnRayDataframePartition
-from modin.core.execution.modin_aqp import progress_bar_wrapper
 
 
 class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):

@@ -14,19 +14,17 @@
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
 import re
-
 import typing
-from typing import Tuple, Union, List, Any
-from functools import lru_cache
 from collections import OrderedDict
+from functools import lru_cache
+from typing import Any, List, Tuple, Union
 
 import numpy as np
 import pandas
-from pandas import Timestamp
-from pandas.core.dtypes.common import _get_dtype, is_string_dtype
-from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
-
 import pyarrow as pa
+from pandas import Timestamp
+from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
+from pandas.core.dtypes.common import _get_dtype, is_string_dtype
 from pyarrow.types import is_dictionary
 
 from modin.pandas.indexing import is_range_like

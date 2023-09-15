@@ -14,7 +14,19 @@
 """Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
 
 from __future__ import annotations
+
+import datetime
+import functools
+import itertools
+import re
+import sys
+import warnings
+from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+
+import numpy as np
 import pandas
+from pandas._libs import lib
+from pandas._typing import CompressionOptions, FilePath, StorageOptions, WriteBuffer
 from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
@@ -24,49 +36,33 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.core.indexes.frozen import FrozenList
-from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.info import DataFrameInfo
-from pandas._libs import lib
-from pandas._typing import (
-    CompressionOptions,
-    WriteBuffer,
-    FilePath,
-    StorageOptions,
-)
+from pandas.util._validators import validate_bool_kwarg
 
-import datetime
-import re
-import itertools
-import functools
-import numpy as np
-import sys
-from typing import IO, Optional, Union, Iterator, Hashable, Sequence
-import warnings
-
+from modin.config import PersistentPickle
+from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.error_message import ErrorMessage
 from modin.utils import (
-    _inherit_docstrings,
-    to_pandas,
-    hashable,
     MODIN_UNNAMED_SERIES_LABEL,
-    try_cast_to_pandas,
+    _inherit_docstrings,
     expanduser_path_arg,
+    hashable,
+    to_pandas,
+    try_cast_to_pandas,
 )
-from modin.config import PersistentPickle
-from .utils import (
-    from_pandas,
-    from_non_pandas,
-    broadcast_item,
-    cast_function_modin2pandas,
-    SET_DATAFRAME_ATTRIBUTE_WARNING,
-)
+
+from .accessor import CachedAccessor, SparseFrameAccessor
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
-from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
-from .groupby import DataFrameGroupBy
-from .accessor import CachedAccessor, SparseFrameAccessor
+from .utils import (
+    SET_DATAFRAME_ATTRIBUTE_WARNING,
+    cast_function_modin2pandas,
+    from_non_pandas,
+    from_pandas,
+)
 
 
 @_inherit_docstrings(
@@ -2530,15 +2526,11 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self,
+                new_qc = self._query_compiler.write_items(
                     slice(None),
-                    key,
+                    self.columns.get_indexer_for(key),
                     value,
                     need_columns_reindex=False,
-                )
-                new_qc = self._query_compiler.write_items(
-                    slice(None), self.columns.get_indexer_for(key), item
                 )
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value

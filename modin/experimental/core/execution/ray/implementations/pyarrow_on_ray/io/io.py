@@ -13,19 +13,19 @@
 
 """Module for housing IO classes with PyArrow storage format and Ray engine."""
 
-from modin.experimental.core.storage_formats.pyarrow import (
-    PyarrowQueryCompiler,
-    PyarrowCSVParser,
-)
+from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.io import RayIO
+from modin.core.io import CSVDispatcher
 from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.dataframe.dataframe import (
     PyarrowOnRayDataframe,
 )
 from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.partitioning.partition import (
     PyarrowOnRayDataframePartition,
 )
-from modin.core.execution.ray.common import RayWrapper
-from modin.core.io import CSVDispatcher
+from modin.experimental.core.storage_formats.pyarrow import (
+    PyarrowCSVParser,
+    PyarrowQueryCompiler,
+)
 
 
 class PyarrowOnRayCSVDispatcher(RayWrapper, PyarrowCSVParser, CSVDispatcher):

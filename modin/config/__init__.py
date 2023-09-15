@@ -13,5 +13,5 @@
 
 """Module houses config entities which can be used for Modin behavior tuning."""
 
-from .pubsub import Parameter  # noqa: F401
 from .envvars import *  # noqa: F403, F401
+from .pubsub import Parameter  # noqa: F401

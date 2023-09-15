@@ -13,8 +13,7 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
-from modin.core.io import BaseIO
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.dask.common import DaskWrapper
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
     PandasOnDaskDataframe,
 )
@@ -22,24 +21,25 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
     PandasOnDaskDataframePartition,
 )
 from modin.core.io import (
+    BaseIO,
     CSVDispatcher,
+    ExcelDispatcher,
+    FeatherDispatcher,
     FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
-    FeatherDispatcher,
     SQLDispatcher,
-    ExcelDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasExcelParser,
+    PandasFeatherParser,
     PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
-    PandasFeatherParser,
     PandasSQLParser,
-    PandasExcelParser,
 )
-from modin.core.execution.dask.common import DaskWrapper
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class PandasOnDaskIO(BaseIO):

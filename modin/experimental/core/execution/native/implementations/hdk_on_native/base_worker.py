@@ -15,10 +15,10 @@
 
 import abc
 import uuid
-from typing import Tuple, List
+from typing import List, Tuple
 
-import pyarrow as pa
 import numpy as np
+import pyarrow as pa
 
 from modin.error_message import ErrorMessage
 

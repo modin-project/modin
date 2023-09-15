@@ -18,56 +18,58 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+import hashlib
 import re
+import warnings
+from collections.abc import Iterable
+from typing import Hashable, List
+
 import numpy as np
 import pandas
+from pandas._libs import lib
 from pandas.api.types import is_scalar
-from pandas.core.common import is_bool_indexer
-from pandas.core.indexing import check_bool_indexer
-from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.apply import reconstruct_func
+from pandas.core.common import is_bool_indexer
+from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
     is_list_like,
     is_numeric_dtype,
-    is_datetime64_any_dtype,
-    is_bool_dtype,
 )
-from pandas.core.dtypes.cast import find_common_type
-from pandas.errors import DataError, MergeError
-from pandas._libs import lib
-from collections.abc import Iterable
-from typing import List, Hashable
-import warnings
-import hashlib
 from pandas.core.groupby.base import transformation_kernels
+from pandas.core.indexes.api import ensure_index_from_sequences
+from pandas.core.indexing import check_bool_indexer
+from pandas.errors import DataError, MergeError
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.config import ExperimentalGroupbyImpl, CpuCount
-from modin.error_message import ErrorMessage
-from modin.utils import (
-    try_cast_to_pandas,
-    wrap_udf_function,
-    hashable,
-    _inherit_docstrings,
-    MODIN_UNNAMED_SERIES_LABEL,
-)
-from modin.core.dataframe.base.dataframe.utils import join_columns
+from modin.config import CpuCount, ExperimentalGroupbyImpl
 from modin.core.dataframe.algebra import (
-    Fold,
-    Map,
-    TreeReduce,
-    Reduce,
     Binary,
+    Fold,
     GroupByReduce,
+    Map,
+    Reduce,
+    TreeReduce,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import (
     GroupBy,
     GroupByDefault,
     SeriesGroupByDefault,
 )
-from .utils import get_group_names, merge_partitioning
-from .groupby import GroupbyReduceImpl
+from modin.core.dataframe.base.dataframe.utils import join_columns
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.error_message import ErrorMessage
+from modin.utils import (
+    MODIN_UNNAMED_SERIES_LABEL,
+    _inherit_docstrings,
+    hashable,
+    try_cast_to_pandas,
+    wrap_udf_function,
+)
+
 from .aggregations import CorrCovBuilder
+from .groupby import GroupbyReduceImpl
+from .utils import get_group_names, merge_partitioning
 
 
 def _get_axis(axis):
@@ -4217,7 +4219,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+    def write_items(
+        self, row_numeric_index, col_numeric_index, item, need_columns_reindex=True
+    ):
+        # We have to keep this import away from the module level to avoid circular import
+        from modin.pandas.utils import broadcast_item, is_scalar
+
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             """
             Write `value` in a specified location in a single partition.
@@ -4253,6 +4260,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 partition.iloc[row_internal_indices, col_internal_indices] = item.copy()
             return partition
 
+        if not is_scalar(item):
+            broadcasted_item, broadcasted_dtypes = broadcast_item(
+                self,
+                row_numeric_index,
+                col_numeric_index,
+                item,
+                need_columns_reindex=need_columns_reindex,
+            )
+        else:
+            broadcasted_item, broadcasted_dtypes = item, pandas.Series(
+                [np.array(item).dtype] * len(col_numeric_index)
+            )
+
+        new_dtypes = None
+        if (
+            # compute dtypes only if assigning entire columns
+            isinstance(row_numeric_index, slice)
+            and row_numeric_index == slice(None)
+            and self._modin_frame.has_materialized_dtypes
+        ):
+            new_dtypes = self.dtypes.copy()
+            new_dtypes.iloc[col_numeric_index] = broadcasted_dtypes.values
+
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
@@ -4260,8 +4290,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             col_labels=col_numeric_index,
             new_index=self.index,
             new_columns=self.columns,
+            new_dtypes=new_dtypes,
             keep_remaining=True,
-            item_to_distribute=broadcasted_items,
+            item_to_distribute=broadcasted_item,
         )
         return self.__constructor__(new_modin_frame)
 

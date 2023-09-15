@@ -14,35 +14,30 @@
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
 from __future__ import annotations
+
+import warnings
+from typing import IO, TYPE_CHECKING, Hashable, Optional, Union
+
 import numpy as np
 import pandas
-from pandas.io.formats.info import SeriesInfo
+from pandas._libs import lib
+from pandas._typing import Axis, IndexKeyFunc
 from pandas.api.types import is_integer
 from pandas.core.common import apply_if_callable, is_bool_indexer
-from pandas.util._validators import validate_bool_kwarg
-from pandas.core.dtypes.common import (
-    is_dict_like,
-    is_list_like,
-)
+from pandas.core.dtypes.common import is_dict_like, is_list_like
 from pandas.core.series import _coerce_method
-from pandas._libs import lib
-from pandas._typing import IndexKeyFunc, Axis
-from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
-import warnings
+from pandas.io.formats.info import SeriesInfo
+from pandas.util._validators import validate_bool_kwarg
 
-from modin.logging import disable_logging
-from modin.utils import (
-    _inherit_docstrings,
-    to_pandas,
-    MODIN_UNNAMED_SERIES_LABEL,
-)
 from modin.config import PersistentPickle
-from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
-from .iterator import PartitionIterator
-from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
-from .accessor import CachedAccessor, SparseAccessor
-from .series_utils import CategoryMethods, StringMethods, DatetimeProperties
+from modin.logging import disable_logging
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings, to_pandas
 
+from .accessor import CachedAccessor, SparseAccessor
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .iterator import PartitionIterator
+from .series_utils import CategoryMethods, DatetimeProperties, StringMethods
+from .utils import _doc_binary_op, cast_function_modin2pandas, from_pandas, is_scalar
 
 if TYPE_CHECKING:
     from .dataframe import DataFrame

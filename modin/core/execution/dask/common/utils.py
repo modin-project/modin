@@ -16,12 +16,12 @@
 import os
 
 from modin.config import (
-    CpuCount,
-    Memory,
-    NPartitions,
-    GithubCI,
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
+    CpuCount,
+    GithubCI,
+    Memory,
+    NPartitions,
 )
 from modin.error_message import ErrorMessage
 

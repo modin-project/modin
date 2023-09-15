@@ -12,11 +12,12 @@
 # governing permissions and limitations under the License.
 
 import os
-import pytest
-import modin.config as cfg
-from modin.config.envvars import EnvironmentVariable, _check_vars, ExactStr
 
+import pytest
 from packaging import version
+
+import modin.config as cfg
+from modin.config.envvars import EnvironmentVariable, ExactStr, _check_vars
 
 
 @pytest.fixture

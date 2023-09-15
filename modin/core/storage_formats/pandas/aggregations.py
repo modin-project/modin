@@ -13,11 +13,12 @@
 
 """Contains implementations for aggregation functions."""
 
+from enum import Enum
+from typing import TYPE_CHECKING, Callable, Tuple
+
+import numpy as np
 import pandas
 from pandas.core.dtypes.common import is_numeric_dtype
-import numpy as np
-from typing import TYPE_CHECKING, Tuple, Callable
-from enum import Enum
 
 if TYPE_CHECKING:
     from .query_compiler import PandasQueryCompiler

@@ -14,10 +14,11 @@
 import sys
 from collections import OrderedDict
 from functools import partial
-from utils import measure
-import modin.pandas as pd
 
 import numpy as np
+from utils import measure
+
+import modin.pandas as pd
 
 
 ################ helper functions ###############################
@@ -194,11 +195,10 @@ def etl(df, df_meta):
 
 def ml(train_final, test_final):
     # to not install ML dependencies unless required
-    import xgboost as xgb
     import sklearnex
+    import xgboost as xgb
 
     sklearnex.patch_sklearn()
-
 
     X_train, y_train, X_test, y_test, Xt, classes, class_weights = split_step(
         train_final, test_final

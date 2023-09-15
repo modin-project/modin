@@ -13,13 +13,15 @@
 
 """Module houses builder class for Binary operator."""
 
-import numpy as np
-import pandas
-from pandas.api.types import is_scalar, is_bool_dtype
 from typing import Optional
 
-from .operator import Operator
+import numpy as np
+import pandas
+from pandas.api.types import is_bool_dtype, is_scalar
+
 from modin.error_message import ErrorMessage
+
+from .operator import Operator
 
 
 def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:

@@ -12,28 +12,26 @@
 # governing permissions and limitations under the License.
 
 
+import multiprocessing as mp
+
+import numpy as np
 import pytest
+import ray
+import xgboost
+from sklearn.datasets import (
+    load_breast_cancer,
+    load_diabetes,
+    load_digits,
+    load_iris,
+    load_wine,
+)
+from sklearn.metrics import accuracy_score, mean_squared_error
 
 import modin
 import modin.experimental.xgboost as xgb
 import modin.pandas as pd
 from modin.config import Engine
-import numpy as np
-import xgboost
-
 from modin.experimental.sklearn.model_selection.train_test_split import train_test_split
-from sklearn.datasets import (
-    load_iris,
-    load_diabetes,
-    load_digits,
-    load_wine,
-    load_breast_cancer,
-)
-from sklearn.metrics import accuracy_score, mean_squared_error
-
-import multiprocessing as mp
-import ray
-
 
 if Engine.get() != "Ray":
     pytest.skip("Implemented only for Ray engine.", allow_module_level=True)

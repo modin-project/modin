@@ -29,18 +29,20 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+import itertools
+
 import numpy as np
 import pandas
-import itertools
-from pandas.api.types import is_list_like, is_bool
-from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
+from pandas.api.types import is_bool, is_list_like
+from pandas.core.dtypes.common import is_bool_dtype, is_integer, is_integer_dtype
 from pandas.core.indexing import IndexingError
+
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 
 from .dataframe import DataFrame
 from .series import Series
-from .utils import is_scalar, broadcast_item
+from .utils import is_scalar
 
 
 def is_slice(x):
@@ -435,27 +437,12 @@ class _LocationIndexerBase(ClassLogger):
             assert len(row_lookup) == 1
             new_qc = self.qc.setitem(1, self.qc.index[row_lookup[0]], item)
             self.df._create_or_update_from_compiler(new_qc, inplace=True)
+            self.qc = self.df._query_compiler
         # Assignment to both axes.
         else:
-            if not is_scalar(item):
-                item = broadcast_item(self.df, row_lookup, col_lookup, item)
-            self._write_items(row_lookup, col_lookup, item)
-
-    def _write_items(self, row_lookup, col_lookup, item):
-        """
-        Perform remote write and replace blocks.
-
-        Parameters
-        ----------
-        row_lookup : slice or scalar
-            The global row index to write item to.
-        col_lookup : slice or scalar
-            The global col index to write item to.
-        item : numpy.ndarray
-            The new item value that needs to be assigned to `self`.
-        """
-        new_qc = self.qc.write_items(row_lookup, col_lookup, item)
-        self.df._create_or_update_from_compiler(new_qc, inplace=True)
+            new_qc = self.qc.write_items(row_lookup, col_lookup, item)
+            self.df._create_or_update_from_compiler(new_qc, inplace=True)
+            self.qc = self.df._query_compiler
 
     def _determine_setitem_axis(self, row_lookup, col_lookup, row_scalar, col_scalar):
         """

@@ -60,3 +60,4 @@ flake8-no-implicit-concat>=0.3.4
 flake8-print>=5.0.0
 mypy>=1.0.0
 pandas-stubs>=2.0.0
+isort>=5.12

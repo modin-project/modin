@@ -13,8 +13,9 @@
 
 """Module houses class that implements ``PandasDataframe`` using unidist."""
 
-from ..partitioning.partition_manager import PandasOnUnidistDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+from ..partitioning.partition_manager import PandasOnUnidistDataframePartitionManager
 
 
 class PandasOnUnidistDataframe(PandasDataframe):

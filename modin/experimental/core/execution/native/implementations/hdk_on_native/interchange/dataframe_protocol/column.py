@@ -13,25 +13,27 @@
 
 """The module houses HdkOnNative implementation of the Column class of DataFrame exchange protocol."""
 
-import pyarrow as pa
-import pandas
-import numpy as np
-from typing import Any, Optional, Tuple, Dict, Iterable, TYPE_CHECKING
 from math import ceil
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
-from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
-    DTypeKind,
-    ColumnNullType,
-    ArrowCTypes,
-    Endianness,
-    pandas_dtype_to_arrow_c,
-    raise_copy_alert,
-)
+import numpy as np
+import pandas
+import pyarrow as pa
+
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     CategoricalDescription,
     ProtocolColumn,
 )
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
+    ArrowCTypes,
+    ColumnNullType,
+    DTypeKind,
+    Endianness,
+    pandas_dtype_to_arrow_c,
+    raise_copy_alert,
+)
 from modin.utils import _inherit_docstrings
+
 from .buffer import HdkProtocolBuffer
 from .utils import arrow_dtype_to_arrow_c, arrow_types_map
 

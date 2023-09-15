@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import modin.utils
 import json
-import pandas
-import modin.pandas as pd
-
 from textwrap import dedent, indent
+
+import pandas
+import pytest
+
+import modin.pandas as pd
+import modin.utils
 from modin.error_message import ErrorMessage
 from modin.pandas.test.utils import create_test_dfs
 

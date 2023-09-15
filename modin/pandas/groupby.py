@@ -14,35 +14,35 @@
 """Implement GroupBy public API as pandas does."""
 
 import warnings
+from collections.abc import Iterable
+from types import BuiltinFunctionType
 
 import numpy as np
 import pandas
-from pandas.core.apply import reconstruct_func
-from pandas.errors import SpecificationError
-import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
-from pandas._libs import lib
 import pandas.core.common as com
-from types import BuiltinFunctionType
-from collections.abc import Iterable
+import pandas.core.groupby
+from pandas._libs import lib
+from pandas.core.apply import reconstruct_func
+from pandas.core.dtypes.common import is_integer, is_list_like, is_numeric_dtype
+from pandas.errors import SpecificationError
 
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
-from modin.utils import (
-    _inherit_docstrings,
-    try_cast_to_pandas,
-    wrap_udf_function,
-    hashable,
-    wrap_into_list,
-    MODIN_UNNAMED_SERIES_LABEL,
-)
 from modin.pandas.utils import cast_function_modin2pandas
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from .series import Series
-from .window import RollingGroupby
-from .utils import is_label
+from modin.utils import (
+    MODIN_UNNAMED_SERIES_LABEL,
+    _inherit_docstrings,
+    hashable,
+    try_cast_to_pandas,
+    wrap_into_list,
+    wrap_udf_function,
+)
 
+from .series import Series
+from .utils import is_label
+from .window import RollingGroupby
 
 _DEFAULT_BEHAVIOUR = {
     "__class__",

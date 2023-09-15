@@ -12,20 +12,18 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkWorker`` class."""
-from typing import Optional, Tuple, List, Union
-
-from packaging import version
+import os
+from typing import List, Optional, Tuple, Union
 
 import pyarrow as pa
-import os
-
 import pyhdk
-from pyhdk.hdk import HDK, QueryNode, ExecutionResult, RelAlgExecutor
+from packaging import version
+from pyhdk.hdk import HDK, ExecutionResult, QueryNode, RelAlgExecutor
 
-from .base_worker import DbTable, BaseDbWorker
-
+from modin.config import HdkFragmentSize, HdkLaunchParameters
 from modin.utils import _inherit_docstrings
-from modin.config import HdkLaunchParameters, HdkFragmentSize
+
+from .base_worker import BaseDbWorker, DbTable
 
 _CAST_DICT = version.parse(pyhdk.__version__) <= version.parse("0.7.0")
 

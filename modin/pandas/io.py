@@ -21,52 +21,54 @@ Manually add documentation for methods which are not presented in pandas.
 
 from __future__ import annotations
 
-from collections import OrderedDict
 import csv
 import inspect
-import pandas
-from pandas.io.parsers import TextFileReader
-from pandas.io.parsers.readers import _c_parser_defaults
-from pandas._libs.lib import no_default, NoDefault
-from pandas._typing import (
-    CompressionOptions,
-    CSVEngine,
-    DtypeArg,
-    ReadCsvBuffer,
-    FilePath,
-    StorageOptions,
-    IntStrT,
-    ReadBuffer,
-    IndexLabel,
-    ConvertersArg,
-    ParseDatesArg,
-    XMLParsers,
-    DtypeBackend,
-)
 import pathlib
 import pickle
+from collections import OrderedDict
 from typing import (
-    Union,
     IO,
-    AnyStr,
-    Sequence,
-    Dict,
-    List,
-    Optional,
     Any,
-    Literal,
-    Hashable,
+    AnyStr,
     Callable,
+    Dict,
+    Hashable,
     Iterable,
-    Pattern,
     Iterator,
+    List,
+    Literal,
+    Optional,
+    Pattern,
+    Sequence,
+    Union,
 )
+
+import pandas
+from pandas._libs.lib import NoDefault, no_default
+from pandas._typing import (
+    CompressionOptions,
+    ConvertersArg,
+    CSVEngine,
+    DtypeArg,
+    DtypeBackend,
+    FilePath,
+    IndexLabel,
+    IntStrT,
+    ParseDatesArg,
+    ReadBuffer,
+    ReadCsvBuffer,
+    StorageOptions,
+    XMLParsers,
+)
+from pandas.io.parsers import TextFileReader
+from pandas.io.parsers.readers import _c_parser_defaults
 
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
+from modin.utils import _inherit_docstrings, expanduser_path_arg
+
 from .dataframe import DataFrame
 from .series import Series
-from modin.utils import _inherit_docstrings, expanduser_path_arg
 
 
 def _read(**kwargs):
@@ -629,8 +631,9 @@ def read_fwf(
     """
     Read a table of fixed-width formatted lines into DataFrame.
     """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
     from pandas.io.parsers.base_parser import parser_defaults
+
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwds", {}))

@@ -21,11 +21,11 @@ MODIN_DIR = os.path.abspath(
 )
 sys.path.insert(0, MODIN_DIR)
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
-    _replace_str,
     _execute_notebook,
-    test_dataset_path,
+    _replace_str,
     download_taxi_dataset,
     set_kernel,
+    test_dataset_path,
 )
 
 # the kernel name "python3mpi" must match the one

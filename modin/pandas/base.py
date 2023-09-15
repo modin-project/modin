@@ -12,57 +12,59 @@
 # governing permissions and limitations under the License.
 """Implement DataFrame/Series public API as pandas does."""
 from __future__ import annotations
+
+import pickle as pkl
+import re
+import warnings
+from typing import Any, Hashable, Optional, Sequence, Union
+
 import numpy as np
 import pandas
-from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, pipe
-from pandas.core.methods.describe import _refine_percentiles
-from pandas.core.dtypes.common import (
-    is_list_like,
-    is_dict_like,
-    is_bool_dtype,
-    is_integer_dtype,
-    is_numeric_dtype,
-    is_dtype_equal,
-    is_object_dtype,
-    is_integer,
-)
-from pandas.core.indexes.api import ensure_index
-import pandas.core.window.rolling
-import pandas.core.resample
 import pandas.core.generic
-from pandas.util._validators import (
-    validate_percentile,
-    validate_bool_kwarg,
-    validate_ascending,
-)
+import pandas.core.resample
+import pandas.core.window.rolling
 from pandas._libs import lib
 from pandas._libs.tslibs import to_offset
 from pandas._typing import (
-    IndexKeyFunc,
-    StorageOptions,
-    CompressionOptions,
     Axis,
+    CompressionOptions,
+    DtypeBackend,
+    IndexKeyFunc,
     IndexLabel,
     Level,
+    RandomState,
+    StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
-    RandomState,
-    DtypeBackend,
     npt,
 )
-import pickle as pkl
-import re
-from typing import Optional, Union, Sequence, Hashable, Any
-import warnings
+from pandas.compat import numpy as numpy_compat
+from pandas.core.common import count_not_none, pipe
+from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_dict_like,
+    is_dtype_equal,
+    is_integer,
+    is_integer_dtype,
+    is_list_like,
+    is_numeric_dtype,
+    is_object_dtype,
+)
+from pandas.core.indexes.api import ensure_index
+from pandas.core.methods.describe import _refine_percentiles
+from pandas.util._validators import (
+    validate_ascending,
+    validate_bool_kwarg,
+    validate_percentile,
+)
 
-
-from .utils import is_full_grab_slice, _doc_binary_op
-from modin.utils import try_cast_to_pandas, _inherit_docstrings, expanduser_path_arg
-from modin.error_message import ErrorMessage
 from modin import pandas as pd
+from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger, disable_logging
 from modin.pandas.utils import is_scalar
-from modin.logging import disable_logging, ClassLogger
+from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
+
+from .utils import _doc_binary_op, is_full_grab_slice
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.

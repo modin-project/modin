@@ -25,24 +25,25 @@ Notes
   this is worth looking at again.
 """
 
-from typing import Any, Optional, Tuple, Dict, Iterable
+from typing import Any, Dict, Iterable, Optional, Tuple
+
 import numpy as np
 import pandas
 
-from modin.utils import _inherit_docstrings
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     CategoricalDescription,
     ProtocolColumn,
 )
 from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
+    ColumnNullType,
     DTypeKind,
     pandas_dtype_to_arrow_c,
-    ColumnNullType,
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from .buffer import PandasProtocolBuffer
-from .exception import NoValidityBuffer, NoOffsetsBuffer
+from modin.utils import _inherit_docstrings
 
+from .buffer import PandasProtocolBuffer
+from .exception import NoOffsetsBuffer, NoValidityBuffer
 
 _NO_VALIDITY_BUFFER = {
     ColumnNullType.NON_NULLABLE: "This column is non-nullable so does not have a mask",

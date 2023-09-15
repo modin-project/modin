@@ -16,11 +16,11 @@
 import ray
 from ray.util import get_node_ip_address
 
-from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
-from modin.core.execution.ray.common import RayWrapper
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
+from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.common.utils import ObjectIDType, deserialize
 from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
