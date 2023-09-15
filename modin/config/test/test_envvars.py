@@ -77,14 +77,6 @@ def test_hdk_envvar():
         # This test is intended to check pyhdk internals. If pyhdk is not available, skip the version check test.
         pass
 
-    os.environ[
-        cfg.OmnisciLaunchParameters.varname
-    ] = "enable_union=2,enable_thrift_logs=3"
-    del cfg.OmnisciLaunchParameters._value
-    params = cfg.OmnisciLaunchParameters.get()
-    assert params["enable_union"] == 2
-    assert params["enable_thrift_logs"] == 3
-
     params = cfg.HdkLaunchParameters.get()
     assert params["enable_union"] == 2
     assert params["enable_thrift_logs"] == 3
@@ -110,13 +102,3 @@ def test_hdk_envvar():
     assert params["enable_union"] == 4
     assert params["enable_thrift_logs"] == 5
     assert params["enable_lazy_dict_materialization"] == 6
-
-    params = cfg.OmnisciLaunchParameters.get()
-    assert params["enable_union"] == 2
-    assert params["enable_thrift_logs"] == 3
-
-    del os.environ[cfg.OmnisciLaunchParameters.varname]
-    del cfg.OmnisciLaunchParameters._value
-    params = cfg.OmnisciLaunchParameters.get()
-    assert params["enable_union"] == 4
-    assert params["enable_thrift_logs"] == 5
