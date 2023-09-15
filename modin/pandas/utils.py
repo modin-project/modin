@@ -13,17 +13,12 @@
 
 """Implement utils for pandas component."""
 
-from typing import Iterator, Tuple, Optional
+from typing import Iterator, Optional, Tuple
 
-from pandas.util._decorators import doc
-from pandas._typing import (
-    AggFuncType,
-    AggFuncTypeBase,
-    AggFuncTypeDict,
-    IndexLabel,
-)
-import pandas
 import numpy as np
+import pandas
+from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
+from pandas.util._decorators import doc
 
 from modin.utils import hashable
 
@@ -91,6 +86,7 @@ def from_pandas(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
@@ -111,6 +107,7 @@ def from_arrow(at):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
@@ -133,6 +130,7 @@ def from_dataframe(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
@@ -182,6 +180,7 @@ def is_scalar(obj):
         True if given object is scalar and False otherwise.
     """
     from pandas.api.types import is_scalar as pandas_is_scalar
+
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)

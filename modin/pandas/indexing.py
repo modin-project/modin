@@ -29,12 +29,14 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+import itertools
+
 import numpy as np
 import pandas
-import itertools
-from pandas.api.types import is_list_like, is_bool
-from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
+from pandas.api.types import is_bool, is_list_like
+from pandas.core.dtypes.common import is_bool_dtype, is_integer, is_integer_dtype
 from pandas.core.indexing import IndexingError
+
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 

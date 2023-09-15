@@ -19,17 +19,16 @@ actual implementation in the execution, bound to that factory. Each execution is
 with a Factory class.
 """
 
-import warnings
-import typing
 import re
-
-from modin.config import Engine
-from modin.utils import _inherit_docstrings, get_current_execution
-from modin.core.io import BaseIO
-from pandas.util._decorators import doc
+import typing
+import warnings
 
 import pandas
+from pandas.util._decorators import doc
 
+from modin.config import Engine
+from modin.core.io import BaseIO
+from modin.utils import _inherit_docstrings, get_current_execution
 
 _doc_abstract_factory_class = """
 Abstract {role} factory which allows to override the IO module easily.

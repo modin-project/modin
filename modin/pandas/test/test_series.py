@@ -13,76 +13,76 @@
 
 from __future__ import annotations
 
-import pytest
-import unittest.mock as mock
-import numpy as np
 import json
-import pandas
-from pandas._testing import assert_series_equal
-from pandas.errors import SpecificationError
-from pandas.core.indexing import IndexingError
-import pandas._libs.lib as lib
+import unittest.mock as mock
+
 import matplotlib
-import modin.pandas as pd
+import numpy as np
+import pandas
+import pandas._libs.lib as lib
+import pytest
 from numpy.testing import assert_array_equal
+from pandas._testing import assert_series_equal
+from pandas.core.indexing import IndexingError
+from pandas.errors import SpecificationError
 
-from modin.utils import get_current_execution, try_cast_to_pandas
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas, try_cast_to_pandas
 
-from modin.utils import to_pandas
 from .utils import (
-    random_state,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
-    arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    test_string_data_values,
-    test_string_data_keys,
-    test_string_list_data_values,
-    test_string_list_data_keys,
-    string_sep_values,
-    string_sep_keys,
-    string_na_rep_values,
-    string_na_rep_keys,
-    numeric_dfs,
-    no_numeric_dfs,
-    agg_func_keys,
-    agg_func_values,
+    RAND_LOW,
+    CustomIntegerForAddition,
+    NonCommutativeMultiplyInteger,
     agg_func_except_keys,
     agg_func_except_values,
-    numeric_agg_funcs,
-    quantiles_keys,
-    quantiles_values,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
+    assert_dtypes_equal,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    categories_equals,
+    default_to_pandas_ignore_string,
+    df_equals,
+    df_equals_with_non_stable_indices,
+    encoding_types,
+    eval_general,
+    generate_multiindex,
     int_arg_keys,
     int_arg_values,
-    encoding_types,
-    categories_equals,
-    eval_general,
-    test_data_small_values,
-    test_data_small_keys,
-    test_data_categorical_values,
+    name_contains,
+    no_numeric_dfs,
+    numeric_agg_funcs,
+    numeric_dfs,
+    quantiles_keys,
+    quantiles_values,
+    random_state,
+    string_na_rep_keys,
+    string_na_rep_values,
+    string_sep_keys,
+    string_sep_values,
+    test_data,
     test_data_categorical_keys,
-    generate_multiindex,
+    test_data_categorical_values,
     test_data_diff_dtype,
-    df_equals_with_non_stable_indices,
+    test_data_keys,
     test_data_large_categorical_series_keys,
     test_data_large_categorical_series_values,
-    default_to_pandas_ignore_string,
-    CustomIntegerForAddition,
-    NonCommutativeMultiplyInteger,
-    assert_dtypes_equal,
+    test_data_small_keys,
+    test_data_small_values,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
+    test_string_data_keys,
+    test_string_data_values,
+    test_string_list_data_keys,
+    test_string_list_data_values,
 )
-from modin.config import NPartitions, StorageFormat
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,

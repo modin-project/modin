@@ -1,14 +1,14 @@
-import re
-import json
+import argparse
 import atexit
 import collections
-import argparse
-from pathlib import Path
+import json
+import re
 import sys
-from packaging import version
+from pathlib import Path
 
-import pygit2
 import github
+import pygit2
+from packaging import version
 
 
 class GithubUserResolver:

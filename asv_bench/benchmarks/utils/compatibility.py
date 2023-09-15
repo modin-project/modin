@@ -14,6 +14,7 @@
 """Compatibility layer for parameters used by ASV."""
 
 import os
+
 import modin.pandas as pd
 
 try:
@@ -24,7 +25,7 @@ except ImportError:
     NPARTITIONS = pd.DEFAULT_NPARTITIONS
 
 try:
-    from modin.config import TestDatasetSize, AsvImplementation, Engine, StorageFormat
+    from modin.config import AsvImplementation, Engine, StorageFormat, TestDatasetSize
 
     ASV_USE_IMPL = AsvImplementation.get()
     ASV_DATASET_SIZE = TestDatasetSize.get() or "Small"

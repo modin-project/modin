@@ -17,21 +17,21 @@ Module holding base PartitionManager class - the thing that tracks partitions ac
 The manager also allows manipulating the data - running functions at each partition, shuffle over the distribution, etc.
 """
 
+import os
+import warnings
 from abc import ABC
 from functools import wraps
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pandas
 from pandas._libs.lib import no_default
-import warnings
-from typing import TYPE_CHECKING
 
-from modin.error_message import ErrorMessage
-from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.config import BenchmarkMode, NPartitions, ProgressBar
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode
+from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
-
-import os
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions

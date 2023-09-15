@@ -14,16 +14,16 @@
 """Module houses Modin configs originated from environment variables."""
 
 import os
-import sys
-from textwrap import dedent
-import warnings
-from packaging import version
 import secrets
+import sys
+import warnings
+from textwrap import dedent
+from typing import Any, Optional
 
+from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Any, Optional
+from .pubsub import _TYPE_PARAMS, ExactStr, Parameter, ValueSource
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -94,11 +94,7 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import (
-            MIN_RAY_VERSION,
-            MIN_DASK_VERSION,
-            MIN_UNIDIST_VERSION,
-        )
+        from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
 
         # If there's a custom engine, we don't need to check for any engine
         # dependencies. Return the default "Python" engine.

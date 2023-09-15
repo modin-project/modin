@@ -26,8 +26,8 @@ from pandas.core.dtypes.dtypes import SparseDtype
 
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
-from modin.utils import _inherit_docstrings
 from modin.logging import ClassLogger
+from modin.utils import _inherit_docstrings
 
 
 class BaseSparseAccessor(ClassLogger):

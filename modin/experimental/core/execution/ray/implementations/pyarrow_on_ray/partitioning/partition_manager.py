@@ -16,6 +16,7 @@
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
+
 from .axis_partition import (
     PyarrowOnRayDataframeColumnPartition,
     PyarrowOnRayDataframeRowPartition,

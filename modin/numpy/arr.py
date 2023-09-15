@@ -13,20 +13,17 @@
 
 """Module houses ``array`` class, that is distributed version of ``numpy.array``."""
 
+from inspect import signature
 from math import prod
+
 import numpy
 import pandas
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_bool_dtype
 from pandas.api.types import is_scalar
-from inspect import signature
+from pandas.core.dtypes.common import is_bool_dtype, is_list_like, is_numeric_dtype
 
 import modin.pandas as pd
+from modin.core.dataframe.algebra import Binary, Map, Reduce
 from modin.error_message import ErrorMessage
-from modin.core.dataframe.algebra import (
-    Map,
-    Reduce,
-    Binary,
-)
 
 from .utils import try_convert_from_interoperable_type
 
@@ -427,7 +424,9 @@ class array(object):
         )
 
     def __array_function__(self, func, types, args, kwargs):
-        from . import array_creation as creation, array_shaping as shaping, math
+        from . import array_creation as creation
+        from . import array_shaping as shaping
+        from . import math
 
         func_name = func.__name__
         modin_func = None

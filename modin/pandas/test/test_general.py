@@ -12,28 +12,29 @@
 # governing permissions and limitations under the License.
 
 import contextlib
+
+import numpy as np
 import pandas
 import pytest
-import modin.pandas as pd
-import numpy as np
 from numpy.testing import assert_array_equal
-from modin.utils import get_current_execution, to_pandas
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import StorageFormat
 from pandas.testing import assert_frame_equal
 
-from .utils import (
-    create_test_dfs,
-    test_data_values,
-    test_data_keys,
-    df_equals,
-    sort_index_for_equal_values,
-    eval_general,
-    bool_arg_values,
-    bool_arg_keys,
-    default_to_pandas_ignore_string,
-)
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas
 
+from .utils import (
+    bool_arg_keys,
+    bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    sort_index_for_equal_values,
+    test_data_keys,
+    test_data_values,
+)
 
 if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)

@@ -17,27 +17,28 @@ import io
 
 import pandas
 
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.unidist.common import SignalActor, UnidistWrapper
 from modin.core.execution.unidist.generic.io import UnidistIO
 from modin.core.io import (
     CSVDispatcher,
+    ExcelDispatcher,
+    FeatherDispatcher,
     FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
-    FeatherDispatcher,
     SQLDispatcher,
-    ExcelDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasExcelParser,
+    PandasFeatherParser,
     PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
-    PandasFeatherParser,
     PandasSQLParser,
-    PandasExcelParser,
 )
-from modin.core.execution.unidist.common import UnidistWrapper, SignalActor
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+
 from ..dataframe import PandasOnUnidistDataframe
 from ..partitioning import PandasOnUnidistDataframePartition
 

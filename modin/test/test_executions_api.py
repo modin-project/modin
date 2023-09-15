@@ -13,12 +13,8 @@
 
 import pytest
 
-from modin.core.storage_formats import (
-    BaseQueryCompiler,
-    PandasQueryCompiler,
-)
+from modin.core.storage_formats import BaseQueryCompiler, PandasQueryCompiler
 from modin.experimental.core.storage_formats.pyarrow import PyarrowQueryCompiler
-
 
 BASE_EXECUTION = BaseQueryCompiler
 EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]

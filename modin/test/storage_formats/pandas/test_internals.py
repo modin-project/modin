@@ -11,54 +11,43 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-from modin.pandas.test.utils import (
-    create_test_dfs,
-    test_data_values,
-    df_equals,
-)
-from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
-from modin.distributed.dataframe.pandas import from_partitions
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
-from modin.utils import try_cast_to_pandas
-from modin.core.dataframe.pandas.dataframe.utils import (
-    ShuffleSortFunctions,
-    ColumnInfo,
-)
+import functools
+import sys
+import unittest.mock as mock
 
 import numpy as np
 import pandas
 import pytest
-import unittest.mock as mock
-import functools
-import sys
 
+import modin.pandas as pd
+from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
+from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.distributed.dataframe.pandas import from_partitions
+from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
+from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
+    from modin.core.execution.ray.common import RayWrapper
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframePartition,
         PandasOnRayDataframeRowPartition,
     )
-    from modin.core.execution.ray.common import RayWrapper
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = RayWrapper.put
 elif Engine.get() == "Dask":
+    from modin.core.execution.dask.common import DaskWrapper
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframePartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
-        PandasOnDaskDataframePartition,
-    )
-    from modin.core.execution.dask.common import DaskWrapper
 
     # initialize modin dataframe to initialize dask
     pd.DataFrame()
@@ -70,12 +59,12 @@ elif Engine.get() == "Dask":
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 elif Engine.get() == "Python":
+    from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
-        PandasOnPythonDataframeRowPartition,
         PandasOnPythonDataframePartition,
+        PandasOnPythonDataframeRowPartition,
     )
-    from modin.core.execution.python.common import PythonWrapper
 
     def put(x):
         return PythonWrapper.put(x, hash=False)

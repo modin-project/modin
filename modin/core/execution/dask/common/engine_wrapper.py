@@ -15,8 +15,8 @@
 
 from collections import UserDict
 
-from distributed.client import default_client
 from dask.distributed import wait
+from distributed.client import default_client
 
 
 def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover

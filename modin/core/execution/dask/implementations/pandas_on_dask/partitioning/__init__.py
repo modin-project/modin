@@ -16,9 +16,9 @@
 from .partition import PandasOnDaskDataframePartition
 from .partition_manager import PandasOnDaskDataframePartitionManager
 from .virtual_partition import (
-    PandasOnDaskDataframeVirtualPartition,
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
+    PandasOnDaskDataframeVirtualPartition,
 )
 
 __all__ = [

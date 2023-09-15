@@ -15,10 +15,10 @@
 
 import pyarrow
 
+from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
     PandasOnRayDataframePartition,
 )
-from modin.core.execution.ray.common import RayWrapper
 
 
 class PyarrowOnRayDataframePartition(PandasOnRayDataframePartition):

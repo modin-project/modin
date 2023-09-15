@@ -17,14 +17,13 @@ The module for working with displaying progress bars for Modin execution engines
 Modin Automatic Query Progress (AQP).
 """
 
-import os
-import time
 import inspect
+import os
 import threading
+import time
 import warnings
 
 from modin.config import Engine, ProgressBar
-
 
 progress_bars = {}
 bar_lock = threading.Lock()

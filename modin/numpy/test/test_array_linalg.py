@@ -12,13 +12,14 @@
 # governing permissions and limitations under the License.
 
 
-import pytest
 import numpy
 import numpy.linalg as NLA
+import pytest
 
-import modin.pandas as pd
 import modin.numpy as np
 import modin.numpy.linalg as LA
+import modin.pandas as pd
+
 from .utils import assert_scalar_or_array_equal
 
 

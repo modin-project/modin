@@ -16,16 +16,17 @@
 import inspect
 import pathlib
 import pickle
-from typing import Union, IO, AnyStr, Callable, Optional, Iterator
+from typing import IO, AnyStr, Callable, Iterator, Optional, Union
 
 import pandas
 import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
-from . import DataFrame
 from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
 from modin.utils import expanduser_path_arg
+
+from . import DataFrame
 
 
 def read_sql(

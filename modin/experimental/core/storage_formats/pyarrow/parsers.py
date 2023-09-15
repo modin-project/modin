@@ -13,8 +13,9 @@
 
 """Module houses Modin parser classes, that are used for data parsing on the workers."""
 
-import pandas
 from io import BytesIO
+
+import pandas
 
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 

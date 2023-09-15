@@ -13,12 +13,14 @@
 
 """The module defines base interface for an axis partition of a Modin DataFrame."""
 
-import pandas
 import numpy as np
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+import pandas
+
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+
 from .partition import PandasDataframePartition
 
 
