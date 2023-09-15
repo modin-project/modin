@@ -4217,7 +4217,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
         )
 
-    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+    def write_items(
+        self, row_numeric_index, col_numeric_index, item, need_columns_reindex=True
+    ):
+        # We have to keep this import away from the module level to avoid circular import
+        from modin.pandas.utils import broadcast_item, is_scalar
+
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             """
             Write `value` in a specified location in a single partition.
@@ -4253,6 +4258,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 partition.iloc[row_internal_indices, col_internal_indices] = item.copy()
             return partition
 
+        if not is_scalar(item):
+            broadcasted_item, broadcasted_dtypes = broadcast_item(
+                self,
+                row_numeric_index,
+                col_numeric_index,
+                item,
+                need_columns_reindex=need_columns_reindex,
+            )
+        else:
+            broadcasted_item, broadcasted_dtypes = item, pandas.Series(
+                [np.array(item).dtype] * len(col_numeric_index)
+            )
+
+        new_dtypes = None
+        if (
+            # compute dtypes only if assigning entire columns
+            isinstance(row_numeric_index, slice)
+            and row_numeric_index == slice(None)
+            and self._modin_frame.has_materialized_dtypes
+        ):
+            new_dtypes = self.dtypes.copy()
+            new_dtypes.iloc[col_numeric_index] = broadcasted_dtypes.values
+
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
@@ -4260,8 +4288,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             col_labels=col_numeric_index,
             new_index=self.index,
             new_columns=self.columns,
+            new_dtypes=new_dtypes,
             keep_remaining=True,
-            item_to_distribute=broadcasted_items,
+            item_to_distribute=broadcasted_item,
         )
         return self.__constructor__(new_modin_frame)
 

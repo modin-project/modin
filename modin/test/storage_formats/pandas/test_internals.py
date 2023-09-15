@@ -1113,6 +1113,17 @@ def test_setitem_bool_preserve_dtypes():
     assert df._query_compiler._modin_frame.has_materialized_dtypes
 
 
+def test_setitem_unhashable_preserve_dtypes():
+    df = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    df2 = pd.DataFrame([[9, 9], [5, 5]])
+    assert df2._query_compiler._modin_frame.has_materialized_dtypes
+
+    df[[1, 2]] = df2
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
 @pytest.mark.parametrize(
     "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
 )
