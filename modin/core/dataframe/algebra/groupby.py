@@ -15,10 +15,11 @@
 
 import pandas
 
-from .tree_reduce import TreeReduce
-from .default2pandas.groupby import GroupBy, GroupByDefault
-from modin.utils import hashable, MODIN_UNNAMED_SERIES_LABEL
 from modin.error_message import ErrorMessage
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
+
+from .default2pandas.groupby import GroupBy, GroupByDefault
+from .tree_reduce import TreeReduce
 
 
 class GroupByReduce(TreeReduce):

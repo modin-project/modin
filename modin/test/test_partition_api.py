@@ -16,11 +16,11 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.distributed.dataframe.pandas import unwrap_partitions, from_partitions
 from modin.config import Engine, NPartitions
-from modin.pandas.test.utils import df_equals, test_data
-from modin.pandas.indexing import compute_sliced_len
 from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+from modin.distributed.dataframe.pandas import from_partitions, unwrap_partitions
+from modin.pandas.indexing import compute_sliced_len
+from modin.pandas.test.utils import df_equals, test_data
 
 PartitionClass = (
     FactoryDispatcher.get_factory().io_cls.frame_cls._partition_mgr_cls._partition_class
@@ -34,8 +34,9 @@ if Engine.get() == "Ray":
     get_func = RayWrapper.materialize
     is_future = lambda obj: isinstance(obj, ObjectIDType)  # noqa: E731
 elif Engine.get() == "Dask":
-    from modin.core.execution.dask.common import DaskWrapper
     from distributed import Future
+
+    from modin.core.execution.dask.common import DaskWrapper
 
     # Looks like there is a key collision;
     # https://github.com/dask/distributed/issues/3703#issuecomment-619446739
@@ -44,8 +45,9 @@ elif Engine.get() == "Dask":
     get_func = DaskWrapper.materialize
     is_future = lambda obj: isinstance(obj, Future)  # noqa: E731
 elif Engine.get() == "Unidist":
-    from modin.core.execution.unidist.common import UnidistWrapper
     from unidist import is_object_ref
+
+    from modin.core.execution.unidist.common import UnidistWrapper
 
     put_func = UnidistWrapper.put
     get_func = UnidistWrapper.materialize
@@ -112,6 +114,28 @@ def test_unwrap_partitions(axis, reverse_index, reverse_columns):
                     get_func(expected_axis_partitions[item_idx]),
                     get_func(actual_axis_partitions[item_idx]),
                 )
+
+
+def test_unwrap_virtual_partitions():
+    # see #5164 for details
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+    virtual_partitioned_df = pd.concat([df] * 10)
+    actual_partitions = np.array(unwrap_partitions(virtual_partitioned_df, axis=None))
+    expected_df = pd.concat([pd.DataFrame(data)] * 10)
+    expected_partitions = expected_df._query_compiler._modin_frame._partitions
+    assert expected_partitions.shape == actual_partitions.shape
+
+    for row_idx in range(expected_partitions.shape[0]):
+        for col_idx in range(expected_partitions.shape[1]):
+            df_equals(
+                get_func(
+                    expected_partitions[row_idx][col_idx]
+                    .force_materialization()
+                    .list_of_blocks[0]
+                ),
+                get_func(actual_partitions[row_idx][col_idx]),
+            )
 
 
 @pytest.mark.parametrize("column_widths", [None, "column_widths"])

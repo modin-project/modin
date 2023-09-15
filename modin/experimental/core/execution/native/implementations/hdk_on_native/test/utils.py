@@ -11,24 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import datetime
 
+import numpy as np
 import pandas
-from pandas.core.dtypes.common import (
-    is_object_dtype,
-    is_datetime64_any_dtype,
-)
+import pytest
+from pandas.core.dtypes.common import is_datetime64_any_dtype, is_object_dtype
 
 import modin.pandas as pd
+from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import eval_io as general_eval_io
+from modin.pandas.test.utils import io_ops_bad_exc
 from modin.utils import try_cast_to_pandas
-import datetime
-import numpy as np
-
-from modin.pandas.test.utils import (
-    df_equals,
-    io_ops_bad_exc,
-    eval_io as general_eval_io,
-)
 
 
 def eval_io(

@@ -11,72 +11,71 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import unittest.mock as mock
-import inspect
 import contextlib
-import pytest
-import numpy as np
-from packaging import version
-import pandas
-from pandas.errors import ParserWarning
-import pandas._libs.lib as lib
-from pandas._testing import ensure_clean
-from pathlib import Path
-from collections import OrderedDict, defaultdict
-from modin.config.envvars import MinPartitionSize
-from modin.db_conn import (
-    ModinDatabaseConnection,
-    UnsupportedDatabaseException,
-)
-from modin.config import (
-    TestDatasetSize,
-    Engine,
-    StorageFormat,
-    IsExperimental,
-    TestReadFromPostgres,
-    TestReadFromSqlServer,
-    ReadSqlEngine,
-    AsyncReadMode,
-)
-from modin.utils import to_pandas
-from modin.pandas.utils import from_arrow
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-import pyarrow as pa
-import pyarrow.dataset
-import fastparquet
-import os
-from io import BytesIO, StringIO
-from scipy import sparse
-import sys
-import sqlalchemy as sa
 import csv
+import inspect
+import os
+import sys
+import unittest.mock as mock
+from collections import OrderedDict, defaultdict
+from io import BytesIO, StringIO
+from pathlib import Path
 from typing import Dict
 
+import fastparquet
+import numpy as np
+import pandas
+import pandas._libs.lib as lib
+import pyarrow as pa
+import pyarrow.dataset
+import pytest
+import sqlalchemy as sa
+from packaging import version
+from pandas._testing import ensure_clean
+from pandas.errors import ParserWarning
+from scipy import sparse
+
+from modin.config import (
+    AsyncReadMode,
+    Engine,
+    IsExperimental,
+    ReadSqlEngine,
+    StorageFormat,
+    TestDatasetSize,
+    TestReadFromPostgres,
+    TestReadFromSqlServer,
+)
+from modin.config.envvars import MinPartitionSize
+from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
+from modin.pandas.utils import from_arrow
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import to_pandas
+
 from .utils import (
+    COMP_TO_EXT,
     check_file_leaks,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
     df_equals,
-    json_short_string,
-    json_short_bytes,
-    json_long_string,
-    json_long_bytes,
+    dummy_decorator,
+    eval_general,
+    eval_io_from_str,
+    generate_dataframe,
     get_unique_filename,
     io_ops_bad_exc,
-    eval_io_from_str,
-    dummy_decorator,
-    create_test_dfs,
-    COMP_TO_EXT,
-    generate_dataframe,
-    default_to_pandas_ignore_string,
+    json_long_bytes,
+    json_long_string,
+    json_short_bytes,
+    json_short_string,
     parse_dates_values_by_id,
-    time_parsing_csv_path,
-    test_data as utils_test_data,
-    eval_general,
 )
+from .utils import test_data as utils_test_data
+from .utils import time_parsing_csv_path
 
 if StorageFormat.get() == "Hdk":
     from modin.experimental.core.execution.native.implementations.hdk_on_native.test.utils import (
-        eval_io,
         align_datetime_dtypes,
+        eval_io,
     )
 else:
     from .utils import eval_io
@@ -613,6 +612,16 @@ class TestCsv:
         pd_df = pd_reader.read()
 
         df_equals(modin_df, pd_df)
+
+        # Tests #6553
+        if iterator:
+            rdf_reader = pd.read_csv(filename, iterator=iterator)
+            pd_reader = pandas.read_csv(filename, iterator=iterator)
+
+            modin_df = rdf_reader.read()
+            pd_df = pd_reader.read()
+
+            df_equals(modin_df, pd_df)
 
     def test_read_csv_encoding_976(self):
         file_name = "modin/pandas/test/data/issue_976.csv"
@@ -1937,8 +1946,7 @@ class TestParquet:
     )
     def test_read_parquet_without_metadata(self, tmp_path, engine, filters):
         """Test that Modin can read parquet files not written by pandas."""
-        from pyarrow import csv
-        from pyarrow import parquet
+        from pyarrow import csv, parquet
 
         parquet_fname = get_unique_filename(extension="parquet", data_dir=tmp_path)
         csv_fname = get_unique_filename(extension="parquet", data_dir=tmp_path)

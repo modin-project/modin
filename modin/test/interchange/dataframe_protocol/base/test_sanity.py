@@ -14,8 +14,8 @@
 """Basic sanity checks for the DataFrame exchange protocol."""
 
 import pytest
-import modin.pandas as pd
 
+import modin.pandas as pd
 from modin.pandas.test.utils import default_to_pandas_ignore_string
 
 

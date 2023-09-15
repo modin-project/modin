@@ -1,5 +1,6 @@
-import modin.pandas as pd
 from sklearn.ensemble import RandomForestRegressor
+
+import modin.pandas as pd
 
 train = pd.read_csv("train.csv")
 train_y = train.SalePrice

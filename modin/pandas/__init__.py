@@ -11,8 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
 import warnings
+
+import pandas
 from packaging import version
 
 __pandas_version__ = "2.1"
@@ -91,6 +92,7 @@ with warnings.catch_warnings():
         Float64Dtype,
         from_dummies,
     )
+
 import os
 
 from modin.config import Parameter
@@ -99,7 +101,7 @@ _is_first_update = {}
 
 
 def _update_engine(publisher: Parameter):
-    from modin.config import Engine, StorageFormat, CpuCount
+    from modin.config import CpuCount, Engine, StorageFormat
     from modin.config.envvars import IsExperimental
     from modin.config.pubsub import ValueSource
 
@@ -161,62 +163,62 @@ def _update_engine(publisher: Parameter):
     _is_first_update[publisher.get()] = False
 
 
+from modin.utils import show_versions
+
 from .. import __version__
 from .dataframe import DataFrame
-from .io import (
-    read_csv,
-    read_parquet,
-    read_json,
-    read_html,
-    read_clipboard,
-    read_excel,
-    read_hdf,
-    read_feather,
-    read_stata,
-    read_sas,
-    read_pickle,
-    read_sql,
-    read_gbq,
-    read_table,
-    read_fwf,
-    read_sql_table,
-    read_sql_query,
-    read_spss,
-    ExcelFile,
-    to_pickle,
-    HDFStore,
-    json_normalize,
-    read_orc,
-    read_xml,
-)
-from .series import Series
 from .general import (
     concat,
+    crosstab,
+    cut,
+    get_dummies,
     isna,
     isnull,
+    lreshape,
+    melt,
     merge,
     merge_asof,
     merge_ordered,
-    notnull,
     notna,
+    notnull,
     pivot,
-    to_numeric,
+    pivot_table,
     qcut,
     to_datetime,
+    to_numeric,
+    to_timedelta,
     unique,
     value_counts,
-    get_dummies,
-    melt,
-    crosstab,
-    lreshape,
     wide_to_long,
-    to_timedelta,
-    pivot_table,
-    cut,
 )
-
+from .io import (
+    ExcelFile,
+    HDFStore,
+    json_normalize,
+    read_clipboard,
+    read_csv,
+    read_excel,
+    read_feather,
+    read_fwf,
+    read_gbq,
+    read_hdf,
+    read_html,
+    read_json,
+    read_orc,
+    read_parquet,
+    read_pickle,
+    read_sas,
+    read_spss,
+    read_sql,
+    read_sql_query,
+    read_sql_table,
+    read_stata,
+    read_table,
+    read_xml,
+    to_pickle,
+)
 from .plotting import Plotting as plotting
-from modin.utils import show_versions
+from .series import Series
 
 __all__ = [  # noqa: F405
     "DataFrame",

@@ -14,28 +14,28 @@
 """Module provides classes for scalar expression trees."""
 
 import abc
-from typing import Union, Generator, Type
+from typing import Generator, Type, Union
 
 import numpy as np
+import pandas
 import pyarrow as pa
 import pyarrow.compute as pc
-
-import pandas
 from pandas.core.dtypes.common import (
-    is_list_like,
     _get_dtype,
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_datetime64_dtype,
     is_float_dtype,
     is_int64_dtype,
     is_integer_dtype,
+    is_list_like,
     is_numeric_dtype,
     is_string_dtype,
-    is_datetime64_any_dtype,
-    is_bool_dtype,
-    is_datetime64_dtype,
 )
 
 from modin.pandas.indexing import is_range_like
 from modin.utils import _inherit_docstrings
+
 from .dataframe.utils import ColNameCodec, to_arrow_type
 
 

@@ -17,8 +17,9 @@ Module contains class ``PyarrowOnRayDataframe``.
 ``PyarrowOnRayDataframe`` is a dataframe class with PyArrow storage format and Ray engine.
 """
 
-from ..partitioning.partition_manager import PyarrowOnRayDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+from ..partitioning.partition_manager import PyarrowOnRayDataframePartitionManager
 
 
 class PyarrowOnRayDataframe(PandasDataframe):

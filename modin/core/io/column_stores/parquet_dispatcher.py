@@ -13,25 +13,24 @@
 
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
+import json
 import os
 import re
-import json
 
 import fsspec
-from fsspec.core import url_to_fs
-from fsspec.spec import AbstractBufferedFile
-from modin.error_message import ErrorMessage
 import numpy as np
-from pandas.io.common import stringify_path
+from modin.error_message import ErrorMessage
+from typing import TYPE_CHECKING
 import pandas
 import pandas._libs.lib as lib
+from fsspec.core import url_to_fs
+from fsspec.spec import AbstractBufferedFile
 from packaging import version
-from typing import TYPE_CHECKING
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
-
-
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 
 if TYPE_CHECKING:

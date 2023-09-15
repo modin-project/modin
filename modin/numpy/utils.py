@@ -13,8 +13,8 @@
 
 """Collection of array utility functions for internal use."""
 
-import modin.pandas as pd
 import modin.numpy as np
+import modin.pandas as pd
 
 _INTEROPERABLE_TYPES = (pd.DataFrame, pd.Series)
 

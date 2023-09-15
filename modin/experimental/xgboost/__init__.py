@@ -13,6 +13,6 @@
 
 """Module holds public interfaces for Modin XGBoost."""
 
-from .xgboost import DMatrix, Booster, train
+from .xgboost import Booster, DMatrix, train
 
 __all__ = ["DMatrix", "Booster", "train"]

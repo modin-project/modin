@@ -12,14 +12,15 @@
 # governing permissions and limitations under the License.
 
 import pytest
+from numpydoc.validate import Docstring
+
 from scripts.doc_checker import (
-    get_optional_args,
-    check_optional_args,
     MODIN_ERROR_CODES,
+    check_optional_args,
     check_spelling_words,
     get_noqa_checks,
+    get_optional_args,
 )
-from numpydoc.validate import Docstring
 
 
 @pytest.mark.parametrize(

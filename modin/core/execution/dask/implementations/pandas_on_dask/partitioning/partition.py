@@ -17,9 +17,9 @@ from distributed import Future
 from distributed.utils import get_ip
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
-from modin.logging import get_logger
 from modin.core.execution.dask.common import DaskWrapper
+from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):

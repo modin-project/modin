@@ -17,23 +17,23 @@ Module houses `TextFileDispatcher` class.
 `TextFileDispatcher` contains utils for text formats files, inherits util functions for
 files from `FileDispatcher` class and can be used as base class for dipatchers of SQL queries.
 """
-import warnings
-import os
-import io
 import codecs
-from typing import Union, Sequence, Optional, Tuple, Callable
+import io
+import os
+import warnings
 from csv import QUOTE_NONE
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 
+from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
+from modin.core.io.text.utils import CustomNewlineIterator
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
-from modin.core.io.text.utils import CustomNewlineIterator
-from modin.config import NPartitions
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -682,6 +682,9 @@ class TextFileDispatcher(FileDispatcher):
 
         if read_kwargs["chunksize"] is not None:
             return (False, "`chunksize` parameter is not supported")
+
+        if read_kwargs.get("iterator"):
+            return (False, "`iterator==True` parameter is not supported")
 
         if read_kwargs.get("dialect") is not None:
             return (False, "`dialect` parameter is not supported")

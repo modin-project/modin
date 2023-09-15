@@ -18,27 +18,28 @@ import io
 import pandas
 from pandas.io.common import get_handle
 
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
     CSVDispatcher,
+    ExcelDispatcher,
+    FeatherDispatcher,
     FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
-    FeatherDispatcher,
     SQLDispatcher,
-    ExcelDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasExcelParser,
+    PandasFeatherParser,
     PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
-    PandasFeatherParser,
     PandasSQLParser,
-    PandasExcelParser,
 )
-from modin.core.execution.ray.common import RayWrapper, SignalActor
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
 

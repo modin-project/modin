@@ -11,11 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import numpy
-import pytest
 import warnings
 
+import numpy
+import pytest
+
 import modin.numpy as np
+
 from .utils import assert_scalar_or_array_equal
 
 
@@ -87,10 +89,10 @@ def test_conversion():
 
 
 def test_to_df():
+    import pandas
+
     import modin.pandas as pd
     from modin.pandas.test.utils import df_equals
-
-    import pandas
 
     modin_df = pd.DataFrame(np.array([1, 2, 3]))
     pandas_df = pandas.DataFrame(numpy.array([1, 2, 3]))
@@ -113,10 +115,10 @@ def test_to_df():
 
 
 def test_to_series():
+    import pandas
+
     import modin.pandas as pd
     from modin.pandas.test.utils import df_equals
-
-    import pandas
 
     with pytest.raises(ValueError, match="Data must be 1-dimensional"):
         pd.Series(np.array([[1, 2, 3], [4, 5, 6]]))

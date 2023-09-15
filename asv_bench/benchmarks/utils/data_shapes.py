@@ -13,10 +13,10 @@
 
 """Define data shapes."""
 
-import os
 import json
+import os
 
-from .compatibility import ASV_USE_STORAGE_FORMAT, ASV_DATASET_SIZE
+from .compatibility import ASV_DATASET_SIZE, ASV_USE_STORAGE_FORMAT
 
 RAND_LOW = 0
 RAND_HIGH = 1_000_000_000 if ASV_USE_STORAGE_FORMAT == "hdk" else 100

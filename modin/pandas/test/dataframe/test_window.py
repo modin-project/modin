@@ -11,37 +11,37 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-import modin.pandas as pd
+import pytest
 
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
     arg_keys,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    no_numeric_dfs,
-    quantiles_keys,
-    quantiles_values,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
     int_arg_keys,
     int_arg_values,
+    name_contains,
+    no_numeric_dfs,
+    quantiles_keys,
+    quantiles_values,
+    random_state,
     test_data,
-    eval_general,
-    create_test_dfs,
     test_data_diff_dtype,
-    default_to_pandas_ignore_string,
+    test_data_keys,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
 )
-from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 

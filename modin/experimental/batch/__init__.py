@@ -13,7 +13,6 @@
 
 from .pipeline import PandasQueryPipeline
 
-
 __all__ = [
     "PandasQueryPipeline",
 ]

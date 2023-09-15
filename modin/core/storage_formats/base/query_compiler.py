@@ -18,32 +18,33 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+from typing import Hashable, List, Optional
 
+import numpy as np
+import pandas
+import pandas.core.resample
+from pandas._typing import DtypeBackend, IndexLabel, Suffixes
+from pandas.core.dtypes.common import is_number, is_scalar
+
+from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
-    DataFrameDefault,
-    SeriesDefault,
-    DateTimeDefault,
-    StrDefault,
     BinaryDefault,
+    CatDefault,
+    DataFrameDefault,
+    DateTimeDefault,
+    ExpandingDefault,
+    GroupByDefault,
     ResampleDefault,
     RollingDefault,
-    ExpandingDefault,
-    CatDefault,
-    GroupByDefault,
+    SeriesDefault,
     SeriesGroupByDefault,
+    StrDefault,
 )
 from modin.error_message import ErrorMessage
-from . import doc_utils
 from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
-from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar, is_number
-import pandas.core.resample
-import pandas
-from pandas._typing import IndexLabel, Suffixes, DtypeBackend
-import numpy as np
-from typing import List, Hashable, Optional
+from . import doc_utils
 
 
 def _get_axis(axis):
@@ -4144,10 +4145,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         from modin.pandas.indexing import (
+            boolean_mask_to_numeric,
             is_boolean_array,
             is_list_like,
             is_range_like,
-            boolean_mask_to_numeric,
         )
 
         lookups = []
@@ -4326,7 +4327,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(setitem)(self, axis=axis, key=key, value=value)
 
-    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+    def write_items(
+        self, row_numeric_index, col_numeric_index, item, need_columns_reindex=True
+    ):
         """
         Update QueryCompiler elements at the specified positions by passed values.
 
@@ -4338,15 +4341,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Row positions to write value.
         col_numeric_index : list of ints
             Column positions to write value.
-        broadcasted_items : 2D-array
-            Values to write. Have to be same size as defined by `row_numeric_index`
-            and `col_numeric_index`.
+        item : Any
+            Values to write. If not a scalar will be broadcasted according to
+            `row_numeric_index` and `col_numeric_index`.
+        need_columns_reindex : bool, default: True
+            In the case of assigning columns to a dataframe (broadcasting is
+            part of the flow), reindexing is not needed.
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler with updated values.
         """
+        # We have to keep this import away from the module level to avoid circular import
+        from modin.pandas.utils import broadcast_item, is_scalar
+
         if not isinstance(row_numeric_index, slice):
             row_numeric_index = list(row_numeric_index)
         if not isinstance(col_numeric_index, slice):
@@ -4358,8 +4367,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
             return df
 
+        if not is_scalar(item):
+            broadcasted_item, _ = broadcast_item(
+                self,
+                row_numeric_index,
+                col_numeric_index,
+                item,
+                need_columns_reindex=need_columns_reindex,
+            )
+        else:
+            broadcasted_item = item
+
         return DataFrameDefault.register(write_items)(
-            self, broadcasted_items=broadcasted_items
+            self, broadcasted_items=broadcasted_item
         )
 
     # END Abstract methods for QueryCompiler

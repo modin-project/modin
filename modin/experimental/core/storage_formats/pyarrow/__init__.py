@@ -13,7 +13,7 @@
 
 """Experimental Modin functionality specific to PyArrow storage format."""
 
-from .query_compiler import PyarrowQueryCompiler
 from .parsers import PyarrowCSVParser
+from .query_compiler import PyarrowQueryCompiler
 
 __all__ = ["PyarrowQueryCompiler", "PyarrowCSVParser"]

@@ -17,20 +17,21 @@ Module contains ``ModinFormatter`` class.
 ``ModinFormatter`` and the associated functions are used for logging configuration.
 """
 
-import logging
-from logging.handlers import RotatingFileHandler
 import datetime as dt
-import uuid
+import logging
 import platform
-import psutil
-import pandas
 import threading
 import time
-from typing import Optional
+import uuid
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Optional
+
+import pandas
+import psutil
 
 import modin
-from modin.config import LogMemoryInterval, LogFileSize, LogMode
+from modin.config import LogFileSize, LogMemoryInterval, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
 

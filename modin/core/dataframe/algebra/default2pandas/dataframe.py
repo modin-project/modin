@@ -13,10 +13,11 @@
 
 """Module houses default DataFrame functions builder class."""
 
-from .default import DefaultMethod
+import pandas
+
 from modin.utils import _inherit_docstrings
 
-import pandas
+from .default import DefaultMethod
 
 
 @_inherit_docstrings(DefaultMethod)

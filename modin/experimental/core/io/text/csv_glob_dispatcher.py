@@ -13,17 +13,17 @@
 
 """Module houses `ExperimentalCSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
 
-from contextlib import ExitStack
 import csv
 import glob
 import os
-from typing import List, Tuple
 import warnings
-import fsspec
+from contextlib import ExitStack
+from typing import List, Tuple
 
+import fsspec
 import pandas
 import pandas._libs.lib as lib
-from pandas.io.common import is_url, is_fsspec_url, stringify_path
+from pandas.io.common import is_fsspec_url, is_url, stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
@@ -284,9 +284,9 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
 
         try:
             from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
                 ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
             )
 
             credential_error_type = (
@@ -335,9 +335,9 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
 
         try:
             from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
                 ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
             )
 
             credential_error_type = (

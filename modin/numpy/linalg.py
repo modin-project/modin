@@ -13,9 +13,10 @@
 
 import numpy
 
+from modin.error_message import ErrorMessage
+
 from .arr import array
 from .utils import try_convert_from_interoperable_type
-from modin.error_message import ErrorMessage
 
 
 def norm(x, ord=None, axis=None, keepdims=False):

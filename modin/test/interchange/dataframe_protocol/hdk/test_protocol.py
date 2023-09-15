@@ -13,21 +13,22 @@
 
 """Dataframe exchange protocol tests that are specific for HDK implementation."""
 
-import pytest
-import pyarrow as pa
-import pandas
 import numpy as np
+import pandas
+import pyarrow as pa
+import pytest
 
 import modin.pandas as pd
 from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
-    primitive_column_to_ndarray,
     buffer_to_ndarray,
+    primitive_column_to_ndarray,
     set_nulls,
 )
-from modin.pandas.utils import from_arrow, from_dataframe
 from modin.pandas.test.utils import df_equals
+from modin.pandas.utils import from_arrow, from_dataframe
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from .utils import get_data_of_all_types, split_df_into_chunks, export_frame
+
+from .utils import export_frame, get_data_of_all_types, split_df_into_chunks
 
 
 @pytest.mark.parametrize("data_has_nulls", [True, False])

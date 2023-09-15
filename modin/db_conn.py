@@ -23,7 +23,7 @@ make a db connection. It can make and provide a connection whenever the Modin
 driver or a worker wants one.
 """
 
-from typing import Any, Sequence, Dict, Optional
+from typing import Any, Dict, Optional, Sequence
 
 _PSYCOPG_LIB_NAME = "psycopg2"
 _SQLALCHEMY_LIB_NAME = "sqlalchemy"

@@ -13,32 +13,41 @@
 
 """Collection of general utility functions, mostly for internal use."""
 
-import importlib
-import inspect
-import os
-from pathlib import Path
-import types
-from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar
-import re
-import sys
-import json
 import codecs
 import functools
-
-from typing import Protocol, runtime_checkable
-
+import importlib
+import inspect
+import json
+import os
+import re
+import sys
+import types
+from pathlib import Path
 from textwrap import dedent, indent
-from packaging import version
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
-import pandas
 import numpy as np
-
-from pandas.util._decorators import Appender  # type: ignore
-from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
+import pandas
+from packaging import version
 from pandas._typing import JSONSerializable
+from pandas.util._decorators import Appender  # type: ignore
+from pandas.util._print_versions import (  # type: ignore[attr-defined]
+    _get_dependency_info,
+    _get_sys_info,
+)
 
-from modin.config import Engine, StorageFormat, IsExperimental, ExperimentalNumPyAPI
 from modin._version import get_versions
+from modin.config import Engine, ExperimentalNumPyAPI, IsExperimental, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""

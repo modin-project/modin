@@ -13,7 +13,8 @@
 
 """Module houses API to operate on Modin DataFrame partitions that are pandas DataFrame(s)."""
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
+
 import numpy as np
 from pandas._typing import Axes
 
@@ -21,20 +22,32 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.pandas.dataframe import DataFrame, Series
 
 if TYPE_CHECKING:
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
+        PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframePartition,
+        PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning.partition import (
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframePartition,
+        PandasOnRayDataframeRowPartition,
+    )
+    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
+        PandasOnUnidistDataframeColumnPartition,
         PandasOnUnidistDataframePartition,
+        PandasOnUnidistDataframeRowPartition,
     )
 
     PartitionUnionType = Union[
         PandasOnRayDataframePartition,
         PandasOnDaskDataframePartition,
         PandasOnUnidistDataframePartition,
+        PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframeRowPartition,
+        PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframeRowPartition,
+        PandasOnUnidistDataframeColumnPartition,
+        PandasOnUnidistDataframeRowPartition,
     ]
 else:
     from typing import Any
@@ -85,7 +98,10 @@ def unwrap_partitions(
             [p.drain_call_queue() for p in modin_frame._partitions.flatten()]
 
             def get_block(partition: PartitionUnionType) -> np.ndarray:
-                blocks = partition.list_of_blocks
+                if hasattr(partition, "force_materialization"):
+                    blocks = partition.force_materialization().list_of_blocks
+                else:
+                    blocks = partition.list_of_blocks
                 assert (
                     len(blocks) == 1
                 ), f"Implementation assumes that partition contains a single block, but {len(blocks)} recieved."
@@ -109,6 +125,12 @@ def unwrap_partitions(
             "PandasOnRayDataframePartition",
             "PandasOnDaskDataframePartition",
             "PandasOnUnidistDataframePartition",
+            "PandasOnRayDataframeColumnPartition",
+            "PandasOnRayDataframeRowPartition",
+            "PandasOnDaskDataframeColumnPartition",
+            "PandasOnDaskDataframeRowPartition",
+            "PandasOnUnidistDataframeColumnPartition",
+            "PandasOnUnidistDataframeRowPartition",
         ):
             return _unwrap_partitions()
         raise ValueError(

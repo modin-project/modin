@@ -11,8 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from modin_spreadsheet import SpreadsheetWidget, show_grid
+
 from .. import pandas as pd
-from modin_spreadsheet import show_grid, SpreadsheetWidget
 
 
 def from_dataframe(

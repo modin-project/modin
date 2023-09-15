@@ -16,16 +16,18 @@ Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
-from typing import TYPE_CHECKING
 import re
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas
+
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
 
 if TYPE_CHECKING:
     from datetime import tzinfo
+
     from pandas._typing import npt
 
 

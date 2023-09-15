@@ -18,8 +18,9 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import PandasOnPythonDataframePartition
 from modin.utils import _inherit_docstrings
+
+from .partition import PandasOnPythonDataframePartition
 
 
 class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):

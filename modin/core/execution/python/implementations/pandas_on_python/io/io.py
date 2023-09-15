@@ -13,11 +13,11 @@
 
 """Module for housing IO classes with pandas storage format and Python engine."""
 
-from modin.core.io import BaseIO
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.core.execution.python.implementations.pandas_on_python.dataframe.dataframe import (
     PandasOnPythonDataframe,
 )
+from modin.core.io import BaseIO
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class PandasOnPythonIO(BaseIO):

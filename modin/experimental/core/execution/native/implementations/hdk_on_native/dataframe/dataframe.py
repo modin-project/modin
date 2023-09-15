@@ -14,74 +14,72 @@
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
 
 import re
-import numpy as np
 from collections import OrderedDict
+from typing import Hashable, Iterable, List, Optional, Tuple, Union
 
-from typing import List, Hashable, Optional, Tuple, Union, Iterable
-
-import pyarrow
-from pyarrow.types import is_dictionary
-
+import numpy as np
 import pandas as pd
+import pyarrow
 from pandas._libs.lib import no_default
-from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
     _get_dtype,
-    is_list_like,
     is_bool_dtype,
-    is_string_dtype,
-    is_integer_dtype,
     is_datetime64_dtype,
+    is_integer_dtype,
+    is_list_like,
+    is_string_dtype,
 )
+from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
+from pyarrow.types import is_dictionary
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, join_columns
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.dataframe.pandas.utils import concatenate
+from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import (
-    ColNameCodec,
-    maybe_range,
-    arrow_to_pandas,
-    check_join_supported,
-    check_cols_to_join,
-    get_data_for_join_by_index,
-    build_categorical_from_at,
-)
-from ..db_worker import DbTable
-from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
-from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
-from modin.error_message import ErrorMessage
+from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import check_both_not_none
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
-from modin.core.dataframe.pandas.utils import concatenate
-from modin.core.dataframe.base.dataframe.utils import join_columns
+
+from ..db_worker import DbTable
 from ..df_algebra import (
-    MaskNode,
+    FilterNode,
     FrameNode,
     GroupbyAggNode,
+    JoinNode,
+    MaskNode,
+    SortNode,
     TransformNode,
     UnionNode,
-    JoinNode,
-    SortNode,
-    FilterNode,
-    translate_exprs_to_base,
     replace_frame_in_exprs,
+    translate_exprs_to_base,
 )
 from ..expr import (
     AggregateExpr,
     InputRefExpr,
     LiteralExpr,
     OpExpr,
-    build_if_then_else,
-    build_dt_expr,
     _get_common_dtype,
+    build_dt_expr,
+    build_if_then_else,
     is_cmp_op,
 )
-from modin.pandas.utils import check_both_not_none
-from modin.pandas.indexing import is_range_like
+from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
+from .utils import (
+    ColNameCodec,
+    arrow_to_pandas,
+    build_categorical_from_at,
+    check_cols_to_join,
+    check_join_supported,
+    get_data_for_join_by_index,
+    maybe_range,
+)
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
 ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME

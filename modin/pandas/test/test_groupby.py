@@ -11,45 +11,45 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import itertools
-import pandas
-import numpy as np
-from unittest import mock
 import datetime
+import itertools
+from unittest import mock
 
-from modin.config import StorageFormat
+import numpy as np
+import pandas
+import pytest
+
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.config.envvars import ExperimentalGroupbyImpl, IsRayCluster
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-import modin.pandas as pd
+from modin.pandas.utils import from_pandas, is_scalar
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import (
-    try_cast_to_pandas,
+    MODIN_UNNAMED_SERIES_LABEL,
     get_current_execution,
     hashable,
-    MODIN_UNNAMED_SERIES_LABEL,
+    try_cast_to_pandas,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from modin.pandas.utils import from_pandas, is_scalar
+
 from .utils import (
-    df_equals,
     check_df_columns_have_nans,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    dict_equals,
     eval_general,
+    generate_multiindex,
+    modin_df_almost_equals_pandas,
     test_data,
     test_data_values,
-    modin_df_almost_equals_pandas,
-    try_modin_df_almost_equals_compare,
-    generate_multiindex,
     test_groupby_data,
-    dict_equals,
+    try_modin_df_almost_equals_compare,
     value_equals,
-    default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-
 
 NPartitions.put(4)
 
