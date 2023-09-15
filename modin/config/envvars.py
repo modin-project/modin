@@ -575,6 +575,7 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
                 "enable_thrift_logs": 0,
                 "enable_multifrag_execution_result": 1,
                 "cpu_only": 1,
+                "idle-session-duration": 600,
             }
 
             try:
