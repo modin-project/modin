@@ -63,9 +63,9 @@ from .utils import (
     generate_dataframe,
     get_unique_filename,
     io_ops_bad_exc,
-    json_long_bytes,
+    json_long_bytes_io,
     json_long_string,
-    json_short_bytes,
+    json_short_bytes_io,
     json_short_string,
     parse_dates_values_by_id,
 )
@@ -524,7 +524,7 @@ class TestCsv:
     @pytest.mark.parametrize(
         "parse_dates", [True, False, ["col2"], ["col2", "col4"], [1, 3]]
     )
-    @pytest.mark.parametrize("infer_datetime_format", [True, False])
+    @pytest.mark.parametrize("infer_datetime_format", [True, lib.no_default])
     @pytest.mark.parametrize("keep_date_col", [True, False])
     @pytest.mark.parametrize(
         "date_parser",
@@ -547,19 +547,25 @@ class TestCsv:
             raising_exceptions = list(io_ops_bad_exc)
             raising_exceptions.remove(TypeError)
 
-        eval_io(
-            fn_name="read_csv",
-            check_kwargs_callable=not callable(date_parser),
-            raising_exceptions=raising_exceptions,
-            # read_csv kwargs
-            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
-            parse_dates=parse_dates,
-            infer_datetime_format=infer_datetime_format,
-            keep_date_col=keep_date_col,
-            date_parser=date_parser,
-            dayfirst=dayfirst,
-            cache_dates=cache_dates,
-        )
+        with pytest.warns(
+            FutureWarning,
+            match=r".*('date_parser'|'infer_datetime_format') is deprecated.*",
+        ) if any(
+            x is not lib.no_default for x in (date_parser, infer_datetime_format)
+        ) else contextlib.nullcontext():
+            eval_io(
+                fn_name="read_csv",
+                check_kwargs_callable=not callable(date_parser),
+                raising_exceptions=raising_exceptions,
+                # read_csv kwargs
+                filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+                parse_dates=parse_dates,
+                infer_datetime_format=infer_datetime_format,
+                keep_date_col=keep_date_col,
+                date_parser=date_parser,
+                dayfirst=dayfirst,
+                cache_dates=cache_dates,
+            )
 
     @pytest.mark.parametrize("date", ["2023-01-01 00:00:01.000000000", "2023"])
     @pytest.mark.parametrize("dtype", [None, "str", {"id": "int64"}])
@@ -2135,7 +2141,7 @@ class TestJson:
 
     @pytest.mark.parametrize(
         "data",
-        [json_short_string, json_short_bytes, json_long_string, json_long_bytes],
+        [json_short_string, json_short_bytes_io, json_long_string, json_long_bytes_io],
     )
     def test_read_json_string_bytes(self, data):
         with warns_that_defaulting_to_pandas():
@@ -2143,7 +2149,10 @@ class TestJson:
         # For I/O objects we need to rewind to reuse the same object.
         if hasattr(data, "seek"):
             data.seek(0)
-        df_equals(modin_df, pandas.read_json(data))
+        with pytest.warns(
+            FutureWarning, match=".*Passing literal json to 'read_json'.*"
+        ) if isinstance(data, str) else contextlib.nullcontext():
+            df_equals(modin_df, pandas.read_json(data))
 
     def test_to_json(self, tmp_path):
         modin_df, pandas_df = create_test_dfs(TEST_DATA)
@@ -2364,11 +2373,14 @@ class TestExcel:
         if use_bytes_io:
             io_bytes = BytesIO(io_bytes)
 
-        eval_io(
-            fn_name="read_excel",
-            # read_excel kwargs
-            io=io_bytes,
-        )
+        with pytest.warns(
+            FutureWarning, match=".*Passing bytes to 'read_excel'.*"
+        ) if not use_bytes_io else contextlib.nullcontext():
+            eval_io(
+                fn_name="read_excel",
+                # read_excel kwargs
+                io=io_bytes,
+            )
 
     def test_read_excel_file_handle(self, make_excel_file):
         unique_filename = make_excel_file()
@@ -3077,7 +3089,8 @@ class TestXml:
    <sides/>
  </row>
 """
-        eval_io("read_xml", path_or_buffer=data)
+        with pytest.warns(FutureWarning, match=".*Passing literal xml to 'read_xml'.*"):
+            eval_io("read_xml", path_or_buffer=data)
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)

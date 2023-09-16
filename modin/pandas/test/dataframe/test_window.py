@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
+
 import matplotlib
 import numpy as np
 import pandas
@@ -168,21 +170,22 @@ def test_ffill(data):
     ids=["backfill", "bfill", "pad", "ffill", "None"],
 )
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("limit", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("limit", [None, 1, 5])
 def test_fillna(data, method, axis, limit):
     # We are not testing when axis is over rows until pandas-17399 gets fixed.
     if axis != 1 and axis != "columns":
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-
-        try:
-            pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
-        except Exception as err:
-            with pytest.raises(type(err)):
-                modin_df.fillna(0, method=method, axis=axis, limit=limit)
-        else:
-            modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
-            df_equals(modin_result, pandas_result)
+        with pytest.warns(
+            FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+        ) if method is not None else contextlib.nullcontext():
+            eval_general(
+                *create_test_dfs(data),
+                lambda df: df.fillna(
+                    value=0 if method is None else None,
+                    method=method,
+                    axis=axis,
+                    limit=limit,
+                ),
+            )
 
 
 @pytest.mark.skipif(
@@ -218,28 +221,42 @@ def test_fillna_sanity():
     df_equals(modin_df, result)
 
     frame_data = {"A": [pandas.Timestamp("2012-11-11 00:00:00+01:00"), pandas.NaT]}
-    df = pandas.DataFrame(frame_data)
-    modin_df = pd.DataFrame(frame_data)
-    df_equals(modin_df.fillna(method="pad"), df.fillna(method="pad"))
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        eval_general(
+            *create_test_dfs(frame_data),
+            lambda df: df.fillna(method="pad"),
+        )
 
     frame_data = {"A": [pandas.NaT, pandas.Timestamp("2012-11-11 00:00:00+01:00")]}
-    df = pandas.DataFrame(frame_data)
-    modin_df = pd.DataFrame(frame_data).fillna(method="bfill")
-    df_equals(modin_df, df.fillna(method="bfill"))
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        eval_general(
+            *create_test_dfs(frame_data),
+            lambda df: df.fillna(method="bfill"),
+        )
 
 
 def test_fillna_downcast():
     # infer int64 from float64
     frame_data = {"a": [1.0, np.nan]}
     df = pandas.DataFrame(frame_data)
-    result = df.fillna(0, downcast="infer")
-    modin_df = pd.DataFrame(frame_data).fillna(0, downcast="infer")
+    with pytest.warns(
+        FutureWarning, match=".*'downcast' keyword in fillna is deprecated.*"
+    ):
+        result = df.fillna(0, downcast="infer")
+        modin_df = pd.DataFrame(frame_data).fillna(0, downcast="infer")
     df_equals(modin_df, result)
 
     # infer int64 from float64 when fillna value is a dict
     df = pandas.DataFrame(frame_data)
-    result = df.fillna({"a": 0}, downcast="infer")
-    modin_df = pd.DataFrame(frame_data).fillna({"a": 0}, downcast="infer")
+    with pytest.warns(
+        FutureWarning, match=".*'downcast' keyword in fillna is deprecated.*"
+    ):
+        result = df.fillna({"a": 0}, downcast="infer")
+        modin_df = pd.DataFrame(frame_data).fillna({"a": 0}, downcast="infer")
     df_equals(modin_df, result)
 
 
@@ -274,7 +291,10 @@ def test_fillna_inplace():
     df[1][:4] = np.nan
     df[3][-4:] = np.nan
     modin_df = pd.DataFrame(df)
-    df.fillna(method="ffill", inplace=True)
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df.fillna(method="ffill", inplace=True)
     try:
         df_equals(modin_df, df)
     except AssertionError:
@@ -309,10 +329,13 @@ def test_frame_fillna_limit(data, limit):
     if limit is not None and limit < 0:
         limit = len(modin_df) + limit
 
-    df_equals(
-        modin_df.fillna(method="pad", limit=limit),
-        result.fillna(method="pad", limit=limit),
-    )
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(
+            modin_df.fillna(method="pad", limit=limit),
+            result.fillna(method="pad", limit=limit),
+        )
     df_equals(
         modin_df.fillna(replace_dict, limit=limit),
         result.fillna(replace_dict, limit=limit),
@@ -328,10 +351,14 @@ def test_frame_fillna_limit(data, limit):
 
     result = pandas_df[-2:].reindex(index)
     modin_df = pd.DataFrame(result)
-    df_equals(
-        modin_df.fillna(method="backfill", limit=limit),
-        result.fillna(method="backfill", limit=limit),
-    )
+
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(
+            modin_df.fillna(method="backfill", limit=limit),
+            result.fillna(method="backfill", limit=limit),
+        )
     df_equals(
         modin_df.fillna(replace_dict, limit=limit),
         result.fillna(replace_dict, limit=limit),
@@ -354,16 +381,24 @@ def test_frame_pad_backfill_limit(data):
 
     result = pandas_df[:2].reindex(index)
     modin_df = pd.DataFrame(result)
-    df_equals(
-        modin_df.fillna(method="pad", limit=2), result.fillna(method="pad", limit=2)
-    )
+
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(
+            modin_df.fillna(method="pad", limit=2), result.fillna(method="pad", limit=2)
+        )
 
     result = pandas_df[-2:].reindex(index)
     modin_df = pd.DataFrame(result)
-    df_equals(
-        modin_df.fillna(method="backfill", limit=2),
-        result.fillna(method="backfill", limit=2),
-    )
+
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(
+            modin_df.fillna(method="backfill", limit=2),
+            result.fillna(method="backfill", limit=2),
+        )
 
 
 def test_fillna_dtype_conversion():
@@ -433,15 +468,18 @@ def test_fillna_columns(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    df_equals(
-        modin_df.fillna(method="ffill", axis=1),
-        pandas_df.fillna(method="ffill", axis=1),
-    )
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(
+            modin_df.fillna(method="ffill", axis=1),
+            pandas_df.fillna(method="ffill", axis=1),
+        )
 
-    df_equals(
-        modin_df.fillna(method="ffill", axis=1),
-        pandas_df.fillna(method="ffill", axis=1),
-    )
+        df_equals(
+            modin_df.fillna(method="ffill", axis=1),
+            pandas_df.fillna(method="ffill", axis=1),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -468,7 +506,10 @@ def test_fillna_col_reordering(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
-    df_equals(modin_df.fillna(method="ffill"), pandas_df.fillna(method="ffill"))
+    with pytest.warns(
+        FutureWarning, match=".*DataFrame.fillna with 'method' is deprecated.*"
+    ):
+        df_equals(modin_df.fillna(method="ffill"), pandas_df.fillna(method="ffill"))
 
 
 def test_fillna_datetime_columns():

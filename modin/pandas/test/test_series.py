@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import unittest.mock as mock
 
@@ -426,12 +427,19 @@ def test___gt__(data):
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___int__(count_elements):
-    eval_general(*create_test_series([1.5] * count_elements), int)
+    with pytest.warns(
+        FutureWarning, match=".*Calling int on a single element Series is deprecated.*"
+    ) if count_elements == 1 else contextlib.nullcontext():
+        eval_general(*create_test_series([1.5] * count_elements), int)
 
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___float__(count_elements):
-    eval_general(*create_test_series([1] * count_elements), float)
+    with pytest.warns(
+        FutureWarning,
+        match=".*Calling float on a single element Series is deprecated.*",
+    ) if count_elements == 1 else contextlib.nullcontext():
+        eval_general(*create_test_series([1] * count_elements), float)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -807,13 +815,16 @@ def test_aggregate_error_checking(data):
                 return fn(series)
         return fn(series)
 
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: user_warning_checker(
-            series, fn=lambda series: series.aggregate("cumproduct")
-        ),
-    )
+    with pytest.warns(
+        DeprecationWarning, match=".*cumproduct.*is deprecated as of NumPy 1.25.0.*"
+    ):
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda series: user_warning_checker(
+                series, fn=lambda series: series.aggregate("cumproduct")
+            ),
+        )
     eval_general(
         modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
     )
@@ -1252,7 +1263,7 @@ def test_clip_scalar(request, data, bound_type):
 
     if name_contains(request.node.name, numeric_dfs):
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
 
         # test only upper scalar bound
         modin_result = modin_series.clip(None, upper)
@@ -1273,8 +1284,8 @@ def test_clip_sequence(request, data, bound_type):
     )
 
     if name_contains(request.node.name, numeric_dfs):
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
 
         if bound_type == "series":
             modin_lower = pd.Series(lower)

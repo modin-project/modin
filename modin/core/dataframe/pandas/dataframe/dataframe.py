@@ -2204,7 +2204,7 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        col_labels : list
+        col_labels : list[int]
             List of column labels to infer and induce types over.
 
         Returns
@@ -2216,7 +2216,7 @@ class PandasDataframe(ClassLogger):
         new_cols = self.take_2d_labels_or_positional(col_labels=col_labels)
         new_cols_dtypes = new_cols.tree_reduce(0, pandas.DataFrame.infer_objects).dtypes
         new_dtypes = self.dtypes.copy()
-        new_dtypes[col_labels] = new_cols_dtypes
+        new_dtypes.iloc[col_labels] = new_cols_dtypes
         return self.__constructor__(
             self._partitions,
             self.copy_index_cache(copy_lengths=True),

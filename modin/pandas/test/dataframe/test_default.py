@@ -195,7 +195,8 @@ def test_bool(data):
     single_bool_pandas_df = pandas.DataFrame([True])
     single_bool_modin_df = pd.DataFrame([True])
 
-    assert single_bool_pandas_df.bool() == single_bool_modin_df.bool()
+    with pytest.warns(FutureWarning, match=".*DataFrame.bool is now deprecated.*"):
+        assert single_bool_pandas_df.bool() == single_bool_modin_df.bool()
 
     with pytest.raises(ValueError):
         # __bool__ always raises this error for DataFrames
@@ -446,8 +447,9 @@ def test_first():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=i
     )
-    df_equals(modin_df.first("3D"), pandas_df.first("3D"))
-    df_equals(modin_df.first("20D"), pandas_df.first("20D"))
+    with pytest.warns(FutureWarning, match=".*first is deprecated.*"):
+        df_equals(modin_df.first("3D"), pandas_df.first("3D"))
+        df_equals(modin_df.first("20D"), pandas_df.first("20D"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -522,8 +524,9 @@ def test_last():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=pandas_index
     )
-    df_equals(modin_df.last("3D"), pandas_df.last("3D"))
-    df_equals(modin_df.last("20D"), pandas_df.last("20D"))
+    with pytest.warns(FutureWarning, match=".*last is deprecated.*"):
+        df_equals(modin_df.last("3D"), pandas_df.last("3D"))
+        df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

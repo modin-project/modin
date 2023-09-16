@@ -462,8 +462,8 @@ json_long_string = """{
             }
         }
     }"""
-json_long_bytes = BytesIO(json_long_string.encode(encoding="UTF-8"))
-json_short_bytes = BytesIO(json_short_string.encode(encoding="UTF-8"))
+json_long_bytes_io = BytesIO(json_long_string.encode(encoding="UTF-8"))
+json_short_bytes_io = BytesIO(json_short_string.encode(encoding="UTF-8"))
 
 
 # Text encoding types
