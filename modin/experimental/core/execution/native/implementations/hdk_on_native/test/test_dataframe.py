@@ -1989,7 +1989,7 @@ class TestDateTime:
             [
                 "2018-10-26 12:00",
                 "2018-10-26 13:00:15",
-                "2020-10-26 04:00:15",
+                "2020-10-26 04:00:15.000000002",
                 "2020-10-26",
             ],
             format="mixed",
@@ -2067,60 +2067,6 @@ class TestDateTime:
             return df["c"].dt.dayofyear
 
         run_and_compare(dt_dayofyear, data=self.datetime_data)
-
-    def test_dt_daysinmonth(self):
-        def dt_daysinmonth(df, **kwargs):
-            return df["c"].dt.daysinmonth
-
-        run_and_compare(dt_daysinmonth, data=self.datetime_data)
-
-    def test_dt_days_in_month(self):
-        def dt_days_in_month(df, **kwargs):
-            return df["c"].dt.days_in_month
-
-        run_and_compare(dt_days_in_month, data=self.datetime_data)
-
-    def test_dt_is_leap_year(self):
-        def dt_is_leap_year(df, **kwargs):
-            return df["c"].dt.is_leap_year
-
-        run_and_compare(dt_is_leap_year, data=self.datetime_data)
-
-    def test_dt_is_month_end(self):
-        def dt_is_month_end(df, **kwargs):
-            return df["c"].dt.is_month_end
-
-        run_and_compare(dt_is_month_end, data=self.datetime_data)
-
-    def test_dt_is_month_start(self):
-        def dt_is_month_start(df, **kwargs):
-            return df["c"].dt.is_month_start
-
-        run_and_compare(dt_is_month_start, data=self.datetime_data)
-
-    def test_dt_is_quarter_end(self):
-        def dt_is_quarter_end(df, **kwargs):
-            return df["c"].dt.is_quarter_end
-
-        run_and_compare(dt_is_quarter_end, data=self.datetime_data)
-
-    def test_dt_is_quarter_start(self):
-        def dt_is_quarter_start(df, **kwargs):
-            return df["c"].dt.is_quarter_start
-
-        run_and_compare(dt_is_quarter_start, data=self.datetime_data)
-
-    def test_dt_is_year_end(self):
-        def dt_is_year_end(df, **kwargs):
-            return df["c"].dt.is_year_end
-
-        run_and_compare(dt_is_year_end, data=self.datetime_data)
-
-    def test_dt_is_year_start(self):
-        def dt_is_year_start(df, **kwargs):
-            return df["c"].dt.is_year_start
-
-        run_and_compare(dt_is_year_start, data=self.datetime_data)
 
     @pytest.mark.parametrize("cast", [True, False])
     @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())

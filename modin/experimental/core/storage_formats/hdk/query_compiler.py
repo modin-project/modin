@@ -662,62 +662,17 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
 
     def dt_dayofweek(self):
         return self.__constructor__(
-            self._modin_frame.dt_extract("dow"), self._shape_hint
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
         )
 
     def dt_weekday(self):
         return self.__constructor__(
-            self._modin_frame.dt_extract("dow"), self._shape_hint
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
         )
 
     def dt_dayofyear(self):
         return self.__constructor__(
             self._modin_frame.dt_extract("doy"), self._shape_hint
-        )
-
-    def dt_daysinmonth(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("daysinmonth"), self._shape_hint
-        )
-
-    def dt_days_in_month(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("daysinmonth"), self._shape_hint
-        )
-
-    def dt_is_leap_year(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("isleapyear"), self._shape_hint
-        )
-
-    def dt_is_month_end(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("ismonthend"), self._shape_hint
-        )
-
-    def dt_is_month_start(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("ismonthstart"), self._shape_hint
-        )
-
-    def dt_is_quarter_end(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("isquarterend"), self._shape_hint
-        )
-
-    def dt_is_quarter_start(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("isquarterstart"), self._shape_hint
-        )
-
-    def dt_is_year_end(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("isyearend"), self._shape_hint
-        )
-
-    def dt_is_year_start(self):
-        return self.__constructor__(
-            self._modin_frame.dt_extract("isyearstart"), self._shape_hint
         )
 
     def _bin_op(self, other, op_name, **kwargs):

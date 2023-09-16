@@ -1393,16 +1393,15 @@ def build_dt_expr(dt_operation, col_expr):
     BaseExpr
         The extract expression.
     """
-    operation = (
-        LiteralExpr(dt_operation) if dt_operation != "dow" else LiteralExpr("isodow")
-    )
+    operation = LiteralExpr(dt_operation)
 
     res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype("int32"))
-    if dt_operation == "dow":
+
+    if dt_operation == "isodow":
         res = res.sub(LiteralExpr(1))
-    if dt_operation == "microsecond":
+    elif dt_operation == "microsecond":
         res = res.mod(LiteralExpr(1000000))
-    if dt_operation == "nanosecond":
+    elif dt_operation == "nanosecond":
         res = res.mod(LiteralExpr(1000))
 
     return res
