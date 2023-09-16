@@ -1460,7 +1460,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
-    def applymap(self, func, *args, **kwargs):
+    def map(self, func, *args, **kwargs):
         """
         Apply passed function elementwise.
 
@@ -1476,7 +1476,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transformed QueryCompiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.applymap)(
+        return DataFrameDefault.register(pandas.DataFrame.map)(
             self, func, *args, **kwargs
         )
 

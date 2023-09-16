@@ -640,7 +640,7 @@ class Series(BasePandasDataset):
                 # The return_type is only a DataFrame when we have a function
                 # return a Series object. This is a very particular case that
                 # has to be handled by the underlying pandas.Series apply
-                # function and not our default applymap call.
+                # function and not our default map call.
                 if return_type == "DataFrame":
                     result = self._query_compiler.apply_on_series(f)
                 else:
@@ -1218,7 +1218,7 @@ class Series(BasePandasDataset):
                 return mapper.get(s, np.nan)
 
         return self.__constructor__(
-            query_compiler=self._query_compiler.applymap(
+            query_compiler=self._query_compiler.map(
                 lambda s: arg(s)
                 if pandas.isnull(s) is not True or na_action is None
                 else s
