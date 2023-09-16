@@ -13,18 +13,22 @@
 
 
 import pytest
-from modin.config import Engine
 
 import modin.experimental.xgboost as xgb
+import modin.pandas as pd
+from modin.config import Engine
 
 
 @pytest.mark.skipif(
     Engine.get() == "Ray",
-    reason="This test doesn't make sense on Ray backend.",
+    reason="This test doesn't make sense on Ray engine.",
 )
-@pytest.mark.parametrize("func", ["train", "predict"])
-def test_backend(func):
+@pytest.mark.skipif(
+    Engine.get() == "Python",
+    reason="This test doesn't make sense on non-distributed engine (see issue #2938).",
+)
+def test_engine():
     try:
-        getattr(xgb, func)({}, xgb.ModinDMatrix(None, None))
+        xgb.train({}, xgb.DMatrix(pd.DataFrame([0]), pd.DataFrame([0])))
     except ValueError:
         pass

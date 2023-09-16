@@ -11,58 +11,63 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import io
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-import modin.pandas as pd
-from modin.utils import to_pandas
+import pytest
 from numpy.testing import assert_array_equal
-import io
 
+import modin.pandas as pd
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    df_equals,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    numeric_dfs,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    eval_general,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
     generate_multiindex,
-    test_data_resample,
+    modin_df_almost_equals_pandas,
+    name_contains,
+    numeric_dfs,
     test_data,
     test_data_diff_dtype,
-    modin_df_almost_equals_pandas,
+    test_data_keys,
+    test_data_large_categorical_dataframe,
+    test_data_resample,
+    test_data_values,
 )
-from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
 
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+
 
 @pytest.mark.parametrize(
     "op, make_args",
     [
         ("align", lambda df: {"other": df}),
-        ("expanding", None),
         ("corrwith", lambda df: {"other": df}),
-        ("explode", lambda df: {"column": df.columns[0]}),
         ("ewm", lambda df: {"com": 0.5}),
         ("from_dict", lambda df: {"data": None}),
         ("from_records", lambda df: {"data": to_pandas(df)}),
         ("hist", lambda df: {"column": "int_col"}),
-        ("infer_objects", None),
         ("interpolate", None),
-        ("lookup", lambda df: {"row_labels": [0], "col_labels": ["int_col"]}),
         ("mask", lambda df: {"cond": df != 0}),
         ("pct_change", None),
-        ("__getstate__", None),
         ("to_xarray", None),
         ("flags", None),
         ("set_flags", lambda df: {"allows_duplicate_labels": False}),
@@ -70,7 +75,7 @@ matplotlib.use("Agg")
 )
 def test_ops_defaulting_to_pandas(op, make_args):
     modin_df = pd.DataFrame(test_data_diff_dtype).drop(["str_col", "bool_col"], axis=1)
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         operation = getattr(modin_df, op)
         if make_args is not None:
             operation(**make_args(modin_df))
@@ -84,28 +89,23 @@ def test_ops_defaulting_to_pandas(op, make_args):
 
 def test_style():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).style
-
-
-def test___setstate__():
-    data = test_data_values[0]
-    with pytest.warns(UserWarning):
-        try:
-            pd.DataFrame(data).__setstate__(None)
-        except TypeError:
-            pass
 
 
 def test_to_timestamp():
     idx = pd.date_range("1/1/2012", periods=5, freq="M")
     df = pd.DataFrame(np.random.randint(0, 100, size=(len(idx), 4)), index=idx)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df.to_period().to_timestamp()
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize(
+    "data",
+    test_data_values + [test_data_large_categorical_dataframe],
+    ids=test_data_keys + ["categorical_ints"],
+)
 def test_to_numpy(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.values, pandas_df.values)
@@ -122,7 +122,7 @@ def test_asfreq():
     index = pd.date_range("1/1/2000", periods=4, freq="T")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
         # the warning
         df.asfreq(freq="30S")
@@ -187,7 +187,6 @@ def test_bfill(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.bool()
@@ -206,7 +205,6 @@ def test_bool(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_boxplot(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     assert modin_df.boxplot() == to_pandas(modin_df).boxplot()
 
@@ -218,37 +216,147 @@ def test_combine_first():
     data2 = {"A": [1, 1], "B": [3, 3]}
     modin_df2 = pd.DataFrame(data2)
     pandas_df2 = pandas.DataFrame(data2)
-    df_equals(modin_df1.combine_first(modin_df2), pandas_df1.combine_first(pandas_df2))
-
-
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-def test_corr(min_periods):
-    eval_general(
-        *create_test_dfs(test_data["int_data"]),
-        lambda df: df.corr(min_periods=min_periods),
+    df_equals(
+        modin_df1.combine_first(modin_df2),
+        pandas_df1.combine_first(pandas_df2),
+        # https://github.com/modin-project/modin/issues/5959
+        check_dtypes=False,
     )
+
+
+class TestCorr:
+    @pytest.mark.parametrize("method", ["pearson", "kendall", "spearman"])
+    def test_corr(self, method):
+        eval_general(
+            *create_test_dfs(test_data["int_data"]),
+            lambda df: df.corr(method=method),
+        )
+        # Modin result may slightly differ from pandas result
+        # due to floating pointing arithmetic.
+        eval_general(
+            *create_test_dfs(test_data["float_nan_data"]),
+            lambda df: df.corr(method=method),
+            comparator=modin_df_almost_equals_pandas,
+        )
+
+    @pytest.mark.parametrize("min_periods", [1, 3, 5, 6])
+    def test_corr_min_periods(self, min_periods):
+        # only 3 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 1, 5]}),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        # only 5 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, 2, 3, 4, 5, np.nan], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        # only 4 valid values (a valid value is considered a row with no NaNs)
+        eval_general(
+            *create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            ),
+            lambda df: df.corr(min_periods=min_periods),
+        )
+
+        if StorageFormat.get() == "Pandas":
+            # only 4 valid values located in different partitions (a valid value is considered a row with no NaNs)
+            modin_df, pandas_df = create_test_dfs(
+                {"a": [1, np.nan, 3, 4, 5, 6], "b": [1, 2, 1, 4, 5, np.nan]}
+            )
+            modin_df = pd.concat([modin_df.iloc[:3], modin_df.iloc[3:]])
+
+            assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
+            eval_general(
+                modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
+            )
+
+    @pytest.mark.parametrize("numeric_only", [True, False, None])
+    def test_corr_non_numeric(self, numeric_only):
+        eval_general(
+            *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
+            lambda df: df.corr(numeric_only=numeric_only),
+        )
+
+    @pytest.mark.skipif(
+        StorageFormat.get() != "Pandas",
+        reason="doesn't make sense for non-partitioned executions",
+    )
+    def test_corr_nans_in_different_partitions(self):
+        # NaN in the first partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in the last partition
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [1, 2, 3, 4, 5, np.nan], "b": [3, 4, 2, 0, 7, 8]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in two partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, 4, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+        # NaN in all partitions
+        modin_df, pandas_df = create_test_dfs(
+            {"a": [np.nan, 2, 3, np.nan, 5, 6], "b": [3, 4, 2, 0, 7, np.nan]}
+        )
+        modin_df = pd.concat([modin_df.iloc[:2], modin_df.iloc[2:4], modin_df.iloc[4:]])
+
+        assert modin_df._query_compiler._modin_frame._partitions.shape == (3, 1)
+        eval_general(modin_df, pandas_df, lambda df: df.corr())
+
+
+@pytest.mark.parametrize("min_periods", [1, 3, 5], ids=lambda x: f"min_periods={x}")
+@pytest.mark.parametrize("ddof", [1, 2, 4], ids=lambda x: f"ddof={x}")
+def test_cov(min_periods, ddof):
     # Modin result may slightly differ from pandas result
     # due to floating pointing arithmetic.
-    eval_general(
-        *create_test_dfs(test_data["float_nan_data"]),
-        lambda df: df.corr(min_periods=min_periods),
-        comparator=modin_df_almost_equals_pandas,
-    )
+    if StorageFormat.get() == "Hdk":
 
+        def comparator1(df1, df2):
+            modin_df_almost_equals_pandas(df1, df2, max_diff=0.0002)
 
-@pytest.mark.parametrize("min_periods", [1, 3, 5])
-@pytest.mark.parametrize("ddof", [1, 2, 4])
-def test_cov(min_periods, ddof):
+        comparator2 = comparator1
+    else:
+        comparator1 = df_equals
+        comparator2 = modin_df_almost_equals_pandas
+
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: df.cov(min_periods=min_periods, ddof=ddof),
+        comparator=comparator1,
     )
-    # Modin result may slightly differ from pandas result
-    # due to floating pointing arithmetic.
+
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.cov(min_periods=min_periods),
-        comparator=modin_df_almost_equals_pandas,
+        comparator=comparator2,
+    )
+
+
+@pytest.mark.parametrize("numeric_only", [True, False, None])
+def test_cov_numeric_only(numeric_only):
+    eval_general(
+        *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
+        lambda df: df.cov(numeric_only=numeric_only),
     )
 
 
@@ -266,7 +374,7 @@ def test_dot(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(np.arange(col_len + 10))
+        modin_df.dot(np.arange(col_len + 10))
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -282,7 +390,7 @@ def test_dot(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df.dot(pd.Series(np.arange(col_len)))
+        modin_df.dot(pd.Series(np.arange(col_len)))
 
     # Test case when left dataframe has size (n x 1)
     # and right dataframe has size (1 x n)
@@ -313,7 +421,7 @@ def test_matmul(data):
 
     # Test bad dimensions
     with pytest.raises(ValueError):
-        modin_result = modin_df @ np.arange(col_len + 10)
+        modin_df @ np.arange(col_len + 10)
 
     # Test series input
     modin_series = pd.Series(np.arange(col_len), index=modin_df.columns)
@@ -329,7 +437,7 @@ def test_matmul(data):
 
     # Test when input series index doesn't line up with columns
     with pytest.raises(ValueError):
-        modin_result = modin_df @ pd.Series(np.arange(col_len))
+        modin_df @ pd.Series(np.arange(col_len))
 
 
 def test_first():
@@ -351,7 +459,6 @@ def test_info_default_param(data):
             verbose=None,
             max_cols=None,
             memory_usage=None,
-            null_counts=None,
             operation=lambda df, **kwargs: df.info(**kwargs),
             buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
         )
@@ -363,12 +470,15 @@ def test_info_default_param(data):
         assert modin_info[1:] == pandas_info[1:]
 
 
+# randint data covers https://github.com/modin-project/modin/issues/5137
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], np.random.randint(0, 100, (10, 10))]
+)
 @pytest.mark.parametrize("verbose", [True, False])
 @pytest.mark.parametrize("max_cols", [10, 99999999])
 @pytest.mark.parametrize("memory_usage", [True, False, "deep"])
-@pytest.mark.parametrize("null_counts", [True, False])
-def test_info(verbose, max_cols, memory_usage, null_counts):
-    data = test_data_values[0]
+@pytest.mark.parametrize("show_counts", [True, False])
+def test_info(data, verbose, max_cols, memory_usage, show_counts):
     with io.StringIO() as first, io.StringIO() as second:
         eval_general(
             pd.DataFrame(data),
@@ -377,7 +487,7 @@ def test_info(verbose, max_cols, memory_usage, null_counts):
             verbose=verbose,
             max_cols=max_cols,
             memory_usage=memory_usage,
-            null_counts=null_counts,
+            show_counts=show_counts,
             buf=lambda df: second if isinstance(df, pandas.DataFrame) else first,
         )
         modin_info = first.getvalue().splitlines()
@@ -391,20 +501,7 @@ def test_info(verbose, max_cols, memory_usage, null_counts):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize(
-    "method",
-    [
-        "kurtosis",
-        pytest.param(
-            "kurt",
-            marks=pytest.mark.skipif(
-                pandas.DataFrame.kurt == pandas.DataFrame.kurtosis
-                and pd.DataFrame.kurt == pd.DataFrame.kurtosis,
-                reason="That method was already tested.",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(axis, skipna, numeric_only, method):
     data = test_data["float_nan_data"]
 
@@ -413,22 +510,6 @@ def test_kurt_kurtosis(axis, skipna, numeric_only, method):
         lambda df: getattr(df, method)(
             axis=axis, skipna=skipna, numeric_only=numeric_only
         ),
-    )
-
-
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_kurt_kurtosis_level(level):
-    data = test_data["int_data"]
-    df_modin, df_pandas = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    df_modin.columns = index
-    df_pandas.columns = index
-
-    eval_general(
-        df_modin,
-        df_pandas,
-        lambda df: df.kurtosis(axis=1, level=level),
     )
 
 
@@ -445,32 +526,6 @@ def test_last():
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 
-@pytest.mark.parametrize("data", test_data_values)
-@pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("skipna", [None, True, False])
-def test_mad(data, axis, skipna):
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    df_equals(
-        modin_df.mad(axis=axis, skipna=skipna, level=None),
-        pandas_df.mad(axis=axis, skipna=skipna, level=None),
-    )
-
-
-@pytest.mark.parametrize("level", [-1, 0, 1])
-def test_mad_level(level):
-    data = test_data_values[0]
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    index = generate_multiindex(len(data.keys()))
-    modin_df.columns = index
-    pandas_df.columns = index
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: df.mad(axis=1, level=level),
-    )
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "id_vars", [lambda df: df.columns[0], lambda df: df.columns[:4], None]
@@ -479,11 +534,21 @@ def test_mad_level(level):
     "value_vars", [lambda df: df.columns[-1], lambda df: df.columns[-4:], None]
 )
 def test_melt(data, id_vars, value_vars):
+    if StorageFormat.get() == "Hdk":
+        # Drop NA and sort by all columns to make sure the order
+        # is identical to Pandas.
+        def melt(df, *args, **kwargs):
+            df = df.melt(*args, **kwargs).dropna()
+            return df.sort_values(df.columns.tolist())
+
+    else:
+
+        def melt(df, *args, **kwargs):
+            return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.melt(*args, **kwargs)
-        .sort_values(["variable", "value"])
-        .reset_index(drop=True),
+        lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
         id_vars=id_vars,
         value_vars=value_vars,
     )
@@ -512,26 +577,44 @@ def test_pivot(data, index, columns, values):
 @pytest.mark.parametrize(
     "index",
     [
-        lambda df: df.columns[0],
-        lambda df: [*df.columns[0:2], *df.columns[-7:-4]],
+        pytest.param(lambda df: df.columns[0], id="single_index_col"),
+        pytest.param(
+            lambda df: [*df.columns[0:2], *df.columns[-7:-4]], id="multiple_index_cols"
+        ),
         None,
     ],
 )
 @pytest.mark.parametrize(
     "columns",
     [
-        lambda df: df.columns[len(df.columns) // 2],
-        lambda df: [
-            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
-            df.columns[-7],
-        ],
+        pytest.param(lambda df: df.columns[len(df.columns) // 2], id="single_col"),
+        pytest.param(
+            lambda df: [
+                *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+                df.columns[-7],
+            ],
+            id="multiple_cols",
+        ),
         None,
     ],
 )
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1], None]
+    "values",
+    [
+        pytest.param(lambda df: df.columns[-1], id="single_value_col"),
+        pytest.param(lambda df: df.columns[-4:-1], id="multiple_value_cols"),
+        None,
+    ],
 )
-def test_pivot_table_data(data, index, columns, values):
+@pytest.mark.parametrize(
+    "aggfunc",
+    [
+        pytest.param(np.mean, id="callable_tree_reduce_func"),
+        pytest.param("mean", id="tree_reduce_func"),
+        pytest.param("nunique", id="full_axis_func"),
+    ],
+)
+def test_pivot_table_data(data, index, columns, values, aggfunc):
     md_df, pd_df = create_test_dfs(data)
 
     # when values is None the output will be huge-dimensional,
@@ -547,6 +630,7 @@ def test_pivot_table_data(data, index, columns, values):
         index=index,
         columns=columns,
         values=values,
+        aggfunc=aggfunc,
         check_exception_type=None,
     )
 
@@ -555,28 +639,47 @@ def test_pivot_table_data(data, index, columns, values):
 @pytest.mark.parametrize(
     "index",
     [
-        lambda df: df.columns[0],
-        lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
+        pytest.param(lambda df: df.columns[0], id="single_index_column"),
+        pytest.param(
+            lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
+            id="multiple_index_cols",
+        ),
     ],
 )
 @pytest.mark.parametrize(
     "columns",
     [
-        lambda df: df.columns[len(df.columns) // 2],
-        lambda df: [
-            *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
-            df.columns[-7],
-        ],
+        pytest.param(lambda df: df.columns[len(df.columns) // 2], id="single_column"),
+        pytest.param(
+            lambda df: [
+                *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
+                df.columns[-7],
+            ],
+            id="multiple_cols",
+        ),
     ],
 )
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-4:-1]]
+    "values",
+    [
+        pytest.param(lambda df: df.columns[-1], id="single_value"),
+        pytest.param(lambda df: df.columns[-4:-1], id="multiple_values"),
+    ],
 )
 @pytest.mark.parametrize(
     "aggfunc",
-    [["mean", "sum"], lambda df: {df.columns[5]: "mean", df.columns[-5]: "sum"}],
+    [
+        pytest.param(["mean", "sum"], id="list_func"),
+        pytest.param(
+            lambda df: {df.columns[5]: "mean", df.columns[-5]: "sum"}, id="dict_func"
+        ),
+    ],
 )
-@pytest.mark.parametrize("margins_name", ["Custom name", None])
+@pytest.mark.parametrize(
+    "margins_name",
+    [pytest.param("Custom name", id="str_name"), pytest.param(None, id="None_name")],
+)
+@pytest.mark.parametrize("fill_value", [None, 0])
 def test_pivot_table_margins(
     data,
     index,
@@ -584,6 +687,7 @@ def test_pivot_table_margins(
     values,
     aggfunc,
     margins_name,
+    fill_value,
 ):
     eval_general(
         *create_test_dfs(data),
@@ -594,6 +698,7 @@ def test_pivot_table_margins(
         aggfunc=aggfunc,
         margins=True,
         margins_name=margins_name,
+        fill_value=fill_value,
     )
 
 
@@ -667,14 +772,12 @@ def test_replace():
 @pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
-    modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis, base=2)
-    pandas_resampler = pandas.DataFrame(data, index=index).resample(
-        rule, axis=axis, base=2
-    )
+    modin_resampler = pd.DataFrame(data, index=index).resample(rule, axis=axis)
+    pandas_resampler = pandas.DataFrame(data, index=index).resample(rule, axis=axis)
 
     assert pandas_resampler.indices == modin_resampler.indices
     assert pandas_resampler.groups == modin_resampler.groups
@@ -692,11 +795,11 @@ def test_resampler(rule, axis):
     [
         *("count", "sum", "std", "sem", "size", "prod", "ohlc", "quantile"),
         *("min", "median", "mean", "max", "last", "first", "nunique", "var"),
-        *("interpolate", "asfreq", "pad", "nearest", "bfill", "backfill", "ffill"),
+        *("interpolate", "asfreq", "nearest", "bfill", "ffill"),
     ],
 )
 def test_resampler_functions(rule, axis, method):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -706,7 +809,7 @@ def test_resampler_functions(rule, axis, method):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(),
+        lambda df: getattr(df.resample(rule, axis=axis), method)(),
     )
 
 
@@ -722,7 +825,7 @@ def test_resampler_functions(rule, axis, method):
     ],
 )
 def test_resampler_functions_with_arg(rule, axis, method_arg):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -734,17 +837,30 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: getattr(df.resample(rule, axis=axis, base=2), method)(arg),
+        lambda df: getattr(df.resample(rule, axis=axis), method)(arg),
     )
 
 
 @pytest.mark.parametrize("rule", ["5T"])
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
-@pytest.mark.parametrize("on", [None, "DateColumn"])
+@pytest.mark.parametrize(
+    "on",
+    [
+        None,
+        pytest.param(
+            "DateColumn",
+            marks=pytest.mark.xfail(
+                condition=Engine.get() in ("Ray", "Unidist", "Dask", "Python")
+                and StorageFormat.get() != "Base",
+                reason="https://github.com/modin-project/modin/issues/6399",
+            ),
+        ),
+    ],
+)
 @pytest.mark.parametrize("level", [None, 1])
 def test_resample_specific(rule, closed, label, on, level):
-    data, index, = (
+    data, index = (
         test_data_resample["data"],
         test_data_resample["index"],
     )
@@ -786,19 +902,54 @@ def test_resample_specific(rule, closed, label, on, level):
         )
 
 
+@pytest.mark.parametrize(
+    "columns",
+    [
+        "volume",
+        "date",
+        ["volume"],
+        ["price", "date"],
+        ("volume",),
+        pandas.Series(["volume"]),
+        pandas.Index(["volume"]),
+        ["volume", "volume", "volume"],
+        ["volume", "price", "date"],
+    ],
+    ids=[
+        "column",
+        "missed_column",
+        "list",
+        "missed_column",
+        "tuple",
+        "series",
+        "index",
+        "duplicate_column",
+        "missed_columns",
+    ],
+)
+def test_resample_getitem(columns):
+    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    data = {
+        "price": range(9),
+        "volume": range(10, 19),
+    }
+    eval_general(
+        *create_test_dfs(data, index=index),
+        lambda df: df.resample("3T")[columns].mean(),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("index", ["default", "ndarray"])
+@pytest.mark.parametrize("index", ["default", "ndarray", "has_duplicates"])
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
 def test_shift(data, index, axis, periods):
-    if index == "default":
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-    elif index == "ndarray":
+    modin_df, pandas_df = create_test_dfs(data)
+    if index == "ndarray":
         data_column_length = len(data[next(iter(data))])
-        index_data = np.arange(2, data_column_length + 2)
-        modin_df = pd.DataFrame(data, index=index_data)
-        pandas_df = pandas.DataFrame(data, index=index_data)
+        modin_df.index = pandas_df.index = np.arange(2, data_column_length + 2)
+    elif index == "has_duplicates":
+        modin_df.index = pandas_df.index = list(modin_df.index[:-3]) + [0, 1, 2]
 
     df_equals(
         modin_df.shift(periods=periods, axis=axis),
@@ -807,26 +958,6 @@ def test_shift(data, index, axis, periods):
     df_equals(
         modin_df.shift(periods=periods, axis=axis, fill_value=777),
         pandas_df.shift(periods=periods, axis=axis, fill_value=777),
-    )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("index", ["default", "ndarray"])
-@pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("periods", [0, 1, -1, 10, -10, 1000000000, -1000000000])
-def test_slice_shift(data, index, axis, periods):
-    if index == "default":
-        modin_df = pd.DataFrame(data)
-        pandas_df = pandas.DataFrame(data)
-    elif index == "ndarray":
-        data_column_length = len(data[next(iter(data))])
-        index_data = np.arange(2, data_column_length + 2)
-        modin_df = pd.DataFrame(data, index=index_data)
-        pandas_df = pandas.DataFrame(data, index=index_data)
-
-    df_equals(
-        modin_df.slice_shift(periods=periods, axis=axis),
-        pandas_df.slice_shift(periods=periods, axis=axis),
     )
 
 
@@ -865,11 +996,7 @@ def test_stack(data, is_multi_idx, is_multi_col):
     if is_multi_col:
         if len(pandas_df.columns) == 64:
             columns = pd.MultiIndex.from_product(
-                [
-                    ["A", "B", "C", "D"],
-                    ["xx", "yy", "zz", "LAST"],
-                    [10, 20, 30, 40],
-                ]
+                [["A", "B", "C", "D"], ["xx", "yy", "zz", "LAST"], [10, 20, 30, 40]]
             )
         elif len(pandas_df.columns) == 100:
             columns = pd.MultiIndex.from_product(
@@ -1011,8 +1138,8 @@ def test_truncate(data):
     after = modin_df.columns[-3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1022,8 +1149,8 @@ def test_truncate(data):
     after = modin_df.columns[3]
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
@@ -1034,20 +1161,18 @@ def test_truncate(data):
     df_equals(modin_df.truncate(before, after), pandas_df.truncate(before, after))
     try:
         pandas_result = pandas_df.truncate(before, after, axis=1)
-    except Exception as e:
-        with pytest.raises(type(e)):
+    except Exception as err:
+        with pytest.raises(type(err)):
             modin_df.truncate(before, after, axis=1)
     else:
         modin_result = modin_df.truncate(before, after, axis=1)
         df_equals(modin_result, pandas_result)
 
 
-def test_tshift():
-    idx = pd.date_range("1/1/2012", periods=5, freq="M")
-    data = np.random.randint(0, 100, size=(len(idx), 4))
-    modin_df = pd.DataFrame(data, index=idx)
-    pandas_df = pandas.DataFrame(data, index=idx)
-    df_equals(modin_df.tshift(4), pandas_df.tshift(4))
+def test_truncate_before_greater_than_after():
+    df = pd.DataFrame([[1, 2, 3]])
+    with pytest.raises(ValueError, match="Truncate: 1 must be after 2"):
+        df.truncate(before=2, after=1)
 
 
 def test_tz_convert():
@@ -1168,3 +1293,26 @@ def test_hasattr_sparse(is_sparse_data):
         else create_test_dfs(test_data["float_nan_data"])
     )
     eval_general(modin_df, pandas_df, lambda df: hasattr(df, "sparse"))
+
+
+def test_setattr_axes():
+    # Test that setting .index or .columns does not warn
+    df = pd.DataFrame([[1, 2], [3, 4]])
+    with warnings.catch_warnings():
+        if get_current_execution() != "BaseOnPython":
+            # In BaseOnPython, setting columns raises a warning because get_axis
+            #  defaults to pandas.
+            warnings.simplefilter("error")
+        if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
+            df.index = ["foo", "bar"]
+            # Check that ensure_index was called
+            pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+
+        df.columns = [9, 10]
+        pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_attrs(data):
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(modin_df, pandas_df, lambda df: df.attrs)

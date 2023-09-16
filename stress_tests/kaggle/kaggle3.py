@@ -2,10 +2,11 @@
 import matplotlib
 
 matplotlib.use("PS")
-import numpy as np  # linear algebra
-import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
+import numpy as np  # linear algebra
 import seaborn as sns  # visualization tool
+
+import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 
 data = pd.read_csv("pokemon.csv")
 data.info()
@@ -85,7 +86,7 @@ for index, value in data[["Attack"]][0:1].iterrows():
 
 
 def tuble_ex():
-    """ return defined t tuble"""
+    """return defined t tuble"""
     t = (1, 2, 3)
     return t
 
@@ -117,10 +118,10 @@ dir(builtins)
 
 
 def square():
-    """ return square of value """
+    """return square of value"""
 
     def add():
-        """ add two local variable """
+        """add two local variable"""
         x = 2
         y = 3
         z = x + y
@@ -152,7 +153,7 @@ f(1, 2, 3, 4)
 
 
 def f(**kwargs):
-    """ print key and value of dictionary"""
+    """print key and value of dictionary"""
     for (
         key,
         value,
@@ -164,7 +165,7 @@ def f(**kwargs):
 
 f(country="spain", capital="madrid", population=123456)
 number_list = [1, 2, 3]
-y = map(lambda x: x ** 2, number_list)
+y = map(lambda x: x**2, number_list)
 print(list(y))
 name = "ronaldo"
 it = iter(name)
@@ -185,7 +186,7 @@ num1 = [1, 2, 3]
 num2 = [i + 1 for i in num1]
 print(num2)
 num1 = [5, 10, 15]
-num2 = [i ** 2 if i == 10 else i - 5 if i < 7 else i + 5 for i in num1]
+num2 = [i**2 if i == 10 else i - 5 if i < 7 else i + 5 for i in num1]
 print(num2)
 threshold = sum(data.Speed) / len(data.Speed)
 data["speed_level"] = ["high" if i > threshold else "low" for i in data.Speed]
@@ -223,8 +224,8 @@ data.dtypes
 data.info()
 data["Type 2"].value_counts(dropna=False)
 data1 = (
-    data
-)  # also we will use data to fill missing value so I assign it to data1 variable
+    data  # also we will use data to fill missing value so I assign it to data1 variable
+)
 data1["Type 2"].dropna(
     inplace=True
 )  # inplace = True means we do not assign it to new variable. Changes automatically assigned to data
@@ -343,7 +344,7 @@ df2
 df
 pd.melt(df, id_vars="treatment", value_vars=["age", "response"])
 df
-df.groupby("treatment").mean()  # mean is aggregation / reduction method
+df.groupby("treatment").mean()  # mean is aggregation / reduce method
 df.groupby("treatment").age.max()
 df.groupby("treatment")[["age", "response"]].min()
 df.info()

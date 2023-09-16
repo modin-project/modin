@@ -11,35 +11,50 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-import modin.pandas as pd
+import pytest
+from pandas._libs.lib import no_default
+from pandas.core.dtypes.common import is_list_like
 
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    query_func_keys,
-    query_func_values,
-    agg_func_keys,
-    agg_func_values,
     agg_func_except_keys,
     agg_func_except_values,
-    eval_general,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
+    bool_arg_keys,
+    bool_arg_values,
     create_test_dfs,
-    udf_func_values,
-    udf_func_keys,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    query_func_keys,
+    query_func_values,
+    random_state,
     test_data,
+    test_data_keys,
+    test_data_values,
+    udf_func_keys,
+    udf_func_values,
 )
-from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+# Our configuration in pytest.ini requires that we explicitly catch all
+# instances of defaulting to pandas, but some test modules, like this one,
+# have too many such instances.
+# TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
+# of defaulting to pandas.
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 def test_agg_dict():
@@ -65,6 +80,7 @@ def test_agg_apply(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
+        check_exception_type=True,
     )
 
 
@@ -79,6 +95,7 @@ def test_agg_apply_axis_names(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
+        check_exception_type=True,
     )
 
 
@@ -89,10 +106,10 @@ def test_aggregate_alias():
 def test_aggregate_error_checking():
     modin_df = pd.DataFrame(test_data["float_nan_data"])
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate({modin_df.columns[0]: "sum", modin_df.columns[1]: "mean"})
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         modin_df.aggregate("cumproduct")
 
     with pytest.raises(ValueError):
@@ -104,45 +121,24 @@ def test_aggregate_error_checking():
     agg_func_values + agg_func_except_values,
     ids=agg_func_keys + agg_func_except_keys,
 )
-def test_apply_type_error(func):
-    modin_df = pd.DataFrame(test_data["int_data"])
-    with pytest.raises(TypeError):
-        modin_df.apply({"row": func}, axis=1)
+def test_apply_key_error(func):
+    if not (is_list_like(func) or callable(func) or isinstance(func, str)):
+        pytest.xfail(
+            reason="Because index materialization is expensive Modin first"
+            + "checks the validity of the function itself and only then the engine level"
+            + "checks the validity of the indices. Pandas order of such checks is reversed,"
+            + "so we get different errors when both (function and index) are invalid."
+        )
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df.apply({"row": func}, axis=1),
+    )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
+@pytest.mark.parametrize("level", [no_default, None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "func",
-    [
-        "kurt",
-        pytest.param(
-            "count",
-            marks=pytest.mark.xfail(
-                reason="count method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "sum",
-            marks=pytest.mark.xfail(
-                reason="sum method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "mean",
-            marks=pytest.mark.xfail(
-                reason="mean method handle level parameter incorrectly"
-            ),
-        ),
-        pytest.param(
-            "all",
-            marks=pytest.mark.xfail(
-                reason="all method handle level parameter incorrectly"
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
 def test_apply_text_func_with_level(level, data, func, axis):
     func_kwargs = {"level": level, "axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column
@@ -155,6 +151,47 @@ def test_apply_text_func_with_level(level, data, func, axis):
         pandas.DataFrame(data, index=index),
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         **func_kwargs,
+    )
+
+
+@pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_single_partition(column, ignore_index):
+    # This test data has two columns where some items are lists that
+    # explode() should expand. In some rows, the columns have list-like
+    # elements that must be expanded, and in others, they have empty lists
+    # or items that aren't list-like at all.
+    data = {
+        "A": [[0, 1, 2], "foo", [], [3, 4]],
+        "B": 1,
+        "C": [["a", "b", "c"], np.nan, [], ["d", "e"]],
+    }
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.explode(column, ignore_index=ignore_index),
+    )
+
+
+@pytest.mark.parametrize(
+    "column", ["A", ["A", "C"]], ids=arg_keys("column", ["A", ["A", "C"]])
+)
+@pytest.mark.parametrize(
+    "ignore_index", bool_arg_values, ids=arg_keys("ignore_index", bool_arg_keys)
+)
+def test_explode_all_partitions(column, ignore_index):
+    # Test explode with enough rows to fill all partitions. explode should
+    # expand every row in the input data into two rows. It's especially
+    # important that the input data has list-like elements that must be
+    # expanded at the boundaries of the partitions, e.g. at row 31.
+    num_rows = NPartitions.get() * MinPartitionSize.get()
+    data = {"A": [[3, 4]] * num_rows, "C": [["a", "b"]] * num_rows}
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.explode(column, ignore_index=ignore_index),
     )
 
 
@@ -196,9 +233,69 @@ def test_apply_metadata():
 def test_apply_udf(data, func):
     eval_general(
         *create_test_dfs(data),
-        lambda df, *args, **kwargs: df.apply(*args, **kwargs),
-        func=func,
+        lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         other=lambda df: df,
+    )
+
+
+def test_apply_dict_4828():
+    data = [[2, 4], [1, 3]]
+    modin_df1, pandas_df1 = create_test_dfs(data)
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df1,
+        pandas_df1,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 0
+    modin_df2, pandas_df2 = create_test_dfs(data, index=[2, 3])
+    modin_df3 = pd.concat([modin_df1, modin_df2], axis=0)
+    pandas_df3 = pandas.concat([pandas_df1, pandas_df2], axis=0)
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df3,
+        pandas_df3,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+    # several partitions along axis 1
+    modin_df4, pandas_df4 = create_test_dfs(data, columns=[2, 3])
+    modin_df5 = pd.concat([modin_df1, modin_df4], axis=1)
+    pandas_df5 = pandas.concat([pandas_df1, pandas_df4], axis=1)
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}),
+    )
+    eval_general(
+        modin_df5,
+        pandas_df5,
+        lambda df: df.apply({0: (lambda x: x**2)}, axis=1),
+    )
+
+
+def test_apply_modin_func_4635():
+    data = [1]
+    modin_df, pandas_df = create_test_dfs(data)
+    df_equals(modin_df.apply(pd.Series.sum), pandas_df.apply(pandas.Series.sum))
+
+    data = {"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]}
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_df = modin_df.set_index(["a"])
+    pandas_df = pandas_df.set_index(["a"])
+
+    df_equals(
+        modin_df.groupby("a", group_keys=False).apply(pd.DataFrame.sample, n=1),
+        pandas_df.groupby("a", group_keys=False).apply(pandas.DataFrame.sample, n=1),
     )
 
 
@@ -238,6 +335,35 @@ def test_eval_df_arithmetic_subexpression():
     modin_df.eval("not_e = sin(a + b)", engine="python", parser="pandas", inplace=True)
     # TODO: Use a series equality validator.
     df_equals(modin_df, df)
+
+
+def test_eval_groupby_transform():
+    # see #5511 for details
+    df = pd.DataFrame({"num": range(1, 1001), "group": ["A"] * 500 + ["B"] * 500})
+    assert df.eval("num.groupby(group).transform('min')").unique().tolist() == [1, 501]
+
+
+def test_eval_scalar():
+    # see #4477 for details
+    df = pd.DataFrame([[2]])
+    assert df.eval("1") == 1
+
+
+TEST_VAR = 2
+
+
+@pytest.mark.parametrize("method", ["query", "eval"])
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("local_var", [2])
+@pytest.mark.parametrize("engine", ["python", "numexpr"])
+def test_eval_and_query_with_local_and_global_var(method, data, engine, local_var):
+    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    op = "+" if method == "eval" else "<"
+    for expr in (f"col1 {op} @local_var", f"col1 {op} @TEST_VAR"):
+        df_equals(
+            getattr(modin_df, method)(expr, engine=engine),
+            getattr(pandas_df, method)(expr, engine=engine),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -280,7 +406,7 @@ def test_pipe(data):
 
     def g(x, arg1=0):
         for _ in range(arg1):
-            x = x.append(x)
+            x = (pd if isinstance(x, pd.DataFrame) else pandas).concat((x, x))
         return x
 
     def f(x, arg2=0, arg3=0):
@@ -298,41 +424,59 @@ def test_pipe(data):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("funcs", query_func_values, ids=query_func_keys)
-def test_query(data, funcs):
+@pytest.mark.parametrize("engine", ["python", "numexpr"])
+def test_query(data, funcs, engine):
+    if get_current_execution() == "BaseOnPython" and funcs != "col3 > col4":
+        pytest.xfail(
+            reason="In this case, we are faced with the problem of handling empty data frames - #4934"
+        )
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
+    try:
+        pandas_result = pandas_df.query(funcs, engine=engine)
+    except Exception as err:
+        with pytest.raises(type(err)):
+            modin_df.query(funcs, engine=engine)
+    else:
+        modin_result = modin_df.query(funcs, engine=engine)
+        # `dtypes` must be evaluated after `query` so we need to check cache
+        assert modin_result._query_compiler._modin_frame.has_dtypes_cache
+        df_equals(modin_result, pandas_result)
+        df_equals(modin_result.dtypes, pandas_result.dtypes)
+
+
+def test_empty_query():
+    modin_df = pd.DataFrame([1, 2, 3, 4, 5])
+
     with pytest.raises(ValueError):
         modin_df.query("")
-    with pytest.raises(NotImplementedError):
-        x = 2  # noqa F841
-        modin_df.query("col1 < @x")
-
-    try:
-        pandas_result = pandas_df.query(funcs)
-    except Exception as e:
-        with pytest.raises(type(e)):
-            modin_df.query(funcs)
-    else:
-        modin_result = modin_df.query(funcs)
-        df_equals(modin_result, pandas_result)
 
 
-def test_query_after_insert():
+@pytest.mark.parametrize("engine", ["python", "numexpr"])
+def test_query_after_insert(engine):
     modin_df = pd.DataFrame({"x": [-1, 0, 1, None], "y": [1, 2, None, 3]})
     modin_df["z"] = modin_df.eval("x / y")
-    modin_df = modin_df.query("z >= 0")
+    modin_df = modin_df.query("z >= 0", engine=engine)
     modin_result = modin_df.reset_index(drop=True)
     modin_result.columns = ["a", "b", "c"]
 
     pandas_df = pd.DataFrame({"x": [-1, 0, 1, None], "y": [1, 2, None, 3]})
     pandas_df["z"] = pandas_df.eval("x / y")
-    pandas_df = pandas_df.query("z >= 0")
+    pandas_df = pandas_df.query("z >= 0", engine=engine)
     pandas_result = pandas_df.reset_index(drop=True)
     pandas_result.columns = ["a", "b", "c"]
 
     df_equals(modin_result, pandas_result)
     df_equals(modin_df, pandas_df)
+
+
+@pytest.mark.parametrize("engine", ["python", "numexpr"])
+def test_query_with_element_access_issue_4580(engine):
+    pdf = pandas.DataFrame({"a": [0, 1, 2]})
+    # get two row partitions by concatenating
+    df = pd.concat([pd.DataFrame(pdf[:1]), pd.DataFrame(pdf[1:])])
+    eval_general(df, pdf, lambda df: df.query("a == a[0]", engine=engine))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -343,6 +487,5 @@ def test_query_after_insert():
 )
 def test_transform(data, func):
     eval_general(
-        *create_test_dfs(data),
-        lambda df: df.transform(func),
+        *create_test_dfs(data), lambda df: df.transform(func), check_exception_type=True
     )

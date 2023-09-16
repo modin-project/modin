@@ -1,0 +1,11 @@
+comment: false
+coverage:
+  status:
+    project:
+      default:
+        branches:
+          - master
+        target: 85%
+    patch:
+      default:
+        target: 30%

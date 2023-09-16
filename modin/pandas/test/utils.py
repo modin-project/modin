@@ -11,43 +11,61 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import numpy as np
+import csv
+import functools
+import itertools
 import math
+import os
+import re
+from io import BytesIO
+from pathlib import Path
+from string import ascii_letters
+from typing import Union
+
+import numpy as np
 import pandas
+import psutil
+import pytest
+from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_list_like,
+    is_numeric_dtype,
+    is_object_dtype,
+    is_period_dtype,
+    is_string_dtype,
+    is_timedelta64_dtype,
+)
 from pandas.testing import (
-    assert_series_equal,
+    assert_extension_array_equal,
     assert_frame_equal,
     assert_index_equal,
-    assert_extension_array_equal,
+    assert_series_equal,
 )
+
 import modin.pandas as pd
-from modin.utils import to_pandas
-from modin.config import TestDatasetSize, TrackFileLeaks
-from io import BytesIO
-import os
-from string import ascii_letters
-import csv
-import psutil
-import functools
+from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
+from modin.utils import to_pandas, try_cast_to_pandas
+
+# Flag activated on command line with "--extra-test-parameters" option.
+# Used in some tests to perform additional parameter combinations.
+extra_test_parameters = False
 
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2 ** 2, 2 ** 3),
-    "Normal": (2 ** 6, 2 ** 8),
-    "Big": (2 ** 7, 2 ** 12),
+    "Small": (2**2, 2**3),
+    "Normal": (2**6, 2**8),
+    "Big": (2**7, 2**12),
 }
 
 # Size of test dataframes
 NCOLS, NROWS = DATASET_SIZE_DICT.get(TestDatasetSize.get(), DATASET_SIZE_DICT["Normal"])
+NGROUPS = 10
 
 # Range for values for test data
 RAND_LOW = 0
 RAND_HIGH = 100
-
-# Directory for storing I/O operations test data
-IO_OPS_DATA_DIR = os.path.join(os.path.dirname(__file__), "io_tests_data")
 
 # Input data and functions for the tests
 # The test data that we will test our code against
@@ -111,6 +129,22 @@ test_data = {
     #     "col2": True,
     # },
 }
+# The parse_dates param can take several different types and combinations of
+# types. Use the following values to test date parsing on a CSV created for
+# that purpose at `time_parsing_csv_path`
+parse_dates_values_by_id = {
+    "bool": False,
+    "list_of_single_int": [0],
+    "list_of_single_string": ["timestamp"],
+    "list_of_list_of_strings": [["year", "month", "date"]],
+    "list_of_string_and_list_of_strings": ["timestamp", ["year", "month", "date"]],
+    "list_of_list_of_ints": [[1, 2, 3]],
+    "list_of_list_of_strings_and_ints": [["year", 2, "date"]],
+    "empty_list": [],
+    "dict": {"year_and_month": [1, 2], "day": ["date"]},
+    "nonexistent_string_column": ["z"],
+    "nonexistent_int_column": [99],
+}
 
 # See details in #1403
 test_data["int_data"]["index"] = test_data["int_data"].pop(
@@ -131,6 +165,8 @@ test_bool_data = {
     )
     for i in range(NCOLS)
 }
+
+test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
 
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
@@ -199,6 +235,16 @@ test_data_categorical = {
 test_data_categorical_values = list(test_data_categorical.values())
 test_data_categorical_keys = list(test_data_categorical.keys())
 
+# Fully fill all of the partitions used in tests.
+test_data_large_categorical_dataframe = {
+    i: pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
+    for i in range(NPartitions.get() * MinPartitionSize.get())
+}
+test_data_large_categorical_series_values = [
+    pandas.Categorical(np.arange(NPartitions.get() * MinPartitionSize.get()))
+]
+test_data_large_categorical_series_keys = ["categorical_series"]
+
 numeric_dfs = [
     "empty_data",
     "columns_only",
@@ -247,7 +293,7 @@ join_type_values = list(join_type.values())
 # Test functions for applymap
 test_func = {
     "plus one": lambda x: x + 1,
-    "convert to string": lambda x: str(x),
+    "convert to string": str,
     "square": lambda x: x * x,
     "identity": lambda x: x,
     "return false": lambda x: False,
@@ -274,6 +320,10 @@ agg_func = {
     "str": str,
     "sum mean": ["sum", "mean"],
     "sum df sum": ["sum", lambda df: df.sum()],
+    # The case verifies that returning a scalar that is based on a frame's data doesn't cause a problem
+    "sum of certain elements": lambda axis: (
+        axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
+    ),
     "should raise TypeError": 1,
 }
 agg_func_keys = list(agg_func.keys())
@@ -290,13 +340,13 @@ agg_func_except_values = list(agg_func_except.values())
 numeric_agg_funcs = ["sum mean", "sum sum", "sum df sum"]
 
 udf_func = {
-    "return self": lambda df: lambda x, *args, **kwargs: type(x)(x.values),
-    "change index": lambda df: lambda x, *args, **kwargs: pandas.Series(
+    "return self": lambda x, *args, **kwargs: type(x)(x.values),
+    "change index": lambda x, *args, **kwargs: pandas.Series(
         x.values, index=np.arange(-1, len(x.index) - 1)
     ),
-    "return none": lambda df: lambda x, *args, **kwargs: None,
-    "return empty": lambda df: lambda x, *args, **kwargs: pandas.Series(),
-    "access self": lambda df: lambda x, other, *args, **kwargs: pandas.Series(
+    "return none": lambda x, *args, **kwargs: None,
+    "return empty": lambda x, *args, **kwargs: pandas.Series(),
+    "access self": lambda x, other, *args, **kwargs: pandas.Series(
         x.values, index=other.index
     ),
 }
@@ -433,8 +483,56 @@ encoding_types = [
 # the type of this exceptions are the same
 io_ops_bad_exc = [TypeError, FileNotFoundError]
 
+default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
+
 # Files compression to extension mapping
 COMP_TO_EXT = {"gzip": "gz", "bz2": "bz2", "xz": "xz", "zip": "zip"}
+
+
+time_parsing_csv_path = "modin/pandas/test/data/test_time_parsing.csv"
+
+
+class CustomIntegerForAddition:
+    def __init__(self, value: int):
+        self.value = value
+
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return other + self.value
+
+
+class NonCommutativeMultiplyInteger:
+    """int-like class with non-commutative multiply operation.
+
+    We need to test that rmul and mul do different things even when
+    multiplication is not commutative, but almost all multiplication is
+    commutative. This class' fake multiplication overloads are not commutative
+    when you multiply an instance of this class with pandas.series, which
+    does not know how to __mul__ with this class. e.g.
+
+    NonCommutativeMultiplyInteger(2) * pd.Series(1, dtype=int) == pd.Series(2, dtype=int)
+    pd.Series(1, dtype=int) * NonCommutativeMultiplyInteger(2) == pd.Series(3, dtype=int)
+    """
+
+    def __init__(self, value: int):
+        if not isinstance(value, int):
+            raise TypeError(
+                f"must initialize with integer, but got {value} of type {type(value)}"
+            )
+        self.value = value
+
+    def __mul__(self, other):
+        # Note that we need to check other is an int, otherwise when we (left) mul
+        # this with a series, we'll just multiply self.value by the series, whereas
+        # we want to make the series do an rmul instead.
+        if not isinstance(other, int):
+            return NotImplemented
+        return self.value * other
+
+    def __rmul__(self, other):
+        return self.value * other + 1
 
 
 def categories_equals(left, right):
@@ -445,24 +543,125 @@ def categories_equals(left, right):
 def df_categories_equals(df1, df2):
     if not hasattr(df1, "select_dtypes"):
         if isinstance(df1, pandas.CategoricalDtype):
-            return categories_equals(df1, df2)
+            categories_equals(df1, df2)
         elif isinstance(getattr(df1, "dtype"), pandas.CategoricalDtype) and isinstance(
-            getattr(df1, "dtype"), pandas.CategoricalDtype
+            getattr(df2, "dtype"), pandas.CategoricalDtype
         ):
-            return categories_equals(df1.dtype, df2.dtype)
-        else:
-            return True
+            categories_equals(df1.dtype, df2.dtype)
+        return True
 
-    categories_columns = df1.select_dtypes(include="category").columns
-    for column in categories_columns:
+    df1_categorical = df1.select_dtypes(include="category")
+    df2_categorical = df2.select_dtypes(include="category")
+    assert df1_categorical.columns.equals(df2_categorical.columns)
+    # Use an index instead of a column name to iterate through columns. There
+    # may be duplicate colum names. e.g. if two columns are named col1,
+    # selecting df1_categorical["col1"] gives a dataframe of width 2 instead of a series.
+    for i in range(len(df1_categorical.columns)):
         assert_extension_array_equal(
-            df1[column].values,
-            df2[column].values,
+            df1_categorical.iloc[:, i].values,
+            df2_categorical.iloc[:, i].values,
             check_dtype=False,
         )
 
 
-def df_equals(df1, df2):
+def assert_empty_frame_equal(df1, df2):
+    """
+    Test if df1 and df2 are empty.
+
+    Parameters
+    ----------
+    df1 : pandas.DataFrame or pandas.Series
+    df2 : pandas.DataFrame or pandas.Series
+
+    Raises
+    ------
+    AssertionError
+        If check fails.
+    """
+
+    if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
+        assert False, "One of the passed frames is empty, when other isn't"
+    elif df1.empty and df2.empty and type(df1) is not type(df2):
+        assert False, f"Empty frames have different types: {type(df1)} != {type(df2)}"
+
+
+def assert_all_act_same(condition, *objs):
+    """
+    Assert that all of the objs give the same boolean result for the passed condition (either all True or all False).
+
+    Parameters
+    ----------
+    condition : callable(obj) -> bool
+        Condition to run on the passed objects.
+    *objs :
+        Objects to pass to the condition.
+
+    Returns
+    -------
+    bool
+        Result of the condition.
+    """
+    results = [condition(obj) for obj in objs]
+    if len(results) < 2:
+        return results[0] if len(results) else None
+
+    assert all(results[0] == res for res in results[1:])
+    return results[0]
+
+
+def assert_dtypes_equal(df1, df2):
+    """
+    Assert that the two passed DataFrame/Series objects have equal dtypes.
+
+    The function doesn't require that the dtypes are identical, it has the following reliefs:
+        1. The dtypes are not required to be in the same order
+           (e.g. {"col1": int, "col2": float} == {"col2": float, "col1": int})
+        2. The dtypes are only required to be in the same class
+           (e.g. both numerical, both categorical, etc...)
+
+    Parameters
+    ----------
+    df1 : DataFrame or Series
+    df2 : DataFrame or Series
+    """
+    if not isinstance(
+        df1, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
+    ) or not isinstance(
+        df2, (pandas.Series, pd.Series, pandas.DataFrame, pd.DataFrame)
+    ):
+        return
+
+    if isinstance(df1.dtypes, (pandas.Series, pd.Series)):
+        dtypes1 = df1.dtypes
+        dtypes2 = df2.dtypes
+    else:
+        # Case when `dtypes` is a scalar
+        dtypes1 = pandas.Series({"col": df1.dtypes})
+        dtypes2 = pandas.Series({"col": df2.dtypes})
+
+    # Don't require for dtypes to be in the same order
+    assert len(dtypes1.index.difference(dtypes2.index)) == 0
+    assert len(dtypes1) == len(dtypes2)
+
+    dtype_comparators = (
+        is_numeric_dtype,
+        lambda obj: is_object_dtype(obj) or is_string_dtype(obj),
+        is_bool_dtype,
+        lambda obj: isinstance(obj, pandas.CategoricalDtype),
+        is_datetime64_any_dtype,
+        is_timedelta64_dtype,
+        is_period_dtype,
+    )
+
+    for col in dtypes1.keys():
+        for comparator in dtype_comparators:
+            if assert_all_act_same(comparator, dtypes1[col], dtypes2[col]):
+                # We met a dtype that both types satisfy, so we can stop iterating
+                # over comparators and compare next dtypes
+                break
+
+
+def df_equals(df1, df2, check_dtypes=True):
     """Tests if df1 and df2 are equal.
 
     Args:
@@ -505,6 +704,9 @@ def df_equals(df1, df2):
         assert len(df1) == len(df2), "Different length result"
         return (df_equals(d1, d2) for d1, d2 in zip(df1, df2))
 
+    if check_dtypes:
+        assert_dtypes_equal(df1, df2)
+
     # Convert to pandas
     if isinstance(df1, (pd.DataFrame, pd.Series)):
         df1 = to_pandas(df1)
@@ -512,12 +714,7 @@ def df_equals(df1, df2):
         df2 = to_pandas(df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
-        if (df1.empty and not df2.empty) or (df2.empty and not df1.empty):
-            assert False, "One of the passed frames is empty, when other isn't"
-        elif df1.empty and df2.empty and type(df1) != type(df2):
-            assert (
-                False
-            ), f"Empty frames have different types: {type(df1)} != {type(df2)}"
+        assert_empty_frame_equal(df1, df2)
 
     if isinstance(df1, pandas.DataFrame) and isinstance(df2, pandas.DataFrame):
         assert_frame_equal(
@@ -534,6 +731,13 @@ def df_equals(df1, df2):
         assert_index_equal(df1, df2)
     elif isinstance(df1, pandas.Series) and isinstance(df2, pandas.Series):
         assert_series_equal(df1, df2, check_dtype=False, check_series_type=False)
+    elif (
+        hasattr(df1, "dtype")
+        and hasattr(df2, "dtype")
+        and isinstance(df1.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+        and isinstance(df2.dtype, pandas.core.dtypes.dtypes.ExtensionDtype)
+    ):
+        assert_extension_array_equal(df1, df2)
     elif isinstance(df1, groupby_types) and isinstance(df2, groupby_types):
         for g1, g2 in zip(df1, df2):
             assert g1[0] == g2[0]
@@ -546,8 +750,8 @@ def df_equals(df1, df2):
     ):
         assert all(df1.index == df2.index)
         assert df1.dtypes == df2.dtypes
-    elif isinstance(df1, pandas.core.arrays.numpy_.PandasArray):
-        assert isinstance(df2, pandas.core.arrays.numpy_.PandasArray)
+    elif isinstance(df1, pandas.core.arrays.NumpyExtensionArray):
+        assert isinstance(df2, pandas.core.arrays.NumpyExtensionArray)
         assert df1 == df2
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
@@ -556,7 +760,7 @@ def df_equals(df1, df2):
             np.testing.assert_almost_equal(df1, df2)
 
 
-def modin_df_almost_equals_pandas(modin_df, pandas_df):
+def modin_df_almost_equals_pandas(modin_df, pandas_df, max_diff=0.0001):
     df_categories_equals(modin_df._to_pandas(), pandas_df)
 
     modin_df = to_pandas(modin_df)
@@ -566,15 +770,34 @@ def modin_df_almost_equals_pandas(modin_df, pandas_df):
     if hasattr(pandas_df, "select_dtypes"):
         pandas_df = pandas_df.select_dtypes(exclude=["category"])
 
-    difference = modin_df - pandas_df
-    diff_max = difference.max()
-    if isinstance(diff_max, pandas.Series):
-        diff_max = diff_max.max()
-    assert (
-        modin_df.equals(pandas_df)
-        or diff_max < 0.0001
-        or (all(modin_df.isna().all()) and all(pandas_df.isna().all()))
-    )
+    if modin_df.equals(pandas_df):
+        return
+
+    isna = modin_df.isna().all()
+    if isinstance(isna, bool):
+        if isna:
+            assert pandas_df.isna().all()
+            return
+    elif isna.all():
+        assert pandas_df.isna().all().all()
+        return
+
+    diff = (modin_df - pandas_df).abs()
+    diff /= pandas_df.abs()
+    diff_max = diff.max() if isinstance(diff, pandas.Series) else diff.max().max()
+    assert diff_max < max_diff, f"{diff_max} >= {max_diff}"
+
+
+def try_modin_df_almost_equals_compare(df1, df2):
+    """Compare two dataframes as nearly equal if possible, otherwise compare as completely equal."""
+    # `modin_df_almost_equals_pandas` is numeric-only comparator
+    dtypes1, dtypes2 = [
+        dtype if is_list_like(dtype := df.dtypes) else [dtype] for df in (df1, df2)
+    ]
+    if all(map(is_numeric_dtype, dtypes1)) and all(map(is_numeric_dtype, dtypes2)):
+        modin_df_almost_equals_pandas(df1, df2)
+    else:
+        df_equals(df1, df2)
 
 
 def df_is_empty(df):
@@ -649,6 +872,7 @@ def eval_general(
     raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
+    comparator_kwargs=None,
     **kwargs,
 ):
     if raising_exceptions:
@@ -664,17 +888,20 @@ def eval_general(
             if check_exception_type is None:
                 return None
             with pytest.raises(Exception) as md_e:
-                # repr to force materialization
-                repr(fn(modin_df, **md_kwargs))
+                try_cast_to_pandas(fn(modin_df, **md_kwargs))  # force materialization
             if check_exception_type:
-                assert isinstance(md_e.value, type(pd_e))
+                assert isinstance(
+                    md_e.value, type(pd_e)
+                ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
+                    type(md_e.value), type(pd_e)
+                )
                 if raising_exceptions:
                     assert not isinstance(
                         md_e.value, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
-            return (md_result, pd_result) if not __inplace__ else (modin_df, pandas_df)
+            return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
 
     for key, value in kwargs.items():
         if check_kwargs_callable and callable(value):
@@ -698,7 +925,7 @@ def eval_general(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
     if values is not None:
-        comparator(*values)
+        comparator(*values, **(comparator_kwargs or {}))
 
 
 def eval_io(
@@ -709,6 +936,7 @@ def eval_io(
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
+    modin_warning_str_match=None,
     md_extra_kwargs=None,
     *args,
     **kwargs,
@@ -734,6 +962,8 @@ def eval_io(
         `check_exception_type` passed as `True`).
     modin_warning: obj
         Warning that should be raised by Modin.
+    modin_warning_str_match: str
+        If `modin_warning` is set, checks that the raised warning matches this string.
     md_extra_kwargs: dict
         Modin operation specific kwargs.
     """
@@ -749,6 +979,7 @@ def eval_io(
             pd,
             pandas,
             applyier,
+            comparator=comparator,
             check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
@@ -757,8 +988,9 @@ def eval_io(
             **kwargs,
         )
 
+    warn_match = modin_warning_str_match if modin_warning is not None else None
     if modin_warning:
-        with pytest.warns(modin_warning):
+        with pytest.warns(modin_warning, match=warn_match):
             call_eval_general()
     else:
         call_eval_general()
@@ -903,7 +1135,7 @@ def get_unique_filename(
     test_name: str = "test",
     kwargs: dict = {},
     extension: str = "csv",
-    data_dir: str = IO_OPS_DATA_DIR,
+    data_dir: Union[str, Path] = "",
     suffix: str = "",
     debug_mode=False,
 ):
@@ -915,13 +1147,13 @@ def get_unique_filename(
         name of the test for which the unique file name is needed.
     kwargs: list of ints
         Unique combiantion of test parameters for creation of unique name.
-    extension: str
+    extension: str, default: "csv"
         Extension of unique file.
-    data_dir: str
+    data_dir: Union[str, Path]
         Data directory where test files will be created.
     suffix: str
         String to append to the resulted name.
-    debug_mode: bool
+    debug_mode: bool, default: False
         Get unique filename containing kwargs values.
         Otherwise kwargs values will be replaced with hash equivalent.
 
@@ -993,7 +1225,6 @@ def insert_lines_to_csv(
     encoding: str
         Encoding type that should be used during file reading and writing.
     """
-    cols_number = len(pandas.read_csv(csv_name, nrows=1).columns)
     if lines_type == "blank":
         lines_data = []
     elif lines_type == "bad":
@@ -1004,7 +1235,6 @@ def insert_lines_to_csv(
             f"acceptable values for  parameter are ['blank', 'bad'], actually passed {lines_type}"
         )
     lines = []
-    dialect = "excel"
     with open(csv_name, "r", encoding=encoding, newline="") as read_file:
         try:
             dialect = csv.Sniffer().sniff(read_file.read())
@@ -1060,10 +1290,17 @@ def check_file_leaks(func):
                 try:
                     fstart.remove(item)
                 except ValueError:
-                    # ignore files in /proc/, as they have nothing to do with
-                    # modin reading any data (and this is what we care about)
-                    if not item[0].startswith("/proc/"):
-                        leaks.append(item)
+                    # Ignore files in /proc/, as they have nothing to do with
+                    # modin reading any data (and this is what we care about).
+                    if item[0].startswith("/proc/"):
+                        continue
+                    # Ignore files in /tmp/ray/session_*/logs (ray session logs)
+                    # because Ray intends to keep these logs open even after
+                    # work has been done.
+                    if re.search(r"/tmp/ray/session_.*/logs", item[0]):
+                        continue
+                    leaks.append(item)
+
             assert (
                 not leaks
             ), f"Unexpected open handles left for: {', '.join(item[0] for item in leaks)}"
@@ -1086,7 +1323,7 @@ def dummy_decorator():
     return wrapper
 
 
-def generate_dataframe(row_size=NROWS, additional_col_values=None):
+def generate_dataframe(row_size=NROWS, additional_col_values=None, idx_name=None):
     dates = pandas.date_range("2000", freq="h", periods=row_size)
     data = {
         "col1": np.arange(row_size) * 10,
@@ -1096,15 +1333,12 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None):
         "col5": [get_random_string() for _ in range(row_size)],
         "col6": random_state.uniform(low=0.0, high=10000.0, size=row_size),
     }
+    index = None if idx_name is None else pd.RangeIndex(0, row_size, name=idx_name)
 
     if additional_col_values is not None:
         assert isinstance(additional_col_values, (list, tuple))
-        data.update(
-            {
-                "col7": random_state.choice(additional_col_values, size=row_size),
-            }
-        )
-    return pandas.DataFrame(data)
+        data.update({"col7": random_state.choice(additional_col_values, size=row_size)})
+    return pandas.DataFrame(data, index=index)
 
 
 def _make_csv_file(filenames):
@@ -1127,7 +1361,7 @@ def _make_csv_file(filenames):
         quotechar='"',
         doublequote=True,
         escapechar=None,
-        line_terminator=None,
+        lineterminator=None,
     ):
         if os.path.exists(filename) and not force:
             pass
@@ -1166,7 +1400,7 @@ def _make_csv_file(filenames):
                 compression=compression,
                 index=False,
                 decimal=decimal_separator if decimal_separator else ".",
-                line_terminator=line_terminator,
+                lineterminator=lineterminator,
                 quoting=quoting,
                 quotechar=quotechar,
                 doublequote=doublequote,
@@ -1176,7 +1410,7 @@ def _make_csv_file(filenames):
                 "delimiter": delimiter,
                 "doublequote": doublequote,
                 "escapechar": escapechar,
-                "lineterminator": line_terminator if line_terminator else os.linesep,
+                "lineterminator": lineterminator if lineterminator else os.linesep,
                 "quotechar": quotechar,
                 "quoting": quoting,
             }
@@ -1220,18 +1454,112 @@ def teardown_test_files(test_paths: list):
         teardown_test_file(path)
 
 
-def sort_index_for_equal_values(series, ascending=False):
-    if series.index.dtype == np.float64:
+def sort_index_for_equal_values(df, ascending=True):
+    """Sort `df` indices of equal rows."""
+    if df.index.dtype == np.float64:
         # HACK: workaround for pandas bug:
         # https://github.com/pandas-dev/pandas/issues/34455
-        series.index = series.index.astype("str")
-    res = series.groupby(series, sort=False).apply(
+        df.index = df.index.astype("str")
+    res = df.groupby(by=df if df.ndim == 1 else df.columns, sort=False).apply(
         lambda df: df.sort_index(ascending=ascending)
     )
-    if res.index.nlevels > series.index.nlevels:
+    if res.index.nlevels > df.index.nlevels:
         # Sometimes GroupBy adds an extra level with 'by' to the result index.
         # GroupBy is very inconsistent about when it's doing this, so that's
         # why this clumsy if-statement is used.
         res.index = res.index.droplevel(0)
-    res.name = series.name
+    # GroupBy overwrites original index names with 'by', so the following line restores original names
+    res.index.names = df.index.names
     return res
+
+
+def df_equals_with_non_stable_indices(df1, df2):
+    """Assert equality of two frames regardless of the index order for equal values."""
+    df1, df2 = map(try_cast_to_pandas, (df1, df2))
+    np.testing.assert_array_equal(df1.values, df2.values)
+    sorted1, sorted2 = map(sort_index_for_equal_values, (df1, df2))
+    df_equals(sorted1, sorted2)
+
+
+def rotate_decimal_digits_or_symbols(value):
+    if value.dtype == object:
+        # When dtype is object, we assume that it is actually strings from MultiIndex level names
+        return [x[-1] + x[:-1] for x in value]
+    else:
+        tens = value // 10
+        ones = value % 10
+        return tens + ones * 10
+
+
+def make_default_file(file_type: str):
+    """Helper function for pytest fixtures."""
+    filenames = []
+
+    def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+        """
+        Helper function that creates a dataframe before writing it to a file.
+
+        Eliminates the duplicate code that is needed before of output functions calls.
+
+        Notes
+        -----
+        Importantly, names of created files are added to `filenames` variable for
+        their further automatic deletion. Without this step, files created by
+        `pytest` fixtures will not be deleted.
+        """
+        if force or not os.path.exists(filename):
+            df = pandas.DataFrame(
+                {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
+            )
+            getattr(df, func)(filename, **func_kw if func_kw else {})
+            filenames.append(filename)
+
+    file_type_to_extension = {
+        "excel": "xlsx",
+        "fwf": "txt",
+        "pickle": "pkl",
+    }
+    extension = file_type_to_extension.get(file_type, file_type)
+
+    def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
+        if filename is None:
+            filename = get_unique_filename(extension=extension)
+
+        if file_type == "json":
+            lines = kwargs.get("lines")
+            func_kw = {"lines": lines, "orient": "records"} if lines else {}
+            _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
+        elif file_type in ("html", "excel", "feather", "stata", "pickle"):
+            _create_file(filenames, filename, force, nrows, ncols, f"to_{file_type}")
+        elif file_type == "hdf":
+            func_kw = {"key": "df", "format": kwargs.get("format")}
+            _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+        elif file_type == "fwf":
+            if force or not os.path.exists(filename):
+                fwf_data = kwargs.get("fwf_data")
+                if fwf_data is None:
+                    with open("modin/pandas/test/data/test_data.fwf", "r") as fwf_file:
+                        fwf_data = fwf_file.read()
+                with open(filename, "w") as f:
+                    f.write(fwf_data)
+                filenames.append(filename)
+        else:
+            raise ValueError(f"Unsupported file type: {file_type}")
+        return filename
+
+    return _make_default_file, filenames
+
+
+def value_equals(obj1, obj2):
+    """Check wherher two scalar or list-like values are equal and raise an ``AssertionError`` if they aren't."""
+    if is_list_like(obj1):
+        np.testing.assert_array_equal(obj1, obj2)
+    else:
+        assert (obj1 == obj2) or (np.isnan(obj1) and np.isnan(obj2))
+
+
+def dict_equals(dict1, dict2):
+    """Check whether two dictionaries are equal and raise an ``AssertionError`` if they aren't."""
+    for key1, key2 in itertools.zip_longest(sorted(dict1), sorted(dict2)):
+        value_equals(key1, key2)
+        value_equals(dict1[key1], dict2[key2])

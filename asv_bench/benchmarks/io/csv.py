@@ -11,58 +11,50 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import numpy as np
 
 from ..utils import (
-    generate_dataframe,
-    RAND_LOW,
-    RAND_HIGH,
     ASV_USE_IMPL,
-    ASV_DATASET_SIZE,
-    UNARY_OP_DATA_SIZE,
+    ASV_USE_STORAGE_FORMAT,
     IMPL,
+    RAND_HIGH,
+    RAND_LOW,
     execute,
+    generate_dataframe,
+    get_benchmark_shapes,
     get_shape_id,
+    prepare_io_data,
 )
-
-# ray init
-if ASV_USE_IMPL == "modin":
-    pd.DataFrame([])
 
 
 class BaseReadCsv:
-    # test data file can de created only once
+    # test data file should be created only once
     def setup_cache(self, test_filename="io_test_file"):
-        test_filenames = {}
-        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
-            shape_id = get_shape_id(shape)
-            test_filenames[shape_id] = f"{test_filename}_{shape_id}.csv"
-            df = generate_dataframe("pandas", "str_int", *shape, RAND_LOW, RAND_HIGH)
-            df.to_csv(test_filenames[shape_id], index=False)
-
+        test_filenames = prepare_io_data(
+            test_filename, self.data_type, get_benchmark_shapes(self.__class__.__name__)
+        )
         return test_filenames
 
     def setup(self, test_filenames, shape, *args, **kwargs):
+        # ray init
+        if ASV_USE_IMPL == "modin":
+            IMPL.DataFrame([])
         self.shape_id = get_shape_id(shape)
 
 
 class TimeReadCsvSkiprows(BaseReadCsv):
+    shapes = get_benchmark_shapes("TimeReadCsvSkiprows")
     skiprows_mapping = {
         "lambda_even_rows": lambda x: x % 2,
-        "range_uniform": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0] // 10),
-        "range_step2": np.arange(1, UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE][0][0], 2),
+        "range_uniform": np.arange(1, shapes[0][0] // 10),
+        "range_step2": np.arange(1, shapes[0][0], 2),
     }
+    data_type = "str_int"
 
     param_names = ["shape", "skiprows"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
-        [
-            None,
-            "lambda_even_rows",
-            "range_uniform",
-            "range_step2",
-        ],
+        shapes,
+        [None, "lambda_even_rows", "range_uniform", "range_step2"],
     ]
 
     def setup(self, test_filenames, shape, skiprows):
@@ -70,20 +62,34 @@ class TimeReadCsvSkiprows(BaseReadCsv):
         self.skiprows = self.skiprows_mapping[skiprows] if skiprows else None
 
     def time_skiprows(self, test_filenames, shape, skiprows):
+        execute(IMPL.read_csv(test_filenames[self.shape_id], skiprows=self.skiprows))
+
+
+class TimeReadCsvTrueFalseValues(BaseReadCsv):
+    data_type = "true_false_int"
+
+    param_names = ["shape"]
+    params = [get_benchmark_shapes("TimeReadCsvTrueFalseValues")]
+
+    def time_true_false_values(self, test_filenames, shape):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
-                test_filenames[self.shape_id], skiprows=self.skiprows
-            )
+            IMPL.read_csv(
+                test_filenames[self.shape_id],
+                true_values=["Yes", "true"],
+                false_values=["No", "false"],
+            ),
+            trigger_hdk_import=ASV_USE_STORAGE_FORMAT == "hdk",
         )
 
 
 class TimeReadCsvNamesDtype:
+    shapes = get_benchmark_shapes("TimeReadCsvNamesDtype")
     _dtypes_params = ["Int64", "Int64_Timestamp"]
     _timestamp_columns = ["col1", "col2"]
 
     param_names = ["shape", "names", "dtype"]
     params = [
-        UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE],
+        shapes,
         ["array-like"],
         _dtypes_params,
     ]
@@ -93,11 +99,7 @@ class TimeReadCsvNamesDtype:
 
     def _add_timestamp_columns(self, df):
         df = df.copy()
-        date_column = IMPL["pandas"].date_range(
-            "2000",
-            periods=df.shape[0],
-            freq="ms",
-        )
+        date_column = IMPL.date_range("2000", periods=df.shape[0], freq="ms")
         for col in self._timestamp_columns:
             df[col] = date_column
         return df
@@ -105,9 +107,11 @@ class TimeReadCsvNamesDtype:
     def setup_cache(self, test_filename="io_test_file_csv_names_dtype"):
         # filenames with a metadata of saved dataframes
         cache = {}
-        for shape in UNARY_OP_DATA_SIZE[ASV_DATASET_SIZE]:
+        for shape in self.shapes:
             for dtype in self._dtypes_params:
-                df = generate_dataframe("pandas", "int", *shape, RAND_LOW, RAND_HIGH)
+                df = generate_dataframe(
+                    "int", *shape, RAND_LOW, RAND_HIGH, impl="pandas"
+                )
                 if dtype == "Int64_Timestamp":
                     df = self._add_timestamp_columns(df)
 
@@ -121,6 +125,9 @@ class TimeReadCsvNamesDtype:
         return cache
 
     def setup(self, cache, shape, names, dtype):
+        # ray init
+        if ASV_USE_IMPL == "modin":
+            IMPL.DataFrame([])
         file_id = self._get_file_id(shape, dtype)
         self.filename, self.names, self.dtype = cache[file_id]
 
@@ -134,7 +141,7 @@ class TimeReadCsvNamesDtype:
 
     def time_read_csv_names_dtype(self, cache, shape, names, dtype):
         execute(
-            IMPL[ASV_USE_IMPL].read_csv(
+            IMPL.read_csv(
                 self.filename,
                 names=self.names,
                 header=0,
@@ -142,3 +149,6 @@ class TimeReadCsvNamesDtype:
                 parse_dates=self.parse_dates,
             )
         )
+
+
+from ..utils import setup  # noqa: E402, F401

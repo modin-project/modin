@@ -1,0 +1,15 @@
+name: "Install Python only"
+description: "Prepare the environment to run simple tasks"
+inputs:
+  python-version:
+    description: "Python version to install"
+    default: "3.9.x"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+        architecture: "x64"
+        cache: 'pip'

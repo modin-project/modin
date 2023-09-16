@@ -12,49 +12,56 @@
 # governing permissions and limitations under the License.
 
 import warnings
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from .config import Engine, StorageFormat
 
 from ._version import get_versions
 
 
-def custom_formatwarning(msg, category, *args, **kwargs):
+def custom_formatwarning(
+    message: Union[Warning, str],
+    category: Type[Warning],
+    filename: str,
+    lineno: int,
+    line: Optional[str] = None,
+) -> str:
     # ignore everything except the message
-    return "{}: {}\n".format(category.__name__, msg)
+    return "{}: {}\n".format(category.__name__, message)
 
 
 warnings.formatwarning = custom_formatwarning
 # Filter numpy version warnings because they are not relevant
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="Large object of size")
-warnings.filterwarnings(
-    "ignore",
-    message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
-    "Import from datetime module instead.",
-)
 
 
-def set_backends(engine=None, partition=None):
+def set_execution(
+    engine: Any = None, storage_format: Any = None
+) -> Tuple["Engine", "StorageFormat"]:
     """
-    Method to set the _pair_ of execution engine and partition format simultaneously.
+    Method to set the _pair_ of execution engine and storage format format simultaneously.
     This is needed because there might be cases where switching one by one would be
     impossible, as not all pairs of values are meaningful.
 
     The method returns pair of old values, so it is easy to return back.
     """
-    from .config import Engine, Backend
+    from .config import Engine, StorageFormat
 
-    old_engine, old_partition = None, None
+    old_engine, old_storage_format = None, None
     # defer callbacks until both entities are set
     if engine is not None:
         old_engine = Engine._put_nocallback(engine)
-    if partition is not None:
-        old_partition = Backend._put_nocallback(partition)
+    if storage_format is not None:
+        old_storage_format = StorageFormat._put_nocallback(storage_format)
     # execute callbacks if something was changed
     if old_engine is not None:
         Engine._check_callbacks(old_engine)
-    if old_partition is not None:
-        Backend._check_callbacks(old_partition)
+    if old_storage_format is not None:
+        StorageFormat._check_callbacks(old_storage_format)
 
-    return old_engine, old_partition
+    return old_engine, old_storage_format
 
 
 __version__ = get_versions()["version"]

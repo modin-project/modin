@@ -11,5 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .pubsub import Parameter  # noqa: F401
+"""Module houses config entities which can be used for Modin behavior tuning."""
+
 from .envvars import *  # noqa: F403, F401
+from .pubsub import Parameter  # noqa: F401

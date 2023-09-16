@@ -1,0 +1,1 @@
+import os; os.environ.get("__MODIN_AUTOIMPORT_PANDAS__", None) and __import__("pandas")

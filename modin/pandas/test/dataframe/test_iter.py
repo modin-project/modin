@@ -11,25 +11,29 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import io
+import warnings
 
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-import modin.pandas as pd
-import io
+import pytest
 
-from modin.pandas.test.utils import (
-    random_state,
-    RAND_LOW,
-    RAND_HIGH,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    create_test_dfs,
-    test_data,
-)
+import modin.pandas as pd
 from modin.config import NPartitions
+from modin.pandas.test.utils import (
+    RAND_HIGH,
+    RAND_LOW,
+    create_test_dfs,
+    df_equals,
+    eval_general,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+)
+from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
@@ -37,8 +41,8 @@ NPartitions.put(4)
 matplotlib.use("Agg")
 
 
-@pytest.mark.parametrize("method", ["items", "iteritems", "iterrows"])
-def test_items_iteritems_iterrows(method):
+@pytest.mark.parametrize("method", ["items", "iterrows"])
+def test_items_iterrows(method):
     data = test_data["float_nan_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
@@ -108,36 +112,37 @@ def test___contains__(request, data):
         assert result == (key in modin_df)
 
 
-def test__options_display():
-    frame_data = random_state.randint(RAND_LOW, RAND_HIGH, size=(1000, 102))
+@pytest.mark.parametrize("expand_frame_repr", [False, True])
+@pytest.mark.parametrize(
+    "max_rows_columns",
+    [(5, 5), (10, 10), (50, 50), (51, 51), (52, 52), (75, 75), (None, None)],
+)
+@pytest.mark.parametrize("frame_size", [101, 102])
+def test_display_options_for___repr__(max_rows_columns, expand_frame_repr, frame_size):
+    frame_data = random_state.randint(
+        RAND_LOW, RAND_HIGH, size=(frame_size, frame_size)
+    )
     pandas_df = pandas.DataFrame(frame_data)
     modin_df = pd.DataFrame(frame_data)
 
-    pandas.options.display.max_rows = 10
-    pandas.options.display.max_columns = 10
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 5
-    pd.options.display.max_columns = 5
-    y = repr(modin_df)
-    assert x != y
-    pd.options.display.max_rows = 10
-    pd.options.display.max_columns = 10
-    y = repr(modin_df)
-    assert x == y
-
-    # test for old fixed max values
-    pandas.options.display.max_rows = 75
-    pandas.options.display.max_columns = 75
-    x = repr(pandas_df)
-    pd.options.display.max_rows = 75
-    pd.options.display.max_columns = 75
-    y = repr(modin_df)
-    assert x == y
+    context_arg = [
+        "display.max_rows",
+        max_rows_columns[0],
+        "display.max_columns",
+        max_rows_columns[1],
+        "display.expand_frame_repr",
+        expand_frame_repr,
+    ]
+    with pd.option_context(*context_arg):
+        modin_df_repr = repr(modin_df)
+    with pandas.option_context(*context_arg):
+        pandas_df_repr = repr(pandas_df)
+    assert modin_df_repr == pandas_df_repr
 
 
 def test___finalize__():
     data = test_data_values[0]
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         pd.DataFrame(data).__finalize__(None)
 
 
@@ -225,40 +230,17 @@ def test___repr__():
 "2016-08-26 09:00:16.413",5,60.193055,24.767427,5,"WALKING",85,"ON_BICYCLE",15,"UNKNOWN",0
 "2016-08-26 09:00:20.578",3,60.152996,24.745216,3.90000009536743,"STILL",69,"IN_VEHICLE",31,"UNKNOWN",0"""
     pandas_df = pandas.read_csv(io.StringIO(string_data))
-    modin_df = pd.read_csv(io.StringIO(string_data))
+    with warns_that_defaulting_to_pandas():
+        modin_df = pd.read_csv(io.StringIO(string_data))
     assert repr(pandas_df) == repr(modin_df)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reset_index_with_multi_index(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-
-    if len(modin_df.columns) > len(pandas_df.columns):
-        col0 = modin_df.columns[0]
-        col1 = modin_df.columns[1]
-        modin_cols = modin_df.groupby([col0, col1]).count().reset_index().columns
-        pandas_cols = pandas_df.groupby([col0, col1]).count().reset_index().columns
-
-        assert modin_cols.equals(pandas_cols)
-
-
-def test_reset_index_with_named_index():
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-
-    modin_df.index.name = pandas_df.index.name = "NAME_OF_INDEX"
-    df_equals(modin_df, pandas_df)
-    df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
-
-    modin_df.reset_index(drop=True, inplace=True)
-    pandas_df.reset_index(drop=True, inplace=True)
-    df_equals(modin_df, pandas_df)
-
-    modin_df = pd.DataFrame(test_data_values[0])
-    pandas_df = pandas.DataFrame(test_data_values[0])
-    modin_df.index.name = pandas_df.index.name = "NEW_NAME"
-    df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
+def test___repr__does_not_raise_attribute_column_warning():
+    # See https://github.com/modin-project/modin/issues/5380
+    df = pd.DataFrame([1])
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="error", message=SET_DATAFRAME_ATTRIBUTE_WARNING)
+        repr(df)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -278,7 +260,8 @@ def test_inplace_series_ops(data):
         df_equals(modin_df, pandas_df)
 
 
-def test___setattr__():
+# Note: Tests setting an attribute that is not an existing column label
+def test___setattr__not_column():
     pandas_df = pandas.DataFrame([1, 2, 3])
     modin_df = pd.DataFrame([1, 2, 3])
 
@@ -286,6 +269,65 @@ def test___setattr__():
     modin_df.new_col = [4, 5, 6]
 
     df_equals(modin_df, pandas_df)
+
+    # While `new_col` is not a column of the dataframe,
+    # it should be accessible with __getattr__.
+    assert modin_df.new_col == pandas_df.new_col
+
+
+def test___setattr__mutating_column():
+    # Use case from issue #4577
+    pandas_df = pandas.DataFrame([[1]], columns=["col0"])
+    modin_df = pd.DataFrame([[1]], columns=["col0"])
+
+    # Replacing a column with a list should mutate the column in place.
+    pandas_df.col0 = [3]
+    modin_df.col0 = [3]
+
+    df_equals(modin_df, pandas_df)
+    # Check that the col0 attribute reflects the value update.
+    df_equals(modin_df.col0, pandas_df.col0)
+
+    pandas_df.col0 = pandas.Series([5])
+    modin_df.col0 = pd.Series([5])
+
+    # Check that the col0 attribute reflects this update
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[0, "col0"] = 4
+    modin_df.loc[0, "col0"] = 4
+
+    # Check that the col0 attribute reflects update via loc
+    df_equals(modin_df, pandas_df)
+    assert modin_df.col0.equals(modin_df["col0"])
+
+    # Check that attempting to add a new col via attributes raises warning
+    # and adds the provided list as a new attribute and not a column.
+    with pytest.warns(
+        UserWarning,
+        match=SET_DATAFRAME_ATTRIBUTE_WARNING,
+    ):
+        modin_df.col1 = [4]
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            action="error",
+            message=SET_DATAFRAME_ATTRIBUTE_WARNING,
+        )
+        modin_df.col1 = [5]
+        modin_df.new_attr = 6
+        modin_df.col0 = 7
+
+    assert "new_attr" in dir(
+        modin_df
+    ), "Modin attribute was not correctly added to the df."
+    assert (
+        "new_attr" not in modin_df
+    ), "New attribute was not correctly added to columns."
+    assert modin_df.new_attr == 6, "Modin attribute value was set incorrectly."
+    assert isinstance(
+        modin_df.col0, pd.Series
+    ), "Scalar was not broadcasted properly to an existing column."
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -300,68 +342,35 @@ def test_isin(data):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_constructor(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-    df_equals(pandas_df, modin_df)
+def test_isin_with_modin_objects():
+    modin_df1, pandas_df1 = create_test_dfs({"a": [1, 2], "b": [3, 4]})
+    modin_series, pandas_series = pd.Series([1, 4, 5, 6]), pandas.Series([1, 4, 5, 6])
 
-    pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
-    modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
-    df_equals(pandas_df, modin_df)
+    eval_general(
+        (modin_df1, modin_series),
+        (pandas_df1, pandas_series),
+        lambda srs: srs[0].isin(srs[1]),
+    )
 
+    modin_df2 = modin_series.to_frame("a")
+    pandas_df2 = pandas_series.to_frame("a")
 
-@pytest.mark.parametrize(
-    "data",
-    [
-        np.arange(1, 10000, dtype=np.float32),
-        [
-            pd.Series([1, 2, 3], dtype="int32"),
-            pandas.Series([4, 5, 6], dtype="int64"),
-            np.array([7, 8, 9], dtype=np.float32),
-        ],
-        pandas.Categorical([1, 2, 3, 4, 5]),
-    ],
-)
-def test_constructor_dtypes(data):
-    md_df, pd_df = create_test_dfs(data)
-    df_equals(md_df, pd_df)
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda srs: srs[0].isin(srs[1]),
+    )
 
+    # Check case when indices are not matching
+    modin_df1, pandas_df1 = create_test_dfs({"a": [1, 2], "b": [3, 4]}, index=[10, 11])
 
-def test_constructor_columns_and_index():
-    modin_df = pd.DataFrame(
-        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
-        index=[1, 2, 3],
-        columns=["id", "max_speed", "health"],
+    eval_general(
+        (modin_df1, modin_series),
+        (pandas_df1, pandas_series),
+        lambda srs: srs[0].isin(srs[1]),
     )
-    pandas_df = pandas.DataFrame(
-        [[1, 1, 10], [2, 4, 20], [3, 7, 30]],
-        index=[1, 2, 3],
-        columns=["id", "max_speed", "health"],
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda srs: srs[0].isin(srs[1]),
     )
-    df_equals(modin_df, pandas_df)
-    df_equals(pd.DataFrame(modin_df), pandas.DataFrame(pandas_df))
-    df_equals(
-        pd.DataFrame(modin_df, columns=["max_speed", "health"]),
-        pandas.DataFrame(pandas_df, columns=["max_speed", "health"]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df, index=[1, 2]),
-        pandas.DataFrame(pandas_df, index=[1, 2]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df, index=[1, 2], columns=["health"]),
-        pandas.DataFrame(pandas_df, index=[1, 2], columns=["health"]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df.iloc[:, 0], index=[1, 2, 3]),
-        pandas.DataFrame(pandas_df.iloc[:, 0], index=[1, 2, 3]),
-    )
-    df_equals(
-        pd.DataFrame(modin_df.iloc[:, 0], columns=["NO_EXIST"]),
-        pandas.DataFrame(pandas_df.iloc[:, 0], columns=["NO_EXIST"]),
-    )
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame(modin_df, index=[1, 2, 99999])
-    with pytest.raises(NotImplementedError):
-        pd.DataFrame(modin_df, columns=["NO_EXIST"])

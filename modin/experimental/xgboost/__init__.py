@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .xgboost import ModinDMatrix, train, predict
+"""Module holds public interfaces for Modin XGBoost."""
 
-__all__ = ["ModinDMatrix", "train", "predict"]
+from .xgboost import Booster, DMatrix, train
+
+__all__ = ["DMatrix", "Booster", "train"]

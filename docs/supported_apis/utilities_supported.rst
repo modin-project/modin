@@ -1,7 +1,7 @@
 pandas Utilities Supported
 ==========================
 
-If you ``import modin.pandas as pd`` the following operations are available from
+If you run ``import modin.pandas as pd``, the following operations are available from
 ``pd.<op>``, e.g. ``pd.concat``. If you do not see an operation that pandas enables and
 would like to request it, feel free to `open an issue`_. Make sure you tell us your
 primary use-case so we can make it happen faster!
@@ -12,10 +12,16 @@ the method in the left column. ``Y`` stands for yes, ``N`` stands for no, ``P`` 
 for partial (meaning some parameters may not be supported yet), and ``D`` stands for
 default to pandas.
 
+.. note::
+    Currently, the second column reflects implementation status for Ray and Dask engines. By default, support for a method
+    in the HDK engine could be treated as ``D`` unless ``Notes`` column contains additional information. Similarly,
+    by default ``Notes`` contains information about ``Ray`` and ``Dask`` engines unless ``Hdk`` is explicitly mentioned.
+
 +---------------------------+---------------------------------+----------------------------------------------------+
 | Utility method            | Modin Implementation? (Y/N/P/D) | Notes for Current implementation                   |
 +---------------------------+---------------------------------+----------------------------------------------------+
-| `pd.concat`_              | Y                               |                                                    |
+| `pd.concat`_              | Y                               | **Hdk**: ``Y`` but ``sort`` and                    |
+|                           |                                 | `ignore_index`` parameters ignored                 |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.eval`_                | Y                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
@@ -29,6 +35,8 @@ default to pandas.
 | `pd.to_numeric`_          | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.factorize`_           | D                               |                                                    |
++---------------------------+---------------------------------+----------------------------------------------------+
+| `pd.from_dummies`_        | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | `pd.qcut`_                | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
@@ -45,8 +53,6 @@ default to pandas.
 | `pd.to_timedelta`_        | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 | ``pd.options``            | Y                               |                                                    |
-+---------------------------+---------------------------------+----------------------------------------------------+
-| ``pd.datetime``           | D                               |                                                    |
 +---------------------------+---------------------------------+----------------------------------------------------+
 
 Other objects & structures
@@ -82,9 +88,6 @@ contributing a distributed version of any of these objects, feel free to open a
 * IntervalDtype
 * PeriodDtype
 * RangeIndex
-* Int64Index
-* UInt64Index
-* Float64Index
 * TimedeltaIndex
 * IntervalIndex
 * IndexSlice
@@ -106,6 +109,7 @@ contributing a distributed version of any of these objects, feel free to open a
 .. _`pd.cut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.cut.html#pandas.cut
 .. _`pd.to_numeric`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_numeric.html#pandas.to_numeric
 .. _`pd.factorize`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.factorize.html#pandas.factorize
+.. _`pd.from_dummies`: https://pandas.pydata.org/docs/reference/api/pandas.from_dummies.html#pandas-from-dummies
 .. _`pd.qcut`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.qcut.html#pandas.qcut
 .. _`pd.to_datetime`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.to_datetime.html#pandas.to_datetime
 .. _`pd.get_dummies`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.get_dummies.html#pandas.get_dummies

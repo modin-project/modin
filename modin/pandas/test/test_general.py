@@ -11,80 +11,59 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
+
+import numpy as np
 import pandas
 import pytest
-import modin.pandas as pd
-import numpy as np
 from numpy.testing import assert_array_equal
-from modin.utils import get_current_backend, to_pandas
+from pandas.testing import assert_frame_equal
+
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas
 
 from .utils import (
-    test_data_values,
-    test_data_keys,
+    bool_arg_keys,
+    bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
     df_equals,
+    eval_general,
     sort_index_for_equal_values,
+    test_data_keys,
+    test_data_values,
 )
 
+if StorageFormat.get() == "Hdk":
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_isna(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
 
-    pandas_result = pandas.isna(pandas_df)
-    modin_result = pd.isna(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.isna(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.isna(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
+@contextlib.contextmanager
+def _nullcontext():
+    """Replacement for contextlib.nullcontext missing in older Python."""
+    yield
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_isnull(data):
+@pytest.mark.parametrize("append_na", [True, False])
+@pytest.mark.parametrize("op", ["isna", "isnull", "notna", "notnull"])
+def test_isna_isnull_notna_notnull(data, append_na, op):
     pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
+    modin_df = pd.DataFrame(pandas_df)
+    if append_na:
+        pandas_df["NONE_COL"] = None
+        pandas_df["NAN_COL"] = np.nan
+        modin_df["NONE_COL"] = None
+        modin_df["NAN_COL"] = np.nan
 
-    pandas_result = pandas.isnull(pandas_df)
-    modin_result = pd.isnull(modin_df)
+    pandas_result = getattr(pandas, op)(pandas_df)
+    modin_result = getattr(pd, op)(modin_df)
     df_equals(modin_result, pandas_result)
 
-    modin_result = pd.isnull(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.isnull(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_notna(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-
-    pandas_result = pandas.notna(pandas_df)
-    modin_result = pd.notna(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.notna(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.notna(pandas.Series([1, np.nan, 2]))
-    df_equals(modin_result, pandas_result)
-
-    assert pd.isna(np.nan) == pandas.isna(np.nan)
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_notnull(data):
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-
-    pandas_result = pandas.notnull(pandas_df)
-    modin_result = pd.notnull(modin_df)
-    df_equals(modin_result, pandas_result)
-
-    modin_result = pd.notnull(pd.Series([1, np.nan, 2]))
-    pandas_result = pandas.notnull(pandas.Series([1, np.nan, 2]))
+    modin_result = getattr(pd, op)(pd.Series([1, np.nan, 2]))
+    pandas_result = getattr(pandas, op)(pandas.Series([1, np.nan, 2]))
     df_equals(modin_result, pandas_result)
 
     assert pd.isna(np.nan) == pandas.isna(np.nan)
@@ -107,42 +86,54 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        # Defaults
-        modin_result = pd.merge(modin_df, modin_df2, how=how)
+        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
+            modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
 
         # left_on and right_index
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col1", right_index=True
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col1", right_index=True
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col1", right_index=True
         )
         df_equals(modin_result, pandas_result)
 
         # left_index and right_on
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_index=True, right_on="col1"
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_index=True, right_on="col1"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_index=True, right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col1
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
-        )
+        if how == "outer":
+            warning_catcher = warns_that_defaulting_to_pandas()
+        else:
+            warning_catcher = _nullcontext()
+        with warning_catcher:
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col1", right_on="col1"
         )
         df_equals(modin_result, pandas_result)
 
         # left_on and right_on col2
-        modin_result = pd.merge(
-            modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
-        )
+        if how == "outer":
+            warning_catcher = warns_that_defaulting_to_pandas()
+        else:
+            warning_catcher = _nullcontext()
+        with warning_catcher:
+            modin_result = pd.merge(
+                modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
+            )
         pandas_result = pandas.merge(
             pandas_df, pandas_df2, how=how, left_on="col2", right_on="col2"
         )
@@ -176,40 +167,43 @@ def test_merge_ordered():
     modin_df_a = pd.DataFrame(data_a)
     modin_df_b = pd.DataFrame(data_b)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_ordered(
             modin_df_a, modin_df_b, fill_method="ffill", left_by="group"
         )
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
         pd.merge_ordered(data_a, data_b, fill_method="ffill", left_by="group")
 
 
-def test_merge_asof():
+@pytest.mark.parametrize("right_index", [None, [0] * 5], ids=["default", "non_unique"])
+def test_merge_asof(right_index):
     left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
-    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
+    right = pd.DataFrame(
+        {"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]}, index=right_index
+    )
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, on="a")
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, on="a", allow_exact_matches=False)
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, on="a", direction="forward")
         assert isinstance(df, pd.DataFrame)
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, on="a", direction="nearest")
         assert isinstance(df, pd.DataFrame)
 
     left = pd.DataFrame({"left_val": ["a", "b", "c"]}, index=[1, 5, 10])
     right = pd.DataFrame({"right_val": [1, 2, 3, 6, 7]}, index=[1, 2, 3, 6, 7])
 
-    with pytest.warns(UserWarning):
+    with warns_that_defaulting_to_pandas():
         df = pd.merge_asof(left, right, left_index=True, right_index=True)
         assert isinstance(df, pd.DataFrame)
 
@@ -232,8 +226,9 @@ def test_merge_asof_on_variations():
         pandas.DataFrame(left, index=left_index),
         pandas.DataFrame(right, index=right_index),
     )
-    modin_left, modin_right = pd.DataFrame(left, index=left_index), pd.DataFrame(
-        right, index=right_index
+    modin_left, modin_right = (
+        pd.DataFrame(left, index=left_index),
+        pd.DataFrame(right, index=right_index),
     )
     for on_arguments in [
         {"on": "a"},
@@ -243,7 +238,8 @@ def test_merge_asof_on_variations():
         {"left_index": True, "right_index": True},
     ]:
         pandas_merged = pandas.merge_asof(pandas_left, pandas_right, **on_arguments)
-        modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
+        with warns_that_defaulting_to_pandas():
+            modin_merged = pd.merge_asof(modin_left, modin_right, **on_arguments)
         df_equals(pandas_merged, modin_merged)
 
 
@@ -261,13 +257,14 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=suffixes,
         )
-        modin_merged = pd.merge_asof(
-            modin_left,
-            modin_right,
-            left_index=True,
-            right_index=True,
-            suffixes=suffixes,
-        )
+        with warns_that_defaulting_to_pandas():
+            modin_merged = pd.merge_asof(
+                modin_left,
+                modin_right,
+                left_index=True,
+                right_index=True,
+                suffixes=suffixes,
+            )
         df_equals(pandas_merged, modin_merged)
 
     with pytest.raises(ValueError):
@@ -278,8 +275,8 @@ def test_merge_asof_suffixes():
             right_index=True,
             suffixes=(False, False),
         )
-    with pytest.raises(ValueError):
-        modin_merged = pd.merge_asof(
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+        pd.merge_asof(
             modin_left,
             modin_right,
             left_index=True,
@@ -295,45 +292,45 @@ def test_merge_asof_bad_arguments():
     modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
 
     # Can't mix by with left_by/right_by
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, by="b", on="a", right_by="can't do with by"
         )
 
     # Can't mix on with left_on/right_on
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", right_on="can't do with by"
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", right_on="can't do with by")
 
     # Can't mix left_index with left_on or on, similarly for right.
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", right_index=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", right_index=True
         )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_index=True)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(
             modin_left, modin_right, left_on="a", right_on="a", left_index=True
         )
@@ -341,15 +338,15 @@ def test_merge_asof_bad_arguments():
     # Need both left and right
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, left_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, left_on="a")
     with pytest.raises(Exception):  # Pandas bug, didn't validate inputs sufficiently
         pandas.merge_asof(pandas_left, pandas_right, right_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, right_on="a")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pandas.merge_asof(pandas_left, pandas_right)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right)
 
 
@@ -388,6 +385,14 @@ def test_merge_asof_merge_options():
     pandas_quotes, pandas_trades = to_pandas(modin_quotes), to_pandas(modin_trades)
 
     # left_by + right_by
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            left_by="ticker",
+            right_by="ticker2",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -396,18 +401,19 @@ def test_merge_asof_merge_options():
             left_by="ticker",
             right_by="ticker2",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            left_by="ticker",
-            right_by="ticker2",
-        ),
+        modin_result,
     )
 
     # Just by:
     pandas_trades["ticker"] = pandas_trades["ticker2"]
     modin_trades["ticker"] = modin_trades["ticker2"]
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -415,15 +421,18 @@ def test_merge_asof_merge_options():
             on="time",
             by="ticker",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-        ),
+        modin_result,
     )
 
     # Tolerance
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            tolerance=pd.Timedelta("2ms"),
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -432,16 +441,18 @@ def test_merge_asof_merge_options():
             by="ticker",
             tolerance=pd.Timedelta("2ms"),
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            tolerance=pd.Timedelta("2ms"),
-        ),
+        modin_result,
     )
 
     # Direction
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            direction="forward",
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -450,16 +461,19 @@ def test_merge_asof_merge_options():
             by="ticker",
             direction="forward",
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            direction="forward",
-        ),
+        modin_result,
     )
 
     # Allow exact matches
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.merge_asof(
+            modin_quotes,
+            modin_trades,
+            on="time",
+            by="ticker",
+            tolerance=pd.Timedelta("10ms"),
+            allow_exact_matches=False,
+        )
     df_equals(
         pandas.merge_asof(
             pandas_quotes,
@@ -469,14 +483,7 @@ def test_merge_asof_merge_options():
             tolerance=pd.Timedelta("10ms"),
             allow_exact_matches=False,
         ),
-        pd.merge_asof(
-            modin_quotes,
-            modin_trades,
-            on="time",
-            by="ticker",
-            tolerance=pd.Timedelta("10ms"),
-            allow_exact_matches=False,
-        ),
+        modin_result,
     )
 
 
@@ -495,6 +502,32 @@ def test_pivot():
 
     with pytest.raises(ValueError):
         pd.pivot(test_df["bar"], index="foo", columns="bar", values="baz")
+
+    if get_current_execution() != "BaseOnPython" and StorageFormat.get() != "Hdk":
+        # FIXME: Failed for some reason on 'BaseOnPython' and 'HDK'
+        # https://github.com/modin-project/modin/issues/6240
+        df_equals(
+            pd.pivot(test_df, columns="bar"),
+            pandas.pivot(test_df._to_pandas(), columns="bar"),
+        )
+
+        df_equals(
+            pd.pivot(test_df, index="foo", columns="bar"),
+            pandas.pivot(test_df._to_pandas(), index="foo", columns="bar"),
+        )
+
+
+def test_pivot_values_is_none():
+    test_df = pd.DataFrame(
+        {
+            "foo": ["one", "one", "one", "two", "two", "two"],
+            "bar": ["A", "B", "C", "A", "B", "C"],
+            "baz": [1, 2, 3, 4, 5, 6],
+            "zoo": ["x", "y", "z", "q", "w", "t"],
+        }
+    )
+    df = pd.pivot(test_df, index="foo", columns="bar")
+    assert isinstance(df, pd.DataFrame)
 
 
 def test_pivot_table():
@@ -593,7 +626,12 @@ def test_unique():
     assert modin_result.shape == pandas_result.shape
 
 
+@pytest.mark.xfail(
+    StorageFormat.get() == "Hdk",
+    reason="https://github.com/modin-project/modin/issues/2896",
+)
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
+@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54857")
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
@@ -605,9 +643,10 @@ def test_value_counts(normalize, bins, dropna):
     )
     df_equals(modin_result, pandas_result)
 
-    modin_result = sort_index_for_equal_values(
-        pd.value_counts(values, bins=bins, ascending=False), False
-    )
+    with warns_that_defaulting_to_pandas():
+        modin_result = sort_index_for_equal_values(
+            pd.value_counts(values, bins=bins, ascending=False), False
+        )
     pandas_result = sort_index_for_equal_values(
         pandas.value_counts(values, bins=bins, ascending=False), False
     )
@@ -644,6 +683,18 @@ def test_to_datetime():
     )
 
 
+def test_to_datetime_inplace_side_effect():
+    # See GH#3063
+    times = list(range(1617993360, 1618193360))
+    values = list(range(215441, 415441))
+    modin_df = pd.DataFrame({"time": times, "value": values})
+    pandas_df = pandas.DataFrame({"time": times, "value": values})
+    df_equals(
+        pd.to_datetime(modin_df["time"], unit="s"),
+        pandas.to_datetime(pandas_df["time"], unit="s"),
+    )
+
+
 @pytest.mark.parametrize(
     "data, errors, downcast",
     [
@@ -662,9 +713,111 @@ def test_to_numeric(data, errors, downcast):
     df_equals(modin_result, pandas_result)
 
 
-def test_to_pandas_indices():
-    data = test_data_values[0]
+@pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
+def test_qcut(retbins):
+    # test case from https://github.com/modin-project/modin/issues/5610
+    pandas_series = pandas.Series(range(10))
+    modin_series = pd.Series(range(10))
+    pandas_result = pandas.qcut(pandas_series, 4, retbins=retbins)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.qcut(modin_series, 4, retbins=retbins)
+    if retbins:
+        df_equals(modin_result[0], pandas_result[0])
+        df_equals(modin_result[0].cat.categories, pandas_result[0].cat.categories)
+        assert_array_equal(modin_result[1], pandas_result[1])
+    else:
+        df_equals(modin_result, pandas_result)
+        df_equals(modin_result.cat.categories, pandas_result.cat.categories)
 
+    # test case for fallback to pandas, taken from pandas docs
+    pandas_result = pandas.qcut(range(5), 4)
+    modin_result = pd.qcut(range(5), 4)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "bins, labels",
+    [
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            [
+                "-inf_to_-1000",
+                "-1000_to_0",
+                "0_to_1000",
+                "1000_to_2000",
+                "2000_to_inf",
+            ],
+            id="bin_list_spanning_entire_range_with_custom_labels",
+        ),
+        pytest.param(
+            [-int(1e18), -1000, 0, 1000, 2000, int(1e18)],
+            None,
+            id="bin_list_spanning_entire_range_with_default_labels",
+        ),
+        pytest.param(
+            [-1000, 0, 1000, 2000], None, id="bin_list_not_spanning_entire_range"
+        ),
+        pytest.param(
+            10,
+            [f"custom_label{i}" for i in range(9)],
+            id="int_bin_10_with_custom_labels",
+        ),
+        pytest.param(1, None, id="int_bin_1_with_default_labels"),
+        pytest.param(-1, None, id="int_bin_-1_with_default_labels"),
+        pytest.param(111, None, id="int_bin_111_with_default_labels"),
+    ],
+)
+@pytest.mark.parametrize("retbins", bool_arg_values, ids=bool_arg_keys)
+def test_cut(retbins, bins, labels):
+    # Would use `eval_general` here, but `eval_general` expects the operation
+    # to be supported by Modin, and so errors out when we give the defaulting
+    # to pandas UserWarning. We could get around this by using
+    # @pytest.mark.filterwarnings("ignore"), but then `eval_general` fails because
+    # sometimes the return type of pd.cut is an np.ndarray, and `eval_general` does
+    # not know how to handle that.
+    try:
+        pd_result = pandas.cut(
+            pandas.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+        )
+    except Exception as pd_e:
+        with pytest.raises(Exception) as md_e:
+            with warns_that_defaulting_to_pandas():
+                md_result = pd.cut(
+                    pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+                )
+        assert isinstance(
+            md_e.value, type(pd_e)
+        ), f"Got Modin Exception type {type(md_e.value)}, but pandas Exception type {type(pd_e)} was expected"
+    else:
+        with warns_that_defaulting_to_pandas():
+            md_result = pd.cut(
+                pd.Series(range(1000)), retbins=retbins, bins=bins, labels=labels
+            )
+        if not isinstance(pd_result, tuple):
+            df_equals(md_result, pd_result)
+        else:
+            assert isinstance(
+                md_result, tuple
+            ), "Modin returned single value, but pandas returned tuple of values"
+            for pd_res, md_res in zip(pd_result, md_result):
+                if isinstance(pd_res, pandas.Series):
+                    df_equals(pd_res, md_res)
+                else:
+                    np.testing.assert_array_equal(pd_res, md_res)
+
+
+def test_cut_fallback():
+    # Test case for falling back to pandas for cut.
+    pandas_result = pandas.cut(range(5), 4)
+    with warns_that_defaulting_to_pandas():
+        modin_result = pd.cut(range(5), 4)
+    df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.parametrize(
+    "data", [test_data_values[0], []], ids=["test_data_values[0]", "[]"]
+)
+def test_to_pandas_indices(data):
     md_df = pd.DataFrame(data)
     index = pandas.MultiIndex.from_tuples(
         [(i, i * 2) for i in np.arange(len(md_df) + 1)], names=["A", "B"]
@@ -682,19 +835,47 @@ def test_to_pandas_indices():
         assert md_df.axes[axis].equals(
             pd_df.axes[axis]
         ), f"Indices at axis {axis} are different!"
-        assert md_df.axes[axis].equal_levels(
+        assert not hasattr(md_df.axes[axis], "equal_levels") or md_df.axes[
+            axis
+        ].equal_levels(
             pd_df.axes[axis]
         ), f"Levels of indices at axis {axis} are different!"
 
 
+def test_create_categorical_dataframe_with_duplicate_column_name():
+    # This tests for https://github.com/modin-project/modin/issues/4312
+    pd_df = pandas.DataFrame(
+        {
+            "a": pandas.Categorical([1, 2]),
+            "b": [4, 5],
+            "c": pandas.Categorical([7, 8]),
+        }
+    )
+    pd_df.columns = ["a", "b", "a"]
+    md_df = pd.DataFrame(pd_df)
+    # Use assert_frame_equal instead of the common modin util df_equals because
+    # we should check dtypes of the new categorical with check_dtype=True.
+    # TODO(https://github.com/modin-project/modin/issues/3804): Make
+    # df_equals set check_dtype=True and use df_equals instead.
+    assert_frame_equal(
+        md_df._to_pandas(),
+        pd_df,
+        check_dtype=True,
+        check_index_type=True,
+        check_column_type=True,
+        check_names=True,
+        check_categorical=True,
+    )
+
+
 @pytest.mark.skipif(
-    get_current_backend() != "BaseOnPython",
-    reason="This test make sense only on BaseOnPython backend.",
+    get_current_execution() != "BaseOnPython",
+    reason="This test make sense only on BaseOnPython execution.",
 )
 @pytest.mark.parametrize(
     "func, regex",
     [
-        (lambda df: df.mean(level=0), r"DataFrame\.mean"),
+        (lambda df: df.mean(), r"DataFrame\.mean"),
         (lambda df: df + df, r"DataFrame\.add"),
         (lambda df: df.index, r"DataFrame\.get_axis\(0\)"),
         (
@@ -711,3 +892,46 @@ def test_default_to_pandas_warning_message(func, regex):
 
     with pytest.warns(UserWarning, match=regex):
         func(df)
+
+
+def test_empty_dataframe():
+    df = pd.DataFrame(columns=["a", "b"])
+    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else _nullcontext():
+        df[(df.a == 1) & (df.b == 2)]
+
+
+def test_empty_series():
+    s = pd.Series([])
+    pd.to_numeric(s)
+
+
+@pytest.mark.parametrize(
+    "arg",
+    [[1, 2], ["a"], 1, "a"],
+    ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
+)
+def test_to_timedelta(arg):
+    # This test case comes from
+    # https://github.com/modin-project/modin/issues/4966
+    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+
+
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+def test_series_to_timedelta(data):
+    def make_frame(lib):
+        series = lib.Series(
+            next(iter(data.values())) if isinstance(data, dict) else data
+        )
+        return lib.to_timedelta(series).to_frame(name="timedelta")
+
+    eval_general(pd, pandas, make_frame)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [["col0"], "col0", "col1"],
+    ids=["valid_list_of_string", "valid_string", "invalid_string"],
+)
+def test_get(key):
+    modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
+    eval_general(modin_df, pandas_df, lambda df: df.get(key))

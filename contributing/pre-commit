@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# Called by "git commit" with no arguments.  The hook should
+# exit with non-zero status after issuing an appropriate message if
+# it wants to stop the commit.
+#
+
+set -e
+
+printf "running black. This script will preempt the commit if black fails.\n"
+black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+printf 'black passed!\n'
+
+printf "running isort. This script will preempt the commit if isort fails.\n"
+isort . --check-only
+printf 'isort passed!\n'
+
+printf "running flake8. This script will preempt the commit if flake8 fails.\n"
+flake8 modin/ asv_bench/benchmarks scripts/doc_checker.py
+printf "flake8 passed!\n"
+
+printf "running mypy. This script will preempt the commit if mypy fails.\n"
+mypy --config-file mypy.ini
+printf "mypy passed!\n"
+printf "pre-commit hook finished!\n"
