@@ -266,7 +266,7 @@ jobs:
               # check Modin on HDK
               MODIN_ENGINE=native MODIN_STORAGE_FORMAT=hdk MODIN_EXPERIMENTAL=true asv run --quick --show-stderr \
                 --launch-method=forkserver --config asv.conf.hdk.json \
-                -b ^hdk -v | tee benchmarks.log
+                -b ^hdk | tee benchmarks.log
           else
               echo "Benchmarks did not run, no changes detected"
           fi
