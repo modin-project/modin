@@ -45,7 +45,7 @@ dependencies:
   - flake8-print>=5.0.0
 
   - pip:
-      - asv==0.5.1
+      - asv==0.6.1
       # no conda package for windows
       - connectorx>=0.2.6a4
       # Fixes breaking ipywidgets changes, but didn't release yet.
