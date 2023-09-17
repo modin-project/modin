@@ -37,7 +37,7 @@
 
     // The list of conda channel names to be searched for benchmark
     // dependency packages in the specified order
-    "conda_channels": ["conda-forge", "defaults"],
+    "conda_channels": ["conda-forge"],
 
     // The directory (relative to the current directory) to cache the Python
     // environments in.  If not provided, defaults to "env"
