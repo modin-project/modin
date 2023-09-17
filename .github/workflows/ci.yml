@@ -234,6 +234,7 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
+          channel-priority: strict
       - name: Install python 3.9 from conda-forge
         run: mamba install python=3.9 -c conda-forge
       - name: ASV installation
