@@ -239,6 +239,8 @@ jobs:
         run: mamba install python=3.9 -c conda-forge
       - name: ASV installation
         run: pip install asv==0.6.1
+      - name: Conda info
+        run: conda info
       - name: Running benchmarks
         run: |
           git remote add upstream https://github.com/modin-project/modin.git
