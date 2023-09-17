@@ -229,11 +229,13 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: true
+          auto-activate-base: true
+          activate-environment: ""
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
-          python-version: 3.9
+      - name: Install python 3.9 from conda-forge
+        run: mamba install python=3.9 -c conda-forge
       - name: ASV installation
         run: pip install asv==0.6.1
       - name: Running benchmarks
