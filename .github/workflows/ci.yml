@@ -229,8 +229,7 @@ jobs:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          auto-activate-base: true
-          activate-environment: ""
+          activate-environment: true
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
