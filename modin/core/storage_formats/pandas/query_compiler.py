@@ -1519,9 +1519,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
     )
     rolling_quantile = Fold.register(
-        lambda df, rolling_kwargs, quantile, interpolation, **kwargs: pandas.DataFrame(
+        lambda df, rolling_kwargs, q, interpolation, **kwargs: pandas.DataFrame(
             df.rolling(**rolling_kwargs).quantile(
-                quantile=quantile, interpolation=interpolation, **kwargs
+                q=q, interpolation=interpolation, **kwargs
             )
         )
     )

@@ -11,8 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
+import warnings
+
 import numpy as np
 import pandas
+import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
@@ -34,7 +38,10 @@ NPartitions.put(4)
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    pytest.mark.filterwarnings("error::FutureWarning"),
+]
 
 
 def create_test_series(vals):
@@ -47,10 +54,29 @@ def create_test_series(vals):
     return modin_series, pandas_series
 
 
+def catch_rolling_axis_1_future_depr(axis):
+    return (
+        pytest.warns(
+            FutureWarning,
+            match=".*Support for axis=1 in DataFrame.rolling is deprecated.*"
+            + ".*Use obj.T.rolling.*",
+        )
+        if axis in (1, "columns")
+        else contextlib.nullcontext()
+    )
+
+
+def catch_rolling_numpy_callable_future_depr():
+    return pytest.warns(
+        FutureWarning,
+        match=".*The provided callable.*pass .* instead.",
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -75,51 +101,73 @@ def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
+
+    def _callable(df):
+        with catch_rolling_axis_1_future_depr(axis):
+            return getattr(
+                df.rolling(
+                    window=window,
+                    min_periods=min_periods,
+                    win_type=None,
+                    center=True,
+                    axis=axis,
+                ),
+                method,
+            )(**kwargs)
+
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: getattr(
-            df.rolling(
-                window=window,
-                min_periods=min_periods,
-                win_type=None,
-                center=True,
-                axis=axis,
-            ),
-            method,
-        )(**kwargs),
+        _callable,
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 def test_dataframe_agg(data, window, min_periods, axis):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-    modin_rolled = modin_df.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
-    )
-    pandas_rolled = pandas_df.rolling(
-        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
-    )
-    df_equals(pandas_rolled.aggregate(np.sum), modin_rolled.aggregate(np.sum))
+    with catch_rolling_axis_1_future_depr(axis):
+        modin_rolled = modin_df.rolling(
+            window=window,
+            min_periods=min_periods,
+            win_type=None,
+            center=True,
+            axis=axis,
+        )
+    with catch_rolling_axis_1_future_depr(axis):
+        pandas_rolled = pandas_df.rolling(
+            window=window,
+            min_periods=min_periods,
+            win_type=None,
+            center=True,
+            axis=axis,
+        )
+    with catch_rolling_numpy_callable_future_depr():
+        pandas_res = pandas_rolled.aggregate(np.sum)
+    # FIXME: modin doesn't have warning for the case so we can't use
+    # `catch_rolling_numpy_callable_future_depr`.
+    modin_res = modin_rolled.aggregate(np.sum)
+    df_equals(pandas_res, modin_res)
     # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
     # allows us to rolling aggregate a list of functions over axis 1, test
     # that, too.
     if axis != 1:
-        df_equals(
-            pandas_rolled.aggregate([np.sum, np.mean]),
-            modin_rolled.aggregate([np.sum, np.mean]),
-        )
+        with catch_rolling_numpy_callable_future_depr():
+            pandas_res = pandas_rolled.aggregate([np.sum, np.mean])
+        # FIXME: modin doesn't have warning for the case so we can't use
+        # `catch_rolling_numpy_callable_future_depr`.
+        modin_res = modin_rolled.aggregate([np.sum, np.mean])
+        df_equals(pandas_res, modin_res)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -134,23 +182,25 @@ def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-    eval_general(
-        modin_df,
-        pandas_df,
-        lambda df: getattr(
-            df.rolling(
-                window=window,
-                min_periods=min_periods,
-                win_type="triang",
-                center=True,
-                axis=axis,
-            ),
-            method,
-        )(**kwargs),
-    )
+
+    with catch_rolling_axis_1_future_depr(axis):
+        eval_general(
+            modin_df,
+            pandas_df,
+            lambda df: getattr(
+                df.rolling(
+                    window=window,
+                    min_periods=min_periods,
+                    win_type="triang",
+                    center=True,
+                    axis=axis,
+                ),
+                method,
+            )(**kwargs),
+        )
 
 
-@pytest.mark.parametrize("axis", [0, "columns"])
+@pytest.mark.parametrize("axis", [lib.no_default, "columns"])
 @pytest.mark.parametrize("on", [None, "DateCol"])
 @pytest.mark.parametrize("closed", ["both", "right"])
 @pytest.mark.parametrize("window", [3, "3s"])
@@ -159,7 +209,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
     data = {"A": range(12), "B": range(12)}
     pandas_df = pandas.DataFrame(data, index=index)
     modin_df = pd.DataFrame(data, index=index)
-    if on is not None and axis == 0 and isinstance(window, str):
+    if on is not None and axis == lib.no_default and isinstance(window, str):
         pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
         modin_df[on] = pd.date_range("22/06/1941", periods=12, freq="T")
     else:
@@ -167,8 +217,14 @@ def test_dataframe_dt_index(axis, on, closed, window):
     if axis == "columns":
         pandas_df = pandas_df.T
         modin_df = modin_df.T
-    pandas_rolled = pandas_df.rolling(window=window, on=on, axis=axis, closed=closed)
-    modin_rolled = modin_df.rolling(window=window, on=on, axis=axis, closed=closed)
+
+    with catch_rolling_axis_1_future_depr(axis):
+        pandas_rolled = pandas_df.rolling(
+            window=window, on=on, axis=axis, closed=closed
+        )
+    with catch_rolling_axis_1_future_depr(axis):
+        modin_rolled = modin_df.rolling(window=window, on=on, axis=axis, closed=closed)
+
     if isinstance(window, int):
         # This functions are very slowly for data from test_rolling
         df_equals(
@@ -181,7 +237,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
         df_equals(
             modin_rolled.cov(modin_df, False), pandas_rolled.cov(pandas_df, False)
         )
-        if axis == 0:
+        if axis == lib.no_default:
             df_equals(
                 modin_rolled.cov(modin_df[modin_df.columns[0]], True),
                 pandas_rolled.cov(pandas_df[pandas_df.columns[0]], True),
@@ -197,7 +253,14 @@ def test_dataframe_dt_index(axis, on, closed, window):
             modin_rolled.apply(np.sum, raw=True),
             pandas_rolled.apply(np.sum, raw=True),
         )
-        df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
+
+        # FIXME: modin doesn't have warning for the case so we can't use
+        # `catch_rolling_numpy_callable_future_depr`.
+        modin_res = modin_rolled.aggregate(np.sum)
+        with catch_rolling_numpy_callable_future_depr():
+            pandas_res = pandas_rolled.aggregate(np.sum)
+        df_equals(modin_res, pandas_res)
+
         df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
 
 
@@ -230,19 +293,28 @@ def test_series_rolling(data, window, min_periods, method, kwargs):
     modin_series, pandas_series = create_test_series(data)
     if window > len(pandas_series):
         window = len(pandas_series)
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: getattr(
-            series.rolling(
-                window=window,
-                min_periods=min_periods,
-                win_type=None,
-                center=True,
-            ),
-            method,
-        )(**kwargs),
-    )
+
+    # FIXME: modin doesn't have warning for the case so we can't use
+    # `catch_rolling_numpy_callable_future_depr`.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=".*The provided callable.*pass .* instead.",
+            category=FutureWarning,
+        )
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda series: getattr(
+                series.rolling(
+                    window=window,
+                    min_periods=min_periods,
+                    win_type=None,
+                    center=True,
+                ),
+                method,
+            )(**kwargs),
+        )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -312,7 +384,15 @@ def test_series_dt_index(closed):
     df_equals(
         modin_rolled.apply(np.sum, raw=True), pandas_rolled.apply(np.sum, raw=True)
     )
-    df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
+    # FIXME: modin doesn't have warning for the case so we can't use
+    # `catch_rolling_numpy_callable_future_depr`.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=".*The provided callable.*pass .* instead.",
+            category=FutureWarning,
+        )
+        df_equals(modin_rolled.aggregate(np.sum), pandas_rolled.aggregate(np.sum))
     df_equals(modin_rolled.quantile(0.1), pandas_rolled.quantile(0.1))
 
 

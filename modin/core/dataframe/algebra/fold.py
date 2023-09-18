@@ -35,6 +35,12 @@ class Fold(Operator):
             Function that takes query compiler and executes Fold function.
         """
 
+        # @functools.wraps(fold_function)
+        # def fold_function_catch_warnings(*args, **kwargs):
+        #    with warnings.catch_warnings():
+        #        warnings.filterwarnings("ignore", category=FutureWarning)
+        #        return fold_function(*args, **kwargs)
+
         def caller(query_compiler, fold_axis=None, *args, **kwargs):
             """
             Execute Fold function against passed query compiler.
