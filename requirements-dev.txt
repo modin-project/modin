@@ -26,7 +26,7 @@ pandas-gbq>=0.15.0
 tables>=3.7.0
 # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
 pymssql>=2.1.5,!=2.2.8
-psycopg2>=2.9.3
+psycopg2-binary>=2.9.3
 connectorx>=0.2.6a4
 fastparquet>=0.8.1
 flask-cors
