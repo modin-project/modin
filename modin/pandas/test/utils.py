@@ -32,7 +32,6 @@ from pandas.core.dtypes.common import (
     is_list_like,
     is_numeric_dtype,
     is_object_dtype,
-    is_period_dtype,
     is_string_dtype,
     is_timedelta64_dtype,
 )
@@ -650,7 +649,7 @@ def assert_dtypes_equal(df1, df2):
         lambda obj: isinstance(obj, pandas.CategoricalDtype),
         is_datetime64_any_dtype,
         is_timedelta64_dtype,
-        is_period_dtype,
+        lambda obj: isinstance(obj, pandas.PeriodDtype),
     )
 
     for col in dtypes1.keys():
