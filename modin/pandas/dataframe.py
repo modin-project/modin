@@ -1562,10 +1562,23 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
+        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_query_compiler = pandas.DataFrame.query(
-            self, expr, inplace=False, **kwargs
-        )._query_compiler
+        # HACK: this condition kind of breaks the idea of backend agnostic API as all queries
+        # _should_ work fine for all of the engines using `pandas.DataFrame.query(...)` approach.
+        # However, at this point we know that we can execute simple queries way more efficiently
+        # using the QC's API directly in case of pandas backend. Ideally, we have to make it work
+        # with the 'pandas.query' approach the same as good the direct QC call is. But investigating
+        # and fixing the root cause of the perf difference appears to be much more complicated
+        # than putting this hack here. Hopefully, we'll get rid of it soon:
+        # https://github.com/modin-project/modin/issues/6499
+        try:
+            new_query_compiler = self._query_compiler.rowwise_query(expr, **kwargs)
+        except NotImplementedError:
+            # a non row-wise query was passed, falling back to pandas implementation
+            new_query_compiler = pandas.DataFrame.query(
+                self, expr, inplace=False, **kwargs
+            )._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
