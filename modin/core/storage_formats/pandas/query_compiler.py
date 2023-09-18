@@ -3187,7 +3187,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
         return self.__constructor__(new_modin_frame)
 
-    def _rowwise_query(self, expr, **kwargs):
+    def rowwise_query(self, expr, **kwargs):
         """
         Query the columns of a ``PandasQueryCompiler`` with a boolean row-wise expression.
 
