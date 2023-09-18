@@ -449,35 +449,35 @@ def test_query(data, funcs, engine):
 def test_query_named_index():
     eval_general(
         *(df.set_index("col1") for df in create_test_dfs(test_data["int_data"])),
-        lambda df: df.query("col1 % 2 == 0 | col2 % 2 == 1"),
+        lambda df: df.query("col1 % 2 == 0 | col3 % 2 == 1"),
         # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=Exception,
+        raising_exceptions=(Exception,),
     )
 
 
 def test_query_named_multiindex():
     eval_general(
         *(
-            df.set_index(["col1", "col2"])
+            df.set_index(["col1", "col3"])
             for df in create_test_dfs(test_data["int_data"])
         ),
-        lambda df: df.query("col1 % 2 == 1 | col2 % 2 == 1"),
+        lambda df: df.query("col1 % 2 == 1 | col3 % 2 == 1"),
         # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=Exception,
+        raising_exceptions=(Exception,),
     )
 
 
 def test_query_multiindex_without_names():
     def make_df(without_index):
-        new_df = without_index.set_index(["col1", "col2"])
+        new_df = without_index.set_index(["col1", "col3"])
         new_df.index.names = [None, None]
         return new_df
 
     eval_general(
         *(make_df(df) for df in create_test_dfs(test_data["int_data"])),
-        lambda df: df.query("ilevel_0 % 2 == 0 | ilevel_1 % 2 == 1 | col3 % 2 == 1"),
+        lambda df: df.query("ilevel_0 % 2 == 0 | ilevel_1 % 2 == 1 | col4 % 2 == 1"),
         # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=Exception,
+        raising_exceptions=(Exception,),
     )
 
 
