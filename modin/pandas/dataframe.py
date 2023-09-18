@@ -1607,6 +1607,7 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
+        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
         # HACK: this condition kind of breaks the idea of backend agnostic API as all queries
         # _should_ work fine for all of the engines using `pandas.DataFrame.query(...)` approach.
