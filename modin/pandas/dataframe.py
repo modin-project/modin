@@ -376,9 +376,7 @@ class DataFrame(BasePandasDataset):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return self.__constructor__(
-            query_compiler=self._query_compiler.applymap(
-                func, na_action=na_action, **kwargs
-            )
+            query_compiler=self._query_compiler.map(func, na_action=na_action, **kwargs)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):

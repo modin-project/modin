@@ -76,7 +76,7 @@ in a Jupyter notebook:
    groupby_result = df.groupby("passenger_count").count()
 
    %%time
-   apply_result = df.applymap(str)
+   apply_result = df.map(str)
 
 Modin performance scales as the number of nodes and cores increases. The following
 chart shows the performance of the above operations with 2, 4, and 8 nodes, with
