@@ -297,14 +297,8 @@ class HdkFragmentSize(EnvironmentVariable, type=int):
     varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
-class OmnisciFragmentSize(EnvironmentVariable, type=int):
-    """How big a fragment in OmniSci should be when creating a table (in rows)."""
-
-    varname = "MODIN_OMNISCI_FRAGMENT_SIZE"
-
-
 class DoUseCalcite(EnvironmentVariable, type=bool):
-    """Whether to use Calcite for OmniSci queries execution."""
+    """Whether to use Calcite for HDK queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
@@ -526,24 +520,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
-        if cls == OmnisciLaunchParameters or (
-            OmnisciLaunchParameters.varname in os.environ
-            and HdkLaunchParameters.varname not in os.environ
-        ):
-            return OmnisciLaunchParameters._get()
-        else:
-            return HdkLaunchParameters._get()
-
-    @classmethod
-    def _get(cls) -> dict:
-        """
-        Get the resulted command-line options.
-
-        Returns
-        -------
-        dict
-            Decoded and verified config value.
-        """
         custom_parameters = super().get()
         result = cls._get_default().copy()
         result.update(
@@ -583,17 +559,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
                 # if pyhdk is not available, do not show any additional options
                 pass
         return default
-
-
-class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
-    """
-    Additional command line options for the OmniSci engine.
-
-    Please visit OmniSci documentation for the description of available parameters:
-    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
-    """
-
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):

@@ -20,7 +20,7 @@ import pyhdk
 from packaging import version
 from pyhdk.hdk import HDK, ExecutionResult, QueryNode, RelAlgExecutor
 
-from modin.config import HdkFragmentSize, HdkLaunchParameters, OmnisciFragmentSize
+from modin.config import HdkFragmentSize, HdkLaunchParameters
 from modin.utils import _inherit_docstrings
 
 from .base_worker import BaseDbWorker, DbTable
@@ -141,8 +141,6 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
             Fragment size to use for import.
         """
         fragment_size = HdkFragmentSize.get()
-        if fragment_size is None:
-            fragment_size = OmnisciFragmentSize.get()
         if fragment_size is None:
             if cls._preferred_device == "CPU":
                 cpu_count = os.cpu_count()
