@@ -115,12 +115,6 @@ TEST_DATA = {
 }
 
 
-@contextlib.contextmanager
-def _nullcontext():
-    """Replacement for contextlib.nullcontext missing in older Python."""
-    yield
-
-
 def assert_files_eq(path1, path2):
     with open(path1, "rb") as file1, open(path2, "rb") as file2:
         file1_content = file1.read()
@@ -1317,7 +1311,7 @@ def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
     pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
     should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
     with mock.patch.dict(os.environ, pinned_home):
-        with warns_that_defaulting_to_pandas() if should_default else _nullcontext():
+        with warns_that_defaulting_to_pandas() if should_default else contextlib.nullcontext():
             eval_io(
                 fn_name=fn_name,
                 **{path_arg: f"~/{basename}"},

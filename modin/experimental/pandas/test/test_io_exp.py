@@ -11,9 +11,9 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import contextlib
 import glob
 import json
-from contextlib import nullcontext
 
 import numpy as np
 import pandas
@@ -140,7 +140,7 @@ class TestCsvGlob:
         with (
             warns_that_defaulting_to_pandas()
             if Engine.get() == "Dask"
-            else nullcontext()
+            else contextlib.nullcontext()
         ):
             df.to_csv(filename)
 
@@ -258,7 +258,7 @@ def test_distributed_pickling(filename, compression):
     with (
         warns_that_defaulting_to_pandas()
         if filename_param == test_default_to_pickle_filename
-        else nullcontext()
+        else contextlib.nullcontext()
     ):
         df.to_pickle_distributed(filename, compression=compression)
         pickled_df = pd.read_pickle_distributed(filename, compression=compression)

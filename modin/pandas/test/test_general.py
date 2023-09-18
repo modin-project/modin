@@ -40,12 +40,6 @@ if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-@contextlib.contextmanager
-def _nullcontext():
-    """Replacement for contextlib.nullcontext missing in older Python."""
-    yield
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("append_na", [True, False])
 @pytest.mark.parametrize("op", ["isna", "isnull", "notna", "notnull"])
@@ -86,7 +80,7 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
+        with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
@@ -115,7 +109,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
@@ -129,7 +123,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
@@ -896,7 +890,7 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else _nullcontext():
+    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else contextlib.nullcontext():
         df[(df.a == 1) & (df.b == 2)]
 
 

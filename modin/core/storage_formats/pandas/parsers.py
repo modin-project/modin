@@ -39,6 +39,7 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
+import contextlib
 import json
 import os
 import warnings
@@ -55,10 +56,7 @@ from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
 
 from modin.core.io.file_dispatcher import OpenFile
-from modin.core.storage_formats.pandas.utils import (
-    _nullcontext,
-    split_result_of_axis_func_pandas,
-)
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
@@ -888,7 +886,7 @@ engine : str
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
-                context = _nullcontext(file_for_parser.path)
+                context = contextlib.nullcontext(file_for_parser.path)
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:
