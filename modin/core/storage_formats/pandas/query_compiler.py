@@ -18,6 +18,7 @@ Module contains ``PandasQueryCompiler`` class.
 queries for the ``PandasDataframe``.
 """
 
+import ast
 import hashlib
 import re
 import warnings
@@ -3185,6 +3186,65 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns=new_columns,
         )
         return self.__constructor__(new_modin_frame)
+
+    def rowwise_query(self, expr, **kwargs):
+        """
+        Query the columns of a ``PandasQueryCompiler`` with a boolean row-wise expression.
+
+        Basically, in row-wise expressions we only allow column names, constants
+        and other variables captured using the '@' symbol. No function/method
+        cannot be called inside such expressions.
+
+        Parameters
+        ----------
+        expr : str
+            Row-wise boolean expression.
+        **kwargs : dict
+            Arguments to pass to the ``pandas.DataFrame.query()``.
+
+        Returns
+        -------
+        PandasQueryCompiler
+
+        Raises
+        ------
+        NotImplementedError
+            In case the passed expression cannot be executed row-wise.
+        """
+        # Walk through the AST and verify it doesn't contain any nodes that
+        # prevent us from executing the query row-wise (we're basically
+        # looking for 'ast.Call')
+        nodes = ast.parse(expr.replace("@", "")).body
+        is_row_wise_query = True
+
+        while nodes:
+            node = nodes.pop()
+            if isinstance(node, ast.Expr):
+                node = getattr(node, "value", node)
+
+            if isinstance(node, ast.UnaryOp):
+                nodes.append(node.operand)
+            elif isinstance(node, ast.BinOp):
+                nodes.extend([node.left, node.right])
+            elif isinstance(node, ast.BoolOp):
+                nodes.extend(node.values)
+            elif isinstance(node, ast.Compare):
+                nodes.extend([node.left] + node.comparators)
+            elif isinstance(node, (ast.Name, ast.Constant)):
+                pass
+            else:
+                # if we end up here then the expression is no longer simple
+                # enough to run it row-wise, so exiting
+                is_row_wise_query = False
+                break
+
+        if not is_row_wise_query:
+            raise NotImplementedError("A non row-wise query was passed.")
+
+        def query_builder(df, **modin_internal_kwargs):
+            return df.query(expr, inplace=False, **kwargs, **modin_internal_kwargs)
+
+        return self.__constructor__(self._modin_frame.filter(1, query_builder))
 
     def _callable_func(self, func, axis, *args, **kwargs):
         """

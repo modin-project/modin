@@ -1310,3 +1310,33 @@ def test_skip_set_columns():
     # of equality comparison, in this case the new columns should be set unconditionally,
     # meaning that the '_deferred_column' has to be True
     assert df._query_compiler._modin_frame._deferred_column
+
+
+def test_query_dispatching():
+    """
+    Test whether the logic of determining whether the passed query
+    can be performed row-wise works correctly in ``PandasQueryCompiler.rowwise_query()``.
+
+    The tested method raises a ``NotImpementedError`` if the query cannot be performed row-wise
+    and raises nothing if it can.
+    """
+    qc = pd.DataFrame(
+        {"a": [1], "b": [2], "c": [3], "d": [4], "e": [5]}
+    )._query_compiler
+
+    local_var = 10  # noqa: F841 (unused variable)
+
+    # these queries should be performed row-wise (so no exception)
+    qc.rowwise_query("a < 1")
+    qc.rowwise_query("a < b")
+    qc.rowwise_query("a < (b + @local_var) * c > 10")
+
+    # these queries cannot be performed row-wise (so they must raise an exception)
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b[0]")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.min()")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < (b + @local_var + (b - e.min())) * c > 10")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.size")

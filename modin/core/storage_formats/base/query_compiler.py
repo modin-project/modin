@@ -2271,6 +2271,25 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 self, n=n, columns=columns, keep=keep
             )
 
+    @doc_utils.add_refer_to("DataFrame.query")
+    def rowwise_query(self, expr, **kwargs):
+        """
+        Query columns of the QueryCompiler with a boolean expression row-wise.
+
+        Parameters
+        ----------
+        expr : str
+        **kwargs : dict
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing the rows where the boolean expression is satisfied.
+        """
+        raise NotImplementedError(
+            "Row-wise queries execution is not implemented for the selected backend."
+        )
+
     @doc_utils.add_refer_to("DataFrame.eval")
     def eval(self, expr, **kwargs):
         """
