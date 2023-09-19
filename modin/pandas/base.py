@@ -749,6 +749,45 @@ class BasePandasDataset(ClassLogger):
         """
         Align two objects on their axes with the specified join method.
         """
+        if (
+            method is not lib.no_default
+            or limit is not lib.no_default
+            or fill_axis is not lib.no_default
+        ):
+            warnings.warn(
+                "The 'method', 'limit', and 'fill_axis' keywords in "
+                + f"{type(self).__name__}.align are deprecated and will be removed "
+                + "in a future version. Call fillna directly on the returned objects "
+                + "instead.",
+                FutureWarning,
+            )
+        if fill_axis is lib.no_default:
+            fill_axis = 0
+        if method is lib.no_default:
+            method = None
+        if limit is lib.no_default:
+            limit = None
+
+        if broadcast_axis is not lib.no_default:
+            msg = (
+                f"The 'broadcast_axis' keyword in {type(self).__name__}.align is "
+                + "deprecated and will be removed in a future version."
+            )
+            if broadcast_axis is not None:
+                if self.ndim == 1 and other.ndim == 2:
+                    msg += (
+                        " Use left = DataFrame({col: left for col in right.columns}, "
+                        + "index=right.index) before calling `left.align(right)` instead."
+                    )
+                elif self.ndim == 2 and other.ndim == 1:
+                    msg += (
+                        " Use right = DataFrame({col: right for col in left.columns}, "
+                        + "index=left.index) before calling `left.align(right)` instead"
+                    )
+            warnings.warn(msg, FutureWarning)
+        else:
+            broadcast_axis = None
+
         left, right = self._query_compiler.align(
             other._query_compiler,
             join=join,
