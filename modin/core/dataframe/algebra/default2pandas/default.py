@@ -13,6 +13,8 @@
 
 """Module houses default functions builder class."""
 
+import warnings
+
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
@@ -117,7 +119,9 @@ class DefaultMethod(Operator):
             # pandas default implementation doesn't know how to handle `dtypes` keyword argument
             kwargs.pop("dtypes", None)
             df = cls.frame_wrapper(df)
-            result = fn(df, *args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                result = fn(df, *args, **kwargs)
 
             if (
                 not isinstance(result, pandas.Series)
