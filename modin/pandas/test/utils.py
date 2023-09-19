@@ -308,6 +308,9 @@ query_func = {
     "col3 > col4": "col3 > col4",
     "col1 == col2": "col1 == col2",
     "(col2 > col1) and (col1 < col3)": "(col2 > col1) and (col1 < col3)",
+    # this is how to query for values of an unnamed index per
+    # https://pandas.pydata.org/docs/user_guide/indexing.html#multiindex-query-syntax
+    "ilevel_0 % 2 == 1": "ilevel_0 % 2 == 1",
 }
 query_func_keys = list(query_func.keys())
 query_func_values = list(query_func.values())
