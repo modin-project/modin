@@ -1063,9 +1063,6 @@ class TextFileDispatcher(FileDispatcher):
                 **read_callback_kw,
             )
             column_names = pd_df_metadata.columns
-            column_widths, num_splits = cls._define_metadata(
-                pd_df_metadata, column_names
-            )
             read_callback_kw = None
         else:
             read_callback_kw = dict(read_callback_kw, skiprows=None)
@@ -1090,12 +1087,40 @@ class TextFileDispatcher(FileDispatcher):
             newline, quotechar = cls.compute_newline(
                 fio, encoding, kwargs.get("quotechar", '"')
             )
+
+            if nrows := kwargs["nrows"] if not should_handle_skiprows else None:
+                appprox_nlines = nrows
+            else:
+                # Estimating an approximate number of lines in the file by reading
+                # the first 10 lines, calculating the average line length in bytes
+                # and dividing the file length by the average line length.
+                encoding = encoding or "UTF-8"
+                newline_len = len(newline) if newline else 1
+                lines_len = 0
+                i = 0
+                while True:
+                    line = fio.readline()
+                    if line is None:
+                        break
+                    if len(line) == 0:
+                        continue
+                    lines_len += len(line.encode(encoding)) + newline_len
+                    if (i := i + 1) == 10:
+                        break
+                if i == 0:
+                    appprox_nlines = 0
+                else:
+                    avg_line_len = lines_len // i
+                    appprox_nlines = cls.file_size(f) // avg_line_len
+            num_partitions = max(1, (appprox_nlines * len(column_names)) // 64_000)
+            num_partitions = min(NPartitions.get(), num_partitions)
+
             f.seek(old_pos)
 
             splits, pd_df_metadata_temp = cls.partitioned_file(
                 f,
-                num_partitions=NPartitions.get(),
-                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
+                num_partitions=num_partitions,
+                nrows=nrows,
                 skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,

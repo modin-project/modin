@@ -257,8 +257,13 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
         else:
             mapped_partitions = cls.map_partitions(partitions, map_func)
+        num_splits = min(len(partitions), NPartitions.get())
         return cls.map_axis_partitions(
-            axis, mapped_partitions, reduce_func, enumerate_partitions=True
+            axis,
+            mapped_partitions,
+            reduce_func,
+            enumerate_partitions=True,
+            num_splits=num_splits,
         )
 
     @classmethod
