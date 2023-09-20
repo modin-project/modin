@@ -27,7 +27,7 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 
-from modin.config import BenchmarkMode, NPartitions, ProgressBar, Engine
+from modin.config import BenchmarkMode, Engine, NPartitions, ProgressBar
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
