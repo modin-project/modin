@@ -811,13 +811,23 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
         else:
             pbar = None
+        # first split over columns and then over rows
+        if col_chunksize >= len(df.columns):
+            # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
+            # so we try not to do it if unnecessary
+            col_parts = [df]
+        else:
+            col_parts = [
+                df.iloc[:, i : i + col_chunksize]
+                for i in range(0, len(df.columns), col_chunksize)
+            ]
         parts = [
             [
                 update_bar(
                     pbar,
-                    put_func(df.iloc[i : i + row_chunksize, j : j + col_chunksize]),
+                    put_func(col_part.iloc[i : i + row_chunksize]),
                 )
-                for j in range(0, len(df.columns), col_chunksize)
+                for col_part in col_parts
             ]
             for i in range(0, len(df), row_chunksize)
         ]
