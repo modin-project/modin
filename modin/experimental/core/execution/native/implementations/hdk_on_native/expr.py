@@ -1396,4 +1396,11 @@ def build_dt_expr(dt_operation, col_expr):
 
     res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype("int32"))
 
+    if dt_operation == "isodow":
+        res = res.sub(LiteralExpr(1))
+    elif dt_operation == "microsecond":
+        res = res.mod(LiteralExpr(1000000))
+    elif dt_operation == "nanosecond":
+        res = res.mod(LiteralExpr(1000))
+
     return res

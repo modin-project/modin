@@ -1989,7 +1989,7 @@ class TestDateTime:
             [
                 "2018-10-26 12:00",
                 "2018-10-26 13:00:15",
-                "2020-10-26 04:00:15",
+                "2020-10-26 04:00:15.000000002",
                 "2020-10-26",
             ],
             format="mixed",
@@ -2019,6 +2019,54 @@ class TestDateTime:
             return df["d"].dt.hour
 
         run_and_compare(dt_hour, data=self.datetime_data)
+
+    def test_dt_minute(self):
+        def dt_minute(df, **kwargs):
+            return df["d"].dt.minute
+
+        run_and_compare(dt_minute, data=self.datetime_data)
+
+    def test_dt_second(self):
+        def dt_second(df, **kwargs):
+            return df["d"].dt.second
+
+        run_and_compare(dt_second, data=self.datetime_data)
+
+    def test_dt_microsecond(self):
+        def dt_microsecond(df, **kwargs):
+            return df["d"].dt.microsecond
+
+        run_and_compare(dt_microsecond, data=self.datetime_data)
+
+    def test_dt_nanosecond(self):
+        def dt_nanosecond(df, **kwargs):
+            return df["d"].dt.nanosecond
+
+        run_and_compare(dt_nanosecond, data=self.datetime_data)
+
+    def test_dt_quarter(self):
+        def dt_quarter(df, **kwargs):
+            return df["c"].dt.quarter
+
+        run_and_compare(dt_quarter, data=self.datetime_data)
+
+    def test_dt_dayofweek(self):
+        def dt_dayofweek(df, **kwargs):
+            return df["c"].dt.dayofweek
+
+        run_and_compare(dt_dayofweek, data=self.datetime_data)
+
+    def test_dt_weekday(self):
+        def dt_weekday(df, **kwargs):
+            return df["c"].dt.weekday
+
+        run_and_compare(dt_weekday, data=self.datetime_data)
+
+    def test_dt_dayofyear(self):
+        def dt_dayofyear(df, **kwargs):
+            return df["c"].dt.dayofyear
+
+        run_and_compare(dt_dayofyear, data=self.datetime_data)
 
     @pytest.mark.parametrize("cast", [True, False])
     @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())

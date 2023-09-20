@@ -635,6 +635,46 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.dt_extract("hour"), self._shape_hint
         )
 
+    def dt_minute(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("minute"), self._shape_hint
+        )
+
+    def dt_second(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("second"), self._shape_hint
+        )
+
+    def dt_microsecond(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("microsecond"), self._shape_hint
+        )
+
+    def dt_nanosecond(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("nanosecond"), self._shape_hint
+        )
+
+    def dt_quarter(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("quarter"), self._shape_hint
+        )
+
+    def dt_dayofweek(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
+        )
+
+    def dt_weekday(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
+        )
+
+    def dt_dayofyear(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("doy"), self._shape_hint
+        )
+
     def _bin_op(self, other, op_name, **kwargs):
         """
         Perform a binary operation on a frame.
