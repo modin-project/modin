@@ -27,7 +27,7 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 
-from modin.config import BenchmarkMode, NPartitions, ProgressBar
+from modin.config import BenchmarkMode, NPartitions, ProgressBar, Engine
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
@@ -811,10 +811,17 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
         else:
             pbar = None
-        # first split over columns and then over rows
-        if col_chunksize >= len(df.columns):
-            # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
-            # so we try not to do it if unnecessary
+
+        # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
+        # so we try not to do it if unnecessary.
+        # FIXME: it appears that this optimization doesn't work for Unidist correctly as it
+        # doesn't explicitly copy the data when putting it into storage (as the rest engines do)
+        # causing it to eventially share memory with a pandas object that was provided by user.
+        # Everything works fine if we do this column slicing as pandas then would set some flags
+        # to perform in COW mode apparently (and so it wouldn't crash our tests).
+        # @YarShev promised that this will be eventially fixed on Unidist's side, but for now there's
+        # this hacky condition
+        if col_chunksize >= len(df.columns) and Engine.get() != "Unidist":
             col_parts = [df]
         else:
             col_parts = [
