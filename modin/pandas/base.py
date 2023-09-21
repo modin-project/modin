@@ -1098,11 +1098,33 @@ class BasePandasDataset(ClassLogger):
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
         downcast = self._deprecate_downcast(downcast, "bfill")
-        return self.fillna(
-            method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="bfill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    backfill = bfill
+    def backfill(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.bfill`.
+        """
+        warnings.warn(
+            "DataFrame.backfill/Series.backfill is deprecated. Use DataFrame.bfill/Series.bfill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.bfill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def bool(self):  # noqa: RT01, D200
         """
@@ -1564,11 +1586,33 @@ class BasePandasDataset(ClassLogger):
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
         downcast = self._deprecate_downcast(downcast, "ffill")
-        return self.fillna(
-            method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="ffill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    pad = ffill
+    def pad(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.ffill`.
+        """
+        warnings.warn(
+            "DataFrame.pad/Series.pad is deprecated. Use DataFrame.ffill/Series.ffill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.ffill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def fillna(
         self,
@@ -1625,6 +1669,13 @@ class BasePandasDataset(ClassLogger):
         Series, DataFrame or None
             Object with missing values filled or None if ``inplace=True``.
         """
+        if method is not None:
+            warnings.warn(
+                f"{type(self).__name__}.fillna with 'method' is deprecated and "
+                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
+                + "instead.",
+                FutureWarning,
+            )
         downcast = self._deprecate_downcast(downcast, "fillna")
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
