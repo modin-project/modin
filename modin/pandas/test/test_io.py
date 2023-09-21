@@ -2717,20 +2717,8 @@ class TestFwf:
         "usecols",
         [
             ["a"],
-            pytest.param(
-                ["a", "b", "d"],
-                marks=pytest.mark.xfail(
-                    Engine.get() != "Python" and StorageFormat.get() != "Hdk",
-                    reason="https://github.com/pandas-dev/pandas/issues/54868",
-                ),
-            ),
-            pytest.param(
-                [0, 1, 3],
-                marks=pytest.mark.xfail(
-                    Engine.get() != "Python" and StorageFormat.get() != "Hdk",
-                    reason="https://github.com/pandas-dev/pandas/issues/54868",
-                ),
-            ),
+            ["a", "b", "d"],
+            [0, 1, 3],
         ],
     )
     def test_fwf_file_usecols(self, make_fwf_file, usecols):
@@ -2797,10 +2785,6 @@ class TestFwf:
         df_equals(modin_df, pd_df)
 
     @pytest.mark.parametrize("nrows", [13, None])
-    @pytest.mark.xfail(
-        Engine.get() != "Python" and StorageFormat.get() != "Hdk",
-        reason="https://github.com/pandas-dev/pandas/issues/54868",
-    )
     def test_fwf_file_skiprows(self, make_fwf_file, nrows):
         unique_filename = make_fwf_file()
 
