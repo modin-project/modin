@@ -13,6 +13,7 @@
 
 """Module houses default GroupBy functions builder class."""
 
+import warnings
 from typing import Any
 
 import pandas
@@ -59,7 +60,9 @@ class GroupBy:
     @classmethod
     def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
         """Call .groupby() on passed `df`."""
-        return df.groupby(*args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return df.groupby(*args, **kwargs)
 
     @classmethod
     def validate_by(cls, by):
@@ -563,7 +566,9 @@ class SeriesGroupBy(GroupBy):
         # In second case surrounding logic will supplement grouping columns,
         # so we need to drop them after grouping is over; our originally
         # selected column is always the first, so use it
-        return df.groupby(*args, **kwargs)[df.columns[0]]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return df.groupby(*args, **kwargs)[df.columns[0]]
 
 
 class GroupByDefault(DefaultMethod):

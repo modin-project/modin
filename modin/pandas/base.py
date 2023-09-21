@@ -503,23 +503,25 @@ class BasePandasDataset(ClassLogger):
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
         pandas_obj = self._to_pandas()
-        if callable(op):
-            result = op(pandas_obj, *args, **kwargs)
-        elif isinstance(op, str):
-            # The inner `getattr` is ensuring that we are treating this object (whether
-            # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
-            # will get the operation (`op`) from the pandas version of the class and run
-            # it on the object after we have converted it to pandas.
-            attr = getattr(self._pandas_class, op)
-            if isinstance(attr, property):
-                result = getattr(pandas_obj, op)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            if callable(op):
+                result = op(pandas_obj, *args, **kwargs)
+            elif isinstance(op, str):
+                # The inner `getattr` is ensuring that we are treating this object (whether
+                # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
+                # will get the operation (`op`) from the pandas version of the class and run
+                # it on the object after we have converted it to pandas.
+                attr = getattr(self._pandas_class, op)
+                if isinstance(attr, property):
+                    result = getattr(pandas_obj, op)
+                else:
+                    result = attr(pandas_obj, *args, **kwargs)
             else:
-                result = attr(pandas_obj, *args, **kwargs)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=True,
-                extra_log="{} is an unsupported operation".format(op),
-            )
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=True,
+                    extra_log="{} is an unsupported operation".format(op),
+                )
         # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
         # For now we will use pandas.
         if isinstance(result, type(self)) and not isinstance(
