@@ -65,6 +65,9 @@ NPartitions.put(4)
 pytestmark = [
     pytest.mark.filterwarnings(default_to_pandas_ignore_string),
     # pytest.mark.filterwarnings("error::FutureWarning"),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.dtypes is deprecated and will be removed in a future version:FutureWarning"
+    ),
     # FIXME: these cases inconsistent between modin and pandas
     pytest.mark.filterwarnings(
         "ignore:DataFrame.groupby with axis=1 is deprecated:FutureWarning"
@@ -450,14 +453,25 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
 
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.pct_change(
-            periods=2, fill_method="pad", limit=1, freq=None, axis=1
-        ),
-        modin_df_almost_equals_pandas,
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            "DataFrameGroupBy.pct_change with axis=1 is deprecated",
+            FutureWarning,
+        )
+        warnings.filterwarnings(
+            "ignore",
+            "The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+            FutureWarning,
+        )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.pct_change(
+                periods=2, fill_method="pad", limit=1, freq=None, axis=1
+            ),
+            modin_df_almost_equals_pandas,
+        )
 
     apply_functions = [
         lambda df: df.sum(numeric_only=True),
@@ -788,10 +802,17 @@ def test_large_row_groupby(is_by_category):
         pandas_groupby,
         lambda df: df.diff(periods=-1),
     )
+
+    def _callable(df):
+        with pytest.warns(
+            FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
+        ):
+            return df.diff(axis=1)
+
     eval_general(
         modin_groupby,
         pandas_groupby,
-        lambda df: df.diff(axis=1),
+        _callable,
     )
 
     eval_general(
