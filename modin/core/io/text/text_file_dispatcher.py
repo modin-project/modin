@@ -32,7 +32,10 @@ from pandas.core.dtypes.common import is_list_like
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.io.text.utils import CustomNewlineIterator
-from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.core.storage_formats.pandas.utils import (
+    compute_chunksize,
+    compute_num_partitions,
+)
 from modin.utils import _inherit_docstrings
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
@@ -1112,8 +1115,7 @@ class TextFileDispatcher(FileDispatcher):
                 else:
                     avg_line_len = lines_len // i
                     appprox_nlines = cls.file_size(f) // avg_line_len
-            num_partitions = max(1, (appprox_nlines * len(column_names)) // 64_000)
-            num_partitions = min(NPartitions.get(), num_partitions)
+            num_partitions = compute_num_partitions(len(column_names), appprox_nlines)
 
             f.seek(old_pos)
 
