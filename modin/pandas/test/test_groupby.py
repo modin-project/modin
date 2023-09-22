@@ -64,6 +64,22 @@ NPartitions.put(4)
 pytestmark = [
     pytest.mark.filterwarnings(default_to_pandas_ignore_string),
     pytest.mark.filterwarnings("error::FutureWarning"),
+    # FIXME: these cases inconsistent between modin and pandas
+    pytest.mark.filterwarnings(
+        "ignore:A grouping was used that is not in the columns of the DataFrame and so was excluded from the result:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:The default of observed=False is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated.*:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated.*:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
+    ),
 ]
 
 

@@ -48,6 +48,15 @@ def initialize_dask():
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
         client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
+
+        def _disable_warnings():
+            import warnings
+
+            warnings.simplefilter("ignore")
+            os.environ["PYTHONWARNINGS"] = "ignore::FutureWarnings"
+
+        client.run(_disable_warnings)
+
         if GithubCI.get():
             # set these keys to run tests that write to the mock s3 service. this seems
             # to be the way to pass environment variables to the workers:

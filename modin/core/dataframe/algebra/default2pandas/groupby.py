@@ -13,6 +13,7 @@
 
 """Module houses default GroupBy functions builder class."""
 
+import functools
 import warnings
 from typing import Any
 
@@ -597,8 +598,17 @@ class GroupByDefault(DefaultMethod):
             Functiom that takes query compiler and defaults to pandas to do GroupBy
             aggregation.
         """
+
+        @functools.wraps(func)
+        def func_catch_warnings(*args, **kwargs):
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                return func(*args, **kwargs)
+
         return super().register(
-            cls._groupby_cls.build_groupby(func), fn_name=func.__name__, **kwargs
+            cls._groupby_cls.build_groupby(func_catch_warnings),
+            fn_name=func.__name__,
+            **kwargs,
         )
 
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,
