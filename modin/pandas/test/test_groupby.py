@@ -296,15 +296,12 @@ def test_mixed_dtypes_groupby(as_index):
         )
         eval_cumprod(modin_groupby, pandas_groupby, numeric_only=True)
         # numeric_only=False doesn't work
-
-        # FIXME:  ValueError: cannot join with no overlapping index names
-        # eval_general(
-        #    modin_groupby,
-        #    pandas_groupby,
-        #    lambda df: df.cov(numeric_only=True),
-        #    modin_df_almost_equals_pandas,
-        # )
-
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cov(numeric_only=True),
+            modin_df_almost_equals_pandas,
+        )
         transform_functions = [lambda df: df, lambda df: df + df]
         for func in transform_functions:
             eval_transform(modin_groupby, pandas_groupby, func)
@@ -313,13 +310,12 @@ def test_mixed_dtypes_groupby(as_index):
         for func in pipe_functions:
             eval_pipe(modin_groupby, pandas_groupby, func)
 
-        # FIXME:  ValueError: cannot join with no overlapping index names
-        # eval_general(
-        #    modin_groupby,
-        #    pandas_groupby,
-        #    lambda df: df.corr(numeric_only=True),
-        #    modin_df_almost_equals_pandas,
-        # )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.corr(numeric_only=True),
+            modin_df_almost_equals_pandas,
+        )
 
         eval_fillna(modin_groupby, pandas_groupby)
         eval_count(modin_groupby, pandas_groupby)
