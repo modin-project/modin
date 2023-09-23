@@ -61,7 +61,9 @@ NPartitions.put(4)
 # of defaulting to pandas.
 pytestmark = [
     pytest.mark.filterwarnings(default_to_pandas_ignore_string),
-    # IGNORE WARNINGS MARKS TO CLEANUP OUTPUT
+    # TO MAKE SURE ALL FUTUREWARNINGS ARE CONSIDERED
+    pytest.mark.filterwarnings("error::FutureWarning"),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
     pytest.mark.filterwarnings(
         "ignore:DataFrame.groupby with axis=1 is deprecated:FutureWarning"
     ),
