@@ -1060,12 +1060,12 @@ class TextFileDispatcher(FileDispatcher):
             and pre_reading == 0
         )
         read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
+        pd_df_metadata = cls.read_callback(
+            filepath_or_buffer_md,
+            **read_callback_kw,
+        )
+        column_names = pd_df_metadata.columns
         if not can_compute_metadata_while_skipping_rows:
-            pd_df_metadata = cls.read_callback(
-                filepath_or_buffer_md,
-                **read_callback_kw,
-            )
-            column_names = pd_df_metadata.columns
             read_callback_kw = None
         else:
             read_callback_kw = dict(read_callback_kw, skiprows=None)
@@ -1103,10 +1103,8 @@ class TextFileDispatcher(FileDispatcher):
                 i = 0
                 while True:
                     line = fio.readline()
-                    if line is None:
-                        break
                     if len(line) == 0:
-                        continue
+                        break
                     lines_len += len(line.encode(encoding)) + newline_len
                     if (i := i + 1) == 10:
                         break
