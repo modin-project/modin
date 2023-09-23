@@ -53,7 +53,7 @@ def initialize_dask():
             import warnings
 
             warnings.simplefilter("ignore")
-            os.environ["PYTHONWARNINGS"] = "ignore::FutureWarnings"
+            os.environ["PYTHONWARNINGS"] = "ignore::FutureWarning"
 
         client.run(_disable_warnings)
 

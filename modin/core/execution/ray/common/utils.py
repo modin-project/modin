@@ -82,7 +82,10 @@ def initialize_ray(
     # the `pandas` module has been fully imported inside of each process before
     # any execution begins:
     # https://github.com/modin-project/modin/pull/4603
-    env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
+    env_vars = {
+        "__MODIN_AUTOIMPORT_PANDAS__": "1",
+        "PYTHONWARNINGS": "ignore::FutureWarning",
+    }
     if GithubCI.get():
         # need these to write parquet to the moto service mocking s3.
         env_vars.update(
@@ -146,6 +149,8 @@ def initialize_ray(
             for key, value in env_vars.items():
                 os.environ[key] = value
             ray.init(**ray_init_kwargs)
+            # so as not to affect the main process
+            del os.environ["PYTHONWARNINGS"]
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
