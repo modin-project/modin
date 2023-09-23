@@ -845,7 +845,7 @@ def test_convert_dtypes_5653():
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
-    assert modin_df.dtypes[0] == "string"
+    assert modin_df.dtypes.iloc[0] == "string"
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

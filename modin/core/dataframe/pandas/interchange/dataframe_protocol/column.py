@@ -127,7 +127,7 @@ class PandasProtocolColumn(ProtocolColumn):
         if self._dtype_cache is not None:
             return self._dtype_cache
 
-        dtype = self._col.dtypes[0]
+        dtype = self._col.dtypes.iloc[0]
 
         if isinstance(dtype, pandas.CategoricalDtype):
             pandas_series = self._col.to_pandas().squeeze(axis=1)

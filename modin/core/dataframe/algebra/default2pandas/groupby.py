@@ -598,9 +598,7 @@ class GroupByDefault(DefaultMethod):
             aggregation.
         """
         return super().register(
-            cls._groupby_cls.build_groupby(func),
-            fn_name=func.__name__,
-            **kwargs,
+            cls._groupby_cls.build_groupby(func), fn_name=func.__name__, **kwargs
         )
 
     # This specifies a `pandas.DataFrameGroupBy` method to pass the `agg_func` to,

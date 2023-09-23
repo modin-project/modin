@@ -91,10 +91,10 @@ pytestmark = [
         "ignore:The default of observed=False is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
+        "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
+        "ignore:.*DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
@@ -302,6 +302,7 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.cov(numeric_only=True),
             modin_df_almost_equals_pandas,
         )
+
         transform_functions = [lambda df: df, lambda df: df + df]
         for func in transform_functions:
             eval_transform(modin_groupby, pandas_groupby, func)
@@ -316,7 +317,6 @@ def test_mixed_dtypes_groupby(as_index):
             lambda df: df.corr(numeric_only=True),
             modin_df_almost_equals_pandas,
         )
-
         eval_fillna(modin_groupby, pandas_groupby)
         eval_count(modin_groupby, pandas_groupby)
         eval_general(
@@ -1656,7 +1656,6 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     for _by in by:
         pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
         modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
-
         eval_general(
             modin_groupby,
             pandas_groupby,

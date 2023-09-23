@@ -2721,7 +2721,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # here we check for a subset of bool indexers only to simplify the code;
             # there could (potentially) be more of those, but we assume the most frequent
             # ones are just of bool dtype
-            if len(key.dtypes) == 1 and is_bool_dtype(key.dtypes[0]):
+            if len(key.dtypes) == 1 and is_bool_dtype(key.dtypes.iloc[0]):
                 self.__validate_bool_indexer(key.index)
                 return self.__getitem_bool(key, broadcast=True, dtypes="copy")
 
