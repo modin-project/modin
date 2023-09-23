@@ -11,11 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
 import datetime
 import itertools
-import warnings
-from types import BuiltinFunctionType
 from unittest import mock
 
 import numpy as np
@@ -64,14 +61,29 @@ NPartitions.put(4)
 # of defaulting to pandas.
 pytestmark = [
     pytest.mark.filterwarnings(default_to_pandas_ignore_string),
-    # pytest.mark.filterwarnings("error::FutureWarning"),
-    pytest.mark.filterwarnings(
-        "ignore:DataFrameGroupBy.dtypes is deprecated and will be removed in a future version:FutureWarning"
-    ),
-    # FIXME: these cases inconsistent between modin and pandas
+    # IGNORE WARNINGS MARKS TO CLEANUP OUTPUT
     pytest.mark.filterwarnings(
         "ignore:DataFrame.groupby with axis=1 is deprecated:FutureWarning"
     ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.dtypes is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.diff with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.pct_change with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.shift with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:(DataFrameGroupBy|SeriesGroupBy|DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
+    ),
+    # FIXME: these cases inconsistent between modin and pandas
     pytest.mark.filterwarnings(
         "ignore:A grouping was used that is not in the columns of the DataFrame and so was excluded from the result:FutureWarning"
     ),
@@ -79,10 +91,10 @@ pytestmark = [
         "ignore:The default of observed=False is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated.*:FutureWarning"
+        "ignore:DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:.*DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated.*:FutureWarning"
+        "ignore:DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
@@ -261,7 +273,7 @@ def test_mixed_dtypes_groupby(as_index):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_agg(modin_groupby, pandas_groupby, func, agg_or_aggregate="aggregate")
+            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_max(modin_groupby, pandas_groupby)
@@ -453,25 +465,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            "DataFrameGroupBy.pct_change with axis=1 is deprecated",
-            FutureWarning,
-        )
-        warnings.filterwarnings(
-            "ignore",
-            "The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
-            FutureWarning,
-        )
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda df: df.pct_change(
-                periods=2, fill_method="pad", limit=1, freq=None, axis=1
-            ),
-            modin_df_almost_equals_pandas,
-        )
+    eval_general(
+        modin_groupby,
+        pandas_groupby,
+        lambda df: df.pct_change(
+            periods=2, fill_method="bfill", limit=1, freq=None, axis=1
+        ),
+        modin_df_almost_equals_pandas,
+    )
 
     apply_functions = [
         lambda df: df.sum(numeric_only=True),
@@ -711,7 +712,7 @@ def test_single_group_row_groupby():
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_agg(modin_groupby, pandas_groupby, func, agg_or_aggregate="aggregate")
+        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -802,17 +803,10 @@ def test_large_row_groupby(is_by_category):
         pandas_groupby,
         lambda df: df.diff(periods=-1),
     )
-
-    def _callable(df):
-        with pytest.warns(
-            FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
-        ):
-            return df.diff(axis=1)
-
     eval_general(
         modin_groupby,
         pandas_groupby,
-        _callable,
+        lambda df: df.diff(axis=1),
     )
 
     eval_general(
@@ -847,7 +841,7 @@ def test_large_row_groupby(is_by_category):
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_agg(modin_groupby, pandas_groupby, func, agg_or_aggregate="aggregate")
+        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -906,14 +900,8 @@ def test_simple_col_groupby():
 
     by = [1, 2, 3, 2, 1]
 
-    with pytest.warns(
-        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
-    ):
-        modin_groupby = modin_df.groupby(axis=1, by=by)
-    with pytest.warns(
-        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
-    ):
-        pandas_groupby = pandas_df.groupby(axis=1, by=by)
+    modin_groupby = modin_df.groupby(axis=1, by=by)
+    pandas_groupby = pandas_df.groupby(axis=1, by=by)
 
     modin_groupby_equals_pandas(modin_groupby, pandas_groupby)
     eval_ngroups(modin_groupby, pandas_groupby)
@@ -1110,7 +1098,7 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_agg(modin_groupby, pandas_groupby, func, agg_or_aggregate="aggregate")
+            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_rank(modin_groupby, pandas_groupby)
@@ -1240,11 +1228,7 @@ def eval_apply(modin_groupby, pandas_groupby, func):
 
 
 def eval_dtypes(modin_groupby, pandas_groupby):
-    with pytest.warns(FutureWarning, match=".*DataFrameGroupBy.dtypes is deprecated.*"):
-        modin_dtypes = modin_groupby.dtypes
-    with pytest.warns(FutureWarning, match=".*DataFrameGroupBy.dtypes is deprecated.*"):
-        pandas_dtypes = pandas_groupby.dtypes
-    df_equals(modin_dtypes, pandas_dtypes)
+    df_equals(modin_groupby.dtypes, pandas_groupby.dtypes)
 
 
 def eval_prod(modin_groupby, pandas_groupby, numeric_only=False):
@@ -1261,25 +1245,12 @@ def eval_std(modin_groupby, pandas_groupby, numeric_only=False):
     )
 
 
-def eval_agg(modin_groupby, pandas_groupby, func, agg_or_aggregate="agg"):
-    def will_be_replaced(func, obj):
-        return (
-            callable(func)
-            and isinstance(func, BuiltinFunctionType)
-            and func.__name__ in dir(obj)
-        )
+def eval_aggregate(modin_groupby, pandas_groupby, func):
+    df_equals(modin_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
-    with pytest.warns(
-        FutureWarning,
-        match=".*In a future version of pandas, the provided callable will be used directly.*",
-    ) if will_be_replaced(func, modin_groupby) else contextlib.nullcontext():
-        modin_res = getattr(modin_groupby, agg_or_aggregate)(func)
-    with pytest.warns(
-        FutureWarning,
-        match=".*In a future version of pandas, the provided callable will be used directly.*",
-    ) if will_be_replaced(func, pandas_groupby) else contextlib.nullcontext():
-        pandas_res = getattr(modin_groupby, agg_or_aggregate)(func)
-    df_equals(modin_res, pandas_res)
+
+def eval_agg(modin_groupby, pandas_groupby, func):
+    df_equals(modin_groupby.agg(func), pandas_groupby.agg(func))
 
 
 def eval_rank(modin_groupby, pandas_groupby):
@@ -1349,18 +1320,12 @@ def eval_transform(modin_groupby, pandas_groupby, func):
     )
 
 
-def eval_fillna(modin_groupby, pandas_groupby, catch_warns=True):
-    with pytest.warns(
-        FutureWarning,
-        match=r".*(DataFrameGroupBy|SeriesGroupBy|Series).fillna with 'method' is deprecated.*",
-    ) if catch_warns else contextlib.nullcontext():
-        modin_res = modin_groupby.fillna(method="ffill")
-    with pytest.warns(
-        FutureWarning,
-        match=".*(DataFrameGroupBy|SeriesGroupBy|Series).fillna with 'method' is deprecated.*",
-    ) if catch_warns else contextlib.nullcontext():
-        pandas_res = pandas_groupby.fillna(method="ffill")
-    df_equals(*sort_index_if_experimental_groupby(modin_res, pandas_res))
+def eval_fillna(modin_groupby, pandas_groupby):
+    df_equals(
+        *sort_index_if_experimental_groupby(
+            modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
+        )
+    )
 
 
 def eval_count(modin_groupby, pandas_groupby):
@@ -1465,7 +1430,7 @@ def eval_groups(modin_groupby, pandas_groupby):
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
-def eval_shift(modin_groupby, pandas_groupby, catch_warns=True):
+def eval_shift(modin_groupby, pandas_groupby):
     def comparator(df1, df2):
         df_equals(*sort_index_if_experimental_groupby(df1, df2))
 
@@ -1494,16 +1459,8 @@ def eval_shift(modin_groupby, pandas_groupby, catch_warns=True):
     # https://github.com/modin-project/modin/issues/3701
     if get_current_execution() != "BaseOnPython":
         if isinstance(pandas_groupby, pandas.core.groupby.DataFrameGroupBy):
-            with pytest.warns(
-                FutureWarning,
-                match=".*DataFrameGroupBy.shift with axis=1 is deprecated.*",
-            ) if catch_warns else contextlib.nullcontext():
-                pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
-            with pytest.warns(
-                FutureWarning,
-                match=".*DataFrameGroupBy.shift with axis=1 is deprecated.*",
-            ) if catch_warns else contextlib.nullcontext():
-                modin_res = modin_groupby.shift(axis=1, fill_value=777)
+            pandas_res = pandas_groupby.shift(axis=1, fill_value=777)
+            modin_res = modin_groupby.shift(axis=1, fill_value=777)
             # Pandas produces unexpected index order (pandas GH 44269).
             # Here we align index of Modin result with pandas to make test passed.
             import pandas.core.algorithms as algorithms
@@ -1704,17 +1661,10 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
         pandas_groupby = pandas_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
         modin_groupby = modin_df.groupby(by=_by, axis=groupby_axis, sort=groupby_sort)
 
-        def _callable(groupby):
-            with pytest.warns(
-                FutureWarning,
-                match=".*DataFrameGroupBy.shift with axis=1 is deprecated.*",
-            ) if shift_axis == 1 else contextlib.nullcontext():
-                return groupby.shift(axis=shift_axis, freq="S")
-
         eval_general(
             modin_groupby,
             pandas_groupby,
-            _callable,
+            lambda groupby: groupby.shift(axis=shift_axis, freq="S"),
         )
 
 
@@ -1849,9 +1799,7 @@ def test_agg_4604():
     [
         "quantile",
         "mean",
-        pytest.param(
-            "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
-        ),
+        "sum",
         "median",
         "unique",
         "cumprod",
@@ -2588,7 +2536,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
     run_test(eval___getattr__, item="b")
     run_test(eval___getitem__, item="b")
     run_test(eval_agg, func=lambda df: df.mean())
-    run_test(eval_agg, func=lambda df: df.mean(), agg_or_aggregate="aggregate")
+    run_test(eval_aggregate, func=lambda df: df.mean())
     run_test(eval_any)
     run_test(eval_apply, func=lambda df: df.mean())
     run_test(eval_count)
@@ -2597,14 +2545,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
     run_test(eval_cumprod, numeric_only=True)
     run_test(eval_cumsum, numeric_only=True)
     run_test(eval_dtypes)
-    # FIXME: inconsistent behavior when showing warnings
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            "DataFrameGroupBy.fillna with 'method' is deprecated",
-            category=FutureWarning,
-        )
-        run_test(eval_fillna, catch_warns=False)
+    run_test(eval_fillna)
     run_test(eval_groups)
     run_test(eval_len)
     run_test(eval_max)
@@ -2630,14 +2571,7 @@ def test_groupby_on_empty_data(modin_df_recipe):
         # https://github.com/modin-project/modin/issues/5505
         # https://github.com/modin-project/modin/issues/5506
         run_test(eval_pipe, func=lambda df: df.mean())
-        # FIXME: inconsistent behavior when showing warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                "DataFrameGroupBy.shift with axis=1 is deprecated",
-                category=FutureWarning,
-            )
-            run_test(eval_shift, catch_warns=False)
+        run_test(eval_shift)
 
     # TODO: these functions fail in case of empty data in the pandas itself,
     # we have to modify the `eval_*` functions to be able to check for
@@ -2996,3 +2930,161 @@ def test_reshuffling_groupby_on_strings(modify_config):
     eval_general(
         modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
     )
+
+
+### TEST GROUPBY WARNINGS ###
+
+
+def test_groupby_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+
+    with pytest.warns(
+        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
+    ):
+        modin_df.groupby(by="col1", axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
+    ):
+        pandas_df.groupby(by="col1", axis=1)
+
+
+def test_groupby_dtypes_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(FutureWarning, match="DataFrameGroupBy.dtypes is deprecated"):
+        modin_groupby.dtypes
+    with pytest.warns(FutureWarning, match="DataFrameGroupBy.dtypes is deprecated"):
+        pandas_groupby.dtypes
+
+
+def test_groupby_diff_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
+    ):
+        modin_groupby.diff(axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
+    ):
+        pandas_groupby.diff(axis=1)
+
+
+def test_groupby_pct_change_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.pct_change with axis=1 is deprecated"
+    ):
+        modin_groupby.pct_change(axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.pct_change with axis=1 is deprecated"
+    ):
+        pandas_groupby.pct_change(axis=1)
+
+
+def test_groupby_pct_change_parameters_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+    ):
+        modin_groupby.pct_change(fill_method="bfill", limit=1)
+    with pytest.warns(
+        FutureWarning,
+        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+    ):
+        pandas_groupby.pct_change(fill_method="bfill", limit=1)
+
+
+def test_groupby_shift_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.shift with axis=1 is deprecated",
+    ):
+        pandas_groupby.shift(axis=1, fill_value=777)
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.shift with axis=1 is deprecated",
+    ):
+        modin_groupby.shift(axis=1, fill_value=777)
+
+
+def test_groupby_fillna_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, None, 6, None],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+    ):
+        modin_groupby.fillna(method="ffill")
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+    ):
+        pandas_groupby.fillna(method="ffill")
+
+
+def test_groupby_agg_provided_callable_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    for func in (sum, max):
+        with pytest.warns(
+            FutureWarning,
+            match="In a future version of pandas, the provided callable will be used directly",
+        ):
+            modin_groupby.agg(func)
+        with pytest.warns(
+            FutureWarning,
+            match="In a future version of pandas, the provided callable will be used directly",
+        ):
+            pandas_groupby.agg(func)
