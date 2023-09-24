@@ -166,12 +166,7 @@ def initialize_ray(
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
     for varname, varvalue in env_vars.items():
         if str(runtime_env_vars.get(varname, "")) != str(varvalue):
-            if is_cluster or (
-                # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
-                # to be set at least as a process environment variable
-                not is_cluster
-                and os.environ.get(varname, "") != str(varvalue)
-            ):
+            if is_cluster:
                 ErrorMessage.single_warning(
                     "When using a pre-initialized Ray cluster, please ensure that the runtime env "
                     + f"sets environment variable {varname} to {varvalue}"
