@@ -36,6 +36,7 @@ from modin.config import (
     StorageFormat,
     ValueSource,
 )
+from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
 
 from .engine_wrapper import RayWrapper
@@ -146,11 +147,8 @@ def initialize_ray(
             # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
             # is usually causing. You can visit this gh-issue for more info:
             # https://github.com/modin-project/modin/issues/5157#issuecomment-1500225150
-            for key, value in env_vars.items():
-                os.environ[key] = value
-            ray.init(**ray_init_kwargs)
-            # so as not to affect the main process
-            del os.environ["PYTHONWARNINGS"]
+            with set_env(**env_vars):
+                ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
