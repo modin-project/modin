@@ -32,10 +32,7 @@ from pandas.core.dtypes.common import is_list_like
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.io.text.utils import CustomNewlineIterator
-from modin.core.storage_formats.pandas.utils import (
-    compute_chunksize,
-    compute_num_partitions,
-)
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
@@ -1060,12 +1057,15 @@ class TextFileDispatcher(FileDispatcher):
             and pre_reading == 0
         )
         read_callback_kw = dict(kwargs, nrows=1, skipfooter=0, index_col=index_col)
-        pd_df_metadata = cls.read_callback(
-            filepath_or_buffer_md,
-            **read_callback_kw,
-        )
-        column_names = pd_df_metadata.columns
         if not can_compute_metadata_while_skipping_rows:
+            pd_df_metadata = cls.read_callback(
+                filepath_or_buffer_md,
+                **read_callback_kw,
+            )
+            column_names = pd_df_metadata.columns
+            column_widths, num_splits = cls._define_metadata(
+                pd_df_metadata, column_names
+            )
             read_callback_kw = None
         else:
             read_callback_kw = dict(read_callback_kw, skiprows=None)
@@ -1090,37 +1090,12 @@ class TextFileDispatcher(FileDispatcher):
             newline, quotechar = cls.compute_newline(
                 fio, encoding, kwargs.get("quotechar", '"')
             )
-
-            if nrows := kwargs["nrows"] if not should_handle_skiprows else None:
-                appprox_nlines = nrows
-            else:
-                # Estimating an approximate number of lines in the file by reading
-                # the first 10 lines, calculating the average line length in bytes
-                # and dividing the file length by the average line length.
-                encoding = encoding or "UTF-8"
-                newline_len = len(newline) if newline else 1
-                lines_len = 0
-                i = 0
-                while True:
-                    line = fio.readline()
-                    if len(line) == 0:
-                        break
-                    lines_len += len(line.encode(encoding)) + newline_len
-                    if (i := i + 1) == 10:
-                        break
-                if i == 0:
-                    appprox_nlines = 0
-                else:
-                    avg_line_len = lines_len // i
-                    appprox_nlines = cls.file_size(f) // avg_line_len
-            num_partitions = compute_num_partitions(len(column_names), appprox_nlines)
-
             f.seek(old_pos)
 
             splits, pd_df_metadata_temp = cls.partitioned_file(
                 f,
-                num_partitions=num_partitions,
-                nrows=nrows,
+                num_partitions=NPartitions.get(),
+                nrows=kwargs["nrows"] if not should_handle_skiprows else None,
                 skiprows=skiprows_partitioning,
                 quotechar=quotechar,
                 is_quoting=is_quoting,

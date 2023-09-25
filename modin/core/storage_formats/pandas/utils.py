@@ -57,26 +57,6 @@ def compute_chunksize(axis_len, num_splits, min_block_size=None):
     return max(chunksize, min_block_size)
 
 
-def compute_num_partitions(ncols, nrows):
-    """
-    Compute the number of partitions for a frame with the specified dimension.
-
-    Parameters
-    ----------
-    ncols : int
-        The number of frame columns.
-    nrows : int
-        The number of frame rows.
-
-    Returns
-    -------
-    int
-        The number of partitions.
-    """
-    num_partitions = max(1, (ncols * nrows) // 64_000)
-    return min(NPartitions.get(), num_partitions)
-
-
 def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
     """
     Split pandas DataFrame evenly based on the provided number of splits.
