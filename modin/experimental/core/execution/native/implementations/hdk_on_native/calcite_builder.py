@@ -133,7 +133,7 @@ class CalciteBuilder:
             super().__init__(builder, arg)
             self._agg = agg
             self._agg_column = f"{arg[0].column}__{agg}__"
-            self._dtype = arg[0]._dtype if dtype is None else dtype
+            self._dtype = dtype or arg[0]._dtype
 
         def gen_proj_exprs(self):
             return {self._agg_column: self._arg[1]}
@@ -162,7 +162,7 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 
@@ -253,7 +253,7 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 

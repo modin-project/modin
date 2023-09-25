@@ -1284,11 +1284,7 @@ class AggregateExpr(BaseExpr):
             self.agg = agg
             self.distinct = distinct
         self.operands = op if isinstance(op, list) else [op]
-        self._dtype = (
-            dtype
-            if dtype
-            else _agg_dtype(self.agg, self.operands[0]._dtype if op else None)
-        )
+        self._dtype = dtype or _agg_dtype(self.agg, self.operands[0]._dtype)
         assert self._dtype is not None
 
     def copy(self):
