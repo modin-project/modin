@@ -13,6 +13,8 @@
 
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
+import warnings
+
 import pandas
 import unidist
 
@@ -310,7 +312,9 @@ def _deploy_unidist_func(
     Unidist functions are not detected by codecov (thus pragma: no cover).
     """
     f_args = deserialize(f_args)
-    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     if not extract_metadata:
         return result
     ip = unidist.get_ip()
