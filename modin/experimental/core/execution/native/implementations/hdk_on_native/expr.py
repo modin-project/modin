@@ -82,6 +82,21 @@ _aggs_with_int_result = {"count", "size"}
 _aggs_with_float_result = {"mean", "median", "std", "skew"}
 
 
+def _quantile_agg_dtype(dtype):
+    """
+    Compute the quantile aggregate data type.
+
+    Parameters
+    ----------
+    dtype : dtype
+
+    Returns
+    -------
+    dtype
+    """
+    return dtype if is_datetime64_any_dtype(dtype) else _get_dtype(float)
+
+
 def _agg_dtype(agg, dtype):
     """
     Compute aggregate data type.
@@ -105,7 +120,7 @@ def _agg_dtype(agg, dtype):
     elif agg in _aggs_with_float_result:
         return _get_dtype(float)
     elif agg == "quantile":
-        return dtype if is_datetime64_any_dtype(dtype) else _get_dtype(float)
+        return _quantile_agg_dtype(dtype)
     else:
         raise NotImplementedError(f"unsupported aggregate {agg}")
 

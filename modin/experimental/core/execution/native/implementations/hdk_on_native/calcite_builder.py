@@ -46,6 +46,7 @@ from .expr import (
     InputRefExpr,
     LiteralExpr,
     OpExpr,
+    _quantile_agg_dtype,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
@@ -394,9 +395,7 @@ class CalciteBuilder:
                 "QUANTILE",
                 builder,
                 arg,
-                arg[0]._dtype
-                if is_datetime64_dtype(arg[0]._dtype)
-                else _get_dtype("float64"),
+                _quantile_agg_dtype(arg[0]._dtype),
             )
             self._interpolation = arg[2].val.upper()
 
