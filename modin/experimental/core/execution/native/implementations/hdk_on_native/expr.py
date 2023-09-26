@@ -77,7 +77,7 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
     )
 
 
-_aggs_preserving_numeric_type = {"sum", "min", "max"}
+_aggs_preserving_numeric_type = {"sum", "min", "max", "nlargest", "nsmallest"}
 _aggs_with_int_result = {"count", "size"}
 _aggs_with_float_result = {"mean", "median", "std", "skew"}
 
@@ -1257,7 +1257,7 @@ class AggregateExpr(BaseExpr):
     ----------
     agg : str
         Aggregate name.
-    op : BaseExpr
+    op : BaseExpr or list of BaseExpr
         Aggregate operand.
     distinct : bool, default: False
         Distinct modifier for 'count' aggregate.
@@ -1269,7 +1269,7 @@ class AggregateExpr(BaseExpr):
     agg : str
         Aggregate name.
     operands : list of BaseExpr
-        Aggregate operands. Always has a single operand.
+        Aggregate operands.
     distinct : bool
         Distinct modifier for 'count' aggregate.
     _dtype : dtype
@@ -1283,10 +1283,8 @@ class AggregateExpr(BaseExpr):
         else:
             self.agg = agg
             self.distinct = distinct
-        self.operands = [op]
-        self._dtype = (
-            dtype if dtype else _agg_dtype(self.agg, op._dtype if op else None)
-        )
+        self.operands = op if isinstance(op, list) else [op]
+        self._dtype = dtype or _agg_dtype(self.agg, self.operands[0]._dtype)
         assert self._dtype is not None
 
     def copy(self):
@@ -1297,7 +1295,7 @@ class AggregateExpr(BaseExpr):
         -------
         AggregateExpr
         """
-        return AggregateExpr(self.agg, self.operands[0], self.distinct, self._dtype)
+        return AggregateExpr(self.agg, self.operands, self.distinct, self._dtype)
 
     def __repr__(self):
         """

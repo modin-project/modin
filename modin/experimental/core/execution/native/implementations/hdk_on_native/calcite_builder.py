@@ -45,6 +45,7 @@ from .expr import (
     AggregateExpr,
     InputRefExpr,
     LiteralExpr,
+    OpExpr,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
@@ -67,8 +68,8 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
-            An aggregated value.
+        arg : BaseExpr or List of BaseExpr
+            An aggregated values.
         """
 
         def __init__(self, builder, arg):
@@ -108,6 +109,53 @@ class CalciteBuilder:
             """
             pass
 
+    class CompoundAggregateWithColArg(CompoundAggregate):
+        """
+        A base class for a compound aggregate that require a `LiteralExpr` column argument.
+
+        This aggregate requires 2 arguments. The first argument is an `InputRefExpr`,
+        refering to the aggregation column. The second argument is a `LiteralExpr`,
+        this expression is added into the frame as a new column.
+
+        Parameters
+        ----------
+        agg : str
+            Aggregate name.
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            Aggregate arguments.
+        dtype : dtype, optional
+            Aggregate data type. If not specified, `_dtype` from the first argument is used.
+        """
+
+        def __init__(self, agg, builder, arg, dtype=None):
+            assert isinstance(arg[0], InputRefExpr)
+            assert isinstance(arg[1], LiteralExpr)
+            super().__init__(builder, arg)
+            self._agg = agg
+            self._agg_column = f"{arg[0].column}__{agg}__"
+            self._dtype = dtype or arg[0]._dtype
+
+        def gen_proj_exprs(self):
+            return {self._agg_column: self._arg[1]}
+
+        def gen_agg_exprs(self):
+            frame = self._arg[0].modin_frame
+            return {
+                self._agg_column: AggregateExpr(
+                    self._agg,
+                    [
+                        self._builder._ref_idx(frame, self._arg[0].column),
+                        self._builder._ref_idx(frame, self._agg_column),
+                    ],
+                    dtype=self._dtype,
+                )
+            }
+
+        def gen_reduce_expr(self):
+            return self._builder._ref(self._arg[0].modin_frame, self._agg_column)
+
     class StdAggregate(CompoundAggregate):
         """
         A sample standard deviation aggregate generator.
@@ -116,13 +164,13 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 
         def __init__(self, builder, arg):
-            assert isinstance(arg, InputRefExpr)
-            super().__init__(builder, arg)
+            assert isinstance(arg[0], InputRefExpr)
+            super().__init__(builder, arg[0])
 
             self._quad_name = self._arg.column + "__quad__"
             self._sum_name = self._arg.column + "__sum__"
@@ -207,13 +255,13 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 
         def __init__(self, builder, arg):
-            assert isinstance(arg, InputRefExpr)
-            super().__init__(builder, arg)
+            assert isinstance(arg[0], InputRefExpr)
+            super().__init__(builder, arg[0])
 
             self._quad_name = self._arg.column + "__quad__"
             self._cube_name = self._arg.column + "__cube__"
@@ -307,7 +355,34 @@ class CalciteBuilder:
                 skew_expr._dtype,
             )
 
-    _compound_aggregates = {"std": StdAggregate, "skew": SkewAggregate}
+    class TopkAggregate(CompoundAggregateWithColArg):
+        """
+        A TOP_K aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            An aggregated values.
+        """
+
+        def __init__(self, builder, arg):
+            super().__init__("TOP_K", builder, arg)
+
+        def gen_reduce_expr(self):
+            return OpExpr(
+                "PG_UNNEST",
+                [super().gen_reduce_expr()],
+                self._dtype,
+            )
+
+    _compound_aggregates = {
+        "std": StdAggregate,
+        "skew": SkewAggregate,
+        "nlargest": TopkAggregate,
+        "nsmallest": TopkAggregate,
+    }
 
     class InputContext:
         """
@@ -930,7 +1005,7 @@ class CalciteBuilder:
         for agg, expr in agg_exprs.items():
             if expr.agg in self._compound_aggregates:
                 compound_aggs[agg] = self._compound_aggregates[expr.agg](
-                    self, expr.operands[0]
+                    self, expr.operands
                 )
                 extra_exprs = compound_aggs[agg].gen_proj_exprs()
                 proj_cols.extend(extra_exprs.keys())

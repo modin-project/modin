@@ -1279,6 +1279,14 @@ class TestGroupby:
         # When invert is false, the rowid column is materialized.
         run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
 
+    @pytest.mark.parametrize("agg", ["nlargest", "nsmallest"])
+    @pytest.mark.parametrize("n", [1, 5, 10])
+    def test_topk(self, agg, n):
+        def topk(df, **kwargs):
+            return getattr(df.groupby("id6")["v3"], agg)(n).reset_index()[["id6", "v3"]]
+
+        run_and_compare(topk, data=self.h2o_data)
+
 
 class TestAgg:
     data = {

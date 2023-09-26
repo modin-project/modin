@@ -646,8 +646,16 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         agg_exprs = OrderedDict()
         if isinstance(agg, str):
-            for col in agg_cols:
-                agg_exprs[col] = AggregateExpr(agg, base.ref(col))
+            if agg == "nlargest" or agg == "nsmallest":
+                n = kwargs["agg_kwargs"]["n"]
+                if agg == "nsmallest":
+                    n = -n
+                n = LiteralExpr(n)
+                for col in agg_cols:
+                    agg_exprs[col] = AggregateExpr(agg, [base.ref(col), n])
+            else:
+                for col in agg_cols:
+                    agg_exprs[col] = AggregateExpr(agg, base.ref(col))
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
             multiindex = any(isinstance(v, list) for v in agg.values())
@@ -742,7 +750,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         filter = transform.copy(op=FilterNode(transform, cond))
         exprs = filter._index_exprs()
         exprs.update((col, filter.ref(col)) for col in base.columns)
-        return base.copy(op=TransformNode(filter, exprs))
+        return base.copy(op=TransformNode(filter, exprs), partitions=None, index=None)
 
     def agg(self, agg):
         """
