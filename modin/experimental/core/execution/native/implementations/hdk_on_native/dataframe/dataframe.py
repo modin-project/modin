@@ -648,8 +648,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         if isinstance(agg, str):
             col_to_ref = {col: base.ref(col) for col in agg_cols}
             self._add_agg_exprs(agg, col_to_ref, kwargs, agg_exprs)
-        else:
-            assert isinstance(agg, dict), "unsupported aggregate type"
+        elif isinstance(agg, (dict, list)):
+            if isinstance(agg, list):
+                agg = {col: agg for col in agg_cols}
             multiindex = any(isinstance(v, list) for v in agg.values())
             for col, aggs in agg.items():
                 if isinstance(aggs, list):
@@ -659,6 +660,9 @@ class HdkOnNativeDataframe(PandasDataframe):
                 else:
                     col_to_ref = {((col, aggs) if multiindex else col): base.ref(col)}
                     self._add_agg_exprs(aggs, col_to_ref, kwargs, agg_exprs)
+        else:
+            raise NotImplementedError(f"aggregate type {type(agg)}")
+
         new_columns.extend(agg_exprs.keys())
         new_dtypes.extend((x._dtype for x in agg_exprs.values()))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)

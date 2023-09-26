@@ -958,6 +958,12 @@ class TestGroupby:
 
         run_and_compare(dict_agg_all_cols, data=self.data)
 
+    def test_groupby_agg_list(self):
+        def agg(df, **kwargs):
+            return df.groupby("a")[["b", "c"]].agg(["sum", "size", "mean", "median"])
+
+        run_and_compare(agg, data=self.data)
+
     # modin-issue#3461
     def test_groupby_pure_by(self):
         data = [1, 1, 2, 2]
