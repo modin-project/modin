@@ -2430,7 +2430,7 @@ class PandasDataframe(ClassLogger):
         # We perform the final steps of the sort on full axis partitions, so we know that the
         # length of each partition is the full length of the dataframe.
         if self.has_materialized_columns:
-            self._set_axis_lengths_cache([len(self.columns)], axis=axis.value ^ 1)
+            result._set_axis_lengths_cache([len(self.columns)], axis=axis.value ^ 1)
 
         if kwargs.get("ignore_index", False):
             result.index = RangeIndex(len(self.get_axis(axis.value)))
