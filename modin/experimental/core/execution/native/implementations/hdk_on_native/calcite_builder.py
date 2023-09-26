@@ -109,11 +109,13 @@ class CalciteBuilder:
             """
             pass
 
-    class CompoundAggregate2(CompoundAggregate):
+    class CompoundAggregateWithColArg(CompoundAggregate):
         """
-        A base class for a compound aggregate that require 2 input arguments.
+        A base class for a compound aggregate that require a `LiteralExpr` column argument.
 
-        The first argument must be an `InputRefExpr` and the second one - `LiteralExpr`.
+        This aggregate requires 2 arguments. The first argument is an `InputRefExpr`,
+        refering to the aggregation column. The second argument is a `LiteralExpr`,
+        this expression is added into the frame as a new column.
 
         Parameters
         ----------
@@ -353,7 +355,7 @@ class CalciteBuilder:
                 skew_expr._dtype,
             )
 
-    class TopkAggregate(CompoundAggregate2):
+    class TopkAggregate(CompoundAggregateWithColArg):
         """
         A TOP_K aggregate generator.
 
