@@ -46,6 +46,7 @@ from .expr import (
     InputRefExpr,
     LiteralExpr,
     OpExpr,
+    _quantile_agg_dtype,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
@@ -377,11 +378,42 @@ class CalciteBuilder:
                 self._dtype,
             )
 
+    class QuantileAggregate(CompoundAggregateWithColArg):
+        """
+        A QUANTILE aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            A list of 3 values:
+                0. InputRefExpr - the column to compute the quantiles for.
+                1. LiteralExpr - the quantile value.
+                2. str - the interpolation method to use.
+        """
+
+        def __init__(self, builder, arg):
+            super().__init__(
+                "QUANTILE",
+                builder,
+                arg,
+                _quantile_agg_dtype(arg[0]._dtype),
+            )
+            self._interpolation = arg[2].val.upper()
+
+        def gen_agg_exprs(self):
+            exprs = super().gen_agg_exprs()
+            for expr in exprs.values():
+                expr.interpolation = self._interpolation
+            return exprs
+
     _compound_aggregates = {
         "std": StdAggregate,
         "skew": SkewAggregate,
         "nlargest": TopkAggregate,
         "nsmallest": TopkAggregate,
+        "quantile": QuantileAggregate,
     }
 
     class InputContext:
@@ -419,7 +451,6 @@ class CalciteBuilder:
             "min": "MIN",
             "size": "COUNT",
             "count": "COUNT",
-            "median": "APPROX_QUANTILE",
         }
         _no_arg_aggregates = {"size"}
 
@@ -662,7 +693,7 @@ class CalciteBuilder:
     _bool_cast_aggregates = {
         "sum": _get_dtype(int),
         "mean": _get_dtype(float),
-        "median": _get_dtype(float),
+        "quantile": _get_dtype(float),
     }
 
     def __init__(self):

@@ -646,26 +646,19 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         agg_exprs = OrderedDict()
         if isinstance(agg, str):
-            if agg == "nlargest" or agg == "nsmallest":
-                n = kwargs["agg_kwargs"]["n"]
-                if agg == "nsmallest":
-                    n = -n
-                n = LiteralExpr(n)
-                for col in agg_cols:
-                    agg_exprs[col] = AggregateExpr(agg, [base.ref(col), n])
-            else:
-                for col in agg_cols:
-                    agg_exprs[col] = AggregateExpr(agg, base.ref(col))
+            col_to_ref = {col: base.ref(col) for col in agg_cols}
+            self._add_agg_exprs(agg, col_to_ref, kwargs, agg_exprs)
         else:
             assert isinstance(agg, dict), "unsupported aggregate type"
             multiindex = any(isinstance(v, list) for v in agg.values())
-            for k, v in agg.items():
-                if isinstance(v, list):
-                    for item in v:
-                        agg_exprs[(k, item)] = AggregateExpr(item, base.ref(k))
+            for col, aggs in agg.items():
+                if isinstance(aggs, list):
+                    for a in aggs:
+                        col_to_ref = {(col, a): base.ref(col)}
+                        self._add_agg_exprs(a, col_to_ref, kwargs, agg_exprs)
                 else:
-                    col_name = (k, v) if multiindex else k
-                    agg_exprs[col_name] = AggregateExpr(v, base.ref(k))
+                    col_to_ref = {((col, aggs) if multiindex else col): base.ref(col)}
+                    self._add_agg_exprs(aggs, col_to_ref, kwargs, agg_exprs)
         new_columns.extend(agg_exprs.keys())
         new_dtypes.extend((x._dtype for x in agg_exprs.values()))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
@@ -691,6 +684,37 @@ class HdkOnNativeDataframe(PandasDataframe):
                     col_labels=filtered_columns
                 )
         return new_frame
+
+    def _add_agg_exprs(self, agg, col_to_ref, kwargs, agg_exprs):
+        """
+        Add `AggregateExpr`s for each column to `agg_exprs`.
+
+        Parameters
+        ----------
+        agg : str
+        col_to_ref : dict
+        kwargs : dict
+        agg_exprs : dict
+        """
+        if agg == "nlargest" or agg == "nsmallest":
+            n = kwargs["agg_kwargs"]["n"]
+            if agg == "nsmallest":
+                n = -n
+            n = LiteralExpr(n)
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr(agg, [ref, n])
+        elif agg == "median" or agg == "quantile":
+            agg_kwargs = kwargs["agg_kwargs"]
+            q = agg_kwargs.get("q", 0.5)
+            if not isinstance(q, float):
+                raise NotImplementedError("Non-float quantile")
+            q = LiteralExpr(q)
+            interpolation = LiteralExpr(agg_kwargs.get("interpolation", "linear"))
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr("quantile", [ref, q, interpolation])
+        else:
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr(agg, ref)
 
     def _groupby_head_tail(
         self, agg: str, n: int, cols: Iterable[str]
