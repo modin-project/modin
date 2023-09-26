@@ -36,6 +36,7 @@ from modin.config import (
     StorageFormat,
     ValueSource,
 )
+from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
 
 from .engine_wrapper import RayWrapper
@@ -82,7 +83,10 @@ def initialize_ray(
     # the `pandas` module has been fully imported inside of each process before
     # any execution begins:
     # https://github.com/modin-project/modin/pull/4603
-    env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
+    env_vars = {
+        "__MODIN_AUTOIMPORT_PANDAS__": "1",
+        "PYTHONWARNINGS": "ignore::FutureWarning",
+    }
     if GithubCI.get():
         # need these to write parquet to the moto service mocking s3.
         env_vars.update(
@@ -143,9 +147,8 @@ def initialize_ray(
             # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
             # is usually causing. You can visit this gh-issue for more info:
             # https://github.com/modin-project/modin/issues/5157#issuecomment-1500225150
-            for key, value in env_vars.items():
-                os.environ[key] = value
-            ray.init(**ray_init_kwargs)
+            with set_env(**env_vars):
+                ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
@@ -163,12 +166,7 @@ def initialize_ray(
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
     for varname, varvalue in env_vars.items():
         if str(runtime_env_vars.get(varname, "")) != str(varvalue):
-            if is_cluster or (
-                # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
-                # to be set at least as a process environment variable
-                not is_cluster
-                and os.environ.get(varname, "") != str(varvalue)
-            ):
+            if is_cluster:
                 ErrorMessage.single_warning(
                     "When using a pre-initialized Ray cluster, please ensure that the runtime env "
                     + f"sets environment variable {varname} to {varvalue}"

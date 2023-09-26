@@ -13,6 +13,8 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import warnings
+
 import unidist
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -351,12 +353,16 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     destructuring it causes a performance penalty.
     """
     try:
-        result = func(partition, *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
     # don't want the error to propagate to the user, and we want to avoid copying unless
     # we absolutely have to.
     except ValueError:
-        result = func(partition.copy(), *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(partition.copy(), *args, **kwargs)
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
@@ -393,12 +399,16 @@ def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
         args = deserialize(f_args)
         kwargs = deserialize(f_kwargs)
         try:
-            partition = func(partition, *args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
         # don't want the error to propagate to the user, and we want to avoid copying unless
         # we absolutely have to.
         except ValueError:
-            partition = func(partition.copy(), *args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                partition = func(partition.copy(), *args, **kwargs)
 
     return (
         partition,

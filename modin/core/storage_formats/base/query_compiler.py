@@ -18,6 +18,7 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+import warnings
 from typing import Hashable, List, Optional
 
 import numpy as np
@@ -164,7 +165,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
 
-        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
         if isinstance(result, (tuple, list)):
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)

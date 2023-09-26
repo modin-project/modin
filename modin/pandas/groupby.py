@@ -226,7 +226,13 @@ class DataFrameGroupBy(ClassLogger):
             + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
             + "on dataframes with duplicated indices"
         )
-        return self.fillna(limit=limit, method="ffill")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*fillna with 'method' is deprecated.*",
+                category=FutureWarning,
+            )
+            return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1, numeric_only=False):
         return self._wrap_aggregation(
@@ -369,7 +375,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def idxmax(self, axis=lib.no_default, skipna=True, numeric_only=False):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "idxmax")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
@@ -382,7 +388,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def idxmin(self, axis=lib.no_default, skipna=True, numeric_only=False):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "idxmin")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
@@ -663,6 +669,11 @@ class DataFrameGroupBy(ClassLogger):
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
+        warnings.warn(
+            f"{type(self).__name__}.dtypes is deprecated and will be removed in "
+            + "a future version. Check the dtypes on the base object instead",
+            FutureWarning,
+        )
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_dtypes,
@@ -825,7 +836,13 @@ class DataFrameGroupBy(ClassLogger):
             + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
             + "on dataframes with duplicated indices"
         )
-        return self.fillna(limit=limit, method="bfill")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*fillna with 'method' is deprecated.*",
+                category=FutureWarning,
+            )
+            return self.fillna(limit=limit, method="bfill")
 
     def prod(self, numeric_only=False, min_count=0):
         return self._wrap_aggregation(
@@ -867,7 +884,15 @@ class DataFrameGroupBy(ClassLogger):
             and isinstance(func, BuiltinFunctionType)
             and func.__name__ in dir(self)
         ):
-            func = func.__name__
+            func_name = func.__name__
+            warnings.warn(
+                f"The provided callable {func} is currently using "
+                + f"{type(self).__name__}.{func_name}. In a future version of pandas, "
+                + "the provided callable will be used directly. To keep current "
+                + f"behavior pass the string {func_name} instead.",
+                category=FutureWarning,
+            )
+            func = func_name
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
@@ -1237,8 +1262,16 @@ class DataFrameGroupBy(ClassLogger):
         limit=None,
         downcast=lib.no_default,
     ):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "fillna")
+
+        if method is not None:
+            warnings.warn(
+                f"{type(self).__name__}.fillna with 'method' is deprecated and "
+                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
+                + "instead.",
+                FutureWarning,
+            )
 
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2

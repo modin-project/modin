@@ -2779,8 +2779,8 @@ class TestFromArrow:
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
 
-        mdt = mdf.dtypes[0]
-        pdt = pdf.dtypes[0]
+        mdt = mdf.dtypes.iloc[0]
+        pdt = pdf.dtypes.iloc[0]
         assert mdt == "category"
         assert isinstance(mdt, pandas.CategoricalDtype)
         assert str(mdt) == str(pdt)
