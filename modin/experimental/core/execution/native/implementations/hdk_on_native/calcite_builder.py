@@ -15,7 +15,7 @@
 from collections import abc
 
 import pandas
-from pandas.core.dtypes.common import _get_dtype, is_bool_dtype, is_datetime64_dtype
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
 
 from .calcite_algebra import (
     CalciteAggregateNode,
@@ -387,7 +387,10 @@ class CalciteBuilder:
         builder : CalciteBuilder
             A builder to use for translation.
         arg : List of BaseExpr
-            An aggregated values.
+            A list of 3 values:
+                0. InputRefExpr - the column to compute the quantiles for.
+                1. LiteralExpr - the quantile value.
+                2. str - the interpolation method to use.
         """
 
         def __init__(self, builder, arg):
