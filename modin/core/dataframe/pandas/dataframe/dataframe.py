@@ -2265,7 +2265,7 @@ class PandasDataframe(ClassLogger):
         )
 
     def _apply_func_to_range_partitioning(
-        self, key_column, func, ascending=True, **kwargs
+        self, key_column, func, ascending=True, preserve_columns=False, **kwargs
     ):
         """
         Reshuffle data so it would be range partitioned and then apply the passed function row-wise.
@@ -2278,6 +2278,8 @@ class PandasDataframe(ClassLogger):
             Function to apply against partitions.
         ascending : bool, default: True
             Whether the range should be built in ascending or descending order.
+        preserve_columns : bool, default: False
+            If the columns cache should be preserved (specify this flag if `func` doesn't change column labels).
         **kwargs : dict
             Additional arguments to forward to the range builder function.
 
@@ -2288,7 +2290,14 @@ class PandasDataframe(ClassLogger):
         """
         # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
         if self._partitions.shape[0] == 1:
-            return self.apply_full_axis(axis=1, func=func)
+            result = self.apply_full_axis(
+                axis=1,
+                func=func,
+                new_columns=self.copy_columns_cache() if preserve_columns else None,
+            )
+            if preserve_columns:
+                result._set_axis_lengths_cache(self._column_widths_cache, axis=1)
+            return result
 
         ideal_num_new_partitions = len(self._partitions)
         m = len(self.index) / ideal_num_new_partitions
@@ -2365,7 +2374,14 @@ class PandasDataframe(ClassLogger):
             func,
         )
 
-        return self.__constructor__(new_partitions)
+        result = self.__constructor__(new_partitions)
+        if preserve_columns:
+            result.set_columns_cache(self.copy_columns_cache())
+            # We perform the final steps of the sort on full axis partitions, so we know that the
+            # length of each partition is the full length of the dataframe.
+            if self.has_materialized_columns:
+                result._set_axis_lengths_cache([len(self.columns)], axis=1)
+        return result
 
     @lazy_metadata_decorator(apply_axis="both")
     def sort_by(
@@ -2422,15 +2438,13 @@ class PandasDataframe(ClassLogger):
             )
 
         result = self._apply_func_to_range_partitioning(
-            key_column=columns[0], func=sort_function, ascending=ascending, **kwargs
+            key_column=columns[0],
+            func=sort_function,
+            ascending=ascending,
+            preserve_columns=True,
+            **kwargs,
         )
-
-        result.set_axis_cache(self.copy_axis_cache(axis.value ^ 1), axis=axis.value ^ 1)
         result.set_dtypes_cache(self.copy_dtypes_cache())
-        # We perform the final steps of the sort on full axis partitions, so we know that the
-        # length of each partition is the full length of the dataframe.
-        if self.has_materialized_columns:
-            result._set_axis_lengths_cache([len(self.columns)], axis=axis.value ^ 1)
 
         if kwargs.get("ignore_index", False):
             result.index = RangeIndex(len(self.get_axis(axis.value)))

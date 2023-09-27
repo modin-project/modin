@@ -117,20 +117,30 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-def validate_partitions_cache(df):
-    """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
-    row_lengths = df._row_lengths_cache
-    column_widths = df._column_widths_cache
+def validate_partitions_cache(df, axis=None):
+    """
+    Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes.
 
-    assert row_lengths is not None
-    assert column_widths is not None
-    assert df._partitions.shape[0] == len(row_lengths)
-    assert df._partitions.shape[1] == len(column_widths)
+    Parameters
+    ----------
+    df : PandasDataframe
+    axis : int, optional
+        An axis to verify the cache for. If not specified, verify cache for both of the axes.
+    """
+    axis = [0, 1] if axis is None else [axis]
+
+    axis_lengths = [df._row_lengths_cache, df._column_widths_cache]
+
+    for ax in axis:
+        assert axis_lengths[ax] is not None
+        assert df._partitions.shape[ax] == len(axis_lengths[ax])
 
     for i in range(df._partitions.shape[0]):
         for j in range(df._partitions.shape[1]):
-            assert df._partitions[i, j].length() == row_lengths[i]
-            assert df._partitions[i, j].width() == column_widths[j]
+            if 0 in axis:
+                assert df._partitions[i, j].length() == axis_lengths[0][i]
+            if 1 in axis:
+                assert df._partitions[i, j].width() == axis_lengths[1][j]
 
 
 def test_aligning_blocks():
@@ -1109,3 +1119,43 @@ def test_query_dispatching():
         qc.rowwise_query("a < (b + @local_var + (b - e.min())) * c > 10")
     with pytest.raises(NotImplementedError):
         qc.rowwise_query("a < b.size")
+
+
+def test_sort_values_cache():
+    """
+    Test that the column widths cache after ``.sort_values()`` is valid:
+    https://github.com/modin-project/modin/issues/6607
+    """
+    # 1 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # row-wise implementation and so the column widths WILL NOT be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [100], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that row-wise implementation was indeed used (col widths were not changed)
+    assert mf_res._column_widths_cache == [32, 32]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
+
+    # 2 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # range-partitioning implementation and so the column widths WILL be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [50, 50], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that range-partitioning implementation was indeed used (col widths were changed)
+    assert mf_res._column_widths_cache == [64]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
