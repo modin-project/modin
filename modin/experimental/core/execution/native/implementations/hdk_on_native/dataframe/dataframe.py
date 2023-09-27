@@ -2616,6 +2616,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         pandas.DataFrame
         """
+        if (df := getattr(self, "_pandas_df", None)) is not None:
+            return df
+
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
@@ -2670,6 +2673,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         # restrictions on column names.
         df.columns = self.columns
 
+        self._pandas_df = df
         return df
 
     def _find_index_or_col(self, col):
