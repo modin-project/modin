@@ -488,6 +488,24 @@ def maybe_range(numbers: Union[List[int], range]) -> Union[List[int], range]:
     return numbers
 
 
+def shallow_copy_df(df: pandas.DataFrame) -> pandas.DataFrame:
+    """
+    Create a non-deep copy of the data frame.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    copy = df.copy(deep=False)
+    copy.index = df.index.copy(deep=False)
+    copy.columns = df.columns.copy(deep=False)
+    return copy
+
+
 def to_arrow_type(dtype) -> pa.lib.DataType:
     """
     Convert the specified dtype to arrow.
