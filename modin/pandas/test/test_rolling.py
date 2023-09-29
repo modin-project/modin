@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import contextlib
-
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
@@ -42,6 +40,9 @@ pytestmark = [
     # TO MAKE SURE ALL FUTUREWARNINGS ARE CONSIDERED
     pytest.mark.filterwarnings("error::FutureWarning"),
     # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:Support for axis=1 in DataFrame.rolling is deprecated:FutureWarning"
+    ),
     # FIXME: these cases inconsistent between modin and pandas
     pytest.mark.filterwarnings(
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
@@ -57,18 +58,6 @@ def create_test_series(vals):
         modin_series = pd.Series(vals)
         pandas_series = pandas.Series(vals)
     return modin_series, pandas_series
-
-
-def catch_rolling_axis_1_future_depr(axis):
-    return (
-        pytest.warns(
-            FutureWarning,
-            match=".*Support for axis=1 in DataFrame.rolling is deprecated.*"
-            + ".*Use obj.T.rolling.*",
-        )
-        if axis in (1, "columns")
-        else contextlib.nullcontext()
-    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -99,24 +88,19 @@ def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-
-    def _callable(df):
-        with catch_rolling_axis_1_future_depr(axis):
-            return getattr(
-                df.rolling(
-                    window=window,
-                    min_periods=min_periods,
-                    win_type=None,
-                    center=True,
-                    axis=axis,
-                ),
-                method,
-            )(**kwargs)
-
     eval_general(
         modin_df,
         pandas_df,
-        _callable,
+        lambda df: getattr(
+            df.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type=None,
+                center=True,
+                axis=axis,
+            ),
+            method,
+        )(**kwargs),
     )
 
 
@@ -128,22 +112,12 @@ def test_dataframe_agg(data, window, min_periods, axis):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-    with catch_rolling_axis_1_future_depr(axis):
-        modin_rolled = modin_df.rolling(
-            window=window,
-            min_periods=min_periods,
-            win_type=None,
-            center=True,
-            axis=axis,
-        )
-    with catch_rolling_axis_1_future_depr(axis):
-        pandas_rolled = pandas_df.rolling(
-            window=window,
-            min_periods=min_periods,
-            win_type=None,
-            center=True,
-            axis=axis,
-        )
+    modin_rolled = modin_df.rolling(
+        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
+    )
+    pandas_rolled = pandas_df.rolling(
+        window=window, min_periods=min_periods, win_type=None, center=True, axis=axis
+    )
     df_equals(pandas_rolled.aggregate(np.sum), modin_rolled.aggregate(np.sum))
     # TODO(https://github.com/modin-project/modin/issues/4260): Once pandas
     # allows us to rolling aggregate a list of functions over axis 1, test
@@ -173,22 +147,20 @@ def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
         window = len(pandas_df)
-
-    with catch_rolling_axis_1_future_depr(axis):
-        eval_general(
-            modin_df,
-            pandas_df,
-            lambda df: getattr(
-                df.rolling(
-                    window=window,
-                    min_periods=min_periods,
-                    win_type="triang",
-                    center=True,
-                    axis=axis,
-                ),
-                method,
-            )(**kwargs),
-        )
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: getattr(
+            df.rolling(
+                window=window,
+                min_periods=min_periods,
+                win_type="triang",
+                center=True,
+                axis=axis,
+            ),
+            method,
+        )(**kwargs),
+    )
 
 
 @pytest.mark.parametrize("axis", [lib.no_default, "columns"])
@@ -208,14 +180,8 @@ def test_dataframe_dt_index(axis, on, closed, window):
     if axis == "columns":
         pandas_df = pandas_df.T
         modin_df = modin_df.T
-
-    with catch_rolling_axis_1_future_depr(axis):
-        pandas_rolled = pandas_df.rolling(
-            window=window, on=on, axis=axis, closed=closed
-        )
-    with catch_rolling_axis_1_future_depr(axis):
-        modin_rolled = modin_df.rolling(window=window, on=on, axis=axis, closed=closed)
-
+    pandas_rolled = pandas_df.rolling(window=window, on=on, axis=axis, closed=closed)
+    modin_rolled = modin_df.rolling(window=window, on=on, axis=axis, closed=closed)
     if isinstance(window, int):
         # This functions are very slowly for data from test_rolling
         df_equals(
@@ -380,3 +346,17 @@ def test_issue_3512():
     pandas_ans = pandas_df[0:33].rolling(window=21).mean()
 
     df_equals(modin_ans, pandas_ans)
+
+
+### TEST ROLLING WARNINGS ###
+
+
+def test_rolling_axis_1_depr():
+    index = pandas.date_range("31/12/2000", periods=12, freq="T")
+    data = {"A": range(12), "B": range(12)}
+    modin_df = pd.DataFrame(data, index=index)
+    with pytest.warns(
+        FutureWarning,
+        match="Support for axis=1 in DataFrame.rolling is deprecated",
+    ):
+        modin_df.rolling(window=3, axis=1)
