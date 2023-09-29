@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``HdkWorker`` class."""
-import os
 from typing import List, Optional, Tuple, Union
 
 import pyarrow as pa
@@ -20,7 +19,7 @@ import pyhdk
 from packaging import version
 from pyhdk.hdk import HDK, ExecutionResult, QueryNode, RelAlgExecutor
 
-from modin.config import HdkFragmentSize, HdkLaunchParameters
+from modin.config import CpuCount, HdkFragmentSize, HdkLaunchParameters
 from modin.utils import _inherit_docstrings
 
 from .base_worker import BaseDbWorker, DbTable
@@ -143,7 +142,7 @@ class HdkWorker(BaseDbWorker):  # noqa: PR01
         fragment_size = HdkFragmentSize.get()
         if fragment_size is None:
             if cls._preferred_device == "CPU":
-                cpu_count = os.cpu_count()
+                cpu_count = CpuCount.get()
                 if cpu_count is not None:
                     fragment_size = table.num_rows // cpu_count
                     fragment_size = min(fragment_size, 2**25)
