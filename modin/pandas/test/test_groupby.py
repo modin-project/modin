@@ -1127,6 +1127,24 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_groups(modin_groupby, pandas_groupby)
 
 
+def test_agg_udf_6600():
+    data = {
+        "name": ["Mariners", "Lakers"] * 50,
+        "league_abbreviation": ["MLB", "NBA"] * 50,
+    }
+    modin_teams, pandas_teams = create_test_dfs(data)
+
+    def my_first_item(s):
+        return s.iloc[0]
+
+    for agg in (my_first_item, [my_first_item], ["nunique", my_first_item]):
+        eval_general(
+            modin_teams,
+            pandas_teams,
+            operation=lambda df: df.groupby("league_abbreviation").name.agg(agg),
+        )
+
+
 def test_multi_column_groupby():
     pandas_df = pandas.DataFrame(
         {

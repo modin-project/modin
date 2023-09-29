@@ -1824,14 +1824,13 @@ class SeriesGroupBy(DataFrameGroupBy):
         Returns
         -------
         str, list
-            If `fn` is a callable, return its name if it's a method of the groupby
-            object, otherwise return `fn` itself. If `fn` is a string, return it.
-            If `fn` is an Iterable, return a list of _try_get_str_func applied to
-            each element of `fn`.
+            If `fn` is a callable, return its name, otherwise return `fn` itself.
+            If `fn` is a string, return it. If `fn` is an Iterable, return a list
+            of _try_get_str_func applied to each element of `fn`.
         """
         if not isinstance(fn, str) and isinstance(fn, Iterable):
             return [self._try_get_str_func(f) for f in fn]
-        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
+        return fn.__name__ if callable(fn) else fn
 
     def value_counts(
         self,
