@@ -1123,7 +1123,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
-            other = self.__constructor__({other.name: other})
+            other = self.__constructor__(other)
         if on is not None:
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
