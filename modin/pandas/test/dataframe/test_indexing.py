@@ -2388,6 +2388,26 @@ def test_setitem_2d_insertion():
     )
 
 
+def test_setitem_2d_update():
+    def test(df, iloc):
+        cols = df.columns[iloc].tolist()
+
+        df[cols] = df[cols] + 10
+        return df
+
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+    eval_general(modin_df, pandas_df, test, iloc=[0, 1, 2])
+    eval_general(modin_df, pandas_df, test, iloc=[0, -1])
+    eval_general(modin_df, pandas_df, test, iloc=slice(1, None))  # (start=1, stop=None)
+    eval_general(
+        modin_df, pandas_df, test, iloc=slice(None, -2)
+    )  # (start=None, stop=-2)
+    eval_general(modin_df, pandas_df, test, iloc=[0, 1, 5, 6, 9, 10, -2, -1])
+    eval_general(
+        modin_df, pandas_df, test, iloc=slice(None, None, 2)
+    )  # (start=None, stop=None, step=2)
+
+
 def test___setitem__single_item_in_series():
     # Test assigning a single item in a Series for issue
     # https://github.com/modin-project/modin/issues/3860

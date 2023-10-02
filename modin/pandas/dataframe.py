@@ -2570,12 +2570,40 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                new_qc = self._query_compiler.write_items(
-                    slice(None),
-                    self.columns.get_indexer_for(key),
-                    value,
-                    need_columns_reindex=False,
-                )
+                if isinstance(value, type(self)):
+                    # importing here to avoid circular import
+                    from .general import concat
+
+                    # here we iterate over every column in the 'self' frame, then check if it's in the 'key'
+                    # and so has to be taken from either from the 'value' or from the 'self'. After that,
+                    # we concatenate those mixed column chunks and get a dataframe with updated columns
+                    to_concat = []
+                    # columns to take for this chunk
+                    to_take = []
+                    # whether columns in this chunk are in the 'key' and has to be taken from the 'value'
+                    is_col_in_key = False
+                    # an object to take columns from for this chunk
+                    src_obj = self
+                    for col in self.columns:
+                        if (col in key) != is_col_in_key:
+                            if len(to_take):
+                                to_concat.append(src_obj.loc[:, to_take])
+                            to_take = [col]
+                            is_col_in_key ^= 1
+                            src_obj = value if is_col_in_key else self
+                        else:
+                            to_take.append(col)
+                    if len(to_take):
+                        to_concat.append(src_obj.loc[:, to_take])
+
+                    new_qc = concat(to_concat, axis=1)._query_compiler
+                else:
+                    new_qc = self._query_compiler.write_items(
+                        slice(None),
+                        self.columns.get_indexer_for(key),
+                        value,
+                        need_columns_reindex=False,
+                    )
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value
                 return
