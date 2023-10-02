@@ -926,7 +926,6 @@ def eval_general(
     values = execute_callable(
         operation, md_kwargs=md_kwargs, pd_kwargs=pd_kwargs, inplace=__inplace__
     )
-    breakpoint()
     if values is not None:
         comparator(*values, **(comparator_kwargs or {}))
 
