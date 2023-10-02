@@ -863,7 +863,7 @@ def test_clip(request, data, axis, bound_type):
             else len(modin_df.columns)
         )
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -875,8 +875,8 @@ def test_clip(request, data, axis, bound_type):
         pandas_result = pandas_df.clip(lower, upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         if bound_type == "series":
             modin_lower = pd.Series(lower)
