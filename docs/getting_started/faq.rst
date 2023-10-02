@@ -136,7 +136,7 @@ This can also be done with:
     modin_cfg.Engine.put('unidist') # Modin will use Unidist
     unidist_cfg.Backend.put('mpi') # Unidist will use MPI backend
 
-We also have an experimental HDK-based engine of Modin. You can read about on :doc:`Using HDK </development/using_hdk>`
+We also have an experimental HDK-based engine of Modin, which you can read about on :doc:`Using HDK </development/using_hdk>`
 page. We plan to support more execution engines in future. If you have a specific request,
 please post on the #feature-requests channel on our Slack_ community.
 
