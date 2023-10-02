@@ -2390,8 +2390,8 @@ def test_setitem_2d_insertion():
 
 def test_setitem_2d_update():
     def test(df, iloc):
+        """Update columns on the given numeric indices."""
         cols = df.columns[iloc].tolist()
-
         df[cols] = df[cols] + 10
         return df
 
