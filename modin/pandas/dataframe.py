@@ -2586,16 +2586,16 @@ class DataFrame(BasePandasDataset):
                     # columns to take for this chunk
                     to_take = []
                     # whether columns in this chunk are in the 'key' and has to be taken from the 'value'
-                    is_col_in_key = False
+                    get_cols_from_value = False
                     # an object to take columns from for this chunk
                     src_obj = self
                     for col in self.columns:
-                        if (col in key) != is_col_in_key:
+                        if (col in key) != get_cols_from_value:
                             if len(to_take):
                                 to_concat.append(src_obj[to_take])
                             to_take = [col]
-                            is_col_in_key = not is_col_in_key
-                            src_obj = value if is_col_in_key else self
+                            get_cols_from_value = not get_cols_from_value
+                            src_obj = value if get_cols_from_value else self
                         else:
                             to_take.append(col)
                     if len(to_take):
