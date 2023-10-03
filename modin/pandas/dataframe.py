@@ -2594,7 +2594,7 @@ class DataFrame(BasePandasDataset):
                             if len(to_take):
                                 to_concat.append(src_obj[to_take])
                             to_take = [col]
-                            is_col_in_key ^= 1
+                            is_col_in_key = not is_col_in_key
                             src_obj = value if is_col_in_key else self
                         else:
                             to_take.append(col)
