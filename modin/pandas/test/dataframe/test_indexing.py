@@ -527,6 +527,18 @@ def test_loc_5829():
     )
 
 
+def test_loc_multiindex_2892():
+    data = {"col1": [1, 2], "col2": [3, 4], "col3": [5, 6]}
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_df = modin_df.set_index(["col1", "col2"])
+    pandas_df = pandas_df.set_index(["col1", "col2"])
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.loc[[1, 2]],
+    )
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_single_categorical_column():
     modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")
