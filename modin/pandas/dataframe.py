@@ -2574,6 +2574,11 @@ class DataFrame(BasePandasDataset):
                     # importing here to avoid circular import
                     from .general import concat
 
+                    if not value.columns.equals(pandas.Index(key)):
+                        # we only need to change the labels, so shallow copy here
+                        value = value.copy(deep=False)
+                        value.columns = key
+
                     # here we iterate over every column in the 'self' frame, then check if it's in the 'key'
                     # and so has to be taken from either from the 'value' or from the 'self'. After that,
                     # we concatenate those mixed column chunks and get a dataframe with updated columns
@@ -2587,14 +2592,14 @@ class DataFrame(BasePandasDataset):
                     for col in self.columns:
                         if (col in key) != is_col_in_key:
                             if len(to_take):
-                                to_concat.append(src_obj.loc[:, to_take])
+                                to_concat.append(src_obj[to_take])
                             to_take = [col]
                             is_col_in_key ^= 1
                             src_obj = value if is_col_in_key else self
                         else:
                             to_take.append(col)
                     if len(to_take):
-                        to_concat.append(src_obj.loc[:, to_take])
+                        to_concat.append(src_obj[to_take])
 
                     new_qc = concat(to_concat, axis=1)._query_compiler
                 else:
