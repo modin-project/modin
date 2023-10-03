@@ -13,6 +13,7 @@
 
 import numpy as np
 import pandas
+import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
@@ -34,7 +35,19 @@ NPartitions.put(4)
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # TO MAKE SURE ALL FUTUREWARNINGS ARE CONSIDERED
+    pytest.mark.filterwarnings("error::FutureWarning"),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:Support for axis=1 in DataFrame.rolling is deprecated:FutureWarning"
+    ),
+    # FIXME: these cases inconsistent between modin and pandas
+    pytest.mark.filterwarnings(
+        "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
+    ),
+]
 
 
 def create_test_series(vals):
@@ -50,7 +63,7 @@ def create_test_series(vals):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -94,7 +107,7 @@ def test_dataframe_rolling(data, window, min_periods, axis, method, kwargs):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 def test_dataframe_agg(data, window, min_periods, axis):
     modin_df, pandas_df = create_test_dfs(data)
     if window > len(pandas_df):
@@ -119,7 +132,7 @@ def test_dataframe_agg(data, window, min_periods, axis):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("window", [5, 100])
 @pytest.mark.parametrize("min_periods", [None, 5])
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [lib.no_default, 1])
 @pytest.mark.parametrize(
     "method, kwargs",
     [
@@ -150,7 +163,7 @@ def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
     )
 
 
-@pytest.mark.parametrize("axis", [0, "columns"])
+@pytest.mark.parametrize("axis", [lib.no_default, "columns"])
 @pytest.mark.parametrize("on", [None, "DateCol"])
 @pytest.mark.parametrize("closed", ["both", "right"])
 @pytest.mark.parametrize("window", [3, "3s"])
@@ -159,7 +172,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
     data = {"A": range(12), "B": range(12)}
     pandas_df = pandas.DataFrame(data, index=index)
     modin_df = pd.DataFrame(data, index=index)
-    if on is not None and axis == 0 and isinstance(window, str):
+    if on is not None and axis == lib.no_default and isinstance(window, str):
         pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
         modin_df[on] = pd.date_range("22/06/1941", periods=12, freq="T")
     else:
@@ -181,7 +194,7 @@ def test_dataframe_dt_index(axis, on, closed, window):
         df_equals(
             modin_rolled.cov(modin_df, False), pandas_rolled.cov(pandas_df, False)
         )
-        if axis == 0:
+        if axis == lib.no_default:
             df_equals(
                 modin_rolled.cov(modin_df[modin_df.columns[0]], True),
                 pandas_rolled.cov(pandas_df[pandas_df.columns[0]], True),
@@ -333,3 +346,17 @@ def test_issue_3512():
     pandas_ans = pandas_df[0:33].rolling(window=21).mean()
 
     df_equals(modin_ans, pandas_ans)
+
+
+### TEST ROLLING WARNINGS ###
+
+
+def test_rolling_axis_1_depr():
+    index = pandas.date_range("31/12/2000", periods=12, freq="T")
+    data = {"A": range(12), "B": range(12)}
+    modin_df = pd.DataFrame(data, index=index)
+    with pytest.warns(
+        FutureWarning,
+        match="Support for axis=1 in DataFrame.rolling is deprecated",
+    ):
+        modin_df.rolling(window=3, axis=1)

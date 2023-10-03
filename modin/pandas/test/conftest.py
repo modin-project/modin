@@ -24,8 +24,8 @@ def pytest_collection_modifyitems(items):
         ):
             for item in items:
                 if item.name in (
-                    "test_dataframe_dt_index[3s-both-DateCol-0]",
-                    "test_dataframe_dt_index[3s-right-DateCol-0]",
+                    "test_dataframe_dt_index[3s-both-DateCol-_NoDefault.no_default]",
+                    "test_dataframe_dt_index[3s-right-DateCol-_NoDefault.no_default]",
                 ):
                     item.add_marker(
                         pytest.mark.xfail(
