@@ -1252,7 +1252,7 @@ def test_clip_scalar(request, data, bound_type):
 
     if name_contains(request.node.name, numeric_dfs):
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
 
         # test only upper scalar bound
         modin_result = modin_series.clip(None, upper)
@@ -1273,8 +1273,8 @@ def test_clip_sequence(request, data, bound_type):
     )
 
     if name_contains(request.node.name, numeric_dfs):
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
 
         if bound_type == "series":
             modin_lower = pd.Series(lower)
