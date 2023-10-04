@@ -74,11 +74,14 @@ from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManage
 from .utils import (
     ColNameCodec,
     arrow_to_pandas,
+    arrow_type_to_pandas,
     build_categorical_from_at,
     check_cols_to_join,
     check_join_supported,
+    get_cat_value_dtype,
     get_data_for_join_by_index,
     maybe_range,
+    set_cat_value_dtype,
 )
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
@@ -1105,8 +1108,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
                 right_dt, pd.CategoricalDtype
             ):
-                left_dt = left_dt.categories.dtype
-                right_dt = right_dt.categories.dtype
+                left_dt = get_cat_value_dtype(left_dt)
+                right_dt = get_cat_value_dtype(right_dt)
             if not (
                 (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
@@ -2842,13 +2845,13 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         for col in at.columns:
             if pyarrow.types.is_dictionary(col.type):
-                new_dtypes.append(
-                    LazyProxyCategoricalDtype._build_proxy(
-                        parent=at,
-                        column_name=col._name,
-                        materializer=build_categorical_from_at,
-                    )
+                dt = LazyProxyCategoricalDtype._build_proxy(
+                    parent=at,
+                    column_name=col._name,
+                    materializer=build_categorical_from_at,
                 )
+                set_cat_value_dtype(dt, arrow_type_to_pandas(col.type.value_type))
+                new_dtypes.append(dt)
             else:
                 new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 
