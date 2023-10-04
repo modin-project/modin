@@ -24,10 +24,10 @@ import pandas.core.groupby
 from pandas._libs import lib
 from pandas.core.apply import reconstruct_func
 from pandas.core.dtypes.common import (
+    is_datetime64_any_dtype,
     is_integer,
     is_list_like,
     is_numeric_dtype,
-    is_datetime64_any_dtype,
 )
 from pandas.errors import SpecificationError
 
