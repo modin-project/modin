@@ -81,7 +81,6 @@ from .utils import (
     get_cat_value_dtype,
     get_data_for_join_by_index,
     maybe_range,
-    set_cat_value_dtype,
 )
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
@@ -2845,13 +2844,14 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         for col in at.columns:
             if pyarrow.types.is_dictionary(col.type):
-                dt = LazyProxyCategoricalDtype._build_proxy(
-                    parent=at,
-                    column_name=col._name,
-                    materializer=build_categorical_from_at,
+                new_dtypes.append(
+                    LazyProxyCategoricalDtype._build_proxy(
+                        parent=at,
+                        column_name=col._name,
+                        materializer=build_categorical_from_at,
+                        dtype=arrow_type_to_pandas(col.type.value_type),
+                    )
                 )
-                set_cat_value_dtype(dt, arrow_type_to_pandas(col.type.value_type))
-                new_dtypes.append(dt)
             else:
                 new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 

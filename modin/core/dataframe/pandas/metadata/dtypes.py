@@ -202,7 +202,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
             return self._build_proxy(parent, column_name, self._materializer)
 
     @classmethod
-    def _build_proxy(cls, parent, column_name, materializer):
+    def _build_proxy(cls, parent, column_name, materializer, dtype=None):
         """
         Construct a lazy proxy.
 
@@ -214,6 +214,8 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
             Column name of the categorical column in the source object.
         materializer : callable(parent, column_name) -> pandas.CategoricalDtype
             A function to call in order to extract categorical values.
+        dtype : dtype, optional
+            The categories dtype.
 
         Returns
         -------
@@ -223,7 +225,20 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         result._parent = parent
         result._column_name = column_name
         result._materializer = materializer
+        result._dtype = dtype
         return result
+
+    def _get_dtype(self):
+        """
+        Get the categories dtype.
+
+        Returns
+        -------
+        dtype
+        """
+        if self._dtype is None:
+            self._dtype = self.categories.dtype
+        return self._dtype
 
     def __reduce__(self):
         """
@@ -265,6 +280,7 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         self._categories_val = categories
         self._parent = None  # The parent is not required any more
         self._materializer = None
+        self._dtype = None
 
     @property
     def _is_materialized(self) -> bool:

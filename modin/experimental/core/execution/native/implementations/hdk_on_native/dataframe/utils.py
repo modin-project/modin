@@ -27,6 +27,7 @@ from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 from pandas.core.dtypes.common import _get_dtype, is_string_dtype
 from pyarrow.types import is_dictionary
 
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
@@ -582,7 +583,7 @@ def arrow_type_to_pandas(at: pa.lib.DataType):
     return at.to_pandas_dtype()
 
 
-def get_cat_value_dtype(cdt: pandas.CategoricalDtype):
+def get_cat_value_dtype(cdt: Union[LazyProxyCategoricalDtype, pandas.CategoricalDtype]):
     """
     Get the categorical value dtype.
 
@@ -594,19 +595,11 @@ def get_cat_value_dtype(cdt: pandas.CategoricalDtype):
     -------
     dtype
     """
-    return getattr(cdt, "_cat_value_type", None) or cdt.categories.dtype
-
-
-def set_cat_value_dtype(cdt: pandas.CategoricalDtype, dtype):
-    """
-    Set the categorical value dtype.
-
-    Parameters
-    ----------
-    cdt : pandas.CategoricalDtype
-    dtype : dtype
-    """
-    cdt._cat_value_type = dtype
+    return (
+        cdt._get_dtype()
+        if isinstance(cdt, LazyProxyCategoricalDtype)
+        else cdt.categories.dtype
+    )
 
 
 class _CategoricalDtypeMapper:  # noqa: GL08
