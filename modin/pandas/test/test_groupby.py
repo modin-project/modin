@@ -2726,6 +2726,21 @@ def test_groupby_pct_change_diff_6194():
     )
 
 
+def test_groupby_datetime_diff_6628():
+    dates = pd.date_range(start="2023-01-01", periods=10, freq="W")
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "group": "A",
+        }
+    )
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby("group").diff(),
+    )
+
+
 def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.count())
     eval_general(md_window, pd_window, lambda window: window.sum())
