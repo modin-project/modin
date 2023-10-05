@@ -14,7 +14,6 @@
 import warnings
 
 import pytest
-import matplotlib
 import numpy as np
 import pandas
 import matplotlib

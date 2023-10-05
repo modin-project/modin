@@ -18,7 +18,12 @@ import pandas
 from pandas.core.apply import reconstruct_func
 from pandas.errors import SpecificationError
 import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
+from pandas.core.dtypes.common import (
+    is_datetime64_any_dtype,
+    is_integer,
+    is_list_like,
+    is_numeric_dtype,
+)
 from pandas._libs.lib import no_default
 import pandas.core.common as com
 from types import BuiltinFunctionType
@@ -1267,7 +1272,9 @@ class DataFrameGroupBy(ClassLogger):
             for col, dtype in self._df.dtypes.items():
                 # can't calculate diff on non-numeric columns, so check for non-numeric
                 # columns that are not included in the `by`
-                if not is_numeric_dtype(dtype) and not (
+                if not (
+                    is_numeric_dtype(dtype) or is_datetime64_any_dtype(dtype)
+                ) and not (
                     isinstance(self._by, BaseQueryCompiler) and col in self._by.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
