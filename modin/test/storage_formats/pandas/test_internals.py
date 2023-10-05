@@ -1390,3 +1390,124 @@ def test_sort_values_cache():
     # check that the initial frame's cache wasn't changed
     assert mf_initial._column_widths_cache == [32, 32]
     validate_partitions_cache(mf_initial, axis=1)
+
+
+class DummyFuture:
+    """
+    A dummy object emulating future's behaviour, this class is used in ``test_call_queue_serialization``.
+
+    It stores a random numeric value representing its data and `was_materialized` state.
+    Initially this object is considered to be serialized, the state can be changed by calling
+    the ``.materialize()`` method.
+    """
+
+    def __init__(self):
+        self._value = np.random.randint(0, 1_000_000)
+        self._was_materialized = False
+
+    def materialize(self):
+        self._was_materialized = True
+        return self
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)) and self._value == other._value:
+            return True
+        return False
+
+
+@pytest.mark.parametrize(
+    "call_queue",
+    [
+        # empty call queue
+        [],
+        # a single-function call queue (the function has no argument and it's materialized)
+        [(0, [], {})],
+        # a single-function call queue (the function has no argument and it's serialized)
+        [(DummyFuture(), [], {})],
+        # a multiple-functions call queue, none of the functions have arguments
+        [(DummyFuture(), [], {}), (DummyFuture(), [], {}), (0, [], {})],
+        # a single-function call queue (the function has both positional and keyword arguments)
+        [
+            (
+                DummyFuture(),
+                [DummyFuture()],
+                {
+                    "a": DummyFuture(),
+                    "b": [DummyFuture()],
+                    "c": [DummyFuture, DummyFuture()],
+                },
+            )
+        ],
+        # a multiple-functions call queue with mixed types of functions/arguments
+        [
+            (
+                DummyFuture(),
+                [1, DummyFuture(), DummyFuture(), [4, 5]],
+                {"a": [DummyFuture(), 2], "b": DummyFuture(), "c": [1]},
+            ),
+            (0, [], {}),
+            (0, [1], {}),
+            (0, [DummyFuture(), DummyFuture()], {}),
+        ],
+    ],
+)
+def test_call_queue_serialization(call_queue):
+    """
+    Test that the process of passing a call queue to Ray's kernel works correctly.
+
+    Before passing a call queue to the kernel that actually executes it, the call queue
+    is unwrapped into a 1D list using the ``deconstruct_call_queue`` function. After that,
+    the 1D list is passed as a variable length argument to the kernel ``kernel(*queue)``,
+    this is done so the Ray engine automatically materialize all the futures that the queue
+    might have contained. In the end, inside of the kernel, the ``reconstruct_call_queue`` function
+    is called to rebuild the call queue into its original structure.
+
+    This test emulates the described flow and verifies that it works properly.
+    """
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+        deconstruct_call_queue,
+        reconstruct_call_queue,
+    )
+
+    def materialize_queue(*values):
+        """
+        Walk over the `values` and materialize all the future types.
+
+        This function emulates how Ray remote functions materialize their positional arguments.
+        """
+        return [
+            val.materialize() if isinstance(val, DummyFuture) else val for val in values
+        ]
+
+    def assert_everything_materialized(queue):
+        """Walk over the call queue and verify that all entities there are materialized."""
+
+        def assert_materialized(obj):
+            assert (
+                isinstance(obj, DummyFuture) and obj._was_materialized
+            ) or not isinstance(obj, DummyFuture)
+
+        for func, args, kwargs in queue:
+            assert_materialized(func)
+            for arg in args:
+                assert_materialized(arg)
+            for value in kwargs.values():
+                if not isinstance(value, (list, tuple)):
+                    value = [value]
+                for val in value:
+                    assert_materialized(val)
+
+    (
+        num_funcs,
+        arg_lengths,
+        kw_key_lengths,
+        kw_value_lengths,
+        queue,
+    ) = deconstruct_call_queue(call_queue)
+    queue = materialize_queue(*queue)
+    reconstructed_queue = reconstruct_call_queue(
+        num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, queue
+    )
+
+    assert call_queue == reconstructed_queue
+    assert_everything_materialized(reconstructed_queue)
