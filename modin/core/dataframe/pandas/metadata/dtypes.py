@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module contains class ``ModinDtypes``."""
+from typing import Union
 
 import pandas
 
@@ -302,3 +303,24 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
         categoricals = self._materializer(self._parent, self._column_name)
         self._categories = categoricals.categories
         self._ordered = categoricals.ordered
+
+
+def get_categories_dtype(
+    cdt: Union[LazyProxyCategoricalDtype, pandas.CategoricalDtype]
+):
+    """
+    Get the categories dtype.
+
+    Parameters
+    ----------
+    cdt : LazyProxyCategoricalDtype or pandas.CategoricalDtype
+
+    Returns
+    -------
+    dtype
+    """
+    return (
+        cdt._get_dtype()
+        if isinstance(cdt, LazyProxyCategoricalDtype)
+        else cdt.categories.dtype
+    )
