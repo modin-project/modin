@@ -13,11 +13,15 @@
 
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
+import numpy as np
+from pandas.core.dtypes.common import is_numeric_dtype
+
 from modin.core.execution.modin_aqp import progress_bar_wrapper
 from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
+from modin.utils import _inherit_docstrings
 
 from .partition import PandasOnRayDataframePartition
 from .virtual_partition import (
@@ -50,6 +54,47 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         RayWrapper.wait(
             [block for partition in partitions for block in partition.list_of_blocks]
         )
+
+    @classmethod
+    @_inherit_docstrings(
+        GenericRayDataframePartitionManager.split_pandas_df_into_partitions
+    )
+    def split_pandas_df_into_partitions(
+        cls, df, row_chunksize, col_chunksize, update_bar
+    ):
+        # it was found out, that starting from about ~6mln elements it's more beneficial to do
+        # distributed dataframe splitting for Ray in case of numerical data
+        distributed_splitting = (len(df) * len(df.columns)) > 6_000_000 and all(
+            is_numeric_dtype(dtype) for dtype in df.dtypes
+        )
+
+        if not distributed_splitting:
+            return super().split_pandas_df_into_partitions(
+                df, row_chunksize, col_chunksize, update_bar
+            )
+
+        put_func = cls._partition_class.put
+
+        def mask(part, row_loc, col_loc):
+            # 2D iloc works surprisingly slow, so doing this chained iloc calls:
+            # https://github.com/pandas-dev/pandas/issues/55202
+            return part.apply(lambda df: df.iloc[row_loc, :].iloc[:, col_loc])
+
+        main_part = put_func(df)
+        parts = [
+            [
+                update_bar(
+                    mask(
+                        main_part,
+                        slice(i, i + row_chunksize),
+                        slice(j, j + col_chunksize),
+                    ),
+                )
+                for j in range(0, len(df.columns), col_chunksize)
+            ]
+            for i in range(0, len(df), row_chunksize)
+        ]
+        return np.array(parts)
 
 
 def _make_wrapped_method(name: str):
