@@ -565,6 +565,23 @@ def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
     return df
 
 
+def arrow_type_to_pandas(at: pa.lib.DataType):
+    """
+    Convert the specified arrow type to pandas dtype.
+
+    Parameters
+    ----------
+    at : pa.lib.DataType
+
+    Returns
+    -------
+    dtype
+    """
+    if at == pa.string():
+        return _get_dtype(str)
+    return at.to_pandas_dtype()
+
+
 class _CategoricalDtypeMapper:  # noqa: GL08
     @staticmethod
     def __from_arrow__(arr):  # noqa: GL08

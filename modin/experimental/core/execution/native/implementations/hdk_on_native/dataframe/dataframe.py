@@ -38,6 +38,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.dataframe.pandas.metadata.dtypes import get_categories_dtype
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
@@ -74,6 +75,7 @@ from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManage
 from .utils import (
     ColNameCodec,
     arrow_to_pandas,
+    arrow_type_to_pandas,
     build_categorical_from_at,
     check_cols_to_join,
     check_join_supported,
@@ -1105,8 +1107,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
                 right_dt, pd.CategoricalDtype
             ):
-                left_dt = left_dt.categories.dtype
-                right_dt = right_dt.categories.dtype
+                left_dt = get_categories_dtype(left_dt)
+                right_dt = get_categories_dtype(right_dt)
             if not (
                 (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
@@ -2847,6 +2849,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                         parent=at,
                         column_name=col._name,
                         materializer=build_categorical_from_at,
+                        dtype=arrow_type_to_pandas(col.type.value_type),
                     )
                 )
             else:
