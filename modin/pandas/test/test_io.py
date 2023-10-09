@@ -2198,6 +2198,17 @@ class TestExcel:
         )
 
     @check_file_leaks
+    @pytest.mark.parametrize("skiprows", [2, [1, 3], lambda x: x in [0, 2]])
+    def test_read_excel_skiprows(self, skiprows, make_excel_file):
+        eval_io(
+            fn_name="read_excel",
+            # read_excel kwargs
+            io=make_excel_file(),
+            skiprows=skiprows,
+            check_kwargs_callable=False,
+        )
+
+    @check_file_leaks
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
