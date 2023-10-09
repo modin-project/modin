@@ -59,6 +59,13 @@ class ExcelDispatcher(TextFileDispatcher):
                 **kwargs
             )
 
+        if kwargs.get("skiprows") is not None:
+            return cls.single_worker_read(
+                io,
+                reason="Modin doesn't support 'skiprows' parameter of `read_excel`",
+                **kwargs
+            )
+
         if isinstance(io, bytes):
             io = BytesIO(io)
 

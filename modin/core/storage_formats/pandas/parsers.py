@@ -580,7 +580,6 @@ class PandasExcelParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        _skiprows = kwargs.pop("skiprows")
         excel_header = kwargs.get("_header")
         sheet_name = kwargs.get("sheet_name", 0)
         footer = b"</sheetData></worksheet>"
@@ -588,6 +587,8 @@ class PandasExcelParser(PandasParser):
         # Default to pandas case, where we are not splitting or partitioning
         if start is None or end is None:
             return pandas.read_excel(fname, **kwargs)
+
+        _skiprows = kwargs.pop("skiprows")
 
         from zipfile import ZipFile
         import openpyxl
