@@ -391,6 +391,19 @@ class TestCSV:
 
         run_and_compare(test, data={})
 
+    def test_read_csv_dtype_object(self):
+        with pytest.warns(UserWarning) as warns:
+            with ensure_clean(".csv") as file:
+                with open(file, "w") as f:
+                    f.write("test\ntest")
+
+                def test(**kwargs):
+                    return pd.read_csv(file, dtype={"test": "object"})
+
+                run_and_compare(test, data={})
+            for warn in warns.list:
+                assert not re.match(r".*defaulting to pandas.*", str(warn))
+
 
 class TestMasks:
     data = {
