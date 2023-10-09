@@ -1130,6 +1130,11 @@ class BasePandasDataset(ClassLogger):
         """
         Return the bool of a single element `BasePandasDataset`.
         """
+        warnings.warn(
+            f"{type(self).__name__}.bool is now deprecated and will be removed "
+            + "in future version of pandas",
+            FutureWarning,
+        )
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
             raise ValueError(
@@ -1757,6 +1762,11 @@ class BasePandasDataset(ClassLogger):
         """
         Select initial periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "first is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
         return self._create_or_update_from_compiler(
             self._query_compiler.first(offset=to_offset(offset))
         )
@@ -1913,6 +1923,12 @@ class BasePandasDataset(ClassLogger):
         """
         Select final periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "last is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
+
         return self._create_or_update_from_compiler(
             self._query_compiler.last(offset=to_offset(offset))
         )

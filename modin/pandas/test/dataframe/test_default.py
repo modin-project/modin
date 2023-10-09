@@ -53,7 +53,19 @@ matplotlib.use("Agg")
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:.*bool is now deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:first is deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:last is deprecated and will be removed:FutureWarning"
+    ),
+]
 
 
 @pytest.mark.parametrize(
@@ -188,9 +200,12 @@ def test_bfill(data):
 def test_bool(data):
     modin_df = pd.DataFrame(data)
 
-    with pytest.raises(ValueError):
-        modin_df.bool()
-        modin_df.__bool__()
+    with pytest.warns(
+        FutureWarning, match="bool is now deprecated and will be removed"
+    ):
+        with pytest.raises(ValueError):
+            modin_df.bool()
+            modin_df.__bool__()
 
     single_bool_pandas_df = pandas.DataFrame([True])
     single_bool_modin_df = pd.DataFrame([True])
@@ -446,7 +461,9 @@ def test_first():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=i
     )
-    df_equals(modin_df.first("3D"), pandas_df.first("3D"))
+    with pytest.warns(FutureWarning, match="first is deprecated and will be removed"):
+        modin_result = modin_df.first("3D")
+    df_equals(modin_result, pandas_df.first("3D"))
     df_equals(modin_df.first("20D"), pandas_df.first("20D"))
 
 
@@ -522,7 +539,9 @@ def test_last():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=pandas_index
     )
-    df_equals(modin_df.last("3D"), pandas_df.last("3D"))
+    with pytest.warns(FutureWarning, match="last is deprecated and will be removed"):
+        modin_result = modin_df.last("3D")
+    df_equals(modin_result, pandas_df.last("3D"))
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 

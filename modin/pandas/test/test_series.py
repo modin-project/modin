@@ -89,7 +89,19 @@ from .utils import (
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:.*bool is now deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:first is deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:last is deprecated and will be removed:FutureWarning"
+    ),
+]
 
 NPartitions.put(4)
 
@@ -1237,8 +1249,11 @@ def test_bfill(data):
 def test_bool(data):
     modin_series, _ = create_test_series(data)
 
-    with pytest.raises(ValueError):
-        modin_series.bool()
+    with pytest.warns(
+        FutureWarning, match="bool is now deprecated and will be removed"
+    ):
+        with pytest.raises(ValueError):
+            modin_series.bool()
     with pytest.raises(ValueError):
         modin_series.__bool__()
 
@@ -2034,7 +2049,9 @@ def test_first():
     i = pd.date_range("2010-04-09", periods=400, freq="2D")
     modin_series = pd.Series(list(range(400)), index=i)
     pandas_series = pandas.Series(list(range(400)), index=i)
-    df_equals(modin_series.first("3D"), pandas_series.first("3D"))
+    with pytest.warns(FutureWarning, match="first is deprecated and will be removed"):
+        modin_result = modin_series.first("3D")
+    df_equals(modin_result, pandas_series.first("3D"))
     df_equals(modin_series.first("20D"), pandas_series.first("20D"))
 
 
@@ -2277,7 +2294,9 @@ def test_last():
     pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")
     modin_series = pd.Series(list(range(400)), index=modin_index)
     pandas_series = pandas.Series(list(range(400)), index=pandas_index)
-    df_equals(modin_series.last("3D"), pandas_series.last("3D"))
+    with pytest.warns(FutureWarning, match="last is deprecated and will be removed"):
+        modin_result = modin_series.last("3D")
+    df_equals(modin_result, pandas_series.last("3D"))
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
