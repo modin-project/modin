@@ -292,7 +292,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         tname = dtype if isinstance(dtype, str) else dtype.name
         if tname == "category":
             return pa.dictionary(index_type=pa.int32(), value_type=pa.string())
-        elif tname == "string":
+        elif tname == "string" or tname == "object":
             return pa.string()
         else:
             return pa.from_numpy_dtype(tname)
