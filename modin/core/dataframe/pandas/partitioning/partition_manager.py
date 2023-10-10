@@ -832,7 +832,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray or (np.ndarray, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
-
         num_splits = NPartitions.get()
         row_chunksize = compute_chunksize(df.shape[0], num_splits)
         col_chunksize = compute_chunksize(df.shape[1], num_splits)
