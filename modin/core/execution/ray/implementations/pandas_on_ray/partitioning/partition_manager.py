@@ -23,6 +23,7 @@ from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
 from modin.utils import _inherit_docstrings
+from modin.logging import get_logger
 
 from .partition import PandasOnRayDataframePartition
 from .virtual_partition import (
@@ -73,17 +74,27 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         #   It was estimated that it requires ~2.5x of the dataframe size, so to avoid
         #   OOM problems, we fall back to sequential implementation in case it doesn't
         #   fit into memory (using 3x threshold to be on the safe side).
+        enough_elements = (len(df) * len(df.columns)) > 6_000_000
+        all_numeric_types = all(is_numeric_dtype(dtype) for dtype in df.dtypes)
+        three_copies_fits_into_memory = psutil.virtual_memory().available > (
+            df.memory_usage().sum() * 3
+        )
         distributed_splitting = (
-            (len(df) * len(df.columns)) > 6_000_000
-            and all(is_numeric_dtype(dtype) for dtype in df.dtypes)
-            and psutil.virtual_memory().available > (df.memory_usage().sum() * 3)
+            enough_elements and all_numeric_types and three_copies_fits_into_memory
         )
 
+        log = get_logger()
+
         if not distributed_splitting:
+            log.info(
+                "Using sequential splitting in '.from_pandas()' because of some of the condition is False: "
+                + f"{enough_elements=}; {all_numeric_types=}; {three_copies_fits_into_memory=}"
+            )
             return super().split_pandas_df_into_partitions(
                 df, row_chunksize, col_chunksize, update_bar
             )
 
+        log.info("Using distributed splitting in '.from_pandas()'")
         put_func = cls._partition_class.put
 
         def mask(part, row_loc, col_loc):
