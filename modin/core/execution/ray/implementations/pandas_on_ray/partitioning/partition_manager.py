@@ -14,8 +14,8 @@
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import numpy as np
-from pandas.core.dtypes.common import is_numeric_dtype
 import psutil
+from pandas.core.dtypes.common import is_numeric_dtype
 
 from modin.core.execution.modin_aqp import progress_bar_wrapper
 from modin.core.execution.ray.common import RayWrapper
