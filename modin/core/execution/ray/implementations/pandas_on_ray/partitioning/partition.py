@@ -70,43 +70,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         )
 
-    @staticmethod
-    def _apply_call_queue(call_queue, data):
-        """
-        Execute call queue over the given `data`.
-
-        Parameters
-        ----------
-        call_queue : list[list[func, args, kwargs], ...]
-        data : ray.ObjectRef
-
-        Returns
-        -------
-        ray.ObjectRef of pandas.DataFrame
-            The resulting pandas DataFrame.
-        ray.ObjectRef of int
-            The number of rows of the resulting pandas DataFrame.
-        ray.ObjectRef of int
-            The number of columns of the resulting pandas DataFrame.
-        ray.ObjectRef of str
-            The node IP address of the worker process.
-        """
-        (
-            num_funcs,
-            arg_lengths,
-            kw_key_lengths,
-            kw_value_lengths,
-            unfolded_queue,
-        ) = deconstruct_call_queue(call_queue)
-        return _apply_list_of_funcs.remote(
-            data,
-            num_funcs,
-            arg_lengths,
-            kw_key_lengths,
-            kw_value_lengths,
-            *unfolded_queue,
-        )
-
     def apply(self, func, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
@@ -138,7 +101,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            result, length, width, ip = self._apply_call_queue(call_queue, data)
+            result, length, width, ip = _apply_list_of_funcs.remote(
+                data, *deconstruct_call_queue(call_queue)
+            )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -169,7 +134,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 new_length,
                 new_width,
                 self._ip_cache,
-            ) = self._apply_call_queue(call_queue, data)
+            ) = _apply_list_of_funcs.remote(data, *deconstruct_call_queue(call_queue))
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.

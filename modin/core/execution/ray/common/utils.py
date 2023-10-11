@@ -335,12 +335,12 @@ def deconstruct_call_queue(call_queue):
             was_iterable = True
             if not isinstance(value, (list, tuple)):
                 was_iterable = False
-                value = [value]
+                value = (value,)
             unfolded_queue.extend(value)
             value_lengths.append({"len": len(value), "was_iterable": was_iterable})
         kw_value_lengths.append(value_lengths)
 
-    return num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, unfolded_queue
+    return num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, *unfolded_queue
 
 
 def reconstruct_call_queue(
@@ -385,9 +385,9 @@ def reconstruct_call_queue(
         kw_keys = take_n_items(kw_key_lengths[i])
         kwargs = {}
         value_lengths = kw_value_lengths[i]
-        for j, key in enumerate(kw_keys):
-            vals = take_n_items(value_lengths[j]["len"])
-            if value_lengths[j]["len"] == 1 and not value_lengths[j]["was_iterable"]:
+        for key, value_length in zip(kw_keys, value_lengths):
+            vals = take_n_items(value_length["len"])
+            if value_length["len"] == 1 and not value_length["was_iterable"]:
                 vals = vals[0]
             kwargs[key] = vals
 

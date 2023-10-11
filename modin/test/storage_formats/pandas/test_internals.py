@@ -1502,7 +1502,7 @@ def test_call_queue_serialization(call_queue):
         arg_lengths,
         kw_key_lengths,
         kw_value_lengths,
-        queue,
+        *queue,
     ) = deconstruct_call_queue(call_queue)
     queue = materialize_queue(*queue)
     reconstructed_queue = reconstruct_call_queue(
