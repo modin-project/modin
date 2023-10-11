@@ -21,7 +21,6 @@ from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
 from modin.core.execution.ray.common import RayWrapper
-from modin.core.execution.ray.common.utils import deserialize
 from modin.utils import _inherit_docstrings
 
 from .partition import PandasOnRayDataframePartition
@@ -118,9 +117,10 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             cls._get_deploy_split_func(),
             axis,
             func,
-            f_args,
+            len(f_args),
             f_kwargs,
             num_splits,
+            *f_args,
             *partitions,
             extract_metadata=extract_metadata,
         )
@@ -179,10 +179,11 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             cls._get_deploy_axis_func(),
             axis,
             func,
-            f_args,
+            len(f_args),
             f_kwargs,
             num_splits,
             maintain_partitioning,
+            *f_args,
             *partitions,
             manual_partition=manual_partition,
             lengths=lengths,
@@ -234,11 +235,12 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             axis,
             func,
-            f_args,
+            len(f_args),
             f_kwargs,
             num_splits,
             len_of_left,
             other_shape,
+            *f_args,
             *partitions,
         )
 
@@ -264,9 +266,9 @@ def _deploy_ray_func(
     deployer,
     axis,
     f_to_deploy,
-    f_args,
+    f_len_args,
     f_kwargs,
-    *args,
+    *futures,
     extract_metadata=True,
     **kwargs,
 ):  # pragma: no cover
@@ -287,12 +289,14 @@ def _deploy_ray_func(
         The axis to perform the function along.
     f_to_deploy : callable or RayObjectID
         The function to deploy.
-    f_args : list or tuple
-        Positional arguments to pass to ``f_to_deploy``.
+    f_len_args : int
+        Number of positional arguments to pass to ``f_to_deploy``.
     f_kwargs : dict
         Keyword arguments to pass to ``f_to_deploy``.
-    *args : list
-        Positional arguments to pass to ``deployer``.
+    *futures : list
+        The first `f_len_args` elements in this list represent positional arguments
+        to pass to the `f_to_deploy`. The rest are partitions that will be passed as
+        positional arguments to `deployer`.
     extract_metadata : bool, default: True
         Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
         the load on object storage as the remote function would return 4 times fewer futures.
@@ -310,8 +314,9 @@ def _deploy_ray_func(
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    f_args = deserialize(f_args)
-    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    f_args = futures[:f_len_args]
+    partitions = futures[f_len_args:]
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *partitions, **kwargs)
     if not extract_metadata:
         return result
     ip = get_node_ip_address()
