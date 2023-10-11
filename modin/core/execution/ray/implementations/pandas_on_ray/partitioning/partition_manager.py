@@ -15,6 +15,7 @@
 
 import numpy as np
 from pandas.core.dtypes.common import is_numeric_dtype
+import psutil
 
 from modin.core.execution.modin_aqp import progress_bar_wrapper
 from modin.core.execution.ray.common import RayWrapper
@@ -62,10 +63,20 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     def split_pandas_df_into_partitions(
         cls, df, row_chunksize, col_chunksize, update_bar
     ):
-        # it was found out, that starting from about ~6mln elements it's more beneficial to do
-        # distributed dataframe splitting for Ray in case of numerical data
-        distributed_splitting = (len(df) * len(df.columns)) > 6_000_000 and all(
-            is_numeric_dtype(dtype) for dtype in df.dtypes
+        # it was found out, that with the following condition it's more beneficial
+        # to use the distributed splitting, let's break them down:
+        #   1. The distributed splitting is used only when there's more than 6mln elements
+        #   in the `df`, as with fewer data it's better to use the sequential splitting
+        #   2. Only used with numerical data, as with other dtypes, putting the whole big
+        #   dataframe into the storage takes too much time.
+        #   3. The distributed splitting consumes more memory that the sequential one.
+        #   It was estimated that it requires ~2.5x of the dataframe size, so to avoid
+        #   OOM problems, we fall back to sequential implementation in case it doesn't
+        #   fit into memory (using 3x threshold to be on the safe side).
+        distributed_splitting = (
+            (len(df) * len(df.columns)) > 6_000_000
+            and all(is_numeric_dtype(dtype) for dtype in df.dtypes)
+            and psutil.virtual_memory().available > (df.memory_usage().sum() * 3)
         )
 
         if not distributed_splitting:
