@@ -396,7 +396,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._agg("min", **kwargs)
 
     def sum(self, **kwargs):
-        min_count = kwargs.pop("min_count")
+        min_count = kwargs.pop("min_count", 0)
         if min_count != 0:
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
