@@ -22,8 +22,8 @@ from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
 )
-from modin.utils import _inherit_docstrings
 from modin.logging import get_logger
+from modin.utils import _inherit_docstrings
 
 from .partition import PandasOnRayDataframePartition
 from .virtual_partition import (
