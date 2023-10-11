@@ -73,11 +73,11 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         #   3. The distributed splitting consumes more memory that the sequential one.
         #   It was estimated that it requires ~2.5x of the dataframe size, so to avoid
         #   OOM problems, we fall back to sequential implementation in case it doesn't
-        #   fit into memory (using 3x threshold to be on the safe side).
+        #   fit into memory (using 3.5x threshold to be on the safe side).
         enough_elements = (len(df) * len(df.columns)) > 6_000_000
         all_numeric_types = all(is_numeric_dtype(dtype) for dtype in df.dtypes)
         three_copies_fits_into_memory = psutil.virtual_memory().available > (
-            df.memory_usage().sum() * 3
+            df.memory_usage().sum() * 3.5
         )
         distributed_splitting = (
             enough_elements and all_numeric_types and three_copies_fits_into_memory
