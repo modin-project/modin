@@ -2231,14 +2231,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else other.to_pandas()
             )
 
-        def map_func(df, other=other, squeeze_self=squeeze_self):  # pragma: no cover
-            """Compute matrix multiplication of the passed frames."""
-            result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
-            if is_list_like(result):
-                return pandas.DataFrame(result)
-            else:
-                return pandas.DataFrame([result])
-
         num_cols = other.shape[1] if len(other.shape) > 1 else 1
         if len(self.columns) == 1:
             new_index = (
@@ -2255,8 +2247,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [MODIN_UNNAMED_SERIES_LABEL] if num_cols == 1 else None
             axis = 1
 
+        align_index = isinstance(new_index, list) and new_index == [
+            MODIN_UNNAMED_SERIES_LABEL
+        ]
+        align_columns = new_columns == [MODIN_UNNAMED_SERIES_LABEL]
+
+        def map_func(df, other=other, squeeze_self=squeeze_self):  # pragma: no cover
+            """Compute matrix multiplication of the passed frames."""
+            result = df.squeeze(axis=1).dot(other) if squeeze_self else df.dot(other)
+
+            if is_list_like(result):
+                res = pandas.DataFrame(result)
+            else:
+                res = pandas.DataFrame([result])
+
+            # manual aligning with external index to avoid `sync_labels` overhead
+            if align_columns:
+                res.columns = [MODIN_UNNAMED_SERIES_LABEL]
+            if align_index:
+                res.index = [MODIN_UNNAMED_SERIES_LABEL]
+            return res
+
         new_modin_frame = self._modin_frame.apply_full_axis(
-            axis, map_func, new_index=new_index, new_columns=new_columns
+            axis,
+            map_func,
+            new_index=new_index,
+            new_columns=new_columns,
+            sync_labels=False,
         )
         return self.__constructor__(new_modin_frame)
 
