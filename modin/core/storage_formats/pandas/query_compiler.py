@@ -278,6 +278,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def finalize(self):
         self._modin_frame.finalize()
 
+    def wait_computations(self):
+        self._modin_frame.wait_computations()
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 

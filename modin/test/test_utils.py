@@ -13,7 +13,9 @@
 
 import json
 from textwrap import dedent, indent
+from unittest.mock import Mock, patch
 
+import numpy as np
 import pandas
 import pytest
 
@@ -336,3 +338,13 @@ def test_assert_dtypes_equal():
     df1 = df1.astype({"a": "str"})
     with pytest.raises(AssertionError):
         assert_dtypes_equal(df1, df2)
+
+
+def test_wait_computations():
+    df = pd.DataFrame(np.random.rand(100, 64))
+    partitions = df._query_compiler._modin_frame._partitions
+    mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.wait_computations(df)
+        mgr_cls.wait_partitions.assert_called_once()
+        assert (mgr_cls.wait_partitions.call_args[0] == partitions).all()

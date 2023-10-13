@@ -606,6 +606,46 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
+def trigger_import(obj: Any) -> None:
+    """
+    Trigger import execution for DataFrames obtained by HDK engine.
+
+    Parameters
+    ----------
+    obj : Any
+        An object to trigger deferred data import.
+    """
+    if hasattr(obj, "_query_compiler"):
+        modin_frame = obj._query_compiler._modin_frame
+        if hasattr(modin_frame, "force_import"):
+            modin_frame.force_import()
+
+
+def wait_computations(obj: Any, *, trigger_hdk_import: bool = False) -> None:
+    """
+    Trigger the `obj` lazy computations, if any, and wait for them to complete.
+
+    Parameters
+    ----------
+    obj : Any
+        An object to trigger lazy computations.
+    trigger_hdk_import : bool, default: False
+        Trigger import execution. Makes sense only for HDK storage format.
+    """
+    if not hasattr(obj, "_query_compiler"):
+        return
+
+    if Engine.get() == "Native":
+        if trigger_hdk_import:
+            trigger_import(obj)
+        else:
+            obj._query_compiler._modin_frame._execute()
+        return
+
+    obj._query_compiler.finalize()
+    obj._query_compiler.wait_computations()
+
+
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
     """
     Wrap a sequence of passed values in a flattened list.
