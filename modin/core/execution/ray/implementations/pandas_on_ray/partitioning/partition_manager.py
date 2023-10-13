@@ -87,7 +87,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
 
         if not distributed_splitting:
             log.info(
-                "Using sequential splitting in '.from_pandas()' because of some of the condition is False: "
+                "Using sequential splitting in '.from_pandas()' because of some of the conditions are False: "
                 + f"{enough_elements=}; {all_numeric_types=}; {async_mode_on=}"
             )
             return super().split_pandas_df_into_partitions(
