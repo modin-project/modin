@@ -3135,6 +3135,17 @@ def test_from_arrow():
     df_equals(modin_df, pandas_df)
 
 
+@pytest.mark.skipif(
+    condition=Engine.get() != "Ray",
+    reason="Distributed 'from_pandas' is only available for Ray engine",
+)
+@pytest.mark.parametrize("modify_config", [{AsyncReadMode: True}], indirect=True)
+def test_distributed_from_pandas(modify_config):
+    pandas_df = pandas.DataFrame({f"col{i}": np.arange(200_000) for i in range(64)})
+    modin_df = pd.DataFrame(pandas_df)
+    df_equals(modin_df, pandas_df)
+
+
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_spmatrix():
     data = sparse.eye(3)

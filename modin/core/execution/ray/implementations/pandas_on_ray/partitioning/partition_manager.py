@@ -14,9 +14,9 @@
 """Module houses class that implements ``GenericRayDataframePartitionManager`` using Ray."""
 
 import numpy as np
-import psutil
 from pandas.core.dtypes.common import is_numeric_dtype
 
+from modin.config import AsyncReadMode
 from modin.core.execution.modin_aqp import progress_bar_wrapper
 from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.partitioning import (
@@ -71,24 +71,24 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         #   2. Only used with numerical data, as with other dtypes, putting the whole big
         #   dataframe into the storage takes too much time.
         #   3. The distributed splitting consumes more memory that the sequential one.
-        #   It was estimated that it requires ~2.5x of the dataframe size, so to avoid
-        #   OOM problems, we fall back to sequential implementation in case it doesn't
-        #   fit into memory (using 3.5x threshold to be on the safe side).
+        #   It was estimated that it requires ~2.5x of the dataframe size, for now there
+        #   was no good way found to automatically fall back to the sequential
+        #   implementation in case of not enough memory, so currently we're enabling
+        #   the distributed version only if 'AsyncReadMode' is set to True. Follow this
+        #   discussion for more info on why automatical dispatching is hard:
+        #   https://github.com/modin-project/modin/pull/6640#issuecomment-1759932664
         enough_elements = (len(df) * len(df.columns)) > 6_000_000
         all_numeric_types = all(is_numeric_dtype(dtype) for dtype in df.dtypes)
-        three_copies_fits_into_memory = psutil.virtual_memory().available > (
-            df.memory_usage().sum() * 3.5
-        )
-        distributed_splitting = (
-            enough_elements and all_numeric_types and three_copies_fits_into_memory
-        )
+        async_mode_on = AsyncReadMode.get()
+
+        distributed_splitting = enough_elements and all_numeric_types and async_mode_on
 
         log = get_logger()
 
         if not distributed_splitting:
             log.info(
                 "Using sequential splitting in '.from_pandas()' because of some of the condition is False: "
-                + f"{enough_elements=}; {all_numeric_types=}; {three_copies_fits_into_memory=}"
+                + f"{enough_elements=}; {all_numeric_types=}; {async_mode_on=}"
             )
             return super().split_pandas_df_into_partitions(
                 df, row_chunksize, col_chunksize, update_bar
