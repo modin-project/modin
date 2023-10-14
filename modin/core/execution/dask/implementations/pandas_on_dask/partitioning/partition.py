@@ -107,12 +107,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=1,
+                num_returns=2,
                 pure=False,
             )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
-        return self.__constructor__(futures)
+        return self.__constructor__(futures[0], ip=futures[1])
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -341,7 +341,7 @@ def apply_func(partition, func, *args, **kwargs):
     destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
-    return result
+    return result, get_ip()
 
 
 def apply_list_of_funcs(call_queue, partition):
