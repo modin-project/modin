@@ -15,6 +15,7 @@
 
 import warnings
 
+import pandas
 import unidist
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -281,9 +282,16 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             self._width_cache = UnidistWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -294,8 +302,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if unidist.is_object_ref(self._ip_cache):
+                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and unidist.is_object_ref(self._ip_cache):
             self._ip_cache = UnidistWrapper.materialize(self._ip_cache)
         return self._ip_cache
 

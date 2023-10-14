@@ -13,6 +13,7 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import pandas
 from distributed import Future
 from distributed.utils import get_ip
 
@@ -106,12 +107,12 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=2,
+                num_returns=1,
                 pure=False,
             )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
-        return self.__constructor__(futures[0], ip=futures[1])
+        return self.__constructor__(futures)
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -289,9 +290,16 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._width_cache = DaskWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -299,8 +307,8 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             IP address of the node that holds the data.
         """
         if self._ip_cache is None:
-            self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, Future):
+            self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
@@ -333,7 +341,7 @@ def apply_func(partition, func, *args, **kwargs):
     destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
-    return result, get_ip()
+    return result
 
 
 def apply_list_of_funcs(call_queue, partition):
