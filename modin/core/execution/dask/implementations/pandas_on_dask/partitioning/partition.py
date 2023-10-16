@@ -13,9 +13,8 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
 from distributed import Future
-from distributed.utils import get_ip
+from distributed.utils import get_ip as get_node_address
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.dask.common import DaskWrapper
@@ -64,7 +63,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             )
         )
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, *args, get_ip=False, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -74,6 +73,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             A function to apply.
         *args : iterable
             Additional positional arguments to be passed in `func`.
+        get_ip : bool, default: False
         **kwargs : dict
             Additional keyword arguments to be passed in `func`.
 
@@ -93,26 +93,31 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            future = DaskWrapper.deploy(
                 func=apply_list_of_funcs,
-                f_args=(call_queue, self._data),
-                num_returns=2,
+                f_args=(call_queue, self._data, get_ip),
+                num_returns=2 if get_ip else 1,
                 pure=False,
             )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
-            futures = DaskWrapper.deploy(
+            f_kwargs["get_ip"] = get_ip
+            future = DaskWrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=2,
+                num_returns=2 if get_ip else 1,
                 pure=False,
             )
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
-        return self.__constructor__(futures[0], ip=futures[1])
+        if get_ip:
+            partition = self.__constructor__(future[0], ip=future[1])
+        else:
+            partition = self.__constructor__(future)
+        return partition
 
     def drain_call_queue(self):
         """Execute all operations stored in the call queue on the object wrapped by this partition."""
@@ -127,10 +132,10 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            future = DaskWrapper.deploy(
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
-                num_returns=2,
+                num_returns=1,
                 pure=False,
             )
         else:
@@ -138,15 +143,14 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
-            futures = DaskWrapper.deploy(
+            future = DaskWrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
-                num_returns=2,
+                num_returns=1,
                 pure=False,
             )
-        self._data = futures[0]
-        self._ip_cache = futures[1]
+        self._data = future
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
         )
@@ -307,13 +311,13 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             IP address of the node that holds the data.
         """
         if self._ip_cache is None:
-            self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+            self._ip_cache = self.apply(lambda df: None, get_ip=True)._ip_cache
         if materialize and isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 
-def apply_func(partition, func, *args, **kwargs):
+def apply_func(partition, func, *args, get_ip=False, **kwargs):
     """
     Execute a function on the partition in a worker process.
 
@@ -325,6 +329,7 @@ def apply_func(partition, func, *args, **kwargs):
         The function to perform.
     *args : list
         Positional arguments to pass to ``func``.
+    get_ip : bool, default: False
     **kwargs : dict
         Keyword arguments to pass to ``func``.
 
@@ -333,7 +338,7 @@ def apply_func(partition, func, *args, **kwargs):
     pandas.DataFrame
         The resulting pandas DataFrame.
     str
-        The node IP address of the worker process.
+        The node IP address of the worker process (if `get_ip==True`).
 
     Notes
     -----
@@ -341,10 +346,13 @@ def apply_func(partition, func, *args, **kwargs):
     destructuring it causes a performance penalty.
     """
     result = func(partition, *args, **kwargs)
-    return result, get_ip()
+    if get_ip:
+        return result, get_node_address()
+    else:
+        return result
 
 
-def apply_list_of_funcs(call_queue, partition):
+def apply_list_of_funcs(call_queue, partition, get_ip=False):
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
@@ -354,14 +362,18 @@ def apply_list_of_funcs(call_queue, partition):
         A call queue of ``[func, args, kwargs]`` triples that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
+    get_ip : bool, default: False
 
     Returns
     -------
     pandas.DataFrame
         The resulting pandas DataFrame.
     str
-        The node IP address of the worker process.
+        The node IP address of the worker process (if `get_ip==True`).
     """
     for func, f_args, f_kwargs in call_queue:
-        partition = func(partition, *f_args, **f_kwargs)
-    return partition, get_ip()
+        result = func(partition, *f_args, **f_kwargs)
+    if get_ip:
+        return result, get_node_address()
+    else:
+        return result
