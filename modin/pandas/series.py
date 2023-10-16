@@ -719,7 +719,9 @@ class Series(BasePandasDataset):
         Return boolean Series equivalent to left <= series <= right.
         """
         return self.__constructor__(
-            query_compiler=self._query_compiler.between(left, right, inclusive)
+            query_compiler=self._query_compiler.between(
+                left=left, right=right, inclusive=inclusive
+            )
         )
 
     def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
