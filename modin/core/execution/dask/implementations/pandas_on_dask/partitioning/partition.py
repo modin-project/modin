@@ -13,7 +13,6 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
 from distributed import Future
 from distributed.utils import get_ip
 
@@ -307,7 +306,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             IP address of the node that holds the data.
         """
         if self._ip_cache is None:
-            self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+            self._ip_cache = self.apply(lambda df: None)._ip_cache
         if materialize and isinstance(self._ip_cache, Future):
             self._ip_cache = DaskWrapper.materialize(self._ip_cache)
         return self._ip_cache

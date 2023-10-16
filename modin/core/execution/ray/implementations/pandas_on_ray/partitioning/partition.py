@@ -13,7 +13,6 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-import pandas
 import ray
 from ray.util import get_node_ip_address
 
@@ -331,7 +330,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+                self._ip_cache = self.apply(lambda df: None)._ip_cache
         if materialize and isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
