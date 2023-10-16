@@ -13,6 +13,7 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import pandas
 import ray
 from ray.util import get_node_ip_address
 
@@ -279,7 +280,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType) and materialize:
+        if materialize and isinstance(self._length_cache, ObjectIDType):
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
@@ -306,13 +307,20 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType) and materialize:
+        if materialize and isinstance(self._width_cache, ObjectIDType):
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -323,8 +331,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, ObjectIDType):
+                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 

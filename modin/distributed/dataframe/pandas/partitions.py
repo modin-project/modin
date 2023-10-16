@@ -109,7 +109,10 @@ def unwrap_partitions(
 
             if get_ip:
                 return [
-                    [(partition._ip_cache, get_block(partition)) for partition in row]
+                    [
+                        (partition.ip(materialize=False), get_block(partition))
+                        for partition in row
+                    ]
                     for row in modin_frame._partitions
                 ]
             else:

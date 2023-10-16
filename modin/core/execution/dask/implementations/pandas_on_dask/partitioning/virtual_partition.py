@@ -67,7 +67,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_block_partitions)
         for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
-            result[idx] = partition._ip_cache
+            result[idx] = partition.ip(materialize=False)
         return result
 
     @classmethod
