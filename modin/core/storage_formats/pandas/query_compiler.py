@@ -2247,6 +2247,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_columns = [MODIN_UNNAMED_SERIES_LABEL] if num_cols == 1 else None
             axis = 1
 
+        # If either new index or new columns are supposed to be a single-dimensional,
+        # then we use a special labeling for them. Besides setting the new labels as
+        # a metadata to the resulted frame, we also want to set them inside the kernel,
+        # so actual partitions would be labeled accordingly (there's a 'sync_label'
+        # parameter that can do the same, but doing it manually is faster)
         align_index = isinstance(new_index, list) and new_index == [
             MODIN_UNNAMED_SERIES_LABEL
         ]
