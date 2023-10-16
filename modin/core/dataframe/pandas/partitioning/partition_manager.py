@@ -767,6 +767,53 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         )
 
     @classmethod
+    def split_pandas_df_into_partitions(
+        cls, df, row_chunksize, col_chunksize, update_bar
+    ):
+        """
+        Split given pandas DataFrame according to the row/column chunk sizes into distributed partitions.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        row_chunksize : int
+        col_chunksize : int
+        update_bar : callable(x) -> x
+            Function that updates a progress bar.
+
+        Returns
+        -------
+        2D np.ndarray[PandasDataframePartition]
+        """
+        put_func = cls._partition_class.put
+        # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
+        # so we try not to do it if unnecessary.
+        # FIXME: it appears that this optimization doesn't work for Unidist correctly as it
+        # doesn't explicitly copy the data when putting it into storage (as the rest engines do)
+        # causing it to eventially share memory with a pandas object that was provided by user.
+        # Everything works fine if we do this column slicing as pandas then would set some flags
+        # to perform in COW mode apparently (and so it wouldn't crash our tests).
+        # @YarShev promised that this will be eventially fixed on Unidist's side, but for now there's
+        # this hacky condition
+        if col_chunksize >= len(df.columns) and Engine.get() != "Unidist":
+            col_parts = [df]
+        else:
+            col_parts = [
+                df.iloc[:, i : i + col_chunksize]
+                for i in range(0, len(df.columns), col_chunksize)
+            ]
+        parts = [
+            [
+                update_bar(
+                    put_func(col_part.iloc[i : i + row_chunksize]),
+                )
+                for col_part in col_parts
+            ]
+            for i in range(0, len(df), row_chunksize)
+        ]
+        return np.array(parts)
+
+    @classmethod
     @wait_computations_if_benchmark_mode
     def from_pandas(cls, df, return_dims=False):
         """
@@ -785,14 +832,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray or (np.ndarray, row_lengths, col_widths)
             A NumPy array with partitions (with dimensions or not).
         """
-
-        def update_bar(pbar, f):
-            if ProgressBar.get():
-                pbar.update(1)
-            return f
-
         num_splits = NPartitions.get()
-        put_func = cls._partition_class.put
         row_chunksize = compute_chunksize(df.shape[0], num_splits)
         col_chunksize = compute_chunksize(df.shape[1], num_splits)
 
@@ -820,36 +860,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         else:
             pbar = None
 
-        # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
-        # so we try not to do it if unnecessary.
-        # FIXME: it appears that this optimization doesn't work for Unidist correctly as it
-        # doesn't explicitly copy the data when putting it into storage (as the rest engines do)
-        # causing it to eventially share memory with a pandas object that was provided by user.
-        # Everything works fine if we do this column slicing as pandas then would set some flags
-        # to perform in COW mode apparently (and so it wouldn't crash our tests).
-        # @YarShev promised that this will be eventially fixed on Unidist's side, but for now there's
-        # this hacky condition
-        if col_chunksize >= len(df.columns) and Engine.get() != "Unidist":
-            col_parts = [df]
-        else:
-            col_parts = [
-                df.iloc[:, i : i + col_chunksize]
-                for i in range(0, len(df.columns), col_chunksize)
-            ]
-        parts = [
-            [
-                update_bar(
-                    pbar,
-                    put_func(col_part.iloc[i : i + row_chunksize]),
-                )
-                for col_part in col_parts
-            ]
-            for i in range(0, len(df), row_chunksize)
-        ]
+        def update_bar(f):
+            if ProgressBar.get():
+                pbar.update(1)
+            return f
+
+        parts = cls.split_pandas_df_into_partitions(
+            df, row_chunksize, col_chunksize, update_bar
+        )
         if ProgressBar.get():
             pbar.close()
         if not return_dims:
-            return np.array(parts)
+            return parts
         else:
             row_lengths = [
                 row_chunksize
@@ -863,7 +885,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 else len(df.columns) % col_chunksize or col_chunksize
                 for i in range(0, len(df.columns), col_chunksize)
             ]
-            return np.array(parts), row_lengths, col_widths
+            return parts, row_lengths, col_widths
 
     @classmethod
     def from_arrow(cls, at, return_dims=False):
