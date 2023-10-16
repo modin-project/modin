@@ -318,7 +318,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Parameters
         ----------
         materialize : bool, default: True
-            Whether to forcibly materialize the result into an integer. If ``False``
+            Whether to forcibly materialize the result into a string. If ``False``
             was specified, may return a future of the result if it hasn't been
             materialized yet.
 
