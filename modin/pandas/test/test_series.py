@@ -3021,15 +3021,6 @@ def test_reset_index(data, drop, name, inplace):
     )
 
 
-@pytest.mark.xfail(reason="Using pandas Series.")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reshape(data):
-    modin_series = create_test_series(data)
-
-    with pytest.raises(NotImplementedError):
-        modin_series.reshape(None)
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_rfloordiv(data):
     modin_series, pandas_series = create_test_series(data)
