@@ -1232,13 +1232,14 @@ def test_array(data):
     eval_general(modin_series, pandas_series, lambda df: df.array)
 
 
-@pytest.mark.xfail(reason="Using pandas Series.")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_between(data):
-    modin_series = create_test_series(data)
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.between(None, None)
+    df_equals(
+        modin_series.between(1, 4),
+        pandas_series.between(1, 4),
+    )
 
 
 def test_between_time():
