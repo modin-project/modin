@@ -718,9 +718,9 @@ class Series(BasePandasDataset):
         """
         Return boolean Series equivalent to left <= series <= right.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.between(left, right, inclusive)
-        )
+        # 'pandas.Series.between()' only uses public Series' API,
+        # so passing a Modin Series there is safe
+        return pandas.Series.between(self, left, right, inclusive)
 
     def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
         """
