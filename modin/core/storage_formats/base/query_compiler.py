@@ -4516,19 +4516,6 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         self.get_axis(axis).names = names
 
-    def between(self, **kwargs):  # noqa: PR01
-        """
-        Return boolean Series equivalent to left <= series <= right.
-
-        This function returns a boolean vector containing True wherever the corresponding Series element is between
-        the boundary values left and right. NA values are treated as False.
-
-        Returns
-        -------
-        BaseQueryCompiler
-        """
-        return SeriesDefault.register(pandas.Series.between)(self, **kwargs)
-
     # DateTime methods
     def between_time(self, **kwargs):  # noqa: PR01
         """
