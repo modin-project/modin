@@ -3630,9 +3630,15 @@ class BasePandasDataset(ClassLogger):
     ):
         if subset is None:
             subset = self._query_compiler.columns
-        counted_values = self.groupby(
-            by=subset, dropna=dropna, observed=True, sort=False
-        ).size()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*groupby keys will be sorted anyway.*",
+                category=UserWarning,
+            )
+            counted_values = self.groupby(
+                by=subset, dropna=dropna, observed=True, sort=False
+            ).size()
         if sort:
             counted_values.sort_values(ascending=ascending, inplace=True)
         if normalize:
