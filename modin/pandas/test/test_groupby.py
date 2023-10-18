@@ -2962,6 +2962,23 @@ def test_reshuffling_groupby_on_strings(modify_config):
     )
 
 
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_groupby_apply_series_result(modify_config):
+    # reproducer from the issue:
+    # https://github.com/modin-project/modin/issues/6632
+    df = pd.DataFrame(
+        np.random.randint(5, 10, size=5), index=[f"s{i+1}" for i in range(5)]
+    )
+    df["group"] = [1, 1, 2, 2, 3]
+
+    # res = df.groupby('group').apply(lambda x: x.name+2)
+    eval_general(
+        df, df._to_pandas(), lambda df: df.groupby("group").apply(lambda x: x.name + 2)
+    )
+
+
 ### TEST GROUPBY WARNINGS ###
 
 

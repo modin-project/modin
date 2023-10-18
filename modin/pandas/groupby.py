@@ -659,16 +659,20 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
-        return self._check_index(
-            self._wrap_aggregation(
-                qc_method=type(self._query_compiler).groupby_agg,
-                numeric_only=False,
-                agg_func=func,
-                agg_args=args,
-                agg_kwargs=kwargs,
-                how="group_wise",
-            )
+        apply_res = self._wrap_aggregation(
+            qc_method=type(self._query_compiler).groupby_agg,
+            numeric_only=False,
+            agg_func=func,
+            agg_args=args,
+            agg_kwargs=kwargs,
+            how="group_wise",
         )
+        reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
+        if not isinstance(apply_res, Series) and apply_res.columns.equals(
+            reduced_index
+        ):
+            apply_res = apply_res.squeeze()
+        return self._check_index(apply_res)
 
     @property
     def dtypes(self):
