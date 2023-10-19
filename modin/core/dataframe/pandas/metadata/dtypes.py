@@ -12,11 +12,519 @@
 # governing permissions and limitations under the License.
 
 """Module contains class ``ModinDtypes``."""
-from typing import Union
 
+from typing import TYPE_CHECKING, Callable, Optional, Union
+
+import numpy as np
 import pandas
+from pandas._typing import IndexLabel
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+    from .index import ModinIndex
 
 from modin.error_message import ErrorMessage
+
+
+class DtypesDescriptor:
+    """
+    Describes partial dtypes.
+
+    Parameters
+    ----------
+    known_dtypes : dict[IndexLabel, np.dtype], optional
+        Columns that we know dtypes for.
+    cols_with_unknown_dtypes : list[IndexLabel], optional
+        Column names that have unknown dtypes. If specified together with `remaining_dtype`, must describe all
+        columns with unknown dtypes, otherwise, the missing columns will be assigned to `remaining_dtype`.
+        If `cols_with_unknown_dtypes` is incomplete, you must specify `know_all_names=False`.
+    remaining_dtype : np.dtype, optional
+        Dtype for columns that are not present neither in `known_dtypes` nor in `cols_with_unknown_dtypes`.
+        This parameter is intended to describe columns that we known dtypes for, but don't know their
+        names yet. Note, that this parameter DOESN'T describe dtypes for columns from `cols_with_unknown_dtypes`.
+    parent_df : PandasDataframe, optional
+        Dataframe object for which we describe dtypes. This dataframe will be used to compute
+        missing dtypes on ``.materialize()``.
+    columns_order : dict[int, IndexLabel], optional
+        Order of columns in the dataframe. If specified, must describe all the columns of the dataframe.
+    know_all_names : bool, default: True
+        Whether `known_dtypes` and `cols_with_unknown_dtypes` contain all column names for this dataframe besides those,
+        that are being described by `remaining_dtype`.
+        One can't pass `know_all_names=False` together with `remaining_dtype` as this creates ambiguity
+        on how to interpret missing columns (whether they belong to `remaining_dtype` or not).
+    _schema_is_known : bool, optional
+        Whether `known_dtypes` describe all the columns in the dataframe. This parameter intended mostly
+        for internal use.
+    """
+
+    def __init__(
+        self,
+        known_dtypes: Optional[dict[IndexLabel, np.dtype]] = None,
+        cols_with_unknown_dtypes: Optional[list[IndexLabel]] = None,
+        remaining_dtype: Optional[np.dtype] = None,
+        parent_df: Optional["PandasDataframe"] = None,
+        columns_order: Optional[dict[int, IndexLabel]] = None,
+        know_all_names=True,
+        _schema_is_known: Optional[bool] = None,
+    ):
+        if not know_all_names and remaining_dtype is not None:
+            raise RuntimeError(
+                "It's not allowed to pass 'remaining_dtype' and 'know_all_names=False' at the same time."
+            )
+        # columns with known dtypes
+        self._known_dtypes: dict[IndexLabel, np.dtype] = (
+            {} if known_dtypes is None else dict(known_dtypes)
+        )
+        if known_dtypes is not None and len(self._known_dtypes) != len(known_dtypes):
+            raise NotImplementedError(
+                "Duplicated column names are not yet supported by DtypesDescriptor"
+            )
+        # columns with unknown dtypes (they're not described by 'remaining_dtype')
+        if cols_with_unknown_dtypes is not None and len(
+            set(cols_with_unknown_dtypes)
+        ) != len(cols_with_unknown_dtypes):
+            raise NotImplementedError(
+                "Duplicated column names are not yet supported by DtypesDescriptor"
+            )
+        self._cols_with_unknown_dtypes: list[IndexLabel] = (
+            [] if cols_with_unknown_dtypes is None else cols_with_unknown_dtypes
+        )
+        # whether 'known_dtypes' describe all the columns in the dataframe
+        if _schema_is_known is None:
+            self._schema_is_known: bool = (
+                len(cols_with_unknown_dtypes) == 0
+                if (
+                    # if 'cols_with_unknown_dtypes' was explicitly specified as an empty list and
+                    # we don't have any 'remaining_dtype', then we assume that 'known_dtypes' are complete
+                    cols_with_unknown_dtypes is not None
+                    and know_all_names
+                    and remaining_dtype is None
+                    and len(self._known_dtypes) > 0
+                )
+                else False
+            )
+        else:
+            self._schema_is_known: bool = _schema_is_known
+        self._know_all_names = know_all_names
+        # a common dtype for columns that are not present in 'known_dtypes' nor in 'cols_with_unknown_dtypes'
+        self._remaining_dtype: Optional[np.dtype] = remaining_dtype
+        self._parent_df: Optional["PandasDataframe"] = parent_df
+        if columns_order is None:
+            self._columns_order: Optional[dict[int, IndexLabel]] = None
+            # try to compute '._columns_order' using 'parent_df'
+            self.columns_order
+        else:
+            if remaining_dtype is not None:
+                raise RuntimeError(
+                    "Passing 'columns_order' and 'remaining_dtype' is ambiguous. You have to manually "
+                    + "complete 'known_dtypes' using the information from 'columns_order' and 'remaining_dtype'."
+                )
+            elif not self._know_all_names:
+                raise RuntimeError(
+                    "Passing 'columns_order' and 'know_all_names=False' is ambiguous. You have to manually "
+                    + "complete 'cols_with_unknown_dtypes' using the information from 'columns_order' "
+                    + "and pass 'know_all_names=True'."
+                )
+            elif len(columns_order) != (
+                len(self._cols_with_unknown_dtypes) + len(self._known_dtypes)
+            ):
+                raise RuntimeError(
+                    "The length of 'columns_order' doesn't match to 'known_dtypes' and 'cols_with_unknown_dtypes'"
+                )
+            self._columns_order: Optional[dict[int, IndexLabel]] = columns_order
+
+    def update_parent(self, new_parent: "PandasDataframe"):
+        """
+        Set new parent dataframe.
+
+        Parameters
+        ----------
+        new_parent : PandasDataframe
+        """
+        self._parent_df = new_parent
+        for key, value in self._known_dtypes.items():
+            if isinstance(value, LazyProxyCategoricalDtype):
+                self._known_dtypes[key] = value._update_proxy(
+                    new_parent, column_name=key
+                )
+        # try to compute '._columns_order' using 'new_parent'
+        self.columns_order
+
+    @property
+    def columns_order(self) -> Optional[dict[int, IndexLabel]]:
+        """
+        Get order of columns for the described dataframe if available.
+
+        Returns
+        -------
+        dict[int, IndexLabel] or None
+        """
+        if self._columns_order is not None:
+            return self._columns_order
+        if self._parent_df is None or not self._parent_df.has_materialized_columns:
+            return None
+
+        self._columns_order = {i: col for i, col in enumerate(self._parent_df.columns)}
+        # we got information about new columns and thus can potentially
+        # extend our knowledge about missing dtypes
+        if len(self._columns_order) > (
+            len(self._known_dtypes) + len(self._cols_with_unknown_dtypes)
+        ):
+            new_cols = [
+                col
+                for col in self._columns_order.values()
+                if col not in self._known_dtypes
+                and col not in self._cols_with_unknown_dtypes
+            ]
+            if self._remaining_dtype is not None:
+                self._known_dtypes.update(
+                    {col: self._remaining_dtype for col in new_cols}
+                )
+                self._remaining_dtype = None
+                if len(self._cols_with_unknown_dtypes) == 0:
+                    self._schema_is_known = True
+            else:
+                self._cols_with_unknown_dtypes.extend(new_cols)
+        self._know_all_names = True
+        return self._columns_order
+
+    def __repr__(self):  # noqa: GL08
+        return (
+            f"DtypesDescriptor:\n\tknown dtypes: {self._known_dtypes};\n\t"
+            + f"remaining dtype: {self._remaining_dtype};\n\t"
+            + f"cols with unknown dtypes: {self._cols_with_unknown_dtypes};\n\t"
+            + f"schema is known: {self._schema_is_known};\n\t"
+            + f"has parent df: {self._parent_df is not None};\n\t"
+            + f"columns order: {self._columns_order};\n\t"
+            + f"know all names: {self._know_all_names}"
+        )
+
+    def __str__(self):  # noqa: GL08
+        return self.__repr__()
+
+    def lazy_get(
+        self, ids: list[Union[IndexLabel, int]], numeric_index: bool = False
+    ) -> "DtypesDescriptor":
+        """
+        Get dtypes descriptor for a subset of columns without triggering any computations.
+
+        Parameters
+        ----------
+        ids : list of index labels or positional indexers
+            Columns for the subset.
+        numeric_index : bool, default: False
+            Whether `ids` are positional indixes or column labels to take.
+
+        Returns
+        -------
+        DtypesDescriptor
+            Descriptor that describes dtypes for columns specified in `ids`.
+        """
+        if len(np.unique(ids)) != len(ids):
+            raise NotImplementedError(
+                "Duplicated column names are not yet supported by DtypesDescriptor"
+            )
+
+        if numeric_index:
+            if self.columns_order is not None:
+                ids = [self.columns_order[i] for i in ids]
+            else:
+                raise NotImplementedError(
+                    "Can't lazily get columns by positional indixers if the columns order is unknown"
+                )
+
+        result = {}
+        unknown_cols = []
+        columns_order = {}
+        for i, col in enumerate(ids):
+            columns_order[i] = col
+            if col in self._cols_with_unknown_dtypes:
+                unknown_cols.append(col)
+                continue
+            dtype = self._known_dtypes.get(col)
+            if dtype is None and self._remaining_dtype is None:
+                unknown_cols.append(col)
+            elif dtype is None and self._remaining_dtype is not None:
+                result[col] = self._remaining_dtype
+            else:
+                result[col] = dtype
+        remaining_dtype = self._remaining_dtype if len(unknown_cols) != 0 else None
+        return DtypesDescriptor(
+            result,
+            unknown_cols,
+            remaining_dtype,
+            self._parent_df,
+            columns_order=columns_order,
+        )
+
+    def copy(self) -> "DtypesDescriptor":
+        """
+        Get a copy of this descriptor.
+
+        Returns
+        -------
+        DtypesDescriptor
+        """
+        return type(self)(
+            self._known_dtypes.copy(),
+            self._cols_with_unknown_dtypes.copy(),
+            self._remaining_dtype,
+            self._parent_df,
+            columns_order=self.columns_order,
+            know_all_names=self._know_all_names,
+            _schema_is_known=self._schema_is_known,
+        )
+
+    def set_index(
+        self, new_index: Union[pandas.Index, "ModinIndex"]
+    ) -> "DtypesDescriptor":
+        """
+        Set new column names for this descriptor.
+
+        Parameters
+        ----------
+        new_index : pandas.Index or ModinIndex
+
+        Returns
+        -------
+        DtypesDescriptor
+            New descriptor with updated column names.
+
+        Notes
+        -----
+        Calling this method on a descriptor that returns ``None`` for ``.columns_order``
+        will result into information lose.
+        """
+        if self.columns_order is None:
+            # we can't map new columns to old columns and lost all dtypes :(
+            return DtypesDescriptor(
+                cols_with_unknown_dtypes=new_index,
+                parent_df=self._parent_df,
+                know_all_names=True,
+            )
+
+        new_self = self.copy()
+        renamer = {old_c: new_index[i] for i, old_c in new_self.columns_order.items()}
+        new_self._known_dtypes = {
+            renamer[old_col]: value for old_col, value in new_self._known_dtypes.items()
+        }
+        new_self._cols_with_unknown_dtypes = [
+            renamer[old_col] for old_col in new_self._cols_with_unknown_dtypes
+        ]
+        new_self._columns_order = {
+            i: renamer[old_col] for i, old_col in new_self._columns_order.items()
+        }
+        return new_self
+
+    def equals(self, other: "DtypesDescriptor") -> bool:
+        """
+        Compare two descriptors for equality.
+
+        Parameters
+        ----------
+        other : DtypesDescriptor
+
+        Returns
+        -------
+        bool
+        """
+        return (
+            self._known_dtypes == other._known_dtypes
+            and set(self._cols_with_unknown_dtypes)
+            == set(other._cols_with_unknown_dtypes)
+            and self._remaining_dtype == other._remaining_dtype
+            and self._schema_is_known == other._schema_is_known
+            and (
+                self.columns_order == other.columns_order
+                or (self.columns_order is None and other.columns_order is None)
+            )
+            and self._know_all_names == other._know_all_names
+        )
+
+    @property
+    def is_materialized(self) -> bool:
+        """
+        Whether this descriptor contains information about all dtypes in the dataframe.
+
+        Returns
+        -------
+        bool
+        """
+        return self._schema_is_known
+
+    def _materialize_all_names(self):
+        """Materialize missing column names."""
+        if self._know_all_names:
+            return
+
+        all_cols = self._parent_df.columns
+        for col in all_cols:
+            if (
+                col not in self._known_dtypes
+                and col not in self._cols_with_unknown_dtypes
+            ):
+                self._cols_with_unknown_dtypes.append(col)
+
+        self._know_all_names = True
+
+    def _materialize_cols_with_unknown_dtypes(self):
+        """Compute dtypes for cols specified in `._cols_with_unknown_dtypes`."""
+        if (
+            len(self._known_dtypes) == 0
+            and len(self._cols_with_unknown_dtypes) == 0
+            and not self._know_all_names
+        ):
+            # here we have to compute dtypes for all columns in the dataframe,
+            # so avoiding columns materialization by setting 'subset=None'
+            subset = None
+        else:
+            if not self._know_all_names:
+                self._materialize_all_names()
+            subset = self._cols_with_unknown_dtypes
+
+        if subset is None or len(subset) > 0:
+            self._known_dtypes.update(self._parent_df._compute_dtypes(subset))
+
+        self._know_all_names = True
+        self._cols_with_unknown_dtypes = []
+
+    def materialize(self):
+        """Complete information about dtypes."""
+        if self.is_materialized:
+            return
+        if self._parent_df is None:
+            raise RuntimeError(
+                "It's not allowed to call '.materialize()' before '._parent_df' is specified."
+            )
+
+        self._materialize_cols_with_unknown_dtypes()
+
+        if self._remaining_dtype is not None:
+            cols = self._parent_df.columns
+            self._known_dtypes.update(
+                {
+                    col: self._remaining_dtype
+                    for col in cols
+                    if col not in self._known_dtypes
+                }
+            )
+
+        # we currently not guarantee for dtypes to be in a proper order:
+        # https://github.com/modin-project/modin/blob/8a332c1597c54d36f7ccbbd544e186b689f9ceb1/modin/pandas/test/utils.py#L644-L646
+        # so restoring the order only if it's possible
+        if self.columns_order is not None:
+            assert len(self.columns_order) == len(self._known_dtypes)
+            self._known_dtypes = {
+                self.columns_order[i]: self._known_dtypes[self.columns_order[i]]
+                for i in range(len(self.columns_order))
+            }
+
+        self._schema_is_known = True
+        self._remaining_dtype = None
+        self._parent_df = None
+
+    def to_series(self) -> pandas.Series:
+        """
+        Convert descriptor to a pandas Series.
+
+        Returns
+        -------
+        pandas.Series
+        """
+        self.materialize()
+        return pandas.Series(self._known_dtypes)
+
+    def get_dtypes_set(self) -> set[np.dtype]:
+        """
+        Get a set of dtypes from the descriptor.
+
+        Returns
+        -------
+        set[np.dtype]
+        """
+        if len(self._cols_with_unknown_dtypes) > 0 or not self._know_all_names:
+            self._materialize_cols_with_unknown_dtypes()
+        known_dtypes: set[np.dtype] = set(self._known_dtypes.values())
+        if self._remaining_dtype is not None:
+            known_dtypes.add(self._remaining_dtype)
+        return known_dtypes
+
+    @classmethod
+    def concat(
+        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]]
+    ) -> "DtypesDescriptor":  # noqa: GL08
+        """
+        Concatenate dtypes descriptors into a single descriptor.
+
+        Parameters
+        ----------
+        values : list of DtypesDescriptors and pandas.Series
+
+        Returns
+        -------
+        DtypesDescriptor
+        """
+        known_dtypes = {}
+        cols_with_unknown_dtypes = []
+        schema_is_known = True
+        # some default value to not mix it with 'None'
+        remaining_dtype = "default"
+        know_all_names = True
+
+        for val in values:
+            if isinstance(val, cls):
+                all_new_cols = (
+                    list(val._known_dtypes.keys()) + val._cols_with_unknown_dtypes
+                )
+                if any(
+                    col in known_dtypes or col in cols_with_unknown_dtypes
+                    for col in all_new_cols
+                ):
+                    raise NotImplementedError(
+                        "Duplicated column names are not yet supported by DtypesDescriptor"
+                    )
+                know_all_names &= val._know_all_names
+                known_dtypes.update(val._known_dtypes)
+                cols_with_unknown_dtypes.extend(val._cols_with_unknown_dtypes)
+                if know_all_names:
+                    if (
+                        remaining_dtype == "default"
+                        and val._remaining_dtype is not None
+                    ):
+                        remaining_dtype = val._remaining_dtype
+                    elif (
+                        remaining_dtype != "default"
+                        and val._remaining_dtype is not None
+                        and remaining_dtype != val._remaining_dtype
+                    ):
+                        remaining_dtype = None
+                        know_all_names = False
+                else:
+                    remaining_dtype = None
+                schema_is_known &= val._schema_is_known
+            elif isinstance(val, pandas.Series):
+                if any(
+                    col in known_dtypes or col in cols_with_unknown_dtypes
+                    for col in val.index
+                ):
+                    raise NotImplementedError(
+                        "Duplicated column names are not yet supported by DtypesDescriptor"
+                    )
+                known_dtypes.update(val)
+            elif val is None:
+                remaining_dtype = None
+                schema_is_known = False
+                know_all_names = False
+            else:
+                raise NotImplementedError(type(val))
+        return cls(
+            known_dtypes,
+            cols_with_unknown_dtypes,
+            None if remaining_dtype == "default" else remaining_dtype,
+            parent_df=None,
+            _schema_is_known=schema_is_known,
+            know_all_names=know_all_names,
+        )
 
 
 class ModinDtypes:
@@ -28,10 +536,19 @@ class ModinDtypes:
     value : pandas.Series or callable
     """
 
-    def __init__(self, value):
-        if value is None:
+    def __init__(self, value: Union[Callable, pandas.Series, DtypesDescriptor]):
+        if callable(value) or isinstance(value, pandas.Series):
+            self._value = value
+        elif isinstance(value, DtypesDescriptor):
+            self._value = value.to_series() if value.is_materialized else value
+        else:
             raise ValueError(f"ModinDtypes doesn't work with '{value}'")
-        self._value = value
+
+    def __repr__(self):  # noqa: GL08
+        return f"ModinDtypes:\n\tvalue type: {type(self._value)};\n\tvalue:\n\t{self._value}"
+
+    def __str__(self):  # noqa: GL08
+        return self.__repr__()
 
     @property
     def is_materialized(self) -> bool:
@@ -43,6 +560,131 @@ class ModinDtypes:
         bool
         """
         return isinstance(self._value, pandas.Series)
+
+    def get_dtypes_set(self) -> set[np.dtype]:
+        """
+        Get a set of dtypes from the descriptor.
+
+        Returns
+        -------
+        set[np.dtype]
+        """
+        if isinstance(self._value, DtypesDescriptor):
+            return self._value.get_dtypes_set()
+        if not self.is_materialized:
+            self.get()
+        return set(self._value.values)
+
+    def maybe_specify_new_frame_ref(
+        self, new_parent: "PandasDataframe"
+    ) -> "ModinDtypes":
+        """
+        Set a new parent for the stored value if needed.
+
+        Parameters
+        ----------
+        new_parent : PandasDataframe
+
+        Returns
+        -------
+        ModinDtypes
+            A copy of ``ModinDtypes`` with updated parent.
+        """
+        new_self = self.copy()
+        if new_self.is_materialized:
+            for key, value in new_self._value.items():
+                if isinstance(value, LazyProxyCategoricalDtype):
+                    new_self._value[key] = value._update_proxy(
+                        new_parent, column_name=key
+                    )
+            return new_self
+        if isinstance(self._value, DtypesDescriptor):
+            new_self._value.update_parent(new_parent)
+            return new_self
+        return new_self
+
+    def lazy_get(self, ids: list, numeric_index: bool = False) -> "ModinDtypes":
+        """
+        Get new ``ModinDtypes`` for a subset of columns without triggering any computations.
+
+        Parameters
+        ----------
+        ids : list of index labels or positional indexers
+            Columns for the subset.
+        numeric_index : bool, default: False
+            Whether `ids` are positional indixes or column labels to take.
+
+        Returns
+        -------
+        ModinDtypes
+            ``ModinDtypes`` that describes dtypes for columns specified in `ids`.
+        """
+        if isinstance(self._value, DtypesDescriptor):
+            res = self._value.lazy_get(ids, numeric_index)
+            return ModinDtypes(res)
+        elif callable(self._value):
+            new_self = self.copy()
+            old_value = new_self._value
+            new_self._value = (
+                lambda: old_value().iloc[ids] if numeric_index else old_value()[ids]
+            )
+            return new_self
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=not self.is_materialized
+        )
+        return ModinDtypes(self._value.iloc[ids] if numeric_index else self._value[ids])
+
+    @classmethod
+    def concat(cls, values: list) -> "ModinDtypes":
+        """
+        Concatenate dtypes..
+
+        Parameters
+        ----------
+        values : list of DtypesDescriptors, pandas.Series, ModinDtypes and Nones
+
+        Returns
+        -------
+        ModinDtypes
+        """
+        preprocessed_vals = []
+        for val in values:
+            if isinstance(val, cls):
+                val = val._value
+            if isinstance(val, (DtypesDescriptor, pandas.Series)) or val is None:
+                preprocessed_vals.append(val)
+            else:
+                raise NotImplementedError(type(val))
+
+        desc = DtypesDescriptor.concat(preprocessed_vals)
+        return ModinDtypes(desc)
+
+    def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> "ModinDtypes":
+        """
+        Set new column names for stored dtypes.
+
+        Parameters
+        ----------
+        new_index : pandas.Index or ModinIndex
+
+        Returns
+        -------
+        ModinDtypes
+            New ``ModinDtypes`` with updated column names.
+        """
+        new_self = self.copy()
+        if self.is_materialized:
+            new_self._value.index = new_index
+            return new_self
+        elif callable(self._value):
+            old_val = new_self._value
+            new_self._value = lambda: old_val().set_axis(new_index)
+            return new_self
+        elif isinstance(new_self._value, DtypesDescriptor):
+            new_self._value = new_self._value.set_index(new_index)
+            return new_self
+        else:
+            raise NotImplementedError()
 
     def get(self) -> pandas.Series:
         """
@@ -57,6 +699,8 @@ class ModinDtypes:
                 self._value = self._value()
                 if self._value is None:
                     self._value = pandas.Series([])
+            elif isinstance(self._value, DtypesDescriptor):
+                self._value = self._value.to_series()
             else:
                 raise NotImplementedError(type(self._value))
         return self._value

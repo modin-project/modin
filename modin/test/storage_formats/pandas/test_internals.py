@@ -22,6 +22,10 @@ import pytest
 import modin.pandas as pd
 from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
+from modin.core.dataframe.pandas.metadata import (
+    DtypesDescriptor,
+    LazyProxyCategoricalDtype,
+)
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
@@ -1011,7 +1015,7 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
 
     if has_dtypes_metadata:
         # Verify that there were initially materialized metadata
-        assert modin_frame.has_dtypes_cache
+        assert modin_frame.has_materialized_dtypes
     else:
         modin_frame.set_dtypes_cache(None)
 
@@ -1020,18 +1024,18 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
     if has_cols_metadata:
         assert res.has_materialized_columns
         if has_dtypes_metadata:
-            assert res.has_dtypes_cache
+            assert res.has_materialized_dtypes
         else:
             # Verify that no materialization was triggered
-            assert not res.has_dtypes_cache
-            assert not modin_frame.has_dtypes_cache
+            assert not res.has_materialized_dtypes
+            assert not modin_frame.has_materialized_dtypes
     else:
         # Verify that no materialization was triggered
         assert not res.has_materialized_columns
-        assert not res.has_dtypes_cache
+        assert not res.has_materialized_dtypes
         assert not modin_frame.has_materialized_columns
         if not has_dtypes_metadata:
-            assert not modin_frame.has_dtypes_cache
+            assert not modin_frame.has_materialized_dtypes
 
 
 def test_binary_op_preserve_dtypes():
@@ -1511,3 +1515,306 @@ def test_call_queue_serialization(call_queue):
 
     assert call_queue == reconstructed_queue
     assert_everything_materialized(reconstructed_queue)
+
+
+class TestDtypesDescriptor:
+    schema = pandas.Series(
+        {
+            "a": np.dtype(int),
+            "b": np.dtype(float),
+            "c": np.dtype(bool),
+            "d": np.dtype(bool),
+            "e": np.dtype("object"),
+        }
+    )
+
+    def get_columns_order(self, cols):
+        """Return a value to be passed as ``DtypesDescriptor(columns_order=...)`` parameter."""
+        return {i: col for i, col in enumerate(cols)}
+
+    class DummyDf:
+        def __init__(self, schema):
+            self._schema = pandas.Series(schema)
+            # record calls to verify that we haven't materialized more than needed
+            self.history = []
+
+        def _compute_dtypes(self, subset=None):
+            self.history.append(("_compute_dtypes", subset))
+            return self._schema if subset is None else self._schema[subset]
+
+        @property
+        def columns(self):
+            self.history.append(("columns",))
+            return self._schema.index
+
+        @property
+        def has_materialized_columns(self):
+            # False, to make descriptor avoid materialization at all cost
+            return False
+
+    def test_get_dtypes_set(self):
+        """
+        Test that ``DtypesDescriptor.get_dtypes_set()`` returns valid values and doesn't
+        trigger unnecessary computations.
+        """
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]], know_all_names=False, parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # since 'know_all_names=False', we first have to retrieve columns
+        # in order to determine missing dtypes and then call '._compute_dtypes()'
+        # only on a subset
+        assert len(df.history) == 2 and df.history == [
+            ("columns",),
+            ("_compute_dtypes", ["c", "d", "e"]),
+        ]
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["c", "d", "e"],
+            parent_df=df,
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # here we already know names for cols with unknown dtypes, so only
+        # calling '._compute_dtypes()' on a subset
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            ["c", "d", "e"],
+        )
+
+        df = self.DummyDf(self.schema[["a", "b", "c", "d"]])
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]], remaining_dtype=np.dtype(bool), parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema[["a", "b", "c", "d"]].values
+        assert res == set(exp)
+        # we don't need to access 'parent_df' in order to get dtypes set, as we
+        # can infer it from 'known_dtypes' and 'remaining_dtype'
+        assert len(df.history) == 0
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(know_all_names=False, parent_df=df)
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # compute dtypes for all columns
+        assert len(df.history) == 1 and df.history[0] == ("_compute_dtypes", None)
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            cols_with_unknown_dtypes=self.schema.index.tolist(), parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # compute dtypes for all columns
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            self.schema.index.tolist(),
+        )
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            cols_with_unknown_dtypes=["a", "b", "e"],
+            remaining_dtype=np.dtype(bool),
+            parent_df=df,
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # here we already know names for cols with unknown dtypes, so only
+        # calling '._compute_dtypes()' on a subset
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            ["a", "b", "e"],
+        )
+
+    def test_lazy_get(self):
+        """
+        Test that ``DtypesDescriptor.lazy_get()`` work properly.
+
+        In this test we never specify `parent_df` for a descriptor, verifying that
+        ``.lazy_get()`` never triggers any computations.
+        """
+        desc = DtypesDescriptor(self.schema[["a", "b"]])
+        subset = ["a", "c", "e"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            self.schema[subset[:1]],
+            cols_with_unknown_dtypes=subset[1:],
+            columns_order=self.get_columns_order(subset),
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor(self.schema[["a", "b"]], remaining_dtype=np.dtype(bool))
+        subset = ["a", "c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            # dtypes for 'c' and 'b' were infered from 'remaining_dtype' parameter
+            self.schema[subset],
+            columns_order=self.get_columns_order(subset),
+            _schema_is_known=True,
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor()
+        subset = ["a", "c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            cols_with_unknown_dtypes=subset,
+            columns_order=self.get_columns_order(subset),
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor(remaining_dtype=np.dtype(bool))
+        subset = ["c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            # dtypes for 'c' and 'd' were infered from 'remaining_dtype' parameter
+            self.schema[subset],
+            columns_order=self.get_columns_order(subset),
+            _schema_is_known=True,
+        )
+        assert res.equals(exp)
+
+    def test_concat(self):
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(self.schema[["c", "d"]]),
+            ]
+        )
+        # simply concat known schemas
+        exp = DtypesDescriptor(self.schema[["a", "b", "c", "d"]])
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # none of the descriptors had missing column names, so we can preserve 'remaining_dtype'
+        exp = DtypesDescriptor(self.schema[["a", "b"]], remaining_dtype=np.dtype(bool))
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]], know_all_names=False),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # can't preserve 'remaining_dtype' since first descriptor has unknown column names
+        exp = DtypesDescriptor(self.schema[["a", "b"]], know_all_names=False)
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"], know_all_names=False
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # can't preserve 'remaining_dtype' since second descriptor has unknown column names
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            know_all_names=False,
+        )
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(
+                    self.schema[["a", "b"]],
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"],
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # none of the descriptors had missing column names, so we can preserve 'remaining_dtype'
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            remaining_dtype=np.dtype(bool),
+        )
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(
+                    self.schema[["a", "b"]], remaining_dtype=np.dtype(bool)
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"], remaining_dtype=np.dtype(float)
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # remaining dtypes don't match, so we drop them and set 'know_all_names=False'
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            know_all_names=False,
+        )
+        assert res.equals(exp)
+
+    def test_update_parent(self):
+        """
+        Test that updating parents in ``DtypesDescriptor`` also propagates to stored lazy categoricals.
+        """
+        # 'df1' will have a materialized 'pandas.Series' as dtypes cache
+        df1 = pd.DataFrame({"a": [1, 1, 2], "b": [3, 4, 5]}).astype({"a": "category"})
+        assert isinstance(df1.dtypes["a"], LazyProxyCategoricalDtype)
+
+        # 'df2' will have a 'DtypesDescriptor' with unknown dtypes for a column 'c'
+        df2 = pd.DataFrame({"c": [2, 3, 4]})
+        df2._query_compiler._modin_frame.set_dtypes_cache(None)
+        dtypes_cache = df2._query_compiler._modin_frame._dtypes
+        assert isinstance(
+            dtypes_cache._value, DtypesDescriptor
+        ) and dtypes_cache._value._cols_with_unknown_dtypes == ["c"]
+
+        # concatenating 'df1' and 'df2' to get a 'DtypesDescriptor' storing lazy categories
+        # in its 'known_dtypes' field
+        res = pd.concat([df1, df2], axis=1)
+        old_parent = df1._query_compiler._modin_frame
+        new_parent = res._query_compiler._modin_frame
+        dtypes_cache = new_parent._dtypes._value
+
+        # verifying that the reference for lazy categories to a new parent was updated
+        assert dtypes_cache._parent_df is new_parent
+        assert dtypes_cache._known_dtypes["a"]._parent is new_parent
+        assert old_parent._dtypes["a"]._parent is old_parent
+
+
+class TestZeroComputationDtypes:
+    """
+    Test cases that shouldn't trigger dtypes computation during their execution.
+    """
+
+    def test_get_dummies_case(self):
+        from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            df = pd.DataFrame(
+                {"items": [1, 2, 3, 4], "b": [3, 3, 4, 4], "c": [1, 0, 0, 1]}
+            )
+            res = pd.get_dummies(df, columns=["b", "c"])
+            cols = [col for col in res.columns if col != "items"]
+            res[cols] = res[cols] / res[cols].mean()
+
+            assert res._query_compiler._modin_frame.has_materialized_dtypes
+
+        patch.assert_not_called()

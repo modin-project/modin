@@ -2875,8 +2875,9 @@ class DataFrame(BasePandasDataset):
         # Series.__getitem__ treating keys as positions is deprecated. In a future version,
         # integer keys will always be treated as labels (consistent with DataFrame behavior).
         # To access a value by position, use `ser.iloc[pos]`
-        dtype = self.dtypes.iloc[0]
-        for t in self.dtypes:
+        dtypes = self._query_compiler.get_dtypes_set()
+        dtype = next(iter(dtypes))
+        for t in dtypes:
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
             elif not numeric_only and t != dtype:

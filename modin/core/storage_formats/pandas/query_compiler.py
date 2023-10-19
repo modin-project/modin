@@ -313,6 +313,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def dtypes(self):
         return self._modin_frame.dtypes
 
+    def get_dtypes_set(self):
+        return self._modin_frame.get_dtypes_set()
+
     # END Index, columns, and dtypes objects
 
     # Metadata modification methods
@@ -4300,13 +4303,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, map_fn, new_index=self.index
+                0, map_fn, new_index=self.index, dtypes=bool
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(0, map_fn, new_index=self.index)
+            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes=bool)
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were
