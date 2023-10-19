@@ -25,7 +25,7 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 from pandas.api.types import is_object_dtype
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import Engine, IsRayCluster, NPartitions
@@ -1486,9 +1486,13 @@ class PandasDataframe(ClassLogger):
         BaseDataFrame
             Dataframe with updated dtypes.
         """
+        self_dtypes = self.dtypes
+        if all(is_dtype_equal(self_dtypes[k], v) for k, v in col_dtypes.items()):
+            return self
+
         columns = col_dtypes.keys()
         # Create Series for the updated dtypes
-        new_dtypes = self.dtypes.copy()
+        new_dtypes = self_dtypes.copy()
         # When casting to "category" we have to make up the whole axis partition
         # to get the properly encoded table of categories. Every block partition
         # will store the encoded table. That can lead to higher memory footprint.
@@ -1498,8 +1502,8 @@ class PandasDataframe(ClassLogger):
         for i, column in enumerate(columns):
             dtype = col_dtypes[column]
             if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
+                not isinstance(dtype, type(self_dtypes[column]))
+                or dtype != self_dtypes[column]
             ):
                 # Update the new dtype series to the proper pandas dtype
                 try:
