@@ -183,8 +183,12 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # TODO: implement this for HDK storage format
         raise NotImplementedError()
 
-    def wait_computations(self):
-        raise NotImplementedError()
+    def execute(self):
+        try:
+            self._modin_frame.force_import()
+        except NotImplementedError:
+            # at least execute
+            self._modin_frame._execute()
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()

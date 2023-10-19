@@ -318,7 +318,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def wait_computations(self):
+    def execute(self):
         """Wait for all computations to complete without materializing data."""
         pass
 

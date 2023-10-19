@@ -175,7 +175,8 @@ class TestQC(BaseQueryCompiler):
     def finalize(self):
         self._modin_frame.finalize()
 
-    def wait_computations(self):
+    def execute(self):
+        self.finalize()
         self._modin_frame.wait_computations()
 
     @classmethod
