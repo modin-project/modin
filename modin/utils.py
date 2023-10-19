@@ -621,7 +621,7 @@ def trigger_import(obj: Any) -> None:
             modin_frame.force_import()
 
 
-def wait_computations(obj: Any, *, trigger_hdk_import: bool = False) -> None:
+def execute(obj: Any, *, trigger_hdk_import: bool = False) -> None:
     """
     Trigger the `obj` lazy computations, if any, and wait for them to complete.
 
