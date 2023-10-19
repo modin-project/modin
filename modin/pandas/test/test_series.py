@@ -2544,13 +2544,22 @@ def test_ne(data):
     inter_df_math_helper(modin_series, pandas_series, "ne")
 
 
-@pytest.mark.xfail(reason="Using pandas Series.")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nlargest(data):
-    modin_series = create_test_series(data)
-
-    with pytest.raises(NotImplementedError):
-        modin_series.nlargest(None)
+    modin_series, pandas_series = create_test_series(data)
+    df_equals(
+        modin_series.nlargest(n=5, keep="first"),
+        pandas_series.nlargest(n=5, keep="first"),
+    )
+    df_equals(
+        modin_series.nlargest(n=10, keep="first"),
+        pandas_series.nlargest(n=10, keep="first"),
+    )
+    df_equals(
+        modin_series.nlargest(n=10, keep="last"),
+        pandas_series.nlargest(n=10, keep="last"),
+    )
+    df_equals(modin_series.nlargest(keep="all"), pandas_series.nlargest(keep="all"))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
