@@ -25,7 +25,7 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 from pandas.api.types import is_object_dtype
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
+from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import Engine, IsRayCluster, NPartitions
@@ -1486,21 +1486,18 @@ class PandasDataframe(ClassLogger):
         BaseDataFrame
             Dataframe with updated dtypes.
         """
-        columns = col_dtypes.keys()
-        # Create Series for the updated dtypes
-        new_dtypes = self.dtypes.copy()
+        new_dtypes = None
+        self_dtypes = self.dtypes
         # When casting to "category" we have to make up the whole axis partition
         # to get the properly encoded table of categories. Every block partition
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
         has_categorical_cast = False
-        for i, column in enumerate(columns):
-            dtype = col_dtypes[column]
-            if (
-                not isinstance(dtype, type(self.dtypes[column]))
-                or dtype != self.dtypes[column]
-            ):
+        for column, dtype in col_dtypes.items():
+            if not is_dtype_equal(dtype, self_dtypes[column]):
+                if new_dtypes is None:
+                    new_dtypes = self_dtypes.copy()
                 # Update the new dtype series to the proper pandas dtype
                 try:
                     new_dtype = np.dtype(dtype)
@@ -1524,6 +1521,9 @@ class PandasDataframe(ClassLogger):
                     use_full_axis_cast = has_categorical_cast = True
                 else:
                     new_dtypes[column] = new_dtype
+
+        if new_dtypes is None:
+            return self.copy()
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
