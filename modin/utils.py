@@ -606,7 +606,7 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def execute(obj: Any, *, trigger_hdk_import: bool = False) -> None:
+def execute(obj: Any) -> None:
     """
     Trigger the `obj` lazy computations, if any, and wait for them to complete.
 
@@ -614,8 +614,6 @@ def execute(obj: Any, *, trigger_hdk_import: bool = False) -> None:
     ----------
     obj : Any
         An object to trigger lazy computations.
-    trigger_hdk_import : bool, default: False
-        Trigger import execution. Makes sense only for HDK storage format.
     """
     if not hasattr(obj, "_query_compiler"):
         return
