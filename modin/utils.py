@@ -27,6 +27,7 @@ from textwrap import dedent, indent
 from typing import (
     Any,
     Callable,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -606,18 +607,18 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def execute(obj: Any) -> None:
+def execute(objs: Iterable[Any]) -> None:
     """
-    Trigger the `obj` lazy computations, if any, and wait for them to complete.
+    Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
 
     Parameters
     ----------
-    obj : Any
-        An object to trigger lazy computations.
+    objs : Iterable[Any]
+        A collection of objects to trigger lazy computations.
     """
-    if not hasattr(obj, "_query_compiler"):
-        return
-    obj._query_compiler.execute()
+    for obj in objs:
+        if hasattr(obj, "_query_compiler"):
+            obj._query_compiler.execute()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
