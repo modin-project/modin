@@ -671,7 +671,7 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(apply_res, Series) and apply_res.columns.equals(
             reduced_index
         ):
-            apply_res = apply_res.squeeze()
+            apply_res = apply_res.squeeze(axis=1)
         return self._check_index(apply_res)
 
     @property
