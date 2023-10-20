@@ -187,6 +187,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         self._modin_frame._execute()
 
     def force_import(self):
+        """Force table import."""
         # HDK-specific method
         self._modin_frame.force_import()
 

@@ -4097,10 +4097,9 @@ class PandasDataframe(ClassLogger):
             dtypes=new_dtypes,
         )
 
-    @lazy_metadata_decorator(apply_axis="both")
     def finalize(self):
         """
-        Perform all deferred calls on dataframe and partitions.
+        Perform all deferred calls on partitions.
 
         This makes `self` Modin Dataframe independent of a history of queries
         that were used to build it.
@@ -4109,7 +4108,7 @@ class PandasDataframe(ClassLogger):
 
     def wait_computations(self):
         """Wait for all computations to complete without materializing data."""
-        self._partition_mgr_cls.wait_partitions(self._partitions)
+        self._partition_mgr_cls.wait_partitions(self._partitions.flatten())
 
     def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """

@@ -53,7 +53,6 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        partitions = partitions.flatten()
         RayWrapper.wait(
             [block for partition in partitions for block in partition.list_of_blocks]
         )

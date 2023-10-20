@@ -74,7 +74,7 @@ def wait_computations_if_benchmark_mode(func):
             cls.finalize(partitions)
             # The partition manager invokes the relevant .wait() method under
             # the hood, which should wait in parallel for all computations to finish
-            cls.wait_partitions(partitions)
+            cls.wait_partitions(partitions.flatten())
         return result
 
     return wait
@@ -952,7 +952,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         This method should be implemented in a more efficient way for engines that supports
         waiting on objects in parallel.
         """
-        partitions = partitions.flatten()
         for partition in partitions:
             partition.wait()
 

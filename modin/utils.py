@@ -607,7 +607,7 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     return obj
 
 
-def execute(*objs: Iterable[Any], trigger_hdk_import=False) -> None:
+def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
     """
     Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
 

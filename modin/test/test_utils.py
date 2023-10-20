@@ -342,7 +342,7 @@ def test_assert_dtypes_equal():
 
 def test_execute():
     df = pd.DataFrame(np.random.rand(100, 64))
-    partitions = df._query_compiler._modin_frame._partitions
+    partitions = df._query_compiler._modin_frame._partitions.flatten()
     mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
     with patch.object(mgr_cls, "wait_partitions", new=Mock()):
         modin.utils.execute(df)
