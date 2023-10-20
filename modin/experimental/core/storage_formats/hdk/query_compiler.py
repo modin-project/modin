@@ -184,11 +184,11 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         raise NotImplementedError()
 
     def execute(self):
-        try:
-            self._modin_frame.force_import()
-        except NotImplementedError:
-            # at least execute
-            self._modin_frame._execute()
+        self._modin_frame._execute()
+
+    def force_import(self):
+        # HDK-specific method
+        self._modin_frame.force_import()
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
