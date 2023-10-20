@@ -341,10 +341,30 @@ def test_assert_dtypes_equal():
 
 
 def test_execute():
-    df = pd.DataFrame(np.random.rand(100, 64))
-    partitions = df._query_compiler._modin_frame._partitions.flatten()
-    mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
+    data = np.random.rand(100, 64)
+    modin_df, pandas_df = create_test_dfs(data)
+    partitions = modin_df._query_compiler._modin_frame._partitions.flatten()
+    mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
+
+    # check modin case
     with patch.object(mgr_cls, "wait_partitions", new=Mock()):
-        modin.utils.execute(df)
+        modin.utils.execute(modin_df)
         mgr_cls.wait_partitions.assert_called_once()
         assert (mgr_cls.wait_partitions.call_args[0] == partitions).all()
+
+    # check pandas case without error
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(pandas_df)
+        mgr_cls.wait_partitions.assert_not_called()
+
+    # muke sure `trigger_hdk_import=True` doesn't broke anything
+    # when using other storage formats
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(modin_df, trigger_hdk_import=True)
+        mgr_cls.wait_partitions.assert_called_once()
+
+    # check several modin dataframes
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(modin_df, modin_df[modin_df.columns[:4]])
+        mgr_cls.wait_partitions.assert_called
+        assert mgr_cls.wait_partitions.call_count == 2
