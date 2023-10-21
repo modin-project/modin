@@ -808,7 +808,9 @@ class PandasDataframe(ClassLogger):
         if axis is None:
 
             def apply_idx_objs(df, idx, cols):
-                return df.set_axis(idx, axis="index").set_axis(cols, axis="columns")
+                return df.set_axis(idx, axis="index").set_axis(
+                    cols, axis="columns", copy=False
+                )
 
             self._partitions = np.array(
                 [

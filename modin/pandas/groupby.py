@@ -1990,7 +1990,9 @@ class SeriesGroupBy(DataFrameGroupBy):
             # because there is no need to identify which original column's aggregation
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
-            return result.set_axis(labels=self._try_get_str_func(func), axis=1)
+            return result.set_axis(
+                labels=self._try_get_str_func(func), axis=1, copy=False
+            )
         else:
             return super().aggregate(
                 func, *args, engine=engine, engine_kwargs=engine_kwargs, **kwargs
