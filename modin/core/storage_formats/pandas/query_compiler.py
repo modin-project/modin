@@ -499,9 +499,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(
-                left, *axis_lengths, partition_idx, right=right_pandas, kwargs=kwargs
-            ):  # pragma: no cover
+            def keep_index_or_not(left, right):
                 keep_index = False
                 if left_on is not None and right_on is not None:
                     keep_index = any(
@@ -514,16 +512,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     keep_index = any(
                         o in left.index.names and o in right.index.names for o in on
                     )
+                return keep_index
 
+            def map_func(
+                left, *axis_lengths, right=right_pandas, kwargs=kwargs, **service_kwargs
+            ):  # pragma: no cover
                 df = pandas.merge(left, right, **kwargs)
-                if not keep_index and kwargs["how"] == "left":
-                    # If the resulting index is a pure RangeIndex that means that
-                    # `.reset_index` actually dropped all of the levels of the
-                    # original index and so we have to recompute it manually for each partition
-                    start = sum(axis_lengths[:partition_idx])
-                    stop = sum(axis_lengths[: partition_idx + 1])
 
-                    df.index = pandas.RangeIndex(start, stop)
+                if kwargs["how"] == "left":
+                    partition_idx = service_kwargs["partition_idx"]
+                    if partition_idx and len(axis_lengths):
+                        if not keep_index_or_not(left, right):
+                            # Doesn't work for "inner" case, since the partition sizes of the
+                            # left dataframe may change
+                            start = sum(axis_lengths[:partition_idx])
+                            stop = sum(axis_lengths[: partition_idx + 1])
+
+                            df.index = pandas.RangeIndex(start, stop)
 
                 return df
 
@@ -573,7 +578,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.apply_full_axis(
                     axis=1,
                     func=map_func,
-                    enumerate_partitions=True,
+                    enumerate_partitions=True if how == "left" else False,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -583,7 +588,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_columns=new_columns,
                     dtypes=new_dtypes,
                     sync_labels=False,
-                    pass_axis_lengths_to_partitions=True,
+                    pass_axis_lengths_to_partitions=True if how == "left" else False,
                 )
             )
 
@@ -593,18 +598,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # materialized quite often compared to the indexes.
             keep_index = False
             if self._modin_frame.has_materialized_index:
-                if left_on is not None and right_on is not None:
-                    keep_index = any(
-                        o in self.index.names
-                        and o in right_on
-                        and o in right_pandas.index.names
-                        for o in left_on
-                    )
-                elif on is not None:
-                    keep_index = any(
-                        o in self.index.names and o in right_pandas.index.names
-                        for o in on
-                    )
+                keep_index = keep_index_or_not(self, right_pandas)
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
@@ -633,12 +627,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         if keep_index
                         else new_self.sort_rows_by_column_values(on)
                     )
-                if not keep_index:
-                    new_self = new_self.reset_index(drop=True)
 
             return (
                 new_self.reset_index(drop=True)
-                if not keep_index and kwargs["how"] != "left" and not sort
+                if not keep_index and (kwargs["how"] != "left" or sort)
                 else new_self
             )
         else:
