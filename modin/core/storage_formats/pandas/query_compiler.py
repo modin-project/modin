@@ -499,8 +499,33 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
-                return pandas.merge(left, right_pandas, **kwargs)
+            def map_func(
+                left, *axis_lengths, partition_idx, right=right_pandas, kwargs=kwargs
+            ):  # pragma: no cover
+                keep_index = False
+                if left_on is not None and right_on is not None:
+                    keep_index = any(
+                        o in left.index.names
+                        and o in right_on
+                        and o in right.index.names
+                        for o in left_on
+                    )
+                elif on is not None:
+                    keep_index = any(
+                        o in left.index.names and o in right.index.names for o in on
+                    )
+
+                df = pandas.merge(left, right, **kwargs)
+                if not keep_index and kwargs["how"] == "left":
+                    # If the resulting index is a pure RangeIndex that means that
+                    # `.reset_index` actually dropped all of the levels of the
+                    # original index and so we have to recompute it manually for each partition
+                    start = sum(axis_lengths[:partition_idx])
+                    stop = sum(axis_lengths[: partition_idx + 1])
+
+                    df.index = pandas.RangeIndex(start, stop)
+
+                return df
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -548,6 +573,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.apply_full_axis(
                     axis=1,
                     func=map_func,
+                    enumerate_partitions=True,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -557,6 +583,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_columns=new_columns,
                     dtypes=new_dtypes,
                     sync_labels=False,
+                    pass_axis_lengths_to_partitions=True,
                 )
             )
 
@@ -606,8 +633,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         if keep_index
                         else new_self.sort_rows_by_column_values(on)
                     )
+                if not keep_index:
+                    new_self = new_self.reset_index(drop=True)
 
-            return new_self if keep_index else new_self.reset_index(drop=True)
+            return (
+                new_self.reset_index(drop=True)
+                if not keep_index and kwargs["how"] != "left" and not sort
+                else new_self
+            )
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
