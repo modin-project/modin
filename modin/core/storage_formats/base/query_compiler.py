@@ -169,6 +169,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             warnings.filterwarnings("ignore", category=FutureWarning)
             result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
         if isinstance(result, (tuple, list)):
+            if "Series.tolist" in pandas_op.__name__:
+                # fast path: no need to iterate over the result from `tolist` function
+                return result
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
 
