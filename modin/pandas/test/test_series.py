@@ -4794,3 +4794,22 @@ def test_binary_numpy_universal_function_issue_6483():
         *create_test_series(test_data["float_nan_data"]),
         lambda series: np.arctan2(series, np.sin(series)),
     )
+
+
+def test__reduce__():
+    abbreviations = pd.Series(
+        ["Major League Baseball", "National Basketball Association"],
+        index=["MLB", "NBA"],
+    )
+    teams = pd.DataFrame(
+        {
+            "name": ["Mariners", "Lakers"] * 500,
+            "league_abbreviation": ["MLB", "NBA"] * 500,
+        }
+    )
+    result = (
+        teams.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbreviations.loc[abbr])
+        .rename("league")
+    )
+    result._to_pandas()
