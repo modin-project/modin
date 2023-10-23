@@ -304,6 +304,7 @@ details. The documentation covers most modules, with more docs being added every
    ├───examples
    ├───modin
    │   ├─── :doc:`config </flow/modin/config>`
+   |   ├─── :doc:`utils </flow/modin/utils>`
    │   ├───core
    │   │   ├─── :doc:`dataframe </flow/modin/core/dataframe/index>`
    │   │   │   ├─── :doc:`algebra </flow/modin/core/dataframe/algebra>`
