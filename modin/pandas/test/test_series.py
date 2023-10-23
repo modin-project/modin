@@ -4796,7 +4796,7 @@ def test_binary_numpy_universal_function_issue_6483():
     )
 
 
-@pytest.mark.xfail(Engine.get() != "Ray", reason="reason")
+@pytest.mark.skipif(Engine.get() == "Unidist", reason="Unidist doesn't work for now.")
 def test__reduce__():
     abbreviations = pd.Series(
         ["Major League Baseball", "National Basketball Association"],

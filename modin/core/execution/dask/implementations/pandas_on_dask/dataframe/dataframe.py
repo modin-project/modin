@@ -41,3 +41,24 @@ class PandasOnDaskDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnDaskDataframePartitionManager
+
+    @classmethod
+    def reconnect(cls, address, attributes):
+        try:
+            from distributed import default_client
+
+            default_client()
+        except ValueError:
+            from distributed import Client
+
+            # setup `default_client` for worker process
+            _ = Client(address)
+        obj = cls.__new__(cls)
+        obj.__dict__.update(attributes)
+        return obj
+
+    def __reduce__(self):
+        from distributed import default_client
+
+        address = default_client().scheduler_info()["address"]
+        return self.reconnect, (address, self.__dict__)
