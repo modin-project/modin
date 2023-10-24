@@ -50,6 +50,8 @@ _MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 _RAY_IGNORE_UNHANDLED_ERRORS_VAR = "RAY_IGNORE_UNHANDLED_ERRORS"
 
 ObjectIDType = ray.ObjectRef
+# TODO: Minimum version of Ray - 1.13
+# `if` branch can be deleted
 if version.parse(ray.__version__) >= version.parse("1.2.0"):
     from ray.util.client.common import ClientObjectRef
 
