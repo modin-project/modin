@@ -31,7 +31,6 @@ from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.logging import disable_logging
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings, to_pandas
 
@@ -80,7 +79,6 @@ class Series(BasePandasDataset):
 
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
-    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
@@ -2513,7 +2511,7 @@ class Series(BasePandasDataset):
         name : str
             The name to give to the new object.
         source_pid : int
-            Determines whether a Modin or Pandas object needs to be created.
+            Determines whether a Modin or pandas object needs to be created.
             Modin objects are created only on the main process.
 
         Returns
