@@ -31,6 +31,7 @@ from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.logging import disable_logging
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings, to_pandas
 
@@ -79,6 +80,7 @@ class Series(BasePandasDataset):
 
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
+    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
@@ -2521,7 +2523,8 @@ class Series(BasePandasDataset):
         """
         if os.getpid() != source_pid:
             return query_compiler.to_pandas()
-        # Modin objects can only be created in the main process.
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler, name=name)
 
     @classmethod
@@ -2549,7 +2552,10 @@ class Series(BasePandasDataset):
     def __reduce__(self):
         self._query_compiler.finalize()
         pid = os.getpid()
-        if PersistentPickle.get():
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
             return self._inflate_full, (self._to_pandas(), pid)
         return self._inflate_light, (self._query_compiler, self.name, pid)
 

@@ -41,3 +41,7 @@ class PandasOnUnidistDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnUnidistDataframePartitionManager
+
+    def support_materialization_in_worker_process(self) -> bool:
+        # more details why this is not `True` in https://github.com/modin-project/modin/pull/6673
+        return False

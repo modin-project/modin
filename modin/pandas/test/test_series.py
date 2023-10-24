@@ -27,7 +27,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution, to_pandas, try_cast_to_pandas
 
@@ -4796,7 +4796,6 @@ def test_binary_numpy_universal_function_issue_6483():
     )
 
 
-@pytest.mark.skipif(Engine.get() == "Unidist", reason="Unidist doesn't work for now.")
 def test__reduce__():
     abbreviations = pd.Series(
         ["Major League Baseball", "National Basketball Association"],
