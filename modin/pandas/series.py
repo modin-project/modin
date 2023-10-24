@@ -2535,7 +2535,7 @@ class Series(BasePandasDataset):
         pandas_series : pandas.Series
             Data to use for object re-creation.
         source_pid : int
-            Determines whether a Modin or Pandas object needs to be created.
+            Determines whether a Modin or pandas object needs to be created.
             Modin objects are created only on the main process.
 
         Returns
@@ -2545,6 +2545,8 @@ class Series(BasePandasDataset):
         """
         if os.getpid() != source_pid:
             return pandas_series
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=pandas_series)
 
     def __reduce__(self):
