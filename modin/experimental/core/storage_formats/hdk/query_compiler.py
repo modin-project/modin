@@ -183,6 +183,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # TODO: implement this for HDK storage format
         raise NotImplementedError()
 
+    def execute(self):
+        self._modin_frame._execute()
+
+    def force_import(self):
+        """Force table import."""
+        # HDK-specific method
+        self._modin_frame.force_import()
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 

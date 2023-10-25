@@ -4106,6 +4106,10 @@ class PandasDataframe(ClassLogger):
         """
         self._partition_mgr_cls.finalize(self._partitions)
 
+    def wait_computations(self):
+        """Wait for all computations to complete without materializing data."""
+        self._partition_mgr_cls.wait_partitions(self._partitions.flatten())
+
     def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.

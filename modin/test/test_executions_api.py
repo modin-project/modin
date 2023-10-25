@@ -25,6 +25,7 @@ def test_base_abstract_methods():
         "__init__",
         "free",
         "finalize",
+        "execute",
         "to_pandas",
         "from_pandas",
         "from_arrow",

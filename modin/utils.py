@@ -27,6 +27,7 @@ from textwrap import dedent, indent
 from typing import (
     Any,
     Callable,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -604,6 +605,27 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
                 else getattr(pandas.Series, fn_name, obj)
             )
     return obj
+
+
+def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
+    """
+    Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
+
+    Parameters
+    ----------
+    *objs : Iterable[Any]
+        A collection of objects to trigger lazy computations.
+    trigger_hdk_import : bool, default: False
+        Trigger import execution. Makes sense only for HDK storage format.
+        Safe to use with other storage formats.
+    """
+    for obj in objs:
+        if not hasattr(obj, "_query_compiler"):
+            continue
+        query_compiler = obj._query_compiler
+        query_compiler.execute()
+        if trigger_hdk_import and hasattr(query_compiler, "force_import"):
+            query_compiler.force_import()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:

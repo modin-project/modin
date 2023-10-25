@@ -317,6 +317,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """Finalize constructing the dataframe calling all deferred functions which were used to build it."""
         pass
 
+    @abc.abstractmethod
+    def execute(self):
+        """Wait for all computations to complete without materializing data."""
+        pass
+
     # END Data Management Methods
 
     # To/From Pandas

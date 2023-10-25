@@ -8,8 +8,8 @@ To benchmark a single Modin function, often turning on the
 :code:`BenchmarkMode` will suffice.
 
 There is no simple way to benchmark more complex Modin workflows, though
-benchmark mode or calling ``repr`` on Modin objects may be useful. The
-:doc:`Modin logs </usage_guide/advanced_usage/modin_logging>` may help you
+benchmark mode or calling ``modin.utils.execute`` on Modin objects may be useful.
+The :doc:`Modin logs </usage_guide/advanced_usage/modin_logging>` may help you
 identify bottlenecks in your code, and they may also help profile the execution
 of each Modin function.
 
@@ -125,9 +125,8 @@ at each Modin :doc:`layer </development/architecture>`. Log mode is more
 useful when used in conjuction with benchmark mode.
 
 Sometimes, if you don't have a natural end-point to your workflow, you can
-just call ``repr`` on the workflow's final Modin objects. That will typically
-block on any asynchronous computation. However, beware that ``repr`` can also
-be misleading, e.g. here:
+just call ``modin.utils.execute`` on the workflow's final Modin objects.
+That will typically block on any asynchronous computation:
 
 .. code-block:: python
 
@@ -137,6 +136,7 @@ be misleading, e.g. here:
 
     import modin.pandas as pd
     from modin.config import MinPartitionSize, NPartitions
+    import modin.utils
 
     MinPartitionSize.put(32)
     NPartitions.put(16)
@@ -149,17 +149,13 @@ be misleading, e.g. here:
     ray.init()
     df1 = pd.DataFrame(list(range(10_000)), columns=['A'])
     result = df1.map(slow_add_one)
-    %time repr(result)
-    # time.sleep(10)
+    # %time modin.utils.execute(result)
     %time result.to_parquet(BytesIO())
 .. code-block::python
 
-The ``repr`` takes only 802 milliseconds, but writing the result to a buffer
-takes 9.84 seconds. However, if you uncomment the :code:`time.sleep` before the
-:code:`to_parquet` call, the :code:`to_parquet` takes just 23.8 milliseconds!
-The problem is that the ``repr`` blocks only on getting the first few and the
-last few rows, but the slow execution is for row 5001, which Modin is
-computing asynchronously in the background even after ``repr`` finishes.
+Writing the result to a buffer takes 9.84 seconds. However, if you uncomment
+the :code:`%time modin.utils.execute(result)` before the :code:`to_parquet`
+call, the :code:`to_parquet` takes just 23.8 milliseconds!
 
 .. note::
     If you see any Modin documentation touting Modin's speed without using
