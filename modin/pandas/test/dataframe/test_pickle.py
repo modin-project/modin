@@ -48,7 +48,7 @@ def test_dataframe_pickle(modin_df, persistent):
 
 
 def test__reduce__():
-    # `Series.__reduce__` will be called implicitly when lambda expressions are
+    # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
     dataframe_data = ["Major League Baseball", "National Basketball Association"]
     abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])

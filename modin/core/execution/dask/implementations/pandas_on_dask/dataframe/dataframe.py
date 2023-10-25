@@ -44,7 +44,7 @@ class PandasOnDaskDataframe(PandasDataframe):
 
     @classmethod
     def reconnect(cls, address, attributes):  # noqa: GL08
-        # The main goal is to configure the client for the worker proces
+        # The main goal is to configure the client for the worker process
         # using the address passed by the custom `__reduce__` function
         try:
             from distributed import default_client
