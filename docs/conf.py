@@ -178,6 +178,7 @@ html_theme_options = {
             "icon": "fas fa-envelope-square",
         },
     ],
+    "navigation_with_keys": True,
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names
