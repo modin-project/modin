@@ -26,16 +26,17 @@ env:
   MODIN_GITHUB_CI: true
 
 jobs:
-  lint-black:
-    name: lint (black)
+  lint-black-isort:
+    name: lint (black and isort)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
-      - run: pip install black
+      - run: pip install black isort>=5.12
       # NOTE: keep the black command here in sync with the pre-commit hook in
       # /contributing/pre-commit
       - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: isort . --check-only
 
   lint-mypy:
     name: lint (mypy)
@@ -77,7 +78,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     strategy:
       matrix:
         os:
@@ -97,7 +98,7 @@ jobs:
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -122,7 +123,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -153,7 +154,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-hdk:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -210,7 +211,7 @@ jobs:
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -253,11 +254,6 @@ jobs:
               # check pure pandas
               MODIN_ASV_USE_IMPL=pandas asv run --quick --strict --show-stderr --launch-method=spawn \
                 -b ^benchmarks -b ^io | tee benchmarks.log
-
-              # HDK: ERR_OUT_OF_CPU_MEM: Not enough host memory to execute the query (MODIN#4270)
-              # just disable test for testing - it works well in a machine with more memory
-              sed -i 's/def time_groupby_agg_nunique(self, \*args, \*\*kwargs):/# def time_groupby_agg_nunique(self, *args, **kwargs):/g' benchmarks/hdk/benchmarks.py
-              sed -i 's/execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/# execute(self.df.groupby(by=self.groupby_columns).agg("nunique"))/g' benchmarks/hdk/benchmarks.py
 
               # Otherwise, ASV considers that the environment has already been created, although ASV command is run for another config,
               # which requires the creation of a completely new environment. This step will be required after removing the manual environment setup step.
@@ -320,7 +316,7 @@ jobs:
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
 
   test-all-unidist:
-    needs: [lint-flake8, lint-black, execution-filter]
+    needs: [lint-flake8, lint-black-isort, execution-filter]
     if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -351,7 +347,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: requirements/env_unidist.yml
+          environment-file: requirements/env_unidist_linux.yml
           activate-environment: modin_on_unidist
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
@@ -376,7 +372,7 @@ jobs:
       # these variables to test writing to the mock s3 filesystem.
       - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
       - run: |
@@ -385,7 +381,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-all:
-    needs: [lint-flake8, lint-black, execution-filter]
+    needs: [lint-flake8, lint-black-isort, execution-filter]
     strategy:
       matrix:
         os:
@@ -497,8 +493,8 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      # - run: pip install "dfsql>=0.4.2" "pyparsing<=2.4.7" && python -m pytest modin/experimental/sql/test/test_sql.py
-      #  if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
+      - run: python -m pytest modin/experimental/sql/test/test_sql.py
+        if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
       - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
@@ -519,7 +515,7 @@ jobs:
         if: matrix.os == 'windows'
 
   test-sanity:
-    needs: [lint-flake8, lint-black, execution-filter]
+    needs: [lint-flake8, lint-black-isort, execution-filter]
     if: github.event_name == 'pull_request'
     strategy:
       matrix:
@@ -552,7 +548,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/mamba-env
         with:
-          environment-file: ${{ matrix.execution.name == 'unidist' && 'requirements/env_unidist.yml' || 'environment-dev.yml' }}
+          environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
           activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
@@ -636,7 +632,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -665,7 +661,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-pyarrow:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -695,7 +691,7 @@ jobs:
       - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
-    needs: [lint-flake8, lint-black]
+    needs: [lint-flake8, lint-black-isort]
     runs-on: ubuntu-latest
     defaults:
       run:

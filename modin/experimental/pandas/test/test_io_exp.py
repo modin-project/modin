@@ -11,25 +11,26 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from contextlib import nullcontext
+import contextlib
 import glob
 import json
 
 import numpy as np
 import pandas
-from pandas._testing import ensure_clean
 import pytest
+from pandas._testing import ensure_clean
 
 import modin.experimental.pandas as pd
-from modin.config import Engine, AsyncReadMode
+from modin.config import AsyncReadMode, Engine
 from modin.pandas.test.utils import (
     df_equals,
+    eval_general,
+    parse_dates_values_by_id,
     teardown_test_files,
     test_data,
-    eval_general,
+    time_parsing_csv_path,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
 from modin.utils import try_cast_to_pandas
 
 
@@ -139,7 +140,7 @@ class TestCsvGlob:
         with (
             warns_that_defaulting_to_pandas()
             if Engine.get() == "Dask"
-            else nullcontext()
+            else contextlib.nullcontext()
         ):
             df.to_csv(filename)
 
@@ -257,7 +258,7 @@ def test_distributed_pickling(filename, compression):
     with (
         warns_that_defaulting_to_pandas()
         if filename_param == test_default_to_pickle_filename
-        else nullcontext()
+        else contextlib.nullcontext()
     ):
         df.to_pickle_distributed(filename, compression=compression)
         pickled_df = pd.read_pickle_distributed(filename, compression=compression)

@@ -13,13 +13,13 @@
 
 """Contains implementations for GroupbyReduce functions."""
 
-import pandas
 import numpy as np
+import pandas
 
-from modin.utils import hashable
-from modin.core.dataframe.algebra import GroupByReduce
 from modin.config import ExperimentalGroupbyImpl
+from modin.core.dataframe.algebra import GroupByReduce
 from modin.error_message import ErrorMessage
+from modin.utils import hashable
 
 
 class GroupbyReduceImpl:

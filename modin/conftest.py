@@ -14,21 +14,21 @@
 # We turn off mypy type checks in this file because it's not imported anywhere
 # type: ignore
 
-import boto3
-import s3fs
 import os
 import platform
-import subprocess
-import time
-
-import requests
-import sys
-import pytest
-import pandas
-from pandas.util._decorators import doc
-import numpy as np
 import shutil
+import subprocess
+import sys
+import time
 from typing import Optional
+
+import boto3
+import numpy as np
+import pandas
+import pytest
+import requests
+import s3fs
+from pandas.util._decorators import doc
 
 assert (
     "modin.utils" not in sys.modules
@@ -50,37 +50,37 @@ def _saving_make_api_url(token, _make_api_url=modin.utils._make_api_url):
 
 modin.utils._make_api_url = _saving_make_api_url
 
+import uuid  # noqa: E402
+
 import modin  # noqa: E402
 import modin.config  # noqa: E402
 from modin.config import (  # noqa: E402
-    NPartitions,
-    MinPartitionSize,
-    IsExperimental,
-    TestRayClient,
-    GithubCI,
-    CIAWSAccessKeyID,
-    CIAWSSecretAccessKey,
     AsyncReadMode,
     BenchmarkMode,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
+    GithubCI,
+    IsExperimental,
+    MinPartitionSize,
+    NPartitions,
+    TestRayClient,
 )
-import uuid  # noqa: E402
-
-from modin.core.storage_formats import (  # noqa: E402
-    PandasQueryCompiler,
-    BaseQueryCompiler,
-)
+from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
     PandasOnPythonIO,
 )
-from modin.core.execution.dispatching.factories import factories  # noqa: E402
-from modin.utils import get_current_execution  # noqa: E402
+from modin.core.storage_formats import (  # noqa: E402
+    BaseQueryCompiler,
+    PandasQueryCompiler,
+)
 from modin.pandas.test.utils import (  # noqa: E402
+    NROWS,
     _make_csv_file,
     get_unique_filename,
     make_default_file,
     teardown_test_files,
-    NROWS,
 )
+from modin.utils import get_current_execution  # noqa: E402
 
 
 def pytest_addoption(parser):
@@ -174,6 +174,10 @@ class TestQC(BaseQueryCompiler):
 
     def finalize(self):
         self._modin_frame.finalize()
+
+    def execute(self):
+        self.finalize()
+        self._modin_frame.wait_computations()
 
     @classmethod
     def from_pandas(cls, df, data_cls):
@@ -385,6 +389,9 @@ def make_parquet_file():
         nrows=NROWS,
         ncols=2,
         force=True,
+        range_index_start=0,
+        range_index_step=1,
+        range_index_name=None,
         partitioned_columns=[],
         row_group_size: Optional[int] = None,
     ):
@@ -402,6 +409,20 @@ def make_parquet_file():
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
+            index = pandas.RangeIndex(
+                start=range_index_start,
+                stop=range_index_start + (nrows * range_index_step),
+                step=range_index_step,
+                name=range_index_name,
+            )
+            if (
+                range_index_start == 0
+                and range_index_step == 1
+                and range_index_name is None
+            ):
+                assert df.index.equals(index)
+            else:
+                df.index = index
             if len(partitioned_columns) > 0:
                 df.to_parquet(
                     filename,

@@ -11,37 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-from modin.config import MinPartitionSize
-import modin.pandas as pd
-
-from pandas.core.dtypes.common import is_list_like
+import pytest
 from pandas._libs.lib import no_default
+from pandas.core.dtypes.common import is_list_like
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    query_func_keys,
-    query_func_values,
-    agg_func_keys,
-    agg_func_values,
     agg_func_except_keys,
     agg_func_except_values,
-    eval_general,
-    create_test_dfs,
-    udf_func_values,
-    udf_func_keys,
-    test_data,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
     bool_arg_keys,
     bool_arg_values,
-    arg_keys,
+    create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    query_func_keys,
+    query_func_values,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+    udf_func_keys,
+    udf_func_values,
 )
-from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -338,6 +337,18 @@ def test_eval_df_arithmetic_subexpression():
     df_equals(modin_df, df)
 
 
+def test_eval_groupby_transform():
+    # see #5511 for details
+    df = pd.DataFrame({"num": range(1, 1001), "group": ["A"] * 500 + ["B"] * 500})
+    assert df.eval("num.groupby(group).transform('min')").unique().tolist() == [1, 501]
+
+
+def test_eval_scalar():
+    # see #4477 for details
+    df = pd.DataFrame([[2]])
+    assert df.eval("1") == 1
+
+
 TEST_VAR = 2
 
 
@@ -433,6 +444,41 @@ def test_query(data, funcs, engine):
         assert modin_result._query_compiler._modin_frame.has_dtypes_cache
         df_equals(modin_result, pandas_result)
         df_equals(modin_result.dtypes, pandas_result.dtypes)
+
+
+def test_query_named_index():
+    eval_general(
+        *(df.set_index("col1") for df in create_test_dfs(test_data["int_data"])),
+        lambda df: df.query("col1 % 2 == 0 | col3 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
+def test_query_named_multiindex():
+    eval_general(
+        *(
+            df.set_index(["col1", "col3"])
+            for df in create_test_dfs(test_data["int_data"])
+        ),
+        lambda df: df.query("col1 % 2 == 1 | col3 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
+def test_query_multiindex_without_names():
+    def make_df(without_index):
+        new_df = without_index.set_index(["col1", "col3"])
+        new_df.index.names = [None, None]
+        return new_df
+
+    eval_general(
+        *(make_df(df) for df in create_test_dfs(test_data["int_data"])),
+        lambda df: df.query("ilevel_0 % 2 == 0 | ilevel_1 % 2 == 1 | col4 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
 
 
 def test_empty_query():

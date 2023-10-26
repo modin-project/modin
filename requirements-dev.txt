@@ -26,7 +26,9 @@ pandas-gbq>=0.15.0
 tables>=3.7.0
 # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
 pymssql>=2.1.5,!=2.2.8
-psycopg2>=2.9.3
+# psycopg devs recommend the other way of installation for production
+# but this is ok for testing and development
+psycopg2-binary>=2.9.3
 connectorx>=0.2.6a4
 fastparquet>=0.8.1
 flask-cors
@@ -60,3 +62,4 @@ flake8-no-implicit-concat>=0.3.4
 flake8-print>=5.0.0
 mypy>=1.0.0
 pandas-stubs>=2.0.0
+isort>=5.12

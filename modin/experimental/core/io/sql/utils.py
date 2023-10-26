@@ -15,9 +15,9 @@
 
 from collections import OrderedDict
 
-from sqlalchemy import MetaData, Table, create_engine, inspect
 import pandas
 import pandas._libs.lib as lib
+from sqlalchemy import MetaData, Table, create_engine, inspect
 
 from modin.core.storage_formats.pandas.parsers import _split_result_for_readers
 

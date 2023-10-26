@@ -14,16 +14,16 @@
 """Module houses Modin configs originated from environment variables."""
 
 import os
-import sys
-from textwrap import dedent
-import warnings
-from packaging import version
 import secrets
+import sys
+import warnings
+from textwrap import dedent
+from typing import Any, Optional
 
+from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Any, Optional
+from .pubsub import _TYPE_PARAMS, ExactStr, Parameter, ValueSource
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -94,11 +94,7 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import (
-            MIN_RAY_VERSION,
-            MIN_DASK_VERSION,
-            MIN_UNIDIST_VERSION,
-        )
+        from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
 
         # If there's a custom engine, we don't need to check for any engine
         # dependencies. Return the default "Python" engine.
@@ -301,14 +297,8 @@ class HdkFragmentSize(EnvironmentVariable, type=int):
     varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
-class OmnisciFragmentSize(EnvironmentVariable, type=int):
-    """How big a fragment in OmniSci should be when creating a table (in rows)."""
-
-    varname = "MODIN_OMNISCI_FRAGMENT_SIZE"
-
-
 class DoUseCalcite(EnvironmentVariable, type=bool):
-    """Whether to use Calcite for OmniSci queries execution."""
+    """Whether to use Calcite for HDK queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
@@ -530,24 +520,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
-        if cls == OmnisciLaunchParameters or (
-            OmnisciLaunchParameters.varname in os.environ
-            and HdkLaunchParameters.varname not in os.environ
-        ):
-            return OmnisciLaunchParameters._get()
-        else:
-            return HdkLaunchParameters._get()
-
-    @classmethod
-    def _get(cls) -> dict:
-        """
-        Get the resulted command-line options.
-
-        Returns
-        -------
-        dict
-            Decoded and verified config value.
-        """
         custom_parameters = super().get()
         result = cls._get_default().copy()
         result.update(
@@ -587,17 +559,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
                 # if pyhdk is not available, do not show any additional options
                 pass
         return default
-
-
-class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
-    """
-    Additional command line options for the OmniSci engine.
-
-    Please visit OmniSci documentation for the description of available parameters:
-    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
-    """
-
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):
@@ -699,8 +660,20 @@ class AsyncReadMode(EnvironmentVariable, type=bool):
     """
     It does not wait for the end of reading information from the source.
 
-    Can break situations when reading occurs in a context, when exiting
-    from which the source is deleted.
+    It basically means, that the reading function only launches tasks for the dataframe
+    to be read/created, but not ensures that the construction is finalized by the time
+    the reading function returns a dataframe.
+
+    This option was brought to improve performance of reading/construction
+    of Modin DataFrames, however it may also:
+
+    1. Increase the peak memory consumption. Since the garbage collection of the
+    temporary objects created during the reading is now also lazy and will only
+    be performed when the reading/construction is actually finished.
+
+    2. Can break situations when the source is manually deleted after the reading
+    function returns a result, for example, when reading inside of a context-block
+    that deletes the file on ``__exit__()``.
     """
 
     varname = "MODIN_ASYNC_READ_MODE"

@@ -13,16 +13,19 @@
 
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
+import warnings
+
 import pandas
 import unidist
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.unidist.common.utils import deserialize
 from modin.core.execution.unidist.common import UnidistWrapper
-from .partition import PandasOnUnidistDataframePartition
+from modin.core.execution.unidist.common.utils import deserialize
 from modin.utils import _inherit_docstrings
+
+from .partition import PandasOnUnidistDataframePartition
 
 
 class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -93,7 +96,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_block_partitions)
         for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
-            result[idx] = partition._ip_cache
+            result[idx] = partition.ip(materialize=False)
         return result
 
     @classmethod
@@ -309,7 +312,9 @@ def _deploy_unidist_func(
     Unidist functions are not detected by codecov (thus pragma: no cover).
     """
     f_args = deserialize(f_args)
-    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
     if not extract_metadata:
         return result
     ip = unidist.get_ip()

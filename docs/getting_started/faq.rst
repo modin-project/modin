@@ -21,8 +21,8 @@ The :py:class:`~modin.pandas.dataframe.DataFrame` is a highly
 scalable, parallel DataFrame. Modin transparently distributes the data and computation so
 that you can continue using the same pandas API while being able to work with more data faster.
 Modin lets you use all the CPU cores on your machine, and because it is lightweight, it
-often has less memory overhead than pandas. See this :doc:`page </getting_started/why_modin/pandas>` to
-learn more about how Modin is different from pandas.
+often has less memory overhead than pandas. See :doc:` Why Modin? </getting_started/why_modin/pandas>`
+page to learn more about how Modin is different from pandas.
 
 Why not just improve pandas?
 """"""""""""""""""""""""""""
@@ -61,7 +61,8 @@ How does Modin compare to Dask DataFrame and Koalas?
 
 TLDR: Modin has better coverage of the pandas API, has a flexible backend, better ordering semantics,
 and supports both row and column-parallel operations.
-Check out this :doc:`page </getting_started/why_modin/modin_vs_dask_vs_koalas>` detailing the differences!
+Check out :doc:`Modin vs Dask vs Koalas </getting_started/why_modin/modin_vs_dask_vs_koalas>` page detailing
+the differences!
 
 How does Modin work under the hood?
 """""""""""""""""""""""""""""""""""
@@ -135,8 +136,8 @@ This can also be done with:
     modin_cfg.Engine.put('unidist') # Modin will use Unidist
     unidist_cfg.Backend.put('mpi') # Unidist will use MPI backend
 
-We also have an experimental HDK-based engine of Modin you can read about :doc:`here </development/using_hdk>`.
-We plan to support more execution engines in future. If you have a specific request,
+We also have an experimental HDK-based engine of Modin, which you can read about on :doc:`Using HDK </development/using_hdk>`
+page. We plan to support more execution engines in future. If you have a specific request,
 please post on the #feature-requests channel on our Slack_ community.
 
 How do I connect Modin to a database via `read_sql`?

@@ -12,37 +12,32 @@
 # governing permissions and limitations under the License.
 
 import contextlib
+
+import numpy as np
 import pandas
 import pytest
-import modin.pandas as pd
-import numpy as np
 from numpy.testing import assert_array_equal
-from modin.utils import get_current_execution, to_pandas
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import StorageFormat
 from pandas.testing import assert_frame_equal
 
-from .utils import (
-    create_test_dfs,
-    test_data_values,
-    test_data_keys,
-    df_equals,
-    sort_index_for_equal_values,
-    eval_general,
-    bool_arg_values,
-    bool_arg_keys,
-    default_to_pandas_ignore_string,
-)
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas
 
+from .utils import (
+    bool_arg_keys,
+    bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    sort_index_for_equal_values,
+    test_data_keys,
+    test_data_values,
+)
 
 if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-
-
-@contextlib.contextmanager
-def _nullcontext():
-    """Replacement for contextlib.nullcontext missing in older Python."""
-    yield
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -85,7 +80,7 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
+        with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
@@ -114,7 +109,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
@@ -128,7 +123,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
@@ -630,7 +625,6 @@ def test_unique():
     reason="https://github.com/modin-project/modin/issues/2896",
 )
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54857")
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
@@ -895,7 +889,7 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else _nullcontext():
+    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else contextlib.nullcontext():
         df[(df.a == 1) & (df.b == 2)]
 
 

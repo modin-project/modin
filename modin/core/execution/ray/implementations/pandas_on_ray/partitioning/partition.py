@@ -13,14 +13,19 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import pandas
 import ray
 from ray.util import get_node_ip_address
 
-from modin.core.execution.ray.common.utils import deserialize, ObjectIDType
-from modin.core.execution.ray.common import RayWrapper
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
+from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.common.utils import (
+    ObjectIDType,
+    deconstruct_call_queue,
+    reconstruct_call_queue,
+)
 from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -97,7 +102,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            result, length, width, ip = _apply_list_of_funcs.remote(call_queue, data)
+            result, length, width, ip = _apply_list_of_funcs.remote(
+                data, *deconstruct_call_queue(call_queue)
+            )
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -128,7 +135,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 new_length,
                 new_width,
                 self._ip_cache,
-            ) = _apply_list_of_funcs.remote(call_queue, data)
+            ) = _apply_list_of_funcs.remote(data, *deconstruct_call_queue(call_queue))
         else:
             # We handle `len(call_queue) == 1` in a different way because
             # this dramatically improves performance.
@@ -273,7 +280,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._length_cache, ObjectIDType) and materialize:
+        if materialize and isinstance(self._length_cache, ObjectIDType):
             self._length_cache = RayWrapper.materialize(self._length_cache)
         return self._length_cache
 
@@ -300,13 +307,20 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 self._length_cache, self._width_cache = _get_index_and_columns.remote(
                     self._data
                 )
-        if isinstance(self._width_cache, ObjectIDType) and materialize:
+        if materialize and isinstance(self._width_cache, ObjectIDType):
             self._width_cache = RayWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -317,8 +331,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, ObjectIDType):
+                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and isinstance(self._ip_cache, ObjectIDType):
             self._ip_cache = RayWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
@@ -391,16 +405,29 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
 
 
 @ray.remote(num_returns=4)
-def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
+def _apply_list_of_funcs(
+    partition, num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, *futures
+):  # pragma: no cover
     """
     Execute all operations stored in the call queue on the partition in a worker process.
 
     Parameters
     ----------
-    call_queue : list
-        A call queue that needs to be executed on the partition.
     partition : pandas.DataFrame
         A pandas DataFrame the call queue needs to be executed on.
+    num_funcs : int
+        The number of functions in the call queue.
+    arg_lengths : list of ints
+        The number of positional arguments for each function in the call queue.
+    kw_key_lengths : list of ints
+        The number of key-word arguments for each function in the call queue.
+    kw_value_lengths : 2D list of dict{"len": int, "was_iterable": bool}
+        Description of keyword arguments for each function. For example, `kw_value_lengths[i][j]`
+        describes the j-th keyword argument of the i-th function in the call queue.
+        The describtion contains of the lengths of the argument and whether it's a list at all
+        (for example, {"len": 1, "was_iterable": False} describes a non-list argument).
+    *futures : list
+        A 1D call queue that is result of the ``deconstruct_call_queue()`` function.
 
     Returns
     -------
@@ -413,10 +440,10 @@ def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
     str
         The node IP address of the worker process.
     """
-    for func, f_args, f_kwargs in call_queue:
-        func = deserialize(func)
-        args = deserialize(f_args)
-        kwargs = deserialize(f_kwargs)
+    call_queue = reconstruct_call_queue(
+        num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, futures
+    )
+    for func, args, kwargs in call_queue:
         try:
             partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We

@@ -13,16 +13,18 @@
 
 """Module houses default GroupBy functions builder class."""
 
-from .default import DefaultMethod
+import warnings
+from typing import Any
 
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
 # Defines a set of string names of functions that are executed in a transform-way in groupby
 from pandas.core.groupby.base import transformation_kernels
-from typing import Any
 
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
+
+from .default import DefaultMethod
 
 
 # FIXME: there is no sence of keeping `GroupBy` and `GroupByDefault` logic in a different
@@ -58,7 +60,9 @@ class GroupBy:
     @classmethod
     def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
         """Call .groupby() on passed `df`."""
-        return df.groupby(*args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return df.groupby(*args, **kwargs)
 
     @classmethod
     def validate_by(cls, by):
@@ -562,7 +566,9 @@ class SeriesGroupBy(GroupBy):
         # In second case surrounding logic will supplement grouping columns,
         # so we need to drop them after grouping is over; our originally
         # selected column is always the first, so use it
-        return df.groupby(*args, **kwargs)[df.columns[0]]
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return df.groupby(*args, **kwargs)[df.columns[0]]
 
 
 class GroupByDefault(DefaultMethod):

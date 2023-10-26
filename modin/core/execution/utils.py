@@ -11,15 +11,21 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Base Modin Dataframe classes related to its partitioning and optimized for cuDF on Ray execution."""
+"""General utils for execution module."""
 
-from .gpu_manager import GPUManager
-from .partition import cuDFOnRayDataframePartition
-from .partition_manager import GPU_MANAGERS, cuDFOnRayDataframePartitionManager
+import contextlib
+import os
 
-__all__ = [
-    "GPUManager",
-    "GPU_MANAGERS",
-    "cuDFOnRayDataframePartitionManager",
-    "cuDFOnRayDataframePartition",
-]
+
+@contextlib.contextmanager
+def set_env(**environ):
+    """
+    Temporarily set the process environment variables.
+    """
+    old_environ = os.environ.copy()
+    os.environ.update(environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_environ)

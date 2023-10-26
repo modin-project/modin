@@ -6,9 +6,10 @@
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/stable/config
 
+import os
+
 # -- Project information -----------------------------------------------------
 import sys
-import os
 import types
 
 import ray
@@ -54,7 +55,6 @@ if not hasattr(sys.modules["xgboost"], "Booster"):
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import modin
-
 from modin.config.__main__ import export_config_help
 
 configs_file_path = os.path.abspath(
@@ -178,6 +178,7 @@ html_theme_options = {
             "icon": "fas fa-envelope-square",
         },
     ],
+    "navigation_with_keys": True,
 }
 
 # Custom sidebar templates, must be a dictionary that maps document names

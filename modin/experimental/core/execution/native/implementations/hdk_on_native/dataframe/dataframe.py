@@ -14,74 +14,74 @@
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
 
 import re
-import numpy as np
 from collections import OrderedDict
+from typing import Hashable, Iterable, List, Optional, Tuple, Union
 
-from typing import List, Hashable, Optional, Tuple, Union, Iterable
-
-import pyarrow
-from pyarrow.types import is_dictionary
-
+import numpy as np
 import pandas as pd
+import pyarrow
 from pandas._libs.lib import no_default
-from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pandas.core.dtypes.common import (
     _get_dtype,
-    is_list_like,
     is_bool_dtype,
-    is_string_dtype,
-    is_integer_dtype,
     is_datetime64_dtype,
+    is_integer_dtype,
+    is_list_like,
+    is_string_dtype,
 )
+from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
+from pyarrow.types import is_dictionary
 
-from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, join_columns
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.dataframe.pandas.metadata.dtypes import get_categories_dtype
+from modin.core.dataframe.pandas.utils import concatenate
+from modin.error_message import ErrorMessage
 from modin.experimental.core.storage_formats.hdk.query_compiler import (
     DFAlgQueryCompiler,
 )
-from .utils import (
-    ColNameCodec,
-    maybe_range,
-    arrow_to_pandas,
-    check_join_supported,
-    check_cols_to_join,
-    get_data_for_join_by_index,
-    build_categorical_from_at,
-)
-from ..db_worker import DbTable
-from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
-from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
-from modin.error_message import ErrorMessage
+from modin.pandas.indexing import is_range_like
+from modin.pandas.utils import check_both_not_none
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
-from modin.core.dataframe.pandas.utils import concatenate
-from modin.core.dataframe.base.dataframe.utils import join_columns
+
+from ..db_worker import DbTable
 from ..df_algebra import (
-    MaskNode,
+    FilterNode,
     FrameNode,
     GroupbyAggNode,
+    JoinNode,
+    MaskNode,
+    SortNode,
     TransformNode,
     UnionNode,
-    JoinNode,
-    SortNode,
-    FilterNode,
-    translate_exprs_to_base,
     replace_frame_in_exprs,
+    translate_exprs_to_base,
 )
 from ..expr import (
     AggregateExpr,
     InputRefExpr,
     LiteralExpr,
     OpExpr,
-    build_if_then_else,
-    build_dt_expr,
     _get_common_dtype,
+    build_dt_expr,
+    build_if_then_else,
     is_cmp_op,
 )
-from modin.pandas.utils import check_both_not_none
-from modin.pandas.indexing import is_range_like
+from ..partitioning.partition_manager import HdkOnNativeDataframePartitionManager
+from .utils import (
+    ColNameCodec,
+    arrow_to_pandas,
+    arrow_type_to_pandas,
+    build_categorical_from_at,
+    check_cols_to_join,
+    check_join_supported,
+    get_data_for_join_by_index,
+    maybe_range,
+)
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
 ROWID_COL_NAME = ColNameCodec.ROWID_COL_NAME
@@ -648,18 +648,23 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         agg_exprs = OrderedDict()
         if isinstance(agg, str):
-            for col in agg_cols:
-                agg_exprs[col] = AggregateExpr(agg, base.ref(col))
-        else:
-            assert isinstance(agg, dict), "unsupported aggregate type"
+            col_to_ref = {col: base.ref(col) for col in agg_cols}
+            self._add_agg_exprs(agg, col_to_ref, kwargs, agg_exprs)
+        elif isinstance(agg, (dict, list)):
+            if isinstance(agg, list):
+                agg = {col: agg for col in agg_cols}
             multiindex = any(isinstance(v, list) for v in agg.values())
-            for k, v in agg.items():
-                if isinstance(v, list):
-                    for item in v:
-                        agg_exprs[(k, item)] = AggregateExpr(item, base.ref(k))
+            for col, aggs in agg.items():
+                if isinstance(aggs, list):
+                    for a in aggs:
+                        col_to_ref = {(col, a): base.ref(col)}
+                        self._add_agg_exprs(a, col_to_ref, kwargs, agg_exprs)
                 else:
-                    col_name = (k, v) if multiindex else k
-                    agg_exprs[col_name] = AggregateExpr(v, base.ref(k))
+                    col_to_ref = {((col, aggs) if multiindex else col): base.ref(col)}
+                    self._add_agg_exprs(aggs, col_to_ref, kwargs, agg_exprs)
+        else:
+            raise NotImplementedError(f"aggregate type {type(agg)}")
+
         new_columns.extend(agg_exprs.keys())
         new_dtypes.extend((x._dtype for x in agg_exprs.values()))
         new_columns = Index.__new__(Index, data=new_columns, dtype=self.columns.dtype)
@@ -685,6 +690,37 @@ class HdkOnNativeDataframe(PandasDataframe):
                     col_labels=filtered_columns
                 )
         return new_frame
+
+    def _add_agg_exprs(self, agg, col_to_ref, kwargs, agg_exprs):
+        """
+        Add `AggregateExpr`s for each column to `agg_exprs`.
+
+        Parameters
+        ----------
+        agg : str
+        col_to_ref : dict
+        kwargs : dict
+        agg_exprs : dict
+        """
+        if agg == "nlargest" or agg == "nsmallest":
+            n = kwargs["agg_kwargs"]["n"]
+            if agg == "nsmallest":
+                n = -n
+            n = LiteralExpr(n)
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr(agg, [ref, n])
+        elif agg == "median" or agg == "quantile":
+            agg_kwargs = kwargs["agg_kwargs"]
+            q = agg_kwargs.get("q", 0.5)
+            if not isinstance(q, float):
+                raise NotImplementedError("Non-float quantile")
+            q = LiteralExpr(q)
+            interpolation = LiteralExpr(agg_kwargs.get("interpolation", "linear"))
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr("quantile", [ref, q, interpolation])
+        else:
+            for col, ref in col_to_ref.items():
+                agg_exprs[col] = AggregateExpr(agg, ref)
 
     def _groupby_head_tail(
         self, agg: str, n: int, cols: Iterable[str]
@@ -744,7 +780,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         filter = transform.copy(op=FilterNode(transform, cond))
         exprs = filter._index_exprs()
         exprs.update((col, filter.ref(col)) for col in base.columns)
-        return base.copy(op=TransformNode(filter, exprs))
+        return base.copy(op=TransformNode(filter, exprs), partitions=None, index=None)
 
     def agg(self, agg):
         """
@@ -1071,8 +1107,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             if isinstance(left_dt, pd.CategoricalDtype) and isinstance(
                 right_dt, pd.CategoricalDtype
             ):
-                left_dt = left_dt.categories.dtype
-                right_dt = right_dt.categories.dtype
+                left_dt = get_categories_dtype(left_dt)
+                right_dt = get_categories_dtype(right_dt)
             if not (
                 (is_integer_dtype(left_dt) and is_integer_dtype(right_dt))
                 or (is_string_dtype(left_dt) and is_string_dtype(right_dt))
@@ -2813,6 +2849,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                         parent=at,
                         column_name=col._name,
                         materializer=build_categorical_from_at,
+                        dtype=arrow_type_to_pandas(col.type.value_type),
                     )
                 )
             else:

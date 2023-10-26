@@ -13,17 +13,12 @@
 
 """Implement utils for pandas component."""
 
-from typing import Iterator, Tuple, Optional
+from typing import Iterator, Optional, Tuple
 
-from pandas.util._decorators import doc
-from pandas._typing import (
-    AggFuncType,
-    AggFuncTypeBase,
-    AggFuncTypeDict,
-    IndexLabel,
-)
-import pandas
 import numpy as np
+import pandas
+from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
+from pandas.util._decorators import doc
 
 from modin.utils import hashable
 
@@ -91,6 +86,7 @@ def from_pandas(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
@@ -111,6 +107,7 @@ def from_arrow(at):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
@@ -133,6 +130,7 @@ def from_dataframe(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
@@ -182,6 +180,7 @@ def is_scalar(obj):
         True if given object is scalar and False otherwise.
     """
     from pandas.api.types import is_scalar as pandas_is_scalar
+
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
@@ -302,7 +301,7 @@ def broadcast_item(
 
     Parameters
     ----------
-    obj : DataFrame or Series
+    obj : DataFrame or Series or query compiler
         The object containing the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
@@ -316,8 +315,9 @@ def broadcast_item(
 
     Returns
     -------
-    np.ndarray
-        `item` after it was broadcasted to `to_shape`.
+    (np.ndarray, Optional[Series])
+        * np.ndarray - `item` after it was broadcasted to `to_shape`.
+        * Series - item's dtypes.
 
     Raises
     ------
@@ -345,6 +345,7 @@ def broadcast_item(
     )
     to_shape = new_row_len, new_col_len
 
+    dtypes = None
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as pandas reindex expects them to be so
         axes_to_reindex = {}
@@ -358,12 +359,21 @@ def broadcast_item(
         # New value for columns/index make that reindex add NaN values
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
+
+        dtypes = item.dtypes
+        if not isinstance(dtypes, pandas.Series):
+            dtypes = pandas.Series([dtypes])
+
     try:
+        # Cast to numpy drop information about heterogeneous types (cast to common)
+        # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
+        if dtypes is None:
+            dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
+            return item.reshape(to_shape), dtypes
         else:
-            return np.broadcast_to(item, to_shape)
+            return np.broadcast_to(item, to_shape), dtypes
     except ValueError:
         from_shape = np.array(item).shape
         raise ValueError(

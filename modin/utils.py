@@ -13,32 +13,42 @@
 
 """Collection of general utility functions, mostly for internal use."""
 
-import importlib
-import inspect
-import os
-from pathlib import Path
-import types
-from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar
-import re
-import sys
-import json
 import codecs
 import functools
-
-from typing import Protocol, runtime_checkable
-
+import importlib
+import inspect
+import json
+import os
+import re
+import sys
+import types
+from pathlib import Path
 from textwrap import dedent, indent
-from packaging import version
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
-import pandas
 import numpy as np
-
-from pandas.util._decorators import Appender  # type: ignore
-from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
+import pandas
+from packaging import version
 from pandas._typing import JSONSerializable
+from pandas.util._decorators import Appender  # type: ignore
+from pandas.util._print_versions import (  # type: ignore[attr-defined]
+    _get_dependency_info,
+    _get_sys_info,
+)
 
-from modin.config import Engine, StorageFormat, IsExperimental, ExperimentalNumPyAPI
 from modin._version import get_versions
+from modin.config import Engine, ExperimentalNumPyAPI, IsExperimental, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -595,6 +605,27 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
                 else getattr(pandas.Series, fn_name, obj)
             )
     return obj
+
+
+def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
+    """
+    Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
+
+    Parameters
+    ----------
+    *objs : Iterable[Any]
+        A collection of objects to trigger lazy computations.
+    trigger_hdk_import : bool, default: False
+        Trigger import execution. Makes sense only for HDK storage format.
+        Safe to use with other storage formats.
+    """
+    for obj in objs:
+        if not hasattr(obj, "_query_compiler"):
+            continue
+        query_compiler = obj._query_compiler
+        query_compiler.execute()
+        if trigger_hdk_import and hasattr(query_compiler, "force_import"):
+            query_compiler.force_import()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:

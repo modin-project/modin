@@ -14,7 +14,19 @@
 """Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
 
 from __future__ import annotations
+
+import datetime
+import functools
+import itertools
+import re
+import sys
+import warnings
+from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+
+import numpy as np
 import pandas
+from pandas._libs import lib
+from pandas._typing import CompressionOptions, FilePath, StorageOptions, WriteBuffer
 from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
@@ -24,49 +36,33 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.core.indexes.frozen import FrozenList
-from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.info import DataFrameInfo
-from pandas._libs import lib
-from pandas._typing import (
-    CompressionOptions,
-    WriteBuffer,
-    FilePath,
-    StorageOptions,
-)
+from pandas.util._validators import validate_bool_kwarg
 
-import datetime
-import re
-import itertools
-import functools
-import numpy as np
-import sys
-from typing import IO, Optional, Union, Iterator, Hashable, Sequence
-import warnings
-
+from modin.config import PersistentPickle
+from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.error_message import ErrorMessage
 from modin.utils import (
-    _inherit_docstrings,
-    to_pandas,
-    hashable,
     MODIN_UNNAMED_SERIES_LABEL,
-    try_cast_to_pandas,
+    _inherit_docstrings,
     expanduser_path_arg,
+    hashable,
+    to_pandas,
+    try_cast_to_pandas,
 )
-from modin.config import PersistentPickle
-from .utils import (
-    from_pandas,
-    from_non_pandas,
-    broadcast_item,
-    cast_function_modin2pandas,
-    SET_DATAFRAME_ATTRIBUTE_WARNING,
-)
+
+from .accessor import CachedAccessor, SparseFrameAccessor
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
-from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
-from .groupby import DataFrameGroupBy
-from .accessor import CachedAccessor, SparseFrameAccessor
+from .utils import (
+    SET_DATAFRAME_ATTRIBUTE_WARNING,
+    cast_function_modin2pandas,
+    from_non_pandas,
+    from_pandas,
+)
 
 
 @_inherit_docstrings(
@@ -380,9 +376,7 @@ class DataFrame(BasePandasDataset):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return self.__constructor__(
-            query_compiler=self._query_compiler.applymap(
-                func, na_action=na_action, **kwargs
-            )
+            query_compiler=self._query_compiler.map(func, na_action=na_action, **kwargs)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):
@@ -1166,7 +1160,7 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
-            other = self.__constructor__({other.name: other})
+            other = self.__constructor__(other)
         if on is not None:
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
@@ -1603,7 +1597,40 @@ class DataFrame(BasePandasDataset):
     # methods and fields we need to use pandas.DataFrame.query
     _AXIS_ORDERS = ["index", "columns"]
     _get_index_resolvers = pandas.DataFrame._get_index_resolvers
-    _get_axis_resolvers = pandas.DataFrame._get_axis_resolvers
+
+    def _get_axis_resolvers(self, axis: str) -> dict:
+        # forked from pandas because we only want to update the index if there's more
+        # than one level of the index.
+        # index or columns
+        axis_index = getattr(self, axis)
+        d = {}
+        prefix = axis[0]
+
+        for i, name in enumerate(axis_index.names):
+            if name is not None:
+                key = level = name
+            else:
+                # prefix with 'i' or 'c' depending on the input axis
+                # e.g., you must do ilevel_0 for the 0th level of an unnamed
+                # multiiindex
+                key = f"{prefix}level_{i}"
+                level = i
+
+            level_values = axis_index.get_level_values(level)
+            s = level_values.to_series()
+            if axis_index.nlevels > 1:
+                s.index = axis_index
+            d[key] = s
+
+        # put the index/columns itself in the dict
+        if axis_index.nlevels > 2:
+            dindex = axis_index
+        else:
+            dindex = axis_index.to_series()
+
+        d[axis] = dindex
+        return d
+
     _get_cleaned_column_resolvers = pandas.DataFrame._get_cleaned_column_resolvers
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
@@ -1611,10 +1638,23 @@ class DataFrame(BasePandasDataset):
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
+        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_query_compiler = pandas.DataFrame.query(
-            self, expr, inplace=False, **kwargs
-        )._query_compiler
+        # HACK: this condition kind of breaks the idea of backend agnostic API as all queries
+        # _should_ work fine for all of the engines using `pandas.DataFrame.query(...)` approach.
+        # However, at this point we know that we can execute simple queries way more efficiently
+        # using the QC's API directly in case of pandas backend. Ideally, we have to make it work
+        # with the 'pandas.query' approach the same as good the direct QC call is. But investigating
+        # and fixing the root cause of the perf difference appears to be much more complicated
+        # than putting this hack here. Hopefully, we'll get rid of it soon:
+        # https://github.com/modin-project/modin/issues/6499
+        try:
+            new_query_compiler = self._query_compiler.rowwise_query(expr, **kwargs)
+        except NotImplementedError:
+            # a non row-wise query was passed, falling back to pandas implementation
+            new_query_compiler = pandas.DataFrame.query(
+                self, expr, inplace=False, **kwargs
+            )._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
@@ -2530,16 +2570,45 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self,
-                    slice(None),
-                    key,
-                    value,
-                    need_columns_reindex=False,
-                )
-                new_qc = self._query_compiler.write_items(
-                    slice(None), self.columns.get_indexer_for(key), item
-                )
+                if isinstance(value, type(self)):
+                    # importing here to avoid circular import
+                    from .general import concat
+
+                    if not value.columns.equals(pandas.Index(key)):
+                        # we only need to change the labels, so shallow copy here
+                        value = value.copy(deep=False)
+                        value.columns = key
+
+                    # here we iterate over every column in the 'self' frame, then check if it's in the 'key'
+                    # and so has to be taken from either from the 'value' or from the 'self'. After that,
+                    # we concatenate those mixed column chunks and get a dataframe with updated columns
+                    to_concat = []
+                    # columns to take for this chunk
+                    to_take = []
+                    # whether columns in this chunk are in the 'key' and has to be taken from the 'value'
+                    get_cols_from_value = False
+                    # an object to take columns from for this chunk
+                    src_obj = self
+                    for col in self.columns:
+                        if (col in key) != get_cols_from_value:
+                            if len(to_take):
+                                to_concat.append(src_obj[to_take])
+                            to_take = [col]
+                            get_cols_from_value = not get_cols_from_value
+                            src_obj = value if get_cols_from_value else self
+                        else:
+                            to_take.append(col)
+                    if len(to_take):
+                        to_concat.append(src_obj[to_take])
+
+                    new_qc = concat(to_concat, axis=1)._query_compiler
+                else:
+                    new_qc = self._query_compiler.write_items(
+                        slice(None),
+                        self.columns.get_indexer_for(key),
+                        value,
+                        need_columns_reindex=False,
+                    )
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value
                 return

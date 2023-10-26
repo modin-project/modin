@@ -12,57 +12,59 @@
 # governing permissions and limitations under the License.
 """Implement DataFrame/Series public API as pandas does."""
 from __future__ import annotations
+
+import pickle as pkl
+import re
+import warnings
+from typing import Any, Hashable, Optional, Sequence, Union
+
 import numpy as np
 import pandas
-from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, pipe
-from pandas.core.methods.describe import _refine_percentiles
-from pandas.core.dtypes.common import (
-    is_list_like,
-    is_dict_like,
-    is_bool_dtype,
-    is_integer_dtype,
-    is_numeric_dtype,
-    is_dtype_equal,
-    is_object_dtype,
-    is_integer,
-)
-from pandas.core.indexes.api import ensure_index
-import pandas.core.window.rolling
-import pandas.core.resample
 import pandas.core.generic
-from pandas.util._validators import (
-    validate_percentile,
-    validate_bool_kwarg,
-    validate_ascending,
-)
+import pandas.core.resample
+import pandas.core.window.rolling
 from pandas._libs import lib
 from pandas._libs.tslibs import to_offset
 from pandas._typing import (
-    IndexKeyFunc,
-    StorageOptions,
-    CompressionOptions,
     Axis,
+    CompressionOptions,
+    DtypeBackend,
+    IndexKeyFunc,
     IndexLabel,
     Level,
+    RandomState,
+    StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
-    RandomState,
-    DtypeBackend,
     npt,
 )
-import pickle as pkl
-import re
-from typing import Optional, Union, Sequence, Hashable, Any
-import warnings
+from pandas.compat import numpy as numpy_compat
+from pandas.core.common import count_not_none, pipe
+from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_dict_like,
+    is_dtype_equal,
+    is_integer,
+    is_integer_dtype,
+    is_list_like,
+    is_numeric_dtype,
+    is_object_dtype,
+)
+from pandas.core.indexes.api import ensure_index
+from pandas.core.methods.describe import _refine_percentiles
+from pandas.util._validators import (
+    validate_ascending,
+    validate_bool_kwarg,
+    validate_percentile,
+)
 
-
-from .utils import is_full_grab_slice, _doc_binary_op
-from modin.utils import try_cast_to_pandas, _inherit_docstrings, expanduser_path_arg
-from modin.error_message import ErrorMessage
 from modin import pandas as pd
+from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger, disable_logging
 from modin.pandas.utils import is_scalar
-from modin.logging import disable_logging, ClassLogger
+from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
+
+from .utils import _doc_binary_op, is_full_grab_slice
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -501,23 +503,25 @@ class BasePandasDataset(ClassLogger):
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
         pandas_obj = self._to_pandas()
-        if callable(op):
-            result = op(pandas_obj, *args, **kwargs)
-        elif isinstance(op, str):
-            # The inner `getattr` is ensuring that we are treating this object (whether
-            # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
-            # will get the operation (`op`) from the pandas version of the class and run
-            # it on the object after we have converted it to pandas.
-            attr = getattr(self._pandas_class, op)
-            if isinstance(attr, property):
-                result = getattr(pandas_obj, op)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            if callable(op):
+                result = op(pandas_obj, *args, **kwargs)
+            elif isinstance(op, str):
+                # The inner `getattr` is ensuring that we are treating this object (whether
+                # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
+                # will get the operation (`op`) from the pandas version of the class and run
+                # it on the object after we have converted it to pandas.
+                attr = getattr(self._pandas_class, op)
+                if isinstance(attr, property):
+                    result = getattr(pandas_obj, op)
+                else:
+                    result = attr(pandas_obj, *args, **kwargs)
             else:
-                result = attr(pandas_obj, *args, **kwargs)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=True,
-                extra_log="{} is an unsupported operation".format(op),
-            )
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=True,
+                    extra_log="{} is an unsupported operation".format(op),
+                )
         # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
         # For now we will use pandas.
         if isinstance(result, type(self)) and not isinstance(
@@ -1094,16 +1098,43 @@ class BasePandasDataset(ClassLogger):
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
         downcast = self._deprecate_downcast(downcast, "bfill")
-        return self.fillna(
-            method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="bfill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    backfill = bfill
+    def backfill(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.bfill`.
+        """
+        warnings.warn(
+            "DataFrame.backfill/Series.backfill is deprecated. Use DataFrame.bfill/Series.bfill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.bfill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def bool(self):  # noqa: RT01, D200
         """
         Return the bool of a single element `BasePandasDataset`.
         """
+        warnings.warn(
+            f"{type(self).__name__}.bool is now deprecated and will be removed "
+            + "in future version of pandas",
+            FutureWarning,
+        )
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
             raise ValueError(
@@ -1560,11 +1591,33 @@ class BasePandasDataset(ClassLogger):
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
         downcast = self._deprecate_downcast(downcast, "ffill")
-        return self.fillna(
-            method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="ffill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    pad = ffill
+    def pad(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.ffill`.
+        """
+        warnings.warn(
+            "DataFrame.pad/Series.pad is deprecated. Use DataFrame.ffill/Series.ffill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.ffill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def fillna(
         self,
@@ -1621,6 +1674,13 @@ class BasePandasDataset(ClassLogger):
         Series, DataFrame or None
             Object with missing values filled or None if ``inplace=True``.
         """
+        if method is not None:
+            warnings.warn(
+                f"{type(self).__name__}.fillna with 'method' is deprecated and "
+                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
+                + "instead.",
+                FutureWarning,
+            )
         downcast = self._deprecate_downcast(downcast, "fillna")
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
@@ -1702,6 +1762,11 @@ class BasePandasDataset(ClassLogger):
         """
         Select initial periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "first is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
         return self._create_or_update_from_compiler(
             self._query_compiler.first(offset=to_offset(offset))
         )
@@ -1858,6 +1923,12 @@ class BasePandasDataset(ClassLogger):
         """
         Select final periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "last is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
+
         return self._create_or_update_from_compiler(
             self._query_compiler.last(offset=to_offset(offset))
         )
@@ -3559,7 +3630,15 @@ class BasePandasDataset(ClassLogger):
     ):
         if subset is None:
             subset = self._query_compiler.columns
-        counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*groupby keys will be sorted anyway.*",
+                category=UserWarning,
+            )
+            counted_values = self.groupby(
+                by=subset, dropna=dropna, observed=True, sort=False
+            ).size()
         if sort:
             counted_values.sort_values(ascending=ascending, inplace=True)
         if normalize:

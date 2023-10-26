@@ -11,23 +11,22 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 from contextlib import contextmanager
 
-from modin.config import Parameter, Engine, StorageFormat
-from modin import set_execution
+import pytest
 
+import modin.pandas as pd
+from modin import set_execution
+from modin.config import Engine, Parameter, StorageFormat
+from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.dispatching.factories.dispatcher import (
     FactoryDispatcher,
     FactoryNotFoundError,
 )
-from modin.core.execution.dispatching.factories import factories
 from modin.core.execution.python.implementations.pandas_on_python.io import (
     PandasOnPythonIO,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-
-import modin.pandas as pd
 
 
 @contextmanager

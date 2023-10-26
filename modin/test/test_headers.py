@@ -12,8 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
-from os.path import dirname, abspath
-
+from os.path import abspath, dirname
 
 # This is the python file root directory (modin/modin)
 rootdir = dirname(dirname(abspath(__file__)))

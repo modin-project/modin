@@ -17,11 +17,12 @@ from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
 from modin.core.execution.dask.common import DaskWrapper
+
+from .partition import PandasOnDaskDataframePartition
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
 )
-from .partition import PandasOnDaskDataframePartition
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):

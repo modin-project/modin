@@ -13,9 +13,9 @@
 
 """Experimental IO functions implementations."""
 
-from .text.csv_glob_dispatcher import ExperimentalCSVGlobDispatcher
-from .sql.sql_dispatcher import ExperimentalSQLDispatcher
 from .pickle.pickle_dispatcher import ExperimentalPickleDispatcher
+from .sql.sql_dispatcher import ExperimentalSQLDispatcher
+from .text.csv_glob_dispatcher import ExperimentalCSVGlobDispatcher
 from .text.custom_text_dispatcher import ExperimentalCustomTextDispatcher
 
 __all__ = [

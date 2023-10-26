@@ -17,22 +17,24 @@ Module contains ``DFAlgQueryCompiler`` class.
 ``DFAlgQueryCompiler`` is used for lazy DataFrame Algebra based engine.
 """
 
-from modin.core.storage_formats.base.query_compiler import (
-    BaseQueryCompiler,
-    _set_axis as default_axis_setter,
-    _get_axis as default_axis_getter,
-)
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
-from modin.utils import _inherit_docstrings, MODIN_UNNAMED_SERIES_LABEL
-from modin.error_message import ErrorMessage
-
-import pandas
-from pandas._libs.lib import no_default
-from pandas.core.common import is_bool_indexer
-from pandas.core.dtypes.common import is_list_like, is_bool_dtype, is_integer_dtype
 from functools import wraps
 
 import numpy as np
+import pandas
+from pandas._libs.lib import no_default
+from pandas.core.common import is_bool_indexer
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype, is_list_like
+
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats.base.query_compiler import (
+    _get_axis as default_axis_getter,
+)
+from modin.core.storage_formats.base.query_compiler import (
+    _set_axis as default_axis_setter,
+)
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.error_message import ErrorMessage
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
 
 def is_inoperable(value):
@@ -180,6 +182,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def finalize(self):
         # TODO: implement this for HDK storage format
         raise NotImplementedError()
+
+    def execute(self):
+        self._modin_frame._execute()
+
+    def force_import(self):
+        """Force table import."""
+        # HDK-specific method
+        self._modin_frame.force_import()
 
     def to_pandas(self):
         return self._modin_frame.to_pandas()
@@ -364,6 +374,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         how="axis_wise",
         drop=False,
+        series_groupby=False,
     ):
         # TODO: handle `drop` args
         if callable(agg_func):
@@ -396,7 +407,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         return self._agg("min", **kwargs)
 
     def sum(self, **kwargs):
-        min_count = kwargs.pop("min_count")
+        min_count = kwargs.pop("min_count", 0)
         if min_count != 0:
             raise NotImplementedError(
                 f"HDK's sum does not support such set of parameters: min_count={min_count}."
@@ -631,6 +642,46 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
     def dt_hour(self):
         return self.__constructor__(
             self._modin_frame.dt_extract("hour"), self._shape_hint
+        )
+
+    def dt_minute(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("minute"), self._shape_hint
+        )
+
+    def dt_second(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("second"), self._shape_hint
+        )
+
+    def dt_microsecond(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("microsecond"), self._shape_hint
+        )
+
+    def dt_nanosecond(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("nanosecond"), self._shape_hint
+        )
+
+    def dt_quarter(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("quarter"), self._shape_hint
+        )
+
+    def dt_dayofweek(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
+        )
+
+    def dt_weekday(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("isodow"), self._shape_hint
+        )
+
+    def dt_dayofyear(self):
+        return self.__constructor__(
+            self._modin_frame.dt_extract("doy"), self._shape_hint
         )
 
     def _bin_op(self, other, op_name, **kwargs):

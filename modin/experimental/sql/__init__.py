@@ -11,16 +11,15 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
 import modin.config as cfg
-
+import modin.pandas as pd
 
 _query_impl = None
 
 
 def query(sql: str, *args, **kwargs) -> pd.DataFrame:
     """
-    Execute SQL query using either HDK engine or dfsql.
+    Execute SQL query using HDK engine.
 
     Parameters
     ----------
@@ -42,20 +41,6 @@ def query(sql: str, *args, **kwargs) -> pd.DataFrame:
         if cfg.StorageFormat.get() == "Hdk":
             from modin.experimental.sql.hdk.query import hdk_query as _query_impl
         else:
-            from dfsql import sql_query as _query_impl
+            raise NotImplementedError
 
     return _query_impl(sql, *args, **kwargs)
-
-
-# dfsql adds the sql() method to the DataFrame class.
-# This code is used for lazy dfsql extensions initialization.
-if not hasattr(pd.DataFrame, "sql"):
-
-    def dfsql_init(df, query):
-        delattr(pd.DataFrame, "sql")
-        import modin.experimental.sql.dfsql.query  # noqa: F401
-
-        df.sql = pd.DataFrame.sql(df)
-        return df.sql(query)
-
-    pd.DataFrame.sql = dfsql_init

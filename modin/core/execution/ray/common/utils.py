@@ -15,28 +15,30 @@
 
 import os
 import sys
-import psutil
-from packaging import version
-from typing import Optional
 import warnings
+from typing import Optional
 
+import psutil
 import ray
+from packaging import version
 
 from modin.config import (
-    StorageFormat,
-    IsRayCluster,
-    RayRedisAddress,
-    RayRedisPassword,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
     CpuCount,
+    GithubCI,
     GpuCount,
+    IsRayCluster,
     Memory,
     NPartitions,
+    RayRedisAddress,
+    RayRedisPassword,
+    StorageFormat,
     ValueSource,
-    GithubCI,
-    CIAWSSecretAccessKey,
-    CIAWSAccessKeyID,
 )
+from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
+
 from .engine_wrapper import RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
@@ -81,7 +83,10 @@ def initialize_ray(
     # the `pandas` module has been fully imported inside of each process before
     # any execution begins:
     # https://github.com/modin-project/modin/pull/4603
-    env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
+    env_vars = {
+        "__MODIN_AUTOIMPORT_PANDAS__": "1",
+        "PYTHONWARNINGS": "ignore::FutureWarning",
+    }
     if GithubCI.get():
         # need these to write parquet to the moto service mocking s3.
         env_vars.update(
@@ -142,14 +147,13 @@ def initialize_ray(
             # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
             # is usually causing. You can visit this gh-issue for more info:
             # https://github.com/modin-project/modin/issues/5157#issuecomment-1500225150
-            for key, value in env_vars.items():
-                os.environ[key] = value
-            ray.init(**ray_init_kwargs)
+            with set_env(**env_vars):
+                ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
-                GPUManager,
                 GPU_MANAGERS,
+                GPUManager,
             )
 
             # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times
@@ -162,12 +166,7 @@ def initialize_ray(
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
     for varname, varvalue in env_vars.items():
         if str(runtime_env_vars.get(varname, "")) != str(varvalue):
-            if is_cluster or (
-                # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
-                # to be set at least as a process environment variable
-                not is_cluster
-                and os.environ.get(varname, "") != str(varvalue)
-            ):
+            if is_cluster:
                 ErrorMessage.single_warning(
                     "When using a pre-initialized Ray cluster, please ensure that the runtime env "
                     + f"sets environment variable {varname} to {varvalue}"
@@ -287,3 +286,111 @@ def deserialize(obj):  # pragma: no cover
         return dict(zip(obj.keys(), RayWrapper.materialize(list(obj.values()))))
     else:
         return obj
+
+
+def deconstruct_call_queue(call_queue):
+    """
+    Deconstruct the passed call queue into a 1D list.
+
+    This is required, so the call queue can be then passed to a Ray's kernel
+    as a variable-length argument ``kernel(*queue)`` so the Ray engine
+    automatically materialize all the futures that the queue might have contained.
+
+    Parameters
+    ----------
+    call_queue : list[list[func, args, kwargs], ...]
+
+    Returns
+    -------
+    num_funcs : int
+        The number of functions in the call queue.
+    arg_lengths : list of ints
+        The number of positional arguments for each function in the call queue.
+    kw_key_lengths : list of ints
+        The number of key-word arguments for each function in the call queue.
+    kw_value_lengths : 2D list of dict{"len": int, "was_iterable": bool}
+        Description of keyword arguments for each function. For example, `kw_value_lengths[i][j]`
+        describes the j-th keyword argument of the i-th function in the call queue.
+        The describtion contains of the lengths of the argument and whether it's a list at all
+        (for example, {"len": 1, "was_iterable": False} describes a non-list argument).
+    unfolded_queue : list
+        A 1D call queue that can be reconstructed using ``reconstruct_call_queue`` function.
+    """
+    num_funcs = len(call_queue)
+    arg_lengths = []
+    kw_key_lengths = []
+    kw_value_lengths = []
+    unfolded_queue = []
+    for call in call_queue:
+        unfolded_queue.append(call[0])
+        unfolded_queue.extend(call[1])
+        arg_lengths.append(len(call[1]))
+        # unfold keyword dict
+        ## unfold keys
+        unfolded_queue.extend(call[2].keys())
+        kw_key_lengths.append(len(call[2]))
+        ## unfold values
+        value_lengths = []
+        for value in call[2].values():
+            was_iterable = True
+            if not isinstance(value, (list, tuple)):
+                was_iterable = False
+                value = (value,)
+            unfolded_queue.extend(value)
+            value_lengths.append({"len": len(value), "was_iterable": was_iterable})
+        kw_value_lengths.append(value_lengths)
+
+    return num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, *unfolded_queue
+
+
+def reconstruct_call_queue(
+    num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, unfolded_queue
+):
+    """
+    Reconstruct original call queue from the result of the ``deconstruct_call_queue()``.
+
+    Parameters
+    ----------
+    num_funcs : int
+        The number of functions in the call queue.
+    arg_lengths : list of ints
+        The number of positional arguments for each function in the call queue.
+    kw_key_lengths : list of ints
+        The number of key-word arguments for each function in the call queue.
+    kw_value_lengths : 2D list of dict{"len": int, "was_iterable": bool}
+        Description of keyword arguments for each function. For example, `kw_value_lengths[i][j]`
+        describes the j-th keyword argument of the i-th function in the call queue.
+        The describtion contains of the lengths of the argument and whether it's a list at all
+        (for example, {"len": 1, "was_iterable": False} describes a non-list argument).
+    unfolded_queue : list
+        A 1D call queue that is result of the ``deconstruct_call_queue()`` function.
+
+    Returns
+    -------
+    list[list[func, args, kwargs], ...]
+        Original call queue.
+    """
+    items_took = 0
+
+    def take_n_items(n):
+        nonlocal items_took
+        res = unfolded_queue[items_took : items_took + n]
+        items_took += n
+        return res
+
+    call_queue = []
+    for i in range(num_funcs):
+        func = take_n_items(1)[0]
+        args = take_n_items(arg_lengths[i])
+        kw_keys = take_n_items(kw_key_lengths[i])
+        kwargs = {}
+        value_lengths = kw_value_lengths[i]
+        for key, value_length in zip(kw_keys, value_lengths):
+            vals = take_n_items(value_length["len"])
+            if value_length["len"] == 1 and not value_length["was_iterable"]:
+                vals = vals[0]
+            kwargs[key] = vals
+
+        call_queue.append((func, args, kwargs))
+
+    return call_queue

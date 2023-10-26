@@ -11,34 +11,35 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
+import pytest
 
 import modin.pandas as pd
-from modin.utils import to_pandas
-
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    create_test_dfs,
-    random_state,
-    df_equals,
     arg_keys,
-    test_data_values,
-    test_data_keys,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    test_data,
-    generate_multiindex,
-    eval_general,
-    rotate_decimal_digits_or_symbols,
-    extra_test_parameters,
+    create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    extra_test_parameters,
+    generate_multiindex,
+    random_state,
+    rotate_decimal_digits_or_symbols,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.config import NPartitions, Engine, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import to_pandas
 
 NPartitions.put(4)
 
@@ -179,6 +180,26 @@ def test_join_5203():
             match="Joining multiple DataFrames only supported for joining on index",
         ):
             dfs[0].join([dfs[1], dfs[2]], how="inner", on="a")
+
+
+def test_join_6602():
+    abbreviations = pd.Series(
+        ["Major League Baseball", "National Basketball Association"],
+        index=["MLB", "NBA"],
+    )
+    teams = pd.DataFrame(
+        {
+            "name": ["Mariners", "Lakers"] * 50,
+            "league_abbreviation": ["MLB", "NBA"] * 50,
+        }
+    )
+
+    with warnings.catch_warnings():
+        # check that join doesn't show UserWarning
+        warnings.filterwarnings(
+            "error", "Distributing <class 'dict'> object", category=UserWarning
+        )
+        teams.set_index("league_abbreviation").join(abbreviations.rename("league_name"))
 
 
 @pytest.mark.parametrize(

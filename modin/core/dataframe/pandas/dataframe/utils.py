@@ -13,12 +13,13 @@
 
 """Collection of algebra utility functions, used to shuffle data across partitions."""
 
+import abc
+from collections import namedtuple
+from typing import TYPE_CHECKING, Callable, Optional, Union
+
 import numpy as np
 import pandas
-from typing import Callable, Union, Optional, TYPE_CHECKING
-from collections import namedtuple
-from pandas.core.dtypes.common import is_numeric_dtype, is_list_like
-import abc
+from pandas.core.dtypes.common import is_list_like, is_numeric_dtype
 
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings

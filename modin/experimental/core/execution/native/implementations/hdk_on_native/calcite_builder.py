@@ -12,41 +12,44 @@
 # governing permissions and limitations under the License.
 
 """Module provides ``CalciteBuilder`` class."""
+from collections import abc
+
+import pandas
+from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
+
+from .calcite_algebra import (
+    CalciteAggregateNode,
+    CalciteBaseNode,
+    CalciteCollation,
+    CalciteFilterNode,
+    CalciteInputIdxExpr,
+    CalciteInputRefExpr,
+    CalciteJoinNode,
+    CalciteProjectionNode,
+    CalciteScanNode,
+    CalciteSortNode,
+    CalciteUnionNode,
+)
 from .dataframe.utils import ColNameCodec
+from .df_algebra import (
+    FilterNode,
+    FrameNode,
+    GroupbyAggNode,
+    JoinNode,
+    MaskNode,
+    SortNode,
+    TransformNode,
+    UnionNode,
+)
 from .expr import (
+    AggregateExpr,
     InputRefExpr,
     LiteralExpr,
-    AggregateExpr,
+    OpExpr,
+    _quantile_agg_dtype,
     build_if_then_else,
     build_row_idx_filter_expr,
 )
-from .calcite_algebra import (
-    CalciteBaseNode,
-    CalciteInputRefExpr,
-    CalciteInputIdxExpr,
-    CalciteScanNode,
-    CalciteProjectionNode,
-    CalciteFilterNode,
-    CalciteAggregateNode,
-    CalciteCollation,
-    CalciteSortNode,
-    CalciteJoinNode,
-    CalciteUnionNode,
-)
-from .df_algebra import (
-    FrameNode,
-    MaskNode,
-    GroupbyAggNode,
-    TransformNode,
-    JoinNode,
-    UnionNode,
-    SortNode,
-    FilterNode,
-)
-
-from collections import abc
-import pandas
-from pandas.core.dtypes.common import _get_dtype, is_bool_dtype
 
 
 class CalciteBuilder:
@@ -66,8 +69,8 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
-            An aggregated value.
+        arg : BaseExpr or List of BaseExpr
+            An aggregated values.
         """
 
         def __init__(self, builder, arg):
@@ -107,6 +110,53 @@ class CalciteBuilder:
             """
             pass
 
+    class CompoundAggregateWithColArg(CompoundAggregate):
+        """
+        A base class for a compound aggregate that require a `LiteralExpr` column argument.
+
+        This aggregate requires 2 arguments. The first argument is an `InputRefExpr`,
+        refering to the aggregation column. The second argument is a `LiteralExpr`,
+        this expression is added into the frame as a new column.
+
+        Parameters
+        ----------
+        agg : str
+            Aggregate name.
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            Aggregate arguments.
+        dtype : dtype, optional
+            Aggregate data type. If not specified, `_dtype` from the first argument is used.
+        """
+
+        def __init__(self, agg, builder, arg, dtype=None):
+            assert isinstance(arg[0], InputRefExpr)
+            assert isinstance(arg[1], LiteralExpr)
+            super().__init__(builder, arg)
+            self._agg = agg
+            self._agg_column = f"{arg[0].column}__{agg}__"
+            self._dtype = dtype or arg[0]._dtype
+
+        def gen_proj_exprs(self):
+            return {self._agg_column: self._arg[1]}
+
+        def gen_agg_exprs(self):
+            frame = self._arg[0].modin_frame
+            return {
+                self._agg_column: AggregateExpr(
+                    self._agg,
+                    [
+                        self._builder._ref_idx(frame, self._arg[0].column),
+                        self._builder._ref_idx(frame, self._agg_column),
+                    ],
+                    dtype=self._dtype,
+                )
+            }
+
+        def gen_reduce_expr(self):
+            return self._builder._ref(self._arg[0].modin_frame, self._agg_column)
+
     class StdAggregate(CompoundAggregate):
         """
         A sample standard deviation aggregate generator.
@@ -115,13 +165,13 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 
         def __init__(self, builder, arg):
-            assert isinstance(arg, InputRefExpr)
-            super().__init__(builder, arg)
+            assert isinstance(arg[0], InputRefExpr)
+            super().__init__(builder, arg[0])
 
             self._quad_name = self._arg.column + "__quad__"
             self._sum_name = self._arg.column + "__sum__"
@@ -206,13 +256,13 @@ class CalciteBuilder:
         ----------
         builder : CalciteBuilder
             A builder to use for translation.
-        arg : BaseExpr
+        arg : list of BaseExpr
             An aggregated value.
         """
 
         def __init__(self, builder, arg):
-            assert isinstance(arg, InputRefExpr)
-            super().__init__(builder, arg)
+            assert isinstance(arg[0], InputRefExpr)
+            super().__init__(builder, arg[0])
 
             self._quad_name = self._arg.column + "__quad__"
             self._cube_name = self._arg.column + "__cube__"
@@ -306,7 +356,65 @@ class CalciteBuilder:
                 skew_expr._dtype,
             )
 
-    _compound_aggregates = {"std": StdAggregate, "skew": SkewAggregate}
+    class TopkAggregate(CompoundAggregateWithColArg):
+        """
+        A TOP_K aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            An aggregated values.
+        """
+
+        def __init__(self, builder, arg):
+            super().__init__("TOP_K", builder, arg)
+
+        def gen_reduce_expr(self):
+            return OpExpr(
+                "PG_UNNEST",
+                [super().gen_reduce_expr()],
+                self._dtype,
+            )
+
+    class QuantileAggregate(CompoundAggregateWithColArg):
+        """
+        A QUANTILE aggregate generator.
+
+        Parameters
+        ----------
+        builder : CalciteBuilder
+            A builder to use for translation.
+        arg : List of BaseExpr
+            A list of 3 values:
+                0. InputRefExpr - the column to compute the quantiles for.
+                1. LiteralExpr - the quantile value.
+                2. str - the interpolation method to use.
+        """
+
+        def __init__(self, builder, arg):
+            super().__init__(
+                "QUANTILE",
+                builder,
+                arg,
+                _quantile_agg_dtype(arg[0]._dtype),
+            )
+            self._interpolation = arg[2].val.upper()
+
+        def gen_agg_exprs(self):
+            exprs = super().gen_agg_exprs()
+            for expr in exprs.values():
+                expr.interpolation = self._interpolation
+            return exprs
+
+    _compound_aggregates = {
+        "std": StdAggregate,
+        "skew": SkewAggregate,
+        "nlargest": TopkAggregate,
+        "nsmallest": TopkAggregate,
+        "quantile": QuantileAggregate,
+    }
 
     class InputContext:
         """
@@ -343,7 +451,6 @@ class CalciteBuilder:
             "min": "MIN",
             "size": "COUNT",
             "count": "COUNT",
-            "median": "APPROX_QUANTILE",
         }
         _no_arg_aggregates = {"size"}
 
@@ -586,7 +693,7 @@ class CalciteBuilder:
     _bool_cast_aggregates = {
         "sum": _get_dtype(int),
         "mean": _get_dtype(float),
-        "median": _get_dtype(float),
+        "quantile": _get_dtype(float),
     }
 
     def __init__(self):
@@ -929,7 +1036,7 @@ class CalciteBuilder:
         for agg, expr in agg_exprs.items():
             if expr.agg in self._compound_aggregates:
                 compound_aggs[agg] = self._compound_aggregates[expr.agg](
-                    self, expr.operands[0]
+                    self, expr.operands
                 )
                 extra_exprs = compound_aggs[agg].gen_proj_exprs()
                 proj_cols.extend(extra_exprs.keys())

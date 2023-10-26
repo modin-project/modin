@@ -15,10 +15,10 @@
 from typing import Union
 
 import pandas
-
 import pyarrow as pa
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
+
 from ..dataframe.utils import arrow_to_pandas
 from ..db_worker import DbTable
 

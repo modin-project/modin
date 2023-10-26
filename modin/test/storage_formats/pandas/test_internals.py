@@ -11,54 +11,43 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-from modin.pandas.test.utils import (
-    create_test_dfs,
-    test_data_values,
-    df_equals,
-)
-from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
-from modin.distributed.dataframe.pandas import from_partitions
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
-from modin.utils import try_cast_to_pandas
-from modin.core.dataframe.pandas.dataframe.utils import (
-    ShuffleSortFunctions,
-    ColumnInfo,
-)
+import functools
+import sys
+import unittest.mock as mock
 
 import numpy as np
 import pandas
 import pytest
-import unittest.mock as mock
-import functools
-import sys
 
+import modin.pandas as pd
+from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
+from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.distributed.dataframe.pandas import from_partitions
+from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
+from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
+    from modin.core.execution.ray.common import RayWrapper
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframePartition,
         PandasOnRayDataframeRowPartition,
     )
-    from modin.core.execution.ray.common import RayWrapper
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = RayWrapper.put
 elif Engine.get() == "Dask":
+    from modin.core.execution.dask.common import DaskWrapper
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframePartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
-        PandasOnDaskDataframePartition,
-    )
-    from modin.core.execution.dask.common import DaskWrapper
 
     # initialize modin dataframe to initialize dask
     pd.DataFrame()
@@ -70,12 +59,12 @@ elif Engine.get() == "Dask":
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 elif Engine.get() == "Python":
+    from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
-        PandasOnPythonDataframeRowPartition,
         PandasOnPythonDataframePartition,
+        PandasOnPythonDataframeRowPartition,
     )
-    from modin.core.execution.python.common import PythonWrapper
 
     def put(x):
         return PythonWrapper.put(x, hash=False)
@@ -124,20 +113,30 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-def validate_partitions_cache(df):
-    """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
-    row_lengths = df._row_lengths_cache
-    column_widths = df._column_widths_cache
+def validate_partitions_cache(df, axis=None):
+    """
+    Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes.
 
-    assert row_lengths is not None
-    assert column_widths is not None
-    assert df._partitions.shape[0] == len(row_lengths)
-    assert df._partitions.shape[1] == len(column_widths)
+    Parameters
+    ----------
+    df : PandasDataframe
+    axis : int, optional
+        An axis to verify the cache for. If not specified, verify cache for both of the axes.
+    """
+    axis = [0, 1] if axis is None else [axis]
+
+    axis_lengths = [df._row_lengths_cache, df._column_widths_cache]
+
+    for ax in axis:
+        assert axis_lengths[ax] is not None
+        assert df._partitions.shape[ax] == len(axis_lengths[ax])
 
     for i in range(df._partitions.shape[0]):
         for j in range(df._partitions.shape[1]):
-            assert df._partitions[i, j].length() == row_lengths[i]
-            assert df._partitions[i, j].width() == column_widths[j]
+            if 0 in axis:
+                assert df._partitions[i, j].length() == axis_lengths[0][i]
+            if 1 in axis:
+                assert df._partitions[i, j].width() == axis_lengths[1][j]
 
 
 def assert_has_no_cache(df, axis=0):
@@ -1113,6 +1112,17 @@ def test_setitem_bool_preserve_dtypes():
     assert df._query_compiler._modin_frame.has_materialized_dtypes
 
 
+def test_setitem_unhashable_preserve_dtypes():
+    df = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    df2 = pd.DataFrame([[9, 9], [5, 5]])
+    assert df2._query_compiler._modin_frame.has_materialized_dtypes
+
+    df[[1, 2]] = df2
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
 @pytest.mark.parametrize(
     "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
 )
@@ -1310,3 +1320,194 @@ def test_skip_set_columns():
     # of equality comparison, in this case the new columns should be set unconditionally,
     # meaning that the '_deferred_column' has to be True
     assert df._query_compiler._modin_frame._deferred_column
+
+
+def test_query_dispatching():
+    """
+    Test whether the logic of determining whether the passed query
+    can be performed row-wise works correctly in ``PandasQueryCompiler.rowwise_query()``.
+
+    The tested method raises a ``NotImpementedError`` if the query cannot be performed row-wise
+    and raises nothing if it can.
+    """
+    qc = pd.DataFrame(
+        {"a": [1], "b": [2], "c": [3], "d": [4], "e": [5]}
+    )._query_compiler
+
+    local_var = 10  # noqa: F841 (unused variable)
+
+    # these queries should be performed row-wise (so no exception)
+    qc.rowwise_query("a < 1")
+    qc.rowwise_query("a < b")
+    qc.rowwise_query("a < (b + @local_var) * c > 10")
+
+    # these queries cannot be performed row-wise (so they must raise an exception)
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b[0]")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.min()")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < (b + @local_var + (b - e.min())) * c > 10")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.size")
+
+
+def test_sort_values_cache():
+    """
+    Test that the column widths cache after ``.sort_values()`` is valid:
+    https://github.com/modin-project/modin/issues/6607
+    """
+    # 1 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # row-wise implementation and so the column widths WILL NOT be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [100], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that row-wise implementation was indeed used (col widths were not changed)
+    assert mf_res._column_widths_cache == [32, 32]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
+
+    # 2 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # range-partitioning implementation and so the column widths WILL be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [50, 50], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that range-partitioning implementation was indeed used (col widths were changed)
+    assert mf_res._column_widths_cache == [64]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
+
+
+class DummyFuture:
+    """
+    A dummy object emulating future's behaviour, this class is used in ``test_call_queue_serialization``.
+
+    It stores a random numeric value representing its data and `was_materialized` state.
+    Initially this object is considered to be serialized, the state can be changed by calling
+    the ``.materialize()`` method.
+    """
+
+    def __init__(self):
+        self._value = np.random.randint(0, 1_000_000)
+        self._was_materialized = False
+
+    def materialize(self):
+        self._was_materialized = True
+        return self
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)) and self._value == other._value:
+            return True
+        return False
+
+
+@pytest.mark.parametrize(
+    "call_queue",
+    [
+        # empty call queue
+        [],
+        # a single-function call queue (the function has no argument and it's materialized)
+        [(0, [], {})],
+        # a single-function call queue (the function has no argument and it's serialized)
+        [(DummyFuture(), [], {})],
+        # a multiple-functions call queue, none of the functions have arguments
+        [(DummyFuture(), [], {}), (DummyFuture(), [], {}), (0, [], {})],
+        # a single-function call queue (the function has both positional and keyword arguments)
+        [
+            (
+                DummyFuture(),
+                [DummyFuture()],
+                {
+                    "a": DummyFuture(),
+                    "b": [DummyFuture()],
+                    "c": [DummyFuture, DummyFuture()],
+                },
+            )
+        ],
+        # a multiple-functions call queue with mixed types of functions/arguments
+        [
+            (
+                DummyFuture(),
+                [1, DummyFuture(), DummyFuture(), [4, 5]],
+                {"a": [DummyFuture(), 2], "b": DummyFuture(), "c": [1]},
+            ),
+            (0, [], {}),
+            (0, [1], {}),
+            (0, [DummyFuture(), DummyFuture()], {}),
+        ],
+    ],
+)
+def test_call_queue_serialization(call_queue):
+    """
+    Test that the process of passing a call queue to Ray's kernel works correctly.
+
+    Before passing a call queue to the kernel that actually executes it, the call queue
+    is unwrapped into a 1D list using the ``deconstruct_call_queue`` function. After that,
+    the 1D list is passed as a variable length argument to the kernel ``kernel(*queue)``,
+    this is done so the Ray engine automatically materialize all the futures that the queue
+    might have contained. In the end, inside of the kernel, the ``reconstruct_call_queue`` function
+    is called to rebuild the call queue into its original structure.
+
+    This test emulates the described flow and verifies that it works properly.
+    """
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning.partition import (
+        deconstruct_call_queue,
+        reconstruct_call_queue,
+    )
+
+    def materialize_queue(*values):
+        """
+        Walk over the `values` and materialize all the future types.
+
+        This function emulates how Ray remote functions materialize their positional arguments.
+        """
+        return [
+            val.materialize() if isinstance(val, DummyFuture) else val for val in values
+        ]
+
+    def assert_everything_materialized(queue):
+        """Walk over the call queue and verify that all entities there are materialized."""
+
+        def assert_materialized(obj):
+            assert (
+                isinstance(obj, DummyFuture) and obj._was_materialized
+            ) or not isinstance(obj, DummyFuture)
+
+        for func, args, kwargs in queue:
+            assert_materialized(func)
+            for arg in args:
+                assert_materialized(arg)
+            for value in kwargs.values():
+                if not isinstance(value, (list, tuple)):
+                    value = [value]
+                for val in value:
+                    assert_materialized(val)
+
+    (
+        num_funcs,
+        arg_lengths,
+        kw_key_lengths,
+        kw_value_lengths,
+        *queue,
+    ) = deconstruct_call_queue(call_queue)
+    queue = materialize_queue(*queue)
+    reconstructed_queue = reconstruct_call_queue(
+        num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, queue
+    )
+
+    assert call_queue == reconstructed_queue
+    assert_everything_materialized(reconstructed_queue)

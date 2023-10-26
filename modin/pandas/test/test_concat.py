@@ -12,21 +12,22 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
-import pytest
 import pandas
+import pytest
 
 import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.utils import from_pandas
+from modin.utils import get_current_execution
+
 from .utils import (
+    create_test_dfs,
+    default_to_pandas_ignore_string,
     df_equals,
     generate_dfs,
     generate_multiindex_dfs,
     generate_none_dfs,
-    create_test_dfs,
-    default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions, StorageFormat
-from modin.utils import get_current_execution
 
 NPartitions.put(4)
 

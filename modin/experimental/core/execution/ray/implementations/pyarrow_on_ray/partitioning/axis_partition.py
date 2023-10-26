@@ -13,13 +13,14 @@
 
 """The module defines interface for an axis partition with PyArrow storage format and Ray engine."""
 
+import pyarrow
+import ray
+
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
-from .partition import PyarrowOnRayDataframePartition
 
-import ray
-import pyarrow
+from .partition import PyarrowOnRayDataframePartition
 
 
 class PyarrowOnRayDataframeAxisPartition(BaseDataframeAxisPartition):

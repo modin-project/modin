@@ -1,21 +1,22 @@
 import matplotlib
 
 matplotlib.use("PS")
-import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import seaborn as sns
 
 np.random.seed(2)
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
 import itertools
-from keras.utils.np_utils import to_categorical  # convert to one-hot-encoding
+
+from keras.callbacks import ReduceLROnPlateau
+from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPool2D
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPool2D
 from keras.optimizers import RMSprop
 from keras.preprocessing.image import ImageDataGenerator
-from keras.callbacks import ReduceLROnPlateau
+from keras.utils.np_utils import to_categorical  # convert to one-hot-encoding
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
 
 sns.set(style="white", context="notebook", palette="deep")
 train = pd.read_csv("train.csv")
@@ -140,7 +141,7 @@ X_val_errors = X_val[errors]
 
 
 def display_errors(errors_index, img_errors, pred_errors, obs_errors):
-    """ This function shows 6 images with their predicted and real labels"""
+    """This function shows 6 images with their predicted and real labels"""
     n = 0
     nrows = 2
     ncols = 3

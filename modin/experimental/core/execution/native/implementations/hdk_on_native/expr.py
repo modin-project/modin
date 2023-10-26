@@ -14,28 +14,27 @@
 """Module provides classes for scalar expression trees."""
 
 import abc
-from typing import Union, Generator, Type
+from typing import Generator, Type, Union
 
 import numpy as np
+import pandas
 import pyarrow as pa
 import pyarrow.compute as pc
-
-import pandas
 from pandas.core.dtypes.common import (
-    is_list_like,
     _get_dtype,
+    is_bool_dtype,
+    is_datetime64_any_dtype,
+    is_datetime64_dtype,
     is_float_dtype,
-    is_int64_dtype,
     is_integer_dtype,
+    is_list_like,
     is_numeric_dtype,
     is_string_dtype,
-    is_datetime64_any_dtype,
-    is_bool_dtype,
-    is_datetime64_dtype,
 )
 
 from modin.pandas.indexing import is_range_like
 from modin.utils import _inherit_docstrings
+
 from .dataframe.utils import ColNameCodec, to_arrow_type
 
 
@@ -69,8 +68,8 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
         return _get_dtype(int)
     if is_datetime64_dtype(lhs_dtype) and is_datetime64_dtype(rhs_dtype):
         return np.promote_types(lhs_dtype, rhs_dtype)
-    if (is_datetime64_dtype(lhs_dtype) and is_int64_dtype(rhs_dtype)) or (
-        is_datetime64_dtype(rhs_dtype) and is_int64_dtype(lhs_dtype)
+    if (is_datetime64_dtype(lhs_dtype) and rhs_dtype == np.int64) or (
+        is_datetime64_dtype(rhs_dtype) and (lhs_dtype == np.int64)
     ):
         return _get_dtype(int)
     raise NotImplementedError(
@@ -78,9 +77,24 @@ def _get_common_dtype(lhs_dtype, rhs_dtype):
     )
 
 
-_aggs_preserving_numeric_type = {"sum", "min", "max"}
+_aggs_preserving_numeric_type = {"sum", "min", "max", "nlargest", "nsmallest"}
 _aggs_with_int_result = {"count", "size"}
 _aggs_with_float_result = {"mean", "median", "std", "skew"}
+
+
+def _quantile_agg_dtype(dtype):
+    """
+    Compute the quantile aggregate data type.
+
+    Parameters
+    ----------
+    dtype : dtype
+
+    Returns
+    -------
+    dtype
+    """
+    return dtype if is_datetime64_any_dtype(dtype) else _get_dtype(float)
 
 
 def _agg_dtype(agg, dtype):
@@ -105,6 +119,8 @@ def _agg_dtype(agg, dtype):
         return _get_dtype(int)
     elif agg in _aggs_with_float_result:
         return _get_dtype(float)
+    elif agg == "quantile":
+        return _quantile_agg_dtype(dtype)
     else:
         raise NotImplementedError(f"unsupported aggregate {agg}")
 
@@ -1258,7 +1274,7 @@ class AggregateExpr(BaseExpr):
     ----------
     agg : str
         Aggregate name.
-    op : BaseExpr
+    op : BaseExpr or list of BaseExpr
         Aggregate operand.
     distinct : bool, default: False
         Distinct modifier for 'count' aggregate.
@@ -1270,7 +1286,7 @@ class AggregateExpr(BaseExpr):
     agg : str
         Aggregate name.
     operands : list of BaseExpr
-        Aggregate operands. Always has a single operand.
+        Aggregate operands.
     distinct : bool
         Distinct modifier for 'count' aggregate.
     _dtype : dtype
@@ -1284,10 +1300,8 @@ class AggregateExpr(BaseExpr):
         else:
             self.agg = agg
             self.distinct = distinct
-        self.operands = [op]
-        self._dtype = (
-            dtype if dtype else _agg_dtype(self.agg, op._dtype if op else None)
-        )
+        self.operands = op if isinstance(op, list) else [op]
+        self._dtype = dtype or _agg_dtype(self.agg, self.operands[0]._dtype)
         assert self._dtype is not None
 
     def copy(self):
@@ -1298,7 +1312,7 @@ class AggregateExpr(BaseExpr):
         -------
         AggregateExpr
         """
-        return AggregateExpr(self.agg, self.operands[0], self.distinct, self._dtype)
+        return AggregateExpr(self.agg, self.operands, self.distinct, self._dtype)
 
     def __repr__(self):
         """
@@ -1396,5 +1410,12 @@ def build_dt_expr(dt_operation, col_expr):
     operation = LiteralExpr(dt_operation)
 
     res = OpExpr("PG_EXTRACT", [operation, col_expr], _get_dtype("int32"))
+
+    if dt_operation == "isodow":
+        res = res.sub(LiteralExpr(1))
+    elif dt_operation == "microsecond":
+        res = res.mod(LiteralExpr(1000000))
+    elif dt_operation == "nanosecond":
+        res = res.mod(LiteralExpr(1000))
 
     return res

@@ -11,42 +11,39 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import numpy as np
-import pandas
-import matplotlib
-from numpy.testing import assert_array_equal
 import io
 import warnings
 
-import modin.pandas as pd
-from modin.utils import (
-    to_pandas,
-    get_current_execution,
-)
+import matplotlib
+import numpy as np
+import pandas
+import pytest
+from numpy.testing import assert_array_equal
 
+import modin.pandas as pd
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    df_equals,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    numeric_dfs,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    eval_general,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
     generate_multiindex,
-    test_data_resample,
+    modin_df_almost_equals_pandas,
+    name_contains,
+    numeric_dfs,
     test_data,
     test_data_diff_dtype,
-    modin_df_almost_equals_pandas,
+    test_data_keys,
     test_data_large_categorical_dataframe,
-    default_to_pandas_ignore_string,
+    test_data_resample,
+    test_data_values,
 )
-from modin.config import NPartitions, StorageFormat, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, to_pandas
 
 NPartitions.put(4)
 
@@ -56,7 +53,19 @@ matplotlib.use("Agg")
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:.*bool is now deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:first is deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:last is deprecated and will be removed:FutureWarning"
+    ),
+]
 
 
 @pytest.mark.parametrize(
@@ -191,9 +200,12 @@ def test_bfill(data):
 def test_bool(data):
     modin_df = pd.DataFrame(data)
 
-    with pytest.raises(ValueError):
-        modin_df.bool()
-        modin_df.__bool__()
+    with pytest.warns(
+        FutureWarning, match="bool is now deprecated and will be removed"
+    ):
+        with pytest.raises(ValueError):
+            modin_df.bool()
+            modin_df.__bool__()
 
     single_bool_pandas_df = pandas.DataFrame([True])
     single_bool_modin_df = pd.DataFrame([True])
@@ -449,7 +461,9 @@ def test_first():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=i
     )
-    df_equals(modin_df.first("3D"), pandas_df.first("3D"))
+    with pytest.warns(FutureWarning, match="first is deprecated and will be removed"):
+        modin_result = modin_df.first("3D")
+    df_equals(modin_result, pandas_df.first("3D"))
     df_equals(modin_df.first("20D"), pandas_df.first("20D"))
 
 
@@ -525,7 +539,9 @@ def test_last():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=pandas_index
     )
-    df_equals(modin_df.last("3D"), pandas_df.last("3D"))
+    with pytest.warns(FutureWarning, match="last is deprecated and will be removed"):
+        modin_result = modin_df.last("3D")
+    df_equals(modin_result, pandas_df.last("3D"))
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 

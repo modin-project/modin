@@ -21,14 +21,14 @@ from collections import OrderedDict
 from typing import Any
 
 import pandas
-from pandas.util._decorators import doc
 from pandas._libs.lib import no_default
+from pandas.util._decorators import doc
 
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.utils import _inherit_docstrings
 from modin.pandas.io import ExcelFile
+from modin.utils import _inherit_docstrings
 
 _doc_default_io_method = """
 {summary} using pandas.

@@ -39,10 +39,14 @@ Data parsing mechanism differs depending on the data format type:
   parameters are passed into `pandas.read_sql` function without modification.
 """
 
-import os
+import contextlib
 import json
+import os
+import warnings
 from collections import OrderedDict
-from io import BytesIO, TextIOWrapper, IOBase
+from io import BytesIO, IOBase, TextIOWrapper
+from typing import Any, NamedTuple
+
 import fsspec
 import numpy as np
 import pandas
@@ -50,15 +54,10 @@ from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
 from pandas.util._decorators import doc
-from typing import Any, NamedTuple
-import warnings
 
 from modin.core.io.file_dispatcher import OpenFile
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.db_conn import ModinDatabaseConnection
-from modin.core.storage_formats.pandas.utils import (
-    split_result_of_axis_func_pandas,
-    _nullcontext,
-)
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.utils import ModinAssumptionError
@@ -581,7 +580,6 @@ class PandasExcelParser(PandasParser):
         num_splits = kwargs.pop("num_splits", None)
         start = kwargs.pop("start", None)
         end = kwargs.pop("end", None)
-        _skiprows = kwargs.pop("skiprows")
         excel_header = kwargs.get("_header")
         sheet_name = kwargs.get("sheet_name", 0)
         footer = b"</sheetData></worksheet>"
@@ -590,18 +588,18 @@ class PandasExcelParser(PandasParser):
         if start is None or end is None:
             return pandas.read_excel(fname, **kwargs)
 
+        _skiprows = kwargs.pop("skiprows")
+
+        import re
         from zipfile import ZipFile
+
         import openpyxl
-        from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.reader.excel import ExcelReader
+        from openpyxl.worksheet._reader import WorksheetReader
         from openpyxl.worksheet.worksheet import Worksheet
         from pandas.core.dtypes.common import is_list_like
-        from pandas.io.excel._util import (
-            fill_mi_header,
-            maybe_convert_usecols,
-        )
+        from pandas.io.excel._util import fill_mi_header, maybe_convert_usecols
         from pandas.io.parsers import TextParser
-        import re
 
         wb = openpyxl.load_workbook(filename=fname, read_only=True)
         # Get shared strings
@@ -889,7 +887,7 @@ engine : str
 
         for file_for_parser in files_for_parser:
             if isinstance(file_for_parser.path, IOBase):
-                context = _nullcontext(file_for_parser.path)
+                context = contextlib.nullcontext(file_for_parser.path)
             else:
                 context = fsspec.open(file_for_parser.path, **storage_options)
             with context as f:

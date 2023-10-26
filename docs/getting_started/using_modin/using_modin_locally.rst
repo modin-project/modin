@@ -67,7 +67,7 @@ cluster for you:
 Finally, if you already have an Ray or Dask engine initialized, Modin will
 automatically attach to whichever engine is available. If you are interested in using
 Modin with HDK engine, please refer to :doc:`these instructions </development/using_hdk>`. For additional information on other settings you can configure, see
-:doc:`this page </flow/modin/config>` for more details.
+:doc:`Modin's config </flow/modin/config>` page for more details.
 
 Advanced: Configuring the resources Modin uses
 ----------------------------------------------
@@ -81,7 +81,8 @@ the following code:
    import modin
    print(modin.config.NPartitions.get()) #prints 16 on a laptop with 16 physical cores
 
-Modin fully utilizes the resources on your machine. To read more about how this works, see :doc:`this page</getting_started/why_modin/pandas/>` for more details.
+Modin fully utilizes the resources on your machine. To read more about how this works, see :doc:`Why Modin? </getting_started/why_modin/pandas/>`
+page for more details.
 
 Since Modin will use all of the resources available on your machine by default, at
 times, it is possible that you may like to limit the amount of resources Modin uses to

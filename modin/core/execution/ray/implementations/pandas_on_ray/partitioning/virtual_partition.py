@@ -20,10 +20,10 @@ from ray.util import get_node_ip_address
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from modin.core.execution.ray.common.utils import deserialize
 from modin.core.execution.ray.common import RayWrapper
-from .partition import PandasOnRayDataframePartition
 from modin.utils import _inherit_docstrings
+
+from .partition import PandasOnRayDataframePartition
 
 
 class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -94,7 +94,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_block_partitions)
         for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
-            result[idx] = partition._ip_cache
+            result[idx] = partition.ip(materialize=False)
         return result
 
     @classmethod
@@ -115,12 +115,13 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             else num_splits,
         ).remote(
             cls._get_deploy_split_func(),
-            axis,
-            func,
-            f_args,
-            f_kwargs,
+            *f_args,
             num_splits,
             *partitions,
+            axis=axis,
+            f_to_deploy=func,
+            f_len_args=len(f_args),
+            f_kwargs=f_kwargs,
             extract_metadata=extract_metadata,
         )
 
@@ -176,13 +177,14 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             **({"max_retries": max_retries} if max_retries is not None else {}),
         ).remote(
             cls._get_deploy_axis_func(),
-            axis,
-            func,
-            f_args,
-            f_kwargs,
+            *f_args,
             num_splits,
             maintain_partitioning,
             *partitions,
+            axis=axis,
+            f_to_deploy=func,
+            f_len_args=len(f_args),
+            f_kwargs=f_kwargs,
             manual_partition=manual_partition,
             lengths=lengths,
         )
@@ -231,14 +233,15 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
         ).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
-            axis,
-            func,
-            f_args,
-            f_kwargs,
+            *f_args,
             num_splits,
             len_of_left,
             other_shape,
             *partitions,
+            axis=axis,
+            f_to_deploy=func,
+            f_len_args=len(f_args),
+            f_kwargs=f_kwargs,
         )
 
     def wait(self):
@@ -261,11 +264,11 @@ class PandasOnRayDataframeRowPartition(PandasOnRayDataframeVirtualPartition):
 @ray.remote
 def _deploy_ray_func(
     deployer,
+    *positional_args,
     axis,
     f_to_deploy,
-    f_args,
+    f_len_args,
     f_kwargs,
-    *args,
     extract_metadata=True,
     **kwargs,
 ):  # pragma: no cover
@@ -274,29 +277,32 @@ def _deploy_ray_func(
 
     This is ALWAYS called on either ``PandasDataframeAxisPartition.deploy_axis_func``
     or ``PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions``, which both
-    serve to deploy another dataframe function on a Ray worker process. The provided ``f_args``
-    is thus are deserialized here (on the Ray worker) before the function is called (``f_kwargs``
-    will never contain more Ray objects, and thus does not require deserialization).
+    serve to deploy another dataframe function on a Ray worker process. The provided `positional_args`
+    contains positional arguments for both: `deployer` and for `f_to_deploy`, the parameters can be separated
+    using the `f_len_args` value. The parameters are combined so they will be deserialized by Ray before the
+    kernel is executed (`f_kwargs` will never contain more Ray objects, and thus does not require deserialization).
 
     Parameters
     ----------
     deployer : callable
         A `PandasDataFrameAxisPartition.deploy_*` method that will call ``f_to_deploy``.
+    *positional_args : list
+        The first `f_len_args` elements in this list represent positional arguments
+        to pass to the `f_to_deploy`. The rest are positional arguments that will be
+        passed to `deployer`.
     axis : {0, 1}
-        The axis to perform the function along.
+        The axis to perform the function along. This argument is keyword only.
     f_to_deploy : callable or RayObjectID
-        The function to deploy.
-    f_args : list or tuple
-        Positional arguments to pass to ``f_to_deploy``.
+        The function to deploy. This argument is keyword only.
+    f_len_args : int
+        Number of positional arguments to pass to ``f_to_deploy``. This argument is keyword only.
     f_kwargs : dict
-        Keyword arguments to pass to ``f_to_deploy``.
-    *args : list
-        Positional arguments to pass to ``deployer``.
+        Keyword arguments to pass to ``f_to_deploy``. This argument is keyword only.
     extract_metadata : bool, default: True
         Whether to return metadata (length, width, ip) of the result. Passing `False` may relax
         the load on object storage as the remote function would return 4 times fewer futures.
         Passing `False` makes sense for temporary results where you know for sure that the
-        metadata will never be requested.
+        metadata will never be requested. This argument is keyword only.
     **kwargs : dict
         Keyword arguments to pass to ``deployer``.
 
@@ -309,8 +315,9 @@ def _deploy_ray_func(
     -----
     Ray functions are not detected by codecov (thus pragma: no cover).
     """
-    f_args = deserialize(f_args)
-    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *args, **kwargs)
+    f_args = positional_args[:f_len_args]
+    deploy_args = positional_args[f_len_args:]
+    result = deployer(axis, f_to_deploy, f_args, f_kwargs, *deploy_args, **kwargs)
     if not extract_metadata:
         return result
     ip = get_node_ip_address()

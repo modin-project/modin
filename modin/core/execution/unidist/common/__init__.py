@@ -13,7 +13,7 @@
 
 """Common utilities for unidist execution engine."""
 
-from .engine_wrapper import UnidistWrapper, SignalActor
+from .engine_wrapper import SignalActor, UnidistWrapper
 from .utils import initialize_unidist
 
 __all__ = [

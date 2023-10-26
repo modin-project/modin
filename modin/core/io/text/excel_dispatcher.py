@@ -14,14 +14,14 @@
 """Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
 import os
+import re
+import warnings
 from io import BytesIO
 
 import pandas
-import re
-import warnings
 
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.config import NPartitions
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from modin.pandas.io import ExcelFile
 
 EXCEL_READ_BLOCK_SIZE = 4096
@@ -59,6 +59,13 @@ class ExcelDispatcher(TextFileDispatcher):
                 **kwargs
             )
 
+        if kwargs.get("skiprows") is not None:
+            return cls.single_worker_read(
+                io,
+                reason="Modin doesn't support 'skiprows' parameter of `read_excel`",
+                **kwargs
+            )
+
         if isinstance(io, bytes):
             io = BytesIO(io)
 
@@ -76,9 +83,11 @@ class ExcelDispatcher(TextFileDispatcher):
             )
 
         from zipfile import ZipFile
-        from openpyxl.worksheet.worksheet import Worksheet
-        from openpyxl.worksheet._reader import WorksheetReader
+
         from openpyxl.reader.excel import ExcelReader
+        from openpyxl.worksheet._reader import WorksheetReader
+        from openpyxl.worksheet.worksheet import Worksheet
+
         from modin.core.storage_formats.pandas.parsers import PandasExcelParser
 
         sheet_name = kwargs.get("sheet_name", 0)

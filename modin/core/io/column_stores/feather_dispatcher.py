@@ -14,8 +14,8 @@
 """Module houses `FeatherDispatcher` class, that is used for reading `.feather` files."""
 
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
-from modin.utils import import_optional_dependency
 from modin.core.io.file_dispatcher import OpenFile
+from modin.utils import import_optional_dependency
 
 
 class FeatherDispatcher(ColumnStoreDispatcher):

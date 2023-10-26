@@ -14,35 +14,40 @@
 """Implement GroupBy public API as pandas does."""
 
 import warnings
+from collections.abc import Iterable
+from types import BuiltinFunctionType
 
 import numpy as np
 import pandas
-from pandas.core.apply import reconstruct_func
-from pandas.errors import SpecificationError
-import pandas.core.groupby
-from pandas.core.dtypes.common import is_list_like, is_numeric_dtype, is_integer
-from pandas._libs import lib
 import pandas.core.common as com
-from types import BuiltinFunctionType
-from collections.abc import Iterable
+import pandas.core.groupby
+from pandas._libs import lib
+from pandas.core.apply import reconstruct_func
+from pandas.core.dtypes.common import (
+    is_datetime64_any_dtype,
+    is_integer,
+    is_list_like,
+    is_numeric_dtype,
+)
+from pandas.errors import SpecificationError
 
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
-from modin.utils import (
-    _inherit_docstrings,
-    try_cast_to_pandas,
-    wrap_udf_function,
-    hashable,
-    wrap_into_list,
-    MODIN_UNNAMED_SERIES_LABEL,
-)
 from modin.pandas.utils import cast_function_modin2pandas
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from .series import Series
-from .window import RollingGroupby
-from .utils import is_label
+from modin.utils import (
+    MODIN_UNNAMED_SERIES_LABEL,
+    _inherit_docstrings,
+    hashable,
+    try_cast_to_pandas,
+    wrap_into_list,
+    wrap_udf_function,
+)
 
+from .series import Series
+from .utils import is_label
+from .window import RollingGroupby
 
 _DEFAULT_BEHAVIOUR = {
     "__class__",
@@ -226,7 +231,13 @@ class DataFrameGroupBy(ClassLogger):
             + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
             + "on dataframes with duplicated indices"
         )
-        return self.fillna(limit=limit, method="ffill")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*fillna with 'method' is deprecated.*",
+                category=FutureWarning,
+            )
+            return self.fillna(limit=limit, method="ffill")
 
     def sem(self, ddof=1, numeric_only=False):
         return self._wrap_aggregation(
@@ -369,7 +380,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def idxmax(self, axis=lib.no_default, skipna=True, numeric_only=False):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "idxmax")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
@@ -382,7 +393,7 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def idxmin(self, axis=lib.no_default, skipna=True, numeric_only=False):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "idxmin")
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
@@ -648,21 +659,30 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
 
-        return self._check_index(
-            self._wrap_aggregation(
-                qc_method=type(self._query_compiler).groupby_agg,
-                numeric_only=False,
-                agg_func=func,
-                agg_args=args,
-                agg_kwargs=kwargs,
-                how="group_wise",
-            )
+        apply_res = self._wrap_aggregation(
+            qc_method=type(self._query_compiler).groupby_agg,
+            numeric_only=False,
+            agg_func=func,
+            agg_args=args,
+            agg_kwargs=kwargs,
+            how="group_wise",
         )
+        reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
+        if not isinstance(apply_res, Series) and apply_res.columns.equals(
+            reduced_index
+        ):
+            apply_res = apply_res.squeeze(axis=1)
+        return self._check_index(apply_res)
 
     @property
     def dtypes(self):
         if self._axis == 1:
             raise ValueError("Cannot call dtypes on groupby with axis=1")
+        warnings.warn(
+            f"{type(self).__name__}.dtypes is deprecated and will be removed in "
+            + "a future version. Check the dtypes on the base object instead",
+            FutureWarning,
+        )
         return self._check_index(
             self._wrap_aggregation(
                 type(self._query_compiler).groupby_dtypes,
@@ -825,7 +845,13 @@ class DataFrameGroupBy(ClassLogger):
             + "which can be impacted by pandas bug https://github.com/pandas-dev/pandas/issues/43412 "
             + "on dataframes with duplicated indices"
         )
-        return self.fillna(limit=limit, method="bfill")
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*fillna with 'method' is deprecated.*",
+                category=FutureWarning,
+            )
+            return self.fillna(limit=limit, method="bfill")
 
     def prod(self, numeric_only=False, min_count=0):
         return self._wrap_aggregation(
@@ -867,7 +893,15 @@ class DataFrameGroupBy(ClassLogger):
             and isinstance(func, BuiltinFunctionType)
             and func.__name__ in dir(self)
         ):
-            func = func.__name__
+            func_name = func.__name__
+            warnings.warn(
+                f"The provided callable {func} is currently using "
+                + f"{type(self).__name__}.{func_name}. In a future version of pandas, "
+                + "the provided callable will be used directly. To keep current "
+                + f"behavior pass the string {func_name} instead.",
+                category=FutureWarning,
+            )
+            func = func_name
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
@@ -1237,8 +1271,16 @@ class DataFrameGroupBy(ClassLogger):
         limit=None,
         downcast=lib.no_default,
     ):
-        if axis is lib.no_default:
+        if axis is not lib.no_default:
             self._deprecate_axis(axis, "fillna")
+
+        if method is not None:
+            warnings.warn(
+                f"{type(self).__name__}.fillna with 'method' is deprecated and "
+                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
+                + "instead.",
+                FutureWarning,
+            )
 
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
@@ -1388,7 +1430,9 @@ class DataFrameGroupBy(ClassLogger):
             for col, dtype in self._df.dtypes.items():
                 # can't calculate diff on non-numeric columns, so check for non-numeric
                 # columns that are not included in the `by`
-                if not is_numeric_dtype(dtype) and not (
+                if not (
+                    is_numeric_dtype(dtype) or is_datetime64_any_dtype(dtype)
+                ) and not (
                     isinstance(self._by, BaseQueryCompiler) and col in self._by.columns
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
@@ -1791,14 +1835,13 @@ class SeriesGroupBy(DataFrameGroupBy):
         Returns
         -------
         str, list
-            If `fn` is a callable, return its name if it's a method of the groupby
-            object, otherwise return `fn` itself. If `fn` is a string, return it.
-            If `fn` is an Iterable, return a list of _try_get_str_func applied to
-            each element of `fn`.
+            If `fn` is a callable, return its name, otherwise return `fn` itself.
+            If `fn` is a string, return it. If `fn` is an Iterable, return a list
+            of _try_get_str_func applied to each element of `fn`.
         """
         if not isinstance(fn, str) and isinstance(fn, Iterable):
             return [self._try_get_str_func(f) for f in fn]
-        return fn.__name__ if callable(fn) and fn.__name__ in dir(self) else fn
+        return fn.__name__ if callable(fn) else fn
 
     def value_counts(
         self,

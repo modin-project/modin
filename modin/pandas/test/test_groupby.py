@@ -11,45 +11,46 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import itertools
-import pandas
-import numpy as np
-from unittest import mock
 import datetime
+import itertools
+from unittest import mock
 
-from modin.config import StorageFormat
+import numpy as np
+import pandas
+import pandas._libs.lib as lib
+import pytest
+
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.config.envvars import ExperimentalGroupbyImpl, IsRayCluster
+from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-import modin.pandas as pd
+from modin.pandas.utils import from_pandas, is_scalar
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import (
-    try_cast_to_pandas,
+    MODIN_UNNAMED_SERIES_LABEL,
     get_current_execution,
     hashable,
-    MODIN_UNNAMED_SERIES_LABEL,
+    try_cast_to_pandas,
 )
-from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from modin.pandas.utils import from_pandas, is_scalar
+
 from .utils import (
-    df_equals,
     check_df_columns_have_nans,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    dict_equals,
     eval_general,
+    generate_multiindex,
+    modin_df_almost_equals_pandas,
     test_data,
     test_data_values,
-    modin_df_almost_equals_pandas,
-    try_modin_df_almost_equals_compare,
-    generate_multiindex,
     test_groupby_data,
-    dict_equals,
+    try_modin_df_almost_equals_compare,
     value_equals,
-    default_to_pandas_ignore_string,
 )
-from modin.config import NPartitions
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-
 
 NPartitions.put(4)
 
@@ -58,7 +59,49 @@ NPartitions.put(4)
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # TO MAKE SURE ALL FUTUREWARNINGS ARE CONSIDERED
+    pytest.mark.filterwarnings("error::FutureWarning"),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:DataFrame.groupby with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.dtypes is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.diff with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.pct_change with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:DataFrameGroupBy.shift with axis=1 is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:(DataFrameGroupBy|SeriesGroupBy|DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
+    ),
+    # FIXME: these cases inconsistent between modin and pandas
+    pytest.mark.filterwarnings(
+        "ignore:A grouping was used that is not in the columns of the DataFrame and so was excluded from the result:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:The default of observed=False is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*DataFrame.idxmin with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
+    ),
+]
 
 
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
@@ -414,17 +457,17 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_ndim(modin_groupby, pandas_groupby)
     if not check_df_columns_have_nans(modin_df, by):
         # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumsum(axis=0))
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax(axis=0))
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin(axis=0))
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod(axis=0))
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumsum())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin())
+        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod())
         eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
 
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.pct_change(
-            periods=2, fill_method="pad", limit=1, freq=None, axis=1
+            periods=2, fill_method="bfill", limit=1, freq=None, axis=1
         ),
         modin_df_almost_equals_pandas,
     )
@@ -1084,6 +1127,24 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         eval_groups(modin_groupby, pandas_groupby)
 
 
+def test_agg_udf_6600():
+    data = {
+        "name": ["Mariners", "Lakers"] * 50,
+        "league_abbreviation": ["MLB", "NBA"] * 50,
+    }
+    modin_teams, pandas_teams = create_test_dfs(data)
+
+    def my_first_item(s):
+        return s.iloc[0]
+
+    for agg in (my_first_item, [my_first_item], ["nunique", my_first_item]):
+        eval_general(
+            modin_teams,
+            pandas_teams,
+            operation=lambda df: df.groupby("league_abbreviation").name.agg(agg),
+        )
+
+
 def test_multi_column_groupby():
     pandas_df = pandas.DataFrame(
         {
@@ -1151,7 +1212,7 @@ def eval_ndim(modin_groupby, pandas_groupby):
     assert modin_groupby.ndim == pandas_groupby.ndim
 
 
-def eval_cumsum(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+def eval_cumsum(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
         *sort_index_if_experimental_groupby(
             modin_groupby.cumsum(axis=axis, numeric_only=numeric_only),
@@ -1160,7 +1221,7 @@ def eval_cumsum(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
     )
 
 
-def eval_cummax(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+def eval_cummax(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
         *sort_index_if_experimental_groupby(
             modin_groupby.cummax(axis=axis, numeric_only=numeric_only),
@@ -1169,7 +1230,7 @@ def eval_cummax(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
     )
 
 
-def eval_cummin(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+def eval_cummin(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
         *sort_index_if_experimental_groupby(
             modin_groupby.cummin(axis=axis, numeric_only=numeric_only),
@@ -1250,7 +1311,9 @@ def eval_median(modin_groupby, pandas_groupby, numeric_only=False):
     )
 
 
-def eval_cumprod(modin_groupby, pandas_groupby, axis=0, numeric_only=False):
+def eval_cumprod(
+    modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False
+):
     df_equals(
         *sort_index_if_experimental_groupby(
             modin_groupby.cumprod(numeric_only=numeric_only),
@@ -1587,8 +1650,8 @@ def test_groupby_with_kwarg_dropna(groupby_kwargs, dropna):
         df_equals(md_grp._default_to_pandas(lambda df: df.sum()), pd_grp.sum())
 
 
-@pytest.mark.parametrize("groupby_axis", [0, 1])
-@pytest.mark.parametrize("shift_axis", [0, 1])
+@pytest.mark.parametrize("groupby_axis", [lib.no_default, 1])
+@pytest.mark.parametrize("shift_axis", [lib.no_default, 1])
 @pytest.mark.parametrize("groupby_sort", [True, False])
 def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     pandas_df = pandas.DataFrame(
@@ -1751,9 +1814,7 @@ def test_agg_4604():
     [
         "quantile",
         "mean",
-        pytest.param(
-            "sum", marks=pytest.mark.skip("See Modin issue #2255 for details")
-        ),
+        "sum",
         "median",
         "unique",
         "cumprod",
@@ -2665,6 +2726,21 @@ def test_groupby_pct_change_diff_6194():
     )
 
 
+def test_groupby_datetime_diff_6628():
+    dates = pd.date_range(start="2023-01-01", periods=10, freq="W")
+    df = pd.DataFrame(
+        {
+            "date": dates,
+            "group": "A",
+        }
+    )
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby("group").diff(),
+    )
+
+
 def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.count())
     eval_general(md_window, pd_window, lambda window: window.sum())
@@ -2884,3 +2960,178 @@ def test_reshuffling_groupby_on_strings(modify_config):
     eval_general(
         modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
     )
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+)
+def test_groupby_apply_series_result(modify_config):
+    # reproducer from the issue:
+    # https://github.com/modin-project/modin/issues/6632
+    df = pd.DataFrame(
+        np.random.randint(5, 10, size=5), index=[f"s{i+1}" for i in range(5)]
+    )
+    df["group"] = [1, 1, 2, 2, 3]
+
+    # res = df.groupby('group').apply(lambda x: x.name+2)
+    eval_general(
+        df, df._to_pandas(), lambda df: df.groupby("group").apply(lambda x: x.name + 2)
+    )
+
+
+### TEST GROUPBY WARNINGS ###
+
+
+def test_groupby_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+
+    with pytest.warns(
+        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
+    ):
+        modin_df.groupby(by="col1", axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrame.groupby with axis=1 is deprecated"
+    ):
+        pandas_df.groupby(by="col1", axis=1)
+
+
+def test_groupby_dtypes_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(FutureWarning, match="DataFrameGroupBy.dtypes is deprecated"):
+        modin_groupby.dtypes
+    with pytest.warns(FutureWarning, match="DataFrameGroupBy.dtypes is deprecated"):
+        pandas_groupby.dtypes
+
+
+def test_groupby_diff_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
+    ):
+        modin_groupby.diff(axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.diff with axis=1 is deprecated"
+    ):
+        pandas_groupby.diff(axis=1)
+
+
+def test_groupby_pct_change_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.pct_change with axis=1 is deprecated"
+    ):
+        modin_groupby.pct_change(axis=1)
+    with pytest.warns(
+        FutureWarning, match="DataFrameGroupBy.pct_change with axis=1 is deprecated"
+    ):
+        pandas_groupby.pct_change(axis=1)
+
+
+def test_groupby_pct_change_parameters_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+    ):
+        modin_groupby.pct_change(fill_method="bfill", limit=1)
+    with pytest.warns(
+        FutureWarning,
+        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+    ):
+        pandas_groupby.pct_change(fill_method="bfill", limit=1)
+
+
+def test_groupby_shift_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.shift with axis=1 is deprecated",
+    ):
+        pandas_groupby.shift(axis=1, fill_value=777)
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.shift with axis=1 is deprecated",
+    ):
+        modin_groupby.shift(axis=1, fill_value=777)
+
+
+def test_groupby_fillna_axis_1_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, None, 6, None],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+    ):
+        modin_groupby.fillna(method="ffill")
+    with pytest.warns(
+        FutureWarning,
+        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+    ):
+        pandas_groupby.fillna(method="ffill")
+
+
+def test_groupby_agg_provided_callable_warning():
+    data = {
+        "col1": [0, 3, 2, 3],
+        "col2": [4, 1, 6, 7],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    modin_groupby = modin_df.groupby(by="col1")
+    pandas_groupby = pandas_df.groupby(by="col1")
+
+    for func in (sum, max):
+        with pytest.warns(
+            FutureWarning,
+            match="In a future version of pandas, the provided callable will be used directly",
+        ):
+            modin_groupby.agg(func)
+        with pytest.warns(
+            FutureWarning,
+            match="In a future version of pandas, the provided callable will be used directly",
+        ):
+            pandas_groupby.agg(func)

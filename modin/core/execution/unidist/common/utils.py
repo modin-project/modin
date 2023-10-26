@@ -18,6 +18,7 @@ import unidist.config as unidist_cfg
 
 import modin.config as modin_cfg
 from modin.error_message import ErrorMessage
+
 from .engine_wrapper import UnidistWrapper
 
 
@@ -44,7 +45,8 @@ def initialize_unidist():
             unidist.init()
             """,
         )
-
+        # TODO: allow unidist to inherit env variables on initialization
+        # with set_env(PYTHONWARNINGS="ignore::FutureWarning"):
         unidist.init()
 
     num_cpus = sum(v["CPU"] for v in unidist.cluster_resources().values())

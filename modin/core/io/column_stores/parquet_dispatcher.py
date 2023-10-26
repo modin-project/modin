@@ -13,25 +13,27 @@
 
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
+import json
 import os
 import re
-import json
+from typing import TYPE_CHECKING
 
 import fsspec
-from fsspec.core import url_to_fs
-from fsspec.spec import AbstractBufferedFile
 import numpy as np
-from pandas.io.common import stringify_path
 import pandas
 import pandas._libs.lib as lib
+from fsspec.core import url_to_fs
+from fsspec.spec import AbstractBufferedFile
 from packaging import version
+from pandas.io.common import stringify_path
 
-from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.config import NPartitions
-
-
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
+from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
 
 class ColumnStoreDataset:
@@ -351,19 +353,102 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
 
     @classmethod
-    def call_deploy(cls, dataset, col_partitions, storage_options, **kwargs):
+    def _determine_partitioning(
+        cls, dataset: ColumnStoreDataset
+    ) -> "list[list[ParquetFileToRead]]":
+        """
+        Determine which partition will read certain files/row groups of the dataset.
+
+        Parameters
+        ----------
+        dataset : ColumnStoreDataset
+
+        Returns
+        -------
+        list[list[ParquetFileToRead]]
+            Each element in the returned list describes a list of files that a partition has to read.
+        """
+        from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
+
+        parquet_files = dataset.files
+        row_groups_per_file = dataset.row_groups_per_file
+        num_row_groups = sum(row_groups_per_file)
+
+        if num_row_groups == 0:
+            return []
+
+        num_splits = min(NPartitions.get(), num_row_groups)
+        part_size = num_row_groups // num_splits
+        # If 'num_splits' does not divide 'num_row_groups' then we can't cover all of
+        # the row groups using the original 'part_size'. According to the 'reminder'
+        # there has to be that number of partitions that should read 'part_size + 1'
+        # number of row groups.
+        reminder = num_row_groups % num_splits
+        part_sizes = [part_size] * (num_splits - reminder) + [part_size + 1] * reminder
+
+        partition_files = []
+        file_idx = 0
+        row_group_idx = 0
+        row_groups_left_in_current_file = row_groups_per_file[file_idx]
+        # this is used for sanity check at the end, verifying that we indeed added all of the row groups
+        total_row_groups_added = 0
+        for size in part_sizes:
+            row_groups_taken = 0
+            part_files = []
+            while row_groups_taken != size:
+                if row_groups_left_in_current_file < 1:
+                    file_idx += 1
+                    row_group_idx = 0
+                    row_groups_left_in_current_file = row_groups_per_file[file_idx]
+
+                to_take = min(size - row_groups_taken, row_groups_left_in_current_file)
+                part_files.append(
+                    ParquetFileToRead(
+                        parquet_files[file_idx],
+                        row_group_start=row_group_idx,
+                        row_group_end=row_group_idx + to_take,
+                    )
+                )
+                row_groups_left_in_current_file -= to_take
+                row_groups_taken += to_take
+                row_group_idx += to_take
+
+            total_row_groups_added += row_groups_taken
+            partition_files.append(part_files)
+
+        sanity_check = (
+            len(partition_files) == num_splits
+            and total_row_groups_added == num_row_groups
+        )
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=not sanity_check,
+            extra_log="row groups added does not match total num of row groups across parquet files",
+        )
+        return partition_files
+
+    @classmethod
+    def call_deploy(
+        cls,
+        partition_files: "list[list[ParquetFileToRead]]",
+        col_partitions: "list[list[str]]",
+        storage_options: dict,
+        engine: str,
+        **kwargs,
+    ):
         """
         Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
-        dataset : Dataset
-            Dataset object of Parquet file/files.
-        col_partitions : list
+        partition_files : list[list[ParquetFileToRead]]
+            List of arrays with files that should be read by each partition.
+        col_partitions : list[list[str]]
             List of arrays with columns names that should be read
             by each partition.
         storage_options : dict
             Parameters for specific storage engine.
+        engine : {"auto", "pyarrow", "fastparquet"}
+            Parquet library to use for reading.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -372,66 +457,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         List
             Array with references to the task deploy result for each partition.
         """
-        from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
-
         # If we don't have any columns to read, we should just return an empty
         # set of references.
         if len(col_partitions) == 0:
             return []
-
-        row_groups_per_file = dataset.row_groups_per_file
-        num_row_groups = sum(row_groups_per_file)
-        parquet_files = dataset.files
-
-        # step determines how many row groups are going to be in a partition
-        step = compute_chunksize(
-            num_row_groups,
-            NPartitions.get(),
-            min_block_size=1,
-        )
-        current_partition_size = 0
-        file_index = 0
-        partition_files = []  # 2D array - each element contains list of chunks to read
-        row_groups_used_in_current_file = 0
-        total_row_groups_added = 0
-        # On each iteration, we add a chunk of one file. That will
-        # take us either to the end of a partition, or to the end
-        # of a file.
-        while total_row_groups_added < num_row_groups:
-            if current_partition_size == 0:
-                partition_files.append([])
-            partition_file = partition_files[-1]
-            file_path = parquet_files[file_index]
-            row_group_start = row_groups_used_in_current_file
-            row_groups_left_in_file = (
-                row_groups_per_file[file_index] - row_groups_used_in_current_file
-            )
-            row_groups_left_for_this_partition = step - current_partition_size
-            if row_groups_left_for_this_partition <= row_groups_left_in_file:
-                # File has at least what we need to finish partition
-                # So finish this partition and start a new one.
-                num_row_groups_to_add = row_groups_left_for_this_partition
-                current_partition_size = 0
-            else:
-                # File doesn't have enough to complete this partition. Add
-                # it into current partition and go to next file.
-                num_row_groups_to_add = row_groups_left_in_file
-                current_partition_size += num_row_groups_to_add
-            if num_row_groups_to_add == row_groups_left_in_file:
-                file_index += 1
-                row_groups_used_in_current_file = 0
-            else:
-                row_groups_used_in_current_file += num_row_groups_to_add
-            partition_file.append(
-                ParquetFileToRead(
-                    file_path, row_group_start, row_group_start + num_row_groups_to_add
-                )
-            )
-            total_row_groups_added += num_row_groups_to_add
-
-        assert (
-            total_row_groups_added == num_row_groups
-        ), "row groups added does not match total num of row groups across parquet files"
 
         all_partitions = []
         for files_to_read in partition_files:
@@ -442,7 +471,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                         f_kwargs={
                             "files_for_parser": files_to_read,
                             "columns": cols,
-                            "engine": dataset.engine,
+                            "engine": engine,
                             "storage_options": storage_options,
                             **kwargs,
                         },
@@ -521,16 +550,24 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         See `build_partition` for more detail on the contents of partitions_ids.
         """
         range_index = True
+        range_index_metadata = None
         column_names_to_read = []
         for column in index_columns:
-            # According to https://arrow.apache.org/docs/python/generated/pyarrow.Schema.html,
-            # only RangeIndex will be stored as metadata. Otherwise, the default behavior is
-            # to store the index as a column.
+            # https://pandas.pydata.org/docs/development/developer.html#storing-pandas-dataframe-objects-in-apache-parquet-format
+            # describes the format of the index column metadata.
+            # It is a list, where each entry is either a string or a dictionary.
+            # A string means that a column stored in the dataset is (part of) the index.
+            # A dictionary is metadata about a RangeIndex, which is metadata-only and not stored
+            # in the dataset as a column.
+            # There cannot be both for a single dataframe, because a MultiIndex can only contain
+            # "actual data" columns and not RangeIndex objects.
+            # See similar code in pyarrow: https://github.com/apache/arrow/blob/44811ba18477560711d512939535c8389dd7787b/python/pyarrow/pandas_compat.py#L912-L926
+            # and in fastparquet, here is where RangeIndex is handled: https://github.com/dask/fastparquet/blob/df1219300a96bc1baf9ebad85f4f5676a130c9e8/fastparquet/api.py#L809-L815
             if isinstance(column, str):
                 column_names_to_read.append(column)
                 range_index = False
-            elif column["name"] is not None:
-                column_names_to_read.append(column["name"])
+            elif column["kind"] == "range":
+                range_index_metadata = column
 
         # When the index has meaningful values, stored in a column, we will replicate those
         # exactly in the Modin dataframe's index. This index may have repeated values, be unsorted,
@@ -538,7 +575,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         # A range index is the special case: we want the Modin dataframe to have a single range,
         # not a range that keeps restarting. i.e. if the partitions have index 0-9, 0-19, 0-29,
         # we want our Modin dataframe to have 0-59.
-        # When there are no filters, it is relatively trivial to construct the index by
+        # When there are no filters, it is relatively cheap to construct the index by
         # actually reading in the necessary data, here in the main process.
         # When there are filters, we let the workers materialize the indices before combining to
         # get a single range.
@@ -560,12 +597,37 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             if range_index:
                 # There are filters, so we had to materialize in order to
                 # determine how many items there actually are
-                start = index_objs[0].start
-                total_length = sum(len(index_part) for index_part in index_objs)
-                complete_index = pandas.RangeIndex(
-                    start=start,
-                    stop=start + total_length,
+                total_filtered_length = sum(
+                    len(index_part) for index_part in index_objs
                 )
+
+                metadata_length_mismatch = False
+                if range_index_metadata is not None:
+                    metadata_implied_length = (
+                        range_index_metadata["stop"] - range_index_metadata["start"]
+                    ) / range_index_metadata["step"]
+                    metadata_length_mismatch = (
+                        total_filtered_length != metadata_implied_length
+                    )
+
+                # pyarrow ignores the RangeIndex metadata if it is not consistent with data length.
+                # https://github.com/apache/arrow/blob/44811ba18477560711d512939535c8389dd7787b/python/pyarrow/pandas_compat.py#L924-L926
+                # fastparquet keeps the start and step from the metadata and just adjusts to the length.
+                # https://github.com/dask/fastparquet/blob/df1219300a96bc1baf9ebad85f4f5676a130c9e8/fastparquet/api.py#L815
+                if range_index_metadata is None or (
+                    isinstance(dataset, PyArrowDataset) and metadata_length_mismatch
+                ):
+                    complete_index = pandas.RangeIndex(total_filtered_length)
+                else:
+                    complete_index = pandas.RangeIndex(
+                        start=range_index_metadata["start"],
+                        step=range_index_metadata["step"],
+                        stop=(
+                            range_index_metadata["start"]
+                            + (total_filtered_length * range_index_metadata["step"])
+                        ),
+                        name=range_index_metadata["name"],
+                    )
             else:
                 complete_index = index_objs[0].append(index_objs[1:])
         return complete_index, range_index or (len(index_columns) == 0)
@@ -594,9 +656,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         storage_options = kwargs.pop("storage_options", {}) or {}
         filters = kwargs.get("filters", None)
 
-        col_partitions, column_widths = cls.build_columns(columns)
+        partition_files = cls._determine_partitioning(dataset)
+        col_partitions, column_widths = cls.build_columns(
+            columns,
+            num_row_parts=len(partition_files),
+        )
         partition_ids = cls.call_deploy(
-            dataset, col_partitions, storage_options, **kwargs
+            partition_files, col_partitions, storage_options, dataset.engine, **kwargs
         )
         index, sync_index = cls.build_index(
             dataset, partition_ids, index_columns, filters

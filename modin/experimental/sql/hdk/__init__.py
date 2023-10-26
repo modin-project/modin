@@ -11,18 +11,4 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import warnings
-
-try:
-    from dfsql import sql_query as dfsql_query
-
-    # This import is required to inject the DataFrame.sql() method.
-    import dfsql.extensions  # noqa: F401
-except ImportError:
-    warnings.warn(
-        "Modin experimental sql interface requires dfsql to be installed."
-        + ' Run `pip install "modin[sql]"` to install it.'
-    )
-    raise
-
-__all__ = ["dfsql_query"]
+"""Implementation of HDK SQL functionality."""

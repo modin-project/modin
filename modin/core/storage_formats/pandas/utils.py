@@ -14,26 +14,13 @@
 """Contains utility functions for frame partitioning."""
 
 import re
+from math import ceil
 from typing import Hashable, List
-import contextlib
 
 import numpy as np
 import pandas
 
 from modin.config import MinPartitionSize, NPartitions
-from math import ceil
-
-
-@contextlib.contextmanager
-def _nullcontext(dummy_value=None):  # noqa: PR01
-    """
-    Act as a replacement for contextlib.nullcontext missing in older Python.
-
-    Notes
-    -----
-    contextlib.nullcontext is only available from Python 3.7.
-    """
-    yield dummy_value
 
 
 def compute_chunksize(axis_len, num_splits, min_block_size=None):

@@ -16,13 +16,14 @@
 import os
 
 from modin.config import (
-    CpuCount,
-    Memory,
-    NPartitions,
-    GithubCI,
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
+    CpuCount,
+    GithubCI,
+    Memory,
+    NPartitions,
 )
+from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
 
 
@@ -32,6 +33,14 @@ def initialize_dask():
 
     try:
         client = default_client()
+
+        def _disable_warnings():
+            import warnings
+
+            warnings.simplefilter("ignore", category=FutureWarning)
+
+        client.run(_disable_warnings)
+
     except ValueError:
         from distributed import Client
 
@@ -47,7 +56,11 @@ def initialize_dask():
         num_cpus = CpuCount.get()
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
-        client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
+
+        # when the client is initialized, environment variables are inherited
+        with set_env(PYTHONWARNINGS="ignore::FutureWarning"):
+            client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
+
         if GithubCI.get():
             # set these keys to run tests that write to the mock s3 service. this seems
             # to be the way to pass environment variables to the workers:

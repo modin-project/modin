@@ -18,12 +18,12 @@ from typing import Optional
 import numpy as np
 import pandas
 import pandas.core.resample
-from pandas.core.dtypes.common import is_list_like
 from pandas._libs import lib
+from pandas.core.dtypes.common import is_list_like
 
 from modin.logging import ClassLogger
-from modin.utils import _inherit_docstrings
 from modin.pandas.utils import cast_function_modin2pandas
+from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)

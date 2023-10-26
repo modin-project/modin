@@ -13,12 +13,16 @@
 
 """The module defines base interface for an axis partition of a Modin DataFrame."""
 
-import pandas
+import warnings
+
 import numpy as np
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+import pandas
+
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+
 from .partition import PandasDataframePartition
 
 
@@ -416,7 +420,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
-        result = func(dataframe, *f_args, **f_kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(dataframe, *f_args, **f_kwargs)
 
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
@@ -495,7 +501,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             for i in range(1, len(other_shape))
         ]
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
-        result = func(lt_frame, rt_frame, *f_args, **f_kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(lt_frame, rt_frame, *f_args, **f_kwargs)
         return split_result_of_axis_func_pandas(axis, num_splits, result)
 
     @classmethod

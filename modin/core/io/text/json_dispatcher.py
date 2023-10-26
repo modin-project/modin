@@ -13,13 +13,14 @@
 
 """Module houses `JSONDispatcher` class, that is used for reading `.json` files."""
 
-from modin.core.io.file_dispatcher import OpenFile
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 from io import BytesIO
-import pandas
+
 import numpy as np
+import pandas
 
 from modin.config import NPartitions
+from modin.core.io.file_dispatcher import OpenFile
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class JSONDispatcher(TextFileDispatcher):
