@@ -1600,7 +1600,9 @@ class Series(BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(
+            # Here `query_compiler` is passed instead of `obj` to avoid unnecessary `copy()`
+            # inside `DataFrame` constructor
+            return DataFrame(query_compiler=obj._query_compiler).reset_index(
                 level=level,
                 drop=drop,
                 inplace=inplace,
