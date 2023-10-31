@@ -808,6 +808,9 @@ class PandasDataframe(ClassLogger):
         if axis is None:
 
             def apply_idx_objs(df, idx, cols):
+                # We should make at least one copy to avoid the data modification problem
+                # that may arise when sharing buffers from distributed storage
+                # (zero-copy pickling).
                 return df.set_axis(idx, axis="index").set_axis(
                     cols, axis="columns", copy=False
                 )
