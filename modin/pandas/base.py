@@ -2172,13 +2172,13 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        if fill_method is not lib.no_default or limit is not lib.no_default:
+        if fill_method not in (lib.no_default, None) or limit is not lib.no_default:
             warnings.warn(
-                "The 'fill_method' and 'limit' keywords in "
-                + f"{type(self).__name__}.pct_change are deprecated and will be "
-                + "removed in a future version. Call "
-                + f"{'bfill' if fill_method in ('backfill', 'bfill') else 'ffill'} "
-                + "before calling pct_change instead.",
+                "The 'fill_method' keyword being not None and the 'limit' keyword in "
+                + f"{type(self).__name__}.pct_change are deprecated and will be removed "
+                + "in a future version. Either fill in any non-leading NA values prior "
+                + "to calling pct_change or specify 'fill_method=None' to not fill NA "
+                + "values.",
                 FutureWarning,
             )
         if fill_method is lib.no_default:

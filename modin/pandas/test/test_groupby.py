@@ -77,7 +77,8 @@ pytestmark = [
         "ignore:DataFrameGroupBy.pct_change with axis=1 is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated:FutureWarning"
+        "ignore:The 'fill_method' keyword being not None and the 'limit' keyword "
+        + "in (DataFrame|DataFrameGroupBy).pct_change are deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
         "ignore:DataFrameGroupBy.shift with axis=1 is deprecated:FutureWarning"
@@ -3011,14 +3012,19 @@ def test_groupby_pct_change_parameters_warning():
     modin_groupby = modin_df.groupby(by="col1")
     pandas_groupby = pandas_df.groupby(by="col1")
 
+    match_string = (
+        "The 'fill_method' keyword being not None and the 'limit' keyword "
+        + "in (DataFrame|DataFrameGroupBy).pct_change are deprecated"
+    )
+
     with pytest.warns(
         FutureWarning,
-        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+        match=match_string,
     ):
         modin_groupby.pct_change(fill_method="bfill", limit=1)
     with pytest.warns(
         FutureWarning,
-        match="The 'fill_method' and 'limit' keywords in (DataFrame|DataFrameGroupBy).pct_change are deprecated",
+        match=match_string,
     ):
         pandas_groupby.pct_change(fill_method="bfill", limit=1)
 
