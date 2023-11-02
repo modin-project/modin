@@ -2058,6 +2058,7 @@ class PandasDataframe(ClassLogger):
         func: Callable,
         dtypes: Optional[str] = None,
         new_columns: Optional[pandas.Index] = None,
+        lazy=False,
     ) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
@@ -2073,13 +2074,17 @@ class PandasDataframe(ClassLogger):
         new_columns : pandas.Index, optional
             New column labels of the result, its length has to be identical
             to the older columns. If not specified, old column labels are preserved.
+        lazy : bool, default: False
+            Perform the function lazily.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
         """
-        new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
+        mgr_cls = self._partition_mgr_cls
+        map_func = mgr_cls.lazy_map_partitions if lazy else mgr_cls.map_partitions
+        new_partitions = map_func(self._partitions, func)
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns
