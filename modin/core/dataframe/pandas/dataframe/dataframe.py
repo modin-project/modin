@@ -1548,7 +1548,7 @@ class PandasDataframe(ClassLogger):
                 0, self._partitions, astype_builder, keep_partitioning=True
             )
         else:
-            new_frame = self._partition_mgr_cls.map_partitions(
+            new_frame = self._partition_mgr_cls.lazy_map_partitions(
                 self._partitions, astype_builder
             )
         return self.__constructor__(
