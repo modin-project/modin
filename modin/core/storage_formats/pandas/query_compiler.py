@@ -2535,6 +2535,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if not numeric_only
             else None,
             dtypes=np.float64,
+            sync_labels=False,
         )
         return self.__constructor__(new_modin_frame)
 
