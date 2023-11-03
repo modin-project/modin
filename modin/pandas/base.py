@@ -405,7 +405,7 @@ class BasePandasDataset(ClassLogger):
             [self._validate_function(fn, on_invalid) for fn in func.values()]
             return
             # We also could validate this, but it may be quite expensive for lazy-frames
-            # if not all(idx in self.axes[axis] for idx in func.keys()):
+            # if not all(idx in self.get_axis(axis) for idx in func.keys()):
             #     error_raiser("Invalid dict keys", KeyError)
 
         if not is_list_like(func):
@@ -2466,7 +2466,7 @@ class BasePandasDataset(ClassLogger):
         Rearrange index levels using input order.
         """
         axis = self._get_axis_number(axis)
-        new_labels = self.axes[axis].reorder_levels(order)
+        new_labels = self._query_compiler.get_axis(axis).reorder_levels(order)
         return self.set_axis(new_labels, axis=axis)
 
     def resample(
@@ -2727,7 +2727,7 @@ class BasePandasDataset(ClassLogger):
             # Index of the weights Series should correspond to the index of the
             # Dataframe in order to sample
             if isinstance(weights, BasePandasDataset):
-                weights = weights.reindex(self.axes[axis])
+                weights = weights.reindex(self._query_compiler.get_axis(axis))
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
             if isinstance(weights, str):
@@ -3509,15 +3509,15 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         if (
-            not self.axes[axis].is_monotonic_increasing
-            and not self.axes[axis].is_monotonic_decreasing
+            not self._query_compiler.get_axis(axis).is_monotonic_increasing
+            and not self._query_compiler.get_axis(axis).is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
 
         if before is not None and after is not None and before > after:
             raise ValueError(f"Truncate: {after} must be after {before}")
 
-        s = slice(*self.axes[axis].slice_locs(before, after))
+        s = slice(*self._query_compiler.get_axis(axis).slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
 

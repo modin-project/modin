@@ -516,7 +516,10 @@ class DataFrame(BasePandasDataset):
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
                     or (isinstance(o, pandas.Grouper) and o.key in self)
-                    or (is_list_like(o) and len(o) == len(self.axes[axis]))
+                    or (
+                        is_list_like(o)
+                        and len(o) == len(self._query_compiler.get_axis(axis))
+                    )
                 )
                 for o in by
             ):
@@ -546,7 +549,7 @@ class DataFrame(BasePandasDataset):
 
                 drop = True
             else:
-                mismatch = len(by) != len(self.axes[axis])
+                mismatch = len(by) != len(self._query_compiler.get_axis(axis))
                 if mismatch and all(
                     hashable(obj)
                     and (
