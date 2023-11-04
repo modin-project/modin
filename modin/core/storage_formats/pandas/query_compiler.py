@@ -3637,7 +3637,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. FIXME: We apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.
-        if len(self.columns) == 0 or len(self.index) == 0:
+        if len(self.columns) == 0 or sum(self._modin_frame.row_lengths) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
@@ -3832,7 +3832,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # Higher API level won't pass empty data here unless the frame has delayed
         # computations. So we apparently lose some laziness here (due to index access)
         # because of the inability to process empty groupby natively.
-        if len(self.columns) == 0 or len(self.index) == 0:
+        if len(self.columns) == 0 or sum(self._modin_frame.row_lengths) == 0:
             return super().groupby_agg(
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
