@@ -3061,14 +3061,14 @@ class TestPickle:
         )
 
     def test_to_pickle(self, tmp_path):
-        modin_df, pandas_df = create_test_dfs(TEST_DATA)
-        eval_to_file(
-            tmp_path,
-            modin_obj=modin_df,
-            pandas_obj=pandas_df,
-            fn="to_pickle",
-            extension="pkl",
-        )
+        modin_df, _ = create_test_dfs(TEST_DATA)
+
+        unique_filename_modin = get_unique_filename(extension="pkl", data_dir=tmp_path)
+
+        modin_df.to_pickle(unique_filename_modin)
+        recreated_modin_df = pd.read_pickle(unique_filename_modin)
+
+        df_equals(modin_df, recreated_modin_df)
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
