@@ -137,7 +137,10 @@ class Series(BasePandasDataset):
                     )
                 )
             )._query_compiler
-        self._query_compiler = query_compiler.columnarize()
+        if query_compiler._columnarize_if_needed:
+            self._query_compiler = query_compiler.columnarize()
+        else:
+            self._query_compiler = query_compiler
         if name is not None:
             self.name = name
 
