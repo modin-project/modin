@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import contextlib
-import glob
 import json
 
 import numpy as np
@@ -26,7 +25,6 @@ from modin.pandas.test.utils import (
     df_equals,
     eval_general,
     parse_dates_values_by_id,
-    teardown_test_files,
     test_data,
     time_parsing_csv_path,
 )
@@ -41,7 +39,7 @@ from modin.utils import try_cast_to_pandas
 def test_from_sql_distributed(tmp_path, make_sql_connection):
     filename = "test_from_sql_distributed.db"
     table = "test_from_sql_distributed"
-    conn = make_sql_connection(tmp_path / filename, table)
+    conn = make_sql_connection(str(tmp_path / filename), table)
     query = "select * from {0}".format(table)
 
     pandas_df = pandas.read_sql(query, conn)
@@ -73,7 +71,7 @@ def test_from_sql_distributed(tmp_path, make_sql_connection):
 def test_from_sql_defaults(tmp_path, make_sql_connection):
     filename = "test_from_sql_distributed.db"
     table = "test_from_sql_distributed"
-    conn = make_sql_connection(tmp_path / filename, table)
+    conn = make_sql_connection(str(tmp_path / filename), table)
     query = "select * from {0}".format(table)
 
     pandas_df = pandas.read_sql(query, conn)
@@ -134,8 +132,8 @@ class TestCsvGlob:
                     storage_options={"anon": True},
                 )
 
-    def test_read_csv_glob_4373(self):
-        columns, filename = ["col0"], "1x1.csv"
+    def test_read_csv_glob_4373(self, tmp_path):
+        columns, filename = ["col0"], str(tmp_path / "1x1.csv")
         df = pd.DataFrame([[1]], columns=columns)
         with (
             warns_that_defaulting_to_pandas()
@@ -203,9 +201,6 @@ def test_read_multiple_csv_cloud_store(path):
     )
 
 
-test_default_to_pickle_filename = "test_default_to_pickle.pkl"
-
-
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
@@ -245,9 +240,9 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
 )
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
-    "filename", [test_default_to_pickle_filename, "test_to_pickle*.pkl"]
+    "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
 )
-def test_distributed_pickling(filename, compression):
+def test_distributed_pickling(tmp_path, filename, compression):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
@@ -257,15 +252,14 @@ def test_distributed_pickling(filename, compression):
 
     with (
         warns_that_defaulting_to_pandas()
-        if filename_param == test_default_to_pickle_filename
+        if filename_param == "test_default_to_pickle.pkl"
         else contextlib.nullcontext()
     ):
-        df.to_pickle_distributed(filename, compression=compression)
-        pickled_df = pd.read_pickle_distributed(filename, compression=compression)
+        df.to_pickle_distributed(str(tmp_path / filename), compression=compression)
+        pickled_df = pd.read_pickle_distributed(
+            str(tmp_path / filename), compression=compression
+        )
     df_equals(pickled_df, df)
-
-    pickle_files = glob.glob(filename)
-    teardown_test_files(pickle_files)
 
 
 @pytest.mark.skipif(
