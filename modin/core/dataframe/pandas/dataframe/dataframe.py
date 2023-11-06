@@ -741,15 +741,12 @@ class PandasDataframe(ClassLogger):
             Trigger the computations for partition sizes and labels if they're not done already.
         """
         if not compute_metadata and (
-            not self.has_materialized_index
-            or not self.has_materialized_columns
-            or self._row_lengths_cache is None
-            or self._column_widths_cache is None
+            self._row_lengths_cache is None or self._column_widths_cache is None
         ):
             # do not trigger the computations
             return
 
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+        if sum(self.column_widths) == 0 or sum(self.row_lengths) == 0:
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
             # is empty.
