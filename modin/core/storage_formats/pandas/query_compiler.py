@@ -503,8 +503,38 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
-                return pandas.merge(left, right_pandas, **kwargs)
+            def should_keep_index(left, right):
+                keep_index = False
+                if left_on is not None and right_on is not None:
+                    keep_index = any(
+                        o in left.index.names
+                        and o in right_on
+                        and o in right.index.names
+                        for o in left_on
+                    )
+                elif on is not None:
+                    keep_index = any(
+                        o in left.index.names and o in right.index.names for o in on
+                    )
+                return keep_index
+
+            def map_func(
+                left, *axis_lengths, right=right_pandas, kwargs=kwargs, **service_kwargs
+            ):  # pragma: no cover
+                df = pandas.merge(left, right, **kwargs)
+
+                if kwargs["how"] == "left":
+                    partition_idx = service_kwargs["partition_idx"]
+                    if len(axis_lengths):
+                        if not should_keep_index(left, right):
+                            # Doesn't work for "inner" case, since the partition sizes of the
+                            # left dataframe may change
+                            start = sum(axis_lengths[:partition_idx])
+                            stop = sum(axis_lengths[: partition_idx + 1])
+
+                            df.index = pandas.RangeIndex(start, stop)
+
+                return df
 
             # Want to ensure that these are python lists
             if left_on is not None and right_on is not None:
@@ -552,6 +582,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.apply_full_axis(
                     axis=1,
                     func=map_func,
+                    enumerate_partitions=how == "left",
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -561,6 +592,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_columns=new_columns,
                     dtypes=new_dtypes,
                     sync_labels=False,
+                    pass_axis_lengths_to_partitions=how == "left",
                 )
             )
 
@@ -570,18 +602,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # materialized quite often compared to the indexes.
             keep_index = False
             if self._modin_frame.has_materialized_index:
-                if left_on is not None and right_on is not None:
-                    keep_index = any(
-                        o in self.index.names
-                        and o in right_on
-                        and o in right_pandas.index.names
-                        for o in left_on
-                    )
-                elif on is not None:
-                    keep_index = any(
-                        o in self.index.names and o in right_pandas.index.names
-                        for o in on
-                    )
+                keep_index = should_keep_index(self, right_pandas)
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
@@ -611,7 +632,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         else new_self.sort_rows_by_column_values(on)
                     )
 
-            return new_self if keep_index else new_self.reset_index(drop=True)
+            return (
+                new_self.reset_index(drop=True)
+                if not keep_index and (kwargs["how"] != "left" or sort)
+                else new_self
+            )
         else:
             return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
 
