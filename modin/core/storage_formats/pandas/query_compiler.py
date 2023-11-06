@@ -578,7 +578,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self._modin_frame.apply_full_axis(
                     axis=1,
                     func=map_func,
-                    enumerate_partitions=True if how == "left" else False,
+                    enumerate_partitions=how=="left",
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -588,7 +588,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_columns=new_columns,
                     dtypes=new_dtypes,
                     sync_labels=False,
-                    pass_axis_lengths_to_partitions=True if how == "left" else False,
+                    pass_axis_lengths_to_partitions=how=="left",
                 )
             )
 
