@@ -499,7 +499,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
             kwargs["sort"] = False
 
-            def whether_keep_index(left, right):
+            def should_keep_index(left, right):
                 keep_index = False
                 if left_on is not None and right_on is not None:
                     keep_index = any(
@@ -522,7 +522,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if kwargs["how"] == "left":
                     partition_idx = service_kwargs["partition_idx"]
                     if len(axis_lengths):
-                        if not whether_keep_index(left, right):
+                        if not should_keep_index(left, right):
                             # Doesn't work for "inner" case, since the partition sizes of the
                             # left dataframe may change
                             start = sum(axis_lengths[:partition_idx])
@@ -598,7 +598,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # materialized quite often compared to the indexes.
             keep_index = False
             if self._modin_frame.has_materialized_index:
-                keep_index = whether_keep_index(self, right_pandas)
+                keep_index = should_keep_index(self, right_pandas)
             else:
                 # Have to trigger columns materialization. Hope they're already available at this point.
                 if left_on is not None and right_on is not None:
