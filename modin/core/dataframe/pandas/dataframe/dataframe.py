@@ -746,7 +746,14 @@ class PandasDataframe(ClassLogger):
             # do not trigger the computations
             return
 
-        if sum(self.column_widths) == 0 or sum(self.row_lengths) == 0:
+        if (
+            self.has_materialized_index
+            and len(self.index) == 0
+            or self.has_materialized_columns
+            and len(self.columns) == 0
+            or sum(self.row_lengths) == 0
+            or sum(self.column_widths) == 0
+        ):
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
             # is empty.
