@@ -132,7 +132,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         ideal_num_new_partitions: int,
         **kwargs: dict,
     ):
-        self.frame_len = sum(modin_frame.row_lengths)
+        self.frame_len = len(modin_frame)
         self.ideal_num_new_partitions = ideal_num_new_partitions
         self.columns = columns if is_list_like(columns) else [columns]
         self.ascending = ascending

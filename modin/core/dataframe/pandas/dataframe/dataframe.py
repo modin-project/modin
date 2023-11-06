@@ -191,6 +191,20 @@ class PandasDataframe(ClassLogger):
                 self._row_lengths_cache = []
         return self._row_lengths_cache
 
+    def __len__(self) -> int:
+        """
+        Return length of index axis.
+
+        Returns
+        -------
+        int
+        """
+        if self.has_materialized_index:
+            _len = len(self.index)
+        else:
+            _len = sum(self.row_lengths)
+        return _len
+
     @property
     def column_widths(self):
         """
@@ -2421,10 +2435,8 @@ class PandasDataframe(ClassLogger):
 
         # don't want to inherit over-partitioning so doing this 'min' check
         ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
-        m = sum(self.row_lengths) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * sum(self.row_lengths)
-        )
+        m = len(self) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(self))
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
@@ -2435,13 +2447,8 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(
-                sum(self.row_lengths) / MinPartitionSize.get()
-            )
-            if (
-                sum(self.row_lengths) < MinPartitionSize.get()
-                or ideal_num_new_partitions < 2
-            ):
+            ideal_num_new_partitions = round(len(self) / MinPartitionSize.get())
+            if len(self) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
