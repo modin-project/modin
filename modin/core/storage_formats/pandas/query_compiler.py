@@ -378,11 +378,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # To NumPy
     def to_numpy(self, **kwargs):
-        arr = self._modin_frame.to_numpy(**kwargs)
-        ErrorMessage.catch_bugs_and_request_email(
-            len(arr) != len(self.index) or len(arr[0]) != len(self.columns)
-        )
-        return arr
+        return self._modin_frame.to_numpy(**kwargs)
 
     # END To NumPy
 

@@ -4068,7 +4068,14 @@ class PandasDataframe(ClassLogger):
         -------
         np.ndarray
         """
-        return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
+        arr = self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
+        ErrorMessage.catch_bugs_and_request_email(
+            self.has_materialized_index
+            and len(arr) != len(self.index)
+            or self.has_materialized_columns
+            and len(arr[0]) != len(self.columns)
+        )
+        return arr
 
     @lazy_metadata_decorator(apply_axis=None, transpose=True)
     def transpose(self):
