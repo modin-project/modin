@@ -329,7 +329,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # copies if we end up modifying something here. We copy all of the metadata
     # to prevent that.
     def copy(self):
-        return self.__constructor__(self._modin_frame.copy())
+        return self.__constructor__(self._modin_frame.copy(), self._shape_hint)
 
     # END Copy
 
