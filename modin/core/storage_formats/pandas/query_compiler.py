@@ -521,7 +521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 if kwargs["how"] == "left":
                     partition_idx = service_kwargs["partition_idx"]
-                    if partition_idx and len(axis_lengths):
+                    if len(axis_lengths):
                         if not keep_index_or_not(left, right):
                             # Doesn't work for "inner" case, since the partition sizes of the
                             # left dataframe may change
