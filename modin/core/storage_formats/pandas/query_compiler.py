@@ -3047,7 +3047,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
-            keep_partitioning=False,
+            keep_partitioning=True,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 
