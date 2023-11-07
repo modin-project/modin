@@ -36,7 +36,7 @@ in the worker process that processes a function (please, refer to `Dask document
 
 Unidist engine
 --------------
-Currently, Modin only supports unidist on MPI backend. There is no mentioned above issue for
+Currently, Modin only supports MPI through unidist. There is no mentioned above issue for
 Modin on ``Unidist`` engine using ``MPI`` backend with ``pandas`` in-memory format
 because ``Unidist`` saves any objects in the MPI worker process that processes a function
 (please, refer to `Unidist documentation`_ for more information).

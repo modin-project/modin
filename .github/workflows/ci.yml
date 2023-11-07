@@ -97,7 +97,6 @@ jobs:
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
-          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
 
   test-internals:
     needs: [lint-flake8, lint-black-isort]

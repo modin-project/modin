@@ -29,7 +29,7 @@ def initialize_unidist():
 
     if unidist_cfg.Backend.get() != "mpi":
         raise RuntimeError(
-            f"Modin only supports unidist on MPI for now, got unidist backend '{unidist_cfg.Backend.get()}'"
+            f"Modin only supports MPI through unidist for now, got unidist backend '{unidist_cfg.Backend.get()}'"
         )
 
     if not unidist.is_initialized():

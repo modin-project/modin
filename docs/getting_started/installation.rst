@@ -30,8 +30,13 @@ Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask<
 
   pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
   pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
-  pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist
-  pip install "modin[all]" # Install all of the above
+  pip install "modin[mpi]" # Install Modin dependencies and MPI to run on MPI through unidist
+  pip install "modin[all]" # Install Ray and Dask
+
+To get Modin on MPI through unidist (as of unidist 0.5.0) fully working
+it is required to have a working MPI implementation installed beforehand.
+Otherwise, installation of ``modin[mpi]`` may fail. Refer to
+`Installing with pip`_ section of the unidist documentation for more details about installation.
 
 Modin will automatically detect which engine you have installed and use that for
 scheduling computation! See below for HDK engine installation.
@@ -65,7 +70,7 @@ storage formats or for different functionalities of Modin. Here is a list of dep
 
 .. code-block:: bash
 
-  pip install "modin[unidist]" # If you want to use the Unidist execution engine
+  pip install "modin[mpi]" # If you want to use MPI through unidist execution engine
 
 Installing on Google Colab
 """""""""""""""""""""""""""
@@ -106,18 +111,18 @@ it is possible to install modin with chosen engine(s) alongside. Current options
 +---------------------------------+---------------------------+-----------------------------+
 | modin-ray                       | Ray_                      |       Linux, Windows        |
 +---------------------------------+---------------------------+-----------------------------+
-| modin-unidist                   | Unidist_                  |   Linux, Windows, MacOS     |
+| modin-mpi                       | MPI_ through unidist_     |   Linux, Windows, MacOS     |
 +---------------------------------+---------------------------+-----------------------------+
 | modin-hdk                       | HDK_                      |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 | modin-all                       | Dask, Ray, Unidist, HDK   |          Linux              |
 +---------------------------------+---------------------------+-----------------------------+
 
-For installing Dask, Ray and Unidist engines into conda environment following command should be used:
+For installing Dask, Ray and MPI through unidist engines into conda environment following command should be used:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask modin-unidist
+  conda install -c conda-forge modin-ray modin-dask modin-mpi
 
 All set of engines could be available in conda environment by specifying:
 
@@ -129,7 +134,10 @@ or explicitly:
 
 .. code-block:: bash
 
-  conda install -c conda-forge modin-ray modin-dask modin-unidist modin-hdk
+  conda install -c conda-forge modin-ray modin-dask modin-mpi modin-hdk
+
+Refer to `Installing with conda`_ section of the unidist documentation
+for more details on how to install a specific MPI implementation to run on.
 
 ``conda`` may be slow installing ``modin-all`` or combitations of execution engines so we currently recommend using libmamba solver for the installation process.
 To do this install it in a base environment:
@@ -171,7 +179,7 @@ also use ``pip``.
 This will install directly from the repo without you having to manually clone it! Please be aware
 that these changes have not made it into a release and may not be completely stable.
 
-If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` or ``modin[unidist]`` instead of ``modin[all]`` in the command above.
+If you would like to install Modin with a specific engine, you can use ``modin[ray]`` or ``modin[dask]`` or ``modin[mpi]`` instead of ``modin[all]`` in the command above.
 
 Windows
 -------
@@ -214,7 +222,10 @@ Once cloned, ``cd`` into the ``modin`` directory and use ``pip`` to install:
 .. _WSL: https://docs.microsoft.com/en-us/windows/wsl/install-win10
 .. _Ray: http://ray.readthedocs.io
 .. _Dask: https://github.com/dask/dask
+.. _MPI: https://www.mpi-forum.org/
 .. _Unidist: https://github.com/modin-project/unidist
+.. _`Installing with pip`: https://unidist.readthedocs.io/en/latest/installation.html#installing-with-pip
+.. _`Installing with conda`: https://unidist.readthedocs.io/en/latest/installation.html#installing-with-conda
 .. _HDK: https://github.com/intel-ai/hdk
 .. _`Intel Distribution of Modin`: https://software.intel.com/content/www/us/en/develop/tools/oneapi/components/distribution-of-modin.html#gs.86stqv
 .. _`Intel Distribution of Modin Getting Started`: https://www.intel.com/content/www/us/en/developer/articles/technical/intel-distribution-of-modin-getting-started-guide.html

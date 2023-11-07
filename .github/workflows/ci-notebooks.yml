@@ -8,6 +8,7 @@ on:
       - setup.cfg
       - setup.py
       - requirements/env_hdk.yml
+      - requirements/env_unidist.yml
 concurrency:
   # Cancel other jobs in the same branch. We don't care whether CI passes
   # on old commits.
@@ -28,12 +29,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
-        if: matrix.execution != 'hdk_on_native'
+        if: matrix.execution != 'hdk_on_native' || matrix.execution != 'pandas_on_unidist'
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/env_hdk.yml
           activate-environment: modin_on_hdk
         if: matrix.execution == 'hdk_on_native'
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: requirements/env_unidist.yml
+          activate-environment: modin_on_unidist
+        if: matrix.execution == 'pandas_on_unidist'
       - name: Cache datasets
         uses: actions/cache@v2
         with:
@@ -43,29 +49,29 @@ jobs:
       # replace modin with . in the tutorial requirements file for `pandas_on_ray` and
       # `pandas_on_dask` since we need Modin built from sources
       - run: sed -i 's/modin/./g' examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
-        if: matrix.execution != 'hdk_on_native'
+        if: matrix.execution != 'hdk_on_native' || matrix.execution != 'pandas_on_unidist'
       # install dependencies required for notebooks execution for `pandas_on_ray` and `pandas_on_dask`
       # Override modin-spreadsheet install for now
       - run: |
           pip install -r examples/tutorial/jupyter/execution/${{ matrix.execution }}/requirements.txt
           pip install git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-        if: matrix.execution != 'hdk_on_native'
-      # Build Modin from sources for `hdk_on_native`
+        if: matrix.execution != 'hdk_on_native' || matrix.execution != 'pandas_on_unidist'
+      # Build Modin from sources for `hdk_on_native` and `pandas_on_unidist`
       - run: pip install -e .
-        if: matrix.execution == 'hdk_on_native'
+        if: matrix.execution == 'hdk_on_native' || matrix.execution == 'pandas_on_unidist'
       # install test dependencies
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
       - run: pip install pytest pytest-cov black flake8 flake8-print flake8-no-implicit-concat
-        if: matrix.execution != 'hdk_on_native'
+        if: matrix.execution != 'hdk_on_native' || matrix.execution != 'pandas_on_unidist'
       - run: pip install flake8-print jupyter nbformat nbconvert
-        if: matrix.execution == 'hdk_on_native'
+        if: matrix.execution == 'hdk_on_native' || matrix.execution == 'pandas_on_unidist'
       - run: pip list
-        if: matrix.execution != 'hdk_on_native'
+        if: matrix.execution != 'hdk_on_native' || matrix.execution != 'pandas_on_unidist'
       - run: |
           conda info
           conda list
-        if: matrix.execution == 'hdk_on_native'
+        if: matrix.execution == 'hdk_on_native' || matrix.execution == 'pandas_on_unidist'
       # setup kernel configuration for `pandas_on_unidist` execution with mpi backend
       - run: python examples/tutorial/jupyter/execution/${{ matrix.execution }}/setup_kernel.py
         if: matrix.execution == 'pandas_on_unidist'
