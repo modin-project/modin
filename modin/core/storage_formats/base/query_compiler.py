@@ -1242,11 +1242,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         if self._shape_hint == "column":
             return self
 
+        result = self
         if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
-            return self.transpose()
-        return self
+            result = self.transpose()
+        result._shape_hint = "column"
+        return result
 
     def is_series_like(self):
         """
