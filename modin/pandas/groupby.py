@@ -58,7 +58,6 @@ _DEFAULT_BEHAVIOUR = {
     "_axis",
     "_by",
     "_check_index",
-    "_check_index_name",
     "_columns",
     "_compute_index_grouped",
     "_default_to_pandas",
@@ -487,14 +486,12 @@ class DataFrameGroupBy(ClassLogger):
             else:
                 result = result.sort_index()
         else:
-            result = self._check_index_name(
-                self._wrap_aggregation(
-                    type(self._query_compiler).groupby_shift,
-                    numeric_only=False,
-                    agg_kwargs=dict(
-                        periods=periods, freq=freq, axis=axis, fill_value=fill_value
-                    ),
-                )
+            result = self._wrap_aggregation(
+                type(self._query_compiler).groupby_shift,
+                numeric_only=False,
+                agg_kwargs=dict(
+                    periods=periods, freq=freq, axis=axis, fill_value=fill_value
+                ),
             )
         return result
 
@@ -528,12 +525,10 @@ class DataFrameGroupBy(ClassLogger):
             self._deprecate_axis(axis, "cumsum")
         else:
             axis = 0
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_cumsum,
-                agg_args=args,
-                agg_kwargs=dict(axis=axis, **kwargs),
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cumsum,
+            agg_args=args,
+            agg_kwargs=dict(axis=axis, **kwargs),
         )
 
     _indices_cache = lib.no_default
@@ -606,17 +601,15 @@ class DataFrameGroupBy(ClassLogger):
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_pct_change,
-                agg_kwargs=dict(
-                    periods=periods,
-                    fill_method=fill_method,
-                    limit=limit,
-                    freq=freq,
-                    axis=axis,
-                ),
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_pct_change,
+            agg_kwargs=dict(
+                periods=periods,
+                fill_method=fill_method,
+                limit=limit,
+                freq=freq,
+                axis=axis,
+            ),
         )
 
     def filter(self, func, dropna=True, *args, **kwargs):
@@ -646,12 +639,10 @@ class DataFrameGroupBy(ClassLogger):
             self._deprecate_axis(axis, "cummax")
         else:
             axis = 0
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_cummax,
-                agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=numeric_only,
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cummax,
+            agg_kwargs=dict(axis=axis, **kwargs),
+            numeric_only=numeric_only,
         )
 
     def apply(self, func, *args, **kwargs):
@@ -831,12 +822,10 @@ class DataFrameGroupBy(ClassLogger):
             self._deprecate_axis(axis, "cummin")
         else:
             axis = 0
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_cummin,
-                agg_kwargs=dict(axis=axis, **kwargs),
-                numeric_only=numeric_only,
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cummin,
+            agg_kwargs=dict(axis=axis, **kwargs),
+            numeric_only=numeric_only,
         )
 
     def bfill(self, limit=None):
@@ -1034,8 +1023,6 @@ class DataFrameGroupBy(ClassLogger):
             ),
             numeric_only=False,
         )
-        # pandas does not name the index on rank
-        result._query_compiler.set_index_name(None)
         return result
 
     @property
@@ -1218,12 +1205,10 @@ class DataFrameGroupBy(ClassLogger):
             self._deprecate_axis(axis, "cumprod")
         else:
             axis = 0
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_cumprod,
-                agg_args=args,
-                agg_kwargs=dict(axis=axis, **kwargs),
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_cumprod,
+            agg_args=args,
+            agg_kwargs=dict(axis=axis, **kwargs),
         )
 
     def __iter__(self):
@@ -1244,15 +1229,13 @@ class DataFrameGroupBy(ClassLogger):
                 )
             )
 
-        return self._check_index_name(
-            self._wrap_aggregation(
-                qc_method=type(self._query_compiler).groupby_agg,
-                numeric_only=False,
-                agg_func=func,
-                agg_args=args,
-                agg_kwargs=kwargs,
-                how="transform",
-            )
+        return self._wrap_aggregation(
+            qc_method=type(self._query_compiler).groupby_agg,
+            numeric_only=False,
+            agg_func=func,
+            agg_args=args,
+            agg_kwargs=kwargs,
+            how="transform",
         )
 
     def corr(self, method="pearson", min_periods=1, numeric_only=False):
@@ -1297,19 +1280,17 @@ class DataFrameGroupBy(ClassLogger):
             drop=self._drop,
             **new_groupby_kwargs,
         )
-        return work_object._check_index_name(
-            work_object._wrap_aggregation(
-                type(self._query_compiler).groupby_fillna,
-                agg_kwargs=dict(
-                    value=value,
-                    method=method,
-                    axis=axis,
-                    inplace=inplace,
-                    limit=limit,
-                    downcast=downcast,
-                ),
-                numeric_only=False,
-            )
+        return work_object._wrap_aggregation(
+            type(self._query_compiler).groupby_fillna,
+            agg_kwargs=dict(
+                value=value,
+                method=method,
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                downcast=downcast,
+            ),
+            numeric_only=False,
         )
 
     def count(self):
@@ -1437,14 +1418,12 @@ class DataFrameGroupBy(ClassLogger):
                 ):
                     raise TypeError(f"unsupported operand type for -: got {dtype}")
 
-        return self._check_index_name(
-            self._wrap_aggregation(
-                type(self._query_compiler).groupby_diff,
-                agg_kwargs=dict(
-                    periods=periods,
-                    axis=axis,
-                ),
-            )
+        return self._wrap_aggregation(
+            type(self._query_compiler).groupby_diff,
+            agg_kwargs=dict(
+                periods=periods,
+                axis=axis,
+            ),
         )
 
     def take(self, indices, axis=lib.no_default, **kwargs):
@@ -1695,24 +1674,6 @@ class DataFrameGroupBy(ClassLogger):
             # resets index, but Modin doesn't do that. More details are in https://github.com/modin-project/modin/issues/3716.
             result.reset_index(drop=True, inplace=True)
 
-        return result
-
-    def _check_index_name(self, result):
-        """
-        Check the result of groupby aggregation on the need of resetting index name.
-
-        Parameters
-        ----------
-        result : DataFrame
-            Group by aggregation result.
-
-        Returns
-        -------
-        DataFrame
-        """
-        if self._by is not None:
-            # pandas does not name the index for this case
-            result._query_compiler.set_index_name(None)
         return result
 
     def _default_to_pandas(self, f, *args, **kwargs):
