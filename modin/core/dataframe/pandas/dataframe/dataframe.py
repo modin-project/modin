@@ -4121,6 +4121,7 @@ class PandasDataframe(ClassLogger):
             dtypes=new_dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def finalize(self):
         """
         Perform all deferred calls on partitions.
