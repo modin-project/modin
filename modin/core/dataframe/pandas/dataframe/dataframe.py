@@ -223,18 +223,6 @@ class PandasDataframe(ClassLogger):
                 self._column_widths_cache = []
         return self._column_widths_cache
 
-    @property
-    def _axes_lengths(self):
-        """
-        Get a pair of row partitions lengths and column partitions widths.
-
-        Returns
-        -------
-        list
-            The pair of row partitions lengths and column partitions widths.
-        """
-        return [self.row_lengths, self.column_widths]
-
     def _set_axis_lengths_cache(self, value, axis=0):
         """
         Set the row/column lengths cache for the specified axis.
@@ -1973,7 +1961,7 @@ class PandasDataframe(ClassLogger):
         new_axes[axis ^ 1] = self.get_axis(axis ^ 1)
 
         new_axes_lengths[axis] = [1]
-        new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
+        new_axes_lengths[axis ^ 1] = self._get_axis_lengths(axis ^ 1)
 
         if dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
@@ -3443,7 +3431,7 @@ class PandasDataframe(ClassLogger):
             reindexed_base = base_frame._partitions
             base_lengths = base_frame.column_widths if axis else base_frame.row_lengths
 
-        others_lengths = [o._axes_lengths[axis] for o in other_frames]
+        others_lengths = [o._get_axis_lengths(axis) for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
         do_reindex_others = [
