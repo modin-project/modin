@@ -216,8 +216,8 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the `Dask Futures`_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Dask </flow/modin/core/execution/dask/implementations/pandas_on_dask/index>` page.
-- :doc:`pandas on Unidist </development/using_pandas_on_unidist>`
-    - Uses the Unidist_ execution framework.
+- :doc:`pandas on MPI </development/using_pandas_on_mpi>`
+    - Uses MPI_ through the Unidist_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`pandas on Unidist </flow/modin/core/execution/unidist/implementations/pandas_on_unidist/index>` page.
 - :doc:`pandas on Python </development/using_pandas_on_python>`
@@ -228,8 +228,8 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses the Ray_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Ray </flow/modin/experimental/core/execution/ray/implementations/pandas_on_ray/index>` page.
-- pandas on Unidist (experimental)
-    - Uses the Unidist_ execution framework.
+- pandas on MPI (experimental)
+    - Uses MPI_ through the Unidist_ execution framework.
     - The storage format is `pandas` and the in-memory partition type is a pandas DataFrame.
     - For more information on the execution path, see the :doc:`experimental pandas on Unidist </flow/modin/experimental/core/execution/unidist/implementations/pandas_on_unidist/index>` page.
 - pandas on Dask (experimental)
@@ -375,6 +375,7 @@ details. The documentation covers most modules, with more docs being added every
 .. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
 .. _Unidist: https://github.com/modin-project/unidist
+.. _MPI: https://www.mpi-forum.org/
 .. _code: https://github.com/modin-project/modin/blob/master/modin/core/dataframe
 .. _Dask: https://github.com/dask/dask
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html

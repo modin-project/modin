@@ -32,6 +32,9 @@ jobs:
           architecture: "x64"
           cache: "pip"
           cache-dependency-path: '**/requirements-doc.txt'
+      # Install a working MPI implementation so mpi4py can link to it
+      - name: Install MPICH
+        run: sudo apt install libmpich-dev
       - run: pip install -r docs/requirements-doc.txt
       - run: cd docs && sphinx-build -T -E -W -b html . build
 
