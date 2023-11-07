@@ -191,6 +191,20 @@ class PandasDataframe(ClassLogger):
                 self._row_lengths_cache = []
         return self._row_lengths_cache
 
+    def __len__(self) -> int:
+        """
+        Return length of index axis.
+
+        Returns
+        -------
+        int
+        """
+        if self.has_materialized_index:
+            _len = len(self.index)
+        else:
+            _len = sum(self.row_lengths)
+        return _len
+
     @property
     def column_widths(self):
         """
@@ -1071,7 +1085,7 @@ class PandasDataframe(ClassLogger):
         indexers = []
         for axis, indexer in enumerate((row_positions, col_positions)):
             if is_range_like(indexer):
-                if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
+                if indexer.step == 1 and len(indexer) == len(self.get_axis(axis)):
                     # By this function semantics, `None` indexer is a full-axis access
                     indexer = None
                 elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
@@ -1664,12 +1678,12 @@ class PandasDataframe(ClassLogger):
         if isinstance(indices, slice) and (
             indices.step is not None and indices.step != 1
         ):
-            indices = range(*indices.indices(len(self.axes[axis])))
+            indices = range(*indices.indices(len(self.get_axis(axis))))
         # Fasttrack slices
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            if is_full_grab_slice(indices, sequence_len=len(self.axes[axis])):
+            if is_full_grab_slice(indices, sequence_len=len(self.get_axis(axis))):
                 return OrderedDict(
                     zip(
                         range(self._partitions.shape[axis]),
@@ -1688,7 +1702,7 @@ class PandasDataframe(ClassLogger):
                 )
                 dict_of_slices.update({last_part: slice(last_idx[0])})
                 return dict_of_slices
-            elif indices.stop is None or indices.stop >= len(self.axes[axis]):
+            elif indices.stop is None or indices.stop >= len(self.get_axis(axis)):
                 first_part, first_idx = list(
                     self._get_dict_of_block_index(axis, [indices.start]).items()
                 )[0]
@@ -1745,7 +1759,7 @@ class PandasDataframe(ClassLogger):
                 if isinstance(indices, np.ndarray)
                 else np.array(indices, dtype=np.int64)
             )
-            indices[negative_mask] = indices[negative_mask] % len(self.axes[axis])
+            indices[negative_mask] = indices[negative_mask] % len(self.get_axis(axis))
         # If the `indices` array was modified because of the negative indices conversion
         # then the original order was broken and so we have to sort anyway:
         if has_negative or not are_indices_sorted:
@@ -1956,7 +1970,7 @@ class PandasDataframe(ClassLogger):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
-        new_axes[axis ^ 1] = self.axes[axis ^ 1]
+        new_axes[axis ^ 1] = self.get_axis(axis ^ 1)
 
         new_axes_lengths[axis] = [1]
         new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
@@ -2425,10 +2439,8 @@ class PandasDataframe(ClassLogger):
 
         # don't want to inherit over-partitioning so doing this 'min' check
         ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
-        m = len(self.index) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * len(self.index)
-        )
+        m = len(self) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(self))
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
@@ -2439,8 +2451,8 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
-            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(len(self) / MinPartitionSize.get())
+            if len(self) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
@@ -2545,7 +2557,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+        if len(self.get_axis(0)) == 0 or len(self.get_axis(1)) == 0:
             return self.copy()
 
         axis = Axis(axis)
@@ -2984,7 +2996,7 @@ class PandasDataframe(ClassLogger):
                 axis,
                 other,
                 join_type,
-                sort=not self.axes[axis].equals(other.axes[axis]),
+                sort=not self.get_axis(axis).equals(other.get_axis(axis)),
             )
             # unwrap list returned by `copartition`.
             right_parts = right_parts[0]
@@ -3125,7 +3137,7 @@ class PandasDataframe(ClassLogger):
 
         if other is None:
             if apply_indices is None:
-                apply_indices = self.axes[axis][numeric_indices]
+                apply_indices = self.get_axis(axis)[numeric_indices]
             return self.apply_select_indices(
                 axis=axis,
                 func=func,
@@ -3225,7 +3237,7 @@ class PandasDataframe(ClassLogger):
             other = [o._partitions for o in other] if len(other) else None
 
         if apply_indices is not None:
-            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
             apply_indices = self._get_dict_of_block_index(
                 axis ^ 1, numeric_indices
             ).keys()
@@ -3381,8 +3393,8 @@ class PandasDataframe(ClassLogger):
         if isinstance(other, type(self)):
             other = [other]
 
-        self_index = self.axes[axis]
-        others_index = [o.axes[axis] for o in other]
+        self_index = self.get_axis(axis)
+        others_index = [o.get_axis(axis) for o in other]
         joined_index, make_reindexer = self._join_index_objects(
             axis, [self_index] + others_index, how, sort
         )
@@ -3408,7 +3420,7 @@ class PandasDataframe(ClassLogger):
 
         # Picking first non-empty frame
         base_frame = frames[non_empty_frames_idx[0]]
-        base_index = base_frame.axes[axis]
+        base_index = base_frame.get_axis(axis)
 
         # define conditions for reindexing and repartitioning `self` frame
         do_reindex_base = not base_index.equals(joined_index)
@@ -3435,7 +3447,7 @@ class PandasDataframe(ClassLogger):
 
         # define conditions for reindexing and repartitioning `other` frames
         do_reindex_others = [
-            not o.axes[axis].equals(joined_index) for o in other_frames
+            not o.get_axis(axis).equals(joined_index) for o in other_frames
         ]
 
         do_repartition_others = [None] * len(other_frames)
@@ -3916,7 +3928,7 @@ class PandasDataframe(ClassLogger):
             self._propagate_index_objs(axis=0)
 
         if apply_indices is not None:
-            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
             apply_indices = list(
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
