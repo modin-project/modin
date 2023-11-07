@@ -28,7 +28,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import Engine, IsRayCluster, NPartitions
+from modin.config import IsRayCluster, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -1504,7 +1504,6 @@ class PandasDataframe(ClassLogger):
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
-        has_categorical_cast = False
         for column, dtype in col_dtypes.items():
             if not is_dtype_equal(dtype, self_dtypes[column]):
                 if new_dtypes is None:
@@ -1529,7 +1528,7 @@ class PandasDataframe(ClassLogger):
                             columns=[column]
                         )[column],
                     )
-                    use_full_axis_cast = has_categorical_cast = True
+                    use_full_axis_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
@@ -1538,14 +1537,7 @@ class PandasDataframe(ClassLogger):
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
-            # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
-            df_for_astype = (
-                df.copy(deep=True)
-                if Engine.get() == "Ray" and has_categorical_cast
-                else df
-            )
-            return df_for_astype.astype(
+            return df.astype(
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
