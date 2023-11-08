@@ -2,7 +2,7 @@
 name: Feature request
 about: Request a new API or feature implementation
 title: ''
-labels: 'new feature/request :speech_balloon:'
+labels: 'new feature/request 💬, Triage 🩹'
 assignees: ''
 
 ---

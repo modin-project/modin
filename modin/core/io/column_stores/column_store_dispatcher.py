@@ -22,9 +22,9 @@ used as base class for dipatchers of specific columnar store formats.
 import numpy as np
 import pandas
 
-from modin.core.storage_formats.pandas.utils import compute_chunksize
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher
-from modin.config import NPartitions
+from modin.core.storage_formats.pandas.utils import compute_chunksize
 
 
 class ColumnStoreDispatcher(FileDispatcher):
@@ -57,12 +57,14 @@ class ColumnStoreDispatcher(FileDispatcher):
         return np.array(
             [
                 cls.deploy(
-                    cls.parse,
+                    func=cls.parse,
+                    f_kwargs={
+                        "fname": fname,
+                        "columns": cols,
+                        "num_splits": NPartitions.get(),
+                        **kwargs,
+                    },
                     num_returns=NPartitions.get() + 2,
-                    fname=fname,
-                    columns=cols,
-                    num_splits=NPartitions.get(),
-                    **kwargs,
                 )
                 for cols in col_partitions
             ]
@@ -134,21 +136,25 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             row_lengths = [
                 index_chunksize
-                if i != num_partitions - 1
-                else index_len - (index_chunksize * (num_partitions - 1))
+                if (i + 1) * index_chunksize < index_len
+                else max(0, index_len - (index_chunksize * i))
                 for i in range(num_partitions)
             ]
         return index, row_lengths
 
     @classmethod
-    def build_columns(cls, columns):
+    def build_columns(cls, columns, num_row_parts=None):
         """
-        Split columns into chunks, that should be read be workers.
+        Split columns into chunks that should be read by workers.
 
         Parameters
         ----------
         columns : list
             List of columns that should be read from file.
+        num_row_parts : int, optional
+            Number of parts the dataset is split into. This parameter is used
+            to align the column partitioning with it so we won't end up with an
+            over partitioned frame.
 
         Returns
         -------
@@ -161,11 +167,17 @@ class ColumnStoreDispatcher(FileDispatcher):
         columns_length = len(columns)
         if columns_length == 0:
             return [], []
-        num_partitions = NPartitions.get()
-        column_splits = (
-            columns_length // num_partitions
-            if columns_length % num_partitions == 0
-            else columns_length // num_partitions + 1
+        if num_row_parts is None:
+            # in column formats we mostly read columns in parallel rather than rows,
+            # so we try to chunk columns as much as possible
+            min_block_size = 1
+        else:
+            num_remaining_parts = round(NPartitions.get() / num_row_parts)
+            min_block_size = min(
+                columns_length // num_remaining_parts, MinPartitionSize.get()
+            )
+        column_splits = compute_chunksize(
+            columns_length, NPartitions.get(), max(1, min_block_size)
         )
         col_partitions = [
             columns[i : i + column_splits]

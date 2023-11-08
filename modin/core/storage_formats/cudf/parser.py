@@ -11,19 +11,20 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import warnings
 from collections import OrderedDict
 from io import BytesIO
+
 import numpy as np
 import pandas
 from pandas.core.dtypes.cast import find_common_type
 from pandas.core.dtypes.concat import union_categoricals
 from pandas.io.common import infer_compression
-import warnings
 
-from modin.core.io.file_dispatcher import OpenFile
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
     GPU_MANAGERS,
 )
+from modin.core.io.file_dispatcher import OpenFile
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.error_message import ErrorMessage
 
@@ -70,8 +71,8 @@ class cuDFParser(object):
         )
 
     @classmethod
-    def single_worker_read(cls, fname, **kwargs):
-        ErrorMessage.default_to_pandas("Parameters provided")
+    def single_worker_read(cls, fname, *, reason, **kwargs):
+        ErrorMessage.default_to_pandas(reason=reason)
         # Use default args for everything
         pandas_frame = cls.parse(fname, **kwargs)
         if isinstance(pandas_frame, pandas.io.parsers.TextFileReader):

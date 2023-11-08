@@ -1,7 +1,7 @@
 :orphan:
 
-IO module Description For Pandas-on-Ray Excecution
-""""""""""""""""""""""""""""""""""""""""""""""""""
+IO module Description For ExperimentalPandasOnRay Execution
+"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 High-Level Module Overview
 ''''''''''''''''''''''''''
@@ -25,13 +25,11 @@ statement as follows:
 Submodules Description
 ''''''''''''''''''''''
 
-``modin.experimental.core.execution.ray.implementations.pandas_on_ray`` module is used mostly for storing utils and 
-functions for experimanetal IO class:
+The ``modin.experimental.core.execution.ray.implementations.pandas_on_ray`` module primarily houses utils and 
+functions for the experimental IO class:
 
 * ``io.py`` - submodule containing IO class and parse functions, which are responsible
   for data processing on the workers.
-
-* ``sql.py`` - submodule with util functions for experimental ``read_sql`` function.
 
 Public API
 ''''''''''

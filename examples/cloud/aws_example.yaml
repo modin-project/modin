@@ -104,7 +104,6 @@ initialization_commands: []
 
 # List of shell commands to run to set up nodes.
 setup_commands:
-    - pip install s3fs
     - pip install modin
     - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
     # Consider uncommenting these if you also want to run apt-get commands during setup

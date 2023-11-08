@@ -1,34 +1,34 @@
 Examples and Resources
 ======================
 
-Here you can find additional resources to learn about Modin. To learn more about
-advanced usage for Modin, please refer to :doc:`this section </usage_guide/index>`.
+Here you can find additional resources to learn about Modin. To learn more about 
+advanced usage for Modin, please refer to :doc:`Usage Guide </usage_guide/index>` section..
 
 Usage Examples
 ''''''''''''''
 
 The following notebooks demonstrate how Modin can be used for scalable data science:
 
-- Quickstart Guide to Modin [`Source <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`_]
-- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/Modin_Taxi.ipynb>`_]
-- Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`_]
+- Quickstart Guide to Modin [`Source <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`__]
+- Using Modin with the NYC Taxi Dataset [`Source <https://github.com/modin-project/modin/blob/master/examples/jupyter/Modin_Taxi.ipynb>`__]
+- Modin for Machine Learning with scikit-learn [`Source <https://github.com/modin-project/modin/blob/master/examples/modin-scikit-learn-example.ipynb>`__]
 
 Tutorials
 '''''''''
 
-The following tutorials cover the basic usage of Modin. `Here <https://www.youtube.com/watch?v=NglkafEmbhE>`_ is a one hour video tutorial that walks through these basic exercises.
+The following tutorials cover the basic usage of Modin. `Here <https://www.youtube.com/watch?v=NglkafEmbhE>`__ is a one hour video tutorial that walks through these basic exercises.
 
-- Exercise 1: Introduction to Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_1.ipynb>`_, `Source OmnisciOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_1.ipynb>`_]
-- Exercise 2: Speed Improvements with Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_2.ipynb>`_, `Source OmnisciOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_2.ipynb>`_]
-- Exercise 3: Defaulting to pandas with Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_3.ipynb>`_, `Source OmnisciOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/omnisci_on_native/local/exercise_3.ipynb>`_]
+- Exercise 1: Introduction to Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_1.ipynb>`__, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_1.ipynb>`__, `Source HdkOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/hdk_on_native/local/exercise_1.ipynb>`__]
+- Exercise 2: Speed Improvements with Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_2.ipynb>`__, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_2.ipynb>`__, `Source HdkOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/hdk_on_native/local/exercise_2.ipynb>`__]
+- Exercise 3: Defaulting to pandas with Modin [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_3.ipynb>`__, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_3.ipynb>`__, `Source HdkOnNative <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/hdk_on_native/local/exercise_3.ipynb>`__]
 
 The following tutorials covers more advanced features in Modin:
 
-- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`_, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_4.ipynb>`_]
-- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_]
-- Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`_]
+- Exercise 4: Experimental Features in Modin (Spreadsheet, Progress Bar) [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/local/exercise_4.ipynb>`__, `Source PandasOnDask <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_dask/local/exercise_4.ipynb>`__]
+- Exercise 5: Setting up Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`__]
+- Exercise 6: Running Modin in a Cluster Environment [`Source PandasOnRay <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`__]
 
-How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/README.md>`_ file.
+How to get required dependencies for the tutorial notebooks and to run them please refer to the respective `README.md <https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/README.md>`__ file.
 
 Talks & Podcasts
 ''''''''''''''''
@@ -55,6 +55,7 @@ Here are some blogposts and articles about Modin:
 - `Get faster pandas with Modin, even on your laptops by Parul Pandey <https://towardsdatascience.com/get-faster-pandas-with-modin-even-on-your-laptops-b527a2eeda74>`_
 - `How to speedup pandas by changing one line of code by Shrivarsheni <https://www.machinelearningplus.com/python/modin-speedup-pandas/>`_
 - `How To Accelerate Pandas With Just One Line Of Code by Analytics India <https://analyticsindiamag.com/how-to-accelerate-pandas-with-just-one-line-of-code-modin/>`_
+- `An Easy Introduction to Modin: A Step-by-Step Guide to Accelerating Pandas by Intel <https://www.intel.com/content/www/us/en/developer/articles/technical/modin-step-by-step-guide-to-accelerating-pandas.html#gs.c69er5>`_
 
 
 Here are some articles contributed by the international community:

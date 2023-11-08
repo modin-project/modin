@@ -14,19 +14,22 @@
 """Module houses Modin configs originated from environment variables."""
 
 import os
-import sys
-from textwrap import dedent
-import warnings
-from packaging import version
 import secrets
+import sys
+import warnings
+from textwrap import dedent
+from typing import Any, Optional
 
-from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
+from packaging import version
+from pandas.util._decorators import doc  # type: ignore[attr-defined]
+
+from .pubsub import _TYPE_PARAMS, ExactStr, Parameter, ValueSource
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
-    varname: str = None
+    varname: Optional[str] = None
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -40,9 +43,13 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
         Raises
         ------
+        TypeError
+            If `varname` is None.
         KeyError
             If value is absent.
         """
+        if cls.varname is None:
+            raise TypeError("varname should not be None")
         return os.environ[cls.varname]
 
     @classmethod
@@ -70,10 +77,16 @@ class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
-    choices = ("Ray", "Dask", "Python", "Native")
+    choices = ("Ray", "Dask", "Python", "Native", "Unidist")
+
+    NOINIT_ENGINES = {
+        "Python",
+    }  # engines that don't require initialization, useful for unit tests
+
+    has_custom_engine = False
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> str:
         """
         Get default value of the config.
 
@@ -81,9 +94,11 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import MIN_RAY_VERSION, MIN_DASK_VERSION
+        from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
 
-        if IsDebug.get():
+        # If there's a custom engine, we don't need to check for any engine
+        # dependencies. Return the default "Python" engine.
+        if IsDebug.get() or cls.has_custom_engine:
             return "Python"
         try:
             import ray
@@ -93,7 +108,9 @@ class Engine(EnvironmentVariable, type=str):
         else:
             if version.parse(ray.__version__) < MIN_RAY_VERSION:
                 raise ImportError(
-                    "Please `pip install modin[ray]` to install compatible Ray version (>={MIN_RAY_VERSION})."
+                    'Please `pip install "modin[ray]"` to install compatible Ray '
+                    + "version "
+                    + f"(>={MIN_RAY_VERSION})."
                 )
             return "Ray"
         try:
@@ -108,22 +125,43 @@ class Engine(EnvironmentVariable, type=str):
                 or version.parse(distributed.__version__) < MIN_DASK_VERSION
             ):
                 raise ImportError(
-                    "Please `pip install modin[dask]` to install compatible Dask version (>={MIN_DASK_VERSION})."
+                    f'Please `pip install "modin[dask]"` to install compatible Dask version (>={MIN_DASK_VERSION}).'
                 )
             return "Dask"
         try:
-            # We import ``PyDbEngine`` from this module since correct import of ``PyDbEngine`` itself
-            # from Omnisci is located in it with all the necessary options for dlopen.
-            from modin.experimental.core.execution.native.implementations.omnisci_on_native.utils import (  # noqa
-                PyDbEngine,
+            # We import ``DbWorker`` from this module since correct import of ``DbWorker`` itself
+            # from HDK is located in it with all the necessary options for dlopen.
+            from modin.experimental.core.execution.native.implementations.hdk_on_native.db_worker import (  # noqa
+                DbWorker,
             )
         except ImportError:
             pass
         else:
             return "Native"
+        try:
+            import unidist
+
+        except ImportError:
+            pass
+        else:
+            if version.parse(unidist.__version__) < MIN_UNIDIST_VERSION:
+                raise ImportError(
+                    'Please `pip install "unidist[mpi]"` to install compatible unidist on MPI '
+                    + "version "
+                    + f"(>={MIN_UNIDIST_VERSION})."
+                )
+            return "Unidist"
         raise ImportError(
             "Please refer to installation documentation page to install an engine"
         )
+
+    @classmethod
+    @doc(Parameter.add_option.__doc__)
+    def add_option(cls, choice: Any) -> Any:
+        choice = super().add_option(choice)
+        cls.NOINIT_ENGINES.add(choice)
+        cls.has_custom_engine = True
+        return choice
 
 
 class StorageFormat(EnvironmentVariable, type=str):
@@ -131,7 +169,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "OmniSci", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -165,7 +203,7 @@ class CpuCount(EnvironmentVariable, type=int):
     varname = "MODIN_CPUS"
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -203,7 +241,7 @@ class NPartitions(EnvironmentVariable, type=int):
     varname = "MODIN_NPARTITIONS"
 
     @classmethod
-    def _put(cls, value):
+    def _put(cls, value: int) -> None:
         """
         Put specific value if NPartitions wasn't set by a user yet.
 
@@ -221,7 +259,7 @@ class NPartitions(EnvironmentVariable, type=int):
             cls.put(value)
 
     @classmethod
-    def _get_default(cls):
+    def _get_default(cls) -> int:
         """
         Get default value of the config.
 
@@ -253,14 +291,14 @@ class DoTraceRpyc(EnvironmentVariable, type=bool):
     varname = "MODIN_TRACE_RPYC"
 
 
-class OmnisciFragmentSize(EnvironmentVariable, type=int):
-    """How big a fragment in OmniSci should be when creating a table (in rows)."""
+class HdkFragmentSize(EnvironmentVariable, type=int):
+    """How big a fragment in HDK should be when creating a table (in rows)."""
 
-    varname = "MODIN_OMNISCI_FRAGMENT_SIZE"
+    varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
 class DoUseCalcite(EnvironmentVariable, type=bool):
-    """Whether to use Calcite for OmniSci queries execution."""
+    """Whether to use Calcite for HDK queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
@@ -313,17 +351,17 @@ class ProgressBar(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def enable(cls):
+    def enable(cls) -> None:
         """Enable ``ProgressBar`` feature."""
         cls.put(True)
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable ``ProgressBar`` feature."""
         cls.put(False)
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``ProgressBar`` value only if synchronous benchmarking is disabled.
 
@@ -344,7 +382,7 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
     default = False
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: bool) -> None:
         """
         Set ``BenchmarkMode`` value only if progress bar feature is disabled.
 
@@ -358,8 +396,99 @@ class BenchmarkMode(EnvironmentVariable, type=bool):
         super().put(value)
 
 
+class LogMode(EnvironmentVariable, type=ExactStr):
+    """Set ``LogMode`` value if users want to opt-in."""
+
+    varname = "MODIN_LOG_MODE"
+    choices = ("enable", "disable", "enable_api_only")
+    default = "disable"
+
+    @classmethod
+    def enable(cls) -> None:
+        """Enable all logging levels."""
+        cls.put("enable")
+
+    @classmethod
+    def disable(cls) -> None:
+        """Disable logging feature."""
+        cls.put("disable")
+
+    @classmethod
+    def enable_api_only(cls) -> None:
+        """Enable API level logging."""
+        cls.put("enable_api_only")
+
+
+class LogMemoryInterval(EnvironmentVariable, type=int):
+    """Interval (in seconds) to profile memory utilization for logging."""
+
+    varname = "MODIN_LOG_MEMORY_INTERVAL"
+    default = 5
+
+    @classmethod
+    def put(cls, value: int) -> None:
+        """
+        Set ``LogMemoryInterval`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log memory Interval should be > 0, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``LogMemoryInterval`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_memory_interval = super().get()
+        assert log_memory_interval > 0, "`LogMemoryInterval` should be > 0"
+        return log_memory_interval
+
+
+class LogFileSize(EnvironmentVariable, type=int):
+    """Max size of logs (in MBs) to store per Modin job."""
+
+    varname = "MODIN_LOG_FILE_SIZE"
+    default = 10
+
+    @classmethod
+    def put(cls, value: int) -> None:
+        """
+        Set ``LogFileSize`` with extra checks.
+
+        Parameters
+        ----------
+        value : int
+            Config value to set.
+        """
+        if value <= 0:
+            raise ValueError(f"Log file size should be > 0 MB, passed value {value}")
+        super().put(value)
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``LogFileSize`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        log_file_size = super().get()
+        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        return log_file_size
+
+
 class PersistentPickle(EnvironmentVariable, type=bool):
-    """Wheather serialization should be persistent."""
+    """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
     # When set to off, it allows faster serialization which is only
@@ -369,26 +498,18 @@ class PersistentPickle(EnvironmentVariable, type=bool):
     default = False
 
 
-class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
+class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
-    Additional command line options for the OmniSci engine.
+    Additional command line options for the HDK engine.
 
     Please visit OmniSci documentation for the description of available parameters:
     https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
     """
 
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
-    default = {
-        "enable_union": 1,
-        "enable_columnar_output": 1,
-        "enable_lazy_fetch": 0,
-        "null_div_by_zero": 1,
-        "enable_watchdog": 0,
-        "enable_thrift_logs": 0,
-    }
+    varname = "MODIN_HDK_LAUNCH_PARAMETERS"
 
     @classmethod
-    def get(self):
+    def get(cls) -> dict:
         """
         Get the resulted command-line options.
 
@@ -400,11 +521,44 @@ class OmnisciLaunchParameters(EnvironmentVariable, type=dict):
             Decoded and verified config value.
         """
         custom_parameters = super().get()
-        result = self.default.copy()
+        result = cls._get_default().copy()
         result.update(
             {key.replace("-", "_"): value for key, value in custom_parameters.items()}
         )
         return result
+
+    @classmethod
+    def _get_default(cls) -> Any:
+        """
+        Get default value of the config. Checks the pyhdk version and omits variables unsupported in prior versions.
+
+        Returns
+        -------
+        dict
+            Config keys and corresponding values.
+        """
+        if (default := getattr(cls, "default", None)) is None:
+            cls.default = default = {
+                "enable_union": 1,
+                "enable_columnar_output": 1,
+                "enable_lazy_fetch": 0,
+                "null_div_by_zero": 1,
+                "enable_watchdog": 0,
+                "enable_thrift_logs": 0,
+                "enable_multifrag_execution_result": 1,
+                "cpu_only": 1,
+            }
+
+            try:
+                import pyhdk
+
+                if version.parse(pyhdk.__version__) >= version.parse("0.6.1"):
+                    default["enable_lazy_dict_materialization"] = 0
+                    default["log_dir"] = "pyhdk_log"
+            except ImportError:
+                # if pyhdk is not available, do not show any additional options
+                pass
+        return default
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):
@@ -419,7 +573,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
     default = 32
 
     @classmethod
-    def put(cls, value):
+    def put(cls, value: int) -> None:
         """
         Set ``MinPartitionSize`` with extra checks.
 
@@ -433,7 +587,7 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         super().put(value)
 
     @classmethod
-    def get(cls):
+    def get(cls) -> int:
         """
         Get ``MinPartitionSize`` with extra checks.
 
@@ -460,7 +614,81 @@ class TestReadFromPostgres(EnvironmentVariable, type=bool):
     default = False
 
 
-def _check_vars():
+class GithubCI(EnvironmentVariable, type=bool):
+    """Set to true when running Modin in GitHub CI."""
+
+    varname = "MODIN_GITHUB_CI"
+    default = False
+
+
+class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
+    """Set to true to use Modin's experimental NumPy API."""
+
+    varname = "MODIN_EXPERIMENTAL_NUMPY_API"
+    default = False
+
+
+class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's experimental group by implementation.
+
+    Experimental groupby is implemented using a range-partitioning technique,
+    note that it may not always work better than the original Modin's TreeReduce
+    and FullAxis implementations. For more information visit the according section
+    of Modin's documentation: TODO: add a link to the section once it's written.
+    """
+
+    varname = "MODIN_EXPERIMENTAL_GROUPBY"
+    default = False
+
+
+class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
+    """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_SECRET_ACCESS_KEY"
+    default = "foobar_secret"
+
+
+class CIAWSAccessKeyID(EnvironmentVariable, type=str):
+    """Set to AWS_ACCESS_KEY_ID when running mock S3 tests for Modin in GitHub CI."""
+
+    varname = "AWS_ACCESS_KEY_ID"
+    default = "foobar_key"
+
+
+class AsyncReadMode(EnvironmentVariable, type=bool):
+    """
+    It does not wait for the end of reading information from the source.
+
+    It basically means, that the reading function only launches tasks for the dataframe
+    to be read/created, but not ensures that the construction is finalized by the time
+    the reading function returns a dataframe.
+
+    This option was brought to improve performance of reading/construction
+    of Modin DataFrames, however it may also:
+
+    1. Increase the peak memory consumption. Since the garbage collection of the
+    temporary objects created during the reading is now also lazy and will only
+    be performed when the reading/construction is actually finished.
+
+    2. Can break situations when the source is manually deleted after the reading
+    function returns a result, for example, when reading inside of a context-block
+    that deletes the file on ``__exit__()``.
+    """
+
+    varname = "MODIN_ASYNC_READ_MODE"
+    default = False
+
+
+class ReadSqlEngine(EnvironmentVariable, type=str):
+    """Engine to run `read_sql`."""
+
+    varname = "MODIN_READ_SQL_ENGINE"
+    default = "Pandas"
+    choices = ("Pandas", "Connectorx")
+
+
+def _check_vars() -> None:
     """
     Check validity of environment variables.
 

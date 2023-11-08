@@ -12,8 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
-from os.path import dirname, abspath
-
+from os.path import abspath, dirname
 
 # This is the python file root directory (modin/modin)
 rootdir = dirname(dirname(abspath(__file__)))
@@ -29,7 +28,7 @@ def test_headers():
         for file in files:
             filepath = os.path.join(subdir, file)
             if file.endswith(".py") and file not in exclude_files:
-                with open(filepath, "r") as f:
+                with open(filepath, "r", encoding="utf8") as f:
                     # Lines for line by line comparison
                     py_file_lines = f.readlines()
                     for left, right in zip(

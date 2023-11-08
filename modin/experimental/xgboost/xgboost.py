@@ -18,9 +18,9 @@ from typing import Dict, Optional
 
 import xgboost as xgb
 
+import modin.pandas as pd
 from modin.config import Engine
 from modin.distributed.dataframe.pandas import unwrap_partitions
-import modin.pandas as pd
 
 LOGGER = logging.getLogger("[modin.xgboost]")
 
@@ -100,7 +100,7 @@ class DMatrix:
         self.metadata = (
             data.index,
             data.columns,
-            data._query_compiler._modin_frame._row_lengths,
+            data._query_compiler._modin_frame.row_lengths,
         )
 
     def __iter__(self):

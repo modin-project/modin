@@ -18,6 +18,8 @@ import pandas
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
+from modin.utils import _inherit_docstrings
+
 from .partition import PandasOnPythonDataframePartition
 
 
@@ -29,57 +31,31 @@ class PandasOnPythonDataframeAxisPartition(PandasDataframeAxisPartition):
 
     Parameters
     ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition from.
+    list_of_partitions : Union[list, PandasOnPythonDataframePartition]
+        List of ``PandasOnPythonDataframePartition`` and
+        ``PandasOnPythonDataframeVirtualPartition`` objects, or a single
+        ``PandasOnPythonDataframePartition``.
+    get_ip : bool, default: False
+        Whether to get node IP addresses to conforming partitions or not.
     full_axis : bool, default: True
         Whether or not the virtual partition encompasses the whole axis.
+    call_queue : list, optional
+        A list of tuples (callable, args, kwargs) that contains deferred calls.
+    length : int, optional
+        Length, or reference to length, of wrapped ``pandas.DataFrame``.
+    width : int, optional
+        Width, or reference to width, of wrapped ``pandas.DataFrame``.
     """
-
-    def __init__(self, list_of_blocks, full_axis: bool = True):
-        if not full_axis:
-            raise NotImplementedError(
-                "Pandas on Python execution requires full-axis partitions."
-            )
-        for obj in list_of_blocks:
-            obj.drain_call_queue()
-        # Unwrap from PandasDataframePartition object for ease of use
-        self.list_of_blocks = [obj.data for obj in list_of_blocks]
 
     partition_type = PandasOnPythonDataframePartition
     instance_type = pandas.DataFrame
 
 
+@_inherit_docstrings(PandasOnPythonDataframeAxisPartition.__init__)
 class PandasOnPythonDataframeColumnPartition(PandasOnPythonDataframeAxisPartition):
-    """
-    The column partition implementation for pandas storage format and Python engine.
-
-    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition from.
-    full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
-    """
-
     axis = 0
 
 
+@_inherit_docstrings(PandasOnPythonDataframeAxisPartition.__init__)
 class PandasOnPythonDataframeRowPartition(PandasOnPythonDataframeAxisPartition):
-    """
-    The row partition implementation for pandas storage format and Python engine.
-
-    All of the implementation for this class is in the ``PandasOnPythonDataframeAxisPartition``
-    parent class, and this class defines the axis to perform the computation over.
-
-    Parameters
-    ----------
-    list_of_blocks : list
-        List with partition objects to create common axis partition from.
-    full_axis : bool, default: True
-        Whether or not the virtual partition encompasses the whole axis.
-    """
-
     axis = 1

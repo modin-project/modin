@@ -31,7 +31,7 @@ extends ``PandasDataframe``.
 In the scope of this module, each execution is represented with a factory class located in
 ``modin/core/execution/dispatching/factories/factories.py``. Each factory contains a field that identifies the IO module of the corresponding execution. This IO module is
 responsible for dispatching calls of IO functions to their actual implementations in the
-underlying IO module. For more information about IO module visit :doc:`related doc </flow/modin/core/io/index>`.
+underlying IO module. For more information about IO module visit :doc:`IO </flow/modin/core/io/index>` page.
 
 Factory Dispatcher
 ''''''''''''''''''

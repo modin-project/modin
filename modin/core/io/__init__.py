@@ -13,27 +13,21 @@
 
 """IO functions implementations."""
 
+from .column_stores.feather_dispatcher import FeatherDispatcher
+from .column_stores.hdf_dispatcher import HDFDispatcher
+from .column_stores.parquet_dispatcher import ParquetDispatcher
+from .file_dispatcher import FileDispatcher
 from .io import BaseIO
+from .sql.sql_dispatcher import SQLDispatcher
 from .text.csv_dispatcher import CSVDispatcher
-from .text.csv_glob_dispatcher import CSVGlobDispatcher
+from .text.excel_dispatcher import ExcelDispatcher
 from .text.fwf_dispatcher import FWFDispatcher
 from .text.json_dispatcher import JSONDispatcher
-from .text.custom_text_dispatcher import (
-    CustomTextExperimentalDispatcher,
-)
-from .text.excel_dispatcher import ExcelDispatcher
-from .file_dispatcher import FileDispatcher
 from .text.text_file_dispatcher import TextFileDispatcher
-from .column_stores.parquet_dispatcher import ParquetDispatcher
-from .column_stores.hdf_dispatcher import HDFDispatcher
-from .column_stores.feather_dispatcher import FeatherDispatcher
-from .sql.sql_dispatcher import SQLDispatcher
-from .pickle.pickle_dispatcher import PickleExperimentalDispatcher
 
 __all__ = [
     "BaseIO",
     "CSVDispatcher",
-    "CSVGlobDispatcher",
     "FWFDispatcher",
     "JSONDispatcher",
     "FileDispatcher",
@@ -43,6 +37,4 @@ __all__ = [
     "FeatherDispatcher",
     "SQLDispatcher",
     "ExcelDispatcher",
-    "PickleExperimentalDispatcher",
-    "CustomTextExperimentalDispatcher",
 ]

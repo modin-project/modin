@@ -13,6 +13,6 @@
 
 """API to operate on distributed pandas DataFrame objects."""
 
-from .partitions import unwrap_partitions, from_partitions
+from .partitions import from_partitions, unwrap_partitions
 
 __all__ = ["unwrap_partitions", "from_partitions"]

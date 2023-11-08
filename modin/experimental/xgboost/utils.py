@@ -14,6 +14,7 @@
 """Module holds classes for work with Rabit all-reduce context."""
 
 import logging
+
 import xgboost as xgb
 
 LOGGER = logging.getLogger("[modin.xgboost]")
@@ -38,7 +39,9 @@ class RabitContextManager:
     def __init__(self, num_workers: int, host_ip):
         self._num_workers = num_workers
         self.env = {"DMLC_NUM_WORKER": self._num_workers}
-        self.rabit_tracker = xgb.RabitTracker(hostIP=host_ip, nslave=self._num_workers)
+        self.rabit_tracker = xgb.RabitTracker(
+            host_ip=host_ip, n_workers=self._num_workers
+        )
 
     def __enter__(self):
         """
@@ -51,7 +54,7 @@ class RabitContextManager:
         dict
             Dict with Rabit Tracker environment.
         """
-        self.env.update(self.rabit_tracker.slave_envs())
+        self.env.update(self.rabit_tracker.worker_envs())
         self.rabit_tracker.start(self._num_workers)
         return self.env
 

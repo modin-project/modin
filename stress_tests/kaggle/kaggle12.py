@@ -1,30 +1,32 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from collections import Counter
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.ensemble import (
-    RandomForestClassifier,
     AdaBoostClassifier,
-    GradientBoostingClassifier,
     ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    RandomForestClassifier,
     VotingClassifier,
 )
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
 from sklearn.model_selection import (
     GridSearchCV,
-    cross_val_score,
     StratifiedKFold,
+    cross_val_score,
     learning_curve,
 )
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+
+import modin.pandas as pd
 
 sns.set(style="white", context="notebook", palette="deep")
 train = pd.read_csv("train.csv")

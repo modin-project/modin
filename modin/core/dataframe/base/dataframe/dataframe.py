@@ -18,7 +18,8 @@ ModinDataframe is a parent abstract class for any dataframe class.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Hashable, Optional, Callable, Union, Dict
+from typing import Callable, Dict, Hashable, List, Optional, Union
+
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 
 
@@ -34,7 +35,7 @@ class ModinDataframe(ABC):
     """
 
     @abstractmethod
-    def mask(
+    def take_2d_labels_or_positional(
         self,
         row_labels: Optional[List[Hashable]] = None,
         row_positions: Optional[List[int]] = None,
@@ -93,6 +94,7 @@ class ModinDataframe(ABC):
         function: Callable,
         axis: Optional[Union[int, Axis]] = None,
         dtypes: Optional[str] = None,
+        new_columns: Optional[List[Hashable]] = None,
     ) -> "ModinDataframe":
         """
         Apply a user-defined function row-wise if `axis`=0, column-wise if `axis`=1, and cell-wise if `axis` is None.
@@ -107,6 +109,9 @@ class ModinDataframe(ABC):
             The data types for the result. This is an optimization
             because there are functions that always result in a particular data
             type, and this allows us to avoid (re)computing it.
+        new_columns : List[Hashable], optional
+            New column labels of the result, its length has to be identical
+            to the older columns. If not specified, old column labels are preserved.
 
         Returns
         -------
@@ -205,7 +210,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        The user-defined reduce function must reduce each window’s column
+        The user-defined reduce function must reduce each window's column
         (row if axis=1) down to a single value.
         """
         pass
@@ -248,7 +253,7 @@ class ModinDataframe(ABC):
         passed to the groupby may be at most the number of rows in the group, and
         may be as small as a single row.
 
-        Unlike the pandas API, an intermediate “GROUP BY” object is not present in this
+        Unlike the pandas API, an intermediate "GROUP BY" object is not present in this
         algebra implementation.
         """
         pass
@@ -463,7 +468,7 @@ class ModinDataframe(ABC):
 
         Notes
         -----
-        In the case that the dataframe has hierarchical labels, all label "levels” are inserted into the dataframe
+        In the case that the dataframe has hierarchical labels, all label "levels" are inserted into the dataframe
         in the order they occur in the labels, with the outermost being in position 0.
         """
         pass

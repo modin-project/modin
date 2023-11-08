@@ -1,0 +1,27 @@
+name: "Run core Modin tests - group 4"
+description: "Run core Modin tests like dataframe or groupby"
+inputs:
+  runner:
+    description: "Runner for tests"
+    default: "python -m pytest"
+  parallel:
+    description: "How to run tests in parallel"
+    default: "-n 2"
+
+runs:
+  using: "composite"
+  steps:
+      - run: |
+          echo "::group::Running tests (group 4)..."
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py \
+                                                      modin/pandas/test/test_expanding.py \
+                                                      modin/pandas/test/test_groupby.py \
+                                                      modin/pandas/test/test_reshape.py \
+                                                      modin/pandas/test/test_general.py
+          echo "::endgroup::"
+        shell: bash -l {0}
+      - run: |
+          echo "::group::Running concat tests (group 4)..."
+          ${{ inputs.runner }} modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+          echo "::endgroup::"
+        shell: bash -l {0}

@@ -16,13 +16,13 @@
 from .default import DefaultMethod
 
 
-# FIXME: there is no sence of keeping `Rolling` and `RollingDefault` logic in a different
-# classes. They should be combined.
-class Rolling:
-    """Builder for aggregation on a rolling window functions."""
+class RollingDefault(DefaultMethod):
+    """Builder for default-to-pandas aggregation on a rolling window functions."""
+
+    OBJECT_TYPE = "Rolling"
 
     @classmethod
-    def build_rolling(cls, func):
+    def _build_rolling(cls, func):
         """
         Build function that creates a rolling window and executes `func` on it.
 
@@ -37,22 +37,16 @@ class Rolling:
             Function that takes pandas DataFrame and applies `func` on a rolling window.
         """
 
-        def fn(df, rolling_args, *args, **kwargs):
+        def fn(df, rolling_kwargs, *args, **kwargs):
             """Create rolling window for the passed frame and execute specified `func` on it."""
-            roller = df.rolling(*rolling_args)
+            roller = df.rolling(**rolling_kwargs)
 
-            if type(func) == property:
+            if type(func) is property:
                 return func.fget(roller)
 
             return func(roller, *args, **kwargs)
 
         return fn
-
-
-class RollingDefault(DefaultMethod):
-    """Builder for default-to-pandas aggregation on a rolling window functions."""
-
-    OBJECT_TYPE = "Rolling"
 
     @classmethod
     def register(cls, func, **kwargs):
@@ -72,4 +66,69 @@ class RollingDefault(DefaultMethod):
             Function that takes query compiler and defaults to pandas to apply aggregation
             `func` on a rolling window.
         """
-        return cls.call(Rolling.build_rolling(func), fn_name=func.__name__, **kwargs)
+        return super().register(
+            cls._build_rolling(func), fn_name=func.__name__, **kwargs
+        )
+
+
+class ExpandingDefault(DefaultMethod):
+    """Builder for default-to-pandas aggregation on an expanding window functions."""
+
+    OBJECT_TYPE = "Expanding"
+
+    @classmethod
+    def _build_expanding(cls, func, squeeze_self):
+        """
+        Build function that creates an expanding window and executes `func` on it.
+
+        Parameters
+        ----------
+        func : callable
+            Function to execute on a expanding window.
+        squeeze_self : bool
+            Whether or not to squeeze frame before executing the window function.
+
+        Returns
+        -------
+        callable
+            Function that takes pandas DataFrame and applies `func` on a expanding window.
+        """
+
+        def fn(df, rolling_args, *args, **kwargs):
+            """Create rolling window for the passed frame and execute specified `func` on it."""
+            if squeeze_self:
+                df = df.squeeze(axis=1)
+            roller = df.expanding(*rolling_args)
+
+            if type(func) is property:
+                return func.fget(roller)
+
+            return func(roller, *args, **kwargs)
+
+        return fn
+
+    @classmethod
+    def register(cls, func, squeeze_self=False, **kwargs):
+        """
+        Build function that do fallback to pandas to apply `func` on a expanding window.
+
+        Parameters
+        ----------
+        func : callable
+            Function to execute on an expanding window.
+        squeeze_self : bool, default: False
+            Whether or not to squeeze frame before executing the window function.
+        **kwargs : kwargs
+            Additional arguments that will be passed to function builder.
+
+        Returns
+        -------
+        callable
+            Function that takes query compiler and defaults to pandas to apply aggregation
+            `func` on an expanding window.
+        """
+        return super().register(
+            cls._build_expanding(func, squeeze_self=squeeze_self),
+            fn_name=func.__name__,
+            **kwargs
+        )

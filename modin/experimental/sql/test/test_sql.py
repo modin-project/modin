@@ -11,9 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 import io
+
+import pandas
+import pytest
+
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
+
+pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,ticket,fare,cabin,embarked
 1,0,3,"Braund, Mr. Owen Harris",male,22,1,0,A/5 21171,7.25,,S
@@ -28,15 +35,16 @@ titanic_snippet = """passenger_id,survived,p_class,name,sex,age,sib_sp,parch,tic
 """
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
 def test_sql_query():
     from modin.experimental.sql import query
 
-    # Modin can't read_csv from a buffer.
-    with warns_that_defaulting_to_pandas():
-        df = pd.read_csv(io.StringIO(titanic_snippet))
-    sql = "SELECT survived, p_class, count(passenger_id) as count FROM (SELECT * FROM titanic WHERE survived = 1) as t1 GROUP BY survived, p_class"
-    with warns_that_defaulting_to_pandas():
-        query_result = query(sql, titanic=df)
+    df = pd.read_csv(io.StringIO(titanic_snippet))
+    sql = "SELECT survived, p_class, count(passenger_id) as cnt FROM (SELECT * FROM titanic WHERE survived = 1) as t1 GROUP BY survived, p_class"
+    query_result = query(sql, titanic=df)
     expected_df = (
         df[df.survived == 1]
         .groupby(["survived", "p_class"])
@@ -49,21 +57,14 @@ def test_sql_query():
     assert (values_left == values_right).all()
 
 
-def test_sql_extension():
-    import modin.experimental.sql  # noqa: F401
+@pytest.mark.skipif(
+    StorageFormat.get() != "Hdk",
+    reason="Lack of implementation for other storage formats.",
+)
+def test_string_cast():
+    from modin.experimental.sql import query
 
-    # Modin can't read_csv from a buffer.
-    with warns_that_defaulting_to_pandas():
-        df = pd.read_csv(io.StringIO(titanic_snippet))
-
-    expected_df = df[df["survived"] == 1][["passenger_id", "survived"]]
-
-    sql = "SELECT passenger_id, survived WHERE survived = 1"
-    # DataFrame.convert_dtypes defaults to pandas.
-    with warns_that_defaulting_to_pandas():
-        query_result = df.sql(sql)
-    assert list(query_result.columns) == ["passenger_id", "survived"]
-    values_left = expected_df.values
-    values_right = query_result.values
-    assert values_left.shape == values_right.shape
-    assert (values_left == values_right).all()
+    data = {"A": ["A", "B", "C"], "B": ["A", "B", "C"]}
+    mdf = pd.DataFrame(data)
+    pdf = pandas.DataFrame(data)
+    df_equals(pdf, query("SELECT * FROM df", df=mdf))

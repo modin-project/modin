@@ -3,6 +3,13 @@ on:
   push:
     branches:
       - master
+concurrency:
+  # Cancel other jobs in the same branch. We don't care whether CI passes
+  # on old commits.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+env:
+  MODIN_GITHUB_CI: true
 jobs:
   test-ray-master:
     runs-on: ubuntu-latest
@@ -10,19 +17,23 @@ jobs:
       run:
         # `shell: bash -l {0}` - special way to activate modin environment
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
-          environment-file: requirements/requirements-no-engine.yml
-          python-version: 3.8
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
+          environment-file: environment-dev.yml
       - name: install Ray nightly build
-        run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
+        # Use --force-reinstall to always reinstall ray and its dependencies.
+        # botocore isn't compatible with urllib3>=2; see #6094 for details
+        run: pip install --force-reinstall "urllib3<2" https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-3.0.0.dev0-cp39-cp39-manylinux2014_x86_64.whl
       - name: Conda environment
         run: |
           conda info
@@ -30,24 +41,33 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Run Modin tests
         run: |
-          pytest modin/experimental/xgboost/test/test_default.py
-          pytest modin/pandas/test/dataframe/test_binary.py
-          pytest modin/pandas/test/dataframe/test_default.py
-          pytest modin/pandas/test/dataframe/test_indexing.py
-          pytest modin/pandas/test/dataframe/test_iter.py
-          pytest modin/pandas/test/dataframe/test_join_sort.py
-          pytest modin/pandas/test/dataframe/test_map_metadata.py
-          pytest modin/pandas/test/dataframe/test_reduce.py
-          pytest modin/pandas/test/dataframe/test_udf.py
-          pytest modin/pandas/test/dataframe/test_window.py
-          pytest modin/pandas/test/test_series.py
-          pytest modin/pandas/test/test_rolling.py
-          pytest modin/pandas/test/test_concat.py
-          pytest modin/pandas/test/test_groupby.py
-          pytest modin/pandas/test/test_reshape.py
-          pytest modin/pandas/test/test_general.py
-          pytest modin/pandas/test/test_io.py
-          pytest modin/experimental/pandas/test/test_io_exp.py
+          python -m pytest modin/pandas/test/dataframe/test_binary.py
+          python -m pytest modin/pandas/test/dataframe/test_default.py
+          python -m pytest modin/pandas/test/dataframe/test_indexing.py
+          python -m pytest modin/pandas/test/dataframe/test_iter.py
+          python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+          python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
+          python -m pytest modin/pandas/test/dataframe/test_reduce.py
+          python -m pytest modin/pandas/test/dataframe/test_udf.py
+          python -m pytest modin/pandas/test/dataframe/test_window.py
+          python -m pytest modin/pandas/test/test_series.py
+          python -m pytest modin/numpy/test/test_array.py
+          python -m pytest modin/numpy/test/test_array_creation.py
+          python -m pytest modin/numpy/test/test_array_arithmetic.py
+          python -m pytest modin/numpy/test/test_array_axis_functions.py
+          python -m pytest modin/numpy/test/test_array_logic.py
+          python -m pytest modin/numpy/test/test_array_linalg.py
+          python -m pytest modin/numpy/test/test_array_indexing.py
+          python -m pytest modin/numpy/test/test_array_math.py
+          python -m pytest modin/numpy/test/test_array_shaping.py
+          python -m pytest modin/pandas/test/test_rolling.py
+          python -m pytest modin/pandas/test/test_expanding.py
+          python -m pytest modin/pandas/test/test_concat.py
+          python -m pytest modin/pandas/test/test_groupby.py
+          python -m pytest modin/pandas/test/test_reshape.py
+          python -m pytest modin/pandas/test/test_general.py
+          python -m pytest modin/pandas/test/test_io.py
+          python -m pytest modin/experimental/pandas/test/test_io_exp.py
 
   test-docs:
     runs-on: ubuntu-latest
@@ -56,20 +76,10 @@ jobs:
         shell: bash -l {0}
     name: test docs
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/mamba-env
         with:
-          fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
-        with:
-          activate-environment: modin
           environment-file: environment-dev.yml
-          python-version: 3.8
-          channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - name: Conda environment
-        run: |
-          conda info
-          conda list
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Docstring URL validity check
         run: python -m pytest modin/test/test_docstring_urls.py
@@ -79,9 +89,17 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+    services:
+      moto:
+        image: motoserver/moto
+        ports:
+          - 5000:5000
+        env:
+          AWS_ACCESS_KEY_ID: foobar_key
+          AWS_SECRET_ACCESS_KEY: foobar_secret
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
         test-task:
           - modin/pandas/test/dataframe/test_binary.py
           - modin/pandas/test/dataframe/test_default.py
@@ -94,7 +112,17 @@ jobs:
           - modin/pandas/test/dataframe/test_window.py
           - modin/pandas/test/dataframe/test_pickle.py
           - modin/pandas/test/test_series.py
+          - modin/numpy/test/test_array.py
+          - modin/numpy/test/test_array_creation.py
+          - modin/numpy/test/test_array_arithmetic.py
+          - modin/numpy/test/test_array_axis_functions.py
+          - modin/numpy/test/test_array_logic.py
+          - modin/numpy/test/test_array_linalg.py
+          - modin/numpy/test/test_array_indexing.py
+          - modin/numpy/test/test_array_math.py
+          - modin/numpy/test/test_array_shaping.py
           - modin/pandas/test/test_rolling.py
+          - modin/pandas/test/test_expanding.py
           - modin/pandas/test/test_concat.py
           - modin/pandas/test/test_groupby.py
           - modin/pandas/test/test_reshape.py
@@ -106,7 +134,7 @@ jobs:
       MODIN_TEST_RAY_CLIENT: "True"
     name: "test-ray-client"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 1
       - uses: conda-incubator/setup-miniconda@v2
@@ -114,12 +142,10 @@ jobs:
           activate-environment: modin
           python-version: ${{matrix.python-version}}
           channel-priority: strict
-          use-only-tar-bz2: true # IMPORTANT: This needs to be set for caching to work properly!
-      - run: pip install -r requirements-dev.txt --use-deprecated=legacy-resolver
-      # Use a ray master commit that includes the fix here: https://github.com/ray-project/ray/pull/16278
-      # Can be changed after a Ray version > 1.4 is released.
-      - run: pip install https://s3-us-west-2.amazonaws.com/ray-wheels/master/c8e3ed9eec30119092ef966ee7b8982c8954c333/ray-2.0.0.dev0-cp38-cp38-manylinux2014_x86_64.whl
-        if: matrix.python-version == '3.8'
+          # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
+          # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
+          use-only-tar-bz2: false
+      - run: pip install -r requirements-dev.txt
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest ${{matrix.test-task}}

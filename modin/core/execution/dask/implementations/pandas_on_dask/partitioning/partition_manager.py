@@ -16,12 +16,13 @@
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.dask.common.engine_wrapper import DaskWrapper
+from modin.core.execution.dask.common import DaskWrapper
+
+from .partition import PandasOnDaskDataframePartition
 from .virtual_partition import (
     PandasOnDaskDataframeColumnPartition,
     PandasOnDaskDataframeRowPartition,
 )
-from .partition import PandasOnDaskDataframePartition
 
 
 class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
@@ -31,20 +32,20 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
     _partition_class = PandasOnDaskDataframePartition
     _column_partitions_class = PandasOnDaskDataframeColumnPartition
     _row_partition_class = PandasOnDaskDataframeRowPartition
+    _execution_wrapper = DaskWrapper
 
     @classmethod
-    def get_objects_from_partitions(cls, partitions):
+    def wait_partitions(cls, partitions):
         """
-        Get the objects wrapped by `partitions` in parallel.
+        Wait on the objects wrapped by `partitions` in parallel, without materializing them.
+
+        This method will block until all computations in the list have completed.
 
         Parameters
         ----------
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
-
-        Returns
-        -------
-        list
-            The objects wrapped by `partitions`.
         """
-        return DaskWrapper.materialize([partition.future for partition in partitions])
+        DaskWrapper.wait(
+            [block for partition in partitions for block in partition.list_of_blocks]
+        )

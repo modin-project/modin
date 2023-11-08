@@ -77,7 +77,7 @@ To be able to form groups engine broadcasts ``by`` partitions to each partition 
 
 Default-to-pandas operator
 --------------------------
-Do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for passed function.
+Do :doc:`fallback to pandas </supported_apis/defaulting_to_pandas>` for passed function.
 
 
 How to register your own function

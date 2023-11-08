@@ -11,11 +11,18 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import modin.utils
 import json
-
 from textwrap import dedent, indent
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pandas
+import pytest
+
+import modin.pandas as pd
+import modin.utils
+from modin.error_message import ErrorMessage
+from modin.pandas.test.utils import create_test_dfs
 
 
 # Note: classes below are used for purely testing purposes - they
@@ -241,9 +248,18 @@ def test_format_string():
     assert answer == expected
 
 
-def warns_that_defaulting_to_pandas():
+def warns_that_defaulting_to_pandas(prefix=None, suffix=None):
     """
     Assert that code warns that it's defaulting to pandas.
+
+    Parameters
+    ----------
+    prefix : Optional[str]
+        If specified, checks that the start of the warning message matches this argument
+        before "[Dd]efaulting to pandas".
+    suffix : Optional[str]
+        If specified, checks that the end of the warning message matches this argument
+        after "[Dd]efaulting to pandas".
 
     Returns
     -------
@@ -251,7 +267,13 @@ def warns_that_defaulting_to_pandas():
         A WarningsChecker checking for a UserWarning saying that Modin is
         defaulting to Pandas.
     """
-    return pytest.warns(UserWarning, match="defaulting to pandas")
+    match = "[Dd]efaulting to pandas"
+    if prefix:
+        # Message may be separated by newlines
+        match = match + "(.|\\n)+"
+    if suffix:
+        match += "(.|\\n)+" + suffix
+    return pytest.warns(UserWarning, match=match)
 
 
 @pytest.mark.parametrize("as_json", [True, False])
@@ -263,3 +285,86 @@ def test_show_versions(as_json, capsys):
     if as_json:
         versions = json.loads(versions)
         assert versions["modin dependencies"]["modin"] == modin.__version__
+
+
+def test_warns_that_defaulting_to_pandas():
+    with warns_that_defaulting_to_pandas():
+        ErrorMessage.default_to_pandas()
+
+    with warns_that_defaulting_to_pandas():
+        ErrorMessage.default_to_pandas(message="Function name")
+
+
+def test_assert_dtypes_equal():
+    """Verify that `assert_dtypes_equal` from test utils works correctly (raises an error when it has to)."""
+    from modin.pandas.test.utils import assert_dtypes_equal
+
+    # Serieses with equal dtypes
+    sr1, sr2 = pd.Series([1.0]), pandas.Series([1.0])
+    assert sr1.dtype == sr2.dtype == "float"
+    assert_dtypes_equal(sr1, sr2)  # shouldn't raise an error since dtypes are equal
+
+    # Serieses with different dtypes belonging to the same class
+    sr1 = sr1.astype("int")
+    assert sr1.dtype != sr2.dtype and sr1.dtype == "int"
+    assert_dtypes_equal(sr1, sr2)  # shouldn't raise an error since both are numeric
+
+    # Serieses with different dtypes not belonging to the same class
+    sr2 = sr2.astype("str")
+    assert sr1.dtype != sr2.dtype and sr2.dtype == "object"
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(sr1, sr2)
+
+    # Dfs with equal dtypes
+    df1, df2 = create_test_dfs({"a": [1], "b": [1.0]})
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since dtypes are equal
+
+    # Dfs with different dtypes belonging to the same class
+    df1 = df1.astype({"a": "float"})
+    assert df1.dtypes["a"] != df2.dtypes["a"]
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since both are numeric
+
+    # Dfs with different dtypes
+    df2 = df2.astype("str")
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(sr1, sr2)
+
+    # Dfs with categorical dtypes
+    df1 = df1.astype("category")
+    df2 = df2.astype("category")
+    assert_dtypes_equal(df1, df2)  # shouldn't raise an error since both are categorical
+
+    # Dfs with different dtypes (categorical and str)
+    df1 = df1.astype({"a": "str"})
+    with pytest.raises(AssertionError):
+        assert_dtypes_equal(df1, df2)
+
+
+def test_execute():
+    data = np.random.rand(100, 64)
+    modin_df, pandas_df = create_test_dfs(data)
+    partitions = modin_df._query_compiler._modin_frame._partitions.flatten()
+    mgr_cls = modin_df._query_compiler._modin_frame._partition_mgr_cls
+
+    # check modin case
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(modin_df)
+        mgr_cls.wait_partitions.assert_called_once()
+        assert (mgr_cls.wait_partitions.call_args[0] == partitions).all()
+
+    # check pandas case without error
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(pandas_df)
+        mgr_cls.wait_partitions.assert_not_called()
+
+    # muke sure `trigger_hdk_import=True` doesn't broke anything
+    # when using other storage formats
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(modin_df, trigger_hdk_import=True)
+        mgr_cls.wait_partitions.assert_called_once()
+
+    # check several modin dataframes
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        modin.utils.execute(modin_df, modin_df[modin_df.columns[:4]])
+        mgr_cls.wait_partitions.assert_called
+        assert mgr_cls.wait_partitions.call_count == 2

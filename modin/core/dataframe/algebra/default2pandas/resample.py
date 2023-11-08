@@ -46,7 +46,7 @@ class Resampler:
                 df = df.squeeze(axis=1)
             resampler = df.resample(**resample_kwargs)
 
-            if type(func) == property:
+            if type(func) is property:
                 return func.fget(resampler)
 
             return func(resampler, *args, **kwargs)
@@ -79,7 +79,7 @@ class ResampleDefault(DefaultMethod):
             Function that takes query compiler and does fallback to pandas to resample
             time-series data and apply aggregation on it.
         """
-        return cls.call(
+        return super().register(
             Resampler.build_resample(func, squeeze_self),
             fn_name=func.__name__,
             **kwargs

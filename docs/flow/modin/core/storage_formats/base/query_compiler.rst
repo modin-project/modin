@@ -6,7 +6,7 @@ Brief description
 :py:class:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler` is an abstract class of query compiler, and sets a common interface
 that every other query compiler implementation in Modin must follow. The Base class contains a basic
 implementations for most of the interface methods, all of which
-:ref:`default to pandas <defaulting-to-pandas-mechanism>`.
+:doc:`fallback to pandas </supported_apis/defaulting_to_pandas>`.
 
 Subclassing :py:class:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler`
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -16,7 +16,7 @@ from :py:class:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompile
 - :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.from_pandas` build query compiler from pandas DataFrame.
 - :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.from_arrow` build query compiler from Arrow Table.
 - :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.to_pandas` get query compiler representation as pandas DataFrame.
-- :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.default_to_pandas` do :ref:`fallback to pandas <defaulting-to-pandas-mechanism>` for the passed function. 
+- :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.default_to_pandas` do :doc:`fallback to pandas </supported_apis/defaulting_to_pandas>` for the passed function. 
 - :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.finalize` finalize object constructing.
 - :py:meth:`~modin.core.storage_formats.base.query_compiler.BaseQueryCompiler.free` trigger memory cleaning.
 
@@ -88,7 +88,7 @@ and already can be used in Modin DataFrame:
 To be able to select this query compiler as default via ``modin.config`` you also need
 to define the combination of your query compiler and pandas engine as an execution
 by adding the corresponding factory. To find more information about factories,
-visit :doc:`corresponding section </flow/modin/core/execution/dispatching>` of the flow documentation.
+visit :doc:`dispatching </flow/modin/core/execution/dispatching>` page.
 
 Query Compiler API
 ''''''''''''''''''

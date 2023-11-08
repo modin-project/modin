@@ -1,7 +1,8 @@
-fsspec
-s3fs
+fsspec>=2022.05.0
 jupyterlab
 ipywidgets
-tqdm
+tqdm>=4.60.0
 modin[ray]
+# https://github.com/modin-project/modin/issues/6336
+pydantic<2
 modin[spreadsheet]

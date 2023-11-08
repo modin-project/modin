@@ -13,12 +13,8 @@
 
 """Module houses `CSVDispatcher` class, that is used for reading `.csv` files."""
 
-import pandas
-
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
 
 
 class CSVDispatcher(TextFileDispatcher):
     """Class handles utils for reading `.csv` files."""
-
-    read_callback = pandas.read_csv

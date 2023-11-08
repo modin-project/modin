@@ -13,13 +13,16 @@
 
 """Module houses `ExcelDispatcher` class, that is used for reading excel files."""
 
-import pandas
+import os
 import re
-import sys
 import warnings
+from io import BytesIO
 
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+import pandas
+
 from modin.config import NPartitions
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.pandas.io import ExcelFile
 
 EXCEL_READ_BLOCK_SIZE = 4096
 
@@ -48,38 +51,64 @@ class ExcelDispatcher(TextFileDispatcher):
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"
         ):
-            warnings.warn(
-                "Modin only implements parallel `read_excel` with `openpyxl` engine, "
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` with `openpyxl` engine, "
                 + 'please specify `engine=None` or `engine="openpyxl"` to '
-                + "use Modin's parallel implementation."
+                + "use Modin's parallel implementation.",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
-        if sys.version_info < (3, 7):
-            warnings.warn("Python 3.7 or higher required for parallel `read_excel`.")
-            return cls.single_worker_read(io, **kwargs)
+
+        if kwargs.get("skiprows") is not None:
+            return cls.single_worker_read(
+                io,
+                reason="Modin doesn't support 'skiprows' parameter of `read_excel`",
+                **kwargs
+            )
+
+        if isinstance(io, bytes):
+            io = BytesIO(io)
+
+        # isinstance(ExcelFile, os.PathLike) == True
+        if not isinstance(io, (str, os.PathLike, BytesIO)) or isinstance(
+            io, (ExcelFile, pandas.ExcelFile)
+        ):
+            if isinstance(io, ExcelFile):
+                io._set_pandas_mode()
+            return cls.single_worker_read(
+                io,
+                reason="Modin only implements parallel `read_excel` the following types of `io`: "
+                + "str, os.PathLike, io.BytesIO.",
+                **kwargs
+            )
 
         from zipfile import ZipFile
-        from openpyxl.worksheet.worksheet import Worksheet
-        from openpyxl.worksheet._reader import WorksheetReader
+
         from openpyxl.reader.excel import ExcelReader
+        from openpyxl.worksheet._reader import WorksheetReader
+        from openpyxl.worksheet.worksheet import Worksheet
+
         from modin.core.storage_formats.pandas.parsers import PandasExcelParser
 
         sheet_name = kwargs.get("sheet_name", 0)
         if sheet_name is None or isinstance(sheet_name, list):
-            warnings.warn(
-                "`read_excel` functionality is only implemented for a single sheet at a "
-                + "time. Multiple sheet reading coming soon!"
+            return cls.single_worker_read(
+                io,
+                reason="`read_excel` functionality is only implemented for a single sheet at a "
+                + "time. Multiple sheet reading coming soon!",
+                **kwargs
             )
-            return cls.single_worker_read(io, **kwargs)
 
         warnings.warn(
-            "Parallel `read_excel` is a new feature! Please email "
-            + "bug_reports@modin.org if you run into any problems."
+            "Parallel `read_excel` is a new feature! If you run into any "
+            + "problems, please visit https://github.com/modin-project/modin/issues. "
+            + "If you find a new issue and can't file it on GitHub, please "
+            + "email bug_reports@modin.org."
         )
 
         # NOTE: ExcelReader() in read-only mode does not close file handle by itself
         # work around that by passing file object if we received some path
-        io_file = open(io, "rb") if isinstance(io, str) else io
+        io_file = open(io, "rb") if isinstance(io, (str, os.PathLike)) else io
         try:
             ex = ExcelReader(io_file, read_only=True)
             ex.read()
@@ -90,14 +119,12 @@ class ExcelDispatcher(TextFileDispatcher):
             ex.read_strings()
             ws = Worksheet(wb)
         finally:
-            if isinstance(io, str):
+            if isinstance(io, (str, os.PathLike)):
                 # close only if it were us who opened the object
                 io_file.close()
 
         pandas_kw = dict(kwargs)  # preserve original kwargs
         with ZipFile(io) as z:
-            from io import BytesIO
-
             # Convert index to sheet name in file
             if isinstance(sheet_name, int):
                 sheet_name = "sheet{}".format(sheet_name + 1)
@@ -125,28 +152,48 @@ class ExcelDispatcher(TextFileDispatcher):
             while end_of_row_tag not in sheet_block:
                 sheet_block += f.read(EXCEL_READ_BLOCK_SIZE)
             idx_of_header_end = sheet_block.index(end_of_row_tag) + len(end_of_row_tag)
-            sheet_header = sheet_block[:idx_of_header_end]
-            # Reset the file pointer to begin at the end of the header information.
-            f.seek(idx_of_header_end)
+            sheet_header_with_first_row = sheet_block[:idx_of_header_end]
+
+            if kwargs["header"] is not None:
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_end)
+                sheet_header = sheet_header_with_first_row
+            else:
+                start_of_row_tag = b"<row"
+                idx_of_header_start = sheet_block.index(start_of_row_tag)
+                sheet_header = sheet_block[:idx_of_header_start]
+                # Reset the file pointer to begin at the end of the header information.
+                f.seek(idx_of_header_start)
+
             kwargs["_header"] = sheet_header
             footer = b"</sheetData></worksheet>"
             # Use openpyxml to parse the data
-            reader = WorksheetReader(
-                ws, BytesIO(sheet_header + footer), ex.shared_strings, False
+            common_args = (
+                ws,
+                BytesIO(sheet_header_with_first_row + footer),
+                ex.shared_strings,
+                False,
             )
+            if cls.need_rich_text_param():
+                reader = WorksheetReader(*common_args, rich_text=False)
+            else:
+                reader = WorksheetReader(*common_args)
             # Attach cells to the worksheet
             reader.bind_cells()
             data = PandasExcelParser.get_sheet_data(
                 ws, kwargs.get("convert_float", True)
             )
             # Extract column names from parsed data.
-            column_names = pandas.Index(data[0])
+            if kwargs["header"] is None:
+                column_names = pandas.RangeIndex(len(data[0]))
+            else:
+                column_names = pandas.Index(data[0])
             index_col = kwargs.get("index_col", None)
             # Remove column names that are specified as `index_col`
             if index_col is not None:
                 column_names = column_names.drop(column_names[index_col])
 
-            if not all(column_names):
+            if not all(column_names) or kwargs.get("usecols"):
                 # some column names are empty, use pandas reader to take the names from it
                 pandas_kw["nrows"] = 1
                 df = pandas.read_excel(io, **pandas_kw)
@@ -192,7 +239,9 @@ class ExcelDispatcher(TextFileDispatcher):
                 if b"</row>" not in chunk and b"</sheetData>" in chunk:
                     break
                 remote_results_list = cls.deploy(
-                    cls.parse, num_returns=num_splits + 2, **args
+                    func=cls.parse,
+                    f_kwargs=args,
+                    num_returns=num_splits + 2,
                 )
                 data_ids.append(remote_results_list[:-2])
                 index_ids.append(remote_results_list[-2])
@@ -212,18 +261,14 @@ class ExcelDispatcher(TextFileDispatcher):
             row_lengths = [len(o) for o in index_objs]
             new_index = index_objs[0].append(index_objs[1:])
 
+        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
+
         # Compute dtypes by getting collecting and combining all of the partitions. The
         # reported dtypes from differing rows can be different based on the inference in
         # the limited data seen by each worker. We use pandas to compute the exact dtype
         # over the whole column for each column. The index is set below.
-        dtypes = cls.get_dtypes(dtypes_ids)
+        dtypes = cls.get_dtypes(dtypes_ids, column_names)
 
-        data_ids = cls.build_partition(data_ids, row_lengths, column_widths)
-        # Set the index for the dtypes to the column names
-        if isinstance(dtypes, pandas.Series):
-            dtypes.index = column_names
-        else:
-            dtypes = pandas.Series(dtypes, index=column_names)
         new_frame = cls.frame_cls(
             data_ids,
             new_index,

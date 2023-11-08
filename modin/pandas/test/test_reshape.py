@@ -11,12 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import numpy as np
 import pandas
 import pytest
-import numpy as np
-import modin.pandas as pd
 
+import modin.pandas as pd
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+
 from .utils import df_equals, test_data_values
 
 
@@ -64,6 +65,13 @@ def test_get_dummies():
 
     with warns_that_defaulting_to_pandas():
         pd.get_dummies(1)
+
+    # test from #5184
+    pandas_df = pandas.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6], "c": ["7", "8", "9"]})
+    modin_df = pd.DataFrame(pandas_df)
+    pandas_result = pandas.get_dummies(pandas_df, columns=["a", "b"])
+    modin_result = pd.get_dummies(modin_df, columns=["a", "b"])
+    df_equals(modin_result, pandas_result)
 
 
 def test_melt():

@@ -11,16 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import warnings
+import modin.config as cfg
+import modin.pandas as pd
 
-try:
-    from dfsql import sql_query as query
-    import dfsql.extensions  # noqa: F401
-except ImportError:
-    warnings.warn(
-        "Modin experimental sql interface requires dfsql to be installed."
-        + " Run `pip install modin[sql]` to install it."
-    )
-    raise
+_query_impl = None
 
-__all__ = ["query"]
+
+def query(sql: str, *args, **kwargs) -> pd.DataFrame:
+    """
+    Execute SQL query using HDK engine.
+
+    Parameters
+    ----------
+    sql : str
+        SQL query to be executed.
+    *args : *tuple
+        Positional arguments, passed to the execution engine.
+    **kwargs : **dict
+        Keyword arguments, passed to the execution engine.
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+        Execution result.
+    """
+    global _query_impl
+
+    if _query_impl is None:
+        if cfg.StorageFormat.get() == "Hdk":
+            from modin.experimental.sql.hdk.query import hdk_query as _query_impl
+        else:
+            raise NotImplementedError
+
+    return _query_impl(sql, *args, **kwargs)

@@ -12,27 +12,29 @@
 # governing permissions and limitations under the License.
 
 
+import multiprocessing as mp
+
+import numpy as np
 import pytest
+import ray
+import xgboost
+from sklearn.datasets import (
+    load_breast_cancer,
+    load_diabetes,
+    load_digits,
+    load_iris,
+    load_wine,
+)
+from sklearn.metrics import accuracy_score, mean_squared_error
 
 import modin
 import modin.experimental.xgboost as xgb
 import modin.pandas as pd
-import numpy as np
-import xgboost
-
+from modin.config import Engine
 from modin.experimental.sklearn.model_selection.train_test_split import train_test_split
-from sklearn.datasets import (
-    load_iris,
-    load_diabetes,
-    load_digits,
-    load_wine,
-    load_breast_cancer,
-)
-from sklearn.metrics import accuracy_score, mean_squared_error
 
-import multiprocessing as mp
-import ray
-
+if Engine.get() != "Ray":
+    pytest.skip("Implemented only for Ray engine.", allow_module_level=True)
 
 ray.init(log_to_driver=False)
 
@@ -104,8 +106,8 @@ def test_xgb_with_binary_classification_datasets(data, num_actors, modin_type_y)
     predictions = bst.predict(xgb_dmatrix)
     modin_predictions = modin_bst.predict(mxgb_dmatrix)
 
-    preds = pd.DataFrame(predictions).apply(lambda x: round(x))
-    modin_preds = modin_predictions.apply(lambda x: round(x))
+    preds = pd.DataFrame(predictions).apply(round)
+    modin_preds = modin_predictions.apply(round)
 
     val = accuracy_score(y, preds)
     modin_val = accuracy_score(modin_y, modin_preds)

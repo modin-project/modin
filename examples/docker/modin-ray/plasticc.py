@@ -15,12 +15,12 @@ import sys
 import time
 from collections import OrderedDict
 from functools import partial
-import modin.pandas as pd
 
 import numpy as np
+import sklearnex
 import xgboost as xgb
 
-import sklearnex
+import modin.pandas as pd
 
 sklearnex.patch_sklearn()
 from sklearn.model_selection import train_test_split
@@ -158,7 +158,7 @@ def read(
 
 
 def etl(df, df_meta):
-    # workaround for both Modin_on_ray and Modin_on_omnisci modes. Eventually this should be fixed
+    # workaround for both Modin_on_ray and Modin_on_hdk modes. Eventually this should be fixed
     df["flux_ratio_sq"] = (df["flux"] / df["flux_err"]) * (
         df["flux"] / df["flux_err"]
     )  # np.power(df["flux"] / df["flux_err"], 2.0)

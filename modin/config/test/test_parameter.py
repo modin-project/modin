@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 from collections import defaultdict
+
 import pytest
 
 from modin.config.pubsub import Parameter

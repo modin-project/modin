@@ -11,22 +11,29 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import pandas
 import matplotlib
-import modin.pandas as pd
+import numpy as np
+import pandas
+import pytest
 
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
+from modin.core.dataframe.pandas.partitioning.axis_partition import (
+    PandasDataframeAxisPartition,
+)
 from modin.pandas.test.utils import (
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    eval_general,
-    test_data,
+    CustomIntegerForAddition,
+    NonCommutativeMultiplyInteger,
     create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -44,8 +51,21 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
     [
         lambda df: 4,
         lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
+        lambda df, axis: {
+            label: idx + 1
+            for idx, label in enumerate(df.axes[0 if axis == "rows" else 1])
+        },
+        lambda df, axis: {
+            label if idx % 2 else f"random_key{idx}": idx + 1
+            for idx, label in enumerate(df.axes[0 if axis == "rows" else 1][::-1])
+        },
     ],
-    ids=["scalar", "series_or_list"],
+    ids=[
+        "scalar",
+        "series_or_list",
+        "dictionary_keys_equal_columns",
+        "dictionary_keys_unequal_columns",
+    ],
 )
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize(
@@ -59,11 +79,11 @@ def test_math_functions(other, axis, op):
     data = test_data["float_nan_data"]
     if (op == "floordiv" or op == "rfloordiv") and axis == "rows":
         # lambda == "series_or_list"
-        pytest.xfail(reason="different behaviour")
+        pytest.xfail(reason="different behavior")
 
     if op == "rmod" and axis == "rows":
         # lambda == "series_or_list"
-        pytest.xfail(reason="different behaviour")
+        pytest.xfail(reason="different behavior")
 
     eval_general(
         *create_test_dfs(data), lambda df: getattr(df, op)(other(df, axis), axis=axis)
@@ -91,6 +111,9 @@ def test_math_functions_fill_value(other, fill_value, op):
         modin_df,
         pandas_df,
         lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+        # This test causes an empty slice to be generated thus triggering:
+        # https://github.com/modin-project/modin/issues/5974
+        comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
     )
 
 
@@ -145,10 +168,44 @@ def test_math_alias(math_op, alias):
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_comparison(data, op, other):
+    def operation(df):
+        df = getattr(df, op)(df if other == "as_left" else other)
+        if other == "as_left" and StorageFormat.get() == "Hdk":
+            # In case of comparison with a DataFrame, HDK returns
+            # a DataFrame with sorted columns.
+            df = df.sort_index(axis=1)
+        return df
+
     eval_general(
         *create_test_dfs(data),
-        lambda df: getattr(df, op)(df if other == "as_left" else other),
+        operation=operation,
     )
+
+
+@pytest.mark.skipif(
+    StorageFormat.get() != "Pandas",
+    reason="Modin on this engine doesn't create virtual partitions.",
+)
+@pytest.mark.parametrize(
+    "left_virtual,right_virtual", [(True, False), (False, True), (True, True)]
+)
+def test_virtual_partitions(left_virtual: bool, right_virtual: bool):
+    # This test covers https://github.com/modin-project/modin/issues/4691
+    n: int = 1000
+    pd_df = pandas.DataFrame(list(range(n)))
+
+    def modin_df(is_virtual):
+        if not is_virtual:
+            return pd.DataFrame(pd_df)
+        result = pd.concat([pd.DataFrame([i]) for i in range(n)], ignore_index=True)
+        # Modin should rebalance the partitions after the concat, producing virtual partitions.
+        assert isinstance(
+            result._query_compiler._modin_frame._partitions[0][0],
+            PandasDataframeAxisPartition,
+        )
+        return result
+
+    df_equals(modin_df(left_virtual) + modin_df(right_virtual), pd_df + pd_df)
 
 
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
@@ -167,28 +224,81 @@ def test_multi_level_comparison(data, op):
         getattr(modin_df_multi_level, op)(modin_df_multi_level, axis=0, level=1)
 
 
-def test_equals():
-    frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 4, 1]}
-    modin_df1 = pd.DataFrame(frame_data)
-    modin_df2 = pd.DataFrame(frame_data)
+@pytest.mark.parametrize(
+    "frame1_data,frame2_data,expected_pandas_equals",
+    [
+        pytest.param({}, {}, True, id="two_empty_dataframes"),
+        pytest.param([[1]], [[0]], False, id="single_unequal_values"),
+        pytest.param([[None]], [[None]], True, id="single_none_values"),
+        pytest.param([[np.NaN]], [[np.NaN]], True, id="single_nan_values"),
+        pytest.param({1: [10]}, {1.0: [10]}, True, id="different_column_types"),
+        pytest.param({1: [10]}, {2: [10]}, False, id="different_columns"),
+        pytest.param(
+            pandas.DataFrame({1: [10]}, index=[1]),
+            pandas.DataFrame({1: [10]}, index=[1.0]),
+            True,
+            id="different_index_types",
+        ),
+        pytest.param(
+            pandas.DataFrame({1: [10]}, index=[1]),
+            pandas.DataFrame({1: [10]}, index=[2]),
+            False,
+            id="different_indexes",
+        ),
+        pytest.param({1: [10]}, {1: [10.0]}, False, id="different_value_types"),
+        pytest.param(
+            [[1, 2], [3, 4]],
+            [[1, 2], [3, 4]],
+            True,
+            id="equal_two_by_two_dataframes",
+        ),
+        pytest.param(
+            [[1, 2], [3, 4]],
+            [[5, 2], [3, 4]],
+            False,
+            id="unequal_two_by_two_dataframes",
+        ),
+        pytest.param(
+            [[1, 1]],
+            [[1]],
+            False,
+            id="different_row_lengths",
+        ),
+        pytest.param(
+            [[1], [1]],
+            [[1]],
+            False,
+            id="different_column_lengths",
+        ),
+    ],
+)
+def test_equals(frame1_data, frame2_data, expected_pandas_equals):
+    modin_df1 = pd.DataFrame(frame1_data)
+    pandas_df1 = pandas.DataFrame(frame1_data)
+    modin_df2 = pd.DataFrame(frame2_data)
+    pandas_df2 = pandas.DataFrame(frame2_data)
 
-    assert modin_df1.equals(modin_df2)
+    pandas_equals = pandas_df1.equals(pandas_df2)
+    assert pandas_equals == expected_pandas_equals, (
+        "Test expected pandas to say the dataframes were"
+        + f"{'' if expected_pandas_equals else ' not'} equal, but they were"
+        + f"{' not' if expected_pandas_equals else ''} equal."
+    )
 
-    df_equals(modin_df1, modin_df2)
-    df_equals(modin_df1, pd.DataFrame(modin_df1))
+    assert modin_df1.equals(modin_df2) == pandas_equals
+    assert modin_df1.equals(pandas_df2) == pandas_equals
 
-    frame_data = {"col1": [2.9, 3, 3, 3], "col2": [2, 3, 5, 1]}
-    modin_df3 = pd.DataFrame(frame_data, index=list("abcd"))
 
-    assert not modin_df1.equals(modin_df3)
+def test_equals_several_partitions():
+    modin_series1 = pd.concat([pd.DataFrame([0, 1]), pd.DataFrame([None, 1])])
+    modin_series2 = pd.concat([pd.DataFrame([0, 1]), pd.DataFrame([1, None])])
+    assert not modin_series1.equals(modin_series2)
 
-    with pytest.raises(AssertionError):
-        df_equals(modin_df3, modin_df1)
 
-    with pytest.raises(AssertionError):
-        df_equals(modin_df3, modin_df2)
-
-    assert modin_df1.equals(modin_df2._query_compiler.to_pandas())
+def test_equals_with_nans():
+    df1 = pd.DataFrame([0, 1, None], dtype="uint8[pyarrow]")
+    df2 = pd.DataFrame([None, None, None], dtype="uint8[pyarrow]")
+    assert not df1.equals(df2)
 
 
 @pytest.mark.parametrize("is_more_other_partitions", [True, False])
@@ -203,8 +313,8 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
     modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
 
-    modin_df2 = modin_df.append(modin_df)
-    pandas_df2 = pandas_df.append(pandas_df)
+    modin_df2 = pd.concat((modin_df, modin_df))
+    pandas_df2 = pandas.concat((pandas_df, pandas_df))
     if is_more_other_partitions:
         modin_df2, modin_df1 = modin_df1, modin_df2
         pandas_df2, pandas_df1 = pandas_df1, pandas_df2
@@ -238,6 +348,8 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
     elif op_type == "ser_ser_different_name":
         modin_res = modin_df2.a / modin_df1.b
         pandas_res = pandas_df2.a / pandas_df1.b
+    else:
+        raise Exception(f"op_type: {op_type} not supported in test")
     df_equals(modin_res, pandas_res)
 
 
@@ -249,3 +361,75 @@ def test_duplicate_indexes():
     modin_df2, pandas_df2 = create_test_dfs({"a": data, "b": data})
     df_equals(modin_df1 / modin_df2, pandas_df1 / pandas_df2)
     df_equals(modin_df1 / modin_df1, pandas_df1 / pandas_df1)
+
+
+@pytest.mark.parametrize("subset_operand", ["left", "right"])
+def test_mismatched_col_partitions(subset_operand):
+    data = [0, 1, 2, 3]
+    modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
+    modin_df_tmp, pandas_df_tmp = create_test_dfs({"c": data})
+
+    modin_df2 = pd.concat([modin_df1, modin_df_tmp], axis=1)
+    pandas_df2 = pandas.concat([pandas_df1, pandas_df_tmp], axis=1)
+
+    if subset_operand == "right":
+        modin_res = modin_df2 + modin_df1
+        pandas_res = pandas_df2 + pandas_df1
+    else:
+        modin_res = modin_df1 + modin_df2
+        pandas_res = pandas_df1 + pandas_df2
+
+    df_equals(modin_res, pandas_res)
+
+
+@pytest.mark.parametrize("empty_operand", ["right", "left", "both"])
+def test_empty_df(empty_operand):
+    modin_df, pandas_df = create_test_dfs([0, 1, 2, 0, 1, 2])
+    modin_df_empty, pandas_df_empty = create_test_dfs()
+
+    if empty_operand == "right":
+        modin_res = modin_df + modin_df_empty
+        pandas_res = pandas_df + pandas_df_empty
+    elif empty_operand == "left":
+        modin_res = modin_df_empty + modin_df
+        pandas_res = pandas_df_empty + pandas_df
+    else:
+        modin_res = modin_df_empty + modin_df_empty
+        pandas_res = pandas_df_empty + pandas_df_empty
+
+    df_equals(modin_res, pandas_res)
+
+
+def test_add_string_to_df():
+    modin_df, pandas_df = create_test_dfs(["a", "b"])
+    eval_general(modin_df, pandas_df, lambda df: "string" + df)
+    eval_general(modin_df, pandas_df, lambda df: df + "string")
+
+
+def test_add_custom_class():
+    # see https://github.com/modin-project/modin/issues/5236
+    # Test that we can add any object that is addable to pandas object data
+    # via "+".
+    eval_general(
+        *create_test_dfs(test_data["int_data"]),
+        lambda df: df + CustomIntegerForAddition(4),
+    )
+
+
+def test_non_commutative_multiply_pandas():
+    # The non commutative integer class implementation is tricky. Check that
+    # multiplying such an integer with a pandas dataframe is really not
+    # commutative.
+    pandas_df = pandas.DataFrame([[1]], dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    assert not (integer * pandas_df).equals(pandas_df * integer)
+
+
+def test_non_commutative_multiply():
+    # This test checks that mul and rmul do different things when
+    # multiplication is not commutative, e.g. for adding a string to a string.
+    # For context see https://github.com/modin-project/modin/issues/5238
+    modin_df, pandas_df = create_test_dfs([1], dtype=int)
+    integer = NonCommutativeMultiplyInteger(2)
+    eval_general(modin_df, pandas_df, lambda s: integer * s)
+    eval_general(modin_df, pandas_df, lambda s: s * integer)

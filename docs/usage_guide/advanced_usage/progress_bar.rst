@@ -22,7 +22,5 @@ Import the progress bar into your notebook by running the following:
 
 .. code-block:: python
 
-    import modin.pandas as pd
-    from tqdm import tqdm
     from modin.config import ProgressBar
     ProgressBar.enable()

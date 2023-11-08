@@ -11,12 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from unittest.mock import Mock, mock_open, patch
+
+import numpy as np
 import pytest
-from unittest.mock import patch, mock_open
+from benchmarks.utils import data_shapes, execute, get_benchmark_shapes
 
-from benchmarks.utils import data_shapes
-from benchmarks.utils import get_benchmark_shapes
-
+import modin.pandas as pd
 from modin.config import AsvDataSizeConfig
 
 
@@ -63,3 +64,13 @@ def test_get_benchmark_shapes_default(asv_config_content, result):
     AsvDataSizeConfig.put(None)
     with patch.object(data_shapes, "DEFAULT_CONFIG", new={"TimeJoin": result}):
         assert result == get_benchmark_shapes("TimeJoin")
+
+
+def test_execute():
+    df = pd.DataFrame(np.random.rand(100, 64))
+    partitions = df._query_compiler._modin_frame._partitions.flatten()
+    mgr_cls = df._query_compiler._modin_frame._partition_mgr_cls
+    with patch.object(mgr_cls, "wait_partitions", new=Mock()):
+        execute(df)
+        mgr_cls.wait_partitions.assert_called_once()
+        assert (mgr_cls.wait_partitions.call_args[0] == partitions).all()

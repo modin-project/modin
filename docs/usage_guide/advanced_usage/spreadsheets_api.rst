@@ -7,7 +7,7 @@ Install Modin-spreadsheet using pip:
 
 .. code-block:: bash
 
-    pip install modin[spreadsheet]
+    pip install "modin[spreadsheet]"
 
 
 The following code snippet creates a spreadsheet using the FiveThirtyEight dataset on labor force information by college majors (licensed under CC BY 4.0):
@@ -15,7 +15,7 @@ The following code snippet creates a spreadsheet using the FiveThirtyEight datas
 .. code-block:: python
 
     import modin.pandas as pd
-    import modin.spreadsheet as mss
+    import modin.experimental.spreadsheet as mss
     df = pd.read_csv('https://raw.githubusercontent.com/fivethirtyeight/data/master/college-majors/all-ages.csv')
     spreadsheet = mss.from_dataframe(df)
     spreadsheet

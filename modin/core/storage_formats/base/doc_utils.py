@@ -14,8 +14,8 @@
 """Module contains decorators for documentation of the query compiler methods."""
 
 from functools import partial
-from modin.utils import append_to_docstring, format_string, align_indents
 
+from modin.utils import align_indents, append_to_docstring, format_string
 
 _one_column_warning = """
 .. warning::
@@ -244,8 +244,6 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
     if params is None:
         params = """
         axis : {{0, 1}}
-        level : None, default: None
-            Serves the compatibility purpose. Always has to be None.
         numeric_only : bool, optional"""
 
     extra_params_map = {
@@ -282,7 +280,7 @@ def doc_reduce_agg(method, refer_to, params=None, extra_params=None):
 doc_cum_agg = partial(
     doc_qc_method,
     template="""
-    Get cummulative {method} for every row or column.
+    Get cumulative {method} for every row or column.
 
     Parameters
     ----------
@@ -371,7 +369,7 @@ def doc_resample_reduce(result, refer_to, params=None, compatibility_params=True
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are preserved.
+            - Labels on the opposite of specified axis are preserved.
             - Each element of QueryCompiler is the {result} for the
               corresponding group and column/row."""
     return doc_resample(
@@ -421,7 +419,7 @@ def doc_resample_agg(action, output, refer_to, params=None):
 
     build_rules = f"""
             - Labels on the specified axis are the group names (time-stamps)
-            - Labels on the opposit of specified axis are a MultiIndex, where first level
+            - Labels on the opposite of specified axis are a MultiIndex, where first level
               contains preserved labels of this axis and the second level is the {output}.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding group and column/row."""
@@ -535,6 +533,7 @@ doc_str_method = partial(
 
 
 def doc_window_method(
+    window_cls_name,
     result,
     refer_to,
     action=None,
@@ -543,10 +542,12 @@ def doc_window_method(
     build_rules="aggregation",
 ):
     """
-    Build decorator which adds docstring for the window method.
+    Build decorator which adds docstring for a window method.
 
     Parameters
     ----------
+    window_cls_name : str
+        The Window class the method is on.
     result : str
         The result of the method.
     refer_to : str
@@ -579,7 +580,7 @@ def doc_window_method(
         -------
         BaseQueryCompiler
             New QueryCompiler containing {result} for each window, built by the following
-            rulles:
+            rules:
 
             {build_rules}
         """
@@ -589,14 +590,19 @@ def doc_window_method(
             - Each element is the {result} for the corresponding window.""",
         "udf_aggregation": """
             - Labels on the specified axis are preserved.
-            - Labels on the opposit of specified axis are MultiIndex, where first level
+            - Labels on the opposite of specified axis are MultiIndex, where first level
               contains preserved labels of this axis and the second level has the function names.
             - Each element of QueryCompiler is the result of corresponding function for the
               corresponding window and column/row.""",
     }
     if action is None:
         action = f"compute {result}"
-    window_args_name = "rolling_args" if win_type == "rolling window" else "window_args"
+    if win_type == "rolling window":
+        window_args_name = "rolling_kwargs"
+    elif win_type == "expanding window":
+        window_args_name = "expanding_args"
+    else:
+        window_args_name = "window_kwargs"
 
     # We need that `params` value ended with new line to have
     # an empty line between "parameters" and "return" sections
@@ -613,7 +619,7 @@ def doc_window_method(
         win_type=win_type,
         extra_params=params,
         build_rules=doc_build_rules.get(build_rules, build_rules),
-        refer_to=f"Rolling.{refer_to}",
+        refer_to=f"{window_cls_name}.{refer_to}",
         window_args_name=window_args_name,
     )
 
@@ -662,7 +668,7 @@ def doc_groupby_method(result, refer_to, action=None):
         QueryCompiler containing the result of groupby reduce built by the
         following rules:
 
-        - Labels on the opposit of specified axis are preserved.
+        - Labels on the opposite of specified axis are preserved.
         - If groupby_args["as_index"] is True then labels on the specified axis
           are the group names, otherwise labels would be default: 0, 1 ... n.
         - If groupby_args["as_index"] is False, then first N columns/rows of the frame

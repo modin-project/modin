@@ -13,11 +13,11 @@
 
 """Common utilities for Ray execution engine."""
 
-from .task_wrapper import RayTask, SignalActor
+from .engine_wrapper import RayWrapper, SignalActor
 from .utils import initialize_ray
 
 __all__ = [
     "initialize_ray",
-    "RayTask",
+    "RayWrapper",
     "SignalActor",
 ]

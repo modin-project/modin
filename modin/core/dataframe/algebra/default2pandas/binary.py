@@ -13,13 +13,13 @@
 
 """Module houses default binary functions builder class."""
 
-from .any import AnyDefault
-
 import pandas
 from pandas.core.dtypes.common import is_list_like
 
+from .default import DefaultMethod
 
-class BinaryDefault(AnyDefault):
+
+class BinaryDefault(DefaultMethod):
     """Build default-to-pandas methods which executes binary functions."""
 
     @classmethod

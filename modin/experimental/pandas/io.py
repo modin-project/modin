@@ -16,16 +16,17 @@
 import inspect
 import pathlib
 import pickle
-from typing import Union, IO, AnyStr, Callable, Optional
+from typing import IO, AnyStr, Callable, Iterator, Optional, Union
 
 import pandas
 import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
+from modin.config import IsExperimental
+from modin.core.storage_formats import BaseQueryCompiler
+from modin.utils import expanduser_path_arg
+
 from . import DataFrame
-from modin.config import IsExperimental, Engine
-from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-from ...pandas import _update_engine
 
 
 def read_sql(
@@ -37,15 +38,20 @@ def read_sql(
     parse_dates=None,
     columns=None,
     chunksize=None,
+    dtype_backend=lib.no_default,
+    dtype=None,
     partition_column: Optional[str] = None,
     lower_bound: Optional[int] = None,
     upper_bound: Optional[int] = None,
     max_sessions: Optional[int] = None,
-) -> DataFrame:
+) -> Union[DataFrame, Iterator[DataFrame]]:
     """
     General documentation is available in `modin.pandas.read_sql`.
 
     This experimental feature provides distributed reading from a sql file.
+    The function extended with `Spark-like parameters <https://spark.apache.org/docs/2.0.0/api/R/read.jdbc.html>`_
+    such as ``partition_column``, ``lower_bound`` and ``upper_bound``. With these
+    parameters, the user will be able to specify how to partition the imported data.
 
     Parameters
     ----------
@@ -83,6 +89,13 @@ def read_sql(
     chunksize : int, optional
         If specified, return an iterator where `chunksize` is the
         number of rows to include in each chunk.
+    dtype_backend : {"numpy_nullable", "pyarrow"}, default: NumPy backed DataFrames
+        Which dtype_backend to use, e.g. whether a DataFrame should have NumPy arrays,
+        nullable dtypes are used for all dtypes that have a nullable implementation when
+        "numpy_nullable" is set, PyArrow is used for all dtypes if "pyarrow" is set.
+        The dtype_backends are still experimential.
+    dtype : Type name or dict of columns, optional
+        Data type for data or columns. E.g. np.float64 or {'a': np.float64, 'b': np.int32, 'c': 'Int64'}. The argument is ignored if a table is passed instead of a query.
     partition_column : str, optional
         Column used to share the data between the workers (MUST be a INTEGER column).
     lower_bound : int, optional
@@ -94,14 +107,21 @@ def read_sql(
 
     Returns
     -------
-    modin.DataFrame
+    modin.DataFrame or Iterator[modin.DataFrame]
     """
-    Engine.subscribe(_update_engine)
-    assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
+
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    assert IsExperimental.get(), "This only works in experimental mode"
+
+    result = FactoryDispatcher.read_sql(**kwargs)
+    if isinstance(result, BaseQueryCompiler):
+        return DataFrame(query_compiler=result)
+    return (DataFrame(query_compiler=qc) for qc in result)
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def read_custom_text(
     filepath_or_buffer,
     columns,
@@ -110,17 +130,17 @@ def read_custom_text(
     nrows: Optional[int] = None,
     is_quoting=True,
 ):
-    """
+    r"""
     Load custom text data from file.
 
     Parameters
     ----------
     filepath_or_buffer : str
         File path where the custom text data will be loaded from.
-    columns : list or callable(file-like object, **kwargs) -> list
+    columns : list or callable(file-like object, \*\*kwargs) -> list
         Column names of list type or callable that create column names from opened file
         and passed `kwargs`.
-    custom_parser : callable(file-like object, **kwargs) -> pandas.DataFrame
+    custom_parser : callable(file-like object, \*\*kwargs) -> pandas.DataFrame
         Function that takes as input a part of the `filepath_or_buffer` file loaded into
         memory in file-like object form.
     compression : {'infer', 'gzip', 'bz2', 'zip', 'xz', None}, default: 'infer'
@@ -137,14 +157,17 @@ def read_custom_text(
     -------
     modin.DataFrame
     """
-    Engine.subscribe(_update_engine)
-    assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    assert IsExperimental.get(), "This only works in experimental mode"
+
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
 
 
 # CSV and table
-def _make_parser_func(sep: str) -> Callable:
+def _make_parser_func(sep: str, funcname: str) -> Callable:
     """
     Create a parser function from the given sep.
 
@@ -152,6 +175,8 @@ def _make_parser_func(sep: str) -> Callable:
     ----------
     sep : str
         The separator default to use for the parser.
+    funcname : str
+        The name of the generated parser function.
 
     Returns
     -------
@@ -160,15 +185,13 @@ def _make_parser_func(sep: str) -> Callable:
 
     def parser_func(
         filepath_or_buffer: Union[str, pathlib.Path, IO[AnyStr]],
+        *,
         sep=lib.no_default,
         delimiter=None,
         header="infer",
         names=lib.no_default,
         index_col=None,
         usecols=None,
-        squeeze=False,
-        prefix=lib.no_default,
-        mangle_dupe_cols=True,
         dtype=None,
         engine=None,
         converters=None,
@@ -176,16 +199,18 @@ def _make_parser_func(sep: str) -> Callable:
         false_values=None,
         skipinitialspace=False,
         skiprows=None,
+        skipfooter=0,
         nrows=None,
         na_values=None,
         keep_default_na=True,
         na_filter=True,
         verbose=False,
         skip_blank_lines=True,
-        parse_dates=False,
-        infer_datetime_format=False,
+        parse_dates=None,
+        infer_datetime_format=lib.no_default,
         keep_date_col=False,
-        date_parser=None,
+        date_parser=lib.no_default,
+        date_format=None,
         dayfirst=False,
         cache_dates=True,
         iterator=False,
@@ -201,16 +226,14 @@ def _make_parser_func(sep: str) -> Callable:
         encoding=None,
         encoding_errors="strict",
         dialect=None,
-        error_bad_lines=None,
-        warn_bad_lines=None,
-        on_bad_lines=None,
-        skipfooter=0,
+        on_bad_lines="error",
         doublequote=True,
         delim_whitespace=False,
         low_memory=True,
         memory_map=False,
         float_precision=None,
         storage_options: StorageOptions = None,
+        dtype_backend=lib.no_default,
     ) -> DataFrame:
         # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
         _pd_read_csv_signature = {
@@ -224,7 +247,8 @@ def _make_parser_func(sep: str) -> Callable:
         return _read(**kwargs)
 
     parser_func.__doc__ = _read.__doc__
-    return parser_func
+    parser_func.__name__ = funcname
+    return expanduser_path_arg("filepath_or_buffer")(parser_func)
 
 
 def _read(**kwargs) -> DataFrame:
@@ -246,7 +270,7 @@ def _read(**kwargs) -> DataFrame:
     Examples
     --------
     >>> import modin.experimental.pandas as pd
-    >>> df = pd.read_csv_glob("s3://nyc-tlc/trip data/yellow_tripdata_2020-1*")
+    >>> df = pd.read_csv_glob("s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-1*")
     UserWarning: `read_*` implementation has mismatches with pandas:
     Data types of partitions are different! Please refer to the troubleshooting section of the Modin documentation to fix this issue.
             VendorID tpep_pickup_datetime  ... total_amount  congestion_surcharge
@@ -264,13 +288,9 @@ def _read(**kwargs) -> DataFrame:
 
     [4652013 rows x 18 columns]
     """
-    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    try:
-        pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
-    except AttributeError:
-        raise AttributeError("read_csv_glob() is only implemented for pandas on Ray.")
-
+    pd_obj = FactoryDispatcher.read_csv_glob(**kwargs)
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
         reader = pd_obj.read
@@ -282,9 +302,10 @@ def _read(**kwargs) -> DataFrame:
     return DataFrame(query_compiler=pd_obj)
 
 
-read_csv_glob = _make_parser_func(sep=",")
+read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def read_pickle_distributed(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
@@ -322,12 +343,16 @@ def read_pickle_distributed(
     -----
     The number of partitions is equal to the number of input files.
     """
-    Engine.subscribe(_update_engine)
-    assert IsExperimental.get(), "This only works in experimental mode"
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
+
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    assert IsExperimental.get(), "This only works in experimental mode"
+
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
 
 
+@expanduser_path_arg("filepath_or_buffer")
 def to_pickle_distributed(
     self,
     filepath_or_buffer,
@@ -357,10 +382,9 @@ def to_pickle_distributed(
         passed as additional compression options.
     protocol : int, default: pickle.HIGHEST_PROTOCOL
         Int which indicates which protocol should be used by the pickler,
-        default HIGHEST_PROTOCOL (see [1]_ paragraph 12.1.2). The possible
-        values are 0, 1, 2, 3, 4, 5. A negative value for the protocol
-        parameter is equivalent to setting its value to HIGHEST_PROTOCOL.
-        .. [1] https://docs.python.org/3/library/pickle.html.
+        default HIGHEST_PROTOCOL (see `pickle docs <https://docs.python.org/3/library/pickle.html>`_
+        paragraph 12.1.2 for details). The possible  values are 0, 1, 2, 3, 4, 5. A negative value
+        for the protocol parameter is equivalent to setting its value to HIGHEST_PROTOCOL.
     storage_options : dict, optional
         Extra options that make sense for a particular storage connection, e.g.
         host, port, username, password, etc., if using a URL that will be parsed by
@@ -369,7 +393,8 @@ def to_pickle_distributed(
         implementation docs for the set of allowed keys and values.
     """
     obj = self
-    Engine.subscribe(_update_engine)
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     if isinstance(self, DataFrame):
         obj = self._query_compiler
     FactoryDispatcher.to_pickle_distributed(

@@ -24,7 +24,7 @@
 Scale your pandas workflow by changing a single line of code
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
-Modin uses Ray_ or Dask_ to provide an effortless way to speed up your pandas notebooks,
+Modin uses Ray_, Dask_ or Unidist_ to provide an effortless way to speed up your pandas notebooks,
 scripts, and libraries. Unlike other distributed DataFrame libraries, Modin provides
 seamless integration and compatibility with existing pandas code. Even using the
 DataFrame constructor is identical.
@@ -37,10 +37,11 @@ DataFrame constructor is identical.
   frame_data = np.random.randint(0, 100, size=(2**10, 2**8))
   df = pd.DataFrame(frame_data)
 
-To use Modin, you do not need to know how many cores your system has and you do not need
-to specify how to distribute the data. In fact, you can continue using your previous
-pandas notebooks while experiencing a considerable speedup from Modin, even on a single
-machine. Once you’ve changed your import statement, you’re ready to use Modin just like
+It is not necessary to know in advance the available hardware resources in order to use Modin.
+Additionally, it is not necessary to specify how to distribute or place data.
+Modin acts as a drop-in replacement for pandas, which means that you can continue using your previous
+pandas notebooks, *unchanged*, while experiencing a considerable speedup thanks to Modin, even on a single
+machine. Once you've changed your import statement, you’re ready to use Modin just like
 you would pandas.
 
 Installation and choosing your compute engine
@@ -53,13 +54,14 @@ Modin can be installed from PyPI:
    pip install modin
 
 
-If you don't have Ray_ or Dask_ installed, you will need to install Modin with one
+If you don't have Ray_, Dask_ or Unidist_ installed, you will need to install Modin with one
 of the targets:
 
 .. code-block:: bash
 
    pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
    pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
+   pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist
    pip install "modin[all]" # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
@@ -72,6 +74,14 @@ variable ``MODIN_ENGINE`` and Modin will do computation with that engine:
 
    export MODIN_ENGINE=ray  # Modin will use Ray
    export MODIN_ENGINE=dask  # Modin will use Dask
+   export MODIN_ENGINE=unidist # Modin will use Unidist
+
+If you want to choose the Unidist engine, you should set the additional environment 
+variable ``UNIDIST_BACKEND``, because currently Modin only supports Unidist on MPI:
+
+.. code-block:: bash
+
+   export UNIDIST_BACKEND=mpi # Unidist will use MPI backend
 
 This can also be done within a notebook/interpreter before you import Modin:
 
@@ -81,6 +91,9 @@ This can also be done within a notebook/interpreter before you import Modin:
 
    os.environ["MODIN_ENGINE"] = "ray"  # Modin will use Ray
    os.environ["MODIN_ENGINE"] = "dask"  # Modin will use Dask
+
+   os.environ["MODIN_ENGINE"] = "unidist" # Modin will use Unidist
+   os.environ["UNIDIST_BACKEND"] = "mpi" # Unidist will use MPI backend
 
    import modin.pandas as pd
 
@@ -130,4 +143,5 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _Ray: https://github.com/ray-project/ray/
 .. _Dask: https://dask.org/
+.. _Unidist: https://github.com/modin-project/unidist/
 .. _Github: https://github.com/modin-project/modin

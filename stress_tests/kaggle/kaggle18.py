@@ -2,30 +2,31 @@
 import matplotlib
 
 matplotlib.use("PS")
-import nltk
-import string
 import re
+import string
+
+import matplotlib.pyplot as plt
+import nltk
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 
 sns.set(style="white")
-from nltk.tokenize import word_tokenize, sent_tokenize
-from nltk.corpus import stopwords
-from sklearn.feature_extraction import stop_words
+import warnings
 from collections import Counter
-from wordcloud import WordCloud
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.decomposition import LatentDirichletAllocation
-import plotly.offline as py
-import plotly.graph_objs as go
+
 import bokeh.plotting as bp
+import plotly.graph_objs as go
+import plotly.offline as py
 from bokeh.models import HoverTool  # BoxSelectTool
 from bokeh.models import ColumnDataSource
-from bokeh.plotting import show, output_notebook  # figure
-import warnings
+from bokeh.plotting import output_notebook, show  # figure
+from nltk.corpus import stopwords
+from nltk.tokenize import sent_tokenize, word_tokenize
+from sklearn.decomposition import LatentDirichletAllocation
+from sklearn.feature_extraction import stop_words
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from wordcloud import WordCloud
 
 warnings.filterwarnings("ignore")
 import logging
@@ -209,8 +210,8 @@ def tokenize(text):
         filtered_tokens = [w for w in tokens if re.search("[a-zA-Z]", w)]
         filtered_tokens = [w.lower() for w in filtered_tokens if len(w) >= 3]
         return filtered_tokens
-    except TypeError as e:
-        print(text, e)
+    except TypeError as err:
+        print(text, err)
 
 
 cat_desc = {}
@@ -245,8 +246,8 @@ def tokenize(text):
         filtered_tokens = [w for w in tokens if re.search("[a-zA-Z]", w)]
         filtered_tokens = [w.lower() for w in filtered_tokens if len(w) >= 3]
         return filtered_tokens
-    except TypeError as e:
-        print(text, e)
+    except TypeError as err:
+        print(text, err)
 
 
 train["tokens"] = train["item_description"].map(tokenize)

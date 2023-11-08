@@ -12,3 +12,11 @@
 # governing permissions and limitations under the License.
 
 """Common utilities for Dask execution engine."""
+
+from .engine_wrapper import DaskWrapper
+from .utils import initialize_dask
+
+__all__ = [
+    "initialize_dask",
+    "DaskWrapper",
+]

@@ -13,8 +13,13 @@
 
 """Implement utils for pandas component."""
 
-from pandas import MultiIndex
+from typing import Iterator, Optional, Tuple
+
+import numpy as np
+import pandas
+from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
 from pandas.util._decorators import doc
+
 from modin.utils import hashable
 
 _doc_binary_operation = """
@@ -29,6 +34,11 @@ Returns
 -------
 {returns}
 """
+
+SET_DATAFRAME_ATTRIBUTE_WARNING = (
+    "Modin doesn't allow columns to be created via a new attribute name - see "
+    + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access"
+)
 
 
 def from_non_pandas(df, index, columns, dtype):
@@ -76,6 +86,7 @@ def from_pandas(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
@@ -96,6 +107,7 @@ def from_arrow(at):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
@@ -118,9 +130,33 @@ def from_dataframe(df):
         A new Modin DataFrame object.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
     from .dataframe import DataFrame
 
     return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
+
+
+def cast_function_modin2pandas(func):
+    """
+    Replace Modin functions with pandas functions if `func` is callable.
+
+    Parameters
+    ----------
+    func : object
+
+    Returns
+    -------
+    object
+    """
+    if callable(func):
+        if func.__module__ == "modin.pandas.series":
+            func = getattr(pandas.Series, func.__name__)
+        elif func.__module__ in ("modin.pandas.dataframe", "modin.pandas.base"):
+            # FIXME: when the method is defined in `modin.pandas.base` file, then the
+            # type cannot be determined, in general there may be an error, but at the
+            # moment it is better.
+            func = getattr(pandas.DataFrame, func.__name__)
+    return func
 
 
 def is_scalar(obj):
@@ -144,6 +180,7 @@ def is_scalar(obj):
         True if given object is scalar and False otherwise.
     """
     from pandas.api.types import is_scalar as pandas_is_scalar
+
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
@@ -252,6 +289,173 @@ def check_both_not_none(option1, option2):
     return not (option1 is None or option2 is None)
 
 
+def broadcast_item(
+    obj,
+    row_lookup,
+    col_lookup,
+    item,
+    need_columns_reindex=True,
+):
+    """
+    Use NumPy to broadcast or reshape item with reindexing.
+
+    Parameters
+    ----------
+    obj : DataFrame or Series or query compiler
+        The object containing the necessary information about the axes.
+    row_lookup : slice or scalar
+        The global row index to locate inside of `item`.
+    col_lookup : range, array, list, slice or scalar
+        The global col index to locate inside of `item`.
+    item : DataFrame, Series, or query_compiler
+        Value that should be broadcast to a new shape of `to_shape`.
+    need_columns_reindex : bool, default: True
+        In the case of assigning columns to a dataframe (broadcasting is
+        part of the flow), reindexing is not needed.
+
+    Returns
+    -------
+    (np.ndarray, Optional[Series])
+        * np.ndarray - `item` after it was broadcasted to `to_shape`.
+        * Series - item's dtypes.
+
+    Raises
+    ------
+    ValueError
+        1) If `row_lookup` or `col_lookup` contains values missing in
+        DataFrame/Series index or columns correspondingly.
+        2) If `item` cannot be broadcast from its own shape to `to_shape`.
+
+    Notes
+    -----
+    NumPy is memory efficient, there shouldn't be performance issue.
+    """
+    # It is valid to pass a DataFrame or Series to __setitem__ that is larger than
+    # the target the user is trying to overwrite.
+    from .dataframe import DataFrame
+    from .series import Series
+
+    new_row_len = (
+        len(obj.index[row_lookup]) if isinstance(row_lookup, slice) else len(row_lookup)
+    )
+    new_col_len = (
+        len(obj.columns[col_lookup])
+        if isinstance(col_lookup, slice)
+        else len(col_lookup)
+    )
+    to_shape = new_row_len, new_col_len
+
+    dtypes = None
+    if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
+        # convert indices in lookups to names, as pandas reindex expects them to be so
+        axes_to_reindex = {}
+        index_values = obj.index[row_lookup]
+        if not index_values.equals(item.index):
+            axes_to_reindex["index"] = index_values
+        if need_columns_reindex and isinstance(item, (pandas.DataFrame, DataFrame)):
+            column_values = obj.columns[col_lookup]
+            if not column_values.equals(item.columns):
+                axes_to_reindex["columns"] = column_values
+        # New value for columns/index make that reindex add NaN values
+        if axes_to_reindex:
+            item = item.reindex(**axes_to_reindex)
+
+        dtypes = item.dtypes
+        if not isinstance(dtypes, pandas.Series):
+            dtypes = pandas.Series([dtypes])
+
+    try:
+        # Cast to numpy drop information about heterogeneous types (cast to common)
+        # TODO: we shouldn't do that, maybe there should be the if branch
+        item = np.array(item)
+        if dtypes is None:
+            dtypes = pandas.Series([item.dtype] * len(col_lookup))
+        if np.prod(to_shape) == np.prod(item.shape):
+            return item.reshape(to_shape), dtypes
+        else:
+            return np.broadcast_to(item, to_shape), dtypes
+    except ValueError:
+        from_shape = np.array(item).shape
+        raise ValueError(
+            f"could not broadcast input array from shape {from_shape} into shape "
+            + f"{to_shape}"
+        )
+
+
+def _walk_aggregation_func(
+    key: IndexLabel, value: AggFuncType, depth: int = 0
+) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
+    """
+    Walk over a function from a dictionary-specified aggregation.
+
+    Note: this function is not supposed to be called directly and
+    is used by ``walk_aggregation_dict``.
+
+    Parameters
+    ----------
+    key : IndexLabel
+        A key in a dictionary-specified aggregation for the passed `value`.
+        This means an index label to apply the `value` functions against.
+    value : AggFuncType
+        An aggregation function matching the `key`.
+    depth : int, default: 0
+        Specifies a nesting level for the `value` where ``depth=0`` is when
+        you call the function on a raw dictionary value.
+
+    Yields
+    ------
+    (col: IndexLabel, func: AggFuncTypeBase, func_name: Optional[str], col_renaming_required: bool)
+        Yield an aggregation function with its metadata:
+            - `col`: column name to apply the function.
+            - `func`: aggregation function to apply to the column.
+            - `func_name`: custom function name that was specified in the dict.
+            - `col_renaming_required`: whether it's required to rename the
+                `col` into ``(col, func_name)``.
+    """
+    col_renaming_required = bool(depth)
+
+    if isinstance(value, (list, tuple)):
+        if depth == 0:
+            for val in value:
+                yield from _walk_aggregation_func(key, val, depth + 1)
+        elif depth == 1:
+            if len(value) != 2:
+                raise ValueError(
+                    f"Incorrect rename format. Renamer must consist of exactly two elements, got: {len(value)}."
+                )
+            func_name, func = value
+            yield key, func, func_name, col_renaming_required
+        else:
+            # pandas doesn't support this as well
+            raise NotImplementedError("Nested renaming is not supported.")
+    else:
+        yield key, value, None, col_renaming_required
+
+
+def walk_aggregation_dict(
+    agg_dict: AggFuncTypeDict,
+) -> Iterator[Tuple[IndexLabel, AggFuncTypeBase, Optional[str], bool]]:
+    """
+    Walk over an aggregation dictionary.
+
+    Parameters
+    ----------
+    agg_dict : AggFuncTypeDict
+
+    Yields
+    ------
+    (col: IndexLabel, func: AggFuncTypeBase, func_name: Optional[str], col_renaming_required: bool)
+        Yield an aggregation function with its metadata:
+            - `col`: column name to apply the function.
+            - `func`: aggregation function to apply to the column.
+            - `func_name`: custom function name that was specified in the dict.
+            - `col_renaming_required`: whether it's required to rename the
+                `col` into ``(col, func_name)``.
+    """
+    for key, value in agg_dict.items():
+        yield from _walk_aggregation_func(key, value)
+
+
 def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Series"):
     """
     Return callable documenting `Series` or `DataFrame` binary operator.
@@ -296,5 +500,5 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     return doc_op
 
 
-_original_pandas_MultiIndex_from_frame = MultiIndex.from_frame
-MultiIndex.from_frame = from_modin_frame_to_mi
+_original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
+pandas.MultiIndex.from_frame = from_modin_frame_to_mi

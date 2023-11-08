@@ -13,7 +13,7 @@ want to review in order to get started.
 
 Also, feel free to join the discussions on the `developer mailing list`_.
 
-If you want a quick guide to getting your development enviroment setup, please
+If you want a quick guide to getting your development environment setup, please
 use `the contributing instructions on GitHub`_.
 
 Certificate of Origin
@@ -86,8 +86,8 @@ after this with ``git push -f``.
 
 Commit Message formatting
 -------------------------
-To ensure that all commit messages in the master branch follow a specific format, we
-enforce that all commit messages must follow the following format:
+We request that your first commit follow a particular format, and we
+**require** that your PR title follow the format. The format is:
 
 .. code-block:: bash
 
@@ -101,12 +101,18 @@ message can be one of the following:
 * FIX: A bugfix contribution
 * REFACTOR: Moving or removing code without change in functionality
 * TEST: Test updates or improvements
+* PERF: Performance enhancements
 
 The ``#9999`` component of the commit message should be the issue number in the Modin
 GitHub issue tracker: https://github.com/modin-project/modin/issues. This is important
 because it links commits to their issues.
 
 The commit message should follow a colon (:) and be descriptive and succinct.
+
+A Modin CI job on GitHub will enforce that your pull request title follows the
+format we suggest. Note that if you update the PR title, you have to push
+another commit (even if it's empty) or amend your last commit for the job to
+pick up the new PR title. Re-running the job in Github Actions won't work.
 
 General Rules for committers
 ----------------------------
@@ -191,9 +197,8 @@ To build the documentation, please follow the steps below from the project root:
 
 .. code-block:: bash
 
-    cd docs
-    pip install -r requirements-doc.txt
-    sphinx-build -b html . build
+    pip install -r docs/requirements-doc.txt
+    sphinx-build -b html docs docs/build
 
 To visualize the documentation locally, run the following from `build` folder:
 

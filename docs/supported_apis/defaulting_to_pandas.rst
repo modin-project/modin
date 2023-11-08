@@ -27,7 +27,7 @@ We have taken a community-driven approach to implementing new methods. We did a 
 on pandas usage`_ to learn what the most-used APIs are. Modin currently supports **93%**
 of the pandas API based on our study of pandas usage, and we are actively expanding the
 API.
-**To request implementation, send an email to feature_requests@modin.org or file an issue at
-https://github.com/modin-project/modin/issues.**
+**To request implementation, file an issue at https://github.com/modin-project/modin/issues
+or send an email to feature_requests@modin.org.**
 
 .. _`study on pandas usage`: https://github.com/modin-project/study_kaggle_usage

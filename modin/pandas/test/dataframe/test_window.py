@@ -11,42 +11,45 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-import modin.pandas as pd
+import pytest
 
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
     arg_keys,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    no_numeric_dfs,
-    quantiles_keys,
-    quantiles_values,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
     int_arg_keys,
     int_arg_values,
+    name_contains,
+    no_numeric_dfs,
+    quantiles_keys,
+    quantiles_values,
+    random_state,
     test_data,
-    eval_general,
-    create_test_dfs,
     test_data_diff_dtype,
+    test_data_keys,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
 )
-from modin.config import NPartitions
-from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
 
 # Force matplotlib to not use any Xwindows backend.
 matplotlib.use("Agg")
+
+if StorageFormat.get() == "Hdk":
+    pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -86,6 +89,36 @@ def test_diff(axis, periods):
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.diff(axis=axis, periods=periods),
     )
+
+
+def test_diff_with_datetime_types():
+    pandas_df = pandas.DataFrame(
+        [[1, 2.0, 3], [4, 5.0, 6], [7, np.nan, 9], [10, 11.3, 12], [13, 14.5, 15]]
+    )
+    data = pandas.date_range("2018-01-01", periods=5, freq="H").values
+    pandas_df = pandas.concat([pandas_df, pandas.Series(data)], axis=1)
+    modin_df = pd.DataFrame(pandas_df)
+
+    # Test `diff` with datetime type.
+    pandas_result = pandas_df.diff()
+    modin_result = modin_df.diff()
+    df_equals(modin_result, pandas_result)
+
+    # Test `diff` with timedelta type.
+    td_pandas_result = pandas_result.diff()
+    td_modin_result = modin_result.diff()
+    df_equals(td_modin_result, td_pandas_result)
+
+
+def test_diff_error_handling():
+    df = pd.DataFrame([["a", "b", "c"]], columns=["col 0", "col 1", "col 2"])
+    with pytest.raises(
+        ValueError, match="periods must be an int. got <class 'str'> instead"
+    ):
+        df.diff(axis=0, periods="1")
+
+    with pytest.raises(TypeError, match="unsupported operand type for -: got object"):
+        df.diff()
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
@@ -144,14 +177,18 @@ def test_fillna(data, method, axis, limit):
 
         try:
             pandas_result = pandas_df.fillna(0, method=method, axis=axis, limit=limit)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.fillna(0, method=method, axis=axis, limit=limit)
         else:
             modin_result = modin_df.fillna(0, method=method, axis=axis, limit=limit)
             df_equals(modin_result, pandas_result)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk",
+    reason="'datetime64[ns, pytz.FixedOffset(60)]' vs 'datetime64[ns, UTC+01:00]'",
+)
 def test_fillna_sanity():
     # with different dtype
     frame_data = [
@@ -204,6 +241,13 @@ def test_fillna_downcast():
     result = df.fillna({"a": 0}, downcast="infer")
     modin_df = pd.DataFrame(frame_data).fillna({"a": 0}, downcast="infer")
     df_equals(modin_df, result)
+
+
+def test_fillna_4660():
+    eval_general(
+        *create_test_dfs({"a": ["a"], "b": ["b"], "c": [pd.NA]}, index=["row1"]),
+        lambda df: df["c"].fillna(df["b"]),
+    )
 
 
 def test_fillna_inplace():
@@ -403,7 +447,6 @@ def test_fillna_columns(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_fillna_invalid_method(data):
     modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)  # noqa F841
 
     with pytest.raises(ValueError):
         modin_df.fillna(method="ffil")
@@ -492,10 +535,7 @@ def test_median_skew_std_var_sem_1953(method):
     modin_df = pd.DataFrame(data, index=arrays)
     pandas_df = pandas.DataFrame(data, index=arrays)
 
-    # These shouldn't default to pandas: follow up on
-    # https://github.com/modin-project/modin/issues/1953
-    with warns_that_defaulting_to_pandas():
-        eval_general(modin_df, pandas_df, lambda df: getattr(df, method)(level=0))
+    eval_general(modin_df, pandas_df, lambda df: getattr(df, method)())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -618,8 +658,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.quantile(q, axis=1, numeric_only=False)
@@ -634,8 +674,8 @@ def test_quantile(request, data, q):
 
         try:
             pandas_result = pandas_df.T.quantile(q, axis=1, numeric_only=False)
-        except Exception as e:
-            with pytest.raises(type(e)):
+        except Exception as err:
+            with pytest.raises(type(err)):
                 modin_df.T.quantile(q, axis=1, numeric_only=False)
         else:
             modin_result = modin_df.T.quantile(q, axis=1, numeric_only=False)

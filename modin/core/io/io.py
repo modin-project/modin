@@ -17,23 +17,21 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
-import pickle
 from collections import OrderedDict
-from typing import Any, Optional
+from typing import Any
 
 import pandas
-import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, StorageOptions
+from pandas._libs.lib import no_default
 from pandas.util._decorators import doc
 
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.pandas.io import ExcelFile
 from modin.utils import _inherit_docstrings
 
 _doc_default_io_method = """
 {summary} using pandas.
-
 For parameters description please refer to pandas API.
 
 Returns
@@ -48,7 +46,7 @@ _doc_returns_qc_or_parser = """BaseQueryCompiler or TextParser
     QueryCompiler or TextParser with read data."""
 
 
-class BaseIO(object):
+class BaseIO:
     """Class for basic utils and default implementation of IO functions."""
 
     query_compiler_cls: BaseQueryCompiler = None
@@ -126,20 +124,9 @@ class BaseIO(object):
         summary="Load a parquet object from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def read_parquet(
-        cls, path, engine, columns, storage_options, use_nullable_dtypes, **kwargs
-    ):  # noqa: PR01
+    def read_parquet(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_parquet`")
-        return cls.from_pandas(
-            pandas.read_parquet(
-                path,
-                engine=engine,
-                columns=columns,
-                storage_options=storage_options,
-                use_nullable_dtypes=use_nullable_dtypes,
-                **kwargs,
-            )
-        )
+        return cls.from_pandas(pandas.read_parquet(**kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -151,140 +138,17 @@ class BaseIO(object):
     def read_csv(
         cls,
         filepath_or_buffer,
-        sep=lib.no_default,
-        delimiter=None,
-        header="infer",
-        names=lib.no_default,
-        index_col=None,
-        usecols=None,
-        squeeze=False,
-        prefix=lib.no_default,
-        mangle_dupe_cols=True,
-        dtype=None,
-        engine=None,
-        converters=None,
-        true_values=None,
-        false_values=None,
-        skipinitialspace=False,
-        skiprows=None,
-        nrows=None,
-        na_values=None,
-        keep_default_na=True,
-        na_filter=True,
-        verbose=False,
-        skip_blank_lines=True,
-        parse_dates=False,
-        infer_datetime_format=False,
-        keep_date_col=False,
-        date_parser=None,
-        dayfirst=False,
-        cache_dates=True,
-        iterator=False,
-        chunksize=None,
-        compression="infer",
-        thousands=None,
-        decimal=b".",
-        lineterminator=None,
-        quotechar='"',
-        quoting=0,
-        escapechar=None,
-        comment=None,
-        encoding=None,
-        encoding_errors="strict",
-        dialect=None,
-        error_bad_lines=None,
-        warn_bad_lines=None,
-        on_bad_lines=None,
-        skipfooter=0,
-        doublequote=True,
-        delim_whitespace=False,
-        low_memory=True,
-        memory_map=False,
-        float_precision=None,
-        storage_options=None,
+        **kwargs,
     ):  # noqa: PR01
-        kwargs = {
-            "filepath_or_buffer": filepath_or_buffer,
-            "sep": sep,
-            "delimiter": delimiter,
-            "header": header,
-            "names": names,
-            "index_col": index_col,
-            "usecols": usecols,
-            "squeeze": squeeze,
-            "prefix": prefix,
-            "mangle_dupe_cols": mangle_dupe_cols,
-            "dtype": dtype,
-            "engine": engine,
-            "converters": converters,
-            "true_values": true_values,
-            "false_values": false_values,
-            "skipinitialspace": skipinitialspace,
-            "skiprows": skiprows,
-            "nrows": nrows,
-            "na_values": na_values,
-            "keep_default_na": keep_default_na,
-            "na_filter": na_filter,
-            "verbose": verbose,
-            "skip_blank_lines": skip_blank_lines,
-            "parse_dates": parse_dates,
-            "infer_datetime_format": infer_datetime_format,
-            "keep_date_col": keep_date_col,
-            "date_parser": date_parser,
-            "dayfirst": dayfirst,
-            "cache_dates": cache_dates,
-            "iterator": iterator,
-            "chunksize": chunksize,
-            "compression": compression,
-            "thousands": thousands,
-            "decimal": decimal,
-            "lineterminator": lineterminator,
-            "quotechar": quotechar,
-            "quoting": quoting,
-            "escapechar": escapechar,
-            "comment": comment,
-            "encoding": encoding,
-            "encoding_errors": encoding_errors,
-            "dialect": dialect,
-            "error_bad_lines": error_bad_lines,
-            "warn_bad_lines": warn_bad_lines,
-            "on_bad_lines": on_bad_lines,
-            "skipfooter": skipfooter,
-            "doublequote": doublequote,
-            "delim_whitespace": delim_whitespace,
-            "low_memory": low_memory,
-            "memory_map": memory_map,
-            "float_precision": float_precision,
-            "storage_options": storage_options,
-        }
         ErrorMessage.default_to_pandas("`read_csv`")
-        return cls._read(**kwargs)
-
-    @classmethod
-    def _read(cls, **kwargs):
-        """
-        Read csv file into query compiler.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            `read_csv` function kwargs including `filepath_or_buffer` parameter.
-
-        Returns
-        -------
-        BaseQueryCompiler
-            QueryCompiler with read data.
-        """
-        pd_obj = pandas.read_csv(**kwargs)
+        pd_obj = pandas.read_csv(filepath_or_buffer, **kwargs)
         if isinstance(pd_obj, pandas.DataFrame):
             return cls.from_pandas(pd_obj)
         if isinstance(pd_obj, pandas.io.parsers.TextFileReader):
             # Overwriting the read method should return a Modin DataFrame for calls
             # to __next__ and get_chunk
             pd_read = pd_obj.read
-            pd_obj.read = lambda *args, **kwargs: cls.from_pandas(
-                pd_read(*args, **kwargs)
-            )
+            pd_obj.read = lambda *args, **kw: cls.from_pandas(pd_read(*args, **kw))
         return pd_obj
 
     @classmethod
@@ -296,44 +160,9 @@ class BaseIO(object):
     )
     def read_json(
         cls,
-        path_or_buf=None,
-        orient=None,
-        typ="frame",
-        dtype=True,
-        convert_axes=True,
-        convert_dates=True,
-        keep_default_dates=True,
-        numpy=False,
-        precise_float=False,
-        date_unit=None,
-        encoding=None,
-        encoding_errors="strict",
-        lines=False,
-        chunksize=None,
-        compression="infer",
-        nrows: Optional[int] = None,
-        storage_options=None,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_json`")
-        kwargs = {
-            "path_or_buf": path_or_buf,
-            "orient": orient,
-            "typ": typ,
-            "dtype": dtype,
-            "convert_axes": convert_axes,
-            "convert_dates": convert_dates,
-            "keep_default_dates": keep_default_dates,
-            "numpy": numpy,
-            "precise_float": precise_float,
-            "date_unit": date_unit,
-            "encoding": encoding,
-            "encoding_errors": encoding_errors,
-            "lines": lines,
-            "chunksize": chunksize,
-            "compression": compression,
-            "nrows": nrows,
-            "storage_options": storage_options,
-        }
         return cls.from_pandas(pandas.read_json(**kwargs))
 
     @classmethod
@@ -390,6 +219,7 @@ class BaseIO(object):
     def read_html(
         cls,
         io,
+        *,
         match=".+",
         flavor=None,
         header=None,
@@ -404,26 +234,28 @@ class BaseIO(object):
         na_values=None,
         keep_default_na=True,
         displayed_only=True,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_html`")
-        kwargs = {
-            "io": io,
-            "match": match,
-            "flavor": flavor,
-            "header": header,
-            "index_col": index_col,
-            "skiprows": skiprows,
-            "attrs": attrs,
-            "parse_dates": parse_dates,
-            "thousands": thousands,
-            "encoding": encoding,
-            "decimal": decimal,
-            "converters": converters,
-            "na_values": na_values,
-            "keep_default_na": keep_default_na,
-            "displayed_only": displayed_only,
-        }
-        return cls.from_pandas(pandas.read_html(**kwargs)[0])
+        result = pandas.read_html(
+            io=io,
+            match=match,
+            flavor=flavor,
+            header=header,
+            index_col=index_col,
+            skiprows=skiprows,
+            attrs=attrs,
+            parse_dates=parse_dates,
+            thousands=thousands,
+            encoding=encoding,
+            decimal=decimal,
+            converters=converters,
+            na_values=na_values,
+            keep_default_na=keep_default_na,
+            displayed_only=displayed_only,
+            **kwargs,
+        )
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -444,67 +276,15 @@ class BaseIO(object):
         returns="""BaseQueryCompiler or dict/OrderedDict :
     QueryCompiler or OrderedDict/dict with read data.""",
     )
-    def read_excel(
-        cls,
-        io,
-        sheet_name=0,
-        header=0,
-        names=None,
-        index_col=None,
-        usecols=None,
-        squeeze=False,
-        dtype=None,
-        engine=None,
-        converters=None,
-        true_values=None,
-        false_values=None,
-        skiprows=None,
-        nrows=None,
-        na_values=None,
-        keep_default_na=True,
-        verbose=False,
-        parse_dates=False,
-        date_parser=None,
-        thousands=None,
-        comment=None,
-        skip_footer=0,
-        skipfooter=0,
-        convert_float=True,
-        mangle_dupe_cols=True,
-        na_filter=True,
-        **kwds,
-    ):  # noqa: PR01
-        if skip_footer != 0:
-            skipfooter = skip_footer
+    def read_excel(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_excel`")
-        intermediate = pandas.read_excel(
-            io,
-            sheet_name=sheet_name,
-            header=header,
-            names=names,
-            index_col=index_col,
-            usecols=usecols,
-            squeeze=squeeze,
-            dtype=dtype,
-            engine=engine,
-            converters=converters,
-            true_values=true_values,
-            false_values=false_values,
-            skiprows=skiprows,
-            nrows=nrows,
-            na_values=na_values,
-            keep_default_na=keep_default_na,
-            verbose=verbose,
-            parse_dates=parse_dates,
-            date_parser=date_parser,
-            thousands=thousands,
-            comment=comment,
-            skipfooter=skipfooter,
-            convert_float=convert_float,
-            mangle_dupe_cols=mangle_dupe_cols,
-            na_filter=na_filter,
-            **kwds,
-        )
+        if isinstance(kwargs["io"], ExcelFile):
+            # otherwise, Modin objects may be passed to the pandas context, resulting
+            # in undefined behavior
+            # for example in the case: pd.read_excel(pd.ExcelFile), since reading from
+            # pd.ExcelFile in `read_excel` isn't supported
+            kwargs["io"]._set_pandas_mode()
+        intermediate = pandas.read_excel(**kwargs)
         if isinstance(intermediate, (OrderedDict, dict)):
             parsed = type(intermediate)()
             for key in intermediate.keys():
@@ -566,15 +346,15 @@ class BaseIO(object):
         returns=_doc_returns_qc,
     )
     def read_feather(
-        cls, path, columns=None, use_threads=True, storage_options=None
+        cls,
+        path,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_feather`")
         return cls.from_pandas(
             pandas.read_feather(
                 path,
-                columns=columns,
-                use_threads=use_threads,
-                storage_options=storage_options,
+                **kwargs,
             )
         )
 
@@ -588,34 +368,10 @@ class BaseIO(object):
     def read_stata(
         cls,
         filepath_or_buffer,
-        convert_dates=True,
-        convert_categoricals=True,
-        index_col=None,
-        convert_missing=False,
-        preserve_dtypes=True,
-        columns=None,
-        order_categoricals=True,
-        chunksize=None,
-        iterator=False,
-        compression="infer",
-        storage_options=None,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_stata`")
-        kwargs = {
-            "filepath_or_buffer": filepath_or_buffer,
-            "convert_dates": convert_dates,
-            "convert_categoricals": convert_categoricals,
-            "index_col": index_col,
-            "convert_missing": convert_missing,
-            "preserve_dtypes": preserve_dtypes,
-            "columns": columns,
-            "order_categoricals": order_categoricals,
-            "chunksize": chunksize,
-            "iterator": iterator,
-            "compression": compression,
-            "storage_options": storage_options,
-        }
-        return cls.from_pandas(pandas.read_stata(**kwargs))
+        return cls.from_pandas(pandas.read_stata(filepath_or_buffer, **kwargs))
 
     @classmethod
     @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
@@ -627,11 +383,13 @@ class BaseIO(object):
     def read_sas(
         cls,
         filepath_or_buffer,
+        *,
         format=None,
         index=None,
         encoding=None,
         chunksize=None,
         iterator=False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sas`")
         return cls.from_pandas(
@@ -642,6 +400,7 @@ class BaseIO(object):
                 encoding=encoding,
                 chunksize=chunksize,
                 iterator=iterator,
+                **kwargs,
             )
         )
 
@@ -653,14 +412,15 @@ class BaseIO(object):
         returns=_doc_returns_qc,
     )
     def read_pickle(
-        cls, filepath_or_buffer, compression="infer", storage_options=None
+        cls,
+        filepath_or_buffer,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_pickle`")
         return cls.from_pandas(
             pandas.read_pickle(
                 filepath_or_buffer,
-                compression=compression,
-                storage_options=storage_options,
+                **kwargs,
             )
         )
 
@@ -681,22 +441,28 @@ class BaseIO(object):
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
+        dtype=None,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql`")
         if isinstance(con, ModinDatabaseConnection):
             con = con.get_connection()
-        return cls.from_pandas(
-            pandas.read_sql(
-                sql,
-                con,
-                index_col=index_col,
-                coerce_float=coerce_float,
-                params=params,
-                parse_dates=parse_dates,
-                columns=columns,
-                chunksize=chunksize,
-            )
+        result = pandas.read_sql(
+            sql,
+            con,
+            index_col=index_col,
+            coerce_float=coerce_float,
+            params=params,
+            parse_dates=parse_dates,
+            columns=columns,
+            chunksize=chunksize,
+            dtype_backend=dtype_backend,
+            dtype=dtype,
         )
+
+        if isinstance(result, (pandas.DataFrame, pandas.Series)):
+            return cls.from_pandas(result)
+        return (cls.from_pandas(df) for df in result)
 
     @classmethod
     @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
@@ -706,7 +472,14 @@ class BaseIO(object):
         returns=_doc_returns_qc_or_parser,
     )
     def read_fwf(
-        cls, filepath_or_buffer, colspecs="infer", widths=None, infer_nrows=100, **kwds
+        cls,
+        filepath_or_buffer,
+        *,
+        colspecs="infer",
+        widths=None,
+        infer_nrows=100,
+        dtype_backend=no_default,
+        **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
         pd_obj = pandas.read_fwf(
@@ -714,6 +487,7 @@ class BaseIO(object):
             colspecs=colspecs,
             widths=widths,
             infer_nrows=infer_nrows,
+            dtype_backend=dtype_backend,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):
@@ -744,6 +518,7 @@ class BaseIO(object):
         parse_dates=None,
         columns=None,
         chunksize=None,
+        dtype_backend=no_default,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_table`")
         return cls.from_pandas(
@@ -756,6 +531,7 @@ class BaseIO(object):
                 parse_dates=parse_dates,
                 columns=columns,
                 chunksize=chunksize,
+                dtype_backend=dtype_backend,
             )
         )
 
@@ -770,24 +546,14 @@ class BaseIO(object):
         cls,
         sql,
         con,
-        index_col=None,
-        coerce_float=True,
-        params=None,
-        parse_dates=None,
-        chunksize=None,
-        dtype=None,
+        **kwargs,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_sql_query`")
         return cls.from_pandas(
             pandas.read_sql_query(
                 sql,
                 con,
-                index_col=index_col,
-                coerce_float=coerce_float,
-                params=params,
-                parse_dates=parse_dates,
-                chunksize=chunksize,
-                dtype=dtype,
+                **kwargs,
             )
         )
 
@@ -798,9 +564,18 @@ class BaseIO(object):
         summary="Load an SPSS file from the file path, returning a query compiler",
         returns=_doc_returns_qc,
     )
-    def read_spss(cls, path, usecols, convert_categoricals):  # noqa: PR01
+    def read_spss(
+        cls, path, usecols, convert_categoricals, dtype_backend
+    ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_spss`")
-        return cls.from_pandas(pandas.read_spss(path, usecols, convert_categoricals))
+        return cls.from_pandas(
+            pandas.read_spss(
+                path,
+                usecols=usecols,
+                convert_categoricals=convert_categoricals,
+                dtype_backend=dtype_backend,
+            )
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_sql, apilink="pandas.DataFrame.to_sql")
@@ -844,10 +619,11 @@ class BaseIO(object):
         cls,
         obj: Any,
         filepath_or_buffer,
-        compression: CompressionOptions = "infer",
-        protocol: int = pickle.HIGHEST_PROTOCOL,
-        storage_options: StorageOptions = None,
-    ):  # noqa: PR01
+        **kwargs,
+    ):  # noqa: PR01, D200
+        """
+        Pickle (serialize) object to file.
+        """
         ErrorMessage.default_to_pandas("`to_pickle`")
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
@@ -855,9 +631,7 @@ class BaseIO(object):
         return pandas.to_pickle(
             obj,
             filepath_or_buffer=filepath_or_buffer,
-            compression=compression,
-            protocol=protocol,
-            storage_options=storage_options,
+            **kwargs,
         )
 
     @classmethod

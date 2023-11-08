@@ -12,27 +12,34 @@
 # governing permissions and limitations under the License.
 
 import warnings
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Type, Union
+
+if TYPE_CHECKING:
+    from .config import Engine, StorageFormat
 
 from ._version import get_versions
 
 
-def custom_formatwarning(msg, category, *args, **kwargs):
+def custom_formatwarning(
+    message: Union[Warning, str],
+    category: Type[Warning],
+    filename: str,
+    lineno: int,
+    line: Optional[str] = None,
+) -> str:
     # ignore everything except the message
-    return "{}: {}\n".format(category.__name__, msg)
+    return "{}: {}\n".format(category.__name__, message)
 
 
 warnings.formatwarning = custom_formatwarning
 # Filter numpy version warnings because they are not relevant
 warnings.filterwarnings("ignore", message="numpy.dtype size changed")
 warnings.filterwarnings("ignore", message="Large object of size")
-warnings.filterwarnings(
-    "ignore",
-    message="The pandas.datetime class is deprecated and will be removed from pandas in a future version. "
-    + "Import from datetime module instead.",
-)
 
 
-def set_execution(engine=None, storage_format=None):
+def set_execution(
+    engine: Any = None, storage_format: Any = None
+) -> Tuple["Engine", "StorageFormat"]:
     """
     Method to set the _pair_ of execution engine and storage format format simultaneously.
     This is needed because there might be cases where switching one by one would be

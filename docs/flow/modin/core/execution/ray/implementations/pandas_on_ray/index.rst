@@ -32,12 +32,12 @@ generic functionality from the ``GenericRayDataframe`` and the :py:class:`~modin
 PandasOnRay Dataframe implementation
 ------------------------------------
 
-Modin implements ``Dataframe``, ``PartitionManager``, ``AxisPartition`` and ``Partition`` classes
-specifically for the ``PandasOnRay`` execution:
+Modin implements ``Dataframe``, ``PartitionManager``, ``VirtualPartition`` (a specific kind of ``AxisPartition`` with the capability
+to combine smaller partitions into the one "virtual") and ``Partition`` classes specifically for the ``PandasOnRay`` execution:
 
 * :doc:`PandasOnRayDataframe <dataframe>`
 * :doc:`PandasOnRayDataframePartition <partitioning/partition>`
-* :doc:`PandasOnRayDataframeAxisPartition <partitioning/axis_partition>`
+* :doc:`PandasOnRayDataframeVirtualPartition <partitioning/axis_partition>`
 * :doc:`PandasOnRayDataframePartitionManager <partitioning/partition_manager>`
 
 .. toctree::
@@ -71,7 +71,7 @@ When reading data from a CSV file, for example, the :py:class:`~modin.core.execu
 the user query to the :meth:`~modin.core.io.text.CSVDispatcher._read` method of :py:class:`~modin.core.io.text.CSVDispatcher`, where the query's parameters are preprocessed
 to check if they are supported by the execution (defaulting to pandas if they are not) and computes some metadata
 common for all partitions to be read. Then, the file is split into row chunks, and this data is used to launch remote tasks on the Ray workers
-via the :meth:`~modin.core.execution.ray.common.RayTask.deploy` method of :py:class:`~modin.core.execution.ray.common.RayTask`.
+via the :meth:`~modin.core.execution.ray.common.RayWrapper.deploy` method of :py:class:`~modin.core.execution.ray.common.RayWrapper`.
 On each Ray worker, the :py:class:`~modin.core.storage_formats.pandas.parsers.PandasCSVParser` parses data.
 After the remote tasks are finished, additional result postprocessing is performed,
 and a new query compiler with the data read is returned.

@@ -18,14 +18,16 @@ Module houses `FileDispatcher` class.
 for direct files processing.
 """
 
-import fsspec
 import os
-import re
-from modin.config import StorageFormat
-from modin.utils import import_optional_dependency
-import numpy as np
 
-S3_ADDRESS_REGEX = re.compile("[sS]3://(.*?)/(.*)")
+import fsspec
+import numpy as np
+from pandas.io.common import is_fsspec_url, is_url
+
+from modin.config import AsyncReadMode
+from modin.logging import ClassLogger
+from modin.utils import ModinAssumptionError
+
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
 
@@ -86,7 +88,7 @@ class OpenFile:
                 PermissionError,
             )
         except ModuleNotFoundError:
-            credential_error_type = ()
+            credential_error_type = (PermissionError,)
 
         args = (self.file_path, self.mode, self.compression)
 
@@ -110,7 +112,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher:
+class FileDispatcher(ClassLogger):
     """
     Class handles util functions for reading data from different kinds of files.
 
@@ -120,6 +122,10 @@ class FileDispatcher:
     implemented in the child classes (functions signatures can differ between child
     classes).
     """
+
+    BUFFER_UNSUPPORTED_MSG = (
+        "Reading from buffers or other non-path-like objects is not supported"
+    )
 
     frame_cls = None
     frame_partition_cls = None
@@ -148,27 +154,22 @@ class FileDispatcher:
         dispatcher class `_read` function with passed parameters and performs some
         postprocessing work on the resulting query_compiler object.
         """
-        query_compiler = cls._read(*args, **kwargs)
-        # TODO (devin-petersohn): Make this section more general for non-pandas kernel
-        # implementations.
-        if StorageFormat.get() == "Pandas":
-            import pandas as kernel_lib
-        elif StorageFormat.get() == "Cudf":
-            import cudf as kernel_lib
-        else:
-            raise NotImplementedError("FIXME")
-
-        if hasattr(query_compiler, "dtypes") and any(
-            isinstance(t, kernel_lib.CategoricalDtype) for t in query_compiler.dtypes
-        ):
-            dtypes = query_compiler.dtypes
-            return query_compiler.astype(
-                {
-                    t: dtypes[t]
-                    for t in dtypes.index
-                    if isinstance(dtypes[t], kernel_lib.CategoricalDtype)
-                }
-            )
+        try:
+            query_compiler = cls._read(*args, **kwargs)
+        except ModinAssumptionError as err:
+            param_name = "path_or_buf" if "path_or_buf" in kwargs else "fname"
+            fname = kwargs.pop(param_name)
+            return cls.single_worker_read(fname, *args, reason=str(err), **kwargs)
+        # TextFileReader can also be returned from `_read`.
+        if not AsyncReadMode.get() and hasattr(query_compiler, "dtypes"):
+            # at the moment it is not possible to use `wait_partitions` function;
+            # in a situation where the reading function is called in a row with the
+            # same parameters, `wait_partitions` considers that we have waited for
+            # the end of remote calculations, however, when trying to materialize the
+            # received data, it is clear that the calculations have not yet ended.
+            # for example, `test_io_exp.py::test_read_evaluated_dict` is failed because of that.
+            # see #5944 for details
+            _ = query_compiler.dtypes
         return query_compiler
 
     @classmethod
@@ -205,10 +206,10 @@ class FileDispatcher:
 
         Notes
         -----
-        if `file_path` is an S3 bucket, parameter will be returned as is, otherwise
+        if `file_path` is a URL, parameter will be returned as is, otherwise
         absolute path will be returned.
         """
-        if isinstance(file_path, str) and S3_ADDRESS_REGEX.search(file_path):
+        if is_fsspec_url(file_path) or is_url(file_path):
             return file_path
         else:
             return os.path.abspath(file_path)
@@ -235,7 +236,7 @@ class FileDispatcher:
         return size
 
     @classmethod
-    def file_exists(cls, file_path):
+    def file_exists(cls, file_path, storage_options=None):
         """
         Check if `file_path` exists.
 
@@ -244,38 +245,55 @@ class FileDispatcher:
         file_path : str
             String that represents the path to the file (paths to S3 buckets
             are also acceptable).
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
         bool
             Whether file exists or not.
         """
-        if isinstance(file_path, str):
-            match = S3_ADDRESS_REGEX.search(file_path)
-            if match is not None:
-                if file_path[0] == "S":
-                    file_path = "{}{}".format("s", file_path[1:])
-                S3FS = import_optional_dependency(
-                    "s3fs", "Module s3fs is required to read S3FS files."
-                )
-                from botocore.exceptions import NoCredentialsError
+        if not is_fsspec_url(file_path) and not is_url(file_path):
+            return os.path.exists(file_path)
 
-                s3fs = S3FS.S3FileSystem(anon=False)
-                exists = False
-                try:
-                    exists = s3fs.exists(file_path) or exists
-                except NoCredentialsError:
-                    pass
-                s3fs = S3FS.S3FileSystem(anon=True)
-                return exists or s3fs.exists(file_path)
-        return os.path.exists(file_path)
+        try:
+            from botocore.exceptions import (
+                ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
+            )
+
+            credential_error_type = (
+                NoCredentialsError,
+                PermissionError,
+                EndpointConnectionError,
+                ConnectTimeoutError,
+            )
+        except ModuleNotFoundError:
+            credential_error_type = (PermissionError,)
+
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
+        exists = False
+        try:
+            exists = fs.exists(file_path)
+        except credential_error_type:
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
+            exists = fs.exists(file_path)
+
+        return exists
 
     @classmethod
     def deploy(cls, func, *args, num_returns=1, **kwargs):  # noqa: PR01
         """
         Deploy remote task.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -292,7 +310,7 @@ class FileDispatcher:
         """
         Get results from worker.
 
-        Should be implemented in the task class (for example in the `RayTask`).
+        Should be implemented in the task class (for example in the `RayWrapper`).
         """
         raise NotImplementedError(NOT_IMPLEMENTED_MESSAGE)
 
@@ -329,3 +347,7 @@ class FileDispatcher:
                 for i in range(len(partition_ids))
             ]
         )
+
+    @classmethod
+    def _file_not_found_msg(cls, filename: str):  # noqa: GL08
+        return f"No such file: '{filename}'"

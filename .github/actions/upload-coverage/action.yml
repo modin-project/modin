@@ -1,0 +1,16 @@
+name: Upload Coverage
+description: Upload coverage files
+
+runs:
+  using: "composite"
+
+  steps:
+    - run: |
+        COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
+        mv .coverage .coverage.${COVERAGE_UUID}
+      id: coverage-uuid
+      shell: bash
+    - uses: actions/upload-artifact@v3.1.2
+      with:
+        name: coverage-data
+        path: .coverage*

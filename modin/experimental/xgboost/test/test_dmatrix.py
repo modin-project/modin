@@ -12,14 +12,22 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
-import pytest
 import pandas
-from sklearn.metrics import accuracy_score
-from sklearn.datasets import load_breast_cancer
+import pytest
 import xgboost as xgb
+from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import accuracy_score
 
-import modin.pandas as pd
 import modin.experimental.xgboost as mxgb
+import modin.pandas as pd
+from modin.config import Engine
+from modin.utils import try_cast_to_pandas
+
+if Engine.get() != "Ray":
+    pytest.skip(
+        "Modin' xgboost extension works only with Ray engine.",
+        allow_module_level=True,
+    )
 
 
 rng = np.random.RandomState(1994)
@@ -76,6 +84,10 @@ def test_dmatrix_feature_names_and_feature_types(data, feature_names, feature_ty
     check_dmatrix(data, feature_names=feature_names, feature_types=feature_types)
 
 
+@pytest.mark.skipif(
+    Engine.get() != "Ray",
+    reason="implemented only for Ray engine.",
+)
 def test_feature_names():
     dataset = load_breast_cancer()
     X = dataset.data
@@ -118,7 +130,7 @@ def test_feature_names():
     with pytest.raises(ValueError):
         booster.predict(dm)
     with pytest.raises(ValueError):
-        repr(md_booster.predict(md_dm))
+        try_cast_to_pandas(md_booster.predict(md_dm))  # force materialization
 
 
 def test_feature_weights():
@@ -134,8 +146,8 @@ def test_feature_weights():
         dm.get_float_info("feature_weights"), md_dm.get_float_info("feature_weights")
     )
     # Handle empty
-    dm.set_info(feature_weights=np.empty((0, 0)))
-    md_dm.set_info(feature_weights=np.empty((0, 0)))
+    dm.set_info(feature_weights=np.empty((0,)))
+    md_dm.set_info(feature_weights=np.empty((0,)))
 
     assert (
         dm.get_float_info("feature_weights").shape[0]

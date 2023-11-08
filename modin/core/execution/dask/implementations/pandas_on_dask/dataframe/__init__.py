@@ -12,3 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Base Modin Dataframe class optimized for pandas on Dask execution."""
+
+from .dataframe import PandasOnDaskDataframe
+
+__all__ = ["PandasOnDaskDataframe"]
