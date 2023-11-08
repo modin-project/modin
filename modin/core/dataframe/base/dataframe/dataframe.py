@@ -478,7 +478,6 @@ class ModinDataframe(ABC):
         self,
         new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
         new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
-        level: Optional[Union[int, List[int]]] = None,
     ) -> "ModinDataframe":
         """
         Replace the row and column labels with the specified new labels.
@@ -489,17 +488,11 @@ class ModinDataframe(ABC):
             Mapping or callable that relates old row labels to new labels.
         new_col_labels : dictionary or callable, optional
             Mapping or callable that relates old col labels to new labels.
-        level : int or list of ints, optional
-            Level(s) whose row labels to replace.
 
         Returns
         -------
         ModinDataframe
             A new ModinDataframe with the new row and column labels.
-
-        Notes
-        -----
-        If level is not specified, the default behavior is to replace row labels in all levels.
         """
         pass
 

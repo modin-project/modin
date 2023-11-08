@@ -2235,10 +2235,6 @@ class PandasDataframe(ClassLogger):
         -------
         PandasDataframe
             A new PandasDataframe with the new row and column labels.
-
-        Notes
-        -----
-        If level is not specified, the default behavior is to replace row labels in all levels.
         """
         result = self.copy()
         if new_row_labels is not None:
