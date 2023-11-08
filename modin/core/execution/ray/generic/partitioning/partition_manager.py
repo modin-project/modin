@@ -18,7 +18,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.ray.common.engine_wrapper import RayWrapper
+from modin.core.execution.ray.common import RayWrapper
 
 
 class GenericRayDataframePartitionManager(PandasDataframePartitionManager):

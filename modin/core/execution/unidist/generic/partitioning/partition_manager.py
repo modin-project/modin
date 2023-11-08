@@ -18,7 +18,7 @@ import numpy as np
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from modin.core.execution.unidist.common.engine_wrapper import UnidistWrapper
+from modin.core.execution.unidist.common import UnidistWrapper
 
 
 class GenericUnidistDataframePartitionManager(PandasDataframePartitionManager):
