@@ -1975,7 +1975,9 @@ class DataFrame(BasePandasDataset):
             self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
-            return Series(query_compiler=self.T._query_compiler)
+            qc = self.T._query_compiler
+            qc._shape_hint = "column"
+            return Series(query_compiler=qc)
         else:
             return self.copy()
 
