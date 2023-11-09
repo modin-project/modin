@@ -2490,12 +2490,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
                 if self._modin_frame.has_materialized_dtypes:
                     dtypes = self._modin_frame.dtypes
+                    value_dtypes = pandas.DataFrame(
+                        {k: [v] for (k, v) in value.items()}
+                    ).dtypes
                     if all(
-                        find_common_type([dtypes[c], t]) == dtypes[c]
-                        for (c, t) in pandas.DataFrame(
-                            {k: [v] for (k, v) in value.items()}
-                        ).dtypes.items()
-                        if c in dtypes
+                        find_common_type([dtypes[col], dtype]) == dtypes[col]
+                        for (col, dtype) in value_dtypes.items()
+                        if col in dtypes
                     ):
                         new_dtypes = dtypes
 
@@ -2513,9 +2514,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if full_axis:
             new_modin_frame = self._modin_frame.fold(axis, fillna)
         else:
-            new_modin_frame = self._modin_frame.map(
-                fillna, dtypes=new_dtypes, lazy=True
-            )
+            new_modin_frame = self._modin_frame.map(fillna, dtypes=new_dtypes)
         return self.__constructor__(new_modin_frame)
 
     def quantile_for_list_of_values(self, **kwargs):
