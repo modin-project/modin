@@ -46,10 +46,6 @@ import modin.pandas as pd
 from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
 from modin.utils import to_pandas, try_cast_to_pandas
 
-# Flag activated on command line with "--extra-test-parameters" option.
-# Used in some tests to perform additional parameter combinations.
-extra_test_parameters = False
-
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {

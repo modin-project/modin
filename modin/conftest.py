@@ -90,12 +90,6 @@ def pytest_addoption(parser):
         default=None,
         help="specifies execution to run tests on",
     )
-    parser.addoption(
-        "--extra-test-parameters",
-        action="store_true",
-        help="activate extra test parameter combinations",
-        default=False,
-    )
 
 
 def set_experimental_env(mode):
@@ -256,10 +250,6 @@ def get_unique_base_execution():
 
 
 def pytest_configure(config):
-    import modin.pandas.test.utils as utils
-
-    utils.extra_test_parameters = config.getoption("--extra-test-parameters")
-
     execution = config.option.execution
 
     if execution is None:
