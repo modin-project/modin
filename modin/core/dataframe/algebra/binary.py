@@ -245,10 +245,9 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None, 
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
         elif infer_dtypes == "float":
-            dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(float))
-            # dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
-            # if dtypes is not None:
-            #     dtypes = dtypes.apply(coerce_int_to_float64)
+            dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
+            if dtypes is not None:
+                dtypes = dtypes.apply(coerce_int_to_float64)
         else:
             # For now we only know how to handle `result_dtype == bool` as that's
             # the only value that is being passed here right now, it's unclear
