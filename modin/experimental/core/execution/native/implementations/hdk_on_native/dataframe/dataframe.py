@@ -511,6 +511,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         table = self._partitions[0][0].get()
         if isinstance(table, pyarrow.Table):
             return super()._maybe_update_proxies(dtypes, new_parent=table)
+        return dtypes
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """

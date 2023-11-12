@@ -53,7 +53,7 @@ class DtypesDescriptor:
         One can't pass `know_all_names=False` together with `remaining_dtype` as this creates ambiguity
         on how to interpret missing columns (whether they belong to `remaining_dtype` or not).
     _schema_is_known : bool, optional
-        Whether `known_dtypes` describe all the columns in the dataframe. This parameter intended mostly
+        Whether `known_dtypes` describe all columns in the dataframe. This parameter intended mostly
         for internal use.
     """
 
@@ -64,7 +64,7 @@ class DtypesDescriptor:
         remaining_dtype: Optional[np.dtype] = None,
         parent_df: Optional["PandasDataframe"] = None,
         columns_order: Optional[dict[int, IndexLabel]] = None,
-        know_all_names=True,
+        know_all_names: bool = True,
         _schema_is_known: Optional[bool] = None,
     ):
         if not know_all_names and remaining_dtype is not None:
@@ -89,7 +89,7 @@ class DtypesDescriptor:
         self._cols_with_unknown_dtypes: list[IndexLabel] = (
             [] if cols_with_unknown_dtypes is None else cols_with_unknown_dtypes
         )
-        # whether 'known_dtypes' describe all the columns in the dataframe
+        # whether 'known_dtypes' describe all columns in the dataframe
         if _schema_is_known is None:
             self._schema_is_known: bool = (
                 len(cols_with_unknown_dtypes) == 0
@@ -105,7 +105,7 @@ class DtypesDescriptor:
             )
         else:
             self._schema_is_known: bool = _schema_is_known
-        self._know_all_names = know_all_names
+        self._know_all_names: bool = know_all_names
         # a common dtype for columns that are not present in 'known_dtypes' nor in 'cols_with_unknown_dtypes'
         self._remaining_dtype: Optional[np.dtype] = remaining_dtype
         self._parent_df: Optional["PandasDataframe"] = parent_df
@@ -270,7 +270,9 @@ class DtypesDescriptor:
             self._cols_with_unknown_dtypes.copy(),
             self._remaining_dtype,
             self._parent_df,
-            columns_order=self.columns_order,
+            columns_order=None
+            if self.columns_order is None
+            else self.columns_order.copy(),
             know_all_names=self._know_all_names,
             _schema_is_known=self._schema_is_known,
         )

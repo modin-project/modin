@@ -339,6 +339,8 @@ class PandasDataframe(ClassLogger):
         """
         dtypes = self._maybe_update_proxies(dtypes)
         if dtypes is None and self.has_materialized_columns:
+            # try to set a descriptor instead of 'None' to be more flexible in
+            # dtypes computing
             try:
                 self._dtypes = ModinDtypes(
                     DtypesDescriptor(

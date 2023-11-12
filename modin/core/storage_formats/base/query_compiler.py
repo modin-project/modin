@@ -4534,7 +4534,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -------
         set
         """
-        return set(self.dtypes.value)
+        return set(self.dtypes.values)
 
     # DateTime methods
     def between_time(self, **kwargs):  # noqa: PR01
