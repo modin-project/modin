@@ -2420,6 +2420,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         method = kwargs.get("method", None)
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
+        new_dtypes = None
         if isinstance(value, BaseQueryCompiler):
             if squeeze_self:
                 # Self is a Series type object
@@ -2487,7 +2488,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     }
                     return df.fillna(value=func_dict, **kwargs)
 
+                if self._modin_frame.has_materialized_dtypes:
+                    dtypes = self._modin_frame.dtypes
+                    value_dtypes = pandas.DataFrame(
+                        {k: [v] for (k, v) in value.items()}
+                    ).dtypes
+                    if all(
+                        find_common_type([dtypes[col], dtype]) == dtypes[col]
+                        for (col, dtype) in value_dtypes.items()
+                        if col in dtypes
+                    ):
+                        new_dtypes = dtypes
+
         else:
+            if self._modin_frame.has_materialized_dtypes:
+                dtype = pandas.Series(value).dtype
+                if all(
+                    find_common_type([t, dtype]) == t for t in self._modin_frame.dtypes
+                ):
+                    new_dtypes = self._modin_frame.dtypes
 
             def fillna(df):
                 return df.fillna(value=value, **kwargs)
@@ -2495,7 +2514,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if full_axis:
             new_modin_frame = self._modin_frame.fold(axis, fillna)
         else:
-            new_modin_frame = self._modin_frame.map(fillna)
+            new_modin_frame = self._modin_frame.map(fillna, dtypes=new_dtypes)
         return self.__constructor__(new_modin_frame)
 
     def quantile_for_list_of_values(self, **kwargs):
