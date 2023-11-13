@@ -433,3 +433,43 @@ def test_non_commutative_multiply():
     integer = NonCommutativeMultiplyInteger(2)
     eval_general(modin_df, pandas_df, lambda s: integer * s)
     eval_general(modin_df, pandas_df, lambda s: s * integer)
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        *("add", "radd", "sub", "rsub", "mod", "rmod", "pow", "rpow"),
+        *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
+    ],
+)
+@pytest.mark.parametrize(
+    "val1",
+    [
+        pytest.param([10, 20], id="int"),
+        pytest.param([10, True], id="obj"),
+        pytest.param([True, True], id="bool"),
+        pytest.param([3.5, 4.5], id="float"),
+    ],
+)
+@pytest.mark.parametrize(
+    "val2",
+    [
+        pytest.param([10, 20], id="int"),
+        pytest.param([10, True], id="obj"),
+        pytest.param([True, True], id="bool"),
+        pytest.param([3.5, 4.5], id="float"),
+        pytest.param(2, id="int scalar"),
+        pytest.param(True, id="bool scalar"),
+        pytest.param(3.5, id="float scalar"),
+    ],
+)
+def test_arithmetic_with_tricky_dtypes(val1, val2, op):
+    modin_df1, pandas_df1 = create_test_dfs(val1)
+    modin_df2, pandas_df2 = (
+        create_test_dfs(val2) if isinstance(val2, list) else (val2, val2)
+    )
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: getattr(dfs[0], op)(dfs[1]),
+    )

@@ -388,9 +388,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add, infer_dtypes="common_cast")
+    add = Binary.register(pandas.DataFrame.add, infer_dtypes="try_sample")
+    # 'combine' and 'combine_first' are working with UDFs, so it's better not so sample them
     combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
-    combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
+    combine_first = Binary.register(
+        pandas.DataFrame.combine_first, infer_dtypes="common_cast"
+    )
     eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
     equals = Binary.register(
         lambda df, other: pandas.DataFrame([[df.equals(other)]]),
@@ -398,24 +401,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         labels="drop",
         infer_dtypes="bool",
     )
-    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
+    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="try_sample")
     ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
     gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
     le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
     lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
-    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="common_cast")
-    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="common_cast")
-    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="common_cast")
+    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="try_sample")
+    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="try_sample")
+    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="try_sample")
     ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
-    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="common_cast")
-    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="common_cast")
-    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="common_cast")
-    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="common_cast")
-    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="common_cast")
-    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="common_cast")
-    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="float")
-    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="common_cast")
-    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="float")
+    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="try_sample")
+    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="try_sample")
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="try_sample")
+    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="try_sample")
+    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="try_sample")
+    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="try_sample")
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="try_sample")
+    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="try_sample")
+    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="try_sample")
     __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
     __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
     __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
