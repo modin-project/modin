@@ -24,7 +24,9 @@ To install the most recent stable release run the following:
 
   pip install -U modin # -U for upgrade in case you have an older version
 
-Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`, :doc:`Unidist</development/using_pandas_on_unidist>`, or :doc:`HDK</development/using_hdk>` engines. If you don't have Ray_, Dask_ or Unidist_ installed, you will need to install Modin with one of the targets:
+Modin can be used with :doc:`Ray</development/using_pandas_on_ray>`, :doc:`Dask</development/using_pandas_on_dask>`,
+:doc:`Unidist</development/using_pandas_on_mpi>`, or :doc:`HDK</development/using_hdk>` engines.
+If you don't have Ray_, Dask_ or Unidist_ installed, you will need to install Modin with one of the targets:
 
 .. code-block:: bash
 
