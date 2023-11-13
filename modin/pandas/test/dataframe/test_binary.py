@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat, Engine
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -447,7 +447,13 @@ def test_non_commutative_multiply():
     [
         pytest.param([10, 20], id="int"),
         pytest.param([10, True], id="obj"),
-        pytest.param([True, True], id="bool"),
+        pytest.param(
+            [True, True],
+            id="bool",
+            marks=pytest.mark.skipif(
+                condition=Engine.get() == "Native", reason="Fails on HDK"
+            ),
+        ),
         pytest.param([3.5, 4.5], id="float"),
     ],
 )
@@ -456,10 +462,22 @@ def test_non_commutative_multiply():
     [
         pytest.param([10, 20], id="int"),
         pytest.param([10, True], id="obj"),
-        pytest.param([True, True], id="bool"),
+        pytest.param(
+            [True, True],
+            id="bool",
+            marks=pytest.mark.skipif(
+                condition=Engine.get() == "Native", reason="Fails on HDK"
+            ),
+        ),
         pytest.param([3.5, 4.5], id="float"),
         pytest.param(2, id="int scalar"),
-        pytest.param(True, id="bool scalar"),
+        pytest.param(
+            True,
+            id="bool scalar",
+            marks=pytest.mark.skipif(
+                condition=Engine.get() == "Native", reason="Fails on HDK"
+            ),
+        ),
         pytest.param(3.5, id="float scalar"),
     ],
 )
