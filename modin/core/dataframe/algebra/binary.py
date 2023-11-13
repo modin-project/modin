@@ -227,7 +227,7 @@ def try_compute_new_dtypes(
         NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
     axis : int, default: 0
         Axis to perform the binary operation along.
-    func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame
+    func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame, optional
         A callable to be used for the "try_sample" method.
 
     Returns
