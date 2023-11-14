@@ -27,7 +27,13 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 
-from modin.config import BenchmarkMode, Engine, NPartitions, ProgressBar
+from modin.config import (
+    BenchmarkMode,
+    Engine,
+    NPartitions,
+    PersistentPickle,
+    ProgressBar,
+)
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
@@ -121,7 +127,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
-        return cls._partition_class.preprocess_func(map_func)
+        old_value = PersistentPickle.get()
+        # When performing a function with Modin objects, it is more profitable to
+        # do the conversion to pandas once on the main process than several times
+        # on worker processes. Details: https://github.com/modin-project/modin/pull/6673/files#r1391086755
+        need_update = not PersistentPickle.get()
+        if need_update:
+            PersistentPickle.put(True)
+        try:
+            result = cls._partition_class.preprocess_func(map_func)
+        finally:
+            if need_update:
+                PersistentPickle.put(old_value)
+        return result
 
     # END Abstract Methods
 
