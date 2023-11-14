@@ -313,6 +313,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """Finalize constructing the dataframe calling all deferred functions which were used to build it."""
         pass
 
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.support_materialization_in_worker_process()
+
     # END Data Management Methods
 
     # To/From Pandas

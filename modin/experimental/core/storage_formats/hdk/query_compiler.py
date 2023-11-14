@@ -181,6 +181,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # TODO: implement this for HDK storage format
         raise NotImplementedError()
 
+    def support_materialization_in_worker_process(self) -> bool:
+        return True
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 

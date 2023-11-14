@@ -27,7 +27,13 @@ import warnings
 from modin.error_message import ErrorMessage
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.core.dataframe.pandas.utils import concatenate
-from modin.config import NPartitions, ProgressBar, BenchmarkMode
+from modin.config import (
+    NPartitions,
+    ProgressBar,
+    BenchmarkMode,
+    PersistentPickle,
+    Engine,
+)
 from modin.logging import ClassLogger
 
 import os
@@ -117,7 +123,20 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
-        return cls._partition_class.preprocess_func(map_func)
+        old_value = PersistentPickle.get()
+        # When performing a function with Modin objects, it is more profitable to
+        # do the conversion to pandas once on the main process than several times
+        # on worker processes. Details: https://github.com/modin-project/modin/pull/6673/files#r1391086755
+        # For Dask, otherwise there may be an error: `coroutine 'Client._gather' was never awaited`
+        need_update = not PersistentPickle.get() and Engine.get() != "Dask"
+        if need_update:
+            PersistentPickle.put(True)
+        try:
+            result = cls._partition_class.preprocess_func(map_func)
+        finally:
+            if need_update:
+                PersistentPickle.put(old_value)
+        return result
 
     # END Abstract Methods
 

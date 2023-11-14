@@ -64,6 +64,7 @@ from .utils import (
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    create_test_dfs,
     int_arg_keys,
     int_arg_values,
     encoding_types,
@@ -4834,3 +4835,29 @@ def test_binary_numpy_universal_function_issue_6483():
         *create_test_series(test_data["float_nan_data"]),
         lambda series: np.arctan2(series, np.sin(series)),
     )
+
+
+def test__reduce__():
+    # `Series.__reduce__` will be called implicitly when lambda expressions are
+    # pre-processed for the distributed engine.
+    series_data = ["Major League Baseball", "National Basketball Association"]
+    abbr_md, abbr_pd = create_test_series(series_data, index=["MLB", "NBA"])
+
+    dataframe_data = {
+        "name": ["Mariners", "Lakers"] * 500,
+        "league_abbreviation": ["MLB", "NBA"] * 500,
+    }
+    teams_md, teams_pd = create_test_dfs(dataframe_data)
+
+    result_md = (
+        teams_md.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_md.loc[abbr])
+        .rename("league")
+    )
+
+    result_pd = (
+        teams_pd.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_pd.loc[abbr])
+        .rename("league")
+    )
+    df_equals(result_md, result_pd)
