@@ -131,7 +131,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         # When performing a function with Modin objects, it is more profitable to
         # do the conversion to pandas once on the main process than several times
         # on worker processes. Details: https://github.com/modin-project/modin/pull/6673/files#r1391086755
-        need_update = not PersistentPickle.get()
+        # For Dask, otherwise there may be an error: `coroutine 'Client._gather' was never awaited`
+        need_update = not PersistentPickle.get() and Engine.get() != "Dask"
         if need_update:
             PersistentPickle.put(True)
         try:
