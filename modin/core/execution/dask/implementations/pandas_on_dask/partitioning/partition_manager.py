@@ -46,6 +46,6 @@ class PandasOnDaskDataframePartitionManager(PandasDataframePartitionManager):
         partitions : np.ndarray
             NumPy array with ``PandasDataframePartition``-s.
         """
-        DaskWrapper.wait(
+        cls._execution_wrapper.wait(
             [block for partition in partitions for block in partition.list_of_blocks]
         )
