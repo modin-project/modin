@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import os
 import warnings
 from typing import IO, TYPE_CHECKING, Hashable, Optional, Union
 
@@ -2497,7 +2498,7 @@ class Series(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler, name):
+    def _inflate_light(cls, query_compiler, name, source_pid):
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -2509,16 +2510,23 @@ class Series(BasePandasDataset):
             Query compiler to use for object re-creation.
         name : str
             The name to give to the new object.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         Series
             New Series based on the `query_compiler`.
         """
+        if os.getpid() != source_pid:
+            return query_compiler.to_pandas()
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler, name=name)
 
     @classmethod
-    def _inflate_full(cls, pandas_series):
+    def _inflate_full(cls, pandas_series, source_pid):
         """
         Re-creates the object from previously-serialized disk-storable representation.
 
@@ -2526,18 +2534,29 @@ class Series(BasePandasDataset):
         ----------
         pandas_series : pandas.Series
             Data to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         Series
             New Series based on the `pandas_series`.
         """
+        if os.getpid() != source_pid:
+            return pandas_series
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=pandas_series)
 
     def __reduce__(self):
         self._query_compiler.finalize()
-        if PersistentPickle.get():
-            return self._inflate_full, (self._to_pandas(),)
-        return self._inflate_light, (self._query_compiler, self.name)
+        pid = os.getpid()
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
+            return self._inflate_full, (self._to_pandas(), pid)
+        return self._inflate_light, (self._query_compiler, self.name, pid)
 
     # Persistance support methods - END
