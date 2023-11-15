@@ -93,10 +93,17 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
       - run: python -m pip install -e ".[all]"
-      - name: Ensure all engines start up
+      - name: Ensure Ray and Dask engines start up
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+      - name: Ensure MPI engine start up
+        # Install a working MPI implementation beforehand so mpi4py can link to it
+        run: |
+          sudo apt install libmpich-dev
+          python -m pip install -e ".[mpi]"
+          MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+        if: matrix.os == 'ubuntu'
 
   test-internals:
     needs: [lint-flake8, lint-black-isort]
