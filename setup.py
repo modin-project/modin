@@ -8,7 +8,7 @@ dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
 # pydantic<2: https://github.com/modin-project/modin/issues/6336
 ray_deps = ["ray[default]>=1.13.0,!=2.5.0", "pyarrow>=7.0.0", "pydantic<2"]
-unidist_deps = ["unidist[mpi]>=0.2.1"]
+unidist_deps = ["unidist[mpi]>=0.2.1,<=0.4.1"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 sql_deps = ["dfsql>=0.4.2", "pyparsing<=2.4.7"]
 all_deps = dask_deps + ray_deps + unidist_deps + spreadsheet_deps
