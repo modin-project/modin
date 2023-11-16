@@ -301,6 +301,7 @@ class DtypesDescriptor:
             # we can't map new columns to old columns and lost all dtypes :(
             return DtypesDescriptor(
                 cols_with_unknown_dtypes=new_index,
+                columns_order={i: col for i, col in enumerate(new_index)},
                 parent_df=self._parent_df,
                 know_all_names=True,
             )

@@ -25,6 +25,7 @@ from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortF
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     LazyProxyCategoricalDtype,
+    ModinDtypes,
 )
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
@@ -1517,7 +1518,9 @@ def test_call_queue_serialization(call_queue):
     assert_everything_materialized(reconstructed_queue)
 
 
-class TestDtypesDescriptor:
+class TestModinDtypes:
+    """Test ``ModinDtypes`` and ``DtypesDescriptor`` classes."""
+
     schema = pandas.Series(
         {
             "a": np.dtype(int),
@@ -1552,7 +1555,25 @@ class TestDtypesDescriptor:
             # False, to make descriptor avoid materialization at all cost
             return False
 
-    def test_get_dtypes_set(self):
+    def test_get_dtypes_set_modin_dtypes(self):
+        """Test that ``ModinDtypes.get_dtypes_set()`` correctly propagates this request to the underlying value."""
+        res = ModinDtypes(lambda: self.schema).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+        res = ModinDtypes(self.schema).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+        res = ModinDtypes(
+            DtypesDescriptor(
+                self.schema[["a", "b", "e"]], remaining_dtype=np.dtype(bool)
+            )
+        ).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+    def test_get_dtypes_set_desc(self):
         """
         Test that ``DtypesDescriptor.get_dtypes_set()`` returns valid values and doesn't
         trigger unnecessary computations.
@@ -1636,7 +1657,30 @@ class TestDtypesDescriptor:
             ["a", "b", "e"],
         )
 
-    def test_lazy_get(self):
+    def test_lazy_get_modin_dtypes(self):
+        """Test that ``ModinDtypes.lazy_get()`` correctly propagates this request to the underlying value."""
+        res = ModinDtypes(self.schema).lazy_get(["b", "c", "a"])
+        exp = self.schema[["b", "c", "a"]]
+        assert res._value.equals(exp)
+
+        res = ModinDtypes(lambda: self.schema).lazy_get(["b", "c", "a"])
+        exp = self.schema[["b", "c", "a"]]
+        assert callable(res._value)
+        assert res._value().equals(exp)
+
+        res = ModinDtypes(
+            DtypesDescriptor(
+                self.schema[["a", "b"]], cols_with_unknown_dtypes=["c", "d", "e"]
+            )
+        ).lazy_get(["b", "c", "a"])
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["c"],
+            columns_order={0: "b", 1: "c", 2: "a"},
+        )
+        assert res._value.equals(exp)
+
+    def test_lazy_get_desc(self):
         """
         Test that ``DtypesDescriptor.lazy_get()`` work properly.
 
@@ -1797,6 +1841,104 @@ class TestDtypesDescriptor:
         assert dtypes_cache._parent_df is new_parent
         assert dtypes_cache._known_dtypes["a"]._parent is new_parent
         assert old_parent._dtypes["a"]._parent is old_parent
+
+    @pytest.mark.parametrize(
+        "initial_dtypes, result_dtypes",
+        [
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype(int), "b": np.dtype(float), "c": np.dtype(float)}
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype(int), "b": np.dtype(float), "c": np.dtype(float)},
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                ),
+                DtypesDescriptor(
+                    {
+                        "col1": np.dtype(int),
+                        "col2": np.dtype(float),
+                        "col3": np.dtype(float),
+                    },
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype(int), "b": np.dtype(float)},
+                    cols_with_unknown_dtypes=["c"],
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                ),
+                DtypesDescriptor(
+                    {"col1": np.dtype(int), "col2": np.dtype(float)},
+                    cols_with_unknown_dtypes=["col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype(int)},
+                    cols_with_unknown_dtypes=["c"],
+                    know_all_names=False,
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor({"a": np.dtype(int)}, remaining_dtype=np.dtype(float)),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                lambda: pandas.Series(
+                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    index=["a", "b", "c"],
+                ),
+                lambda: pandas.Series(
+                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    index=["col1", "col2", "col3"],
+                ),
+            ],
+            [
+                pandas.Series(
+                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    index=["a", "b", "c"],
+                ),
+                pandas.Series(
+                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    index=["col1", "col2", "col3"],
+                ),
+            ],
+        ],
+    )
+    def test_set_index_dataframe(self, initial_dtypes, result_dtypes):
+        """Test that changing labels for a dataframe also updates labels of dtypes."""
+        df = pd.DataFrame(
+            {"a": [1, 2, 3], "b": [3.0, 4.0, 5.0], "c": [3.2, 4.5, 5.4]}
+        )._query_compiler._modin_frame
+        df.set_columns_cache(None)
+        if isinstance(initial_dtypes, DtypesDescriptor):
+            initial_dtypes = ModinDtypes(initial_dtypes)
+
+        df.set_dtypes_cache(initial_dtypes)
+        df.columns = ["col1", "col2", "col3"]
+
+        if result_dtypes is not None:
+            if callable(result_dtypes):
+                assert callable(df._dtypes._value)
+                assert df._dtypes._value().equals(result_dtypes())
+            else:
+                assert df._dtypes._value.equals(result_dtypes)
+        assert df.dtypes.index.equals(pandas.Index(["col1", "col2", "col3"]))
 
 
 class TestZeroComputationDtypes:
