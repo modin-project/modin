@@ -81,7 +81,7 @@ class DtypesDescriptor:
             )
         # columns with unknown dtypes (they're not described by 'remaining_dtype')
         if cols_with_unknown_dtypes is not None and len(
-            set(cols_with_unknown_dtypes)
+            np.unique(cols_with_unknown_dtypes)
         ) != len(cols_with_unknown_dtypes):
             raise NotImplementedError(
                 "Duplicated column names are not yet supported by DtypesDescriptor"
@@ -223,7 +223,7 @@ class DtypesDescriptor:
             if self.columns_order is not None:
                 ids = [self.columns_order[i] for i in ids]
             else:
-                raise NotImplementedError(
+                raise ValueError(
                     "Can't lazily get columns by positional indixers if the columns order is unknown"
                 )
 
@@ -331,10 +331,7 @@ class DtypesDescriptor:
             == set(other._cols_with_unknown_dtypes)
             and self._remaining_dtype == other._remaining_dtype
             and self._schema_is_known == other._schema_is_known
-            and (
-                self.columns_order == other.columns_order
-                or (self.columns_order is None and other.columns_order is None)
-            )
+            and self.columns_order == other.columns_order
             and self._know_all_names == other._know_all_names
         )
 
