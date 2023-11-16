@@ -81,7 +81,7 @@ class DtypesDescriptor:
             )
         # columns with unknown dtypes (they're not described by 'remaining_dtype')
         if cols_with_unknown_dtypes is not None and len(
-            np.unique(cols_with_unknown_dtypes)
+            set(cols_with_unknown_dtypes)
         ) != len(cols_with_unknown_dtypes):
             raise NotImplementedError(
                 "Duplicated column names are not yet supported by DtypesDescriptor"
@@ -214,7 +214,7 @@ class DtypesDescriptor:
         DtypesDescriptor
             Descriptor that describes dtypes for columns specified in `ids`.
         """
-        if len(np.unique(ids)) != len(ids):
+        if len(set(ids)) != len(ids):
             raise NotImplementedError(
                 "Duplicated column names are not yet supported by DtypesDescriptor"
             )
