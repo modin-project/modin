@@ -32,7 +32,7 @@ class DtypesDescriptor:
 
     Parameters
     ----------
-    known_dtypes : dict[IndexLabel, np.dtype], optional
+    known_dtypes : dict[IndexLabel, np.dtype] or pandas.Series, optional
         Columns that we know dtypes for.
     cols_with_unknown_dtypes : list[IndexLabel], optional
         Column names that have unknown dtypes. If specified together with `remaining_dtype`, must describe all
@@ -59,7 +59,7 @@ class DtypesDescriptor:
 
     def __init__(
         self,
-        known_dtypes: Optional[dict[IndexLabel, np.dtype]] = None,
+        known_dtypes: Optional[Union[dict[IndexLabel, np.dtype], pandas.Series]] = None,
         cols_with_unknown_dtypes: Optional[list[IndexLabel]] = None,
         remaining_dtype: Optional[np.dtype] = None,
         parent_df: Optional["PandasDataframe"] = None,
@@ -68,7 +68,7 @@ class DtypesDescriptor:
         _schema_is_known: Optional[bool] = None,
     ):
         if not know_all_names and remaining_dtype is not None:
-            raise RuntimeError(
+            raise ValueError(
                 "It's not allowed to pass 'remaining_dtype' and 'know_all_names=False' at the same time."
             )
         # columns with known dtypes
@@ -90,21 +90,19 @@ class DtypesDescriptor:
             [] if cols_with_unknown_dtypes is None else cols_with_unknown_dtypes
         )
         # whether 'known_dtypes' describe all columns in the dataframe
-        if _schema_is_known is None:
-            self._schema_is_known: bool = (
-                len(cols_with_unknown_dtypes) == 0
-                if (
-                    # if 'cols_with_unknown_dtypes' was explicitly specified as an empty list and
-                    # we don't have any 'remaining_dtype', then we assume that 'known_dtypes' are complete
-                    cols_with_unknown_dtypes is not None
-                    and know_all_names
-                    and remaining_dtype is None
-                    and len(self._known_dtypes) > 0
-                )
-                else False
-            )
-        else:
-            self._schema_is_known: bool = _schema_is_known
+        self._schema_is_known: Optional[bool] = _schema_is_known
+        if self._schema_is_known is None:
+            self._schema_is_known = False
+            if (
+                # if 'cols_with_unknown_dtypes' was explicitly specified as an empty list and
+                # we don't have any 'remaining_dtype', then we assume that 'known_dtypes' are complete
+                cols_with_unknown_dtypes is not None
+                and know_all_names
+                and remaining_dtype is None
+                and len(self._known_dtypes) > 0
+            ):
+                self._schema_is_known = len(cols_with_unknown_dtypes) == 0
+
         self._know_all_names: bool = know_all_names
         # a common dtype for columns that are not present in 'known_dtypes' nor in 'cols_with_unknown_dtypes'
         self._remaining_dtype: Optional[np.dtype] = remaining_dtype
@@ -115,12 +113,12 @@ class DtypesDescriptor:
             self.columns_order
         else:
             if remaining_dtype is not None:
-                raise RuntimeError(
+                raise ValueError(
                     "Passing 'columns_order' and 'remaining_dtype' is ambiguous. You have to manually "
                     + "complete 'known_dtypes' using the information from 'columns_order' and 'remaining_dtype'."
                 )
             elif not self._know_all_names:
-                raise RuntimeError(
+                raise ValueError(
                     "Passing 'columns_order' and 'know_all_names=False' is ambiguous. You have to manually "
                     + "complete 'cols_with_unknown_dtypes' using the information from 'columns_order' "
                     + "and pass 'know_all_names=True'."
@@ -128,7 +126,7 @@ class DtypesDescriptor:
             elif len(columns_order) != (
                 len(self._cols_with_unknown_dtypes) + len(self._known_dtypes)
             ):
-                raise RuntimeError(
+                raise ValueError(
                     "The length of 'columns_order' doesn't match to 'known_dtypes' and 'cols_with_unknown_dtypes'"
                 )
             self._columns_order: Optional[dict[int, IndexLabel]] = columns_order
@@ -142,11 +140,7 @@ class DtypesDescriptor:
         new_parent : PandasDataframe
         """
         self._parent_df = new_parent
-        for key, value in self._known_dtypes.items():
-            if isinstance(value, LazyProxyCategoricalDtype):
-                self._known_dtypes[key] = value._update_proxy(
-                    new_parent, column_name=key
-                )
+        LazyProxyCategoricalDtype.update_dtypes(self._known_dtypes, new_parent)
         # try to compute '._columns_order' using 'new_parent'
         self.columns_order
 
@@ -595,11 +589,7 @@ class ModinDtypes:
         """
         new_self = self.copy()
         if new_self.is_materialized:
-            for key, value in new_self._value.items():
-                if isinstance(value, LazyProxyCategoricalDtype):
-                    new_self._value[key] = value._update_proxy(
-                        new_parent, column_name=key
-                    )
+            LazyProxyCategoricalDtype.update_dtypes(new_self._value, new_parent)
             return new_self
         if isinstance(self._value, DtypesDescriptor):
             new_self._value.update_parent(new_parent)
@@ -825,6 +815,22 @@ class LazyProxyCategoricalDtype(pandas.CategoricalDtype):
             None,
         )
         super().__init__(categories, ordered)
+
+    @staticmethod
+    def update_dtypes(dtypes, new_parent):
+        """
+        Update a parent for categorical proxies in a dtype object.
+
+        Parameters
+        ----------
+        dtypes : dict-like
+            A dict-like object describing dtypes. The method will walk through every dtype
+            an update parents for categorical proxies inplace.
+        new_parent : object
+        """
+        for key, value in dtypes.items():
+            if isinstance(value, LazyProxyCategoricalDtype):
+                dtypes[key] = value._update_proxy(new_parent, column_name=key)
 
     def _update_proxy(self, parent, column_name):
         """

@@ -324,9 +324,7 @@ class PandasDataframe(ClassLogger):
         if isinstance(dtypes, ModinDtypes):
             dtypes = dtypes.maybe_specify_new_frame_ref(new_parent)
         if isinstance(dtypes, pandas.Series):
-            for key, value in dtypes.items():
-                if isinstance(value, LazyProxyCategoricalDtype):
-                    dtypes[key] = value._update_proxy(new_parent, column_name=key)
+            LazyProxyCategoricalDtype.update_dtypes(dtypes, new_parent)
         return dtypes
 
     def set_dtypes_cache(self, dtypes):
