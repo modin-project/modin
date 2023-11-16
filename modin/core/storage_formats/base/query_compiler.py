@@ -325,6 +325,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """Wait for all computations to complete without materializing data."""
         pass
 
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.support_materialization_in_worker_process()
+
     # END Data Management Methods
 
     # To/From Pandas

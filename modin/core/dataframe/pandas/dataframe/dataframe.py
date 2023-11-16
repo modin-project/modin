@@ -4173,6 +4173,16 @@ class PandasDataframe(ClassLogger):
         """Wait for all computations to complete without materializing data."""
         self._partition_mgr_cls.wait_partitions(self._partitions.flatten())
 
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return True
+
     def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """
         Get a Modin DataFrame that implements the dataframe exchange protocol.
