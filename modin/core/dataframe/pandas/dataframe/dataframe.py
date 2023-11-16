@@ -1187,7 +1187,8 @@ class PandasDataframe(ClassLogger):
                     new_dtypes = self._dtypes.lazy_get(
                         monotonic_col_idx, numeric_index=True
                     )
-                except NotImplementedError:
+                # can raise either on missing cache or on duplicated labels
+                except (ValueError, NotImplementedError):
                     new_dtypes = None
             else:
                 new_dtypes = None
@@ -1487,6 +1488,7 @@ class PandasDataframe(ClassLogger):
             elif isinstance(self._dtypes, ModinDtypes):
                 try:
                     new_dtypes = self._dtypes.lazy_get(col_idx)
+                # can raise on duplicated labels
                 except NotImplementedError:
                     new_dtypes = None
 
