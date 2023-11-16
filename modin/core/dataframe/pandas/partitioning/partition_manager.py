@@ -824,7 +824,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         parts = [
             [
                 update_bar(
-                    put_func(col_part.iloc[i : i + row_chunksize]),
+                    put_func(
+                        col_part.iloc[i : i + row_chunksize].copy()
+                    ),  # `copy()` to fix zero-copy pickling
                 )
                 for col_part in col_parts
             ]

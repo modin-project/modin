@@ -1511,3 +1511,23 @@ def test_call_queue_serialization(call_queue):
 
     assert call_queue == reconstructed_queue
     assert_everything_materialized(reconstructed_queue)
+
+
+@pytest.mark.skipif(Engine.get() != "Ray", reason="Ray specific")
+def test_zero_copy_pickling():
+    import ray
+
+    df = pd.DataFrame(np.zeros((100, 100)))
+    part = ray.get(df._query_compiler._modin_frame._partitions[0][0]._data)
+
+    try:
+        part.values[0, 0] = 10
+    except ValueError as err:
+        if "assignment destination is read-only" in str(err):
+            pass
+        else:
+            # Unexpected exception
+            raise err
+    else:
+        # The exception must be thrown
+        raise RuntimeError("not zero copy pickling")
