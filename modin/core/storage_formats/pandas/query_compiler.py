@@ -573,8 +573,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    # renamers may return renamers that contain columns from 'index',
-                    # so trying to merge index and column dtypes here
+                    # renamers may contain columns from 'index', so trying to merge index and column dtypes here
                     right_index_dtypes = (
                         right_pandas.index.dtypes
                         if isinstance(right_pandas.index, pandas.MultiIndex)
