@@ -105,9 +105,9 @@ def join_columns(
             right_on = []
         # in other cases, we can simply add the index name to columns and proceed as normal
         elif left_on[0] not in left:
-            left = left.insert(loc=0, item=left_on[0])
+            left = cast(pandas.Index, left.insert(loc=0, item=left_on[0]))
         elif right_on[0] not in right:
-            right = right.insert(loc=0, item=right_on[0])
+            right = cast(pandas.Index, right.insert(loc=0, item=right_on[0]))
 
     if any(col not in left for col in left_on) or any(
         col not in right for col in right_on
