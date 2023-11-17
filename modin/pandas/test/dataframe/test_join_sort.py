@@ -494,7 +494,6 @@ def test_merge_on_single_index(left_index, right_index):
     if len(right_index):
         modin_df2 = modin_df2.set_index(right_index)
         pandas_df2 = pandas_df2.set_index(right_index)
-    # breakpoint()
     eval_general(
         (modin_df1, modin_df2),
         (pandas_df1, pandas_df2),
