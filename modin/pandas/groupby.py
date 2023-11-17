@@ -1092,8 +1092,6 @@ class DataFrameGroupBy(ClassLogger):
             )
         elif isinstance(self._df, Series):
             result.name = self._df.name
-        else:
-            result.name = None
         return result
 
     def sum(self, numeric_only=False, min_count=0, engine=None, engine_kwargs=None):
@@ -1163,8 +1161,6 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(result, Series):
             # The result should always be a Series with name None and type int64
             result = result.squeeze(axis=1)
-        # TODO: this might not hold in the future
-        result.name = None
         return result
 
     def nunique(self, dropna=True):
@@ -1311,7 +1307,6 @@ class DataFrameGroupBy(ClassLogger):
         if not isinstance(result, Series):
             # The result should always be a Series with name None and type int64
             result = result.squeeze(axis=1)
-            result.name = None
         return result
 
     def tail(self, n=5):

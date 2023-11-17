@@ -505,12 +505,13 @@ class HdkOnNativeDataframe(PandasDataframe):
     @_inherit_docstrings(PandasDataframe._maybe_update_proxies)
     def _maybe_update_proxies(self, dtypes, new_parent=None):
         if new_parent is not None:
-            super()._maybe_update_proxies(dtypes, new_parent)
+            return super()._maybe_update_proxies(dtypes, new_parent)
         if self._partitions is None:
-            return
+            return dtypes
         table = self._partitions[0][0].get()
         if isinstance(table, pyarrow.Table):
-            super()._maybe_update_proxies(dtypes, new_parent=table)
+            return super()._maybe_update_proxies(dtypes, new_parent=table)
+        return dtypes
 
     def groupby_agg(self, by, axis, agg, groupby_args, **kwargs):
         """

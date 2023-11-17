@@ -313,6 +313,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def dtypes(self):
         return self._modin_frame.dtypes
 
+    def get_dtypes_set(self):
+        return self._modin_frame.get_dtypes_set()
+
     # END Index, columns, and dtypes objects
 
     # Metadata modification methods
@@ -402,9 +405,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # such that columns/rows that don't have an index on the other DataFrame
     # result in NaN values.
 
-    add = Binary.register(pandas.DataFrame.add, infer_dtypes="common_cast")
+    add = Binary.register(pandas.DataFrame.add, infer_dtypes="try_sample")
+    # 'combine' and 'combine_first' are working with UDFs, so it's better not so sample them
     combine = Binary.register(pandas.DataFrame.combine, infer_dtypes="common_cast")
-    combine_first = Binary.register(pandas.DataFrame.combine_first, infer_dtypes="bool")
+    combine_first = Binary.register(
+        pandas.DataFrame.combine_first, infer_dtypes="common_cast"
+    )
     eq = Binary.register(pandas.DataFrame.eq, infer_dtypes="bool")
     equals = Binary.register(
         lambda df, other: pandas.DataFrame([[df.equals(other)]]),
@@ -412,24 +418,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
         labels="drop",
         infer_dtypes="bool",
     )
-    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="common_cast")
+    floordiv = Binary.register(pandas.DataFrame.floordiv, infer_dtypes="try_sample")
     ge = Binary.register(pandas.DataFrame.ge, infer_dtypes="bool")
     gt = Binary.register(pandas.DataFrame.gt, infer_dtypes="bool")
     le = Binary.register(pandas.DataFrame.le, infer_dtypes="bool")
     lt = Binary.register(pandas.DataFrame.lt, infer_dtypes="bool")
-    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="common_cast")
-    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="common_cast")
-    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="common_cast")
+    mod = Binary.register(pandas.DataFrame.mod, infer_dtypes="try_sample")
+    mul = Binary.register(pandas.DataFrame.mul, infer_dtypes="try_sample")
+    rmul = Binary.register(pandas.DataFrame.rmul, infer_dtypes="try_sample")
     ne = Binary.register(pandas.DataFrame.ne, infer_dtypes="bool")
-    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="common_cast")
-    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="common_cast")
-    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="common_cast")
-    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="common_cast")
-    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="common_cast")
-    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="common_cast")
-    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="float")
-    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="common_cast")
-    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="float")
+    pow = Binary.register(pandas.DataFrame.pow, infer_dtypes="try_sample")
+    radd = Binary.register(pandas.DataFrame.radd, infer_dtypes="try_sample")
+    rfloordiv = Binary.register(pandas.DataFrame.rfloordiv, infer_dtypes="try_sample")
+    rmod = Binary.register(pandas.DataFrame.rmod, infer_dtypes="try_sample")
+    rpow = Binary.register(pandas.DataFrame.rpow, infer_dtypes="try_sample")
+    rsub = Binary.register(pandas.DataFrame.rsub, infer_dtypes="try_sample")
+    rtruediv = Binary.register(pandas.DataFrame.rtruediv, infer_dtypes="try_sample")
+    sub = Binary.register(pandas.DataFrame.sub, infer_dtypes="try_sample")
+    truediv = Binary.register(pandas.DataFrame.truediv, infer_dtypes="try_sample")
     __and__ = Binary.register(pandas.DataFrame.__and__, infer_dtypes="bool")
     __or__ = Binary.register(pandas.DataFrame.__or__, infer_dtypes="bool")
     __rand__ = Binary.register(pandas.DataFrame.__rand__, infer_dtypes="bool")
@@ -2434,6 +2440,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         method = kwargs.get("method", None)
         limit = kwargs.get("limit", None)
         full_axis = method is not None or limit is not None
+        new_dtypes = None
         if isinstance(value, BaseQueryCompiler):
             if squeeze_self:
                 # Self is a Series type object
@@ -2501,7 +2508,25 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     }
                     return df.fillna(value=func_dict, **kwargs)
 
+                if self._modin_frame.has_materialized_dtypes:
+                    dtypes = self._modin_frame.dtypes
+                    value_dtypes = pandas.DataFrame(
+                        {k: [v] for (k, v) in value.items()}
+                    ).dtypes
+                    if all(
+                        find_common_type([dtypes[col], dtype]) == dtypes[col]
+                        for (col, dtype) in value_dtypes.items()
+                        if col in dtypes
+                    ):
+                        new_dtypes = dtypes
+
         else:
+            if self._modin_frame.has_materialized_dtypes:
+                dtype = pandas.Series(value).dtype
+                if all(
+                    find_common_type([t, dtype]) == t for t in self._modin_frame.dtypes
+                ):
+                    new_dtypes = self._modin_frame.dtypes
 
             def fillna(df):
                 return df.fillna(value=value, **kwargs)
@@ -2509,7 +2534,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if full_axis:
             new_modin_frame = self._modin_frame.fold(axis, fillna)
         else:
-            new_modin_frame = self._modin_frame.map(fillna)
+            new_modin_frame = self._modin_frame.map(fillna, dtypes=new_dtypes)
         return self.__constructor__(new_modin_frame)
 
     def quantile_for_list_of_values(self, **kwargs):
@@ -3061,7 +3086,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
             dtypes=np.bool_,
-            keep_partitioning=False,
+            keep_partitioning=True,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")
 
@@ -4314,13 +4339,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # than it would be to reuse the code for specific columns.
         if len(columns) == len(self.columns):
             new_modin_frame = self._modin_frame.apply_full_axis(
-                0, map_fn, new_index=self.index
+                0, map_fn, new_index=self.index, dtypes=bool
             )
             untouched_frame = None
         else:
             new_modin_frame = self._modin_frame.take_2d_labels_or_positional(
                 col_labels=columns
-            ).apply_full_axis(0, map_fn, new_index=self.index)
+            ).apply_full_axis(0, map_fn, new_index=self.index, dtypes=bool)
             untouched_frame = self.drop(columns=columns)
         # If we mapped over all the data we are done. If not, we need to
         # prepend the `new_modin_frame` with the raw data from the columns that were

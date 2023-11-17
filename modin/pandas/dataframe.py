@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime
 import functools
 import itertools
+import os
 import re
 import sys
 import warnings
@@ -1972,9 +1973,12 @@ class DataFrame(BasePandasDataset):
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and len(self.columns) == 1:
+            self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
-            return Series(query_compiler=self.T._query_compiler)
+            qc = self.T._query_compiler
+            qc._shape_hint = "column"
+            return Series(query_compiler=qc)
         else:
             return self.copy()
 
@@ -2875,8 +2879,9 @@ class DataFrame(BasePandasDataset):
         # Series.__getitem__ treating keys as positions is deprecated. In a future version,
         # integer keys will always be treated as labels (consistent with DataFrame behavior).
         # To access a value by position, use `ser.iloc[pos]`
-        dtype = self.dtypes.iloc[0]
-        for t in self.dtypes:
+        dtypes = self._query_compiler.get_dtypes_set()
+        dtype = next(iter(dtypes))
+        for t in dtypes:
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
             elif not numeric_only and t != dtype:
@@ -3104,7 +3109,7 @@ class DataFrame(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler):
+    def _inflate_light(cls, query_compiler, source_pid):
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -3114,16 +3119,23 @@ class DataFrame(BasePandasDataset):
         ----------
         query_compiler : BaseQueryCompiler
             Query compiler to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `query_compiler`.
         """
+        if os.getpid() != source_pid:
+            return query_compiler.to_pandas()
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler)
 
     @classmethod
-    def _inflate_full(cls, pandas_df):
+    def _inflate_full(cls, pandas_df, source_pid):
         """
         Re-creates the object from previously-serialized disk-storable representation.
 
@@ -3131,18 +3143,29 @@ class DataFrame(BasePandasDataset):
         ----------
         pandas_df : pandas.DataFrame
             Data to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `pandas_df`.
         """
+        if os.getpid() != source_pid:
+            return pandas_df
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):
         self._query_compiler.finalize()
-        if PersistentPickle.get():
-            return self._inflate_full, (self._to_pandas(),)
-        return self._inflate_light, (self._query_compiler,)
+        pid = os.getpid()
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
+            return self._inflate_full, (self._to_pandas(), pid)
+        return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END

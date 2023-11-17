@@ -249,6 +249,22 @@ class ModinIndex:
             },
         )
 
+    def __getitem__(self, key):
+        """
+        Get an index value at the position of `key`.
+
+        Parameters
+        ----------
+        key : int
+
+        Returns
+        -------
+        label
+        """
+        if not self.is_materialized:
+            self.get()
+        return self._value[key]
+
     def __getattr__(self, name):
         """
         Redirect access to non-existent attributes to the internal representation.
