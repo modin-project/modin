@@ -1,5 +1,5 @@
 # install current modin checkout to bring all required dependencies
-.[all,mpi]
+.[all]
 # now install some more optional dependencies
 colorama
 click
