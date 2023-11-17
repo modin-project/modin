@@ -4536,6 +4536,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         self.get_axis(axis).names = names
 
+    def get_dtypes_set(self):
+        """
+        Get a set of dtypes that are in this query compiler.
+
+        Returns
+        -------
+        set
+        """
+        return set(self.dtypes.values)
+
     # DateTime methods
     def between_time(self, **kwargs):  # noqa: PR01
         """
