@@ -58,6 +58,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     SeriesGroupByDefault,
 )
 from modin.core.dataframe.base.dataframe.utils import join_columns
+from modin.core.dataframe.pandas.metadata import ModinDtypes
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -719,10 +720,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame.has_columns_cache and kwargs["drop"]:
-                new_columns = self._modin_frame.copy_columns_cache(copy_lengths=True)
+            new_columns = None
+            if kwargs["drop"]:
+                dtypes = self._modin_frame.copy_dtypes_cache()
+                if self._modin_frame.has_columns_cache:
+                    new_columns = self._modin_frame.copy_columns_cache(
+                        copy_lengths=True
+                    )
             else:
-                new_columns = None
+                # concat index dtypes (None, since they're unknown) with column dtypes
+                try:
+                    dtypes = ModinDtypes.concat([None, self._modin_frame._dtypes])
+                except NotImplementedError:
+                    # may raise on duplicated names in materialized 'self.dtypes'
+                    dtypes = None
 
             return self.__constructor__(
                 self._modin_frame.apply_full_axis(
@@ -730,9 +741,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     enumerate_partitions=True,
                     new_columns=new_columns,
-                    dtypes=(
-                        self._modin_frame._dtypes if kwargs.get("drop", False) else None
-                    ),
+                    dtypes=dtypes,
                     sync_labels=False,
                     pass_axis_lengths_to_partitions=True,
                 )

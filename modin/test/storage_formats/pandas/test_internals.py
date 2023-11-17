@@ -21,6 +21,7 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
@@ -1947,8 +1948,6 @@ class TestZeroComputationDtypes:
     """
 
     def test_get_dummies_case(self):
-        from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-
         with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
             df = pd.DataFrame(
                 {"items": [1, 2, 3, 4], "b": [3, 3, 4, 4], "c": [1, 0, 0, 1]}
@@ -1958,5 +1957,93 @@ class TestZeroComputationDtypes:
             res[cols] = res[cols] / res[cols].mean()
 
             assert res._query_compiler._modin_frame.has_materialized_dtypes
+
+        patch.assert_not_called()
+
+    @pytest.mark.parametrize("has_materialized_index", [True, False])
+    @pytest.mark.parametrize("drop", [True, False])
+    def test_preserve_dtypes_reset_index(self, drop, has_materialized_index):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            # case 1: 'df' has complete dtype by default
+            df = pd.DataFrame({"a": [1, 2, 3]})
+            if has_materialized_index:
+                assert df._query_compiler._modin_frame.has_materialized_index
+            else:
+                df._query_compiler._modin_frame.set_index_cache(None)
+                assert not df._query_compiler._modin_frame.has_materialized_index
+            assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+            res = df.reset_index(drop=drop)
+            if drop:
+                # we droped the index, so columns and dtypes shouldn't change
+                assert res._query_compiler._modin_frame.has_materialized_dtypes
+                assert res.dtypes.equals(df.dtypes)
+            else:
+                if has_materialized_index:
+                    # we should have inserted index dtype into the descriptor,
+                    # and since both of them are materialized, the result should be
+                    # materialized too
+                    assert res._query_compiler._modin_frame.has_materialized_dtypes
+                    assert res.dtypes.equals(
+                        pandas.Series(
+                            [np.dtype(int), np.dtype(int)], index=["index", "a"]
+                        )
+                    )
+                else:
+                    # we now know that there are cols with unknown name and dtype in our dataframe,
+                    # so the resulting dtypes should contain information only about original column
+                    expected_dtypes = DtypesDescriptor(
+                        {"a": np.dtype(int)},
+                        know_all_names=False,
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
+
+            # case 2: 'df' has partial dtype by default
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [3, 4, 5]})
+            df._query_compiler._modin_frame.set_dtypes_cache(
+                ModinDtypes(
+                    DtypesDescriptor(
+                        {"a": np.dtype(int)}, cols_with_unknown_dtypes=["b"]
+                    )
+                )
+            )
+            if has_materialized_index:
+                assert df._query_compiler._modin_frame.has_materialized_index
+            else:
+                df._query_compiler._modin_frame.set_index_cache(None)
+                assert not df._query_compiler._modin_frame.has_materialized_index
+
+            res = df.reset_index(drop=drop)
+            if drop:
+                # we droped the index, so columns and dtypes shouldn't change
+                assert res._query_compiler._modin_frame._dtypes._value.equals(
+                    df._query_compiler._modin_frame._dtypes._value
+                )
+            else:
+                if has_materialized_index:
+                    # we should have inserted index dtype into the descriptor,
+                    # the resulted dtype should have information about 'index' and 'a' columns,
+                    # and miss dtype info for 'b' column
+                    expected_dtypes = DtypesDescriptor(
+                        {"index": np.dtype(int), "a": np.dtype(int)},
+                        cols_with_unknown_dtypes=["b"],
+                        columns_order={0: "index", 1: "a", 2: "b"},
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
+                else:
+                    # we miss info about the 'index' column since it wasn't materialized at
+                    # the time of 'reset_index()' and we're still missing dtype info for 'b' column
+                    expected_dtypes = DtypesDescriptor(
+                        {"a": np.dtype(int)},
+                        cols_with_unknown_dtypes=["b"],
+                        know_all_names=False,
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
 
         patch.assert_not_called()
