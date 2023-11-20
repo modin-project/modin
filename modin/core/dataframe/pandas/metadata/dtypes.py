@@ -648,7 +648,16 @@ class ModinDtypes:
             else:
                 raise NotImplementedError(type(val))
 
-        desc = DtypesDescriptor.concat(preprocessed_vals)
+        try:
+            desc = DtypesDescriptor.concat(preprocessed_vals)
+        except NotImplementedError as e:
+            # 'DtypesDescriptor' doesn't support duplicated labels, however, if all values are pandas Serieses,
+            # we still can perform concatenation using pure pandas
+            if "duplicated" not in e.args[0].lower() or not all(
+                isinstance(val, pandas.Series) for val in values
+            ):
+                raise e
+            desc = pandas.concat(values)
         return ModinDtypes(desc)
 
     def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> "ModinDtypes":

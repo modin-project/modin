@@ -1815,6 +1815,24 @@ class TestModinDtypes:
         )
         assert res.equals(exp)
 
+    def test_ModinDtypes_duplicated_concat(self):
+        # test that 'ModinDtypes' is able to perform dtypes concatenation on duplicated labels
+        # if all of them are Serieses
+        res = ModinDtypes.concat([pandas.Series([np.dtype(int)], index=["a"])] * 2)
+        assert isinstance(res._value, pandas.Series)
+        assert res._value.equals(
+            pandas.Series([np.dtype(int), np.dtype(int)], index=["a", "a"])
+        )
+
+        # test that 'ModinDtypes.concat' with duplicated labels raises when not all dtypes are materialized
+        with pytest.raises(NotImplementedError):
+            res = ModinDtypes.concat(
+                [
+                    pandas.Series([np.dtype(int)], index=["a"]),
+                    DtypesDescriptor(cols_with_unknown_dtypes=["a"]),
+                ]
+            )
+
     def test_update_parent(self):
         """
         Test that updating parents in ``DtypesDescriptor`` also propagates to stored lazy categoricals.
