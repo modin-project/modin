@@ -3686,16 +3686,7 @@ class PandasDataframe(ClassLogger):
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
-            if all(frame.has_materialized_dtypes for frame in frames):
-                all_dtypes = [frame.dtypes for frame in frames]
-                if not all(dtypes.empty for dtypes in all_dtypes):
-                    new_dtypes = pandas.concat(all_dtypes, axis=1)
-                    # 'nan' value will be placed in a row if a column doesn't exist in all frames;
-                    # this value is np.float64 type so we need an explicit conversion
-                    new_dtypes.fillna(np.dtype("float64"), inplace=True)
-                    new_dtypes = new_dtypes.apply(
-                        lambda row: find_common_type(row.values), axis=1
-                    )
+            new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=0)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
