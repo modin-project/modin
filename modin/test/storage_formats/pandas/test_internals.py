@@ -1965,6 +1965,61 @@ class TestZeroComputationDtypes:
     Test cases that shouldn't trigger dtypes computation during their execution.
     """
 
+    @pytest.mark.parametrize("self_dtype", ["materialized", "partial", "unknown"])
+    @pytest.mark.parametrize(
+        "value, value_dtype",
+        [
+            [3.5, np.dtype(float)],
+            [[3.5, 2.4], np.dtype(float)],
+            [np.array([3.5, 2.4]), np.dtype(float)],
+            [pd.Series([3.5, 2.4]), np.dtype(float)],
+        ],
+    )
+    def test_preserve_dtypes_insert(self, self_dtype, value, value_dtype):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+            if self_dtype == "materialized":
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+            elif self_dtype == "partial":
+                df._query_compiler._modin_frame.set_dtypes_cache(
+                    ModinDtypes(
+                        DtypesDescriptor(
+                            {"a": np.dtype(int)}, cols_with_unknown_dtypes=["b"]
+                        )
+                    )
+                )
+            elif self_dtype == "unknown":
+                df._query_compiler._modin_frame.set_dtypes_cache(None)
+            else:
+                raise NotImplementedError(self_dtype)
+
+            df.insert(loc=0, column="c", value=value)
+
+            if self_dtype == "materialized":
+                result_dtype = pandas.Series(
+                    [value_dtype, np.dtype(int), np.dtype(int)], index=["c", "a", "b"]
+                )
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df.dtypes.equals(result_dtype)
+            elif self_dtype == "partial":
+                result_dtype = DtypesDescriptor(
+                    {"a": np.dtype(int), "c": value_dtype},
+                    cols_with_unknown_dtypes=["b"],
+                    columns_order={0: "c", 1: "a", 2: "b"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            elif self_dtype == "unknown":
+                result_dtype = DtypesDescriptor(
+                    {"c": value_dtype},
+                    cols_with_unknown_dtypes=["a", "b"],
+                    columns_order={0: "c", 1: "a", 2: "b"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            else:
+                raise NotImplementedError(self_dtype)
+
+        patch.assert_not_called()
+
     def test_get_dummies_case(self):
         with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
             df = pd.DataFrame(

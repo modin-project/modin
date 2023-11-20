@@ -2804,6 +2804,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
+        new_dtypes=None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -2826,6 +2827,10 @@ class PandasDataframe(ClassLogger):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
+        new_dtypes : ModinDtypes or pandas.Series, optional
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -2854,7 +2859,9 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
