@@ -2587,7 +2587,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.get_axis(0)) == 0 or len(self.get_axis(1)) == 0:
+        if len(self.get_axis(1)) == 0 or len(self) == 0:
             return self.copy()
 
         axis = Axis(axis)
