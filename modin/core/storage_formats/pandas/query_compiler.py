@@ -58,6 +58,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     SeriesGroupByDefault,
 )
 from modin.core.dataframe.base.dataframe.utils import join_columns
+from modin.core.dataframe.pandas.metadata import DtypesDescriptor, ModinDtypes
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -2911,6 +2912,27 @@ class PandasQueryCompiler(BaseQueryCompiler):
             idx = self.get_axis(axis ^ 1).get_indexer_for([key])[0]
             return self.insert_item(axis ^ 1, idx, value, how, replace=True)
 
+        if axis == 0:
+            if hasattr(value, "dtype"):
+                value_dtype = value.dtype
+            elif is_scalar(value):
+                value_dtype = np.dtype(type(value))
+            else:
+                value_dtype = np.array(value).dtype
+
+            old_columns = self.columns.difference(pandas.Index([key]))
+            old_dtypes = ModinDtypes(self._modin_frame._dtypes).lazy_get(old_columns)
+            new_dtypes = ModinDtypes.concat(
+                [
+                    old_dtypes,
+                    DtypesDescriptor({key: value_dtype}, cols_with_unknown_dtypes=[]),
+                ]
+                # get dtypes in a proper order
+            ).lazy_get(self.columns)
+        else:
+            # TODO: apply 'find_common_dtype' to the value's dtype and old column dtypes
+            new_dtypes = None
+
         # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
         if is_list_like(value):
@@ -2921,6 +2943,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 new_index=self.index,
                 new_columns=self.columns,
                 keep_remaining=True,
+                new_dtypes=new_dtypes,
             )
         else:
             new_modin_frame = self._modin_frame.apply_select_indices(
@@ -2929,6 +2952,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 [key],
                 new_index=self.index,
                 new_columns=self.columns,
+                new_dtypes=new_dtypes,
                 keep_remaining=True,
             )
         return self.__constructor__(new_modin_frame)

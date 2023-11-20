@@ -527,14 +527,23 @@ class ModinDtypes:
 
     Parameters
     ----------
-    value : pandas.Series or callable
+    value : pandas.Series, callable, DtypesDescriptor or ModinDtypes, optional
     """
 
-    def __init__(self, value: Union[Callable, pandas.Series, DtypesDescriptor]):
+    def __init__(
+        self,
+        value: Optional[
+            Union[Callable, pandas.Series, DtypesDescriptor, "ModinDtypes"]
+        ],
+    ):
         if callable(value) or isinstance(value, pandas.Series):
             self._value = value
         elif isinstance(value, DtypesDescriptor):
             self._value = value.to_series() if value.is_materialized else value
+        elif isinstance(value, type(self)):
+            self._value = value.copy()._value
+        elif isinstance(value, None):
+            self._value = DtypesDescriptor()
         else:
             raise ValueError(f"ModinDtypes doesn't work with '{value}'")
 
