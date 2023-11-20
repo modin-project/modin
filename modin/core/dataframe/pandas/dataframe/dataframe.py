@@ -3686,7 +3686,7 @@ class PandasDataframe(ClassLogger):
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
-            new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=0)
+            new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a

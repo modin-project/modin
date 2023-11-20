@@ -445,7 +445,7 @@ class DtypesDescriptor:
         return known_dtypes
 
     @classmethod
-    def _merge_row_dtypes(
+    def _merge_dtypes(
         cls, values: list[Union["DtypesDescriptor", pandas.Series, None]]
     ) -> "DtypesDescriptor":
         """
@@ -537,7 +537,7 @@ class DtypesDescriptor:
 
     @classmethod
     def concat(
-        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]], axis: int = 1
+        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]], axis: int = 0
     ) -> "DtypesDescriptor":
         """
         Concatenate dtypes descriptors into a single descriptor.
@@ -545,10 +545,10 @@ class DtypesDescriptor:
         Parameters
         ----------
         values : list of DtypesDescriptors and pandas.Series
-        axis : int, default: 1
-            If ``axis == 1``: concatenate column names. This implements the logic of
+        axis : int, default: 0
+            If ``axis == 0``: concatenate column names. This implements the logic of
             how dtypes are combined on ``pd.concat([df1, df2], axis=1)``.
-            If ``axis == 0``: perform a union join for the column names described by
+            If ``axis == 1``: perform a union join for the column names described by
             `values` and then find common dtypes for the columns appeared to be in
             an intersection. This implements the logic of how dtypes are combined on
             ``pd.concat([df1, df2], axis=0).dtypes``.
@@ -557,8 +557,8 @@ class DtypesDescriptor:
         -------
         DtypesDescriptor
         """
-        if axis == 0:
-            return cls._merge_row_dtypes(values)
+        if axis == 1:
+            return cls._merge_dtypes(values)
         known_dtypes = {}
         cols_with_unknown_dtypes = []
         schema_is_known = True
@@ -726,17 +726,17 @@ class ModinDtypes:
         return ModinDtypes(self._value.iloc[ids] if numeric_index else self._value[ids])
 
     @classmethod
-    def concat(cls, values: list, axis: int = 1) -> "ModinDtypes":
+    def concat(cls, values: list, axis: int = 0) -> "ModinDtypes":
         """
         Concatenate dtypes.
 
         Parameters
         ----------
         values : list of DtypesDescriptors, pandas.Series, ModinDtypes and Nones
-        axis : int, default: 1
-            If ``axis == 1``: concatenate column names. This implements the logic of
+        axis : int, default: 0
+            If ``axis == 0``: concatenate column names. This implements the logic of
             how dtypes are combined on ``pd.concat([df1, df2], axis=1)``.
-            If ``axis == 0``: perform a union join for the column names described by
+            If ``axis == 1``: perform a union join for the column names described by
             `values` and then find common dtypes for the columns appeared to be in
             an intersection. This implements the logic of how dtypes are combined on
             ``pd.concat([df1, df2], axis=0).dtypes``.
