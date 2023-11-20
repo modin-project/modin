@@ -58,6 +58,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     SeriesGroupByDefault,
 )
 from modin.core.dataframe.base.dataframe.utils import join_columns
+from modin.core.dataframe.pandas.metadata import DtypesDescriptor, ModinDtypes
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -3103,6 +3104,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
+        if hasattr(value, "dtype"):
+            value_dtype = value.dtype
+        elif is_scalar(value):
+            value_dtype = np.dtype(type(value))
+        else:
+            value_dtype = np.array(value).dtype
+
+        new_columns = self.columns.insert(loc, column)
+        new_dtypes = ModinDtypes.concat(
+            [
+                self._modin_frame._dtypes,
+                DtypesDescriptor({column: value_dtype}, cols_with_unknown_dtypes=[]),
+            ]
+        ).lazy_get(
+            new_columns
+        )  # get dtypes in a proper order
+
         # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
         new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
@@ -3111,7 +3129,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             numeric_indices=[loc],
             keep_remaining=True,
             new_index=self.index,
-            new_columns=self.columns.insert(loc, column),
+            new_columns=new_columns,
+            new_dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 
