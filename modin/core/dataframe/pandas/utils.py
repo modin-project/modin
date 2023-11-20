@@ -43,4 +43,5 @@ def concatenate(dfs):
             df.isetitem(
                 i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
-    return pandas.concat(dfs)
+    # `ValueError: buffer source array is read-only` if copy==False
+    return pandas.concat(dfs, copy=True)
