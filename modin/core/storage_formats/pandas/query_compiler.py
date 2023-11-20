@@ -58,7 +58,7 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     SeriesGroupByDefault,
 )
 from modin.core.dataframe.base.dataframe.utils import join_columns
-from modin.core.dataframe.pandas.metadata import ModinDtypes
+from modin.core.dataframe.pandas.metadata import DtypesDescriptor, ModinDtypes
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -743,10 +743,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = pandas.RangeIndex(start, stop)
                 return df
 
-            if self._modin_frame.has_columns_cache and kwargs["drop"]:
-                new_columns = self._modin_frame.copy_columns_cache(copy_lengths=True)
+            new_columns = None
+            if kwargs["drop"]:
+                dtypes = self._modin_frame.copy_dtypes_cache()
+                if self._modin_frame.has_columns_cache:
+                    new_columns = self._modin_frame.copy_columns_cache(
+                        copy_lengths=True
+                    )
             else:
-                new_columns = None
+                # concat index dtypes (None, since they're unknown) with column dtypes
+                try:
+                    dtypes = ModinDtypes.concat([None, self._modin_frame._dtypes])
+                except NotImplementedError:
+                    # may raise on duplicated names in materialized 'self.dtypes'
+                    dtypes = None
 
             return self.__constructor__(
                 self._modin_frame.apply_full_axis(
@@ -754,9 +764,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     func=_reset,
                     enumerate_partitions=True,
                     new_columns=new_columns,
-                    dtypes=(
-                        self._modin_frame._dtypes if kwargs.get("drop", False) else None
-                    ),
+                    dtypes=dtypes,
                     sync_labels=False,
                     pass_axis_lengths_to_partitions=True,
                 )
@@ -3127,6 +3135,23 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
+        if hasattr(value, "dtype"):
+            value_dtype = value.dtype
+        elif is_scalar(value):
+            value_dtype = np.dtype(type(value))
+        else:
+            value_dtype = np.array(value).dtype
+
+        new_columns = self.columns.insert(loc, column)
+        new_dtypes = ModinDtypes.concat(
+            [
+                self._modin_frame._dtypes,
+                DtypesDescriptor({column: value_dtype}, cols_with_unknown_dtypes=[]),
+            ]
+        ).lazy_get(
+            new_columns
+        )  # get dtypes in a proper order
+
         # TODO: rework by passing list-like values to `apply_select_indices`
         # as an item to distribute
         new_modin_frame = self._modin_frame.apply_full_axis_select_indices(
@@ -3135,7 +3160,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             numeric_indices=[loc],
             keep_remaining=True,
             new_index=self.index,
-            new_columns=self.columns.insert(loc, column),
+            new_columns=new_columns,
+            new_dtypes=new_dtypes,
         )
         return self.__constructor__(new_modin_frame)
 

@@ -119,7 +119,7 @@ and Modin will do computation with that engine:
     pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
     export MODIN_ENGINE=dask  # Modin will use Dask
 
-    pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist.
+    pip install "modin[mpi]" # Install Modin dependencies and MPI to run on MPI through unidist.
     export MODIN_ENGINE=unidist  # Modin will use Unidist
     export UNIDIST_BACKEND=mpi   # Unidist will use MPI backend.
 

@@ -1323,11 +1323,13 @@ class PandasDataframe(ClassLogger):
                 if "index" not in self.columns
                 else "level_{}".format(0)
             ]
-        new_dtypes = None
-        if self.has_materialized_dtypes:
-            names = tuple(level_names) if len(level_names) > 1 else level_names[0]
-            new_dtypes = self.index.to_frame(name=names).dtypes
-            new_dtypes = pandas.concat([new_dtypes, self.dtypes])
+        names = tuple(level_names) if len(level_names) > 1 else level_names[0]
+        new_dtypes = self.index.to_frame(name=names).dtypes
+        try:
+            new_dtypes = ModinDtypes.concat([new_dtypes, self._dtypes])
+        except NotImplementedError:
+            # can raise on duplicated labels
+            new_dtypes = None
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
@@ -2587,7 +2589,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.get_axis(0)) == 0 or len(self.get_axis(1)) == 0:
+        if len(self.get_axis(1)) == 0 or len(self) == 0:
             return self.copy()
 
         axis = Axis(axis)
@@ -2802,6 +2804,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
+        new_dtypes=None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -2824,6 +2827,10 @@ class PandasDataframe(ClassLogger):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
+        new_dtypes : ModinDtypes or pandas.Series, optional
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -2852,7 +2859,9 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
