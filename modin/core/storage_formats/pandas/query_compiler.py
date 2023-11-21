@@ -573,13 +573,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     # is really complicated in this case, so we're not computing resulted columns for now.
                     pass
                 else:
-                    if self._modin_frame.has_materialized_dtypes:
-                        new_dtypes = []
-                        for old_col in left_renamer.keys():
-                            new_dtypes.append(self.dtypes[old_col])
-                        for old_col in right_renamer.keys():
-                            new_dtypes.append(right_pandas.dtypes[old_col])
-                        new_dtypes = pandas.Series(new_dtypes, index=new_columns)
+                    # renamers may contain columns from 'index', so trying to merge index and column dtypes here
+                    right_index_dtypes = (
+                        right_pandas.index.dtypes
+                        if isinstance(right_pandas.index, pandas.MultiIndex)
+                        else pandas.Series(
+                            [right_pandas.index.dtype], index=[right_pandas.index.name]
+                        )
+                    )
+                    right_dtypes = pandas.concat(
+                        [right_pandas.dtypes, right_index_dtypes]
+                    )[right_renamer.keys()].rename(right_renamer)
+
+                    left_index_dtypes = None
+                    if self._modin_frame.has_materialized_index:
+                        left_index_dtypes = (
+                            self.index.dtypes
+                            if isinstance(self.index, pandas.MultiIndex)
+                            else pandas.Series(
+                                [self.index.dtype], index=[self.index.name]
+                            )
+                        )
+
+                    left_dtypes = (
+                        ModinDtypes.concat(
+                            [self._modin_frame._dtypes, left_index_dtypes]
+                        )
+                        .lazy_get(left_renamer.keys())
+                        .set_index(list(left_renamer.values()))
+                    )
+                    new_dtypes = ModinDtypes.concat([left_dtypes, right_dtypes])
 
             new_self = self.__constructor__(
                 self._modin_frame.apply_full_axis(
