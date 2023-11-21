@@ -61,6 +61,7 @@ from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     ModinDtypes,
+    ModinIndex,
     extract_dtype,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
@@ -589,16 +590,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         [right_pandas.dtypes, right_index_dtypes]
                     )[right_renamer.keys()].rename(right_renamer)
 
-                    left_index_dtypes = None
-                    if self._modin_frame.has_materialized_index:
-                        left_index_dtypes = (
-                            self.index.dtypes
-                            if isinstance(self.index, pandas.MultiIndex)
-                            else pandas.Series(
-                                [self.index.dtype], index=[self.index.name]
-                            )
-                        )
-
+                    left_index_dtypes = (
+                        self._modin_frame._index_cache.maybe_get_dtypes()
+                    )
                     left_dtypes = (
                         ModinDtypes.concat(
                             [self._modin_frame._dtypes, left_index_dtypes]
@@ -755,12 +749,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         copy_lengths=True
                     )
             else:
-                # concat index dtypes (None, since they're unknown) with column dtypes
+                # concat index dtypes with column dtypes
+                index_dtypes = self._modin_frame._index_cache.maybe_get_dtypes()
                 try:
-                    dtypes = ModinDtypes.concat([None, self._modin_frame._dtypes])
+                    dtypes = ModinDtypes.concat(
+                        [
+                            index_dtypes,
+                            self._modin_frame._dtypes,
+                        ]
+                    )
                 except NotImplementedError:
                     # may raise on duplicated names in materialized 'self.dtypes'
                     dtypes = None
+                if (
+                    # can precompute new columns if we know columns and index names
+                    self._modin_frame.has_materialized_columns
+                    and index_dtypes is not None
+                ):
+                    empty_index = (
+                        pandas.Index([0], name=index_dtypes.index[0])
+                        if len(index_dtypes) == 1
+                        else pandas.MultiIndex.from_arrays(
+                            [[i] for i in range(len(index_dtypes))],
+                            names=index_dtypes.index,
+                        )
+                    )
+                    new_columns = (
+                        pandas.DataFrame(columns=self.columns, index=empty_index)
+                        .reset_index(**kwargs)
+                        .columns
+                    )
 
             return self.__constructor__(
                 self._modin_frame.apply_full_axis(
@@ -4124,12 +4142,28 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             apply_indices = None
 
+        if (
+            agg_kwargs.get("as_index", True)
+            and len(not_broadcastable_by) == 0
+            and len(broadcastable_by) == 1
+            and broadcastable_by[0].has_materialized_dtypes
+        ):
+            new_index = ModinIndex(
+                # value can be anything here, as it will be reassigned on a parent update
+                value=self._modin_frame,
+                axis=0,
+                dtypes=broadcastable_by[0].dtypes,
+            )
+        else:
+            new_index = None
+
         new_modin_frame = self._modin_frame.broadcast_apply_full_axis(
             axis=axis,
             func=lambda df, by=None, partition_idx=None: groupby_agg_builder(
                 df, by, drop, partition_idx
             ),
             other=broadcastable_by,
+            new_index=new_index,
             apply_indices=apply_indices,
             enumerate_partitions=True,
         )
