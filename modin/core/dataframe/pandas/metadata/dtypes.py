@@ -19,8 +19,6 @@ import numpy as np
 import pandas
 from pandas._typing import IndexLabel
 
-from modin.pandas.utils import is_scalar
-
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
     from .index import ModinIndex
@@ -1010,6 +1008,8 @@ def extract_dtype(value):
     -------
     numpy.dtype or pandas.Series of numpy.dtypes
     """
+    from modin.pandas.utils import is_scalar
+
     if hasattr(value, "dtype"):
         return value.dtype
     elif hasattr(value, "dtypes"):
