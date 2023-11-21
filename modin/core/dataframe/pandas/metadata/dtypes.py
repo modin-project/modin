@@ -260,13 +260,15 @@ class DtypesDescriptor:
         DtypesDescriptor
         """
         return type(self)(
-            self._known_dtypes.copy(),
-            self._cols_with_unknown_dtypes.copy(),
-            self._remaining_dtype,
-            self._parent_df,
-            columns_order=None
-            if self.columns_order is None
-            else self.columns_order.copy(),
+            # should access '.columns_order' first, as it may compute columns order
+            # and complete the metadata for 'self'
+            columns_order=(
+                None if self.columns_order is None else self.columns_order.copy()
+            ),
+            known_dtypes=self._known_dtypes.copy(),
+            cols_with_unknown_dtypes=self._cols_with_unknown_dtypes.copy(),
+            remaining_dtype=self._remaining_dtype,
+            parent_df=self._parent_df,
             know_all_names=self._know_all_names,
             _schema_is_known=self._schema_is_known,
         )
@@ -655,7 +657,16 @@ class ModinDtypes:
             else:
                 raise NotImplementedError(type(val))
 
-        desc = DtypesDescriptor.concat(preprocessed_vals)
+        try:
+            desc = DtypesDescriptor.concat(preprocessed_vals)
+        except NotImplementedError as e:
+            # 'DtypesDescriptor' doesn't support duplicated labels, however, if all values are pandas Serieses,
+            # we still can perform concatenation using pure pandas
+            if "duplicated" not in e.args[0].lower() or not all(
+                isinstance(val, pandas.Series) for val in values
+            ):
+                raise e
+            desc = pandas.concat(values)
         return ModinDtypes(desc)
 
     def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> "ModinDtypes":
