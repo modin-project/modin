@@ -2319,3 +2319,50 @@ class TestZeroComputationDtypes:
                     )
 
         patch.assert_not_called()
+
+    def test_groupby_index_dtype(self):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            # case 1: MapReduce impl, Series as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").size().reset_index(name="new_name")
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+
+            # case 2: ExperimentalImpl impl, Series as an output of groupby
+            ExperimentalGroupbyImpl.put(True)
+            try:
+                df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+                res = df.groupby("a").size().reset_index(name="new_name")
+                res_dtypes = res._query_compiler._modin_frame._dtypes._value
+                assert "a" in res_dtypes._known_dtypes
+                assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+            finally:
+                ExperimentalGroupbyImpl.put(False)
+
+            # case 3: MapReduce impl, DataFrame as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").sum().reset_index()
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+
+            # case 4: ExperimentalImpl impl, DataFrame as an output of groupby
+            ExperimentalGroupbyImpl.put(True)
+            try:
+                df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+                res = df.groupby("a").sum().reset_index()
+                res_dtypes = res._query_compiler._modin_frame._dtypes._value
+                assert "a" in res_dtypes._known_dtypes
+                assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+            finally:
+                ExperimentalGroupbyImpl.put(False)
+
+            # case 5: FullAxis impl, DataFrame as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").quantile().reset_index()
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+
+        patch.assert_not_called()

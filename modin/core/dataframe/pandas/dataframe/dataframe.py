@@ -3911,6 +3911,12 @@ class PandasDataframe(ClassLogger):
                 row_lengths=result._row_lengths_cache,
             )
 
+        if not result.has_materialized_index:
+            by_dtypes = ModinDtypes(self._dtypes).lazy_get(by)
+            if by_dtypes.is_materialized:
+                new_index = ModinIndex(value=result, axis=0, dtypes=by_dtypes)
+                result.set_index_cache(new_index)
+
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)
 
