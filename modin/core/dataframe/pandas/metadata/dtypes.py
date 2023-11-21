@@ -19,6 +19,8 @@ import numpy as np
 import pandas
 from pandas._typing import IndexLabel
 
+from modin.pandas.utils import is_scalar
+
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
     from .index import ModinIndex
@@ -994,3 +996,25 @@ def get_categories_dtype(
         if isinstance(cdt, LazyProxyCategoricalDtype)
         else cdt.categories.dtype
     )
+
+
+def extract_dtype(value):
+    """
+    Extract dtype(s) from the passed `value`.
+
+    Parameters
+    ----------
+    value : object
+
+    Returns
+    -------
+    numpy.dtype or pandas.Series of numpy.dtypes
+    """
+    if hasattr(value, "dtype"):
+        return value.dtype
+    elif hasattr(value, "dtypes"):
+        return value.dtypes
+    elif is_scalar(value):
+        return np.dtype(type(value))
+    else:
+        return np.array(value).dtype

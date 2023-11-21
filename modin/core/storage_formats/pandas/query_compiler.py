@@ -58,7 +58,11 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     SeriesGroupByDefault,
 )
 from modin.core.dataframe.base.dataframe.utils import join_columns
-from modin.core.dataframe.pandas.metadata import DtypesDescriptor, ModinDtypes
+from modin.core.dataframe.pandas.metadata import (
+    DtypesDescriptor,
+    ModinDtypes,
+    extract_dtype,
+)
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.utils import (
@@ -2921,12 +2925,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.insert_item(axis ^ 1, idx, value, how, replace=True)
 
         if axis == 0:
-            if hasattr(value, "dtype"):
-                value_dtype = value.dtype
-            elif is_scalar(value):
-                value_dtype = np.dtype(type(value))
-            else:
-                value_dtype = np.array(value).dtype
+            value_dtype = extract_dtype(value)
 
             old_columns = self.columns.difference(pandas.Index([key]))
             old_dtypes = ModinDtypes(self._modin_frame._dtypes).lazy_get(old_columns)
@@ -3135,13 +3134,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             df.insert(internal_idx, column, value)
             return df
 
-        if hasattr(value, "dtype"):
-            value_dtype = value.dtype
-        elif is_scalar(value):
-            value_dtype = np.dtype(type(value))
-        else:
-            value_dtype = np.array(value).dtype
-
+        value_dtype = extract_dtype(value)
         new_columns = self.columns.insert(loc, column)
         new_dtypes = ModinDtypes.concat(
             [
