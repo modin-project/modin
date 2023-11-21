@@ -4143,6 +4143,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             apply_indices = None
 
         if (
+            # For now handling only simple cases, where 'by' columns are described by a single query compiler
             agg_kwargs.get("as_index", True)
             and len(not_broadcastable_by) == 0
             and len(broadcastable_by) == 1
