@@ -316,7 +316,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `to_pickle_distributed` function.
+    obtained, for example, by `DataFrame._exp.to_pickle_distributed` function.
 
     Parameters
     ----------

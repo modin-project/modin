@@ -14,6 +14,7 @@
 """Collection of general utility functions, mostly for internal use."""
 
 import codecs
+import contextlib
 import functools
 import importlib
 import inspect
@@ -27,6 +28,7 @@ from textwrap import dedent, indent
 from typing import (
     Any,
     Callable,
+    Generator,
     Iterable,
     List,
     Mapping,
@@ -626,6 +628,43 @@ def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
         query_compiler.execute()
         if trigger_hdk_import and hasattr(query_compiler, "force_import"):
             query_compiler.force_import()
+
+
+@contextlib.contextmanager
+def enable_exp_mode() -> Generator[None, None, None]:  # noqa: MD02
+    """
+    Enable experimental mode.
+
+    Similar to using `export MODIN_EXPERIMENTAL=True`, but allows to enable
+    experimental functionality for a small section of code.
+
+    Returns
+    -------
+    Generator[None, None, None]
+
+    Examples
+    --------
+    >>> import modin.pandas as pd
+    >>> import modin.utils
+    >>> import numpy as np
+    >>> df = pd.DataFrame(np.random.rand(100, 32))
+    >>> with modin.utils.enable_exp_mode():
+    >>>   from modin.experimental.pandas import read_pickle_distributed
+    >>>   df._exp.to_pickle_distributed("transactions_train_new*.pkl")
+    >>>   new_df = read_pickle_distributed("transactions_train_new*.pkl")
+    """
+    from modin.config import IsExperimental
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    old_value = IsExperimental.get()
+    try:
+        IsExperimental.put(True)
+        FactoryDispatcher._update_factory_if_already_initialized()
+        yield
+    finally:
+        IsExperimental.put(old_value or False)
+        # cleanup potential side effects from importing `modin.experimental.pandas`
+        FactoryDispatcher._update_factory_if_already_initialized()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:

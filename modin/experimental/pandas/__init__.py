@@ -45,10 +45,7 @@ from .io import (  # noqa F401
     read_custom_text,
     read_pickle_distributed,
     read_sql,
-    to_pickle_distributed,
 )
-
-setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
 
 warnings.warn(
     "Thank you for using the Modin Experimental pandas API."

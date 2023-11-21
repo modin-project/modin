@@ -260,7 +260,7 @@ def test_distributed_pickling(filename, compression):
         if filename_param == test_default_to_pickle_filename
         else contextlib.nullcontext()
     ):
-        df.to_pickle_distributed(filename, compression=compression)
+        df._exp.to_pickle_distributed(filename, compression=compression)
         pickled_df = pd.read_pickle_distributed(filename, compression=compression)
     df_equals(pickled_df, df)
 

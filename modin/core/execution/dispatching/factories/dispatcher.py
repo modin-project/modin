@@ -107,6 +107,22 @@ class FactoryDispatcher(object):
     __factory: factories.BaseFactory = None
 
     @classmethod
+    def _update_factory_if_already_initialized(cls) -> None:
+        """
+        Update the factory if it has already been initialized.
+
+        Notes
+        -----
+        1. Primary use in `enable_exp_mode` context manager, to enable experimental mode.
+        2. This work is not delegated to `get_factory` method specifically so as not to
+           call the engine initialization function.
+        3. This work is not delegated to `_update_factory` method specifically so as not
+           not to initialize the factory the first time.
+        """
+        if cls.__factory is not None:
+            cls.__factory = cls._update_factory()
+
+    @classmethod
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
         if cls.__factory is None:
@@ -118,14 +134,13 @@ class FactoryDispatcher(object):
         return cls.__factory
 
     @classmethod
-    # FIXME: replace `_` parameter with `*args`
-    def _update_factory(cls, _):
+    def _update_factory(cls, *args):
         """
         Update and prepare factory with a new one specified via Modin config.
 
         Parameters
         ----------
-        _ : object
+        *args : iterable
             This parameters serves the compatibility purpose.
             Does not affect the result.
         """

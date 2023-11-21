@@ -2366,3 +2366,14 @@ class TestZeroComputationDtypes:
             assert res_dtypes._known_dtypes["a"] == np.dtype(int)
 
         patch.assert_not_called()
+
+
+def test_enable_exp_mode_utility():
+    df = pd.DataFrame([1, 2, 3, 4, 5])
+    with pytest.raises(ValueError, match="This only works in experimental mode"):
+        _ = df._exp
+
+    import modin.utils
+
+    with modin.utils.enable_exp_mode():
+        _ = df._exp
