@@ -486,17 +486,17 @@ class DtypesDescriptor:
                 # in the 'dtypes_matrix'
                 series = pandas.Series(dtypes, name=i)
                 dtypes_matrix = pandas.concat([dtypes_matrix, series], axis=1)
-                dtypes_matrix.iloc[:, -1].fillna(
-                    value=(
+                dtypes_matrix.fillna(
+                    value={
                         # If we encountered a 'NaN' while 'val' describes all the columns, then
                         # it means, that the missing columns for this instance will be filled with NaNs (floats),
                         # otherwise, it may indicate missing columns that this 'val' has no info about,
                         # meaning that we shouldn't try computing a new dtype for this column,
                         # so marking it as 'unknown'
-                        np.dtype(float)
+                        i: np.dtype(float)
                         if val._know_all_names and val._remaining_dtype is None
                         else "unknown"
-                    ),
+                    },
                     inplace=True,
                 )
             elif isinstance(val, pandas.Series):
@@ -759,9 +759,11 @@ class ModinDtypes:
         try:
             desc = DtypesDescriptor.concat(preprocessed_vals, axis=axis)
         except NotImplementedError as e:
-            # 'DtypesDescriptor' doesn't support duplicated labels, however, if all values are pandas Serieses,
+            # 'DtypesDescriptor' doesn't support duplicated labels, however, if all values are pandas Series,
             # we still can perform concatenation using pure pandas
             if (
+                # 'pd.concat(axis=1)' fails on duplicated labels anyway, so doing this logic
+                # only in case 'axis=0'
                 axis == 0
                 and "duplicated" not in e.args[0].lower()
                 or not all(isinstance(val, pandas.Series) for val in values)
