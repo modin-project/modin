@@ -13,7 +13,18 @@
 
 """Utilities and classes to handle work with metadata."""
 
-from .dtypes import DtypesDescriptor, LazyProxyCategoricalDtype, ModinDtypes
+from .dtypes import (
+    DtypesDescriptor,
+    LazyProxyCategoricalDtype,
+    ModinDtypes,
+    extract_dtype,
+)
 from .index import ModinIndex
 
-__all__ = ["ModinDtypes", "ModinIndex", "LazyProxyCategoricalDtype", "DtypesDescriptor"]
+__all__ = [
+    "ModinDtypes",
+    "ModinIndex",
+    "LazyProxyCategoricalDtype",
+    "DtypesDescriptor",
+    "extract_dtype",
+]

@@ -529,14 +529,23 @@ class ModinDtypes:
 
     Parameters
     ----------
-    value : pandas.Series or callable
+    value : pandas.Series, callable, DtypesDescriptor or ModinDtypes, optional
     """
 
-    def __init__(self, value: Union[Callable, pandas.Series, DtypesDescriptor]):
+    def __init__(
+        self,
+        value: Optional[
+            Union[Callable, pandas.Series, DtypesDescriptor, "ModinDtypes"]
+        ],
+    ):
         if callable(value) or isinstance(value, pandas.Series):
             self._value = value
         elif isinstance(value, DtypesDescriptor):
             self._value = value.to_series() if value.is_materialized else value
+        elif isinstance(value, type(self)):
+            self._value = value.copy()._value
+        elif isinstance(value, None):
+            self._value = DtypesDescriptor()
         else:
             raise ValueError(f"ModinDtypes doesn't work with '{value}'")
 
@@ -985,3 +994,27 @@ def get_categories_dtype(
         if isinstance(cdt, LazyProxyCategoricalDtype)
         else cdt.categories.dtype
     )
+
+
+def extract_dtype(value):
+    """
+    Extract dtype(s) from the passed `value`.
+
+    Parameters
+    ----------
+    value : object
+
+    Returns
+    -------
+    numpy.dtype or pandas.Series of numpy.dtypes
+    """
+    from modin.pandas.utils import is_scalar
+
+    if hasattr(value, "dtype"):
+        return value.dtype
+    elif hasattr(value, "dtypes"):
+        return value.dtypes
+    elif is_scalar(value):
+        return np.dtype(type(value))
+    else:
+        return np.array(value).dtype
