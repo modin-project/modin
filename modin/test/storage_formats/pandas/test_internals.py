@@ -1398,6 +1398,72 @@ def test_sort_values_cache():
     validate_partitions_cache(mf_initial, axis=1)
 
 
+def test_apply_full_axis_preserve_widths():
+    md_df = construct_modin_df_by_scheme(
+        pandas.DataFrame(
+            {"a": [1, 2, 3, 4], "b": [3, 4, 5, 6], "c": [6, 7, 8, 9], "d": [0, 1, 2, 3]}
+        ),
+        {"row_lengths": [2, 2], "column_widths": [2, 2]},
+    )._query_compiler._modin_frame
+
+    assert md_df._row_lengths_cache == [2, 2]
+    assert md_df._column_widths_cache == [2, 2]
+
+    def func(df):
+        if df.iloc[0, 0] == 1:
+            return pandas.DataFrame(
+                {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8], "d": [0, 1, 2]}
+            )
+        else:
+            return pandas.DataFrame({"a": [4], "b": [6], "c": [9], "d": [3]})
+
+    res = md_df.apply_full_axis(
+        func=func,
+        axis=1,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c", "d"],
+        keep_partitioning=True,
+    )
+
+    actual_column_widths = [part.width() for part in res._partitions[0]]
+
+    assert res._column_widths_cache == actual_column_widths
+    assert res._row_lengths_cache is None
+
+
+def test_apply_full_axis_preserve_lengths():
+    md_df = construct_modin_df_by_scheme(
+        pandas.DataFrame(
+            {"a": [1, 2, 3, 4], "b": [3, 4, 5, 6], "c": [6, 7, 8, 9], "d": [0, 1, 2, 3]}
+        ),
+        {"row_lengths": [2, 2], "column_widths": [2, 2]},
+    )._query_compiler._modin_frame
+
+    assert md_df._row_lengths_cache == [2, 2]
+    assert md_df._column_widths_cache == [2, 2]
+
+    def func(df):
+        if df.iloc[0, 0] == 1:
+            return pandas.DataFrame(
+                {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8], "d": [0, 1, 2]}
+            )
+        else:
+            return pandas.DataFrame({"a": [4], "b": [6], "c": [9], "d": [3]})
+
+    res = md_df.apply_full_axis(
+        func=func,
+        axis=0,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c", "d"],
+        keep_partitioning=True,
+    )
+
+    actual_row_lengths = [part.length() for part in res._partitions[:, 0]]
+
+    assert res._row_lengths_cache == actual_row_lengths
+    assert res._column_widths_cache is None
+
+
 class DummyFuture:
     """
     A dummy object emulating future's behaviour, this class is used in ``test_call_queue_serialization``.

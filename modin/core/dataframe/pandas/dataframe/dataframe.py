@@ -3274,7 +3274,8 @@ class PandasDataframe(ClassLogger):
                         kw["column_widths"] = [1]
         else:
             if (
-                kw["row_lengths"] is None
+                axis == 0
+                and kw["row_lengths"] is None
                 and new_index is not None
                 and self._row_lengths_cache is not None
                 and len(new_index) == sum(self._row_lengths_cache)
@@ -3283,7 +3284,8 @@ class PandasDataframe(ClassLogger):
             ):
                 kw["row_lengths"] = self._row_lengths_cache
             if (
-                kw["column_widths"] is None
+                axis == 1
+                and kw["column_widths"] is None
                 and new_columns is not None
                 and self._column_widths_cache is not None
                 and len(new_columns) == sum(self._column_widths_cache)
