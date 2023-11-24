@@ -22,13 +22,14 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
 import pickle
+import warnings
+from functools import wraps
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
 from pandas.core.dtypes.dtypes import SparseDtype
 
 from modin import pandas as pd
-from modin.config import IsExperimental
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.utils import _inherit_docstrings
@@ -197,9 +198,32 @@ class CachedAccessor(ClassLogger):
         return accessor_obj
 
 
+def run_function_in_experimental_context(func):
+    """
+    Run a `func` in experimental context using `modin.utils.enable_exp_mode`.
+
+    Parameters
+    ----------
+    func : callable
+
+    Returns
+    -------
+    callable
+    """
+    import modin.utils
+
+    @wraps(func)
+    def enable_experimental_context_and_run(self, *args, **kwargs):
+        """Wait for computation results."""
+        with modin.utils.enable_exp_mode():
+            return func(self, *args, **kwargs)
+
+    return enable_experimental_context_and_run
+
+
 class ExperimentalFunctions:
     """
-    Namespace class for accessing experimental functionality.
+    Namespace class for accessing experimental Modin functions.
 
     Parameters
     ----------
@@ -208,14 +232,14 @@ class ExperimentalFunctions:
     """
 
     def __init__(self, data):
-        if IsExperimental.get() is not True:
-            raise ValueError(
-                "This only works in experimental mode. "
-                + "Define `MODIN_EXPERIMENTAL=True` env variable or "
-                + "use `modin.utils.enable_exp_mode` context manager"
-            )
+        warnings.warn(
+            "Thank you for using the Modin Experimental pandas API."
+            + "\nPlease note that some of these APIs deviate from pandas in order to "
+            + "provide improved performance."
+        )
         self._data = data
 
+    @run_function_in_experimental_context
     def to_pickle_distributed(
         self,
         filepath_or_buffer,
