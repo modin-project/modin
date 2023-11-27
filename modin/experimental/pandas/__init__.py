@@ -32,6 +32,8 @@ Examples
 >>> df = pd.read_csv_glob("data*.csv")
 """
 
+import functools
+
 from modin.config import IsExperimental
 
 IsExperimental.put(True)
@@ -45,7 +47,23 @@ from .io import (  # noqa F401
     read_custom_text,
     read_pickle_distributed,
     read_sql,
+    to_pickle_distributed,
 )
+
+old_to_pickle_distributed = to_pickle_distributed
+
+
+@functools.wraps(to_pickle_distributed)
+def to_pickle_distributed(*args, **kwargs):
+    warnings.warn(
+        "`DataFrame.to_pickle_distributed` will be removed after Modin 0.26.0 release. "
+        + "Please use `DataFrame._exp.to_pickle_distributed` instead.",
+        category=FutureWarning,
+    )
+    return old_to_pickle_distributed(*args, **kwargs)
+
+
+setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
 
 warnings.warn(
     "Thank you for using the Modin Experimental pandas API."

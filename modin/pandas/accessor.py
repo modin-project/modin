@@ -32,7 +32,7 @@ from pandas.core.dtypes.dtypes import SparseDtype
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
-from modin.utils import _inherit_docstrings
+from modin.utils import _inherit_docstrings, enable_exp_mode
 
 
 class BaseSparseAccessor(ClassLogger):
@@ -210,12 +210,11 @@ def run_function_in_experimental_context(func):
     -------
     callable
     """
-    import modin.utils
 
     @wraps(func)
     def enable_experimental_context_and_run(self, *args, **kwargs):
         """Wait for computation results."""
-        with modin.utils.enable_exp_mode():
+        with enable_exp_mode():
             return func(self, *args, **kwargs)
 
     return enable_experimental_context_and_run
