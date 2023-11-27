@@ -96,6 +96,19 @@ def join_columns(
         Sequence[IndexLabel], [right_on] if is_scalar(right_on) else right_on
     )
 
+    # handling a simple case of merging on one column and when the column is located in an index
+    if len(left_on) == 1 and len(right_on) == 1 and left_on[0] == right_on[0]:
+        if left_on[0] not in left and right_on[0] not in right:
+            # in this case the 'on' column will stay in the index, so we can simply
+            # drop the 'left/right_on' values and proceed as normal
+            left_on = []
+            right_on = []
+        # in other cases, we can simply add the index name to columns and proceed as normal
+        elif left_on[0] not in left:
+            left = left.insert(loc=0, item=left_on[0])  # type: ignore
+        elif right_on[0] not in right:
+            right = right.insert(loc=0, item=right_on[0])  # type: ignore
+
     if any(col not in left for col in left_on) or any(
         col not in right for col in right_on
     ):

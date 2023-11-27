@@ -15,6 +15,7 @@
 
 import pandas
 
+from modin.core.dataframe.pandas.metadata import ModinIndex
 from modin.error_message import ErrorMessage
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, hashable
 
@@ -407,8 +408,26 @@ class GroupByReduce(TreeReduce):
         # Otherwise `by` was already bound to the Map function in `build_map_reduce_functions`.
         broadcastable_by = getattr(by, "_modin_frame", None)
         apply_indices = list(map_func.keys()) if isinstance(map_func, dict) else None
+        if (
+            broadcastable_by is not None
+            and groupby_kwargs.get("as_index", True)
+            and broadcastable_by.has_materialized_dtypes
+        ):
+            new_index = ModinIndex(
+                # value can be anything here, as it will be reassigned on a parent update
+                value=query_compiler._modin_frame,
+                axis=0,
+                dtypes=broadcastable_by.dtypes,
+            )
+        else:
+            new_index = None
         new_modin_frame = query_compiler._modin_frame.groupby_reduce(
-            axis, broadcastable_by, map_fn, reduce_fn, apply_indices=apply_indices
+            axis,
+            broadcastable_by,
+            map_fn,
+            reduce_fn,
+            apply_indices=apply_indices,
+            new_index=new_index,
         )
 
         result = query_compiler.__constructor__(new_modin_frame)

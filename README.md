@@ -57,7 +57,7 @@ The charts below show the speedup you get by replacing pandas with Modin based o
 Modin can be installed with `pip` on Linux, Windows and MacOS:
 
 ```bash
-pip install "modin[all]" # (Recommended) Install Modin with all of Modin's currently supported engines.
+pip install "modin[all]" # (Recommended) Install Modin with Ray and Dask engines.
 ```
 
 If you want to install Modin with a specific engine, we recommend:
@@ -65,8 +65,14 @@ If you want to install Modin with a specific engine, we recommend:
 ```bash
 pip install "modin[ray]" # Install Modin dependencies and Ray.
 pip install "modin[dask]" # Install Modin dependencies and Dask.
-pip install "modin[unidist]" # Install Modin dependencies and Unidist.
+pip install "modin[mpi]" # Install Modin dependencies and MPI through unidist.
 ```
+
+To get Modin on MPI through unidist (as of unidist 0.5.0) fully working
+it is required to have a working MPI implementation installed beforehand.
+Otherwise, installation of `modin[mpi]` may fail. Refer to
+[Installing with pip](https://unidist.readthedocs.io/en/latest/installation.html#installing-with-pip)
+section of the unidist documentation for more details about installation.
 
 Modin automatically detects which engine(s) you have installed and uses that for scheduling computation.
 
@@ -74,7 +80,7 @@ Modin automatically detects which engine(s) you have installed and uses that for
 
 Installing from [conda forge](https://github.com/conda-forge/modin-feedstock) using `modin-all`
 will install Modin and four engines: [Ray](https://github.com/ray-project/ray), [Dask](https://github.com/dask/dask),
-[Unidist](https://github.com/modin-project/unidist) and [HDK](https://github.com/intel-ai/hdk).
+[MPI through unidist](https://github.com/modin-project/unidist) and [HDK](https://github.com/intel-ai/hdk).
 
 ```bash
 conda install -c conda-forge modin-all
@@ -85,9 +91,13 @@ Each engine can also be installed individually (and also as a combination of sev
 ```bash
 conda install -c conda-forge modin-ray  # Install Modin dependencies and Ray.
 conda install -c conda-forge modin-dask # Install Modin dependencies and Dask.
-conda install -c conda-forge modin-unidist # Install Modin dependencies and Unidist.
+conda install -c conda-forge modin-mpi # Install Modin dependencies and MPI through unidist.
 conda install -c conda-forge modin-hdk # Install Modin dependencies and HDK.
 ```
+
+Refer to
+[Installing with conda](https://unidist.readthedocs.io/en/latest/installation.html#installing-with-conda)
+section of the unidist documentation for more details on how to install a specific MPI implementation to run on.
 
 To speed up conda installation we recommend using libmamba solver. To do this install it in a base environment:
 
@@ -119,7 +129,7 @@ export MODIN_ENGINE=unidist # Modin will use Unidist
 ```
 
 If you want to choose the Unidist engine, you should set the additional environment 
-variable ``UNIDIST_BACKEND``, because currently Modin only supports Unidist on MPI:
+variable ``UNIDIST_BACKEND``. Currently, Modin only supports MPI through unidist:
 
 ```bash
 export UNIDIST_BACKEND=mpi # Unidist will use MPI backend
@@ -144,7 +154,7 @@ _Note: You should not change the engine after your first operation with Modin as
 
 #### Which engine should I use?
 
-On Linux, MacOS, and Windows you can install and use either Ray, Dask or Unidist. There is no knowledge required
+On Linux, MacOS, and Windows you can install and use either Ray, Dask or MPI through unidist. There is no knowledge required
 to use either of these engines as Modin abstracts away all of the complexity, so feel
 free to pick either!
 

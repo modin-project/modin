@@ -1323,11 +1323,13 @@ class PandasDataframe(ClassLogger):
                 if "index" not in self.columns
                 else "level_{}".format(0)
             ]
-        new_dtypes = None
-        if self.has_materialized_dtypes:
-            names = tuple(level_names) if len(level_names) > 1 else level_names[0]
-            new_dtypes = self.index.to_frame(name=names).dtypes
-            new_dtypes = pandas.concat([new_dtypes, self.dtypes])
+        names = tuple(level_names) if len(level_names) > 1 else level_names[0]
+        new_dtypes = self.index.to_frame(name=names).dtypes
+        try:
+            new_dtypes = ModinDtypes.concat([new_dtypes, self._dtypes])
+        except NotImplementedError:
+            # can raise on duplicated labels
+            new_dtypes = None
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
@@ -2497,7 +2499,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.get_axis(0)) == 0 or len(self.get_axis(1)) == 0:
+        if len(self.get_axis(1)) == 0 or len(self) == 0:
             return self.copy()
 
         axis = Axis(axis)
@@ -2712,6 +2714,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
+        new_dtypes=None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -2734,6 +2737,10 @@ class PandasDataframe(ClassLogger):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
+        new_dtypes : ModinDtypes or pandas.Series, optional
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -2762,7 +2769,9 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
@@ -2816,7 +2825,7 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        if new_columns is not None and new_dtypes is not None:
+        if new_columns is not None and isinstance(new_dtypes, pandas.Series):
             assert new_dtypes.index.equals(
                 new_columns
             ), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
@@ -3596,16 +3605,7 @@ class PandasDataframe(ClassLogger):
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
-            if all(frame.has_materialized_dtypes for frame in frames):
-                all_dtypes = [frame.dtypes for frame in frames]
-                if not all(dtypes.empty for dtypes in all_dtypes):
-                    new_dtypes = pandas.concat(all_dtypes, axis=1)
-                    # 'nan' value will be placed in a row if a column doesn't exist in all frames;
-                    # this value is np.float64 type so we need an explicit conversion
-                    new_dtypes.fillna(np.dtype("float64"), inplace=True)
-                    new_dtypes = new_dtypes.apply(
-                        lambda row: find_common_type(row.values), axis=1
-                    )
+            new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
@@ -3820,6 +3820,12 @@ class PandasDataframe(ClassLogger):
                 index=result.copy_index_cache(),
                 row_lengths=result._row_lengths_cache,
             )
+
+        if not result.has_materialized_index:
+            by_dtypes = ModinDtypes(self._dtypes).lazy_get(by)
+            if by_dtypes.is_materialized:
+                new_index = ModinIndex(value=result, axis=0, dtypes=by_dtypes)
+                result.set_index_cache(new_index)
 
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)

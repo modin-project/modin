@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Callable, Optional, Union
 import numpy as np
 import pandas
 from pandas._typing import IndexLabel
+from pandas.core.dtypes.cast import find_common_type
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
@@ -260,13 +261,15 @@ class DtypesDescriptor:
         DtypesDescriptor
         """
         return type(self)(
-            self._known_dtypes.copy(),
-            self._cols_with_unknown_dtypes.copy(),
-            self._remaining_dtype,
-            self._parent_df,
-            columns_order=None
-            if self.columns_order is None
-            else self.columns_order.copy(),
+            # should access '.columns_order' first, as it may compute columns order
+            # and complete the metadata for 'self'
+            columns_order=(
+                None if self.columns_order is None else self.columns_order.copy()
+            ),
+            known_dtypes=self._known_dtypes.copy(),
+            cols_with_unknown_dtypes=self._cols_with_unknown_dtypes.copy(),
+            remaining_dtype=self._remaining_dtype,
+            parent_df=self._parent_df,
             know_all_names=self._know_all_names,
             _schema_is_known=self._schema_is_known,
         )
@@ -444,20 +447,120 @@ class DtypesDescriptor:
         return known_dtypes
 
     @classmethod
-    def concat(
+    def _merge_dtypes(
         cls, values: list[Union["DtypesDescriptor", pandas.Series, None]]
-    ) -> "DtypesDescriptor":  # noqa: GL08
+    ) -> "DtypesDescriptor":
+        """
+        Union columns described by ``values`` and compute common dtypes for them.
+
+        Parameters
+        ----------
+        values : list of DtypesDescriptors, pandas.Series or Nones
+
+        Returns
+        -------
+        DtypesDescriptor
+        """
+        known_dtypes = {}
+        cols_with_unknown_dtypes = []
+        know_all_names = True
+        dtypes_are_unknown = False
+
+        # index - joined column names, columns - dtypes taken from 'values'
+        #        0     1     2      3
+        #  col1  int   bool  float  int
+        #  col2  int   int   int    int
+        #  colN  bool  bool  bool   int
+        dtypes_matrix = pandas.DataFrame()
+
+        for i, val in enumerate(values):
+            if isinstance(val, cls):
+                know_all_names &= val._know_all_names
+                dtypes = val._known_dtypes.copy()
+                dtypes.update({col: "unknown" for col in val._cols_with_unknown_dtypes})
+                if val._remaining_dtype is not None:
+                    # we can't process remaining dtypes, so just discarding them
+                    know_all_names = False
+
+                # setting a custom name to the Series to prevent duplicated names
+                # in the 'dtypes_matrix'
+                series = pandas.Series(dtypes, name=i)
+                dtypes_matrix = pandas.concat([dtypes_matrix, series], axis=1)
+                dtypes_matrix.fillna(
+                    value={
+                        # If we encountered a 'NaN' while 'val' describes all the columns, then
+                        # it means, that the missing columns for this instance will be filled with NaNs (floats),
+                        # otherwise, it may indicate missing columns that this 'val' has no info about,
+                        # meaning that we shouldn't try computing a new dtype for this column,
+                        # so marking it as 'unknown'
+                        i: np.dtype(float)
+                        if val._know_all_names and val._remaining_dtype is None
+                        else "unknown"
+                    },
+                    inplace=True,
+                )
+            elif isinstance(val, pandas.Series):
+                dtypes_matrix = pandas.concat([dtypes_matrix, val], axis=1)
+            elif val is None:
+                # one of the 'dtypes' is None, meaning that we wouldn't been infer a valid result dtype,
+                # however, we're continuing our loop so we would at least know the columns we're missing
+                # dtypes for
+                dtypes_are_unknown = True
+                know_all_names = False
+            else:
+                raise NotImplementedError(type(val))
+
+        if dtypes_are_unknown:
+            return DtypesDescriptor(
+                cols_with_unknown_dtypes=dtypes_matrix.index,
+                know_all_names=know_all_names,
+            )
+
+        def combine_dtypes(row):
+            if (row == "unknown").any():
+                return "unknown"
+            row = row.fillna(np.dtype("float"))
+            return find_common_type(list(row.values))
+
+        dtypes = dtypes_matrix.apply(combine_dtypes, axis=1)
+
+        for col, dtype in dtypes.items():
+            if dtype == "unknown":
+                cols_with_unknown_dtypes.append(col)
+            else:
+                known_dtypes[col] = dtype
+
+        return DtypesDescriptor(
+            known_dtypes,
+            cols_with_unknown_dtypes,
+            remaining_dtype=None,
+            know_all_names=know_all_names,
+        )
+
+    @classmethod
+    def concat(
+        cls, values: list[Union["DtypesDescriptor", pandas.Series, None]], axis: int = 0
+    ) -> "DtypesDescriptor":
         """
         Concatenate dtypes descriptors into a single descriptor.
 
         Parameters
         ----------
         values : list of DtypesDescriptors and pandas.Series
+        axis : int, default: 0
+            If ``axis == 0``: concatenate column names. This implements the logic of
+            how dtypes are combined on ``pd.concat([df1, df2], axis=1)``.
+            If ``axis == 1``: perform a union join for the column names described by
+            `values` and then find common dtypes for the columns appeared to be in
+            an intersection. This implements the logic of how dtypes are combined on
+            ``pd.concat([df1, df2], axis=0).dtypes``.
 
         Returns
         -------
         DtypesDescriptor
         """
+        if axis == 1:
+            return cls._merge_dtypes(values)
         known_dtypes = {}
         cols_with_unknown_dtypes = []
         schema_is_known = True
@@ -527,14 +630,23 @@ class ModinDtypes:
 
     Parameters
     ----------
-    value : pandas.Series or callable
+    value : pandas.Series, callable, DtypesDescriptor or ModinDtypes, optional
     """
 
-    def __init__(self, value: Union[Callable, pandas.Series, DtypesDescriptor]):
+    def __init__(
+        self,
+        value: Optional[
+            Union[Callable, pandas.Series, DtypesDescriptor, "ModinDtypes"]
+        ],
+    ):
         if callable(value) or isinstance(value, pandas.Series):
             self._value = value
         elif isinstance(value, DtypesDescriptor):
             self._value = value.to_series() if value.is_materialized else value
+        elif isinstance(value, type(self)):
+            self._value = value.copy()._value
+        elif isinstance(value, None):
+            self._value = DtypesDescriptor()
         else:
             raise ValueError(f"ModinDtypes doesn't work with '{value}'")
 
@@ -625,13 +737,20 @@ class ModinDtypes:
         return ModinDtypes(self._value.iloc[ids] if numeric_index else self._value[ids])
 
     @classmethod
-    def concat(cls, values: list) -> "ModinDtypes":
+    def concat(cls, values: list, axis: int = 0) -> "ModinDtypes":
         """
-        Concatenate dtypes..
+        Concatenate dtypes.
 
         Parameters
         ----------
         values : list of DtypesDescriptors, pandas.Series, ModinDtypes and Nones
+        axis : int, default: 0
+            If ``axis == 0``: concatenate column names. This implements the logic of
+            how dtypes are combined on ``pd.concat([df1, df2], axis=1)``.
+            If ``axis == 1``: perform a union join for the column names described by
+            `values` and then find common dtypes for the columns appeared to be in
+            an intersection. This implements the logic of how dtypes are combined on
+            ``pd.concat([df1, df2], axis=0).dtypes``.
 
         Returns
         -------
@@ -646,7 +765,20 @@ class ModinDtypes:
             else:
                 raise NotImplementedError(type(val))
 
-        desc = DtypesDescriptor.concat(preprocessed_vals)
+        try:
+            desc = DtypesDescriptor.concat(preprocessed_vals, axis=axis)
+        except NotImplementedError as e:
+            # 'DtypesDescriptor' doesn't support duplicated labels, however, if all values are pandas Series,
+            # we still can perform concatenation using pure pandas
+            if (
+                # 'pd.concat(axis=1)' fails on duplicated labels anyway, so doing this logic
+                # only in case 'axis=0'
+                axis == 0
+                and "duplicated" not in e.args[0].lower()
+                or not all(isinstance(val, pandas.Series) for val in values)
+            ):
+                raise e
+            desc = pandas.concat(values)
         return ModinDtypes(desc)
 
     def set_index(self, new_index: Union[pandas.Index, "ModinIndex"]) -> "ModinDtypes":
@@ -974,3 +1106,27 @@ def get_categories_dtype(
         if isinstance(cdt, LazyProxyCategoricalDtype)
         else cdt.categories.dtype
     )
+
+
+def extract_dtype(value):
+    """
+    Extract dtype(s) from the passed `value`.
+
+    Parameters
+    ----------
+    value : object
+
+    Returns
+    -------
+    numpy.dtype or pandas.Series of numpy.dtypes
+    """
+    from modin.pandas.utils import is_scalar
+
+    if hasattr(value, "dtype"):
+        return value.dtype
+    elif hasattr(value, "dtypes"):
+        return value.dtypes
+    elif is_scalar(value):
+        return np.dtype(type(value))
+    else:
+        return np.array(value).dtype

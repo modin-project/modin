@@ -35,13 +35,16 @@ class ModinIndex:
     axis : int, optional
         Specifies an axis the object represents, serves as an optional hint. This parameter
         must be passed in case value is a ``PandasDataframe``.
+    dtypes : pandas.Series, optional
+        Materialized dtypes of index levels.
     """
 
-    def __init__(self, value, axis=None):
+    def __init__(self, value, axis=None, dtypes=None):
         from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
         self._is_default_callable = False
         self._axis = axis
+        self._dtypes = dtypes
 
         if callable(value):
             self._value = value
@@ -57,6 +60,25 @@ class ModinIndex:
         # these should be propagated to the copies of the index
         self._index_id = uuid.uuid4()
         self._lengths_id = uuid.uuid4()
+
+    def maybe_get_dtypes(self):
+        """
+        Get index dtypes if available.
+
+        Returns
+        -------
+        pandas.Series or None
+        """
+        if self._dtypes is not None:
+            return self._dtypes
+        if self.is_materialized:
+            self._dtypes = (
+                self._value.dtypes
+                if isinstance(self._value, pandas.MultiIndex)
+                else pandas.Series([self._value.dtype], index=[self._value.name])
+            )
+            return self._dtypes
+        return None
 
     @staticmethod
     def _get_default_callable(dataframe_obj, axis):
@@ -308,7 +330,7 @@ class ModinIndex:
         idx_cache = self._value
         if not callable(idx_cache):
             idx_cache = idx_cache.copy()
-        result = ModinIndex(idx_cache, axis=self._axis)
+        result = ModinIndex(idx_cache, axis=self._axis, dtypes=self._dtypes)
         result._index_id = self._index_id
         result._is_default_callable = self._is_default_callable
         if copy_lengths:
