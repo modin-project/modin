@@ -1474,6 +1474,10 @@ def test_cumsum(data, skipna):
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
 
 
+def test_cumsum_6771():
+    _ = to_pandas(pd.Series([1, 2, 3], dtype="Int64").cumsum())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data):
     modin_series, pandas_series = create_test_series(data)

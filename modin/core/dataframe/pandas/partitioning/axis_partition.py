@@ -422,7 +422,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
-            result = func(dataframe, *f_args, **f_kwargs)
+            try:
+                result = func(dataframe, *f_args, **f_kwargs)
+            except ValueError as err:
+                if "assignment destination is read-only" in str(err):
+                    result = func(dataframe.copy(), *f_args, **f_kwargs)
+                else:
+                    raise err
 
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
