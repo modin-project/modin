@@ -3475,6 +3475,15 @@ def test_to_numpy(data):
     assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
 
 
+def test_to_numpy_dtype():
+    modin_series, pandas_series = create_test_series(test_data["float_nan_data"])
+    assert_array_equal(
+        modin_series.to_numpy(dtype="int64"),
+        pandas_series.to_numpy(dtype="int64"),
+        strict=True,
+    )
+
+
 @pytest.mark.parametrize(
     "data",
     test_data_values + test_data_large_categorical_series_values,
