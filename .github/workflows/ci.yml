@@ -637,7 +637,6 @@ jobs:
         with:
           timeout_minutes: 1
           max_attempts: 5
-          shell: bash -l {0}
           command: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
         timeout-minutes: 10
         if: matrix.execution.name == 'unidist'
