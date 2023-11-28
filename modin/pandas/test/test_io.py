@@ -1135,8 +1135,6 @@ class TestCsv:
             columns=columns,
         )
 
-    @pytest.mark.flaky(reruns=3, reruns_delay=5)
-    @pytest.mark.timeout(60)
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
@@ -1147,8 +1145,6 @@ class TestCsv:
             extension="csv",
         )
 
-    @pytest.mark.flaky(reruns=3, reruns_delay=5)
-    @pytest.mark.timeout(60)
     def test_series_to_csv(self, tmp_path):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
