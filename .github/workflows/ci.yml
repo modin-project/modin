@@ -632,6 +632,14 @@ jobs:
         if: matrix.os != 'windows'
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
       - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+        if: matrix.execution.name != 'unidist'
+      - uses: nick-fields/retry@v2
+        with:
+          timeout_minutes: 1
+          max_attempts: 5
+          command: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+        timeout-minutes: 10
+        if: matrix.execution.name == 'unidist'
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
