@@ -637,7 +637,10 @@ jobs:
         with:
           timeout_minutes: 1
           max_attempts: 5
-          command: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+          command: |
+            conda env list
+            conda activate modin_on_unidist
+            ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
         timeout-minutes: 10
         if: matrix.execution.name == 'unidist'
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
