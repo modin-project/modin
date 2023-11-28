@@ -587,11 +587,7 @@ jobs:
         with:
           timeout_minutes: 15
           max_attempts: 3
-          shell: bash -l {0}
-          command: |
-            conda env list
-            conda list
-            ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
         if: matrix.execution.name == 'unidist'
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
