@@ -835,6 +835,36 @@ def test_to_pandas_indices(data):
         ), f"Levels of indices at axis {axis} are different!"
 
 
+def test_to_pandas_read_only_issue():
+    df = pd.DataFrame(
+        [
+            [np.nan, 2, np.nan, 0],
+            [3, 4, np.nan, 1],
+            [np.nan, np.nan, np.nan, np.nan],
+            [np.nan, 3, np.nan, 4],
+        ],
+        columns=list("ABCD"),
+    )
+    pdf = df._to_pandas()
+    # there shouldn't be `ValueError: putmask: output array is read-only`
+    pdf.fillna(0, inplace=True)
+
+
+def test_to_numpy_read_only_issue():
+    df = pd.DataFrame(
+        [
+            [np.nan, 2, np.nan, 0],
+            [3, 4, np.nan, 1],
+            [np.nan, np.nan, np.nan, np.nan],
+            [np.nan, 3, np.nan, 4],
+        ],
+        columns=list("ABCD"),
+    )
+    arr = df.to_numpy()
+    # there shouldn't be `ValueError: putmask: output array is read-only`
+    np.putmask(arr, np.isnan(arr), 0)
+
+
 def test_create_categorical_dataframe_with_duplicate_column_name():
     # This tests for https://github.com/modin-project/modin/issues/4312
     pd_df = pandas.DataFrame(
