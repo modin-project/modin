@@ -634,6 +634,8 @@ jobs:
       - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
         if: matrix.execution.name != 'unidist'
       - uses: nick-fields/retry@v2
+        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+        # for details see: https://github.com/modin-project/modin/pull/6776
         with:
           timeout_minutes: 15
           max_attempts: 3
