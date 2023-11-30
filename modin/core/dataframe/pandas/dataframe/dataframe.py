@@ -1960,7 +1960,7 @@ class PandasDataframe(ClassLogger):
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
             )
 
         result = self.__constructor__(
