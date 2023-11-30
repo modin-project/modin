@@ -1468,14 +1468,14 @@ class TestParquet:
     def test_read_parquet_no_extension(self, engine, make_parquet_file):
         with ensure_clean(".parquet") as unique_filename:
             # Remove the .parquet extension
-            no_ext_fname = unique_filename[:unique_filename.index(".parquet")]
+            no_ext_fname = unique_filename[: unique_filename.index(".parquet")]
 
             make_parquet_file(filename=no_ext_fname)
             eval_io(
                 fn_name="read_parquet",
                 # read_parquet kwargs
                 engine=engine,
-                path=no_ext_fname
+                path=no_ext_fname,
             )
 
     @pytest.mark.parametrize(
