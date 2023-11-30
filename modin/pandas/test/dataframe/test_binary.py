@@ -93,10 +93,12 @@ def test_math_functions(other, axis, op):
 @pytest.mark.parametrize("other", [lambda df: 2, lambda df: df])
 def test___divmod__(other):
     data = test_data["float_nan_data"]
-
     eval_general(*create_test_dfs(data), lambda df: divmod(df, other(df)))
-    # test __rdivmod__
-    eval_general(*create_test_dfs(data), lambda df: divmod(other(df), df))
+
+
+def test___rdivmod__():
+    data = test_data["float_nan_data"]
+    eval_general(*create_test_dfs(data), lambda df: divmod(2, df))
 
 
 @pytest.mark.parametrize(
