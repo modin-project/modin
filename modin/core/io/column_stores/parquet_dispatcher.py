@@ -285,19 +285,33 @@ class FastParquetDataset(ColumnStoreDataset):
     def to_pandas_dataframe(self, columns):
         return self.dataset.to_pandas(columns=columns)
 
+    # Karthik Velayutham writes:
+    #
+    # fastparquet doesn't have a nice method like PyArrow, so we
+    # have to copy some of their logic here while we work on getting
+    # an easier method to get a list of valid files.
+    # See: https://github.com/dask/fastparquet/issues/795
     def _get_fastparquet_files(self):  # noqa: GL08
-        # fastparquet doesn't have a nice method like PyArrow, so we
-        # have to copy some of their logic here while we work on getting
-        # an easier method to get a list of valid files.
-        # See: https://github.com/dask/fastparquet/issues/795
         if "*" in self.path:
             files = self.fs.glob(self.path)
         else:
-            files = [
-                f
-                for f in self.fs.find(self.path)
-                if f.endswith(".parquet") or f.endswith(".parq")
-            ]
+            # (Resolving issue #6778)
+            #
+            # Users will pass in a directory to a delta table, which stores parquet
+            # files in various directories along with other, non-parquet files. We
+            # need to identify those parquet files and not the non-parquet files.
+            #
+            # However, we also need to support users passing in explicit files that
+            # don't necessarily have the `.parq` or `.parquet` extension -- if a user
+            # says that a file is parquet, then we should probably give it a shot.
+            if os.path.isfile(self.path):
+                files = self.fs.find(self.path)
+            else:
+                files = [
+                    f
+                    for f in self.fs.find(self.path)
+                    if f.endswith(".parquet") or f.endswith(".parq")
+                ]
         return files
 
 
