@@ -2363,6 +2363,14 @@ def test_loc(data):
     df_equals(modin_result, pandas_result)
 
 
+def test_loc_with_boolean_series():
+    modin_series, pandas_series = create_test_series([1, 2, 3])
+    modin_mask, pandas_mask = create_test_series([True, False, False])
+    modin_result = modin_series.loc[modin_mask]
+    pandas_result = pandas_series.loc[pandas_mask]
+    df_equals(modin_result, pandas_result)
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_categorical_series():
     modin_series = pd.Series(["a", "b", "c"], dtype="category")
