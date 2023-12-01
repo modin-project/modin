@@ -18,7 +18,7 @@ import pytest
 from pandas._testing import assert_series_equal
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat, Engine
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.test.utils import (
     arg_keys,
     assert_dtypes_equal,
