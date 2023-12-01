@@ -304,7 +304,7 @@ class FastParquetDataset(ColumnStoreDataset):
             # However, we also need to support users passing in explicit files that
             # don't necessarily have the `.parq` or `.parquet` extension -- if a user
             # says that a file is parquet, then we should probably give it a shot.
-            if os.path.isfile(self.path):
+            if self.fs.isfile(self.path):
                 files = self.fs.find(self.path)
             else:
                 files = [
