@@ -167,6 +167,19 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_cross_6786():
+    data = [[7, 8, 9], [10, 11, 12]]
+    modin_df, pandas_df = create_test_dfs(data, columns=["x", "y", "z"])
+
+    modin_join = modin_df.join(
+        modin_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    pandas_join = pandas_df.join(
+        pandas_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    df_equals(modin_join, pandas_join)
+
+
 def test_join_5203():
     data = np.ones([2, 4])
     kwargs = {"columns": ["a", "b", "c", "d"]}
