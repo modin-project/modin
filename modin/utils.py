@@ -14,7 +14,6 @@
 """Collection of general utility functions, mostly for internal use."""
 
 import codecs
-import contextlib
 import functools
 import importlib
 import inspect
@@ -28,7 +27,6 @@ from textwrap import dedent, indent
 from typing import (
     Any,
     Callable,
-    Generator,
     Iterable,
     List,
     Mapping,

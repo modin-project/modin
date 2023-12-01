@@ -94,9 +94,9 @@ _doc_io_method_kwargs_params = """**kwargs : kwargs
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
 supported_execution = (
-    "ExperimentalPandasOnRay",
-    "ExperimentalPandasOnUnidist",
-    "ExperimentalPandasOnDask",
+    "PandasOnRay",
+    "PandasOnUnidist",
+    "PandasOnDask",
 )
 
 
