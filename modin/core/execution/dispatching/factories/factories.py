@@ -355,7 +355,7 @@ class BaseFactory(object):
                         warnings.warn(
                             f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
                         )
-                del kwargs["max_sessions"]
+                    del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod

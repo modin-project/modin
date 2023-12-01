@@ -233,7 +233,7 @@ class SQLDispatcher(FileDispatcher):
             message = "Defaulting to Modin core implementation; \
                 'partition_column', 'lower_bound', 'upper_bound' must be different from None"
             warnings.warn(message)
-            return cls.base_io.read_sql(
+            return cls._read_non_exp(
                 sql,
                 con,
                 index_col,
