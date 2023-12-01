@@ -23,7 +23,6 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 
 import pickle
 import warnings
-from functools import wraps
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
@@ -32,7 +31,7 @@ from pandas.core.dtypes.dtypes import SparseDtype
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
-from modin.utils import _inherit_docstrings, enable_exp_mode
+from modin.utils import _inherit_docstrings
 
 
 class BaseSparseAccessor(ClassLogger):
@@ -198,28 +197,6 @@ class CachedAccessor(ClassLogger):
         return accessor_obj
 
 
-def run_function_in_experimental_context(func):
-    """
-    Run a `func` in experimental context using `modin.utils.enable_exp_mode`.
-
-    Parameters
-    ----------
-    func : callable
-
-    Returns
-    -------
-    callable
-    """
-
-    @wraps(func)
-    def enable_experimental_context_and_run(self, *args, **kwargs):
-        """Wait for computation results."""
-        with enable_exp_mode():
-            return func(self, *args, **kwargs)
-
-    return enable_experimental_context_and_run
-
-
 class ExperimentalFunctions:
     """
     Namespace class for accessing experimental Modin functions.
@@ -238,7 +215,6 @@ class ExperimentalFunctions:
         )
         self._data = data
 
-    @run_function_in_experimental_context
     def to_pickle_distributed(
         self,
         filepath_or_buffer,

@@ -20,13 +20,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import (
-    Engine,
-    ExperimentalGroupbyImpl,
-    IsExperimental,
-    MinPartitionSize,
-    NPartitions,
-)
+from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -37,7 +31,7 @@ from modin.core.dataframe.pandas.metadata import (
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
-from modin.utils import enable_exp_mode, try_cast_to_pandas
+from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
 
@@ -2372,14 +2366,3 @@ class TestZeroComputationDtypes:
             assert res_dtypes._known_dtypes["a"] == np.dtype(int)
 
         patch.assert_not_called()
-
-
-def test_enable_exp_mode_utility():
-    with enable_exp_mode():
-        # This implicitly activates the experimental variable
-        from modin.experimental.pandas import read_pickle_distributed  # noqa: F401
-
-        assert IsExperimental.get()
-
-    # check that `enable_exp_mode` will do some cleanup
-    assert IsExperimental.get() is not True

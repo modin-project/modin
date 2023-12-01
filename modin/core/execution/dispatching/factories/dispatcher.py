@@ -107,22 +107,6 @@ class FactoryDispatcher(object):
     __factory: factories.BaseFactory = None
 
     @classmethod
-    def _update_factory_if_already_initialized(cls) -> None:
-        """
-        Update the factory if it has already been initialized.
-
-        Notes
-        -----
-        1. Primary use in `enable_exp_mode` context manager, to enable experimental mode.
-        2. This work is not delegated to `get_factory` method specifically so as not to
-           call the engine initialization function.
-        3. This work is not delegated to `_update_factory` method specifically so as not
-           not to initialize the factory the first time.
-        """
-        if cls.__factory is not None:
-            cls.__factory = cls._update_factory()
-
-    @classmethod
     def get_factory(cls) -> factories.BaseFactory:
         """Get current factory."""
         if cls.__factory is None:
@@ -220,9 +204,7 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_csv_glob(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(
-        factories.PandasOnRayFactory._read_pickle_distributed
-    )
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_distributed)
     def read_pickle_distributed(cls, **kwargs):
         return cls.get_factory()._read_pickle_distributed(**kwargs)
 
@@ -312,9 +294,7 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_pickle(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(
-        factories.PandasOnRayFactory._to_pickle_distributed
-    )
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_distributed)
     def to_pickle_distributed(cls, *args, **kwargs):
         return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
 
