@@ -31,6 +31,9 @@ from modin.core.io import (
     SQLDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasPickleParser,
+    PandasCSVGlobParser,
     PandasCSVParser,
     PandasExcelParser,
     PandasFeatherParser,
@@ -40,6 +43,11 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalCustomTextDispatcher,
+    ExperimentalPickleDispatcher,
+)
 
 
 class PandasOnDaskIO(BaseIO):
@@ -73,6 +81,16 @@ class PandasOnDaskIO(BaseIO):
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
     to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    # experimental methods that don't exist in pandas
+    read_csv_glob = __make_read(PandasCSVGlobParser, ExperimentalCSVGlobDispatcher)
+    read_pickle_distributed = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
+    )
+    to_pickle_distributed = __make_write(ExperimentalPickleDispatcher)
+    read_custom_text = __make_read(
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace

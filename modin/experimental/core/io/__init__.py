@@ -14,13 +14,11 @@
 """Experimental IO functions implementations."""
 
 from .pickle.pickle_dispatcher import ExperimentalPickleDispatcher
-from .sql.sql_dispatcher import ExperimentalSQLDispatcher
 from .text.csv_glob_dispatcher import ExperimentalCSVGlobDispatcher
 from .text.custom_text_dispatcher import ExperimentalCustomTextDispatcher
 
 __all__ = [
     "ExperimentalCSVGlobDispatcher",
-    "ExperimentalSQLDispatcher",
     "ExperimentalPickleDispatcher",
     "ExperimentalCustomTextDispatcher",
 ]
