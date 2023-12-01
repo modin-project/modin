@@ -132,12 +132,6 @@ class FactoryDispatcher(object):
         try:
             cls.__factory = getattr(factories, factory_name)
         except AttributeError:
-            if factory_name == "ExperimentalOmnisciOnRayFactory":
-                msg = (
-                    "OmniSci storage format no longer needs Ray engine; "
-                    + "please specify MODIN_ENGINE='native'"
-                )
-                raise FactoryNotFoundError(msg)
             if not IsExperimental.get():
                 # allow missing factories in experimenal mode only
                 if hasattr(factories, "Experimental" + factory_name):

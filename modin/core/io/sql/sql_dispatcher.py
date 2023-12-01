@@ -21,7 +21,6 @@ used as base class for dipatchers of SQL queries.
 
 import math
 import warnings
-from typing import Any
 
 import numpy as np
 import pandas
@@ -35,7 +34,14 @@ class SQLDispatcher(FileDispatcher):
     """Class handles utils for reading SQL queries or database tables."""
 
     @classmethod
-    def _read(cls, sql, con, index_col=None, **kwargs):
+    def _read(cls, *args, **kwargs):  # noqa: GL08
+        if not IsExperimental.get():
+            return cls._read_non_exp(*args, **kwargs)
+        else:
+            return cls._read_exp(*args, **kwargs)
+
+    @classmethod
+    def _read_non_exp(cls, sql, con, index_col=None, **kwargs):
         """
         Read a SQL query or database table into a query compiler.
 
@@ -178,11 +184,6 @@ class SQLDispatcher(FileDispatcher):
         cls.materialize(
             [part.list_of_blocks[0] for row in result._partitions for part in row]
         )
-
-    def __getattribute__(self, __name: str) -> Any:
-        if __name == "_read" and IsExperimental.get():
-            __name = "_read_exp"
-        return super().__getattribute__(__name)
 
     # experimental implementation
     __read_sql_with_offset = None
