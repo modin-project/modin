@@ -554,7 +554,7 @@ def is_supported_arrow_type(dtype: pa.lib.DataType) -> bool:
         return False
     try:
         pandas_dtype = dtype.to_pandas_dtype()
-        return pandas_dtype != np.dtype("O")
+        return pandas_dtype != pandas.api.types.pandas_dtype("O")
     except NotImplementedError:
         return False
 

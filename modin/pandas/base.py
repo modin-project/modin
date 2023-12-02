@@ -1864,7 +1864,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of maximum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1877,7 +1877,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of minimum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(

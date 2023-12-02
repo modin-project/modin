@@ -28,7 +28,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import IsRayCluster, NPartitions
+from modin.config import Engine, IsRayCluster, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -1647,13 +1647,13 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 if new_dtypes is None:
                     new_dtypes = self_dtypes.copy()
                 # Update the new dtype series to the proper pandas dtype
-                try:
-                    new_dtype = np.dtype(dtype)
-                except TypeError:
-                    new_dtype = dtype
+                new_dtype = pandas.api.types.pandas_dtype(dtype)
+                if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
+                    # FIXME: https://github.com/dask/distributed/issues/8585
+                    _ = dtype._materialize_categories()
 
                 # We cannot infer without computing the dtype if
-                if isinstance(new_dtype, str) and new_dtype == "category":
+                if isinstance(new_dtype, pandas.CategoricalDtype):
                     new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
                         # Actual parent will substitute `None` at `.set_dtypes_cache`
                         parent=None,
@@ -2187,7 +2187,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 # Materializing lazy columns in order to build dtype's index
                 new_columns = new_columns.get(return_lengths=False)
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
+                index=new_columns,
             )
         return self.__constructor__(
             new_partitions,
@@ -3425,14 +3426,17 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             else:
                 if new_columns is None:
                     kw["dtypes"] = ModinDtypes(
-                        DtypesDescriptor(remaining_dtype=np.dtype(dtypes))
+                        DtypesDescriptor(
+                            remaining_dtype=pandas.api.types.pandas_dtype(dtypes)
+                        )
                     )
                 else:
                     kw["dtypes"] = (
                         pandas.Series(dtypes, index=new_columns)
                         if is_list_like(dtypes)
                         else pandas.Series(
-                            [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                            [pandas.api.types.pandas_dtype(dtypes)] * len(new_columns),
+                            index=new_columns,
                         )
                     )
 
