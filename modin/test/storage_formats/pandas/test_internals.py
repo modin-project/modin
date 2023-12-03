@@ -1524,7 +1524,7 @@ class TestModinDtypes:
 
     schema = pandas.Series(
         {
-            "a": np.dtype(int),
+            "a": np.dtype("int64"),
             "b": np.dtype(float),
             "c": np.dtype(bool),
             "d": np.dtype(bool),
@@ -1959,17 +1959,17 @@ class TestModinDtypes:
     def test_ModinDtypes_duplicated_concat(self):
         # test that 'ModinDtypes' is able to perform dtypes concatenation on duplicated labels
         # if all of them are Serieses
-        res = ModinDtypes.concat([pandas.Series([np.dtype(int)], index=["a"])] * 2)
+        res = ModinDtypes.concat([pandas.Series([np.dtype("int64")], index=["a"])] * 2)
         assert isinstance(res._value, pandas.Series)
         assert res._value.equals(
-            pandas.Series([np.dtype(int), np.dtype(int)], index=["a", "a"])
+            pandas.Series([np.dtype("int64"), np.dtype("int64")], index=["a", "a"])
         )
 
         # test that 'ModinDtypes.concat' with duplicated labels raises when not all dtypes are materialized
         with pytest.raises(NotImplementedError):
             res = ModinDtypes.concat(
                 [
-                    pandas.Series([np.dtype(int)], index=["a"]),
+                    pandas.Series([np.dtype("int64")], index=["a"]),
                     DtypesDescriptor(cols_with_unknown_dtypes=["a"]),
                 ]
             )
@@ -2007,7 +2007,7 @@ class TestModinDtypes:
         [
             [
                 DtypesDescriptor(
-                    {"a": np.dtype(int), "b": np.dtype(float), "c": np.dtype(float)}
+                    {"a": np.dtype("int64"), "b": np.dtype(float), "c": np.dtype(float)}
                 ),
                 DtypesDescriptor(
                     cols_with_unknown_dtypes=["col1", "col2", "col3"],
@@ -2016,12 +2016,16 @@ class TestModinDtypes:
             ],
             [
                 DtypesDescriptor(
-                    {"a": np.dtype(int), "b": np.dtype(float), "c": np.dtype(float)},
+                    {
+                        "a": np.dtype("int64"),
+                        "b": np.dtype(float),
+                        "c": np.dtype(float),
+                    },
                     columns_order={0: "a", 1: "b", 2: "c"},
                 ),
                 DtypesDescriptor(
                     {
-                        "col1": np.dtype(int),
+                        "col1": np.dtype("int64"),
                         "col2": np.dtype(float),
                         "col3": np.dtype(float),
                     },
@@ -2030,19 +2034,19 @@ class TestModinDtypes:
             ],
             [
                 DtypesDescriptor(
-                    {"a": np.dtype(int), "b": np.dtype(float)},
+                    {"a": np.dtype("int64"), "b": np.dtype(float)},
                     cols_with_unknown_dtypes=["c"],
                     columns_order={0: "a", 1: "b", 2: "c"},
                 ),
                 DtypesDescriptor(
-                    {"col1": np.dtype(int), "col2": np.dtype(float)},
+                    {"col1": np.dtype("int64"), "col2": np.dtype(float)},
                     cols_with_unknown_dtypes=["col3"],
                     columns_order={0: "col1", 1: "col2", 2: "col3"},
                 ),
             ],
             [
                 DtypesDescriptor(
-                    {"a": np.dtype(int)},
+                    {"a": np.dtype("int64")},
                     cols_with_unknown_dtypes=["c"],
                     know_all_names=False,
                 ),
@@ -2052,7 +2056,9 @@ class TestModinDtypes:
                 ),
             ],
             [
-                DtypesDescriptor({"a": np.dtype(int)}, remaining_dtype=np.dtype(float)),
+                DtypesDescriptor(
+                    {"a": np.dtype("int64")}, remaining_dtype=np.dtype(float)
+                ),
                 DtypesDescriptor(
                     cols_with_unknown_dtypes=["col1", "col2", "col3"],
                     columns_order={0: "col1", 1: "col2", 2: "col3"},
@@ -2060,21 +2066,21 @@ class TestModinDtypes:
             ],
             [
                 lambda: pandas.Series(
-                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
                     index=["a", "b", "c"],
                 ),
                 lambda: pandas.Series(
-                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
                     index=["col1", "col2", "col3"],
                 ),
             ],
             [
                 pandas.Series(
-                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
                     index=["a", "b", "c"],
                 ),
                 pandas.Series(
-                    [np.dtype(int), np.dtype(float), np.dtype(float)],
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
                     index=["col1", "col2", "col3"],
                 ),
             ],
@@ -2128,7 +2134,8 @@ class TestZeroComputationDtypes:
                 df._query_compiler._modin_frame.set_dtypes_cache(
                     ModinDtypes(
                         DtypesDescriptor(
-                            {"a": np.dtype(int)}, cols_with_unknown_dtypes=["b", "c"]
+                            {"a": np.dtype("int64")},
+                            cols_with_unknown_dtypes=["b", "c"],
                         )
                     )
                 )
@@ -2141,13 +2148,14 @@ class TestZeroComputationDtypes:
 
             if self_dtype == "materialized":
                 result_dtype = pandas.Series(
-                    [np.dtype(int), value_dtype, np.dtype(int)], index=["a", "b", "c"]
+                    [np.dtype("int64"), value_dtype, np.dtype("int64")],
+                    index=["a", "b", "c"],
                 )
                 assert df._query_compiler._modin_frame.has_materialized_dtypes
                 assert df.dtypes.equals(result_dtype)
             elif self_dtype == "partial":
                 result_dtype = DtypesDescriptor(
-                    {"a": np.dtype(int), "b": value_dtype},
+                    {"a": np.dtype("int64"), "b": value_dtype},
                     cols_with_unknown_dtypes=["c"],
                     columns_order={0: "a", 1: "b", 2: "c"},
                 )
@@ -2183,7 +2191,7 @@ class TestZeroComputationDtypes:
                 df._query_compiler._modin_frame.set_dtypes_cache(
                     ModinDtypes(
                         DtypesDescriptor(
-                            {"a": np.dtype(int)}, cols_with_unknown_dtypes=["b"]
+                            {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
                         )
                     )
                 )
@@ -2196,13 +2204,14 @@ class TestZeroComputationDtypes:
 
             if self_dtype == "materialized":
                 result_dtype = pandas.Series(
-                    [value_dtype, np.dtype(int), np.dtype(int)], index=["c", "a", "b"]
+                    [value_dtype, np.dtype("int64"), np.dtype("int64")],
+                    index=["c", "a", "b"],
                 )
                 assert df._query_compiler._modin_frame.has_materialized_dtypes
                 assert df.dtypes.equals(result_dtype)
             elif self_dtype == "partial":
                 result_dtype = DtypesDescriptor(
-                    {"a": np.dtype(int), "c": value_dtype},
+                    {"a": np.dtype("int64"), "c": value_dtype},
                     cols_with_unknown_dtypes=["b"],
                     columns_order={0: "c", 1: "a", 2: "b"},
                 )
@@ -2258,14 +2267,14 @@ class TestZeroComputationDtypes:
                     assert res._query_compiler._modin_frame.has_materialized_dtypes
                     assert res.dtypes.equals(
                         pandas.Series(
-                            [np.dtype(int), np.dtype(int)], index=["index", "a"]
+                            [np.dtype("int64"), np.dtype("int64")], index=["index", "a"]
                         )
                     )
                 else:
                     # we now know that there are cols with unknown name and dtype in our dataframe,
                     # so the resulting dtypes should contain information only about original column
                     expected_dtypes = DtypesDescriptor(
-                        {"a": np.dtype(int)},
+                        {"a": np.dtype("int64")},
                         know_all_names=False,
                     )
                     assert res._query_compiler._modin_frame._dtypes._value.equals(
@@ -2277,7 +2286,7 @@ class TestZeroComputationDtypes:
             df._query_compiler._modin_frame.set_dtypes_cache(
                 ModinDtypes(
                     DtypesDescriptor(
-                        {"a": np.dtype(int)}, cols_with_unknown_dtypes=["b"]
+                        {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
                     )
                 )
             )
@@ -2299,7 +2308,7 @@ class TestZeroComputationDtypes:
                     # the resulted dtype should have information about 'index' and 'a' columns,
                     # and miss dtype info for 'b' column
                     expected_dtypes = DtypesDescriptor(
-                        {"index": np.dtype(int), "a": np.dtype(int)},
+                        {"index": np.dtype("int64"), "a": np.dtype("int64")},
                         cols_with_unknown_dtypes=["b"],
                         columns_order={0: "index", 1: "a", 2: "b"},
                     )
@@ -2310,7 +2319,7 @@ class TestZeroComputationDtypes:
                     # we miss info about the 'index' column since it wasn't materialized at
                     # the time of 'reset_index()' and we're still missing dtype info for 'b' column
                     expected_dtypes = DtypesDescriptor(
-                        {"a": np.dtype(int)},
+                        {"a": np.dtype("int64")},
                         cols_with_unknown_dtypes=["b"],
                         know_all_names=False,
                     )
@@ -2327,7 +2336,7 @@ class TestZeroComputationDtypes:
             res = df.groupby("a").size().reset_index(name="new_name")
             res_dtypes = res._query_compiler._modin_frame._dtypes._value
             assert "a" in res_dtypes._known_dtypes
-            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
             # case 2: ExperimentalImpl impl, Series as an output of groupby
             ExperimentalGroupbyImpl.put(True)
@@ -2336,7 +2345,7 @@ class TestZeroComputationDtypes:
                 res = df.groupby("a").size().reset_index(name="new_name")
                 res_dtypes = res._query_compiler._modin_frame._dtypes._value
                 assert "a" in res_dtypes._known_dtypes
-                assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+                assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
             finally:
                 ExperimentalGroupbyImpl.put(False)
 
@@ -2345,7 +2354,7 @@ class TestZeroComputationDtypes:
             res = df.groupby("a").sum().reset_index()
             res_dtypes = res._query_compiler._modin_frame._dtypes._value
             assert "a" in res_dtypes._known_dtypes
-            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
             # case 4: ExperimentalImpl impl, DataFrame as an output of groupby
             ExperimentalGroupbyImpl.put(True)
@@ -2354,7 +2363,7 @@ class TestZeroComputationDtypes:
                 res = df.groupby("a").sum().reset_index()
                 res_dtypes = res._query_compiler._modin_frame._dtypes._value
                 assert "a" in res_dtypes._known_dtypes
-                assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+                assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
             finally:
                 ExperimentalGroupbyImpl.put(False)
 
@@ -2363,6 +2372,6 @@ class TestZeroComputationDtypes:
             res = df.groupby("a").quantile().reset_index()
             res_dtypes = res._query_compiler._modin_frame._dtypes._value
             assert "a" in res_dtypes._known_dtypes
-            assert res_dtypes._known_dtypes["a"] == np.dtype(int)
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
         patch.assert_not_called()
