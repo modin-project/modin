@@ -826,7 +826,8 @@ class _LocIndexer(_LocationIndexerBase):
                         "Must have equal len keys and value when setting with an iterable"
                     )
             else:
-                if item.shape[0] != len(col_loc):
+                if item.shape[-1] != len(col_loc):
+                    print(item.shape, col_loc)
                     raise ValueError(
                         "Must have equal len keys and value when setting with an iterable"
                     )
