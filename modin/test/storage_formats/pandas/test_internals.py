@@ -1444,17 +1444,15 @@ def test_apply_full_axis_preserve_lengths():
 
     def func(df):
         if df.iloc[0, 0] == 1:
-            return pandas.DataFrame(
-                {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8], "d": [0, 1, 2]}
-            )
+            return pandas.DataFrame({"a": [3, 2, 3, 4], "b": [3, 4, 5, 6]})
         else:
-            return pandas.DataFrame({"a": [4], "b": [6], "c": [9], "d": [3]})
+            return pandas.DataFrame({"c": [9, 5, 6, 7]})
 
     res = md_df.apply_full_axis(
         func=func,
         axis=0,
         new_index=[0, 1, 2, 3],
-        new_columns=["a", "b", "c", "d"],
+        new_columns=["a", "b", "c"],
         keep_partitioning=True,
     )
 
