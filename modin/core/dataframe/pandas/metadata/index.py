@@ -17,6 +17,7 @@ import functools
 import uuid
 
 import pandas
+from pandas.core.dtypes.common import is_list_like
 from pandas.core.indexes.api import ensure_index
 
 
@@ -170,9 +171,12 @@ class ModinIndex:
         -------
         bool
         """
+        # importing here to avoid circular import issue
+        from modin.pandas.indexing import is_range_like
+
         if isinstance(index, cls):
             index = index._value
-        return isinstance(index, pandas.Index)
+        return is_list_like(index) or is_range_like(index) or isinstance(index, slice)
 
     def get(self, return_lengths=False) -> pandas.Index:
         """
