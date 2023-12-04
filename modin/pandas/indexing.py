@@ -813,7 +813,7 @@ class _LocIndexer(_LocationIndexerBase):
         ----------
         row_loc : scalar, slice, list, array or tuple
             Row locator.
-        col_loc : scalar, slice, list, array or tuple
+        col_loc : list, array or tuple
             Columns locator.
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
