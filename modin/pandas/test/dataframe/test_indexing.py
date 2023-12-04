@@ -531,12 +531,12 @@ def test_loc_6774():
         pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
         .transpose()
         .values
-    )  # works correctly
+    )
     modin_df.loc[:, ["b", "c", "d"]] = (
         pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
         .transpose()
         .values
-    )  # fails
+    )
     df_equals(modin_df, pandas_df)
 
 
