@@ -3243,10 +3243,8 @@ class PandasDataframe(ClassLogger):
                     )
 
         if not keep_partitioning:
-            if (
-                kw["row_lengths"] is None
-                and new_index is not None
-                and ModinIndex.is_materialized_index(new_index)
+            if kw["row_lengths"] is None and ModinIndex.is_materialized_index(
+                new_index
             ):
                 if axis == 0:
                     kw["row_lengths"] = get_length_list(
@@ -3259,10 +3257,8 @@ class PandasDataframe(ClassLogger):
                         kw["row_lengths"] = self._row_lengths_cache
                     elif len(new_index) == 1 and new_partitions.shape[0] == 1:
                         kw["row_lengths"] = [1]
-            if (
-                kw["column_widths"] is None
-                and new_columns is not None
-                and ModinIndex.is_materialized_index(new_columns)
+            if kw["column_widths"] is None and ModinIndex.is_materialized_index(
+                new_columns
             ):
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
