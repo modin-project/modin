@@ -516,7 +516,9 @@ def test_loc_4456(
 
 
 def test_loc_6774():
-    modin_df, pandas_df = create_test_dfs({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]})
+    modin_df, pandas_df = create_test_dfs(
+        {"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]}
+    )
     pandas_df.loc[:, "c"] = [10, 20, 30, 40, 51]
     modin_df.loc[:, "c"] = [10, 20, 30, 40, 51]
     df_equals(modin_df, pandas_df)
@@ -525,11 +527,19 @@ def test_loc_6774():
     modin_df.loc[2:, "y"] = [30, 40, 51]
     df_equals(modin_df, pandas_df)
 
-    pandas_df.loc[:, ["b", "c", "d"]] = pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]]).transpose().values  # works correctly
-    modin_df.loc[:, ["b", "c", "d"]] = pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]]).transpose().values  # fails
+    pandas_df.loc[:, ["b", "c", "d"]] = (
+        pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
+        .transpose()
+        .values
+    )  # works correctly
+    modin_df.loc[:, ["b", "c", "d"]] = (
+        pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
+        .transpose()
+        .values
+    )  # fails
     df_equals(modin_df, pandas_df)
 
-    
+
 def test_loc_5829():
     data = {"a": [1, 2, 3, 4, 5], "b": [11, 12, 13, 14, 15]}
     modin_df = pd.DataFrame(data, dtype=object)
