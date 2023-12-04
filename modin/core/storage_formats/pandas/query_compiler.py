@@ -61,6 +61,7 @@ from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     ModinDtypes,
+    ModinIndex,
     extract_dtype,
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
