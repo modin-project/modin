@@ -414,8 +414,8 @@ class GroupByReduce(TreeReduce):
             and broadcastable_by.has_materialized_dtypes
         ):
             new_index = ModinIndex(
-                # value can be anything here, as it will be reassigned on a parent update
-                value=query_compiler._modin_frame,
+                # actual value will be assigned on a parent update
+                value=None,
                 axis=0,
                 dtypes=broadcastable_by.dtypes,
             )
