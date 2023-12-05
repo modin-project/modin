@@ -1424,10 +1424,10 @@ def test_apply_full_axis_preserve_widths():
         new_columns=["a", "b", "c", "d"],
         keep_partitioning=True,
     )
-
+    col_widths_cache = res._column_widths_cache
     actual_column_widths = [part.width() for part in res._partitions[0]]
 
-    assert res._column_widths_cache == actual_column_widths
+    assert col_widths_cache == actual_column_widths
     assert res._row_lengths_cache is None
 
 
@@ -1456,9 +1456,10 @@ def test_apply_full_axis_preserve_lengths():
         keep_partitioning=True,
     )
 
+    row_lengths_cache = res._row_lengths_cache
     actual_row_lengths = [part.length() for part in res._partitions[:, 0]]
 
-    assert res._row_lengths_cache == actual_row_lengths
+    assert row_lengths_cache == actual_row_lengths
     assert res._column_widths_cache is None
 
 
