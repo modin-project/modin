@@ -26,7 +26,7 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
-from modin.config import Engine
+from modin.config import Engine, IsExperimental
 from modin.core.io import BaseIO
 from modin.utils import get_current_execution
 
@@ -526,16 +526,6 @@ class BaseFactory(object):
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
 
-@doc(_doc_factory_class, execution_name="cuDFOnRay")
-class CudfOnRayFactory(BaseFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
-    def prepare(cls):
-        from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
-
-        cls.io_cls = cuDFOnRayIO
-
-
 @doc(_doc_factory_class, execution_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):
     @classmethod
@@ -572,30 +562,6 @@ class PandasOnDaskFactory(BaseFactory):
         cls.io_cls = PandasOnDaskIO
 
 
-@doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")
-class PyarrowOnRayFactory(BaseFactory):  # pragma: no cover
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``PyarrowOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.io import (
-            PyarrowOnRayIO,
-        )
-
-        cls.io_cls = PyarrowOnRayIO
-
-
-@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
-class HdkOnNativeFactory(BaseFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
-            HdkOnNativeIO,
-        )
-
-        cls.io_cls = HdkOnNativeIO
-
-
 @doc(_doc_factory_class, execution_name="PandasOnUnidist")
 class PandasOnUnidistFactory(BaseFactory):
     @classmethod
@@ -606,3 +572,49 @@ class PandasOnUnidistFactory(BaseFactory):
         )
 
         cls.io_cls = PandasOnUnidistIO
+
+
+# EXPERIMENTAL EXECUTIONS
+
+
+@doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")
+class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="experimental ``PyarrowOnRayIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.io import (
+            PyarrowOnRayIO,
+        )
+
+        if not IsExperimental.get():
+            raise ValueError("'PyarrowOnRay' only works in experimental mode.")
+
+        cls.io_cls = PyarrowOnRayIO
+
+
+@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
+class ExperimentalHdkOnNativeFactory(BaseFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
+    def prepare(cls):
+        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
+            HdkOnNativeIO,
+        )
+
+        if not IsExperimental.get():
+            raise ValueError("'HdkOnNative' only works in experimental mode.")
+
+        cls.io_cls = HdkOnNativeIO
+
+
+@doc(_doc_factory_class, execution_name="cuDFOnRay")
+class ExperimentalCudfOnRayFactory(BaseFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
+    def prepare(cls):
+        from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
+
+        if not IsExperimental.get():
+            raise ValueError("'CudfOnRay' only works in experimental mode.")
+
+        cls.io_cls = cuDFOnRayIO

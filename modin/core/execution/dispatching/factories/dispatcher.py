@@ -129,22 +129,19 @@ class FactoryDispatcher(object):
             Does not affect the result.
         """
         factory_name = get_current_execution() + "Factory"
+        experimental_factory_name = "Experimental" + factory_name
         try:
-            cls.__factory = getattr(factories, factory_name)
+            cls.__factory = getattr(factories, factory_name, None) or getattr(
+                factories, experimental_factory_name
+            )
         except AttributeError:
             if not IsExperimental.get():
-                # allow missing factories in experimenal mode only
-                if hasattr(factories, "Experimental" + factory_name):
-                    msg = (
-                        "{0} is only accessible through the experimental API.\nRun "
-                        + "`import modin.experimental.pandas as pd` to use {0}."
-                    )
-                else:
-                    msg = (
-                        "Cannot find factory {}. "
-                        + "Potential reason might be incorrect environment variable value for "
-                        + f"{StorageFormat.varname} or {Engine.varname}"
-                    )
+                # allow missing factories in experimental mode only
+                msg = (
+                    "Cannot find factory {}. "
+                    + "Potential reason might be incorrect environment variable value for "
+                    + f"{StorageFormat.varname} or {Engine.varname}"
+                )
                 raise FactoryNotFoundError(msg.format(factory_name))
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
