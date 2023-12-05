@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 
-"""The module is needed to allow the following import `from modin.pandas import errors`."""
+"""The module is needed to allow the following import `import modin.pandas.errors`."""
 
 from pandas.errors import *  # noqa: F403, F401
 from pandas.errors import __all__  # noqa: F401
