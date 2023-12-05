@@ -94,7 +94,9 @@ class PandasOnRayIO(RayIO):
     read_custom_text = __make_read(
         ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )
-    read_sql_distributed = __make_read(ExperimentalSQLDispatcher)
+    read_sql_distributed = __make_read(
+        ExperimentalSQLDispatcher, build_args={**build_args, "base_read": read_sql}
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace

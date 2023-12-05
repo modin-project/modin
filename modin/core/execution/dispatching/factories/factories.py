@@ -26,7 +26,7 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
-from modin.config import Engine, IsExperimental
+from modin.config import Engine
 from modin.core.io import BaseIO
 from modin.utils import get_current_execution
 
@@ -329,33 +329,6 @@ class BaseFactory(object):
         method="read_sql",
     )
     def _read_sql(cls, **kwargs):
-        if IsExperimental.get():
-            supported_engines = ("Ray", "Unidist", "Dask")
-            if Engine.get() not in supported_engines:
-                if "partition_column" in kwargs:
-                    if kwargs["partition_column"] is not None:
-                        warnings.warn(
-                            f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                        )
-                    del kwargs["partition_column"]
-                if "lower_bound" in kwargs:
-                    if kwargs["lower_bound"] is not None:
-                        warnings.warn(
-                            f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                        )
-                    del kwargs["lower_bound"]
-                if "upper_bound" in kwargs:
-                    if kwargs["upper_bound"] is not None:
-                        warnings.warn(
-                            f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                        )
-                    del kwargs["upper_bound"]
-                if "max_sessions" in kwargs:
-                    if kwargs["max_sessions"] is not None:
-                        warnings.warn(
-                            f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                        )
-                    del kwargs["max_sessions"]
         return cls.io_cls.read_sql(**kwargs)
 
     @classmethod
@@ -490,11 +463,32 @@ class BaseFactory(object):
         params=_doc_io_method_kwargs_params,
     )
     def _read_sql_distributed(cls, **kwargs):
-        current_execution = get_current_execution()
-        if current_execution not in supported_execution:
-            raise NotImplementedError(
-                f"`_read_sql_distributed()` is not implemented for {current_execution} execution."
-            )
+        supported_engines = ("Ray", "Unidist", "Dask")
+        if Engine.get() not in supported_engines:
+            if "partition_column" in kwargs:
+                if kwargs["partition_column"] is not None:
+                    warnings.warn(
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
+                    )
+                del kwargs["partition_column"]
+            if "lower_bound" in kwargs:
+                if kwargs["lower_bound"] is not None:
+                    warnings.warn(
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
+                    )
+                del kwargs["lower_bound"]
+            if "upper_bound" in kwargs:
+                if kwargs["upper_bound"] is not None:
+                    warnings.warn(
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
+                    )
+                del kwargs["upper_bound"]
+            if "max_sessions" in kwargs:
+                if kwargs["max_sessions"] is not None:
+                    warnings.warn(
+                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
+                    )
+                del kwargs["max_sessions"]
         return cls.io_cls.read_sql_distributed(**kwargs)
 
     @classmethod
