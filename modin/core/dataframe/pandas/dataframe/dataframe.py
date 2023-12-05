@@ -3272,6 +3272,27 @@ class PandasDataframe(ClassLogger):
                         kw["column_widths"] = self._column_widths_cache
                     elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
                         kw["column_widths"] = [1]
+        else:
+            if (
+                axis == 0
+                and kw["row_lengths"] is None
+                and self._row_lengths_cache is not None
+                and ModinIndex.is_materialized_index(new_index)
+                and len(new_index) == sum(self._row_lengths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(r != 0 for r in self._row_lengths_cache)
+            ):
+                kw["row_lengths"] = self._row_lengths_cache
+            if (
+                axis == 1
+                and kw["column_widths"] is None
+                and self._column_widths_cache is not None
+                and ModinIndex.is_materialized_index(new_columns)
+                and len(new_columns) == sum(self._column_widths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(w != 0 for w in self._column_widths_cache)
+            ):
+                kw["column_widths"] = self._column_widths_cache
 
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
