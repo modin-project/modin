@@ -3171,4 +3171,4 @@ class DataFrame(BasePandasDataset):
     # Persistance support methods - END
 
     # Namespace for experimental functions
-    _exp = CachedAccessor("_exp", ExperimentalFunctions)
+    modin = CachedAccessor("modin", ExperimentalFunctions)

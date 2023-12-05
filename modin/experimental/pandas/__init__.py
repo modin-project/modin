@@ -57,7 +57,7 @@ old_to_pickle_distributed = to_pickle_distributed
 def to_pickle_distributed(*args, **kwargs):
     warnings.warn(
         "`DataFrame.to_pickle_distributed` will be removed after Modin 0.26.0 release. "
-        + "Please use `DataFrame._exp.to_pickle_distributed` instead.",
+        + "Please use `DataFrame.modin.to_pickle_distributed` instead.",
         category=FutureWarning,
     )
     return old_to_pickle_distributed(*args, **kwargs)
