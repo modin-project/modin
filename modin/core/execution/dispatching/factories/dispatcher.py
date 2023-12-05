@@ -258,6 +258,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_sql(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_sql_distributed)
+    def read_sql_distributed(cls, **kwargs):
+        return cls.get_factory()._read_sql_distributed(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_fwf)
     def read_fwf(cls, **kwargs):
         return cls.get_factory()._read_fwf(**kwargs)

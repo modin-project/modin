@@ -486,6 +486,20 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_raw_template,
+        source="SQL files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_sql_distributed(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_execution:
+            raise NotImplementedError(
+                f"`_read_sql_distributed()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_sql_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
         source="Custom text files",
         params=_doc_io_method_kwargs_params,
     )

@@ -115,7 +115,7 @@ def read_sql(
 
     assert IsExperimental.get(), "This only works in experimental mode"
 
-    result = FactoryDispatcher.read_sql(**kwargs)
+    result = FactoryDispatcher.read_sql_distributed(**kwargs)
     if isinstance(result, BaseQueryCompiler):
         return DataFrame(query_compiler=result)
     return (DataFrame(query_compiler=qc) for qc in result)

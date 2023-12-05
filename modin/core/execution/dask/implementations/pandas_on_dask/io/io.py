@@ -47,6 +47,7 @@ from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
     ExperimentalPickleDispatcher,
+    ExperimentalSQLDispatcher,
 )
 
 
@@ -91,6 +92,7 @@ class PandasOnDaskIO(BaseIO):
     read_custom_text = __make_read(
         ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )
+    read_sql_distributed = __make_read(ExperimentalSQLDispatcher)
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace
