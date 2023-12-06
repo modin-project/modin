@@ -1106,4 +1106,6 @@ __all__ = [
     "from_arrow",
     "from_dataframe",
     "to_pickle",
+    "to_pandas",
+    "to_numpy",
 ]
