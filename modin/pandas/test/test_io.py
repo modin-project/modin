@@ -47,9 +47,8 @@ from modin.config import (
 )
 from modin.config.envvars import MinPartitionSize
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.utils import from_arrow
+from modin.pandas.io import from_arrow, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import to_pandas
 
 from .utils import (
     COMP_TO_EXT,

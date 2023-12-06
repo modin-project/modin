@@ -44,12 +44,12 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
+from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     expanduser_path_arg,
     hashable,
-    to_pandas,
     try_cast_to_pandas,
 )
 
@@ -62,8 +62,6 @@ from .utils import (
     SET_DATAFRAME_ATTRIBUTE_WARNING,
     _doc_binary_op,
     cast_function_modin2pandas,
-    from_non_pandas,
-    from_pandas,
 )
 
 

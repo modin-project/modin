@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import types
+import warnings
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import (
@@ -490,46 +491,44 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     return decorator
 
 
-# TODO add proper type annotation
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def func_from_deprecated_location(func_name, module, deprecation_message):
     """
-    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+    Create a function that decorates a function ``module.func_name`` with a ``FutureWarning``.
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin.Series
-        The Modin DataFrame/Series to convert.
+    func_name : str
+        Function name to decorate.
+    module : str
+        Module where the function is located.
+    deprecation_message : str
+        Message to print in a future warning.
 
     Returns
     -------
-    pandas.DataFrame or pandas.Series
-        Converted object with type depending on input.
+    callable
     """
-    return modin_obj._to_pandas()
+
+    def deprecated_func(*args, **kwargs):
+        """Call deprecated function."""
+        func = getattr(importlib.import_module(module), func_name)
+        # using 'FutureWarning' as 'DeprecationWarnings' are filtered out by default
+        warnings.warn(deprecation_message, FutureWarning)
+        return func(*args, **kwargs)
+
+    return deprecated_func
 
 
-def to_numpy(
-    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
-) -> np.ndarray:
-    """
-    Convert a Modin object to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
-        The Modin distributed object to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    if isinstance(modin_obj, SupportsPrivateToNumPy):
-        return modin_obj._to_numpy()
-    array = modin_obj.to_numpy()
-    if ExperimentalNumPyAPI.get():
-        array = array._to_numpy()
-    return array
+to_numpy = func_from_deprecated_location(
+    "to_numpy",
+    "modin.pandas.io",
+    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in 0.28.0 release. This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+to_pandas = func_from_deprecated_location(
+    "to_pandas",
+    "modin.pandas.io",
+    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in 0.28.0 release. This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
 
 
 def hashable(obj: bool) -> bool:

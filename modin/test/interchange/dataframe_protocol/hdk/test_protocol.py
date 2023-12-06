@@ -24,8 +24,8 @@ from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe i
     primitive_column_to_ndarray,
     set_nulls,
 )
+from modin.pandas.io import from_arrow, from_dataframe
 from modin.pandas.test.utils import df_equals
-from modin.pandas.utils import from_arrow, from_dataframe
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import export_frame, get_data_of_all_types, split_df_into_chunks

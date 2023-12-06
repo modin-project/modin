@@ -20,6 +20,7 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     arg_keys,
     axis_keys,
@@ -39,7 +40,6 @@ from modin.pandas.test.utils import (
     test_data_values,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import to_pandas
 
 NPartitions.put(4)
 
