@@ -3809,6 +3809,8 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
+        kwargs = kwargs.copy()
+        kwargs["observed"] = True
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
@@ -3831,9 +3833,10 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
+        drop_dupl_categories = True
 
         # no need aligning columns if there's only one row partition
-        if align_result_columns and result._partitions.shape[0] > 1:
+        if (drop_dupl_categories or align_result_columns) and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
             # partition in the result, so we should never hit this exception for now, however
             # in the future, we might want to make this implementation more broader
@@ -3851,20 +3854,38 @@ class PandasDataframe(ClassLogger):
 
                 def compute_aligned_columns(*dfs):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
-                    valid_dfs = [
-                        df
-                        for df in dfs
-                        if not df.attrs.get(skip_on_aligning_flag, False)
-                    ]
-                    if len(valid_dfs) == 0 and len(dfs) != 0:
-                        valid_dfs = dfs
+                    combined_cols = None
+                    mask = None
+                    if align_result_columns:
+                        valid_dfs = [
+                            df
+                            for df in dfs
+                            if not df.attrs.get(skip_on_aligning_flag, False)
+                        ]
+                        if len(valid_dfs) == 0 and len(dfs) != 0:
+                            valid_dfs = dfs
 
-                    # Using '.concat()' on empty-slices instead of 'Index.join()'
-                    # in order to get identical behavior to pandas when it joins
-                    # results of different groups
-                    return pandas.concat(
-                        [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
-                    ).columns
+                        # Using '.concat()' on empty-slices instead of 'Index.join()'
+                        # in order to get identical behavior to pandas when it joins
+                        # results of different groups
+                        combined_cols = pandas.concat(
+                            [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
+                        ).columns
+                    if drop_dupl_categories:
+                        indices = [df.index for df in dfs]
+                        total_index = indices[0].append(indices[1:])
+                        missing_cats = total_index.categories.difference(total_index.values)
+                        if not kwargs["sort"]:
+                            mask = {len(indices) - 1: missing_cats}
+                            return (combined_cols, mask)
+                        bins = [idx[0] for idx in indices]
+                        parts = (np.digitize(missing_cats, bins) - 1)
+                        parts[parts < 0] = 0
+                        masks = {idx: [] for idx in np.unique(parts)}
+                        for idx, value in zip(parts, missing_cats):
+                            masks[idx].append(value)
+
+                    return (combined_cols, mask)
 
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
@@ -3872,6 +3893,14 @@ class PandasDataframe(ClassLogger):
                 aligned_columns = parts[0].apply(
                     compute_aligned_columns, *[part._data for part in parts[1:]]
                 )
+
+                def apply_aligned(df, args, partition_idx):
+                    combined_cols, mask = args
+                    if combined_cols is not None:
+                        df = df.reindex(columns=combined_cols)
+                    if mask is not None and mask.get(partition_idx) is not None:
+                        values = mask[partition_idx]
+                        
 
                 # Lazily applying aligned columns to partitions
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
