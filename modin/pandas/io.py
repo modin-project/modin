@@ -1033,9 +1033,7 @@ def from_dataframe(df):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(
-        query_compiler=FactoryDispatcher.from_ModinObjects.DataFrame(df)
-    )
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
 def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
