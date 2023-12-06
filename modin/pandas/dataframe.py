@@ -60,6 +60,7 @@ from .iterator import PartitionIterator
 from .series import Series
 from .utils import (
     SET_DATAFRAME_ATTRIBUTE_WARNING,
+    _doc_binary_op,
     cast_function_modin2pandas,
     from_non_pandas,
     from_pandas,
@@ -1162,7 +1163,7 @@ class DataFrame(BasePandasDataset):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = self.__constructor__(other)
-        if on is not None:
+        if on is not None or how == "cross":
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
                     other._query_compiler,
@@ -2719,6 +2720,23 @@ class DataFrame(BasePandasDataset):
         if key not in self:
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
+
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        returns="tuple of two DataFrames",
+    )
+    def __divmod__(self, right):
+        return self._default_to_pandas(pandas.DataFrame.__divmod__, right)
+
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        right="left",
+        returns="tuple of two DataFrames",
+    )
+    def __rdivmod__(self, left):
+        return self._default_to_pandas(pandas.DataFrame.__rdivmod__, left)
 
     __add__ = add
     __iadd__ = add  # pragma: no cover

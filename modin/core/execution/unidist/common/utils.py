@@ -45,8 +45,9 @@ def initialize_unidist():
             unidist.init()
             """,
         )
-        # TODO: allow unidist to inherit env variables on initialization
-        # with set_env(PYTHONWARNINGS="ignore::FutureWarning"):
+        unidist_cfg.MpiRuntimeEnv.put(
+            {"env_vars": {"PYTHONWARNINGS": "ignore::FutureWarning"}}
+        )
         unidist.init()
 
     num_cpus = sum(v["CPU"] for v in unidist.cluster_resources().values())

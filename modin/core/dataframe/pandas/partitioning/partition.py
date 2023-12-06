@@ -209,7 +209,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         If the underlying object is a pandas DataFrame, this will return
         a 2D NumPy array.
         """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
+        return self.apply(lambda df: df.to_numpy(**kwargs)).get()
 
     @staticmethod
     def _iloc(df, row_labels, col_labels):  # noqa: RT01, PR01

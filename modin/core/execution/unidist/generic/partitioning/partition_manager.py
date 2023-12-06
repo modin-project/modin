@@ -42,7 +42,7 @@ class GenericUnidistDataframePartitionManager(PandasDataframePartitionManager):
         """
         if partitions.shape[1] == 1:
             parts = cls.get_objects_from_partitions(partitions.flatten())
-            parts = [part.to_numpy() for part in parts]
+            parts = [part.to_numpy(**kwargs) for part in parts]
         else:
             parts = UnidistWrapper.materialize(
                 [

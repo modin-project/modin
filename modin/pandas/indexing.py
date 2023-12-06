@@ -568,6 +568,9 @@ class _LocationIndexerBase(ClassLogger):
         masked_df = self.df.__constructor__(
             query_compiler=self.qc.getitem_array(row_loc._query_compiler)
         )
+        if isinstance(masked_df, Series):
+            assert col_loc == slice(None)
+            return masked_df
         # Passing `slice(None)` as a row indexer since we've just applied it
         return type(self)(masked_df)[(slice(None), col_loc)]
 
@@ -810,7 +813,7 @@ class _LocIndexer(_LocationIndexerBase):
         ----------
         row_loc : scalar, slice, list, array or tuple
             Row locator.
-        col_loc : scalar, slice, list, array or tuple
+        col_loc : list, array or tuple
             Columns locator.
         item : modin.pandas.DataFrame, modin.pandas.Series or scalar
             Value that should be assigned to located dataset.
@@ -818,12 +821,12 @@ class _LocIndexer(_LocationIndexerBase):
         if is_list_like(item) and not isinstance(item, (DataFrame, Series)):
             item = np.array(item)
             if len(item.shape) == 1:
-                if item.shape[0] != len(col_loc):
+                if len(col_loc) != 1:
                     raise ValueError(
                         "Must have equal len keys and value when setting with an iterable"
                     )
             else:
-                if item.shape != (len(row_loc), len(col_loc)):
+                if item.shape[-1] != len(col_loc):
                     raise ValueError(
                         "Must have equal len keys and value when setting with an iterable"
                     )

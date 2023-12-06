@@ -17,6 +17,7 @@ import functools
 import uuid
 
 import pandas
+from pandas.core.dtypes.common import is_list_like
 from pandas.core.indexes.api import ensure_index
 
 
@@ -26,12 +27,16 @@ class ModinIndex:
 
     Parameters
     ----------
-    value : sequence, PandasDataframe or callable() -> (pandas.Index, list of ints)
+    value : sequence, PandasDataframe or callable() -> (pandas.Index, list of ints), optional
         If a sequence passed this will be considered as the index values.
         If a ``PandasDataframe`` passed then it will be used to lazily extract indices
         when required, note that the `axis` parameter must be passed in this case.
         If a callable passed then it's expected to return a pandas Index and a list of
         partition lengths along the index axis.
+        If ``None`` was passed, the index will be considered an incomplete and will raise
+        a ``RuntimeError`` on an attempt of materialization. To complete the index object
+        you have to use ``.maybe_specify_new_frame_ref()`` method.
+
     axis : int, optional
         Specifies an axis the object represents, serves as an optional hint. This parameter
         must be passed in case value is a ``PandasDataframe``.
@@ -39,7 +44,7 @@ class ModinIndex:
         Materialized dtypes of index levels.
     """
 
-    def __init__(self, value, axis=None, dtypes=None):
+    def __init__(self, value=None, axis=None, dtypes=None):
         from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
         self._is_default_callable = False
@@ -52,6 +57,9 @@ class ModinIndex:
             assert axis is not None
             self._value = self._get_default_callable(value, axis)
             self._is_default_callable = True
+        elif value is None:
+            assert axis is not None
+            self._value = value
         else:
             self._value = ensure_index(value)
 
@@ -128,7 +136,9 @@ class ModinIndex:
         ModinIndex
             New ModinIndex with the reference updated.
         """
-        if not callable(self._value) or not self._is_default_callable:
+        if self._value is not None and (
+            not callable(self._value) or not self._is_default_callable
+        ):
             return self
 
         new_index = self.copy(copy_lengths=True)
@@ -145,7 +155,28 @@ class ModinIndex:
         -------
         bool
         """
-        return isinstance(self._value, pandas.Index)
+        return self.is_materialized_index(self)
+
+    @classmethod
+    def is_materialized_index(cls, index) -> bool:
+        """
+        Check if the passed object represents a materialized index.
+
+        Parameters
+        ----------
+        index : object
+            An object to check.
+
+        Returns
+        -------
+        bool
+        """
+        # importing here to avoid circular import issue
+        from modin.pandas.indexing import is_range_like
+
+        if isinstance(index, cls):
+            index = index._value
+        return is_list_like(index) or is_range_like(index) or isinstance(index, slice)
 
     def get(self, return_lengths=False) -> pandas.Index:
         """
@@ -166,6 +197,10 @@ class ModinIndex:
             if callable(self._value):
                 index, self._lengths_cache = self._value()
                 self._value = ensure_index(index)
+            elif self._value is None:
+                raise RuntimeError(
+                    "It's not allowed to call '.materialize()' before '._value' is specified."
+                )
             else:
                 raise NotImplementedError(type(self._value))
         if return_lengths:
@@ -328,7 +363,7 @@ class ModinIndex:
         ModinIndex
         """
         idx_cache = self._value
-        if not callable(idx_cache):
+        if idx_cache is not None and not callable(idx_cache):
             idx_cache = idx_cache.copy()
         result = ModinIndex(idx_cache, axis=self._axis, dtypes=self._dtypes)
         result._index_id = self._index_id

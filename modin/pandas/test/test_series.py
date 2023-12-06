@@ -1474,6 +1474,10 @@ def test_cumsum(data, skipna):
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
 
 
+def test_cumsum_6771():
+    _ = to_pandas(pd.Series([1, 2, 3], dtype="Int64").cumsum())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data):
     modin_series, pandas_series = create_test_series(data)
@@ -2356,6 +2360,14 @@ def test_loc(data):
     pandas_result = pandas_series.loc[
         (slice(None), 1),
     ]  # fmt: skip
+    df_equals(modin_result, pandas_result)
+
+
+def test_loc_with_boolean_series():
+    modin_series, pandas_series = create_test_series([1, 2, 3])
+    modin_mask, pandas_mask = create_test_series([True, False, False])
+    modin_result = modin_series.loc[modin_mask]
+    pandas_result = pandas_series.loc[pandas_mask]
     df_equals(modin_result, pandas_result)
 
 
@@ -3473,6 +3485,15 @@ def test_to_period():
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
     assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
+
+
+def test_to_numpy_dtype():
+    modin_series, pandas_series = create_test_series(test_data["float_nan_data"])
+    assert_array_equal(
+        modin_series.to_numpy(dtype="int64"),
+        pandas_series.to_numpy(dtype="int64"),
+        strict=True,
+    )
 
 
 @pytest.mark.parametrize(

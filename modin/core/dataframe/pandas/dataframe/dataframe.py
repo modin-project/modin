@@ -1610,57 +1610,6 @@ class PandasDataframe(ClassLogger):
             new_dtypes,
         )
 
-    # Metadata modification methods
-    def add_prefix(self, prefix, axis):
-        """
-        Add a prefix to the current row or column labels.
-
-        Parameters
-        ----------
-        prefix : str
-            The prefix to add.
-        axis : int
-            The axis to update.
-
-        Returns
-        -------
-        PandasDataframe
-            A new dataframe with the updated labels.
-        """
-
-        def new_labels_mapper(x, prefix=str(prefix)):
-            return prefix + str(x)
-
-        if axis == 0:
-            return self.rename(new_row_labels=new_labels_mapper)
-        return self.rename(new_col_labels=new_labels_mapper)
-
-    def add_suffix(self, suffix, axis):
-        """
-        Add a suffix to the current row or column labels.
-
-        Parameters
-        ----------
-        suffix : str
-            The suffix to add.
-        axis : int
-            The axis to update.
-
-        Returns
-        -------
-        PandasDataframe
-            A new dataframe with the updated labels.
-        """
-
-        def new_labels_mapper(x, suffix=str(suffix)):
-            return str(x) + suffix
-
-        if axis == 0:
-            return self.rename(new_row_labels=new_labels_mapper)
-        return self.rename(new_col_labels=new_labels_mapper)
-
-    # END Metadata modification methods
-
     def numeric_columns(self, include_bool=True):
         """
         Return the names of numeric columns in the frame.
@@ -2011,7 +1960,8 @@ class PandasDataframe(ClassLogger):
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]),
+                index=new_axes[1],
             )
 
         result = self.__constructor__(
@@ -2323,7 +2273,6 @@ class PandasDataframe(ClassLogger):
         self,
         new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
         new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
-        level: Optional[Union[int, List[int]]] = None,
     ) -> "PandasDataframe":
         """
         Replace the row and column labels with the specified new labels.
@@ -2334,60 +2283,22 @@ class PandasDataframe(ClassLogger):
             Mapping or callable that relates old row labels to new labels.
         new_col_labels : dictionary or callable, optional
             Mapping or callable that relates old col labels to new labels.
-        level : int, optional
-            Level whose row labels to replace.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe with the new row and column labels.
-
-        Notes
-        -----
-        If level is not specified, the default behavior is to replace row labels in all levels.
         """
-        new_index = self.index.copy()
-
-        def make_label_swapper(label_dict):
-            if isinstance(label_dict, dict):
-                return lambda label: label_dict.get(label, label)
-            return label_dict
-
-        def swap_labels_levels(index_tuple):
-            if isinstance(new_row_labels, dict):
-                return tuple(new_row_labels.get(label, label) for label in index_tuple)
-            return tuple(new_row_labels(label) for label in index_tuple)
-
-        if new_row_labels:
-            swap_row_labels = make_label_swapper(new_row_labels)
-            if isinstance(self.index, pandas.MultiIndex):
-                if level is not None:
-                    new_index.set_levels(
-                        new_index.levels[level].map(swap_row_labels), level
-                    )
-                else:
-                    new_index = new_index.map(swap_labels_levels)
-            else:
-                new_index = new_index.map(swap_row_labels)
-        new_cols = self.columns.copy()
-        if new_col_labels:
-            new_cols = new_cols.map(make_label_swapper(new_col_labels))
-
-        def map_fn(df):
-            return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
-
-        new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
-        new_dtypes = None
-        if self.has_materialized_dtypes:
-            new_dtypes = self.dtypes.set_axis(new_cols)
-        return self.__constructor__(
-            new_parts,
-            new_index,
-            new_cols,
-            self._row_lengths_cache,
-            self._column_widths_cache,
-            new_dtypes,
-        )
+        result = self.copy()
+        if new_row_labels is not None:
+            if callable(new_row_labels):
+                new_row_labels = result.index.map(new_row_labels)
+            result.index = new_row_labels
+        if new_col_labels is not None:
+            if callable(new_col_labels):
+                new_col_labels = result.columns.map(new_col_labels)
+            result.columns = new_col_labels
+        return result
 
     def combine_and_apply(
         self, func, new_index=None, new_columns=None, new_dtypes=None
@@ -3332,7 +3243,9 @@ class PandasDataframe(ClassLogger):
                     )
 
         if not keep_partitioning:
-            if kw["row_lengths"] is None and new_index is not None:
+            if kw["row_lengths"] is None and ModinIndex.is_materialized_index(
+                new_index
+            ):
                 if axis == 0:
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
@@ -3344,7 +3257,9 @@ class PandasDataframe(ClassLogger):
                         kw["row_lengths"] = self._row_lengths_cache
                     elif len(new_index) == 1 and new_partitions.shape[0] == 1:
                         kw["row_lengths"] = [1]
-            if kw["column_widths"] is None and new_columns is not None:
+            if kw["column_widths"] is None and ModinIndex.is_materialized_index(
+                new_columns
+            ):
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
@@ -3357,6 +3272,27 @@ class PandasDataframe(ClassLogger):
                         kw["column_widths"] = self._column_widths_cache
                     elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
                         kw["column_widths"] = [1]
+        else:
+            if (
+                axis == 0
+                and kw["row_lengths"] is None
+                and self._row_lengths_cache is not None
+                and ModinIndex.is_materialized_index(new_index)
+                and len(new_index) == sum(self._row_lengths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(r != 0 for r in self._row_lengths_cache)
+            ):
+                kw["row_lengths"] = self._row_lengths_cache
+            if (
+                axis == 1
+                and kw["column_widths"] is None
+                and self._column_widths_cache is not None
+                and ModinIndex.is_materialized_index(new_columns)
+                and len(new_columns) == sum(self._column_widths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(w != 0 for w in self._column_widths_cache)
+            ):
+                kw["column_widths"] = self._column_widths_cache
 
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
@@ -3799,14 +3735,6 @@ class PandasDataframe(ClassLogger):
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
-            if any(
-                isinstance(dtype, pandas.CategoricalDtype)
-                for dtype in df.dtypes[by].values
-            ):
-                raise NotImplementedError(
-                    "Reshuffling groupby is not yet supported when grouping on a categorical column. "
-                    + "https://github.com/modin-project/modin/issues/5925"
-                )
             result = operator(df.groupby(by, **kwargs))
             if (
                 align_result_columns
