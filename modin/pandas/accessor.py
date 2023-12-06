@@ -22,7 +22,6 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
 import pickle
-import warnings
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
@@ -208,11 +207,6 @@ class ExperimentalFunctions:
     """
 
     def __init__(self, data):
-        warnings.warn(
-            "Thank you for using the Modin Experimental pandas API."
-            + "\nPlease note that some of these APIs deviate from pandas in order to "
-            + "provide improved performance."
-        )
         self._data = data
 
     def to_pickle_distributed(

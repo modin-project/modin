@@ -138,11 +138,13 @@ class FactoryDispatcher(object):
             if not IsExperimental.get():
                 # allow missing factories in experimental mode only
                 msg = (
-                    "Cannot find factory {}. "
+                    "Cannot find neither factory {} nor experimental factory {}. "
                     + "Potential reason might be incorrect environment variable value for "
                     + f"{StorageFormat.varname} or {Engine.varname}"
                 )
-                raise FactoryNotFoundError(msg.format(factory_name))
+                raise FactoryNotFoundError(
+                    msg.format(factory_name, experimental_factory_name)
+                )
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             try:

@@ -26,7 +26,7 @@ import warnings
 import pandas
 from pandas.util._decorators import doc
 
-from modin.config import Engine, IsExperimental
+from modin.config import IsExperimental
 from modin.core.io import BaseIO
 from modin.utils import get_current_execution
 
@@ -93,7 +93,7 @@ _doc_io_method_kwargs_params = """**kwargs : kwargs
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
-supported_execution = (
+supported_executions = (
     "PandasOnRay",
     "PandasOnUnidist",
     "PandasOnDask",
@@ -436,7 +436,7 @@ class BaseFactory(object):
     )
     def _read_csv_glob(cls, **kwargs):
         current_execution = get_current_execution()
-        if current_execution not in supported_execution:
+        if current_execution not in supported_executions:
             raise NotImplementedError(
                 f"`_read_csv_glob()` is not implemented for {current_execution} execution."
             )
@@ -450,7 +450,7 @@ class BaseFactory(object):
     )
     def _read_pickle_distributed(cls, **kwargs):
         current_execution = get_current_execution()
-        if current_execution not in supported_execution:
+        if current_execution not in supported_executions:
             raise NotImplementedError(
                 f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
             )
@@ -463,32 +463,23 @@ class BaseFactory(object):
         params=_doc_io_method_kwargs_params,
     )
     def _read_sql_distributed(cls, **kwargs):
-        supported_engines = ("Ray", "Unidist", "Dask")
-        if Engine.get() not in supported_engines:
-            if "partition_column" in kwargs:
-                if kwargs["partition_column"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["partition_column"]
-            if "lower_bound" in kwargs:
-                if kwargs["lower_bound"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["lower_bound"]
-            if "upper_bound" in kwargs:
-                if kwargs["upper_bound"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["upper_bound"]
-            if "max_sessions" in kwargs:
-                if kwargs["max_sessions"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["max_sessions"]
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            extra_parameters = (
+                "partition_column",
+                "lower_bound",
+                "upper_bound",
+                "max_sessions",
+            )
+            if any(
+                param in kwargs and kwargs[param] is not None
+                for param in extra_parameters
+            ):
+                warnings.warn(
+                    f"Distributed read_sql() was only implemented for {', '.join(supported_executions)} executions."
+                )
+            for param in extra_parameters:
+                del kwargs[param]
             return cls.io_cls.read_sql(**kwargs)
         return cls.io_cls.read_sql_distributed(**kwargs)
 
@@ -500,7 +491,7 @@ class BaseFactory(object):
     )
     def _read_custom_text(cls, **kwargs):
         current_execution = get_current_execution()
-        if current_execution not in supported_execution:
+        if current_execution not in supported_executions:
             raise NotImplementedError(
                 f"`_read_custom_text()` is not implemented for {current_execution} execution."
             )
@@ -519,7 +510,7 @@ class BaseFactory(object):
             Arguments to the writer method.
         """
         current_execution = get_current_execution()
-        if current_execution not in supported_execution:
+        if current_execution not in supported_executions:
             raise NotImplementedError(
                 f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
             )
@@ -574,7 +565,9 @@ class PandasOnUnidistFactory(BaseFactory):
         cls.io_cls = PandasOnUnidistIO
 
 
-# EXPERIMENTAL EXECUTIONS
+# EXPERIMENTAL FACTORIES
+# Factories that operate only in experimental mode. They provide access to executions
+# that have little coverage of implemented functionality or are not stable enough.
 
 
 @doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")

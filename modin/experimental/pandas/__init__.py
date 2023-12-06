@@ -64,9 +64,3 @@ def to_pickle_distributed(*args, **kwargs):
 
 
 setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
-
-warnings.warn(
-    "Thank you for using the Modin Experimental pandas API."
-    + "\nPlease note that some of these APIs deviate from pandas in order to "
-    + "provide improved performance."
-)
