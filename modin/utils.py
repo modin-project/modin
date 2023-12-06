@@ -49,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, ExperimentalNumPyAPI, IsExperimental, StorageFormat
+from modin.config import Engine, IsExperimental, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -491,7 +491,9 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     return decorator
 
 
-def func_from_deprecated_location(func_name, module, deprecation_message):
+def func_from_deprecated_location(
+    func_name: str, module: str, deprecation_message: str
+) -> Callable:
     """
     Create a function that decorates a function ``module.func_name`` with a ``FutureWarning``.
 
@@ -509,7 +511,7 @@ def func_from_deprecated_location(func_name, module, deprecation_message):
     callable
     """
 
-    def deprecated_func(*args, **kwargs):
+    def deprecated_func(*args: tuple[Any], **kwargs: dict[Any, Any]) -> Any:
         """Call deprecated function."""
         func = getattr(importlib.import_module(module), func_name)
         # using 'FutureWarning' as 'DeprecationWarnings' are filtered out by default
