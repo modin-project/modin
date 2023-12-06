@@ -3735,14 +3735,6 @@ class PandasDataframe(ClassLogger):
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
-            if any(
-                isinstance(dtype, pandas.CategoricalDtype)
-                for dtype in df.dtypes[by].values
-            ):
-                raise NotImplementedError(
-                    "Reshuffling groupby is not yet supported when grouping on a categorical column. "
-                    + "https://github.com/modin-project/modin/issues/5925"
-                )
             result = operator(df.groupby(by, **kwargs))
             if (
                 align_result_columns

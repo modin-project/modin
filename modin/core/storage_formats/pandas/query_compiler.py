@@ -66,6 +66,7 @@ from modin.core.dataframe.pandas.metadata import (
 )
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.logging import get_logger
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
@@ -3782,12 +3783,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        # So this check works only if we have dtypes cache materialized, otherwise the exception will be thrown
-        # inside the kernel and so it will be uncatchable. TODO: figure out a better way to handle this.
-        if self._modin_frame._dtypes is not None and any(
-            isinstance(dtype, pandas.CategoricalDtype)
-            for dtype in self.dtypes[by].values
-        ):
+        # This check materializes dtypes for 'by' columns
+        if isinstance(self._modin_frame._dtypes, ModinDtypes):
+            by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
+        else:
+            by_dtypes = self.dtypes[by]
+        if any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
             raise NotImplementedError(
                 "Reshuffling groupby is not yet supported when grouping on a categorical column. "
                 + "https://github.com/modin-project/modin/issues/5925"
@@ -3960,7 +3961,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if ExperimentalGroupbyImpl.get():
+        # 'group_wise' means 'groupby.apply()'. We're certain that range-partitioning groupby
+        # always works better for '.apply()', so we're using it regardless of the 'ExperimentalGroupbyImpl'
+        # value
+        if how == "group_wise" or ExperimentalGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3973,10 +3977,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     how=how,
                 )
             except NotImplementedError as e:
-                ErrorMessage.warn(
+                # if a user wants to use range-partitioning groupby explicitly, then we should print a visible
+                # warning to them on a failure, otherwise we're only logging it
+                message = (
                     f"Can't use experimental reshuffling groupby implementation because of: {e}"
                     + "\nFalling back to a full-axis implementation."
                 )
+                get_logger().info(message)
+                if ExperimentalGroupbyImpl.get():
+                    ErrorMessage.warn(message)
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
             return self._groupby_dict_reduce(
