@@ -45,6 +45,7 @@ from modin.experimental.core.execution.native.implementations.hdk_on_native.df_a
 from modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager import (
     HdkOnNativeDataframePartitionManager,
 )
+from modin.pandas.io import from_arrow
 from modin.pandas.test.utils import (
     bool_arg_values,
     df_equals,
@@ -56,7 +57,6 @@ from modin.pandas.test.utils import (
     time_parsing_csv_path,
     to_pandas,
 )
-from modin.pandas.utils import from_arrow
 from modin.utils import try_cast_to_pandas
 
 # Our configuration in pytest.ini requires that we explicitly catch all

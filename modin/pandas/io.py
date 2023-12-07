@@ -28,6 +28,7 @@ import pickle
 from collections import OrderedDict
 from typing import (
     IO,
+    TYPE_CHECKING,
     Any,
     AnyStr,
     Callable,
@@ -43,6 +44,7 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import pandas
 from pandas._libs.lib import NoDefault, no_default
 from pandas._typing import (
@@ -63,12 +65,37 @@ from pandas._typing import (
 from pandas.io.parsers import TextFileReader
 from pandas.io.parsers.readers import _c_parser_defaults
 
+from modin.config import ExperimentalNumPyAPI
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
-from modin.utils import _inherit_docstrings, expanduser_path_arg
+from modin.utils import (
+    SupportsPrivateToNumPy,
+    SupportsPrivateToPandas,
+    SupportsPublicToNumPy,
+    _inherit_docstrings,
+    classproperty,
+    expanduser_path_arg,
+)
 
-from .dataframe import DataFrame
-from .series import Series
+# below logic is to handle circular imports without errors
+if TYPE_CHECKING:
+    from .dataframe import DataFrame
+    from .series import Series
+
+
+class ModinObjects:
+    """Lazily import Modin classes and provide an access to them."""
+
+    _dataframe = None
+
+    @classproperty
+    def DataFrame(cls):
+        """Get ``modin.pandas.DataFrame`` class."""
+        if cls._dataframe is None:
+            from .dataframe import DataFrame
+
+            cls._dataframe = DataFrame
+        return cls._dataframe
 
 
 def _read(**kwargs):
@@ -91,11 +118,11 @@ def _read(**kwargs):
     # This happens when `read_csv` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, TextFileReader):
         reader = pd_obj.read
-        pd_obj.read = lambda *args, **kwargs: DataFrame(
+        pd_obj.read = lambda *args, **kwargs: ModinObjects.DataFrame(
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
-    result = DataFrame(query_compiler=pd_obj)
+    result = ModinObjects.DataFrame(query_compiler=pd_obj)
     if squeeze:
         return result.squeeze(axis=1)
     return result
@@ -122,10 +149,10 @@ def read_xml(
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> DataFrame:
+) -> "DataFrame":
     ErrorMessage.default_to_pandas("read_xml")
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
-    return DataFrame(pandas.read_xml(**kwargs))
+    return ModinObjects.DataFrame(pandas.read_xml(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_csv, apilink="pandas.read_csv")
@@ -190,7 +217,7 @@ def read_csv(
     float_precision: Literal["high", "legacy"] | None = None,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> DataFrame | TextFileReader:
+) -> "DataFrame" | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -262,7 +289,7 @@ def read_table(
     float_precision: str | None = None,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> DataFrame | TextFileReader:
+) -> "DataFrame" | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_table_signature = {
         val.name for val in inspect.signature(pandas.read_table).parameters.values()
@@ -287,7 +314,7 @@ def read_parquet(
     filesystem=None,
     filters=None,
     **kwargs,
-) -> DataFrame:
+) -> "DataFrame":
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if engine == "fastparquet" and dtype_backend is not no_default:
@@ -295,7 +322,7 @@ def read_parquet(
             "The 'dtype_backend' argument is not supported for the fastparquet engine"
         )
 
-    return DataFrame(
+    return ModinObjects.DataFrame(
         query_compiler=FactoryDispatcher.read_parquet(
             path=path,
             engine=engine,
@@ -333,12 +360,12 @@ def read_json(
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     engine="ujson",
-) -> DataFrame | Series | pandas.io.json._json.JsonReader:
+) -> "DataFrame" | "Series" | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_json(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_gbq, apilink="pandas.read_gbq")
@@ -357,13 +384,13 @@ def read_gbq(
     use_bqstorage_api: bool | None = None,
     max_results: int | None = None,
     progress_bar_type: str | None = None,
-) -> DataFrame:
+) -> "DataFrame":
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_gbq(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_html, apilink="pandas.read_html")
@@ -389,7 +416,7 @@ def read_html(
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     storage_options: StorageOptions = None,
-) -> list[DataFrame]:  # noqa: PR01, RT01, D200
+) -> list["DataFrame"]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
     """
@@ -398,7 +425,7 @@ def read_html(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     qcs = FactoryDispatcher.read_html(**kwargs)
-    return [DataFrame(query_compiler=qc) for qc in qcs]
+    return [ModinObjects.DataFrame(query_compiler=qc) for qc in qcs]
 
 
 @_inherit_docstrings(pandas.read_clipboard, apilink="pandas.read_clipboard")
@@ -416,7 +443,9 @@ def read_clipboard(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_clipboard(**kwargs))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.read_clipboard(**kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.read_excel, apilink="pandas.read_excel")
@@ -456,7 +485,7 @@ def read_excel(
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     engine_kwargs: Optional[dict] = None,
-) -> DataFrame | dict[IntStrT, DataFrame]:
+) -> "DataFrame" | dict[IntStrT, "DataFrame"]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -465,10 +494,10 @@ def read_excel(
     if isinstance(intermediate, (OrderedDict, dict)):
         parsed = type(intermediate)()
         for key in intermediate.keys():
-            parsed[key] = DataFrame(query_compiler=intermediate.get(key))
+            parsed[key] = ModinObjects.DataFrame(query_compiler=intermediate.get(key))
         return parsed
     else:
-        return DataFrame(query_compiler=intermediate)
+        return ModinObjects.DataFrame(query_compiler=intermediate)
 
 
 @_inherit_docstrings(pandas.read_hdf, apilink="pandas.read_hdf")
@@ -495,7 +524,7 @@ def read_hdf(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_hdf(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_feather, apilink="pandas.read_feather")
@@ -512,7 +541,9 @@ def read_feather(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_feather(**kwargs))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.read_feather(**kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.read_stata)
@@ -532,12 +563,12 @@ def read_stata(
     iterator: bool = False,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
-) -> DataFrame | pandas.io.stata.StataReader:
+) -> "DataFrame" | pandas.io.stata.StataReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_stata(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_sas, apilink="pandas.read_sas")
@@ -552,13 +583,13 @@ def read_sas(
     chunksize: int | None = None,
     iterator: bool = False,
     compression: CompressionOptions = "infer",
-) -> DataFrame | pandas.io.sas.sasreader.ReaderBase:  # noqa: PR01, RT01, D200
+) -> "DataFrame" | pandas.io.sas.sasreader.ReaderBase:  # noqa: PR01, RT01, D200
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
+    return ModinObjects.DataFrame(
         query_compiler=FactoryDispatcher.read_sas(
             filepath_or_buffer=filepath_or_buffer,
             format=format,
@@ -583,7 +614,9 @@ def read_pickle(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_pickle(**kwargs))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.read_pickle(**kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.read_sql, apilink="pandas.read_sql")
@@ -611,9 +644,10 @@ def read_sql(
         ErrorMessage.default_to_pandas("Parameters provided [chunksize]")
         df_gen = pandas.read_sql(**kwargs)
         return (
-            DataFrame(query_compiler=FactoryDispatcher.from_pandas(df)) for df in df_gen
+            ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
+            for df in df_gen
         )
-    return DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.read_sql(**kwargs))
 
 
 @_inherit_docstrings(pandas.read_fwf, apilink="pandas.read_fwf")
@@ -643,11 +677,11 @@ def read_fwf(
     # When `read_fwf` returns a TextFileReader object for iterating through
     if isinstance(pd_obj, TextFileReader):
         reader = pd_obj.read
-        pd_obj.read = lambda *args, **kwargs: DataFrame(
+        pd_obj.read = lambda *args, **kwargs: ModinObjects.DataFrame(
             query_compiler=reader(*args, **kwargs)
         )
         return pd_obj
-    return DataFrame(query_compiler=pd_obj)
+    return ModinObjects.DataFrame(query_compiler=pd_obj)
 
 
 @_inherit_docstrings(pandas.read_sql_table, apilink="pandas.read_sql_table")
@@ -670,7 +704,9 @@ def read_sql_table(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_sql_table(**kwargs))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.read_sql_table(**kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.read_sql_query, apilink="pandas.read_sql_query")
@@ -685,12 +721,14 @@ def read_sql_query(
     chunksize: int | None = None,
     dtype: DtypeArg | None = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> DataFrame | Iterator[DataFrame]:
+) -> "DataFrame" | Iterator["DataFrame"]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_sql_query(**kwargs))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.read_sql_query(**kwargs)
+    )
 
 
 @_inherit_docstrings(pandas.to_pickle)
@@ -705,7 +743,7 @@ def to_pickle(
 ) -> None:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    if isinstance(obj, DataFrame):
+    if isinstance(obj, ModinObjects.DataFrame):
         obj = obj._query_compiler
     return FactoryDispatcher.to_pickle(
         obj,
@@ -730,7 +768,7 @@ def read_spss(
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(
+    return ModinObjects.DataFrame(
         query_compiler=FactoryDispatcher.read_spss(
             path=path,
             usecols=usecols,
@@ -751,12 +789,12 @@ def json_normalize(
     errors: Optional[str] = "raise",
     sep: str = ".",
     max_level: Optional[int] = None,
-) -> DataFrame:  # noqa: PR01, RT01, D200
+) -> "DataFrame":  # noqa: PR01, RT01, D200
     """
     Normalize semi-structured JSON data into a flat table.
     """
     ErrorMessage.default_to_pandas("json_normalize")
-    return DataFrame(
+    return ModinObjects.DataFrame(
         pandas.json_normalize(
             data, record_path, meta, meta_prefix, record_prefix, errors, sep, max_level
         )
@@ -772,12 +810,12 @@ def read_orc(
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     filesystem=None,
     **kwargs,
-) -> DataFrame:  # noqa: PR01, RT01, D200
+) -> "DataFrame":  # noqa: PR01, RT01, D200
     """
     Load an ORC object from the file path, returning a DataFrame.
     """
     ErrorMessage.default_to_pandas("read_orc")
-    return DataFrame(
+    return ModinObjects.DataFrame(
         pandas.read_orc(
             path,
             columns=columns,
@@ -819,25 +857,25 @@ class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
                     does not accept Modin DataFrame objects, so we must convert to
                     pandas.
                     """
-                    from modin.utils import to_pandas
-
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
                         ErrorMessage.default_to_pandas("`{}`".format(item))
                     args = [
-                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        to_pandas(arg)
+                        if isinstance(arg, ModinObjects.DataFrame)
+                        else arg
                         for arg in args
                     ]
                     kwargs = {
-                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        k: to_pandas(v) if isinstance(v, ModinObjects.DataFrame) else v
                         for k, v in kwargs.items()
                     }
                     obj = super(HDFStore, self).__getattribute__(item)(*args, **kwargs)
                     if self._return_modin_dataframe and isinstance(
                         obj, pandas.DataFrame
                     ):
-                        return DataFrame(obj)
+                        return ModinObjects.DataFrame(obj)
                     return obj
 
                 # We replace the method with `return_handler` for inplace operations
@@ -883,28 +921,156 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
                     methods of ExcelFile with the pandas equivalent. It will convert
                     Modin DataFrame to pandas DataFrame, etc.
                     """
-                    from modin.utils import to_pandas
-
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
                         ErrorMessage.default_to_pandas("`{}`".format(item))
                     args = [
-                        to_pandas(arg) if isinstance(arg, DataFrame) else arg
+                        to_pandas(arg)
+                        if isinstance(arg, ModinObjects.DataFrame)
+                        else arg
                         for arg in args
                     ]
                     kwargs = {
-                        k: to_pandas(v) if isinstance(v, DataFrame) else v
+                        k: to_pandas(v) if isinstance(v, ModinObjects.DataFrame) else v
                         for k, v in kwargs.items()
                     }
                     obj = super(ExcelFile, self).__getattribute__(item)(*args, **kwargs)
                     if isinstance(obj, pandas.DataFrame):
-                        return DataFrame(obj)
+                        return ModinObjects.DataFrame(obj)
                     return obj
 
                 # We replace the method with `return_handler` for inplace operations
                 method = return_handler
         return method
+
+
+def from_non_pandas(df, index, columns, dtype):
+    """
+    Convert a non-pandas DataFrame into Modin DataFrame.
+
+    Parameters
+    ----------
+    df : object
+        Non-pandas DataFrame.
+    index : object
+        Index for non-pandas DataFrame.
+    columns : object
+        Columns for non-pandas DataFrame.
+    dtype : type
+        Data type to force.
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+        Converted DataFrame.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    new_qc = FactoryDispatcher.from_non_pandas(df, index, columns, dtype)
+    if new_qc is not None:
+        return ModinObjects.DataFrame(query_compiler=new_qc)
+    return new_qc
+
+
+def from_pandas(df):
+    """
+    Convert a pandas DataFrame to a Modin DataFrame.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The pandas DataFrame to convert.
+
+    Returns
+    -------
+    modin.pandas.DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
+
+
+def from_arrow(at):
+    """
+    Convert an Arrow Table to a Modin DataFrame.
+
+    Parameters
+    ----------
+    at : Arrow Table
+        The Arrow Table to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
+
+
+def from_dataframe(df):
+    """
+    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
+
+    See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
+
+    Parameters
+    ----------
+    df : DataFrame
+        The DataFrame object supporting the dataframe exchange protocol.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
+
+
+def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+    """
+    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+
+    Parameters
+    ----------
+    modin_obj : modin.DataFrame, modin.Series
+        The Modin DataFrame/Series to convert.
+
+    Returns
+    -------
+    pandas.DataFrame or pandas.Series
+        Converted object with type depending on input.
+    """
+    return modin_obj._to_pandas()
+
+
+def to_numpy(
+    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
+) -> np.ndarray:
+    """
+    Convert a Modin object to a NumPy array.
+
+    Parameters
+    ----------
+    modin_obj : modin.DataFrame, modin."Series", modin.numpy.array
+        The Modin distributed object to convert.
+
+    Returns
+    -------
+    numpy.array
+        Converted object with type depending on input.
+    """
+    if isinstance(modin_obj, SupportsPrivateToNumPy):
+        return modin_obj._to_numpy()
+    array = modin_obj.to_numpy()
+    if ExperimentalNumPyAPI.get():
+        array = array._to_numpy()
+    return array
 
 
 __all__ = [
@@ -931,5 +1097,11 @@ __all__ = [
     "read_stata",
     "read_table",
     "read_xml",
+    "from_non_pandas",
+    "from_pandas",
+    "from_arrow",
+    "from_dataframe",
     "to_pickle",
+    "to_pandas",
+    "to_numpy",
 ]

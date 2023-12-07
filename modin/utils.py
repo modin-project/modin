@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import types
+import warnings
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import (
@@ -48,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, IsExperimental, NumpyOnModin, StorageFormat
+from modin.config import Engine, IsExperimental, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -490,46 +491,48 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     return decorator
 
 
-# TODO add proper type annotation
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def func_from_deprecated_location(
+    func_name: str, module: str, deprecation_message: str
+) -> Callable:
     """
-    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+    Create a function that decorates a function ``module.func_name`` with a ``FutureWarning``.
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin.Series
-        The Modin DataFrame/Series to convert.
+    func_name : str
+        Function name to decorate.
+    module : str
+        Module where the function is located.
+    deprecation_message : str
+        Message to print in a future warning.
 
     Returns
     -------
-    pandas.DataFrame or pandas.Series
-        Converted object with type depending on input.
+    callable
     """
-    return modin_obj._to_pandas()
+
+    def deprecated_func(*args: tuple[Any], **kwargs: dict[Any, Any]) -> Any:
+        """Call deprecated function."""
+        func = getattr(importlib.import_module(module), func_name)
+        # using 'FutureWarning' as 'DeprecationWarnings' are filtered out by default
+        warnings.warn(deprecation_message, FutureWarning)
+        return func(*args, **kwargs)
+
+    return deprecated_func
 
 
-def to_numpy(
-    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
-) -> np.ndarray:
-    """
-    Convert a Modin object to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
-        The Modin distributed object to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    if isinstance(modin_obj, SupportsPrivateToNumPy):
-        return modin_obj._to_numpy()
-    array = modin_obj.to_numpy()
-    if NumpyOnModin.get():
-        array = array._to_numpy()
-    return array
+to_numpy = func_from_deprecated_location(
+    "to_numpy",
+    "modin.pandas.io",
+    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+to_pandas = func_from_deprecated_location(
+    "to_pandas",
+    "modin.pandas.io",
+    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
 
 
 def hashable(obj: bool) -> bool:
@@ -847,3 +850,30 @@ class ModinAssumptionError(Exception):
     """An exception that allows us defaults to pandas if any assumption fails."""
 
     pass
+
+
+class classproperty:
+    """
+    Decorator that allows creating read-only class properties.
+
+    Parameters
+    ----------
+    func : method
+
+    Examples
+    --------
+    >>> class A:
+    ...     field = 10
+    ...     @classproperty
+    ...     def field_x2(cls):
+    ...             return cls.field * 2
+    ...
+    >>> print(A.field_x2)
+    20
+    """
+
+    def __init__(self, func: Any):
+        self.fget = func
+
+    def __get__(self, instance: Any, owner: Any) -> Any:  # noqa: GL08
+        return self.fget(owner)

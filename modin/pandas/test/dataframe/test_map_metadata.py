@@ -602,7 +602,7 @@ class TestCategoricalProxyDtype:
         elif StorageFormat.get() == "Hdk":
             import pyarrow as pa
 
-            from modin.pandas.utils import from_arrow
+            from modin.pandas.io import from_arrow
 
             at = pa.concat_tables(
                 [

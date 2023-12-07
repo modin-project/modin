@@ -28,8 +28,9 @@ from pandas.errors import SpecificationError
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import get_current_execution, to_pandas, try_cast_to_pandas
+from modin.utils import get_current_execution, try_cast_to_pandas
 
 from .utils import (
     RAND_HIGH,

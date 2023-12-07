@@ -32,13 +32,14 @@ from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings, to_pandas
+from modin.pandas.io import from_pandas, to_pandas
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
 from .accessor import CachedAccessor, SparseAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .iterator import PartitionIterator
 from .series_utils import CategoryMethods, DatetimeProperties, StringMethods
-from .utils import _doc_binary_op, cast_function_modin2pandas, from_pandas, is_scalar
+from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
     from .dataframe import DataFrame
