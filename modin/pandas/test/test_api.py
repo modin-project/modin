@@ -39,7 +39,6 @@ def test_top_level_api_equality():
         "arrays",
         "api",
         "tseries",
-        "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished
         "Panel",  # This is deprecated and throws a warning every time.
         "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
