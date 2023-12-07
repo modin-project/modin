@@ -48,7 +48,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, ExperimentalNumPyAPI, IsExperimental, StorageFormat
+from modin.config import Engine, IsExperimental, NumpyOnModin, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -527,7 +527,7 @@ def to_numpy(
     if isinstance(modin_obj, SupportsPrivateToNumPy):
         return modin_obj._to_numpy()
     array = modin_obj.to_numpy()
-    if ExperimentalNumPyAPI.get():
+    if NumpyOnModin.get():
         array = array._to_numpy()
     return array
 

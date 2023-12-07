@@ -16,7 +16,7 @@
 import numpy as np
 import pandas
 
-from modin.config import ExperimentalGroupbyImpl
+from modin.config import RangePartitioningGroupbyImpl
 from modin.core.dataframe.algebra import GroupByReduce
 from modin.error_message import ErrorMessage
 from modin.utils import hashable
@@ -93,7 +93,7 @@ class GroupbyReduceImpl:
         )
 
         def method(query_compiler, *args, **kwargs):
-            if ExperimentalGroupbyImpl.get():
+            if RangePartitioningGroupbyImpl.get():
                 try:
                     if finalizer_fn is not None:
                         raise NotImplementedError(
@@ -104,7 +104,7 @@ class GroupbyReduceImpl:
                     )
                 except NotImplementedError as e:
                     ErrorMessage.warn(
-                        f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                        f"Can't use reshuffling groupby implementation because of: {e}"
                         + "\nFalling back to a TreeReduce implementation."
                     )
             return map_reduce_method(query_compiler, *args, **kwargs)

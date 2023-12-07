@@ -495,9 +495,9 @@ class Series(BasePandasDataset):
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
-            from modin.config import ExperimentalNumPyAPI
+            from modin.config import NumpyOnModin
 
-            if ExperimentalNumPyAPI.get():
+            if NumpyOnModin.get():
                 data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
@@ -1913,9 +1913,9 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        from modin.config import ExperimentalNumPyAPI
+        from modin.config import NumpyOnModin
 
-        if not ExperimentalNumPyAPI.get():
+        if not NumpyOnModin.get():
             return (
                 super(Series, self)
                 .to_numpy(

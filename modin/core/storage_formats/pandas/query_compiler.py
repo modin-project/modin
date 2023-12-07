@@ -43,7 +43,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError, MergeError
 
-from modin.config import CpuCount, ExperimentalGroupbyImpl
+from modin.config import CpuCount, RangePartitioningGroupbyImpl
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -3521,7 +3521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        if ExperimentalGroupbyImpl.get():
+        if RangePartitioningGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3534,7 +3534,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    f"Can't use reshuffling groupby implementation because of: {e}"
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
@@ -3592,7 +3592,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
-        if ExperimentalGroupbyImpl.get():
+        if RangePartitioningGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3605,7 +3605,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    f"Can't use reshuffling groupby implementation because of: {e}"
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
@@ -3962,9 +3962,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # 'group_wise' means 'groupby.apply()'. We're certain that range-partitioning groupby
-        # always works better for '.apply()', so we're using it regardless of the 'ExperimentalGroupbyImpl'
+        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioningGroupbyImpl'
         # value
-        if how == "group_wise" or ExperimentalGroupbyImpl.get():
+        if how == "group_wise" or RangePartitioningGroupbyImpl.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3980,11 +3980,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # if a user wants to use range-partitioning groupby explicitly, then we should print a visible
                 # warning to them on a failure, otherwise we're only logging it
                 message = (
-                    f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                    f"Can't use reshuffling groupby implementation because of: {e}"
                     + "\nFalling back to a full-axis implementation."
                 )
                 get_logger().info(message)
-                if ExperimentalGroupbyImpl.get():
+                if RangePartitioningGroupbyImpl.get():
                     ErrorMessage.warn(message)
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):

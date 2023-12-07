@@ -20,7 +20,12 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, ExperimentalGroupbyImpl, MinPartitionSize, NPartitions
+from modin.config import (
+    Engine,
+    MinPartitionSize,
+    NPartitions,
+    RangePartitioningGroupbyImpl,
+)
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -1130,7 +1135,7 @@ def test_setitem_unhashable_preserve_dtypes():
 
 
 @pytest.mark.parametrize(
-    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+    "modify_config", [{RangePartitioningGroupbyImpl: True}], indirect=True
 )
 def test_groupby_size_shuffling(modify_config):
     # verifies that 'groupby.size()' works with reshuffling implementation
@@ -2404,7 +2409,7 @@ class TestZeroComputationDtypes:
             assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
             # case 2: ExperimentalImpl impl, Series as an output of groupby
-            ExperimentalGroupbyImpl.put(True)
+            RangePartitioningGroupbyImpl.put(True)
             try:
                 df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
                 res = df.groupby("a").size().reset_index(name="new_name")
@@ -2412,7 +2417,7 @@ class TestZeroComputationDtypes:
                 assert "a" in res_dtypes._known_dtypes
                 assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
             finally:
-                ExperimentalGroupbyImpl.put(False)
+                RangePartitioningGroupbyImpl.put(False)
 
             # case 3: MapReduce impl, DataFrame as an output of groupby
             df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
@@ -2422,7 +2427,7 @@ class TestZeroComputationDtypes:
             assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
             # case 4: ExperimentalImpl impl, DataFrame as an output of groupby
-            ExperimentalGroupbyImpl.put(True)
+            RangePartitioningGroupbyImpl.put(True)
             try:
                 df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
                 res = df.groupby("a").sum().reset_index()
@@ -2430,7 +2435,7 @@ class TestZeroComputationDtypes:
                 assert "a" in res_dtypes._known_dtypes
                 assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
             finally:
-                ExperimentalGroupbyImpl.put(False)
+                RangePartitioningGroupbyImpl.put(False)
 
             # case 5: FullAxis impl, DataFrame as an output of groupby
             df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
