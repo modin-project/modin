@@ -44,7 +44,8 @@ from pandas.testing import (
 
 import modin.pandas as pd
 from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
-from modin.utils import to_pandas, try_cast_to_pandas
+from modin.pandas.io import to_pandas
+from modin.utils import try_cast_to_pandas
 
 # Flag activated on command line with "--extra-test-parameters" option.
 # Used in some tests to perform additional parameter combinations.

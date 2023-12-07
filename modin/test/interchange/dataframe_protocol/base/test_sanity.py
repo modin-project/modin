@@ -41,7 +41,7 @@ def test_basic_io(get_unique_base_execution):
     query_compiler_cls.from_dataframe = dummy_io_method
     query_compiler_cls.to_dataframe = dummy_io_method
 
-    from modin.pandas.utils import from_dataframe
+    from modin.pandas.io import from_dataframe
 
     with pytest.raises(TestPassed):
         from_dataframe(None)
