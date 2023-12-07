@@ -2433,6 +2433,12 @@ class Series(BasePandasDataset):
             new_other = other
         return new_self, new_other
 
+    def __arrow_array__(self, type=None):
+        # convert the underlying array values to a pyarrow Array
+        import pyarrow
+
+        return pyarrow.array(self._to_pandas(), type=type)
+
     def _getitem(self, key):
         """
         Get the data specified by `key` for this Series.

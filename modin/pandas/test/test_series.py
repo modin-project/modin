@@ -20,6 +20,7 @@ import matplotlib
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
+import pyarrow as pa
 import pytest
 from numpy.testing import assert_array_equal
 from pandas._testing import assert_series_equal
@@ -1965,6 +1966,17 @@ def test_equals_with_nans():
     ser1 = pd.Series([0, 1, None], dtype="uint8[pyarrow]")
     ser2 = pd.Series([None, None, None], dtype="uint8[pyarrow]")
     assert not ser1.equals(ser2)
+
+
+def test___arrow_array__():
+    # GH#6808
+    mpd_df_1 = pd.DataFrame({"a": ["1", "2", "3"], "b": ["4", "5", "6"]})
+    mpd_df_2 = pd.DataFrame({"a": ["7", "8", "9"], "b": ["10", "11", "12"]})
+    test_df = pd.concat([mpd_df_1, mpd_df_2])
+
+    res_from_md = pa.Table.from_pandas(df=test_df)
+    res_from_pd = pa.Table.from_pandas(df=test_df._to_pandas())
+    assert res_from_md.equals(res_from_pd)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
