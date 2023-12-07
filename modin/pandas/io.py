@@ -88,14 +88,26 @@ class ModinObjects:
     _dataframe = None
 
     @classmethod
-    @property
-    def DataFrame(cls):
-        """Get ``modin.pandas.DataFrame`` class."""
+    def DataFrame(cls, *args, **kwargs):
+        """
+        Build ``modin.pandas.DataFrame`` object with the passed arguments.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments to pass to the ``modin.pandas.DataFrame`` constructor.
+        **kwargs : dict
+            Keyword arguments to pass to the ``modin.pandas.DataFrame`` constructor.
+
+        Returns
+        -------
+        modin.pandas.DataFrame
+        """
         if cls._dataframe is None:
             from .dataframe import DataFrame
 
             cls._dataframe = DataFrame
-        return cls._dataframe
+        return cls._dataframe(*args, **kwargs)
 
 
 def _read(**kwargs):
@@ -857,8 +869,6 @@ class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
                     does not accept Modin DataFrame objects, so we must convert to
                     pandas.
                     """
-                    from modin.pandas.io import to_pandas
-
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":
@@ -923,8 +933,6 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
                     methods of ExcelFile with the pandas equivalent. It will convert
                     Modin DataFrame to pandas DataFrame, etc.
                     """
-                    from modin.pandas.io import to_pandas
-
                     # We don't want to constantly be giving this error message for
                     # internal methods.
                     if item[0] != "_":

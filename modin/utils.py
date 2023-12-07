@@ -524,12 +524,14 @@ def func_from_deprecated_location(
 to_numpy = func_from_deprecated_location(
     "to_numpy",
     "modin.pandas.io",
-    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in 0.28.0 release. This function was moved to ``modin.pandas.io``, please import it from there instead.",
+    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
 )
 to_pandas = func_from_deprecated_location(
     "to_pandas",
     "modin.pandas.io",
-    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in 0.28.0 release. This function was moved to ``modin.pandas.io``, please import it from there instead.",
+    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
 )
 
 
