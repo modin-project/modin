@@ -133,7 +133,8 @@ and in case of Modin it waits either for Github releases or for tags and then ma
 a new automatic PR with version increment.
 
 You should watch for that PR and, fixing any issues if there are some, merge it
-to make new Modin release appear in `conda-forge` channel.
+to make new Modin release appear in `conda-forge` channel. For detailed instructions
+on how to ensure the PR passes CI and is merge-able, check out [the how-to page in the modin-feedstock repo](https://github.com/conda-forge/modin-feedstock/blob/main/HOWTO.md)!
 
 ## Publicize Release
 Once the release has been finalized, make sure to post an announcement in the #general channel of
