@@ -73,8 +73,8 @@ from modin.utils import (
     SupportsPrivateToPandas,
     SupportsPublicToNumPy,
     _inherit_docstrings,
-    expanduser_path_arg,
     classproperty,
+    expanduser_path_arg,
 )
 
 # below logic is to handle circular imports without errors
