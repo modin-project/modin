@@ -74,6 +74,7 @@ from modin.utils import (
     SupportsPublicToNumPy,
     _inherit_docstrings,
     expanduser_path_arg,
+    classproperty,
 )
 
 # below logic is to handle circular imports without errors
@@ -87,27 +88,14 @@ class ModinObjects:
 
     _dataframe = None
 
-    @classmethod
-    def DataFrame(cls, *args, **kwargs):
-        """
-        Build ``modin.pandas.DataFrame`` object with the passed arguments.
-
-        Parameters
-        ----------
-        *args : tuple
-            Positional arguments to pass to the ``modin.pandas.DataFrame`` constructor.
-        **kwargs : dict
-            Keyword arguments to pass to the ``modin.pandas.DataFrame`` constructor.
-
-        Returns
-        -------
-        modin.pandas.DataFrame
-        """
+    @classproperty
+    def DataFrame(cls):
+        """Get ``modin.pandas.DataFrame`` class."""
         if cls._dataframe is None:
             from .dataframe import DataFrame
 
             cls._dataframe = DataFrame
-        return cls._dataframe(*args, **kwargs)
+        return cls._dataframe
 
 
 def _read(**kwargs):

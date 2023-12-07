@@ -850,3 +850,30 @@ class ModinAssumptionError(Exception):
     """An exception that allows us defaults to pandas if any assumption fails."""
 
     pass
+
+
+class classproperty:
+    """
+    Decorator that allows creating read-only class properties.
+
+    Parameters
+    ----------
+    func : method
+
+    Examples
+    --------
+    >>> class A:
+    ...     field = 10
+    ...     @classproperty
+    ...     def field_x2(cls):
+    ...             return cls.field * 2
+    ...
+    >>> print(A.field_x2)
+    20
+    """
+
+    def __init__(self, func: Any):
+        self.fget = func
+
+    def __get__(self, instance: Any, owner: Any) -> Any:  # noqa: GL08
+        return self.fget(owner)
