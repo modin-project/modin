@@ -3788,15 +3788,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # This check materializes dtypes for 'by' columns
-        if isinstance(self._modin_frame._dtypes, ModinDtypes):
-            by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
+        if not groupby_kwargs.get("observed", False):
+            if isinstance(self._modin_frame._dtypes, ModinDtypes):
+                by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
+            else:
+                by_dtypes = self.dtypes[by]
+            add_missing_cats = any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
         else:
-            by_dtypes = self.dtypes[by]
-        if any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
-            raise NotImplementedError(
-                "Range-partitioning groupby is not yet supported when grouping on a categorical column. "
-                + "https://github.com/modin-project/modin/issues/5925"
-            )
+            add_missing_cats = False
 
         is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
 
@@ -3842,6 +3841,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # that's why we have to align the partition's shapes/labeling across different
             # row partitions
             align_result_columns=how == "group_wise",
+            add_missing_cats=add_missing_cats,
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)

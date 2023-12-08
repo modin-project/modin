@@ -3758,7 +3758,8 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
-        align_result_columns=False,
+        align_result_columns : bool=False,
+        add_missing_cats : bool=False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3833,10 +3834,9 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
-        drop_dupl_categories = True
 
         # no need aligning columns if there's only one row partition
-        if (drop_dupl_categories or align_result_columns) and result._partitions.shape[0] > 1:
+        if (add_missing_cats or align_result_columns) and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
             # partition in the result, so we should never hit this exception for now, however
             # in the future, we might want to make this implementation more broader
@@ -3871,7 +3871,7 @@ class PandasDataframe(ClassLogger):
                         combined_cols = pandas.concat(
                             [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
                         ).columns
-                    if drop_dupl_categories:
+                    if add_missing_cats:
                         indices = [df.index for df in dfs]
                         total_index = indices[0].append(indices[1:])
                         missing_cats = total_index.categories.difference(total_index.values)
