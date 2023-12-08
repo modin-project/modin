@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 import unittest.mock as mock
 
@@ -3349,6 +3350,17 @@ def test_std(request, data, skipna, ddof):
 def test_sub(data):
     modin_series, pandas_series = create_test_series(data)
     inter_df_math_helper(modin_series, pandas_series, "sub")
+
+
+def test_6782():
+    datetime_scalar = datetime.datetime(1970, 1, 1, 0, 0)
+    with pytest.warns(UserWarning) as warns:
+        _ = pd.Series([datetime.datetime(2000, 1, 1)]) - datetime_scalar
+        for warn in warns.list:
+            assert (
+                "Adding/subtracting object-dtype array to DatetimeArray not vectorized"
+                not in str(warn)
+            )
 
 
 @pytest.mark.skipif(
