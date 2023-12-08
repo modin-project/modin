@@ -34,7 +34,6 @@ from modin.pandas.test.utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
-    extra_test_parameters,
     generate_multiindex,
     int_arg_keys,
     int_arg_values,
@@ -1473,7 +1472,7 @@ def test_reset_index_multiindex_groupby(data):
     [
         pytest.param(
             test_data["int_data"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         test_data["float_nan_data"],
     ],
@@ -1494,23 +1493,23 @@ def test_reset_index_multiindex_groupby(data):
         [1, 0],
         pytest.param(
             [2, 1, 2],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [0, 0, 0, 0],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_2", "level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [2, "level_name_0"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1523,12 +1522,8 @@ def test_reset_index_multiindex_groupby(data):
         0,
         1,
         2,
-        pytest.param(
-            3, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
-        pytest.param(
-            4, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
+        pytest.param(3, marks=pytest.mark.exclude_by_default),
+        pytest.param(4, marks=pytest.mark.exclude_by_default),
     ],
 )
 @pytest.mark.parametrize(
@@ -1536,13 +1531,13 @@ def test_reset_index_multiindex_groupby(data):
     [
         pytest.param(
             False,
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         True,
         "mixed_1st_None",
         pytest.param(
             "mixed_2nd_None",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1631,7 +1626,7 @@ def test_reset_index_with_multi_index_no_drop(
     [
         pytest.param(
             test_data["int_data"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         test_data["float_nan_data"],
     ],
@@ -1651,23 +1646,23 @@ def test_reset_index_with_multi_index_no_drop(
         [1, 0],
         pytest.param(
             [2, 1, 2],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [0, 0, 0, 0],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_2", "level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [2, "level_name_0"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1677,12 +1672,8 @@ def test_reset_index_with_multi_index_no_drop(
         0,
         1,
         2,
-        pytest.param(
-            3, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
-        pytest.param(
-            4, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
+        pytest.param(3, marks=pytest.mark.exclude_by_default),
+        pytest.param(4, marks=pytest.mark.exclude_by_default),
     ],
 )
 @pytest.mark.parametrize(
@@ -1690,13 +1681,13 @@ def test_reset_index_with_multi_index_no_drop(
     [
         pytest.param(
             False,
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         True,
         "mixed_1st_None",
         pytest.param(
             "mixed_2nd_None",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )

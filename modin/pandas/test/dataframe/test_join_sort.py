@@ -31,7 +31,6 @@ from modin.pandas.test.utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
-    extra_test_parameters,
     generate_multiindex,
     random_state,
     rotate_decimal_digits_or_symbols,
@@ -585,11 +584,11 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "first",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             "first,last",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "first,last,middle",
     ],
@@ -608,12 +607,12 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "mergesort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "quicksort",
         pytest.param(
             "heapsort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
