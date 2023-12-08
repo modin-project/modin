@@ -115,7 +115,7 @@ def read_sql(
 
     assert IsExperimental.get(), "This only works in experimental mode"
 
-    result = FactoryDispatcher.read_sql(**kwargs)
+    result = FactoryDispatcher.read_sql_distributed(**kwargs)
     if isinstance(result, BaseQueryCompiler):
         return DataFrame(query_compiler=result)
     return (DataFrame(query_compiler=qc) for qc in result)
@@ -316,7 +316,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `to_pickle_distributed` function.
+    obtained, for example, by `DataFrame.modin.to_pickle_distributed` function.
 
     Parameters
     ----------

@@ -66,7 +66,6 @@ jobs:
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
             modin/core/io \
-            modin/experimental/core/execution/ray/implementations/pandas_on_ray \
             modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
             modin/pandas/series.py \
             modin/core/execution/python \

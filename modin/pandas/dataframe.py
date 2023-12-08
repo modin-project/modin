@@ -53,7 +53,7 @@ from modin.utils import (
     try_cast_to_pandas,
 )
 
-from .accessor import CachedAccessor, SparseFrameAccessor
+from .accessor import CachedAccessor, ExperimentalFunctions, SparseFrameAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
@@ -3185,3 +3185,6 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
+
+    # Namespace for experimental functions
+    modin = CachedAccessor("modin", ExperimentalFunctions)
