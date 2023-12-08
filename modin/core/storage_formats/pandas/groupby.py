@@ -16,7 +16,7 @@
 import numpy as np
 import pandas
 
-from modin.config import RangePartitioningGroupbyImpl
+from modin.config import RangePartitioningGroupby
 from modin.core.dataframe.algebra import GroupByReduce
 from modin.error_message import ErrorMessage
 from modin.utils import hashable
@@ -93,7 +93,7 @@ class GroupbyReduceImpl:
         )
 
         def method(query_compiler, *args, **kwargs):
-            if RangePartitioningGroupbyImpl.get():
+            if RangePartitioningGroupby.get():
                 try:
                     if finalizer_fn is not None:
                         raise NotImplementedError(

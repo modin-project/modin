@@ -738,7 +738,7 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioningGroupbyImpl(EnvWithSibilings, type=bool):
+class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
@@ -761,7 +761,7 @@ class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    This parameter is deprecated. Use ``RangePartitioningGroupbyImpl`` instead.
+    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
     """
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
@@ -770,13 +770,13 @@ class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     @classmethod
     def _sibling(cls) -> type[EnvWithSibilings]:
         """Get a parameter sibling."""
-        return RangePartitioningGroupbyImpl
+        return RangePartitioningGroupby
 
 
 # Let the parameter's handling logic know that this variable is deprecated and that
 # we should raise respective warnings
 ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
-    ExperimentalGroupbyImpl, RangePartitioningGroupbyImpl
+    ExperimentalGroupbyImpl, RangePartitioningGroupby
 )
 
 

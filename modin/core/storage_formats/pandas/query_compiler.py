@@ -43,7 +43,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError, MergeError
 
-from modin.config import CpuCount, RangePartitioningGroupbyImpl
+from modin.config import CpuCount, RangePartitioningGroupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -3521,7 +3521,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        if RangePartitioningGroupbyImpl.get():
+        if RangePartitioningGroupby.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3592,7 +3592,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
-        if RangePartitioningGroupbyImpl.get():
+        if RangePartitioningGroupby.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3962,9 +3962,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # 'group_wise' means 'groupby.apply()'. We're certain that range-partitioning groupby
-        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioningGroupbyImpl'
+        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioningGroupby'
         # value
-        if how == "group_wise" or RangePartitioningGroupbyImpl.get():
+        if how == "group_wise" or RangePartitioningGroupby.get():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3984,7 +3984,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a full-axis implementation."
                 )
                 get_logger().info(message)
-                if RangePartitioningGroupbyImpl.get():
+                if RangePartitioningGroupby.get():
                     ErrorMessage.warn(message)
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):
