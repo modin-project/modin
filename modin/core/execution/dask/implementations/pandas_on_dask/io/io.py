@@ -31,9 +31,6 @@ from modin.core.io import (
     SQLDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
-    ExperimentalCustomTextParser,
-    ExperimentalPandasPickleParser,
-    PandasCSVGlobParser,
     PandasCSVParser,
     PandasExcelParser,
     PandasFeatherParser,
@@ -48,6 +45,11 @@ from modin.experimental.core.io import (
     ExperimentalCustomTextDispatcher,
     ExperimentalPickleDispatcher,
     ExperimentalSQLDispatcher,
+)
+from modin.experimental.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasPickleParser,
+    PandasCSVGlobParser,
 )
 
 
