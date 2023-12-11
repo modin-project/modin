@@ -32,7 +32,7 @@ from modin.core.storage_formats.pandas.parsers import (
 
 
 @doc(_doc_pandas_parser_class, data_type="multiple CSV files simultaneously")
-class PandasCSVGlobParser(PandasCSVParser):
+class ExperimentalPandasCSVGlobParser(PandasCSVParser):
     @staticmethod
     @doc(
         _doc_parse_func,
