@@ -3371,9 +3371,9 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array or a Modin wrapper for NumPy array.
         """
-        from modin.config import NumpyOnModin
+        from modin.config import ModinNumpy
 
-        if NumpyOnModin.get():
+        if ModinNumpy.get():
             from ..numpy.arr import array
 
             return array(self, copy=copy)

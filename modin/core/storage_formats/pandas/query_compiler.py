@@ -3534,7 +3534,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use reshuffling groupby implementation because of: {e}"
+                    f"Can't use range-partitioning groupby implementation because of: {e}"
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
@@ -3605,7 +3605,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             except NotImplementedError as e:
                 ErrorMessage.warn(
-                    f"Can't use reshuffling groupby implementation because of: {e}"
+                    f"Can't use range-partitioning groupby implementation because of: {e}"
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
@@ -3779,7 +3779,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if not is_all_column_names:
             raise NotImplementedError(
-                "Reshuffling groupby is only supported when grouping on a column(s) of the same frame. "
+                "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
@@ -3790,7 +3790,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             by_dtypes = self.dtypes[by]
         if any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
             raise NotImplementedError(
-                "Reshuffling groupby is not yet supported when grouping on a categorical column. "
+                "Range-partitioning groupby is not yet supported when grouping on a categorical column. "
                 + "https://github.com/modin-project/modin/issues/5925"
             )
 
@@ -3799,7 +3799,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if is_transform:
             # https://github.com/modin-project/modin/issues/5924
             ErrorMessage.missmatch_with_pandas(
-                operation="reshuffling groupby",
+                operation="range-partitioning groupby",
                 message="the order of rows may be shuffled for the result",
             )
 
@@ -3980,7 +3980,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # if a user wants to use range-partitioning groupby explicitly, then we should print a visible
                 # warning to them on a failure, otherwise we're only logging it
                 message = (
-                    f"Can't use reshuffling groupby implementation because of: {e}"
+                    f"Can't use range-partitioning groupby implementation because of: {e}"
                     + "\nFalling back to a full-axis implementation."
                 )
                 get_logger().info(message)

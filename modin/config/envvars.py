@@ -104,10 +104,14 @@ class EnvWithSibilings(
             try:
                 old_v = cls._sibling()._get_raw_from_config()
             except KeyError:
+                # keeping `_UNSET`, will handle default value later
+                # when process both of the siblings
                 old_v = _UNSET
             try:
                 new_v = cls._get_raw_from_config()
             except KeyError:
+                # keeping `_UNSET`, will handle default value later
+                # when process both of the siblings
                 new_v = _UNSET
             if old_v is not _UNSET and new_v is _UNSET:
                 if not _TYPE_PARAMS[cls.type].verify(old_v):
@@ -703,10 +707,10 @@ class GithubCI(EnvironmentVariable, type=bool):
     default = False
 
 
-class NumpyOnModin(EnvWithSibilings, type=bool):
+class ModinNumpy(EnvWithSibilings, type=bool):
     """Set to true to use Modin's implementation of NumPy API."""
 
-    varname = "NUMPY_ON_MODIN"
+    varname = "MODIN_NUMPY"
     default = False
 
     @classmethod
@@ -719,7 +723,7 @@ class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's implementation of NumPy API.
 
-    This parameter is deprecated. Use ``NumpyOnModin`` instead.
+    This parameter is deprecated. Use ``ModinNumpy`` instead.
     """
 
     varname = "MODIN_EXPERIMENTAL_NUMPY_API"
@@ -728,13 +732,13 @@ class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
     @classmethod
     def _sibling(cls) -> type[EnvWithSibilings]:
         """Get a parameter sibling."""
-        return NumpyOnModin
+        return ModinNumpy
 
 
 # Let the parameter's handling logic know that this variable is deprecated and that
 # we should raise respective warnings
 ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
-    ExperimentalNumPyAPI, NumpyOnModin
+    ExperimentalNumPyAPI, ModinNumpy
 )
 
 

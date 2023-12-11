@@ -166,7 +166,7 @@ class array(object):
     ):
         self._siblings = []
         ErrorMessage.single_warning(
-            "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the NumpyOnModin flag, or use `modin.pandas.io.to_numpy`."
+            "Using Modin's new NumPy API. To convert from a Modin object to a NumPy array, either turn off the ModinNumpy flag, or use `modin.pandas.io.to_numpy`."
         )
         if isinstance(object, array):
             _query_compiler = object._query_compiler.copy()
