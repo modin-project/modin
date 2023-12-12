@@ -22,7 +22,6 @@ import pandas
 import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
-from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
 from modin.utils import expanduser_path_arg
 
@@ -113,8 +112,6 @@ def read_sql(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
     result = FactoryDispatcher.read_sql_distributed(**kwargs)
     if isinstance(result, BaseQueryCompiler):
         return DataFrame(query_compiler=result)
@@ -160,8 +157,6 @@ def read_custom_text(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    assert IsExperimental.get(), "This only works in experimental mode"
 
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
 
@@ -346,8 +341,6 @@ def read_pickle_distributed(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    assert IsExperimental.get(), "This only works in experimental mode"
 
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
 

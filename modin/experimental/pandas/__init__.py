@@ -33,11 +33,6 @@ Examples
 """
 
 import functools
-
-from modin.config import IsExperimental
-
-IsExperimental.put(True)
-
 import warnings
 
 from modin.pandas import *  # noqa F401, F403
