@@ -22,7 +22,7 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
-from modin.config.envvars import ExperimentalGroupbyImpl, IsRayCluster
+from modin.config.envvars import IsRayCluster, RangePartitioningGroupby
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -283,7 +283,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
-        if not ExperimentalGroupbyImpl.get():
+        if not RangePartitioningGroupby.get():
             # `.group` fails with experimental groupby
             # https://github.com/modin-project/modin/issues/6083
             eval_ngroup(modin_groupby, pandas_groupby)
@@ -1179,7 +1179,7 @@ def sort_index_if_experimental_groupby(*dfs):
     the experimental implementation changes the order of rows for that:
     https://github.com/modin-project/modin/issues/5924
     """
-    if ExperimentalGroupbyImpl.get():
+    if RangePartitioningGroupby.get():
         return tuple(df.sort_index() for df in dfs)
     return dfs
 
@@ -1440,7 +1440,7 @@ def eval___getitem__(md_grp, pd_grp, item):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
-    if ExperimentalGroupbyImpl.get():
+    if RangePartitioningGroupby.get():
         # `.get_group()` doesn't work correctly with experimental groupby:
         # https://github.com/modin-project/modin/issues/6093
         return
@@ -1751,7 +1751,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
             False,
             marks=pytest.mark.skipif(
                 get_current_execution() == "BaseOnPython"
-                or ExperimentalGroupbyImpl.get(),
+                or RangePartitioningGroupby.get(),
                 reason="See Pandas issue #39103",
             ),
         ),
@@ -2884,8 +2884,8 @@ def test_groupby_deferred_index(func):
 @pytest.mark.parametrize(
     "modify_config",
     [
-        {ExperimentalGroupbyImpl: True, IsRayCluster: True},
-        {ExperimentalGroupbyImpl: True, IsRayCluster: False},
+        {RangePartitioningGroupby: True, IsRayCluster: True},
+        {RangePartitioningGroupby: True, IsRayCluster: False},
     ],
     indirect=True,
 )
@@ -2948,7 +2948,7 @@ def test_shape_changing_udf(modify_config):
 
 
 @pytest.mark.parametrize(
-    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
 )
 def test_reshuffling_groupby_on_strings(modify_config):
     # reproducer from https://github.com/modin-project/modin/issues/6509
@@ -2965,7 +2965,7 @@ def test_reshuffling_groupby_on_strings(modify_config):
 
 
 @pytest.mark.parametrize(
-    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
 )
 def test_groupby_apply_series_result(modify_config):
     # reproducer from the issue:

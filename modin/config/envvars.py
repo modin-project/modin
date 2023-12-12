@@ -23,7 +23,14 @@ from typing import Any, Optional
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import _TYPE_PARAMS, ExactStr, Parameter, ValueSource
+from .pubsub import (
+    _TYPE_PARAMS,
+    _UNSET,
+    DeprecationDescriptor,
+    ExactStr,
+    Parameter,
+    ValueSource,
+)
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -65,6 +72,96 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
         if cls.choices:
             help += f" (valid examples are: {', '.join(str(c) for c in cls.choices)})"
         return help
+
+
+class EnvWithSibilings(
+    EnvironmentVariable,
+    # 'type' is a mandatory parameter for '__init_subclasses__', so we have to pass something here,
+    # this doesn't force child classes to have 'str' type though, they actually can be any type
+    type=str,
+):
+    """Ensure values synchronization between sibling parameters."""
+
+    _update_sibling = True
+
+    @classmethod
+    def _sibling(cls) -> type["EnvWithSibilings"]:
+        """Return a sibling parameter."""
+        raise NotImplementedError()
+
+    @classmethod
+    def get(cls) -> Any:
+        """
+        Get parameter's value and ensure that it's equal to the sibling's value.
+
+        Returns
+        -------
+        Any
+        """
+        sibling = cls._sibling()
+
+        if sibling._value is _UNSET and cls._value is _UNSET:
+            super().get()
+            with warnings.catch_warnings():
+                # filter warnings that can potentially come from the potentially deprecated sibling
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                super(EnvWithSibilings, sibling).get()
+
+            if (
+                cls._value_source
+                == sibling._value_source
+                == ValueSource.GOT_FROM_CFG_SOURCE
+            ):
+                raise ValueError(
+                    f"Configuration is ambiguous. You cannot set '{cls.varname}' and '{sibling.varname}' at the same time."
+                )
+
+            # further we assume that there are only two valid sources for the variables: 'GOT_FROM_CFG' and 'DEFAULT',
+            # as otherwise we wouldn't ended-up in this branch at all, because all other ways of setting a value
+            # changes the '._value' attribute from '_UNSET' to something meaningful
+            from modin.error_message import ErrorMessage
+
+            if cls._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=sibling._value_source != ValueSource.DEFAULT
+                )
+                sibling._value = cls._value
+                sibling._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+            elif sibling._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                )
+                cls._value = sibling._value
+                cls._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                    or sibling._value_source != ValueSource.DEFAULT
+                )
+                # propagating 'cls' default value to the sibling
+                sibling._value = cls._value
+        return super().get()
+
+    @classmethod
+    def put(cls, value: Any) -> None:
+        """
+        Set a new value to this parameter as well as to its sibling.
+
+        Parameters
+        ----------
+        value : Any
+        """
+        super().put(value)
+        # avoid getting into an infinite recursion
+        if cls._update_sibling:
+            cls._update_sibling = False
+            try:
+                with warnings.catch_warnings():
+                    # filter potential future warnings of the sibling
+                    warnings.filterwarnings("ignore", category=FutureWarning)
+                    cls._sibling().put(value)
+            finally:
+                cls._update_sibling = True
 
 
 class IsDebug(EnvironmentVariable, type=bool):
@@ -621,16 +718,44 @@ class GithubCI(EnvironmentVariable, type=bool):
     default = False
 
 
-class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
-    """Set to true to use Modin's experimental NumPy API."""
+class ModinNumpy(EnvWithSibilings, type=bool):
+    """Set to true to use Modin's implementation of NumPy API."""
+
+    varname = "MODIN_NUMPY"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ExperimentalNumPyAPI
+
+
+class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
+    """
+    Set to true to use Modin's implementation of NumPy API.
+
+    This parameter is deprecated. Use ``ModinNumpy`` instead.
+    """
 
     varname = "MODIN_EXPERIMENTAL_NUMPY_API"
     default = False
 
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ModinNumpy
 
-class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
+
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
+    ExperimentalNumPyAPI, ModinNumpy
+)
+
+
+class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
-    Set to true to use Modin's experimental group by implementation.
+    Set to true to use Modin's range-partitioning group by implementation.
 
     Experimental groupby is implemented using a range-partitioning technique,
     note that it may not always work better than the original Modin's TreeReduce
@@ -638,8 +763,36 @@ class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
     of Modin's documentation: TODO: add a link to the section once it's written.
     """
 
+    varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ExperimentalGroupbyImpl
+
+
+class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
+    """
+    Set to true to use Modin's range-partitioning group by implementation.
+
+    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
+    """
+
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
     default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return RangePartitioningGroupby
+
+
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
+    ExperimentalGroupbyImpl, RangePartitioningGroupby
+)
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
@@ -704,11 +857,26 @@ def _check_vars() -> None:
     }
     found_names = {name for name in os.environ if name.startswith("MODIN_")}
     unknown = found_names - valid_names
+    deprecated: dict[str, DeprecationDescriptor] = {
+        obj.varname: obj._deprecation_descriptor
+        for obj in globals().values()
+        if isinstance(obj, type)
+        and issubclass(obj, EnvironmentVariable)
+        and not obj.is_abstract
+        and obj.varname is not None
+        and obj._deprecation_descriptor is not None
+    }
+    found_deprecated = found_names & deprecated.keys()
     if unknown:
         warnings.warn(
             f"Found unknown environment variable{'s' if len(unknown) > 1 else ''},"
             + f" please check {'their' if len(unknown) > 1 else 'its'} spelling: "
             + ", ".join(sorted(unknown))
+        )
+    for depr_var in found_deprecated:
+        warnings.warn(
+            deprecated[depr_var].deprecation_message(use_envvar_names=True),
+            FutureWarning,
         )
 
 
