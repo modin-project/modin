@@ -37,7 +37,7 @@ The range-partitiong implementation appears to be quite efficient when compared 
     In [8]: %timeit df.groupby("col0").nunique() # range-partitiong implementation
     Out[8]: # 595 ms ± 61.3 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
-Although it may look like the range-partitioning implementation always outperforms the other ones ones, it's not actually true.
+Although it may look like the range-partitioning implementation always outperforms the other ones, it's not actually true.
 There's a decent overhead on building the range partitioning itself, meaning that the other implementations
 may act better on smaller data sizes or when the grouping columns (a key column to build range partitioning)
 have too few unique values (and thus fewer units of parallelization):

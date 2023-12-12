@@ -24,7 +24,6 @@ from typing import (
     NamedTuple,
     Optional,
     Tuple,
-    cast,
 )
 
 if TYPE_CHECKING:
@@ -37,22 +36,22 @@ class DeprecationDescriptor:
 
     Parameters
     ----------
-    parameter : type[Parameter]
+    parameter : type[EnvironmentVariable]
         Deprecated parameter.
-    new_parameter : type[Parameter], optional
+    new_parameter : type[EnvironmentVariable], optional
         If there's a replacement parameter for the deprecated one, specify it here.
     when_removed : str, optional
         If known, the exact release when the deprecated parameter is planned to be removed.
     """
 
-    _parameter: type["Parameter"]
-    _new_parameter: Optional[type["Parameter"]]
+    _parameter: type["EnvironmentVariable"]
+    _new_parameter: Optional[type["EnvironmentVariable"]]
     _when_removed: str
 
     def __init__(
         self,
-        parameter: type["Parameter"],
-        new_parameter: Optional[type["Parameter"]] = None,
+        parameter: type["EnvironmentVariable"],
+        new_parameter: Optional[type["EnvironmentVariable"]] = None,
         when_removed: Optional[str] = None,
     ):
         self._parameter = parameter
@@ -73,15 +72,11 @@ class DeprecationDescriptor:
         -------
         str
         """
-        name = (
-            cast("EnvironmentVariable", self._parameter).varname
-            if use_envvar_names
-            else self._parameter.__name__
-        )
+        name = self._parameter.varname if use_envvar_names else self._parameter.__name__
         msg = f"'{name}' is deprecated and will be removed in {self._when_removed} version."
         if self._new_parameter is not None:
             new_name = (
-                cast("EnvironmentVariable", self._new_parameter)
+                self._new_parameter
                 if use_envvar_names
                 else self._new_parameter.__name__
             )
