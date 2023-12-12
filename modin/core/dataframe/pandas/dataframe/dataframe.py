@@ -3852,7 +3852,7 @@ class PandasDataframe(ClassLogger):
             #      so there should be less stress on the network.
             if not IsRayCluster.get():
 
-                def compute_aligned_columns(*dfs):
+                def compute_aligned_columns(*dfs, initial_columns=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
                     combined_cols = None
                     mask = None
@@ -3875,6 +3875,7 @@ class PandasDataframe(ClassLogger):
                         indices = [df.index for df in dfs]
                         total_index = indices[0].append(indices[1:])
                         missing_cats = total_index.categories.difference(total_index.values)
+                        pandas.Categorical(missing_cats)
                         if not kwargs["sort"]:
                             mask = {len(indices) - 1: missing_cats}
                             return (combined_cols, mask)
@@ -3896,10 +3897,10 @@ class PandasDataframe(ClassLogger):
 
                 def apply_aligned(df, args, partition_idx):
                     combined_cols, mask = args
-                    if combined_cols is not None:
-                        df = df.reindex(columns=combined_cols)
                     if mask is not None and mask.get(partition_idx) is not None:
                         values = mask[partition_idx]
+                    if combined_cols is not None:
+                        df = df.reindex(columns=combined_cols)
                         
 
                 # Lazily applying aligned columns to partitions
