@@ -147,12 +147,8 @@ class EnvWithSibilings(
                     # filter potential future warnings of the sibling
                     warnings.filterwarnings("ignore", category=FutureWarning)
                     cls._sibling().put(value)
-            # if any exception occurs, we have to reset the '_update_sibling' value in order
-            # to keep a consistent condition
-            except BaseException:
+            finally:
                 cls._update_sibling = True
-                raise
-            cls._update_sibling = True
 
 
 class IsDebug(EnvironmentVariable, type=bool):
