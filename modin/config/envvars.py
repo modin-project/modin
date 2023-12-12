@@ -98,35 +98,48 @@ class EnvWithSibilings(
         -------
         Any
         """
-        if cls._sibling()._value is _UNSET and cls._value is _UNSET:
-            old_v: Any
-            new_v: Any
-            try:
-                old_v = cls._sibling()._get_raw_from_config()
-            except KeyError:
-                # keeping `_UNSET`, will handle default value later
-                # when processing both of the siblings
-                old_v = _UNSET
-            try:
-                new_v = cls._get_raw_from_config()
-            except KeyError:
-                # keeping `_UNSET`, will handle default value later
-                # when processing both of the siblings
-                new_v = _UNSET
-            if old_v is not _UNSET and new_v is _UNSET:
-                if not _TYPE_PARAMS[cls.type].verify(old_v):
-                    raise ValueError(f"Unsupported raw value: {old_v}")
-                old_v = _TYPE_PARAMS[cls.type].decode(old_v)
-                cls._sibling()._value = old_v
-                cls._sibling()._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+        sibling = cls._sibling()
 
-                cls._value = old_v
+        if sibling._value is _UNSET and cls._value is _UNSET:
+            super().get()
+            with warnings.catch_warnings():
+                # filter warnings that can potentially come from the potentially deprecated sibling
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                super(EnvWithSibilings, sibling).get()
+
+            if (
+                cls._value_source
+                == sibling._value_source
+                == ValueSource.GOT_FROM_CFG_SOURCE
+            ):
+                raise ValueError(
+                    f"Configuration is ambiguous. You cannot set '{cls.varname}' and '{sibling.varname}' at the same time."
+                )
+
+            # further we assume that there are only two valid sources for the variables: 'GOT_FROM_CFG' and 'DEFAULT',
+            # as otherwise we wouldn't ended-up in this branch at all, because all other ways of setting a value
+            # changes the '._value' attribute from '_UNSET' to something meaningful
+            from modin.error_message import ErrorMessage
+
+            if cls._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=sibling._value_source != ValueSource.DEFAULT
+                )
+                sibling._value = cls._value
+                sibling._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+            elif sibling._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                )
+                cls._value = sibling._value
                 cls._value_source = ValueSource.GOT_FROM_CFG_SOURCE
-                return cls._value
-            res = super().get()
-            cls._sibling()._value = res
-            cls._sibling()._value_source = cls._value_source
-            return res
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                    or sibling._value_source != ValueSource.DEFAULT
+                )
+                # propagating 'cls' default value to the sibling
+                sibling._value = cls._value
         return super().get()
 
     @classmethod
