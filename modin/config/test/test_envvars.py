@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
+import unittest.mock
 import warnings
 
 import pytest
@@ -37,10 +38,7 @@ def reset_vars(*vars: tuple[Parameter]):
     """
     for var in vars:
         var._value = _UNSET
-        try:
-            del os.environ[var.varname]
-        except KeyError:
-            pass
+        _ = os.environ.pop(var.varname, None)
 
 
 @pytest.fixture
@@ -150,10 +148,9 @@ def test_deprecated_bool_vars_warnings(deprecated_var, new_var):
         with pytest.warns(FutureWarning):
             deprecated_var.put(False)
 
-        os.environ[deprecated_var.varname] = "1"
-        with pytest.warns(FutureWarning):
-            _check_vars()
-        del os.environ[deprecated_var.varname]
+        with unittest.mock.patch.dict(os.environ, {deprecated_var.varname: "1"}):
+            with pytest.warns(FutureWarning):
+                _check_vars()
 
         # check that the new var doesn't raise any warnings
         reset_vars(deprecated_var, new_var)
@@ -161,9 +158,8 @@ def test_deprecated_bool_vars_warnings(deprecated_var, new_var):
             warnings.simplefilter("error")
             new_var.get()
             new_var.put(False)
-            os.environ[new_var.varname] = "1"
-            _check_vars()
-            del os.environ[new_var.varname]
+            with unittest.mock.patch.dict(os.environ, {new_var.varname: "1"}):
+                _check_vars()
     finally:
         deprecated_var.put(old_depr_val)
         new_var.put(old_new_var)
@@ -241,39 +237,39 @@ def test_deprecated_bool_vars_equals(deprecated_var, new_var, get_depr_first):
 
         # case3: initializing the value using 'deprecated_var' with env variable
         reset_vars(deprecated_var, new_var)
-        os.environ[deprecated_var.varname] = "True"
-        val1, val2 = get_values()
-        assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
+        with unittest.mock.patch.dict(os.environ, {deprecated_var.varname: "True"}):
+            val1, val2 = get_values()
+            assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
 
-        new_var.put(False)
-        val1, val2 = get_values()
-        assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
+            new_var.put(False)
+            val1, val2 = get_values()
+            assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
 
-        new_var.put(True)
-        val1, val2 = get_values()
-        assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
+            new_var.put(True)
+            val1, val2 = get_values()
+            assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
 
-        deprecated_var.put(False)
-        val1, val2 = get_values()
-        assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
+            deprecated_var.put(False)
+            val1, val2 = get_values()
+            assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
 
         # case4: initializing the value using 'new_var' with env variable
         reset_vars(deprecated_var, new_var)
-        os.environ[new_var.varname] = "True"
-        val1, val2 = get_values()
-        assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
+        with unittest.mock.patch.dict(os.environ, {new_var.varname: "True"}):
+            val1, val2 = get_values()
+            assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
 
-        deprecated_var.put(False)
-        val1, val2 = get_values()
-        assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
+            deprecated_var.put(False)
+            val1, val2 = get_values()
+            assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
 
-        deprecated_var.put(True)
-        val1, val2 = get_values()
-        assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
+            deprecated_var.put(True)
+            val1, val2 = get_values()
+            assert val1 == val2 == True  # noqa: E712 ('obj == True' comparison)
 
-        new_var.put(False)
-        val1, val2 = get_values()
-        assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
+            new_var.put(False)
+            val1, val2 = get_values()
+            assert val1 == val2 == False  # noqa: E712 ('obj == False' comparison)
     finally:
         deprecated_var.put(old_depr_val)
         new_var.put(old_new_var)

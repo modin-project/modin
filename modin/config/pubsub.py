@@ -45,15 +45,19 @@ class DeprecationDescriptor:
         If known, the exact release when the deprecated parameter is planned to be removed.
     """
 
+    _parameter: type["Parameter"]
+    _new_parameter: Optional[type["Parameter"]]
+    _when_removed: str
+
     def __init__(
         self,
         parameter: type["Parameter"],
         new_parameter: Optional[type["Parameter"]] = None,
         when_removed: Optional[str] = None,
     ):
-        self._parameter: type["Parameter"] = parameter
-        self._new_parameter: Optional[type["Parameter"]] = new_parameter
-        self._when_removed: str = "a future" if when_removed is None else when_removed
+        self._parameter = parameter
+        self._new_parameter = new_parameter
+        self._when_removed = "a future" if when_removed is None else when_removed
 
     def deprecation_message(self, use_envvar_names: bool = False) -> str:
         """

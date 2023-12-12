@@ -18,7 +18,7 @@ import secrets
 import sys
 import warnings
 from textwrap import dedent
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
@@ -76,8 +76,8 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
 
 class EnvWithSibilings(
     EnvironmentVariable,
-    # we have to pass anything here in order to derive from 'EnvironmentVariable',
-    # this doesn't force child classes to have 'str' type, they actually can be any type
+    # 'type' is a mandatory parameter for '__init_subclasses__', so we have to pass something here,
+    # this doesn't force child classes to have 'str' type though, they actually can be any type
     type=str,
 ):
     """Ensure values synchronization between sibling parameters."""
@@ -105,13 +105,13 @@ class EnvWithSibilings(
                 old_v = cls._sibling()._get_raw_from_config()
             except KeyError:
                 # keeping `_UNSET`, will handle default value later
-                # when process both of the siblings
+                # when processing both of the siblings
                 old_v = _UNSET
             try:
                 new_v = cls._get_raw_from_config()
             except KeyError:
                 # keeping `_UNSET`, will handle default value later
-                # when process both of the siblings
+                # when processing both of the siblings
                 new_v = _UNSET
             if old_v is not _UNSET and new_v is _UNSET:
                 if not _TYPE_PARAMS[cls.type].verify(old_v):
@@ -147,10 +147,12 @@ class EnvWithSibilings(
                     # filter potential future warnings of the sibling
                     warnings.filterwarnings("ignore", category=FutureWarning)
                     cls._sibling().put(value)
+            # if any exception occurs, we have to reset the '_update_sibling' value in order
+            # to keep a consistent condition
             except BaseException:
-                pass
-            finally:
                 cls._update_sibling = True
+                raise
+            cls._update_sibling = True
 
 
 class IsDebug(EnvironmentVariable, type=bool):
@@ -846,12 +848,13 @@ def _check_vars() -> None:
     }
     found_names = {name for name in os.environ if name.startswith("MODIN_")}
     unknown = found_names - valid_names
-    deprecated = {
-        obj.varname: obj
+    deprecated: dict[str, DeprecationDescriptor] = {
+        obj.varname: obj._deprecation_descriptor
         for obj in globals().values()
         if isinstance(obj, type)
         and issubclass(obj, EnvironmentVariable)
         and not obj.is_abstract
+        and obj.varname is not None
         and obj._deprecation_descriptor is not None
     }
     found_deprecated = found_names & deprecated.keys()
@@ -863,9 +866,7 @@ def _check_vars() -> None:
         )
     for depr_var in found_deprecated:
         warnings.warn(
-            cast(
-                DeprecationDescriptor, deprecated[depr_var]._deprecation_descriptor
-            ).deprecation_message(use_envvar_names=True),
+            deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
 
