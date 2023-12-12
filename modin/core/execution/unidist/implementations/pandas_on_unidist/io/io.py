@@ -16,6 +16,7 @@
 import io
 
 import pandas
+from pandas.io.common import get_handle, stringify_path
 
 from modin.core.execution.unidist.common import SignalActor, UnidistWrapper
 from modin.core.execution.unidist.generic.io import UnidistIO
@@ -153,6 +154,7 @@ class PandasOnUnidistIO(UnidistIO):
         **kwargs : dict
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
+        kwargs["path_or_buf"] = stringify_path(kwargs["path_or_buf"])
         if not cls._to_csv_check_support(kwargs):
             return UnidistIO.to_csv(qc, **kwargs)
 
@@ -196,7 +198,7 @@ class PandasOnUnidistIO(UnidistIO):
             UnidistWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
+            with get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode

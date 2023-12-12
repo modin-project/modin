@@ -16,7 +16,7 @@
 import io
 
 import pandas
-from pandas.io.common import get_handle
+from pandas.io.common import get_handle, stringify_path
 
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
@@ -154,6 +154,7 @@ class PandasOnRayIO(RayIO):
         **kwargs : dict
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
+        kwargs["path_or_buf"] = stringify_path(kwargs["path_or_buf"])
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 

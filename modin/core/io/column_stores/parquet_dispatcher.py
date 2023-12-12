@@ -818,6 +818,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         **kwargs : dict
             Parameters for `pandas.to_parquet(**kwargs)`.
         """
+        kwargs["path"] = stringify_path(kwargs["path"])
         output_path = kwargs["path"]
         if not isinstance(output_path, str):
             return cls.base_io.to_parquet(qc, **kwargs)

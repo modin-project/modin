@@ -17,6 +17,7 @@ import glob
 import warnings
 
 import pandas
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher
@@ -49,6 +50,7 @@ class ExperimentalPickleDispatcher(FileDispatcher):
 
         The number of partitions is equal to the number of input files.
         """
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
@@ -113,6 +115,7 @@ class ExperimentalPickleDispatcher(FileDispatcher):
         **kwargs : dict
             Parameters for ``pandas.to_pickle(**kwargs)``.
         """
+        kwargs["filepath_or_buffer"] = stringify_path(kwargs["filepath_or_buffer"])
         if not (
             isinstance(kwargs["filepath_or_buffer"], str)
             and "*" in kwargs["filepath_or_buffer"]
