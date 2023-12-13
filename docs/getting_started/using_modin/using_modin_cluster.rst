@@ -35,7 +35,7 @@ This configuration script starts 1 head node (m5.24xlarge) and 7 workers (m5.24x
 cloud providers or on-premise, you can also refer to the `Ray's cluster docs`_.
 
 .. note::
-   By default, Modin uses 60% of the system memory. It is recommended to use the same
+   By default, Modin on Ray uses 60% of the system memory. It is recommended to use the same
    amount, when using your own cluster (for each node).
 
 Connecting to a Ray Cluster
@@ -61,8 +61,8 @@ Modin:
 Congratualions! You have successfully connected to the Ray cluster.
 
 .. note::
-   Be careful when using the Ray client to connect to a remote cluster, most likely
-   this connection mode will not work. Known bugs:
+   Be careful when using the Ray client to connect to a remote cluster.
+   This connection mode may not work. Known bugs:
    - https://github.com/ray-project/ray/issues/38713,
    - https://github.com/modin-project/modin/issues/6641.
 
