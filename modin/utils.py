@@ -49,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, IsExperimental, StorageFormat
+from modin.config import Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -97,12 +97,10 @@ MIN_UNIDIST_VERSION = version.parse("0.2.1")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
+# The '__reduced__' name is used internally by the query compiler as a column name to
+# represent pandas Series objects that are not explicitly assigned a name, so as to
+# distinguish between an N-element series and 1xN dataframe.
 MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
-"""
-The '__reduced__' name is used internally by the query compiler as a column name to
-represent pandas Series objects that are not explicitly assigned a name, so as to
-distinguish between an N-element series and 1xN dataframe.
-"""
 
 
 def _make_api_url(token: str) -> str:
@@ -788,8 +786,6 @@ def _get_modin_deps_info() -> Mapping[str, Optional[JSONSerializable]]:
     return result
 
 
-# Disable flake8 checks for print() in this file
-# flake8: noqa: T001
 def show_versions(as_json: Union[str, bool] = False) -> None:
     """
     Provide useful information, important for bug reports.
@@ -836,14 +832,13 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
         sys_info["LOCALE"] = f"{language_code}.{encoding}"
 
         maxlen = max(max(len(x) for x in d) for d in (deps, modin_deps))
-        print("\nINSTALLED VERSIONS")
-        print("------------------")
+        print("\nINSTALLED VERSIONS\n------------------")  # noqa: T201
         for k, v in sys_info.items():
-            print(f"{k:<{maxlen}}: {v}")
+            print(f"{k:<{maxlen}}: {v}")  # noqa: T201
         for name, d in (("Modin", modin_deps), ("pandas", deps)):
-            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
+            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")  # noqa: T201
             for k, v in d.items():
-                print(f"{k:<{maxlen}}: {v}")
+                print(f"{k:<{maxlen}}: {v}")  # noqa: T201
 
 
 class ModinAssumptionError(Exception):
