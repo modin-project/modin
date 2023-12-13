@@ -716,6 +716,8 @@ class PandasDataframe(ClassLogger):
                 new_dtypes = None
         elif isinstance(self._dtypes, pandas.Series):
             new_dtypes = self.dtypes.set_axis(new_columns)
+        else:
+            new_dtypes = None
         self.set_columns_cache(new_columns)
         # we have to set new dtypes cache after columns,
         # so the 'self.columns' and 'new_dtypes.index' indices would match
