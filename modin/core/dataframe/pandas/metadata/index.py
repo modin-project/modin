@@ -144,6 +144,10 @@ class ModinIndex:
         new_index = self.copy(copy_lengths=True)
         new_index._axis = axis
         new_index._value = self._get_default_callable(value, new_index._axis)
+        # if the '._value' was 'None' initially, then the '_is_default_callable' flag was
+        # also being set to 'False', since now the '._value' is a default callable,
+        # so we want to ensure that the flag is set to 'True'
+        new_index._is_default_callable = True
         return new_index
 
     @property
