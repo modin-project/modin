@@ -816,8 +816,17 @@ class PandasDataframe(ClassLogger):
                 if i < len(self.row_lengths) and self.row_lengths[i] != 0
             ]
         )
-        self._column_widths_cache = [w for w in self.column_widths if w != 0]
-        self._row_lengths_cache = [r for r in self.row_lengths if r != 0]
+        new_col_widths = [w for w in self.column_widths if w != 0]
+        new_row_lengths = [r for r in self.row_lengths if r != 0]
+
+        # check whether an axis partitioning was modified and if we should reset the lengths id for 'ModinIndex'
+        if new_col_widths != self.column_widths:
+            self.set_columns_cache(self.copy_columns_cache(copy_lengths=False))
+        if new_row_lengths != self.row_lengths:
+            self.set_index_cache(self.copy_index_cache(copy_lengths=False))
+
+        self._column_widths_cache = new_col_widths
+        self._row_lengths_cache = new_row_lengths
 
     def synchronize_labels(self, axis=None):
         """
