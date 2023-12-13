@@ -709,11 +709,17 @@ class PandasDataframe(ClassLogger):
                 return
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
         if isinstance(self._dtypes, ModinDtypes):
-            new_value = self._dtypes.set_index(new_columns)
-            self.set_dtypes_cache(new_value)
+            try:
+                new_dtypes = self._dtypes.set_index(new_columns)
+            except NotImplementedError:
+                # can raise on duplicated labels
+                new_dtypes = None
         elif isinstance(self._dtypes, pandas.Series):
-            self.dtypes.index = new_columns
+            new_dtypes = self.dtypes.set_axis(new_columns)
         self.set_columns_cache(new_columns)
+        # we have to set new dtypes cache after columns,
+        # so the 'self.columns' and 'new_dtypes.index' indices would match
+        self.set_dtypes_cache(new_dtypes)
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)

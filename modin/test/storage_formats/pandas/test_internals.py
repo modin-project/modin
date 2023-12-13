@@ -2171,6 +2171,17 @@ class TestModinDtypes:
                 assert df._dtypes._value.equals(result_dtypes)
         assert df.dtypes.index.equals(pandas.Index(["col1", "col2", "col3"]))
 
+    def test_set_index_with_dupl_labels(self):
+        """Verify that setting duplicated columns doesn't propagate any errors to a user."""
+        df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [3.5, 4.4, 5.5, 6.6]})
+        # making sure that dtypes are represented by an unmaterialized dtypes-descriptor
+        df._query_compiler._modin_frame.set_dtypes_cache(None)
+
+        df.columns = ["a", "a"]
+        assert df.dtypes.equals(
+            pandas.Series([np.dtype(int), np.dtype("float64")], index=["a", "a"])
+        )
+
 
 class TestZeroComputationDtypes:
     """
