@@ -1282,37 +1282,37 @@ class TestModinIndexIds:
         # case1: partitioning is modified by '._filter_empties()', meaning that '._lengths_id' should be changed
         md_df = construct_modin_df_by_scheme(
             pandas.DataFrame({"a": [1, 1, 2, 2]}),
-            {"row_lengths": [2, 2], "col_widths": [1]},
+            {"row_lengths": [2, 2], "column_widths": [1]},
         )
         mf = md_df.query("a < 2")._query_compiler._modin_frame
+        mf.index  # trigger index materialization
 
         old_cache = mf._index_cache
         assert mf._partitions.shape == (2, 1)
-        assert not mf.has_materialized_index
 
         mf._filter_empties()
         new_cache = mf._index_cache
 
         assert new_cache._index_id == old_cache._index_id
         assert new_cache._lengths_id != old_cache._lengths_id
+        assert new_cache._lengths_cache != old_cache._lengths_cache
 
         # case2: partitioning is NOT modified by '._filter_empties()', meaning that '._lengths_id' should stay the same
         md_df = construct_modin_df_by_scheme(
             pandas.DataFrame({"a": [1, 1, 2, 2]}),
-            {"row_lengths": [2, 2], "col_widths": [1]},
+            {"row_lengths": [2, 2], "column_widths": [1]},
         )
-        remove_axis_cache(md_df)
         mf = md_df._query_compiler._modin_frame
 
         old_cache = mf._index_cache
         assert mf._partitions.shape == (2, 1)
-        assert not mf.has_materialized_index
 
         mf._filter_empties()
         new_cache = mf._index_cache
 
         assert new_cache._index_id == old_cache._index_id
         assert new_cache._lengths_id == old_cache._lengths_id
+        assert new_cache._lengths_cache == old_cache._lengths_cache
 
 
 def test_skip_set_columns():
