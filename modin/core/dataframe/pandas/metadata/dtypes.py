@@ -294,6 +294,11 @@ class DtypesDescriptor:
         Calling this method on a descriptor that returns ``None`` for ``.columns_order``
         will result into information lose.
         """
+        if len(new_index) != len(set(new_index)):
+            raise NotImplementedError(
+                "Duplicated column names are not yet supported by DtypesDescriptor"
+            )
+
         if self.columns_order is None:
             # we can't map new columns to old columns and lost all dtypes :(
             return DtypesDescriptor(
