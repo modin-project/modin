@@ -19,6 +19,7 @@ import warnings
 from io import BytesIO
 
 import pandas
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
@@ -47,6 +48,7 @@ class ExcelDispatcher(TextFileDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        io = stringify_path(io)
         if (
             kwargs.get("engine", None) is not None
             and kwargs.get("engine") != "openpyxl"

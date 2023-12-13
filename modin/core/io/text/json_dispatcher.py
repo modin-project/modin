@@ -17,6 +17,7 @@ from io import BytesIO
 
 import numpy as np
 import pandas
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
@@ -43,6 +44,7 @@ class JSONDispatcher(TextFileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        path_or_buf = stringify_path(path_or_buf)
         path_or_buf = cls.get_path_or_buffer(path_or_buf)
         if isinstance(path_or_buf, str):
             if not cls.file_exists(path_or_buf):
