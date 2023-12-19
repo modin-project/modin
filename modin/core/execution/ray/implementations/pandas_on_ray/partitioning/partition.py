@@ -16,7 +16,6 @@ from typing import Callable, Union
 
 import pandas
 import ray
-from ray.util import get_node_ip_address
 from ray.util.client.common import ClientObjectRef
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -41,14 +40,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    data : ray.ObjectRef or DeferredExecution
+    data : ObjectIDType or DeferredExecution
         A reference to ``pandas.DataFrame`` that need to be wrapped with this class
         or a reference to DeferredExecution that need to be executed on demand.
-    length : ray.ObjectRef or int, optional
+    length : ObjectIDType or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
+    width : ObjectIDType or int, optional
         Width or reference to it of wrapped ``pandas.DataFrame``.
-    ip : ray.ObjectRef or str, optional
+    ip : ObjectIDType or str, optional
         Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
     """
 
@@ -65,6 +64,11 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(data, DeferredExecution):
             data.ref_count(1)
         self._data_ref = data
+        # The metadata is stored in the MetaList at 0 offset. If the data is
+        # a DeferredExecution, the meta will be replaced with the list, returned
+        # by the remote function. The returned list may contain data for multiple
+        # results and, in this case, meta_off corresponds to the meta related to
+        # this partition.
         self.meta = MetaList([length, width, ip])
         self.meta_off = 0
 
@@ -302,8 +306,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         if (ip := self._ip_cache) is None:
             self.drain_call_queue()
-            if (ip := self._ip_cache) is None:
-                self._ip_cache = ip = _get_ip.remote()
         if materialize and isinstance(ip, ObjectIDType):
             self._ip_cache = ip = RayWrapper.materialize(ip)
         return ip
@@ -356,15 +358,3 @@ def _get_index_and_columns(df):  # pragma: no cover
         The number of columns.
     """
     return len(df.index), len(df.columns)
-
-
-@ray.remote(num_returns=4)
-def _get_ip() -> str:
-    """
-    Get the IP address of the worker process.
-
-    Returns
-    -------
-    str
-    """
-    return get_node_ip_address()
