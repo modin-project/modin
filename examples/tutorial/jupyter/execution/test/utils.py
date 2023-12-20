@@ -18,7 +18,7 @@ test_dataset_path = "taxi.csv"
 download_taxi_dataset = f"""import os
 import urllib.request
 if not os.path.exists("{test_dataset_path}"):
-    url_path = "https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv"
+    url_path = "https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
     urllib.request.urlretrieve(url_path, "{test_dataset_path}")
     """
 
