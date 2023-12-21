@@ -370,24 +370,6 @@ class NPartitions(EnvironmentVariable, type=int):
             return CpuCount.get()
 
 
-class SocksProxy(EnvironmentVariable, type=ExactStr):
-    """SOCKS proxy address if it is needed for SSH to work."""
-
-    varname = "MODIN_SOCKS_PROXY"
-
-
-class DoLogRpyc(EnvironmentVariable, type=bool):
-    """Whether to gather RPyC logs (applicable for remote context)."""
-
-    varname = "MODIN_LOG_RPYC"
-
-
-class DoTraceRpyc(EnvironmentVariable, type=bool):
-    """Whether to trace RPyC calls (applicable for remote context)."""
-
-    varname = "MODIN_TRACE_RPYC"
-
-
 class HdkFragmentSize(EnvironmentVariable, type=int):
     """How big a fragment in HDK should be when creating a table (in rows)."""
 
