@@ -14,8 +14,6 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
-import typing
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
@@ -971,7 +969,7 @@ class UnionNode(DFAlgNode):
         except pa.lib.ArrowInvalid:
             # Probably, some tables have different column types.
             # Trying to find a common type and cast the columns.
-            fields: typing.OrderedDict[str, pa.Field] = OrderedDict()
+            fields: Dict[str, pa.Field] = {}
             for table in tables:
                 for col_name in table.column_names:
                     field = table.field(col_name)
@@ -1178,7 +1176,7 @@ def translate_exprs_to_base(exprs, base):
         new_frames.discard(base)
         frames = new_frames
 
-    res = OrderedDict()
+    res = {}
     for col in exprs.keys():
         res[col] = new_exprs[col]
     return res
@@ -1205,7 +1203,7 @@ def replace_frame_in_exprs(exprs, old_frame, new_frame):
     mapper = InputMapper()
     mapper.add_mapper(old_frame, FrameMapper(new_frame))
 
-    res = OrderedDict()
+    res = {}
     for col in exprs.keys():
         res[col] = exprs[col].translate_input(mapper)
     return res
