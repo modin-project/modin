@@ -149,8 +149,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A copy of this partition.
         """
-        if isinstance(self._data_ref, DeferredExecution):
-            self._data_ref.ref_count(1)
         return self.__constructor__(
             self._data_ref,
             length=self._length_cache,
