@@ -415,7 +415,9 @@ class Binary(Operator):
                     ):
                         shape_hint = "column"
                     new_modin_frame = query_compiler._modin_frame.map(
-                        lambda df: func(df, other, *args, **kwargs),
+                        func,
+                        func_args=(other, *args),
+                        func_kwargs=kwargs,
                         dtypes=dtypes,
                     )
                 return query_compiler.__constructor__(

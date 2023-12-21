@@ -18,6 +18,7 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
+from types import FunctionType
 
 import ray
 from ray.util.client.common import ClientObjectRef
@@ -47,6 +48,8 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
 
 class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
+
+    _func_cache = {}
 
     @classmethod
     def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
@@ -127,6 +130,14 @@ class RayWrapper:
         ray.ObjectID
             Ray object identifier to get the value by.
         """
+        if isinstance(data, FunctionType):
+            qname = data.__qualname__
+            if "<locals>" not in qname and "<lambda>" not in qname:
+                ref = cls._func_cache.get(data, None)
+                if ref is None:
+                    ref = ray.put(data)
+                    cls._func_cache[data] = ref
+                return ref
         return ray.put(data, **kwargs)
 
     @classmethod
