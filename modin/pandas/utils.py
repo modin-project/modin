@@ -429,6 +429,23 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
 
     return doc_op
 
+def apply_function_on_selected_items(input_list, filter_condition, func_apply):
+    breakpoint()
+    filtered_list = []
+    filterd_masks=[False]*len(input_list)
+    for idx,item in enumerate(input_list):
+        if filter_condition(item):
+            filterd_masks[idx] = True
+            filtered_list.append(item)
+    filtered_list = func_apply(filtered_list)
+    # Reversing the filtered list as the elements are to be popped on by one from the end
+    filtered_list.reverse()
+    for i in range(len(input_list)):
+        if filterd_masks[i]:
+            input_list[i]=filtered_list.pop()
+    
+            
+        
 
 _original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
 pandas.MultiIndex.from_frame = from_modin_frame_to_mi

@@ -40,7 +40,10 @@ class PythonWrapper:
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
         return func(*args, **kwargs)
-
+    
+    @classmethod
+    def check_is_future(cls, item):
+        return False
     @classmethod
     def materialize(cls, obj_id):
         """
