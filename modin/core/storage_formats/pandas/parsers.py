@@ -43,7 +43,6 @@ import contextlib
 import json
 import os
 import warnings
-from collections import OrderedDict
 from io import BytesIO, IOBase, TextIOWrapper
 from typing import Any, NamedTuple
 
@@ -313,7 +312,7 @@ class PandasParser(ClassLogger):
                 )
             )
             return pandas_frame
-        elif isinstance(pandas_frame, (OrderedDict, dict)):
+        elif isinstance(pandas_frame, dict):
             return {
                 i: cls.query_compiler_cls.from_pandas(frame, cls.frame_cls)
                 for i, frame in pandas_frame.items()

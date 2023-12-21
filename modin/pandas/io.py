@@ -25,7 +25,6 @@ import csv
 import inspect
 import pathlib
 import pickle
-from collections import OrderedDict
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -491,7 +490,7 @@ def read_excel(
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     intermediate = FactoryDispatcher.read_excel(**kwargs)
-    if isinstance(intermediate, (OrderedDict, dict)):
+    if isinstance(intermediate, dict):
         parsed = type(intermediate)()
         for key in intermediate.keys():
             parsed[key] = ModinObjects.DataFrame(query_compiler=intermediate.get(key))

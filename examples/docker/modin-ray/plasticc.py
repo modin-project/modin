@@ -13,7 +13,6 @@
 
 import sys
 import time
-from collections import OrderedDict
 from functools import partial
 
 import numpy as np
@@ -29,7 +28,7 @@ from sklearn.preprocessing import LabelEncoder
 
 ################ helper functions ###############################
 def create_dtypes():
-    dtypes = OrderedDict(
+    dtypes = dict(
         [
             ("object_id", "int32"),
             ("mjd", "float32"),
@@ -56,7 +55,7 @@ def create_dtypes():
         "target",
     ]
     meta_dtypes = ["int32"] + ["float32"] * 4 + ["int32"] + ["float32"] * 5 + ["int32"]
-    meta_dtypes = OrderedDict(
+    meta_dtypes = dict(
         [(columns_names[i], meta_dtypes[i]) for i in range(len(meta_dtypes))]
     )
     return dtypes, meta_dtypes
