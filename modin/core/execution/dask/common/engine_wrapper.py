@@ -16,8 +16,9 @@
 from collections import UserDict
 
 from dask.distributed import wait
-from distributed.client import default_client
 from distributed import Future
+from distributed.client import default_client
+
 
 def _deploy_dask_func(func, *args, **kwargs):  # pragma: no cover
     """
@@ -89,11 +90,10 @@ class DaskWrapper:
                 for i in range(num_returns)
             ]
         return remote_task_future
-    
+
     @classmethod
     def check_is_future(cls, item):
         return isinstance(item, Future)
-        
 
     @classmethod
     def materialize(cls, future):

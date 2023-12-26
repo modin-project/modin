@@ -429,11 +429,14 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
 
     return doc_op
 
+
 def apply_function_on_selected_items(input_list, filter_condition, func_apply):
-    breakpoint()
+    if not input_list:
+        return
     filtered_list = []
-    filterd_masks=[False]*len(input_list)
-    for idx,item in enumerate(input_list):
+    input_list_length = len(input_list)
+    filterd_masks = [False] * input_list_length
+    for idx, item in enumerate(input_list):
         if filter_condition(item):
             filterd_masks[idx] = True
             filtered_list.append(item)
@@ -442,10 +445,8 @@ def apply_function_on_selected_items(input_list, filter_condition, func_apply):
     filtered_list.reverse()
     for i in range(len(input_list)):
         if filterd_masks[i]:
-            input_list[i]=filtered_list.pop()
-    
-            
-        
+            input_list[i] = filtered_list.pop()
+
 
 _original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
 pandas.MultiIndex.from_frame = from_modin_frame_to_mi

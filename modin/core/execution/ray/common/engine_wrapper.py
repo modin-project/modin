@@ -73,9 +73,11 @@ class RayWrapper:
         return _deploy_ray_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
+
     @classmethod
     def check_is_future(cls, item):
-        return isinstance(item, ray.ObjectRef) 
+        return isinstance(item, ray.ObjectRef)
+
     @classmethod
     def materialize(cls, obj_id):
         """

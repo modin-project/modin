@@ -575,9 +575,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     _length_cache = None
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+        Adding materialize to be consistent with length function of PandasDataframePartition.
 
         Returns
         -------
@@ -595,9 +600,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     _width_cache = None
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+        Adding materialize to be consistent with width function of PandasDataframePartition.
 
         Returns
         -------

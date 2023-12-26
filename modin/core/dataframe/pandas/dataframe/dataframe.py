@@ -56,7 +56,11 @@ if TYPE_CHECKING:
 
 from modin.logging import ClassLogger
 from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import check_both_not_none, is_full_grab_slice,apply_function_on_selected_items
+from modin.pandas.utils import (
+    apply_function_on_selected_items,
+    check_both_not_none,
+    is_full_grab_slice,
+)
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -188,10 +192,16 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = [part.length(materialize=False) for part in row_parts]
-                filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-                apply_function_on_selected_items(self._row_lengths_cache,filter_condition,self.materialize_func)
-                
+                self._row_lengths_cache = [
+                    part.length(materialize=False) for part in row_parts
+                ]
+                filter_condition = (
+                    self._partition_mgr_cls._execution_wrapper.check_is_future
+                )
+                apply_function_on_selected_items(
+                    self._row_lengths_cache, filter_condition, self.materialize_func
+                )
+
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -220,14 +230,20 @@ class PandasDataframe(ClassLogger):
         list
             A list of column partitions widths.
         """
-        
+
         if self._column_widths_cache is None:
-            if len(self._partitions) > 0:                
+            if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                
-                self._column_widths_cache = [part.width(materialize=False) for part in col_parts]
-                filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-                apply_function_on_selected_items(self._column_widths_cache,filter_condition,self.materialize_func)
+
+                self._column_widths_cache = [
+                    part.width(materialize=False) for part in col_parts
+                ]
+                filter_condition = (
+                    self._partition_mgr_cls._execution_wrapper.check_is_future
+                )
+                apply_function_on_selected_items(
+                    self._column_widths_cache, filter_condition, self.materialize_func
+                )
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -3671,9 +3687,13 @@ class PandasDataframe(ClassLogger):
                         else:
                             new_lengths = None
                             break
-                    filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-                    apply_function_on_selected_items(new_lengths,filter_condition,self.materialize_func)
-        
+                    filter_condition = (
+                        self._partition_mgr_cls._execution_wrapper.check_is_future
+                    )
+                    apply_function_on_selected_items(
+                        new_lengths, filter_condition, self.materialize_func
+                    )
+
         else:
             if all(obj.has_materialized_columns for obj in (self, *others)):
                 new_columns = self.columns.append([other.columns for other in others])
@@ -3698,12 +3718,13 @@ class PandasDataframe(ClassLogger):
                         else:
                             new_widths = None
                             break
-                    filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-                    apply_function_on_selected_items(new_widths,filter_condition,self.materialize_func)
-                    
-                    
-        
-        
+                    filter_condition = (
+                        self._partition_mgr_cls._execution_wrapper.check_is_future
+                    )
+                    apply_function_on_selected_items(
+                        new_widths, filter_condition, self.materialize_func
+                    )
+
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )

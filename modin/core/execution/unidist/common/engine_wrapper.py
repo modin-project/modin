@@ -73,10 +73,11 @@ class UnidistWrapper:
         return _deploy_unidist_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
+
     @classmethod
     def check_is_future(cls, item):
         return unidist.is_object_ref(item)
-    
+
     @classmethod
     def materialize(cls, obj_id):
         """
