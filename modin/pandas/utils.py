@@ -431,6 +431,18 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
 
 
 def apply_function_on_selected_items(input_list, filter_condition, func_apply):
+    """
+    Apply a funtion the provided list for elements filtered by a filter condition.
+
+    Parameters
+    ----------
+    input_list : list
+        The list that has to be manipulated.
+    filter_condition : callable
+        The filter function to filter elements in the given list.
+    func_apply : callable
+        The function that has to be applied to elements in the list.
+    """
     if not input_list:
         return
     filtered_list = []

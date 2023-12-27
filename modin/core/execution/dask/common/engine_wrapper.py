@@ -93,6 +93,19 @@ class DaskWrapper:
 
     @classmethod
     def check_is_future(cls, item):
+        """
+        Get the value of object from the object store.
+
+        Parameters
+        ----------
+        item : distributed.Future or object
+            Future or object to check.
+
+        Returns
+        -------
+        boolean
+            If the value is a future.
+        """
         return isinstance(item, Future)
 
     @classmethod

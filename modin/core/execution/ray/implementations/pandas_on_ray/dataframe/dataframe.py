@@ -41,3 +41,4 @@ class PandasOnRayDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnRayDataframePartitionManager
+    _materialize_in_loop = False

@@ -43,6 +43,18 @@ class PythonWrapper:
 
     @classmethod
     def check_is_future(cls, item):
+        """
+        Get the value of object from the object store.
+
+        Parameters
+        ----------
+        item : object
+
+        Returns
+        -------
+        boolean
+            Always return false.
+        """
         return False
 
     @classmethod
