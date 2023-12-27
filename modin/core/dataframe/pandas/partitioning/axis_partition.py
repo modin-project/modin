@@ -582,7 +582,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         Parameters
         ----------
         materialize : bool, default: True
-        Adding materialize to be consistent with length function of PandasDataframePartition.
+            Adding materialize to be consistent with length function of PandasDataframePartition.
 
         Returns
         -------
@@ -607,7 +607,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         Parameters
         ----------
         materialize : bool, default: True
-        Adding materialize to be consistent with width function of PandasDataframePartition.
+            Adding materialize to be consistent with width function of PandasDataframePartition.
 
         Returns
         -------

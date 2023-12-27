@@ -97,6 +97,11 @@ class PandasDataframe(ClassLogger):
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index = False
     _deferred_column = False
+    # If some logic involving materialisation is performed in loop the below property
+    # decides if the materialisation should be performed in each loop iteration.
+    # This value is set True by default. For  implementations eg Ray where this is an
+    # antipattern the value will be set to false.
+    _materialize_in_loop = True
 
     @pandas.util.cache_readonly
     def __constructor__(self):
@@ -124,6 +129,7 @@ class PandasDataframe(ClassLogger):
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
         self.materialize_func = self._partition_mgr_cls._execution_wrapper.materialize
+
         self.set_dtypes_cache(dtypes)
 
         self._validate_axes_lengths()
@@ -193,14 +199,16 @@ class PandasDataframe(ClassLogger):
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
                 self._row_lengths_cache = [
-                    part.length(materialize=False) for part in row_parts
+                    part.length(materialize=self._materialize_in_loop)
+                    for part in row_parts
                 ]
-                filter_condition = (
-                    self._partition_mgr_cls._execution_wrapper.check_is_future
-                )
-                apply_function_on_selected_items(
-                    self._row_lengths_cache, filter_condition, self.materialize_func
-                )
+                if not self._materialize_in_loop:
+                    filter_condition = (
+                        self._partition_mgr_cls._execution_wrapper.check_is_future
+                    )
+                    apply_function_on_selected_items(
+                        self._row_lengths_cache, filter_condition, self.materialize_func
+                    )
 
             else:
                 self._row_lengths_cache = []
@@ -230,20 +238,23 @@ class PandasDataframe(ClassLogger):
         list
             A list of column partitions widths.
         """
-
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
 
                 self._column_widths_cache = [
-                    part.width(materialize=False) for part in col_parts
+                    part.width(materialize=self._materialize_in_loop)
+                    for part in col_parts
                 ]
-                filter_condition = (
-                    self._partition_mgr_cls._execution_wrapper.check_is_future
-                )
-                apply_function_on_selected_items(
-                    self._column_widths_cache, filter_condition, self.materialize_func
-                )
+                if not self._materialize_in_loop:
+                    filter_condition = (
+                        self._partition_mgr_cls._execution_wrapper.check_is_future
+                    )
+                    apply_function_on_selected_items(
+                        self._column_widths_cache,
+                        filter_condition,
+                        self.materialize_func,
+                    )
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -3683,16 +3694,19 @@ class PandasDataframe(ClassLogger):
                 if new_partitions.size > 0:
                     for part in new_partitions.T[0]:
                         if part._length_cache is not None:
-                            new_lengths.append(part.length(materialize=False))
+                            new_lengths.append(
+                                part.length(materialize=self._materialize_in_loop)
+                            )
                         else:
                             new_lengths = None
                             break
-                    filter_condition = (
-                        self._partition_mgr_cls._execution_wrapper.check_is_future
-                    )
-                    apply_function_on_selected_items(
-                        new_lengths, filter_condition, self.materialize_func
-                    )
+                    if not self._materialize_in_loop:
+                        filter_condition = (
+                            self._partition_mgr_cls._execution_wrapper.check_is_future
+                        )
+                        apply_function_on_selected_items(
+                            new_lengths, filter_condition, self.materialize_func
+                        )
 
         else:
             if all(obj.has_materialized_columns for obj in (self, *others)):
@@ -3714,16 +3728,19 @@ class PandasDataframe(ClassLogger):
                 if new_partitions.size > 0:
                     for part in new_partitions[0]:
                         if part._width_cache is not None:
-                            new_widths.append(part.width(materialize=False))
+                            new_widths.append(
+                                part.width(materialize=self._materialize_in_loop)
+                            )
                         else:
                             new_widths = None
                             break
-                    filter_condition = (
-                        self._partition_mgr_cls._execution_wrapper.check_is_future
-                    )
-                    apply_function_on_selected_items(
-                        new_widths, filter_condition, self.materialize_func
-                    )
+                    if self._materialize_in_loop:
+                        filter_condition = (
+                            self._partition_mgr_cls._execution_wrapper.check_is_future
+                        )
+                        apply_function_on_selected_items(
+                            new_widths, filter_condition, self.materialize_func
+                        )
 
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
