@@ -333,6 +333,40 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         """
         return width_fn_pandas
 
+    @classmethod
+    def get_lengths_glob(cls, parts):
+        """
+        Get lengths of all the given parts.
+
+        Parameters
+        ----------
+        parts : list
+            All parts whose lengths are to be retrived.
+
+        Returns
+        -------
+        str
+        """
+        lengths = [part.length() for part in parts]
+        return lengths
+
+    @classmethod
+    def get_widths_glob(cls, parts):
+        """
+        Get widths of all the given parts.
+
+        Parameters
+        ----------
+        parts : list
+            All parts whose widths are to be retrived.
+
+        Returns
+        -------
+        str
+        """
+        lengths = [part.width() for part in parts]
+        return lengths
+
     def length(self, materialize=True):
         """
         Get the length of the object wrapped by this partition.

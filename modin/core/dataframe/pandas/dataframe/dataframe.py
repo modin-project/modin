@@ -196,20 +196,9 @@ class PandasDataframe(ClassLogger):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            if len(self._partitions.T) > 0:
+            if len(self._partitions.T) > 0 and len(self._partitions.T[0]) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = [
-                    part.length(materialize=self._materialize_in_loop)
-                    for part in row_parts
-                ]
-                if not self._materialize_in_loop:
-                    filter_condition = (
-                        self._partition_mgr_cls._execution_wrapper.check_is_future
-                    )
-                    apply_function_on_selected_items(
-                        self._row_lengths_cache, filter_condition, self.materialize_func
-                    )
-
+                self._row_lengths_cache = row_parts[0].get_lengths_glob(row_parts)
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
@@ -239,22 +228,9 @@ class PandasDataframe(ClassLogger):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            if len(self._partitions) > 0:
+            if len(self._partitions) > 0 and len(self._partitions[0]) > 0:
                 col_parts = self._partitions[0]
-
-                self._column_widths_cache = [
-                    part.width(materialize=self._materialize_in_loop)
-                    for part in col_parts
-                ]
-                if not self._materialize_in_loop:
-                    filter_condition = (
-                        self._partition_mgr_cls._execution_wrapper.check_is_future
-                    )
-                    apply_function_on_selected_items(
-                        self._column_widths_cache,
-                        filter_condition,
-                        self.materialize_func,
-                    )
+                self._column_widths_cache = col_parts[0].get_widths_glob(col_parts)
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache

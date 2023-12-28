@@ -26,6 +26,7 @@ from modin.core.execution.ray.common.utils import (
 )
 from modin.logging import get_logger
 from modin.pandas.indexing import compute_sliced_len
+from modin.pandas.utils import apply_function_on_selected_items
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -256,6 +257,49 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A reference to `func`.
         """
         return cls.execution_wrapper.put(func)
+
+    @classmethod
+    def get_lengths_glob(cls, parts):
+        """
+        Get lengths of all the given parts.
+
+        Parameters
+        ----------
+        parts : list
+            All parts whose lengths are to be retrived.
+
+        Returns
+        -------
+        str
+        """
+        lengths = [part.length() for part in parts]
+        filter_condition = cls.execution_wrapper.check_is_future
+
+        apply_function_on_selected_items(
+            lengths, filter_condition, cls.execution_wrapper.materialize
+        )
+        return lengths
+
+    @classmethod
+    def get_widths_glob(cls, parts):
+        """
+        Get widths of all the given parts.
+
+        Parameters
+        ----------
+        parts : list
+            All parts whose widths are to be retrived.
+
+        Returns
+        -------
+        str
+        """
+        widths = [part.width() for part in parts]
+        filter_condition = cls.execution_wrapper.check_is_future
+        apply_function_on_selected_items(
+            widths, filter_condition, cls.execution_wrapper.materialize
+        )
+        return widths
 
     def length(self, materialize=True):
         """
