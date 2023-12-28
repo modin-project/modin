@@ -20,6 +20,7 @@ To be used as a piece of building a Ray-based engine.
 import asyncio
 
 import ray
+from ray.util.client.common import ClientObjectRef
 
 
 @ray.remote
@@ -89,7 +90,8 @@ class RayWrapper:
         boolean
             If the value is a future.
         """
-        return isinstance(item, ray.ObjectRef)
+        ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+        return isinstance(item, ObjectIDType)
 
     @classmethod
     def materialize(cls, obj_id):
