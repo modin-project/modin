@@ -18,10 +18,13 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
+from os import environ
 from types import FunctionType
 
 import ray
 from ray.util.client.common import ClientObjectRef
+
+from modin.error_message import ErrorMessage
 
 
 @ray.remote
@@ -135,8 +138,13 @@ class RayWrapper:
             if "<locals>" not in qname and "<lambda>" not in qname:
                 ref = cls._func_cache.get(data, None)
                 if ref is None:
-                    ref = ray.put(data)
-                    cls._func_cache[data] = ref
+                    if len(cls._func_cache) < 1024:
+                        ref = ray.put(data)
+                        cls._func_cache[data] = ref
+                    else:
+                        msg = "To many functions in the RayWrapper cache!"
+                        assert "MODIN_GITHUB_CI" not in environ, msg
+                        ErrorMessage.warn(msg)
                 return ref
         return ray.put(data, **kwargs)
 
