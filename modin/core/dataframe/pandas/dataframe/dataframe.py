@@ -198,10 +198,28 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0 and len(self._partitions.T[0]) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = row_parts[0].get_lengths_glob(row_parts)
+                self._row_lengths_cache = self._get_dimensions(row_parts, "length")
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
+
+    def _get_dimensions(self, parts, dim_name):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        dim_name : string
+            Dimension name could be "length" or "width".
+
+        Returns
+        -------
+        list
+        """
+        dims = [getattr(part, dim_name)() for part in parts]
+        return dims
 
     def __len__(self) -> int:
         """
@@ -230,7 +248,7 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0 and len(self._partitions[0]) > 0:
                 col_parts = self._partitions[0]
-                self._column_widths_cache = col_parts[0].get_widths_glob(col_parts)
+                self._column_widths_cache = self._get_dimensions(col_parts, "width")
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache

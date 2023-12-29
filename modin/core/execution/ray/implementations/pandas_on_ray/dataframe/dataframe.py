@@ -14,6 +14,7 @@
 """Module houses class that implements ``PandasDataframe`` using Ray."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.pandas.utils import apply_function_on_selected_items
 
 from ..partitioning.partition_manager import PandasOnRayDataframePartitionManager
 
@@ -42,3 +43,23 @@ class PandasOnRayDataframe(PandasDataframe):
 
     _partition_mgr_cls = PandasOnRayDataframePartitionManager
     _materialize_in_loop = False
+
+    def _get_dimensions(self, parts, dim_name):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        dim_name : string
+            Dimension name could be "length" or "width".
+
+        Returns
+        -------
+        list
+        """
+        dims = [getattr(part, dim_name)(False) for part in parts]
+        filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
+        apply_function_on_selected_items(dims, filter_condition, self.materialize_func)
+        return dims
