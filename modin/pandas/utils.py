@@ -442,9 +442,14 @@ def apply_function_on_selected_items(input_list, filter_condition, func_apply):
         The filter function to filter elements in the given list.
     func_apply : callable
         The function that has to be applied to elements in the list.
+
+    Returns
+    -------
+    list
+        Modified input list.
     """
     if not input_list:
-        return
+        return None
     filtered_list = []
     filtered_idx = []
     for idx, item in enumerate(input_list):
@@ -454,6 +459,7 @@ def apply_function_on_selected_items(input_list, filter_condition, func_apply):
     filtered_list = func_apply(filtered_list)
     for idx, item in zip(filtered_idx, filtered_list):
         input_list[idx] = item
+    return input_list
 
 
 _original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame

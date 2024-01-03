@@ -61,5 +61,7 @@ class PandasOnRayDataframe(PandasDataframe):
         """
         dims = [getattr(part, dim_name)(False) for part in parts]
         filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-        apply_function_on_selected_items(dims, filter_condition, self.materialize_func)
+        dims = apply_function_on_selected_items(
+            dims, filter_condition, self.materialize_func
+        )
         return dims

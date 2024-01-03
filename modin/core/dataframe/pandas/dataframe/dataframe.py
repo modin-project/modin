@@ -196,7 +196,7 @@ class PandasDataframe(ClassLogger):
             A list of row partitions lengths.
         """
         if self._row_lengths_cache is None:
-            if len(self._partitions.T) > 0 and len(self._partitions.T[0]) > 0:
+            if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
                 self._row_lengths_cache = self._get_dimensions(row_parts, "length")
             else:
@@ -246,7 +246,7 @@ class PandasDataframe(ClassLogger):
             A list of column partitions widths.
         """
         if self._column_widths_cache is None:
-            if len(self._partitions) > 0 and len(self._partitions[0]) > 0:
+            if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
                 self._column_widths_cache = self._get_dimensions(col_parts, "width")
             else:
@@ -3698,7 +3698,7 @@ class PandasDataframe(ClassLogger):
                         filter_condition = (
                             self._partition_mgr_cls._execution_wrapper.check_is_future
                         )
-                        apply_function_on_selected_items(
+                        new_lengths = apply_function_on_selected_items(
                             new_lengths, filter_condition, self.materialize_func
                         )
 
@@ -3732,7 +3732,7 @@ class PandasDataframe(ClassLogger):
                         filter_condition = (
                             self._partition_mgr_cls._execution_wrapper.check_is_future
                         )
-                        apply_function_on_selected_items(
+                        new_widths = apply_function_on_selected_items(
                             new_widths, filter_condition, self.materialize_func
                         )
 
