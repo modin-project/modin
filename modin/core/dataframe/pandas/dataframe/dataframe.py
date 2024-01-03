@@ -56,11 +56,7 @@ if TYPE_CHECKING:
 
 from modin.logging import ClassLogger
 from modin.pandas.indexing import is_range_like
-from modin.pandas.utils import (
-    apply_function_on_selected_items,
-    check_both_not_none,
-    is_full_grab_slice,
-)
+from modin.pandas.utils import check_both_not_none, is_full_grab_slice
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
@@ -3695,11 +3691,8 @@ class PandasDataframe(ClassLogger):
                             new_lengths = None
                             break
                     if not self._materialize_in_loop:
-                        filter_condition = (
-                            self._partition_mgr_cls._execution_wrapper.check_is_future
-                        )
-                        new_lengths = apply_function_on_selected_items(
-                            new_lengths, filter_condition, self.materialize_func
+                        new_lengths = self._partition_mgr_cls.materialize_futures(
+                            new_lengths
                         )
 
         else:
@@ -3729,11 +3722,8 @@ class PandasDataframe(ClassLogger):
                             new_widths = None
                             break
                     if self._materialize_in_loop:
-                        filter_condition = (
-                            self._partition_mgr_cls._execution_wrapper.check_is_future
-                        )
-                        new_widths = apply_function_on_selected_items(
-                            new_widths, filter_condition, self.materialize_func
+                        new_widths = self._partition_mgr_cls.materialize_futures(
+                            new_widths
                         )
 
         return self.__constructor__(

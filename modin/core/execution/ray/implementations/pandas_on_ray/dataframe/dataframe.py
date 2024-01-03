@@ -14,7 +14,6 @@
 """Module houses class that implements ``PandasDataframe`` using Ray."""
 
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
-from modin.pandas.utils import apply_function_on_selected_items
 
 from ..partitioning.partition_manager import PandasOnRayDataframePartitionManager
 
@@ -60,8 +59,5 @@ class PandasOnRayDataframe(PandasDataframe):
         list
         """
         dims = [getattr(part, dim_name)(False) for part in parts]
-        filter_condition = self._partition_mgr_cls._execution_wrapper.check_is_future
-        dims = apply_function_on_selected_items(
-            dims, filter_condition, self.materialize_func
-        )
+        dims = self._partition_mgr_cls.materialize_futures(dims)
         return dims

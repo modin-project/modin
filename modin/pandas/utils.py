@@ -430,37 +430,5 @@ def _doc_binary_op(operation, bin_op, left="Series", right="right", returns="Ser
     return doc_op
 
 
-def apply_function_on_selected_items(input_list, filter_condition, func_apply):
-    """
-    Apply a funtion the provided list for elements filtered by a filter condition.
-
-    Parameters
-    ----------
-    input_list : list
-        The list that has to be manipulated.
-    filter_condition : callable
-        The filter function to filter elements in the given list.
-    func_apply : callable
-        The function that has to be applied to elements in the list.
-
-    Returns
-    -------
-    list
-        Modified input list.
-    """
-    if not input_list:
-        return None
-    filtered_list = []
-    filtered_idx = []
-    for idx, item in enumerate(input_list):
-        if filter_condition(item):
-            filtered_idx.append(idx)
-            filtered_list.append(item)
-    filtered_list = func_apply(filtered_list)
-    for idx, item in zip(filtered_idx, filtered_list):
-        input_list[idx] = item
-    return input_list
-
-
 _original_pandas_MultiIndex_from_frame = pandas.MultiIndex.from_frame
 pandas.MultiIndex.from_frame = from_modin_frame_to_mi
