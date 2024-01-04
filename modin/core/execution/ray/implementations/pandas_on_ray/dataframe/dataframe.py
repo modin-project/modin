@@ -59,5 +59,4 @@ class PandasOnRayDataframe(PandasDataframe):
         list
         """
         dims = [getattr(part, dim_name)(False) for part in parts]
-        dims = self._partition_mgr_cls.materialize_futures(dims)
-        return dims
+        return self._partition_mgr_cls.materialize_futures(dims)

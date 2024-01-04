@@ -114,7 +114,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         Returns
         -------
         list
-            Modified input list.
+           A new list with materialized objects.
         """
         # Do nothing if input_list is None or [].
         if not input_list:

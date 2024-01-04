@@ -199,7 +199,8 @@ class PandasDataframe(ClassLogger):
                 self._row_lengths_cache = []
         return self._row_lengths_cache
 
-    def _get_dimensions(self, parts, dim_name):
+    @classmethod
+    def _get_dimensions(cls, parts, dim_name):
         """
         Get list of  dimensions for all the provided parts.
 
@@ -214,8 +215,7 @@ class PandasDataframe(ClassLogger):
         -------
         list
         """
-        dims = [getattr(part, dim_name)() for part in parts]
-        return dims
+        return [getattr(part, dim_name)() for part in parts]
 
     def __len__(self) -> int:
         """
