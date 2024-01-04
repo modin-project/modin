@@ -41,7 +41,6 @@ class PandasOnRayDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnRayDataframePartitionManager
-    _materialize_in_loop = False
 
     def _get_dimensions(self, parts, dim_name):
         """

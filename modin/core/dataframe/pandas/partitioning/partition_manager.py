@@ -117,8 +117,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
            A new list with materialized objects.
         """
         # Do nothing if input_list is None or [].
-        if not input_list:
-            return input_list
+        if input_list is None:
+            return None
         filtered_list = []
         filtered_idx = []
         for idx, item in enumerate(input_list):

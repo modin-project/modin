@@ -94,7 +94,7 @@ class DaskWrapper:
     @classmethod
     def check_is_future(cls, item):
         """
-        Get the value of object from the object store.
+        Check if the item is a Future.
 
         Parameters
         ----------

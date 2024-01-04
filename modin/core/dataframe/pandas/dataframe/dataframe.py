@@ -93,11 +93,6 @@ class PandasDataframe(ClassLogger):
     # These properties flag whether or not we are deferring the metadata synchronization
     _deferred_index = False
     _deferred_column = False
-    # If some logic involving materialisation is performed in loop the below property
-    # decides if the materialisation should be performed in each loop iteration.
-    # This value is set True by default. For  implementations eg Ray where this is an
-    # antipattern the value will be set to false.
-    _materialize_in_loop = True
 
     @pandas.util.cache_readonly
     def __constructor__(self):
@@ -124,8 +119,6 @@ class PandasDataframe(ClassLogger):
         self.set_columns_cache(columns)
         self._row_lengths_cache = row_lengths
         self._column_widths_cache = column_widths
-        self.materialize_func = self._partition_mgr_cls._execution_wrapper.materialize
-
         self.set_dtypes_cache(dtypes)
 
         self._validate_axes_lengths()
@@ -3682,19 +3675,14 @@ class PandasDataframe(ClassLogger):
             if not new_lengths:
                 new_lengths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions.T[0]:
-                        if part._length_cache is not None:
-                            new_lengths.append(
-                                part.length(materialize=self._materialize_in_loop)
-                            )
-                        else:
-                            new_lengths = None
-                            break
-                    if not self._materialize_in_loop:
-                        new_lengths = self._partition_mgr_cls.materialize_futures(
-                            new_lengths
+                    if all(
+                        part._length_cache is not None for part in new_partitions.T[0]
+                    ):
+                        new_lengths = self._get_dimensions(
+                            new_partitions.T[0], "length"
                         )
-
+                    else:
+                        new_lengths = None
         else:
             if all(obj.has_materialized_columns for obj in (self, *others)):
                 new_columns = self.columns.append([other.columns for other in others])
@@ -3713,18 +3701,10 @@ class PandasDataframe(ClassLogger):
             if not new_widths:
                 new_widths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions[0]:
-                        if part._width_cache is not None:
-                            new_widths.append(
-                                part.width(materialize=self._materialize_in_loop)
-                            )
-                        else:
-                            new_widths = None
-                            break
-                    if self._materialize_in_loop:
-                        new_widths = self._partition_mgr_cls.materialize_futures(
-                            new_widths
-                        )
+                    if all(part._width_cache is not None for part in new_partitions[0]):
+                        new_widths = self._get_dimensions(new_partitions[0], "width")
+                    else:
+                        new_widths = None
 
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
