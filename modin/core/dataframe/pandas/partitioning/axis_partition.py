@@ -582,7 +582,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         Parameters
         ----------
         materialize : bool, default: True
-            Adding materialize to be consistent with length function of PandasDataframePartition.
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -595,7 +597,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     obj.length() for obj in self.list_of_block_partitions
                 )
             else:
-                self._length_cache = self.list_of_block_partitions[0].length()
+                self._length_cache = self.list_of_block_partitions[0].length(
+                    materialize
+                )
         return self._length_cache
 
     _width_cache = None
@@ -607,7 +611,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         Parameters
         ----------
         materialize : bool, default: True
-            Adding materialize to be consistent with width function of PandasDataframePartition.
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -620,7 +626,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     obj.width() for obj in self.list_of_block_partitions
                 )
             else:
-                self._width_cache = self.list_of_block_partitions[0].width()
+                self._width_cache = self.list_of_block_partitions[0].width(materialize)
         return self._width_cache
 
     def wait(self):
