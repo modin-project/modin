@@ -197,6 +197,26 @@ def test_concat_5776():
     )
 
 
+def test_concat_6840():
+    groupby_objs = []
+    for idx, lib in enumerate((pd, pandas)):
+        df1 = lib.DataFrame(
+            [["a", 1], ["b", 2], ["b", 4]], columns=["letter", "number"]
+        )
+        df1_g = df1.groupby("letter", as_index=False)["number"].agg("sum")
+
+        df2 = lib.DataFrame(
+            [["a", 3], ["a", 4], ["b", 1]], columns=["letter", "number"]
+        )
+        df2_g = df2.groupby("letter", as_index=False)["number"].agg("sum")
+        groupby_objs.append([df1_g, df2_g])
+
+    df_equals(
+        pd.concat(groupby_objs[0]),
+        pandas.concat(groupby_objs[1]),
+    )
+
+
 def test_concat_with_empty_frame():
     modin_empty_df = pd.DataFrame()
     pandas_empty_df = pandas.DataFrame()
