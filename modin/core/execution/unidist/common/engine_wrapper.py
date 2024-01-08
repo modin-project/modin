@@ -75,6 +75,23 @@ class UnidistWrapper:
         )
 
     @classmethod
+    def check_is_future(cls, item):
+        """
+        Check if the item is a Future.
+
+        Parameters
+        ----------
+        item : unidist.ObjectRef or object
+            Future or object to check.
+
+        Returns
+        -------
+        boolean
+            If the value is a future.
+        """
+        return unidist.is_object_ref(item)
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the value of object from the object store.

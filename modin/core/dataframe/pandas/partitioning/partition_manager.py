@@ -99,6 +99,37 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     _column_partitions_class = None
     # Row partitions class is the class to use to create the row partitions.
     _row_partition_class = None
+    _execution_wrapper = None
+
+    @classmethod
+    def materialize_futures(cls, input_list):
+        """
+        Materialize all futures in the input list.
+
+        Parameters
+        ----------
+        input_list : list
+            The list that has to be manipulated.
+
+        Returns
+        -------
+        list
+           A new list with materialized objects.
+        """
+        # Do nothing if input_list is None or [].
+        if input_list is None:
+            return None
+        filtered_list = []
+        filtered_idx = []
+        for idx, item in enumerate(input_list):
+            if cls._execution_wrapper.check_is_future(item):
+                filtered_idx.append(idx)
+                filtered_list.append(item)
+        filtered_list = cls._execution_wrapper.materialize(filtered_list)
+        result = input_list.copy()
+        for idx, item in zip(filtered_idx, filtered_list):
+            result[idx] = item
+        return result
 
     @classmethod
     def preprocess_func(cls, map_func):

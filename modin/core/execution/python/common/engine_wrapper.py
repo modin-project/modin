@@ -42,6 +42,22 @@ class PythonWrapper:
         return func(*args, **kwargs)
 
     @classmethod
+    def check_is_future(cls, item):
+        """
+        Check if the item is a Future.
+
+        Parameters
+        ----------
+        item : object
+
+        Returns
+        -------
+        boolean
+            Always return false.
+        """
+        return False
+
+    @classmethod
     def materialize(cls, obj_id):
         """
         Get the data from the data storage.

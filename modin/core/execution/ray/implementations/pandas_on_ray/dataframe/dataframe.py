@@ -41,3 +41,21 @@ class PandasOnRayDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnRayDataframePartitionManager
+
+    def _get_dimensions(self, parts, dim_name):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        dim_name : string
+            Dimension name could be "length" or "width".
+
+        Returns
+        -------
+        list
+        """
+        dims = [getattr(part, dim_name)(False) for part in parts]
+        return self._partition_mgr_cls.materialize_futures(dims)

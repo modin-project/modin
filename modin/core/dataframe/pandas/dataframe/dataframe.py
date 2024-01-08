@@ -187,10 +187,28 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = [part.length() for part in row_parts]
+                self._row_lengths_cache = self._get_dimensions(row_parts, "length")
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
+
+    @classmethod
+    def _get_dimensions(cls, parts, dim_name):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        dim_name : string
+            Dimension name could be "length" or "width".
+
+        Returns
+        -------
+        list
+        """
+        return [getattr(part, dim_name)() for part in parts]
 
     def __len__(self) -> int:
         """
@@ -219,7 +237,7 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                self._column_widths_cache = [part.width() for part in col_parts]
+                self._column_widths_cache = self._get_dimensions(col_parts, "width")
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -3657,12 +3675,14 @@ class PandasDataframe(ClassLogger):
             if not new_lengths:
                 new_lengths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions.T[0]:
-                        if part._length_cache is not None:
-                            new_lengths.append(part.length())
-                        else:
-                            new_lengths = None
-                            break
+                    if all(
+                        part._length_cache is not None for part in new_partitions.T[0]
+                    ):
+                        new_lengths = self._get_dimensions(
+                            new_partitions.T[0], "length"
+                        )
+                    else:
+                        new_lengths = None
         else:
             if all(obj.has_materialized_columns for obj in (self, *others)):
                 new_columns = self.columns.append([other.columns for other in others])
@@ -3681,12 +3701,11 @@ class PandasDataframe(ClassLogger):
             if not new_widths:
                 new_widths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions[0]:
-                        if part._width_cache is not None:
-                            new_widths.append(part.width())
-                        else:
-                            new_widths = None
-                            break
+                    if all(part._width_cache is not None for part in new_partitions[0]):
+                        new_widths = self._get_dimensions(new_partitions[0], "width")
+                    else:
+                        new_widths = None
+
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
