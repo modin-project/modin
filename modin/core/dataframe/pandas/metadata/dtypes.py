@@ -517,7 +517,7 @@ class DtypesDescriptor:
 
         if dtypes_are_unknown:
             return DtypesDescriptor(
-                cols_with_unknown_dtypes=dtypes_matrix.index,
+                cols_with_unknown_dtypes=dtypes_matrix.index.tolist(),
                 know_all_names=know_all_names,
             )
 
