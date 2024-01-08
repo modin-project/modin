@@ -1103,6 +1103,10 @@ class TestCsv:
     @pytest.mark.parametrize("index_label", [None, False, "New index"])
     @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
     @pytest.mark.exclude_in_sanity
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_to_csv(
         self,
         tmp_path,
@@ -1137,6 +1141,10 @@ class TestCsv:
             columns=columns,
         )
 
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
@@ -1147,6 +1155,10 @@ class TestCsv:
             extension="csv",
         )
 
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_series_to_csv(self, tmp_path):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
