@@ -1898,7 +1898,6 @@ class HdkOnNativeDataframe(PandasDataframe):
             exprs = replace_frame_in_exprs(exprs, base, filtered_base)
             if base._index_cols is None:
                 idx_name = mangle_index_names([None])[0]
-                exprs[idx_name] = filtered_base.ref(idx_name)
                 # `idx_name` should be first
                 exprs = {idx_name: filtered_base.ref(idx_name)} | exprs
 
