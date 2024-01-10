@@ -3834,9 +3834,9 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
-
+        # breakpoint()
         # no need aligning columns if there's only one row partition
-        if (add_missing_cats or align_result_columns) and result._partitions.shape[0] > 1:
+        if (add_missing_cats or align_result_columns): # and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
             # partition in the result, so we should never hit this exception for now, however
             # in the future, we might want to make this implementation more broader
@@ -3855,13 +3855,42 @@ class PandasDataframe(ClassLogger):
                 def compute_aligned_columns(*dfs, initial_columns=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
                     combined_cols = None
-                    mask = None
+                    masks = None
+                    if add_missing_cats:
+                        indices = [df.index for df in dfs]
+                        total_index = indices[0].append(indices[1:])
+                        missing_cats = total_index.categories.difference(total_index.values)
+                        cats = pandas.CategoricalDtype(missing_cats)
+                        empty_df = pandas.DataFrame(columns=initial_columns)
+                        empty_df = empty_df.astype({col: cats for col in by})
+                        nonlocal kwargs
+                        kwargs = kwargs.copy()
+                        kwargs["observed"] = False
+                        breakpoint()
+                        missing_values = operator(empty_df.groupby(by, **kwargs))
+                        if len(missing_values.columns.intersection(by)) == len(by):
+                            missing_values = missing_values.astype({col: total_index.dtype for col in by})
+                        elif isinstance(missing_values.index, pandas.MultiIndex):
+                            missing_values.index = pandas.MultiIndex.from_frame(missing_values.index.to_frame().astype({col: total_index.dtype for col in by}))
+                        else:
+                            missing_values.index = missing_values.index.astype(total_index.dtype)
+                        if not kwargs["sort"]:
+                            mask = {len(indices) - 1: missing_values}
+                            return (combined_cols, mask)
+                        bins = [idx[0] for idx in indices]
+                        parts = (np.digitize(cats.categories, bins) - 1)
+                        parts[parts < 0] = 0
+                        masks = {idx: pandas.DataFrame() for idx in np.unique(parts)}
+                        for i, idx in enumerate(parts):
+                            masks[idx] = pandas.concat([masks[idx], missing_values.iloc[[i]]])
                     if align_result_columns:
                         valid_dfs = [
                             df
                             for df in dfs
                             if not df.attrs.get(skip_on_aligning_flag, False)
                         ]
+                        if add_missing_cats:
+                            valid_dfs += missing_values
                         if len(valid_dfs) == 0 and len(dfs) != 0:
                             valid_dfs = dfs
 
@@ -3871,27 +3900,8 @@ class PandasDataframe(ClassLogger):
                         combined_cols = pandas.concat(
                             [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
                         ).columns
-                    if add_missing_cats:
-                        indices = [df.index for df in dfs]
-                        total_index = indices[0].append(indices[1:])
-                        missing_cats = total_index.categories.difference(total_index.values)
-                        cats = pandas.Categorical(missing_cats)
-                        empty_df = pandas.DataFrame(columns=initial_columns)
-                        empty_df = empty_df.astype({by: cats})
-                        kwargs = kwargs.copy()
-                        kwargs["observed"] = False
-                        missing_values = operator(empty_df.groupby(by, **kwargs))
-                        if not kwargs["sort"]:
-                            mask = {len(indices) - 1: missing_values}
-                            return (combined_cols, mask)
-                        bins = [idx[0] for idx in indices]
-                        parts = (np.digitize(missing_values.index, bins) - 1)
-                        parts[parts < 0] = 0
-                        masks = {idx: [] for idx in np.unique(parts)}
-                        for idx, value in zip(parts, missing_cats):
-                            masks[idx].append(value)
-
-                    return (combined_cols, mask)
+                    # breakpoint()
+                    return (combined_cols, masks)
 
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
@@ -3904,15 +3914,18 @@ class PandasDataframe(ClassLogger):
                     combined_cols, mask = args
                     if mask is not None and mask.get(partition_idx) is not None:
                         values = mask[partition_idx]
+                        df = pandas.concat([df, values])
                     if combined_cols is not None:
                         df = df.reindex(columns=combined_cols)
-                        
+                    return df
 
                 # Lazily applying aligned columns to partitions
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                     result._partitions,
-                    lambda df, columns: df.reindex(columns=columns),
+                    apply_aligned,
+                    # lambda df, columns: df.reindex(columns=columns),
                     func_args=(aligned_columns._data,),
+                    enumerate_partitions=True,
                 )
             else:
 

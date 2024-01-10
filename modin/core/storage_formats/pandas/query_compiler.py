@@ -3786,14 +3786,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
-
+        from pandas.api.extensions import no_default
+        # breakpoint()
         # This check materializes dtypes for 'by' columns
-        if not groupby_kwargs.get("observed", False):
+        if not groupby_kwargs.get("observed", False) or groupby_kwargs.get("observed", False) is no_default:
             if isinstance(self._modin_frame._dtypes, ModinDtypes):
                 by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
             else:
                 by_dtypes = self.dtypes[by]
-            add_missing_cats = any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
+            add_missing_cats = any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes)
         else:
             add_missing_cats = False
 
