@@ -12,7 +12,6 @@ Development
     using_pandas_on_python
     using_pandas_on_mpi
     using_hdk
-    using_pyarrow_on_ray
 
 .. meta::
     :description lang=en:

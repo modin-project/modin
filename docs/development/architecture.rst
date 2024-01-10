@@ -56,7 +56,7 @@ For the simplicity the other execution systems - Dask and MPI are omitted and on
   on a selected storage format and mapping or compiling the Dataframe Algebra DAG to and actual
   execution sequence.
 * Storage formats module is responsible for mapping the abstract operation to an actual executor call, e.g. pandas,
-  PyArrow, custom format.
+  HDK, custom format.
 * Orchestration subsystem is responsible for spawning and controlling the actual execution environment for the
   selected execution. It spawns the actual nodes, fires up the execution environment, e.g. Ray, monitors the state
   of executors and provides telemetry
@@ -228,10 +228,6 @@ documentation page on :doc:`contributing </development/contributing>`.
     - Uses HDK as an engine.
     - The storage format is `hdk` and the in-memory partition type is a pyarrow Table. When defaulting to pandas, the pandas DataFrame is used.
     - For more information on the execution path, see the :doc:`HDK on Native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>` page.
-- :doc:`Pyarrow on Ray </development/using_pyarrow_on_ray>` (experimental)
-    - Uses the Ray_ execution framework.
-    - The storage format is `pyarrow` and the in-memory partition type is a pyarrow Table.
-    - For more information on the execution path, see the :doc:`Pyarrow on Ray </flow/modin/experimental/core/execution/ray/implementations/pyarrow_on_ray>` page.
 - cuDF on Ray (experimental)
     - Uses the Ray_ execution framework.
     - The storage format is `cudf` and the in-memory partition type is a cuDF DataFrame.
@@ -252,7 +248,7 @@ following figure illustrates this concept.
    :align: center
 
 Currently, the main in-memory format of each partition is a `pandas DataFrame`_ (:doc:`pandas storage format </flow/modin/core/storage_formats/pandas/index>`).
-:doc:`HDK </flow/modin/experimental/core/storage_formats/hdk/index>`, :doc:`PyArrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
+:doc:`HDK </flow/modin/experimental/core/storage_formats/hdk/index>`
 and cuDF are also supported as experimental in-memory formats in Modin.
 
 
@@ -333,8 +329,7 @@ details. The documentation covers most modules, with more docs being added every
    │   │   │   │       └───implementations
    │   │   │   │           └─── :doc:`hdk_on_native </flow/modin/experimental/core/execution/native/implementations/hdk_on_native/index>`
    │   │   │   ├─── :doc:`storage_formats </flow/modin/experimental/core/storage_formats/index>`
-   |   │   │   |   ├─── :doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
-   │   │   │   |   └─── :doc:`pyarrow </flow/modin/experimental/core/storage_formats/pyarrow/index>`
+   |   │   │   |   └───:doc:`hdk </flow/modin/experimental/core/storage_formats/hdk/index>`
    |   |   |   └─── :doc:`io </flow/modin/experimental/core/io/index>`
    │   │   ├─── :doc:`pandas </flow/modin/experimental/pandas>`
    │   │   ├─── :doc:`sklearn </flow/modin/experimental/sklearn>`
