@@ -80,7 +80,6 @@ from modin.pandas.test.utils import (  # noqa: E402
     make_default_file,
     teardown_test_files,
 )
-from modin.utils import get_current_execution  # noqa: E402
 
 
 def pytest_addoption(parser):
@@ -275,7 +274,7 @@ def pytest_runtest_call(item):
             if not isinstance(executions, list):
                 executions = [executions]
 
-            current_execution = get_current_execution()
+            current_execution = modin.utils.get_current_execution()
             reason = marker.kwargs.pop("reason", "")
 
             item.add_marker(

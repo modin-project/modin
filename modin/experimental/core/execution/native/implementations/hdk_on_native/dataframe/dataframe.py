@@ -1887,7 +1887,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         )
 
         if self is base:
-            exprs = OrderedDict()
+            exprs = dict()
             for col in filtered_base._table_cols:
                 exprs[col] = filtered_base.ref(col)
         else:
@@ -1898,8 +1898,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             exprs = replace_frame_in_exprs(exprs, base, filtered_base)
             if base._index_cols is None:
                 idx_name = mangle_index_names([None])[0]
-                exprs[idx_name] = filtered_base.ref(idx_name)
-                exprs.move_to_end(idx_name, last=False)
+                # `idx_name` should be first
+                exprs = {idx_name: filtered_base.ref(idx_name)} | exprs
 
         return self.__constructor__(
             columns=self.columns,
