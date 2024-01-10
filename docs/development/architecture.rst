@@ -345,7 +345,6 @@ details. The documentation covers most modules, with more docs being added every
    └───stress_tests
 
 .. _pandas Dataframe: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
-.. _Arrow tables: https://arrow.apache.org/docs/python/generated/pyarrow.Table.html
 .. _Ray: https://github.com/ray-project/ray
 .. _Unidist: https://github.com/modin-project/unidist
 .. _MPI: https://www.mpi-forum.org/

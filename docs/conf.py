@@ -29,7 +29,6 @@ ray.remote = noop_decorator
 for mod_name in (
     "cudf",
     "cupy",
-    "pyarrow.gandiva",
     "pyhdk",
     "pyhdk.hdk",
     "xgboost",

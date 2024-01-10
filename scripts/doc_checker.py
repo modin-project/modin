@@ -514,7 +514,6 @@ def monkeypatching():
     pandas.util.cache_readonly = property
 
     # We are mocking packages we don't need for docs checking in order to avoid import errors
-    sys.modules["pyarrow.gandiva"] = Mock()
     sys.modules["sqlalchemy"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
