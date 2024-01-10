@@ -266,7 +266,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):

@@ -570,21 +570,6 @@ class PandasOnUnidistFactory(BaseFactory):
 # that have little coverage of implemented functionality or are not stable enough.
 
 
-@doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")
-class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``PyarrowOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.io import (
-            PyarrowOnRayIO,
-        )
-
-        if not IsExperimental.get():
-            raise ValueError("'PyarrowOnRay' only works in experimental mode.")
-
-        cls.io_cls = PyarrowOnRayIO
-
-
 @doc(_doc_factory_class, execution_name="experimental HdkOnNative")
 class ExperimentalHdkOnNativeFactory(BaseFactory):
     @classmethod
