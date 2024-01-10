@@ -3875,12 +3875,17 @@ class PandasDataframe(ClassLogger):
                         indices = [df.index for df in dfs]
                         total_index = indices[0].append(indices[1:])
                         missing_cats = total_index.categories.difference(total_index.values)
-                        pandas.Categorical(missing_cats)
+                        cats = pandas.Categorical(missing_cats)
+                        empty_df = pandas.DataFrame(columns=initial_columns)
+                        empty_df = empty_df.astype({by: cats})
+                        kwargs = kwargs.copy()
+                        kwargs["observed"] = False
+                        missing_values = operator(empty_df.groupby(by, **kwargs))
                         if not kwargs["sort"]:
-                            mask = {len(indices) - 1: missing_cats}
+                            mask = {len(indices) - 1: missing_values}
                             return (combined_cols, mask)
                         bins = [idx[0] for idx in indices]
-                        parts = (np.digitize(missing_cats, bins) - 1)
+                        parts = (np.digitize(missing_values.index, bins) - 1)
                         parts[parts < 0] = 0
                         masks = {idx: [] for idx in np.unique(parts)}
                         for idx, value in zip(parts, missing_cats):
@@ -3892,7 +3897,7 @@ class PandasDataframe(ClassLogger):
                 # aligned columns
                 parts = result._partitions.flatten()
                 aligned_columns = parts[0].apply(
-                    compute_aligned_columns, *[part._data for part in parts[1:]]
+                    compute_aligned_columns, *[part._data for part in parts[1:]], initial_columns=self.columns,
                 )
 
                 def apply_aligned(df, args, partition_idx):
