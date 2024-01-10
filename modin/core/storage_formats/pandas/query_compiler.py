@@ -523,7 +523,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
             right_pandas = right.to_pandas()
-
             kwargs["sort"] = False
 
             def should_keep_index(left, right):
@@ -542,7 +541,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return keep_index
 
             def map_func(
-                left, *axis_lengths, right=right_pandas, kwargs=kwargs, **service_kwargs
+                left, right, *axis_lengths, kwargs=kwargs, **service_kwargs
             ):  # pragma: no cover
                 df = pandas.merge(left, right, **kwargs)
 
@@ -571,7 +570,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             if self._modin_frame.has_materialized_columns:
                 if left_on is None and right_on is None:
                     if on is None:
-                        on = [c for c in self.columns if c in right_pandas.columns]
+                        on = [c for c in self.columns if c in right.columns]
                     _left_on, _right_on = on, on
                 else:
                     if left_on is None or right_on is None:
@@ -583,7 +582,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 try:
                     new_columns, left_renamer, right_renamer = join_columns(
                         self.columns,
-                        right_pandas.columns,
+                        right.columns,
                         _left_on,
                         _right_on,
                         kwargs.get("suffixes", ("_x", "_y")),
@@ -595,15 +594,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 else:
                     # renamers may contain columns from 'index', so trying to merge index and column dtypes here
                     right_index_dtypes = (
-                        right_pandas.index.dtypes
-                        if isinstance(right_pandas.index, pandas.MultiIndex)
+                        right.index.dtypes
+                        if isinstance(right.index, pandas.MultiIndex)
                         else pandas.Series(
-                            [right_pandas.index.dtype], index=[right_pandas.index.name]
+                            [right.index.dtype], index=[right.index.name]
                         )
                     )
-                    right_dtypes = pandas.concat(
-                        [right_pandas.dtypes, right_index_dtypes]
-                    )[right_renamer.keys()].rename(right_renamer)
+                    right_dtypes = pandas.concat([right.dtypes, right_index_dtypes])[
+                        right_renamer.keys()
+                    ].rename(right_renamer)
 
                     left_index_dtypes = (
                         self._modin_frame._index_cache.maybe_get_dtypes()
@@ -618,10 +617,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     new_dtypes = ModinDtypes.concat([left_dtypes, right_dtypes])
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(
+                self._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
                     enumerate_partitions=how == "left",
+                    other=right._modin_frame,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -629,8 +629,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         self._modin_frame, right._modin_frame, axis=1
                     ),
                     new_columns=new_columns,
-                    dtypes=new_dtypes,
                     sync_labels=False,
+                    dtypes=new_dtypes,
                     pass_axis_lengths_to_partitions=how == "left",
                 )
             )
@@ -685,13 +685,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
 
         if how in ["left", "inner"]:
-            right_pandas = right.to_pandas()
 
-            def map_func(left, right=right_pandas, kwargs=kwargs):  # pragma: no cover
+            def map_func(left, right, kwargs=kwargs):  # pragma: no cover
                 return pandas.DataFrame.join(left, right, **kwargs)
 
             new_self = self.__constructor__(
-                self._modin_frame.apply_full_axis(
+                self._modin_frame.broadcast_apply_full_axis(
                     axis=1,
                     func=map_func,
                     # We're going to explicitly change the shape across the 1-axis,
@@ -700,6 +699,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
+                    other=right._modin_frame,
                 )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self
