@@ -297,6 +297,16 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
 
     @classmethod
+    # @_inherit_docstrings(factories.PandasOnRayFactory._read_parquet_glob)
+    def read_parquet_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_parquet_glob(*args, **kwargs)
+
+    @classmethod
+    # @_inherit_docstrings(factories.PandasOnRayFactory._to_parquet_glob)
+    def to_parquet_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_parquet_glob(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.PandasOnRayFactory._read_custom_text)
     def read_custom_text(cls, **kwargs):
         return cls.get_factory()._read_custom_text(**kwargs)

@@ -42,12 +42,13 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
-    ExperimentalPickleDispatcher,
+    ExperimentalGlobDispatcher,
     ExperimentalSQLDispatcher,
 )
 from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalCustomTextParser,
     ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasParquetParser,
     ExperimentalPandasPickleParser,
 )
 
@@ -91,10 +92,20 @@ class PandasOnUnidistIO(UnidistIO):
     read_csv_glob = __make_read(
         ExperimentalPandasCSVGlobParser, ExperimentalCSVGlobDispatcher
     )
-    read_pickle_distributed = __make_read(
-        ExperimentalPandasPickleParser, ExperimentalPickleDispatcher
+    read_parquet_glob = __make_read(
+        ExperimentalPandasParquetParser, ExperimentalGlobDispatcher
     )
-    to_pickle_distributed = __make_write(ExperimentalPickleDispatcher)
+    to_parquet_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": UnidistIO.to_parquet},
+    )
+    read_pickle_distributed = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalGlobDispatcher
+    )
+    to_pickle_distributed = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": UnidistIO.to_pickle},
+    )
     read_custom_text = __make_read(
         ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
     )

@@ -257,3 +257,27 @@ class ExperimentalFunctions:
             protocol=protocol,
             storage_options=storage_options,
         )
+
+    def to_parquet_glob(
+        self,
+        path=None,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        storage_options: StorageOptions = None,
+        **kwargs,
+    ):
+        # TODO: add docstring
+        from modin.experimental.pandas.io import to_parquet_glob
+
+        to_parquet_glob(
+            self._data,
+            path=path,
+            engine=engine,
+            compression=compression,
+            index=index,
+            partition_cols=partition_cols,
+            storage_options=storage_options,
+            **kwargs,
+        )

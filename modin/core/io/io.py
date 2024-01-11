@@ -652,7 +652,7 @@ class BaseIO:
     @_inherit_docstrings(
         pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
     )
-    def to_parquet(cls, obj, **kwargs):  # noqa: PR01
+    def to_parquet(cls, obj, path, **kwargs):  # noqa: PR01
         """
         Write object to the binary parquet format using pandas.
 
@@ -662,4 +662,4 @@ class BaseIO:
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return obj.to_parquet(**kwargs)
+        return obj.to_parquet(path, **kwargs)

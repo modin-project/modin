@@ -516,6 +516,28 @@ class BaseFactory(object):
             )
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
+    @classmethod
+    # @_inherit_docstrings(factories.PandasOnRayFactory._read_parquet_glob)
+    def _read_parquet_glob(cls, *args, **kwargs):
+        # TODO: add docstring
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_parquet_glob(*args, **kwargs)
+
+    @classmethod
+    # @_inherit_docstrings(factories.PandasOnRayFactory._to_parquet_glob)
+    def _to_parquet_glob(cls, *args, **kwargs):
+        # TODO: add docstring
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_parquet_glob(*args, **kwargs)
+
 
 @doc(_doc_factory_class, execution_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):

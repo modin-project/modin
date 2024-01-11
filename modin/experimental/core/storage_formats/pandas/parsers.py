@@ -114,6 +114,24 @@ class ExperimentalPandasPickleParser(PandasParser):
         return _split_result_for_readers(1, num_splits, df) + [length, width]
 
 
+@doc(_doc_pandas_parser_class, data_type="parquet files")
+class ExperimentalPandasParquetParser(PandasParser):
+    @staticmethod
+    @doc(_doc_parse_func, parameters=_doc_parse_parameters_common)
+    def parse(fname, **kwargs):
+        warnings.filterwarnings("ignore")
+        num_splits = 1
+        single_worker_read = kwargs.pop("single_worker_read", None)
+        df = pandas.read_parquet(fname, **kwargs)
+        if single_worker_read:
+            return df
+
+        length = len(df)
+        width = len(df.columns)
+
+        return _split_result_for_readers(1, num_splits, df) + [length, width]
+
+
 @doc(_doc_pandas_parser_class, data_type="custom text")
 class ExperimentalCustomTextParser(PandasParser):
     @staticmethod
