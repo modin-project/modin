@@ -12,7 +12,6 @@
 # governing permissions and limitations under the License.
 
 import warnings
-from collections import OrderedDict
 from io import BytesIO
 
 import numpy as np
@@ -83,7 +82,7 @@ class cuDFParser(object):
                 )
             )
             return pandas_frame
-        elif isinstance(pandas_frame, (OrderedDict, dict)):
+        elif isinstance(pandas_frame, dict):
             return {
                 i: cls.query_compiler_cls.from_pandas(frame, cls.frame_cls)
                 for i, frame in pandas_frame.items()

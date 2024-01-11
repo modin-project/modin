@@ -14,7 +14,6 @@
 """Module provides ``HdkOnNativeDataframe`` class implementing lazy frame."""
 
 import re
-from collections import OrderedDict
 from typing import Hashable, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
@@ -464,7 +463,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # Sort by the rowid column
             base = base.copy(op=SortNode(base, [rowid_col], [False], "last"))
             # Remove the rowid column
-            exprs = OrderedDict()
+            exprs = dict()
             for col in table_cols:
                 exprs[col] = base.ref(col)
             base = base.copy(
@@ -614,7 +613,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             else:
                 return by
 
-        exprs = OrderedDict(
+        exprs = dict(
             ((generate_by_name(col), by_frame.ref(col)) for col in groupby_cols)
         )
         groupby_cols = list(exprs.keys())
@@ -647,7 +646,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         new_dtypes = base._dtypes[groupby_cols].tolist()
 
-        agg_exprs = OrderedDict()
+        agg_exprs = dict()
         if isinstance(agg, str):
             col_to_ref = {col: base.ref(col) for col in agg_cols}
             self._add_agg_exprs(agg, col_to_ref, kwargs, agg_exprs)
@@ -799,7 +798,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         assert isinstance(agg, str)
 
-        agg_exprs = OrderedDict()
+        agg_exprs = dict()
         for col in self.columns:
             agg_exprs[col] = AggregateExpr(agg, self.ref(col))
 
@@ -1089,7 +1088,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             if isinstance(self._op, FrameNode):
                 other = self.copy()
             else:
-                exprs = OrderedDict((c, self.ref(c)) for c in self._table_cols)
+                exprs = dict((c, self.ref(c)) for c in self._table_cols)
                 other = self.__constructor__(
                     columns=self.columns,
                     dtypes=self._dtypes_for_exprs(exprs),
@@ -1129,7 +1128,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         else:
             ignore_index = True
             index_cols = None
-            exprs = OrderedDict()
+            exprs = dict()
             new_dtypes = []
 
             new_columns, left_renamer, right_renamer = join_columns(
@@ -1235,7 +1234,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         index_cols = None
-        col_name_to_dtype = OrderedDict()
+        col_name_to_dtype = dict()
         for col in self.columns:
             col_name_to_dtype[col] = self._dtypes[col]
 
@@ -1287,7 +1286,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                         )
 
             if sort:
-                col_name_to_dtype = OrderedDict(
+                col_name_to_dtype = dict(
                     (col, col_name_to_dtype[col]) for col in sorted(col_name_to_dtype)
                 )
 
@@ -1308,7 +1307,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     or any(frame_dtypes.index != dtypes.index)
                     or any(frame_dtypes.values != dtypes.values)
                 ):
-                    exprs = OrderedDict()
+                    exprs = dict()
                     uses_rowid = False
                     for col in table_col_name_to_dtype:
                         if col in frame_dtypes:
@@ -1785,7 +1784,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     drop_index_cols_after = None
 
                 if drop_index_cols_before:
-                    exprs = OrderedDict()
+                    exprs = dict()
                     index_cols = (
                         drop_index_cols_after if drop_index_cols_after else None
                     )
@@ -1810,7 +1809,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 )
 
                 if drop_index_cols_after:
-                    exprs = OrderedDict()
+                    exprs = dict()
                     for col in base.columns:
                         exprs[col] = base.ref(col)
                     base = base.__constructor__(
@@ -1950,7 +1949,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         name = self._index_cache.get().name if self.has_materialized_index else None
         name = mangle_index_names([name])[0]
-        exprs = OrderedDict()
+        exprs = dict()
         exprs[name] = self.ref(ROWID_COL_NAME)
         for col in self._table_cols:
             exprs[col] = self.ref(col)
@@ -1974,7 +1973,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         dict
         """
-        exprs = OrderedDict()
+        exprs = dict()
         if self._index_cols:
             for col in self._index_cols:
                 exprs[col] = self.ref(col)
@@ -2290,7 +2289,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             The new frame.
         """
         if drop:
-            exprs = OrderedDict()
+            exprs = dict()
             for c in self.columns:
                 exprs[c] = self.ref(c)
             return self.__constructor__(
@@ -2306,7 +2305,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                     "default index reset with no drop is not supported"
                 )
             # Need to demangle index names.
-            exprs = OrderedDict()
+            exprs = dict()
             for i, c in enumerate(self._index_cols):
                 name = ColNameCodec.demangle_index_name(c)
                 if name is None:
@@ -2542,7 +2541,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return self
 
         names = mangle_index_names([name])
-        exprs = OrderedDict()
+        exprs = dict()
         if self._index_cols is None:
             exprs[names[0]] = self.ref(ROWID_COL_NAME)
         else:
@@ -2597,7 +2596,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             )
 
         names = mangle_index_names(names)
-        exprs = OrderedDict()
+        exprs = dict()
         for old, new in zip(self._index_cols, names):
             exprs[new] = self.ref(old)
         for col in self.columns:

@@ -18,7 +18,6 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -1686,7 +1685,7 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        OrderedDict
+        dict
             A mapping from partition index to list of internal indices which correspond to `indices` in each
             partition.
         """
@@ -1700,7 +1699,7 @@ class PandasDataframe(ClassLogger):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
             if is_full_grab_slice(indices, sequence_len=len(self.get_axis(axis))):
-                return OrderedDict(
+                return dict(
                     zip(
                         range(self._partitions.shape[axis]),
                         [slice(None)] * self._partitions.shape[axis],
@@ -1708,25 +1707,23 @@ class PandasDataframe(ClassLogger):
                 )
             # Empty selection case
             if indices.start == indices.stop and indices.start is not None:
-                return OrderedDict()
+                return dict()
             if indices.start is None or indices.start == 0:
                 last_part, last_idx = list(
                     self._get_dict_of_block_index(axis, [indices.stop]).items()
                 )[0]
-                dict_of_slices = OrderedDict(
-                    zip(range(last_part), [slice(None)] * last_part)
-                )
+                dict_of_slices = dict(zip(range(last_part), [slice(None)] * last_part))
                 dict_of_slices.update({last_part: slice(last_idx[0])})
                 return dict_of_slices
             elif indices.stop is None or indices.stop >= len(self.get_axis(axis)):
                 first_part, first_idx = list(
                     self._get_dict_of_block_index(axis, [indices.start]).items()
                 )[0]
-                dict_of_slices = OrderedDict({first_part: slice(first_idx[0], None)})
+                dict_of_slices = dict({first_part: slice(first_idx[0], None)})
                 num_partitions = np.size(self._partitions, axis=axis)
                 part_list = range(first_part + 1, num_partitions)
                 dict_of_slices.update(
-                    OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                    dict(zip(part_list, [slice(None)] * len(part_list)))
                 )
                 return dict_of_slices
             else:
@@ -1737,10 +1734,10 @@ class PandasDataframe(ClassLogger):
                     self._get_dict_of_block_index(axis, [indices.stop]).items()
                 )[0]
                 if first_part == last_part:
-                    return OrderedDict({first_part: slice(first_idx[0], last_idx[0])})
+                    return dict({first_part: slice(first_idx[0], last_idx[0])})
                 else:
                     if last_part - first_part == 1:
-                        return OrderedDict(
+                        return dict(
                             # FIXME: this dictionary creation feels wrong - it might not maintain the order
                             {
                                 first_part: slice(first_idx[0], None),
@@ -1748,12 +1745,10 @@ class PandasDataframe(ClassLogger):
                             }
                         )
                     else:
-                        dict_of_slices = OrderedDict(
-                            {first_part: slice(first_idx[0], None)}
-                        )
+                        dict_of_slices = dict({first_part: slice(first_idx[0], None)})
                         part_list = range(first_part + 1, last_part)
                         dict_of_slices.update(
-                            OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                            dict(zip(part_list, [slice(None)] * len(part_list)))
                         )
                         dict_of_slices.update({last_part: slice(None, last_idx[0])})
                         return dict_of_slices
@@ -1765,7 +1760,7 @@ class PandasDataframe(ClassLogger):
             # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
             # Otherwise, we will get an empty `new_partitions` array, from which it will
             #  no longer be possible to obtain metadata
-            return OrderedDict([(0, np.array([], dtype=np.int64))])
+            return dict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
         if has_negative:
@@ -1827,7 +1822,7 @@ class PandasDataframe(ClassLogger):
             for i in range(1, len(count_for_each_partition))
             if count_for_each_partition[i] > count_for_each_partition[i - 1]
         ]
-        return OrderedDict(partition_ids_with_indices)
+        return dict(partition_ids_with_indices)
 
     @staticmethod
     def _join_index_objects(axis, indexes, how, sort):

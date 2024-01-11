@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 import unittest.mock as mock
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Dict
@@ -2282,7 +2282,7 @@ class TestExcel:
         pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
         modin_df = pd.read_excel(unique_filename, sheet_name=None)
 
-        assert isinstance(pandas_df, (OrderedDict, dict))
+        assert isinstance(pandas_df, dict)
         assert isinstance(modin_df, type(pandas_df))
         assert pandas_df.keys() == modin_df.keys()
 
@@ -3220,7 +3220,6 @@ def test_to_dict_dataframe():
     [
         pytest.param({}, id="no_kwargs"),
         pytest.param({"into": dict}, id="into_dict"),
-        pytest.param({"into": OrderedDict}, id="into_ordered_dict"),
         pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
     ],
 )
