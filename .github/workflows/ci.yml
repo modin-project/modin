@@ -378,7 +378,15 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
       # these variables to test writing to the mock s3 filesystem.
-      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
+      - uses: nick-fields/retry@v2
+        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+        # for details see: https://github.com/modin-project/modin/pull/6776
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: |
+            conda run --no-capture-output -n modin_on_unidist mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key \
+              -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
