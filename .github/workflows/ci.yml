@@ -325,7 +325,6 @@ jobs:
 
   test-all-unidist:
     needs: [lint-flake8, lint-black-isort, execution-filter]
-    if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
