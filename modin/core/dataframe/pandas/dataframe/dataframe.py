@@ -3856,14 +3856,37 @@ class PandasDataframe(ClassLogger):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
                     combined_cols = None
                     masks = None
+                    if align_result_columns:
+                        valid_dfs = [
+                            df
+                            for df in dfs
+                            if not df.attrs.get(skip_on_aligning_flag, False)
+                        ]
+
+                        if len(valid_dfs) == 0 and len(dfs) != 0:
+                            valid_dfs = dfs
+
+                        # Using '.concat()' on empty-slices instead of 'Index.join()'
+                        # in order to get identical behavior to pandas when it joins
+                        # results of different groups
+                        combined_cols = pandas.concat(
+                            [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
+                        ).columns
+                    else:
+                        combined_cols = dfs[0].columns
                     if add_missing_cats:
                         # TODO-now: 
                         # 1. when grouping on multiple BYs, the result of apply is always considered to be None
                         # 2. in other cases we can simply sample for the filling value and fill by mask
-                        indices = [df.index for df in dfs]
+                        if kwargs["as_index"]:
+                            indices = [df.index for df in dfs]
                         # breakpoint()
-                        total_index = indices[0].append(indices[1:])
-                        if isinstance(total_index, pandas.MultiIndex):
+                            total_index = indices[0].append(indices[1:])
+                        else:
+                            indices = [df[by] for df in dfs]
+                            total_index = pandas.concat(indices).squeeze(axis=1)
+                        # if isinstance(total_index, pandas.MultiIndex):
+                        if total_index.ndim == 2:
                             # TODO: create complete matrix and filter out valid results
                             missing_cats = {}
                             for level, name in zip(total_index.levels, total_index.names):
@@ -3873,17 +3896,53 @@ class PandasDataframe(ClassLogger):
                                     missing_cats[name] = pandas.CategoricalDtype(level)                                   
                         else:
                             missing_cats = total_index.categories.difference(total_index.values)
+                            if len(missing_cats) == 0:
+                                no_missing_cats = True
                             missing_cats = {by[0]: pandas.CategoricalDtype(missing_cats)}
-                        empty_df = pandas.DataFrame(columns=initial_columns)
-                        empty_df = empty_df.astype(missing_cats)
                         nonlocal kwargs
-                        kwargs = kwargs.copy()
-                        kwargs["observed"] = False
-                        # breakpoint()
-                        missing_values = operator(empty_df.groupby(by, **kwargs))
-                        # breakpoint()
+
+                        if isinstance(total_index, pandas.MultiIndex):
+                            complete_index = pandas.MultiIndex.from_product([val.categories for val in missing_cats.values()], names=by)
+                            missing_index = complete_index[~complete_index.isin(total_index)]
+                        else:
+                            missing_index = missing_cats[by[0]].categories
+                        
+                        if len(missing_index) == 0:
+                            return (combined_cols, {}) if align_result_columns else (None, {}) 
+
+                        if align_result_columns and not isinstance(total_index, pandas.MultiIndex):
+                            # actually execute operator on empty df
+                            empty_df = pandas.DataFrame(columns=initial_columns)
+                            empty_df = empty_df.astype(missing_cats)
+                            # nonlocal kwargs
+                            kwargs = kwargs.copy()
+                            kwargs["observed"] = False
+                            # breakpoint()
+                            missing_values = operator(empty_df.groupby(by, **kwargs))
+                            missing_values = missing_values.drop(columns=by, errors="ignore")
+                            combined_cols = pandas.concat(
+                                [pandas.DataFrame(columns=combined_cols), missing_values.iloc[:0]], axis=0, join="outer"
+                            ).columns
+                        else:
+                            if align_result_columns:
+                                fill_value = np.NaN
+                            else:
+                                # get fill value by sample
+                                missing_cats_sample = {key: pandas.CategoricalDtype(value.categories[:1]) for key, value in missing_cats.items()}
+                                empty_df = pandas.DataFrame(columns=initial_columns)
+                                empty_df = empty_df.astype(missing_cats_sample)
+                                
+                                kwargs = kwargs.copy()
+                                kwargs["observed"] = False
+                                missing_values = operator(empty_df.groupby(by, **kwargs))
+                                # breakpoint()
+                                fill_value = missing_values.iloc[0, 0]
+                            # breakpoint()
+                            # breakpoint()
+                            missing_values = pandas.DataFrame(index=missing_index, columns=combined_cols).fillna(fill_value)
+
                         if isinstance(missing_values.index, pandas.MultiIndex):
-                            missing_values = missing_values[~missing_values.index.isin(total_index)]
+                            # breakpoint()
                             missing_values.index = pandas.MultiIndex.from_frame(
                                 missing_values.index.to_frame().astype({name: dtype for name, dtype in total_index.dtypes.items()})
                             )
@@ -3900,42 +3959,29 @@ class PandasDataframe(ClassLogger):
                                 offset += 1
                                 continue
                             old_bins_to_new[len(bins)] = offset
-                            bins.append(idx.levels[0][-1])
+                            bins.append(idx.levels[0][-1] if isinstance(idx, pandas.MultiIndex) else idx[-1])
                         old_bins_to_new[len(bins)] = offset
-                        breakpoint()
-                        if len(bins) == 0:
-                            parts = np.digitize(missing_values.index.levels[0], bins)
+                        lvl_zero = missing_values.index if isinstance(missing_values.index, pandas.CategoricalIndex) else missing_values.index.levels[0]
+                        # breakpoint()
+                        if len(bins) != 0:
+                            if pandas.api.types.is_any_real_numeric_dtype(lvl_zero):
+                                parts = np.digitize(lvl_zero, bins, right=True)
+                            else:
+                                parts = np.searchsorted(bins, lvl_zero)
                         else:
-                            parts = np.zeros(len(missing_values.index.levels[0]), dtype=int)
+                            parts = np.zeros(len(lvl_zero), dtype=int)
                         masks = {idx: pandas.DataFrame() for idx in np.unique(parts)}
                         if isinstance(missing_values.index, pandas.MultiIndex):
                             frame_idx = missing_values.index.to_frame()
-                            for lvl_val, idx in zip(missing_values.index.levels[0], parts):
+                            for lvl_val, idx in zip(lvl_zero, parts):
                                 masks[idx] = pandas.concat([masks[idx], missing_values[frame_idx.iloc[:, 0] == lvl_val]])
                         else:
                             for i, idx in enumerate(parts):
                                 masks[idx] = pandas.concat([masks[idx], missing_values.iloc[[i]]])
                         
-                        masks = {key: masks[value] for key, value in old_bins_to_new.items()}
-                    if align_result_columns:
-                        valid_dfs = [
-                            df
-                            for df in dfs
-                            if not df.attrs.get(skip_on_aligning_flag, False)
-                        ]
-                        if add_missing_cats:
-                            valid_dfs += missing_values
-                        if len(valid_dfs) == 0 and len(dfs) != 0:
-                            valid_dfs = dfs
-
-                        # Using '.concat()' on empty-slices instead of 'Index.join()'
-                        # in order to get identical behavior to pandas when it joins
-                        # results of different groups
-                        combined_cols = pandas.concat(
-                            [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
-                        ).columns
+                        masks = {key + old_bins_to_new[key]: value for key, value in masks.items()}
                     # breakpoint()
-                    return (combined_cols, masks)
+                    return (combined_cols, masks) if align_result_columns else (None, masks)
 
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
@@ -3948,11 +3994,14 @@ class PandasDataframe(ClassLogger):
                     combined_cols, mask = args
                     if mask is not None and mask.get(partition_idx) is not None:
                         values = mask[partition_idx]
+                        # breakpoint()
+                        original_names = df.index.names
                         if kwargs["sort"]:
                             # TODO: write search-sorted insertion or sort the result after insertion
-                            df = pandas.concat([df, values]).sort_values(by)
+                            df = pandas.concat([df, values]).sort_index(axis=0)
                         else:
                             df = pandas.concat([df, values])
+                        df.index.names = original_names
                     if combined_cols is not None:
                         df = df.reindex(columns=combined_cols)
                     return df

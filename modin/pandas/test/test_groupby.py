@@ -3155,6 +3155,7 @@ def _apply_transform(df):
     return df.sum()
 
 @pytest.mark.parametrize("observed", [False])
+@pytest.mark.parametrize("as_index", [True, False])
 @pytest.mark.parametrize(
     "func",
     [
@@ -3167,19 +3168,19 @@ def _apply_transform(df):
 @pytest.mark.parametrize(
     "by_cols, cat_cols",
     [
-        # ("a", ["a"]),
-        # ("b", ["b"]),
-        # ("e", ["e"]),
-        # (["a", "e"], ["a"]),
-        # (["a", "e"], ["e"]),
-        # (["a", "e"], ["a", "e"]),
-        # (["b", "e"], ["b"]),
-        # (["b", "e"], ["e"]),
-        # (["b", "e"], ["b", "e"]),
-        # (["a", "b", "e"], ["a"]),
-        # (["a", "b", "e"], ["b"]),
-        # (["a", "b", "e"], ["e"]),
-        # (["a", "b", "e"], ["a", "e"]),
+        ("a", ["a"]),
+        ("b", ["b"]),
+        ("e", ["e"]),
+        (["a", "e"], ["a"]),
+        (["a", "e"], ["e"]),
+        (["a", "e"], ["a", "e"]),
+        (["b", "e"], ["b"]),
+        (["b", "e"], ["e"]),
+        (["b", "e"], ["b", "e"]),
+        (["a", "b", "e"], ["a"]),
+        (["a", "b", "e"], ["b"]),
+        (["a", "b", "e"], ["e"]),
+        (["a", "b", "e"], ["a", "e"]),
         (["a", "b", "e"], ["a", "b", "e"]),
     ]
 )
@@ -3194,7 +3195,7 @@ def _apply_transform(df):
         pytest.param(lambda row: ~row["a"].isin(["a", "e"]) & ~row["b"].isin([4]) & ~row["e"].isin(["x"]), id="exclude_from_a_b_e"),
     ]
 )
-def test_range_groupby_categories(observed, func, by_cols, cat_cols, exclude_values):
+def test_range_groupby_categories(observed, func, by_cols, cat_cols, exclude_values, as_index):
     data = {
         "a": ["a", "b", "c", "d", "e", "b", "g", "a"] * 32,
         "b": [1, 2, 3, 4] * 64,
@@ -3207,8 +3208,8 @@ def test_range_groupby_categories(observed, func, by_cols, cat_cols, exclude_val
     md_df = md_df.astype({col: "category" for col in cat_cols})[exclude_values]
     pd_df = pd_df.astype({col: "category" for col in cat_cols})[exclude_values]
 
-    # md_res = func(md_df.groupby(by_cols, observed=observed))
-    pd_res = func(pd_df.groupby(by_cols, observed=observed))
-    breakpoint()
-    print("lel")
+    md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
+    pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
+    # breakpoint()
+    # print("lel")
     df_equals(md_res, pd_res)
