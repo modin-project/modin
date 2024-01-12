@@ -11,7 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses ``ExperimentalGlobDispatcher`` class that is used to read files of different formats in parallel."""
+"""Module houses ``ExperimentalGlobDispatcher`` class that is used to read/write files of different formats in parallel."""
 
 import glob
 import warnings
@@ -25,7 +25,7 @@ from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
 class ExperimentalGlobDispatcher(FileDispatcher):
-    """Class implements reading different formats, parallelizing by the number of files."""
+    """Class implements reading/writing different formats, parallelizing by the number of files."""
 
     @classmethod
     def _read(cls, **kwargs):
