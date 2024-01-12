@@ -269,7 +269,7 @@ class ExperimentalFunctions:
         **kwargs,
     ) -> None:  # noqa: PR01
         """
-        Load a parquet object from the file path, returning a DataFrame.
+        Write a DataFrame to the binary parquet format.
 
         This experimental feature provides parallel reading from multiple parquet files which are
         defined by glob pattern. The files must contain parts of one dataframe, which can be
