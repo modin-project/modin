@@ -271,18 +271,13 @@ class ExperimentalFunctions:
         """
         Write a DataFrame to the binary parquet format.
 
-        This experimental feature provides parallel reading from multiple parquet files which are
-        defined by glob pattern. The files must contain parts of one dataframe, which can be
-        obtained, for example, by `DataFrame.modin.to_parquet_glob` function.
-
-        Returns
-        -------
-        DataFrame
+        This experimental feature provides parallel writing into multiple parquet files which are
+        defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
 
         Notes
         -----
         * Only string type supported for `path` argument.
-        * The rest of the arguments are the same as for `pandas.read_parquet`.
+        * The rest of the arguments are the same as for `pandas.to_parquet`.
         """
         from modin.experimental.pandas.io import to_parquet_glob
 

@@ -460,7 +460,7 @@ def to_parquet_glob(
     """
     Write a DataFrame to the binary parquet format.
 
-    This experimental feature provides parallel writing into multiple pickle files which are
+    This experimental feature provides parallel writing into multiple parquet files which are
     defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
 
     Notes

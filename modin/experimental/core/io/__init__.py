@@ -22,6 +22,5 @@ __all__ = [
     "ExperimentalCSVGlobDispatcher",
     "ExperimentalSQLDispatcher",
     "ExperimentalGlobDispatcher",
-    "ExperimentalGlobDispatcher",
     "ExperimentalCustomTextDispatcher",
 ]
