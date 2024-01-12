@@ -354,7 +354,7 @@ def to_pickle_distributed(
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
-):
+) -> None:
     """
     Pickle (serialize) object to file.
 
@@ -363,7 +363,7 @@ def to_pickle_distributed(
 
     Parameters
     ----------
-    filepath_or_buffer : str, path object or file-like object
+    filepath_or_buffer : str
         File path where the pickled object will be stored.
     compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         A string representing the compression to use in the output file. By
@@ -412,8 +412,23 @@ def read_parquet_glob(
     filesystem=None,
     filters=None,
     **kwargs,
-):
-    # TODO: add docstring
+) -> DataFrame:  # noqa: PR01
+    """
+    Load a parquet object from the file path, returning a DataFrame.
+
+    This experimental feature provides parallel reading from multiple parquet files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_parquet_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.read_parquet`.
+    """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return DataFrame(
@@ -434,15 +449,25 @@ def read_parquet_glob(
 @expanduser_path_arg("path")
 def to_parquet_glob(
     self,
-    path=None,
+    path,
     engine="auto",
     compression="snappy",
     index=None,
     partition_cols=None,
     storage_options: StorageOptions = None,
     **kwargs,
-):
-    # TODO: add docstring
+) -> None:  # noqa: PR01
+    """
+    Write a DataFrame to the binary parquet format.
+
+    This experimental feature provides parallel writing into multiple pickle files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.to_parquet`.
+    """
     obj = self
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 

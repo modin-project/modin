@@ -215,7 +215,7 @@ class ExperimentalFunctions:
         compression: CompressionOptions = "infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
-    ):
+    ) -> None:
         """
         Pickle (serialize) object to file.
 
@@ -224,7 +224,7 @@ class ExperimentalFunctions:
 
         Parameters
         ----------
-        filepath_or_buffer : str, path object or file-like object
+        filepath_or_buffer : str
             File path where the pickled object will be stored.
         compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
             A string representing the compression to use in the output file. By
@@ -260,16 +260,36 @@ class ExperimentalFunctions:
 
     def to_parquet_glob(
         self,
-        path=None,
+        path,
         engine="auto",
         compression="snappy",
         index=None,
         partition_cols=None,
         storage_options: StorageOptions = None,
         **kwargs,
-    ):
-        # TODO: add docstring
+    ) -> None:  # noqa: PR01
+        """
+        Load a parquet object from the file path, returning a DataFrame.
+
+        This experimental feature provides parallel reading from multiple parquet files which are
+        defined by glob pattern. The files must contain parts of one dataframe, which can be
+        obtained, for example, by `DataFrame.modin.to_parquet_glob` function.
+
+        Returns
+        -------
+        DataFrame
+
+        Notes
+        -----
+        * Only string type supported for `path` argument.
+        * The rest of the arguments are the same as for `pandas.read_parquet`.
+        """
         from modin.experimental.pandas.io import to_parquet_glob
+
+        if path is None:
+            raise NotImplementedError(
+                "`to_parquet_glob` doesn't support path=None, use `to_parquet` in that case."
+            )
 
         to_parquet_glob(
             self._data,

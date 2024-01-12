@@ -122,7 +122,8 @@ class ExperimentalGlobDispatcher(FileDispatcher):
             cls.base_write(qc, filepath_or_buffer, **kwargs)
             return
 
-        # just to try
+        # Be careful, this is a kind of limitation, but at the time of the first implementation,
+        # getting a name in this way is quite convenient.
         write_func_name = cls.base_write.__name__
 
         def func(df, **kw):  # pragma: no cover
