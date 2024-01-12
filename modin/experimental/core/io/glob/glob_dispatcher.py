@@ -108,9 +108,9 @@ class ExperimentalGlobDispatcher(FileDispatcher):
         ----------
         qc : BaseQueryCompiler
             The query compiler of the Modin dataframe that we want
-            to run ``to_[format]_glob`` on.
+            to run ``to_<format>_glob`` on.
         **kwargs : dict
-            Parameters for ``pandas.to_[format](**kwargs)``.
+            Parameters for ``pandas.to_<format>(**kwargs)``.
         """
         path_key = "filepath_or_buffer" if "filepath_or_buffer" in kwargs else "path"
         filepath_or_buffer = kwargs.pop(path_key)

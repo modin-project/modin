@@ -295,8 +295,8 @@ def test_parquet_glob(filename):
         read_df = pd.read_parquet_glob(filename)
     df_equals(read_df, df)
 
-    pickle_files = glob.glob(str(filename))
-    teardown_test_files(pickle_files)
+    parquet_files = glob.glob(str(filename))
+    teardown_test_files(parquet_files)
 
 
 @pytest.mark.skipif(
