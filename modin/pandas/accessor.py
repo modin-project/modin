@@ -215,7 +215,7 @@ class ExperimentalFunctions:
         compression: CompressionOptions = "infer",
         protocol: int = pickle.HIGHEST_PROTOCOL,
         storage_options: StorageOptions = None,
-    ):
+    ) -> None:
         """
         Pickle (serialize) object to file.
 
@@ -224,7 +224,7 @@ class ExperimentalFunctions:
 
         Parameters
         ----------
-        filepath_or_buffer : str, path object or file-like object
+        filepath_or_buffer : str
             File path where the pickled object will be stored.
         compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
             A string representing the compression to use in the output file. By
@@ -256,4 +256,43 @@ class ExperimentalFunctions:
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,
+        )
+
+    def to_parquet_glob(
+        self,
+        path,
+        engine="auto",
+        compression="snappy",
+        index=None,
+        partition_cols=None,
+        storage_options: StorageOptions = None,
+        **kwargs,
+    ) -> None:  # noqa: PR01
+        """
+        Write a DataFrame to the binary parquet format.
+
+        This experimental feature provides parallel writing into multiple parquet files which are
+        defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
+
+        Notes
+        -----
+        * Only string type supported for `path` argument.
+        * The rest of the arguments are the same as for `pandas.to_parquet`.
+        """
+        from modin.experimental.pandas.io import to_parquet_glob
+
+        if path is None:
+            raise NotImplementedError(
+                "`to_parquet_glob` doesn't support path=None, use `to_parquet` in that case."
+            )
+
+        to_parquet_glob(
+            self._data,
+            path=path,
+            engine=engine,
+            compression=compression,
+            index=index,
+            partition_cols=partition_cols,
+            storage_options=storage_options,
+            **kwargs,
         )

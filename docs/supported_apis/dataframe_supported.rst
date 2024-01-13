@@ -421,6 +421,8 @@ default to pandas.
 |                            |                           |                        | ``path`` parameter specifies a directory where one |
 |                            |                           |                        | file is written per row partition of the Modin     |
 |                            |                           |                        | dataframe.                                         |
+|                            |                           |                        | Experimental implementation:                       |
+|                            |                           |                        | DataFrame.modin.to_parquet_glob                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+

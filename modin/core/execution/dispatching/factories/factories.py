@@ -516,6 +516,39 @@ class BaseFactory(object):
             )
         return cls.io_cls.to_pickle_distributed(*args, **kwargs)
 
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Parquet files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_parquet_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_parquet_glob(**kwargs)
+
+    @classmethod
+    def _to_parquet_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several parquet files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_parquet_glob(*args, **kwargs)
+
 
 @doc(_doc_factory_class, execution_name="PandasOnRay")
 class PandasOnRayFactory(BaseFactory):

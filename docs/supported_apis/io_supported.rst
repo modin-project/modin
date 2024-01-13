@@ -46,6 +46,7 @@ default to pandas.
 |                   |                                 | passed via ``**kwargs`` are not supported.             |
 |                   |                                 | ``use_nullable_dtypes`` == True is not supported.      |
 |                   |                                 |                                                        |
+|                   |                                 | Experimental implementation: read_parquet_glob         |
 +-------------------+---------------------------------+--------------------------------------------------------+
 | `read_json`_      | P                               | Implemented for ``lines=True``                         |
 +-------------------+---------------------------------+--------------------------------------------------------+

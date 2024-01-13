@@ -274,6 +274,33 @@ def test_distributed_pickling(filename, compression, pathlike):
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_parquet_glob.parquet", "test_parquet_glob*.parquet"],
+)
+def test_parquet_glob(filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_parquet_glob.parquet"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_parquet_glob(filename)
+        read_df = pd.read_parquet_glob(filename)
+    df_equals(read_df, df)
+
+    parquet_files = glob.glob(str(filename))
+    teardown_test_files(parquet_files)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
