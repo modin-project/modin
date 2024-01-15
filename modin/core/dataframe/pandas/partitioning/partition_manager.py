@@ -122,7 +122,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         filtered_list = []
         filtered_idx = []
         for idx, item in enumerate(input_list):
-            if cls._execution_wrapper.check_is_future(item):
+            if cls._execution_wrapper.is_future(item):
                 filtered_idx.append(idx)
                 filtered_list.append(item)
         filtered_list = cls._execution_wrapper.materialize(filtered_list)

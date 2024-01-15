@@ -186,13 +186,13 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = self._get_dimensions(row_parts, "length")
+                self._row_lengths_cache = self._get_lengths(row_parts, Axis.ROW_WISE)
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
 
     @classmethod
-    def _get_dimensions(cls, parts, dim_name):
+    def _get_lengths(cls, parts, axis):
         """
         Get list of  dimensions for all the provided parts.
 
@@ -200,14 +200,17 @@ class PandasDataframe(ClassLogger):
         ----------
         parts : list
             List of parttions.
-        dim_name : string
-            Dimension name could be "length" or "width".
+        axis : {0, 1}
+            The axis along which to get the lengths (0 - length across rows or, 1 - width across columns).
 
         Returns
         -------
         list
         """
-        return [getattr(part, dim_name)() for part in parts]
+        if axis == Axis.ROW_WISE:
+            return [part.length() for part in parts]
+        else:
+            return [part.width() for part in parts]
 
     def __len__(self) -> int:
         """
@@ -236,7 +239,7 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                self._column_widths_cache = self._get_dimensions(col_parts, "width")
+                self._column_widths_cache = self._get_lengths(col_parts, Axis.COL_WISE)
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
@@ -3673,9 +3676,7 @@ class PandasDataframe(ClassLogger):
                     if all(
                         part._length_cache is not None for part in new_partitions.T[0]
                     ):
-                        new_lengths = self._get_dimensions(
-                            new_partitions.T[0], "length"
-                        )
+                        new_lengths = self._get_lengths(new_partitions.T[0], axis)
                     else:
                         new_lengths = None
         else:
@@ -3697,7 +3698,7 @@ class PandasDataframe(ClassLogger):
                 new_widths = []
                 if new_partitions.size > 0:
                     if all(part._width_cache is not None for part in new_partitions[0]):
-                        new_widths = self._get_dimensions(new_partitions[0], "width")
+                        new_widths = self._get_lengths(new_partitions[0], axis)
                     else:
                         new_widths = None
 
