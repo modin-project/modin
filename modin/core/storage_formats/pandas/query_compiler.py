@@ -3781,6 +3781,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
             all(col in self.columns for col in by) if is_all_labels else False
         )
 
+        is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
+
+        if is_transform:
+            # https://github.com/modin-project/modin/issues/5924
+            ErrorMessage.missmatch_with_pandas(
+                operation="range-partitioning groupby",
+                message="the order of rows may be shuffled for the result",
+            )
+
         if not is_all_column_names:
             raise NotImplementedError(
                 "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
@@ -3789,7 +3798,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         from pandas.api.extensions import no_default
         # breakpoint()
         # This check materializes dtypes for 'by' columns
-        if not groupby_kwargs.get("observed", False) or groupby_kwargs.get("observed", False) is no_default:
+        if not is_transform and (not groupby_kwargs.get("observed", False) or groupby_kwargs.get("observed", False) is no_default):
             if isinstance(self._modin_frame._dtypes, ModinDtypes):
                 by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
             else:
@@ -3798,13 +3807,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             add_missing_cats = False
 
-        is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
-
-        if is_transform:
-            # https://github.com/modin-project/modin/issues/5924
-            ErrorMessage.missmatch_with_pandas(
-                operation="range-partitioning groupby",
-                message="the order of rows may be shuffled for the result",
+        if add_missing_cats and not groupby_kwargs.get("as_index", True):
+            raise NotImplementedError(
+                "Range-partitioning groupby is not implemented for grouping on categorical columns with "
+                + "the following set of parameters \{'as_index': False, 'observed': False\}. Change either 'as_index' "
+                + "or 'observed' to True and try again. "
+                + "https://github.com/modin-project/modin/issues/5926"
             )
 
         if isinstance(agg_func, dict):
@@ -3848,7 +3856,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result_qc = self.__constructor__(result)
 
         if not is_transform and not groupby_kwargs.get("as_index", True):
-            return result_qc.reset_index(drop=True)
+            try:
+                return result_qc.reset_index(drop=True)
+            except:
+                breakpoint()
+                print("sas")
 
         return result_qc
 

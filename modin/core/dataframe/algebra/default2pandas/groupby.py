@@ -55,7 +55,7 @@ class GroupBy:
         -------
         bool
         """
-        return hashable(agg_func) and agg_func in transformation_kernels
+        return hashable(agg_func) and agg_func in transformation_kernels.union({"nth", "head", "tail"})
 
     @classmethod
     def _call_groupby(cls, df, *args, **kwargs):  # noqa: PR01
