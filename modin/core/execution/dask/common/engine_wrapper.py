@@ -92,7 +92,7 @@ class DaskWrapper:
         return remote_task_future
 
     @classmethod
-    def check_is_future(cls, item):
+    def is_future(cls, item):
         """
         Check if the item is a Future.
 
