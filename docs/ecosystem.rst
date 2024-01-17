@@ -24,6 +24,9 @@ to the format preferred.
 to_pandas
 ---------
 
+You can refer to `pandas ecosystem`_ page to get more details on
+where pandas can be used and what libraries it powers.
+
 .. code-block:: python
 
     from modin.pandas.io import to_pandas
@@ -33,8 +36,14 @@ to_pandas
 to_numpy
 --------
 
+You can refer to `NumPy ecosystem`_ section of NumPy documentation to get more details on
+where NumPy can be used and what libraries it powers.
+
 .. code-block:: python
 
     from modin.pandas.io import to_numpy
 
     numpy_arr = to_numpy(modin_df)
+
+.. _pandas ecosystem: https://pandas.pydata.org/community/ecosystem.html
+.. _NumPy ecosystem: https://numpy.org
