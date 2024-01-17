@@ -51,7 +51,6 @@ from modin.pandas.io import from_arrow, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
-    COMP_TO_EXT,
     check_file_leaks,
     create_test_dfs,
     default_to_pandas_ignore_string,
@@ -267,42 +266,38 @@ class TestCsv:
     def test_read_csv_delimiters(
         self, make_csv_file, sep, delimiter, decimal, thousands
     ):
-        with ensure_clean(".csv") as unique_filename:
-            make_csv_file(
-                filename=unique_filename,
-                delimiter=delimiter,
-                thousands_separator=thousands,
-                decimal_separator=decimal,
-            )
-
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                delimiter=delimiter,
-                sep=sep,
-                decimal=decimal,
-                thousands=thousands,
-            )
+        unique_filename = make_csv_file(
+            delimiter=delimiter,
+            thousands_separator=thousands,
+            decimal_separator=decimal,
+        )
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            delimiter=delimiter,
+            sep=sep,
+            decimal=decimal,
+            thousands=thousands,
+        )
 
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
     def test_read_csv_dtype_backend(self, make_csv_file, dtype_backend):
-        with ensure_clean(".csv") as unique_filename:
-            make_csv_file(filename=unique_filename)
+        unique_filename = make_csv_file()
 
-            def comparator(df1, df2):
-                df_equals(df1, df2)
-                df_equals(df1.dtypes, df2.dtypes)
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
 
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                dtype_backend=dtype_backend,
-                comparator=comparator,
-            )
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     # Column and Index Locations and Names tests
     @pytest.mark.parametrize("header", ["infer", None, 0])
@@ -420,38 +415,32 @@ class TestCsv:
         names,
         encoding,
     ):
-        with ensure_clean(".csv") as unique_filename:
-            if encoding:
-                make_csv_file(
-                    filename=unique_filename,
-                    encoding=encoding,
-                )
-            kwargs = {
-                "filepath_or_buffer": unique_filename
-                if encoding
-                else pytest.csvs_names["test_read_csv_regular"],
-                "header": header,
-                "skiprows": skiprows,
-                "nrows": nrows,
-                "names": names,
-                "encoding": encoding,
-            }
+        if encoding:
+            unique_filename = make_csv_file(encoding=encoding)
+        else:
+            unique_filename = pytest.csvs_names["test_read_csv_regular"]
+        kwargs = {
+            "filepath_or_buffer": unique_filename,
+            "header": header,
+            "skiprows": skiprows,
+            "nrows": nrows,
+            "names": names,
+            "encoding": encoding,
+        }
 
-            if Engine.get() != "Python":
-                df = pandas.read_csv(**dict(kwargs, nrows=1))
-                # in that case first partition will contain str
-                if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
-                    pytest.xfail(
-                        "read_csv incorrect output with float data - issue #2634"
-                    )
+        if Engine.get() != "Python":
+            df = pandas.read_csv(**dict(kwargs, nrows=1))
+            # in that case first partition will contain str
+            if df[df.columns[0]][df.index[0]] in ["c1", "col1", "c3", "col3"]:
+                pytest.xfail("read_csv incorrect output with float data - issue #2634")
 
-            eval_io(
-                fn_name="read_csv",
-                raising_exceptions=None,
-                check_kwargs_callable=not callable(skiprows),
-                # read_csv kwargs
-                **kwargs,
-            )
+        eval_io(
+            fn_name="read_csv",
+            raising_exceptions=None,
+            check_kwargs_callable=not callable(skiprows),
+            # read_csv kwargs
+            **kwargs,
+        )
 
     @pytest.mark.parametrize("true_values", [["Yes"], ["Yes", "true"], None])
     @pytest.mark.parametrize("false_values", [["No"], ["No", "false"], None])
@@ -642,24 +631,16 @@ class TestCsv:
     @pytest.mark.parametrize("encoding", [None, "latin8", "utf16"])
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
-        with ensure_clean(".csv") as unique_filename:
-            make_csv_file(
-                filename=unique_filename, encoding=encoding, compression=compression
-            )
-            compressed_file_path = (
-                f"{unique_filename}.{COMP_TO_EXT[compression]}"
-                if compression != "infer"
-                else unique_filename
-            )
+        unique_filename = make_csv_file(encoding=encoding, compression=compression)
 
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=compressed_file_path,
-                compression=compression,
-                encoding=encoding,
-                engine=engine,
-            )
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            compression=compression,
+            encoding=encoding,
+            engine=engine,
+        )
 
     @pytest.mark.parametrize(
         "encoding",
@@ -687,15 +668,13 @@ class TestCsv:
         ],
     )
     def test_read_csv_encoding(self, make_csv_file, encoding):
-        with ensure_clean(".csv") as unique_filename:
-            make_csv_file(filename=unique_filename, encoding=encoding)
-
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                encoding=encoding,
-            )
+        unique_filename = make_csv_file(encoding=encoding)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            encoding=encoding,
+        )
 
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
     @pytest.mark.parametrize("decimal", [".", "_"])
@@ -711,55 +690,49 @@ class TestCsv:
         escapechar,
         dialect,
     ):
-        with ensure_clean(".csv") as unique_filename:
-            if dialect:
-                test_csv_dialect_params = {
-                    "delimiter": "_",
-                    "doublequote": False,
-                    "escapechar": "\\",
-                    "quotechar": "d",
-                    "quoting": csv.QUOTE_ALL,
-                }
-                csv.register_dialect(dialect, **test_csv_dialect_params)
-                if dialect != "use_dialect_name":
-                    # otherwise try with dialect name instead of `_csv.Dialect` object
-                    dialect = csv.get_dialect(dialect)
-                make_csv_file(filename=unique_filename, **test_csv_dialect_params)
-            else:
-                make_csv_file(
-                    filename=unique_filename,
-                    thousands_separator=thousands,
-                    decimal_separator=decimal,
-                    escapechar=escapechar,
-                    lineterminator=lineterminator,
-                )
-
-            if (
-                (StorageFormat.get() == "Hdk")
-                and (escapechar is not None)
-                and (lineterminator is None)
-                and (thousands is None)
-                and (decimal == ".")
-            ):
-                with open(unique_filename, "r") as f:
-                    if any(
-                        line.find(f',"{escapechar}') != -1 for _, line in enumerate(f)
-                    ):
-                        pytest.xfail(
-                            "Tests with this character sequence fail due to #5649"
-                        )
-
-            eval_io(
-                raising_exceptions=None,
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                thousands=thousands,
-                decimal=decimal,
-                lineterminator=lineterminator,
+        if dialect:
+            test_csv_dialect_params = {
+                "delimiter": "_",
+                "doublequote": False,
+                "escapechar": "\\",
+                "quotechar": "d",
+                "quoting": csv.QUOTE_ALL,
+            }
+            csv.register_dialect(dialect, **test_csv_dialect_params)
+            if dialect != "use_dialect_name":
+                # otherwise try with dialect name instead of `_csv.Dialect` object
+                dialect = csv.get_dialect(dialect)
+            unique_filename = make_csv_file(**test_csv_dialect_params)
+        else:
+            unique_filename = make_csv_file(
+                thousands_separator=thousands,
+                decimal_separator=decimal,
                 escapechar=escapechar,
-                dialect=dialect,
+                lineterminator=lineterminator,
             )
+
+        if (
+            (StorageFormat.get() == "Hdk")
+            and (escapechar is not None)
+            and (lineterminator is None)
+            and (thousands is None)
+            and (decimal == ".")
+        ):
+            with open(unique_filename, "r") as f:
+                if any(line.find(f',"{escapechar}') != -1 for _, line in enumerate(f)):
+                    pytest.xfail("Tests with this character sequence fail due to #5649")
+
+        eval_io(
+            raising_exceptions=None,
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            thousands=thousands,
+            decimal=decimal,
+            lineterminator=lineterminator,
+            escapechar=escapechar,
+            dialect=dialect,
+        )
 
     @pytest.mark.parametrize(
         "quoting",
@@ -782,26 +755,24 @@ class TestCsv:
             not doublequote and quotechar != '"' and quoting != csv.QUOTE_NONE
         )
         escapechar = "\\" if use_escapechar else None
-        with ensure_clean(".csv") as unique_filename:
-            make_csv_file(
-                filename=unique_filename,
-                quoting=quoting,
-                quotechar=quotechar,
-                doublequote=doublequote,
-                escapechar=escapechar,
-                comment_col_char=comment,
-            )
+        unique_filename = make_csv_file(
+            quoting=quoting,
+            quotechar=quotechar,
+            doublequote=doublequote,
+            escapechar=escapechar,
+            comment_col_char=comment,
+        )
 
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                quoting=quoting,
-                quotechar=quotechar,
-                doublequote=doublequote,
-                escapechar=escapechar,
-                comment=comment,
-            )
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            quoting=quoting,
+            quotechar=quotechar,
+            doublequote=doublequote,
+            escapechar=escapechar,
+            comment=comment,
+        )
 
     # Error Handling parameters tests
     @pytest.mark.skip(reason="https://github.com/modin-project/modin/issues/6239")
@@ -841,6 +812,7 @@ class TestCsv:
         low_memory,
         memory_map,
         float_precision,
+        tmp_path,
     ):
         # In this case raised TypeError: cannot use a string pattern on a bytes-like object,
         # so TypeError should be excluded from raising_exceptions list in order to check, that
@@ -868,29 +840,28 @@ class TestCsv:
             "float_precision": float_precision,
         }
 
-        with ensure_clean(".csv") as unique_filename:
-            if use_str_data:
-                str_delim_whitespaces = (
-                    "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
-                )
-                eval_io_from_str(
-                    str_delim_whitespaces,
-                    unique_filename,
-                    raising_exceptions=raising_exceptions,
-                    **kwargs,
-                )
-            else:
-                make_csv_file(
-                    filename=unique_filename,
-                    delimiter=delimiter,
-                )
+        if use_str_data:
+            str_delim_whitespaces = (
+                "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
+            )
+            unique_filename = get_unique_filename(data_dir=tmp_path)
+            eval_io_from_str(
+                str_delim_whitespaces,
+                unique_filename,
+                raising_exceptions=raising_exceptions,
+                **kwargs,
+            )
+        else:
+            unique_filename = make_csv_file(
+                delimiter=delimiter,
+            )
 
-                eval_io(
-                    filepath_or_buffer=unique_filename,
-                    fn_name="read_csv",
-                    raising_exceptions=raising_exceptions,
-                    **kwargs,
-                )
+            eval_io(
+                filepath_or_buffer=unique_filename,
+                fn_name="read_csv",
+                raising_exceptions=raising_exceptions,
+                **kwargs,
+            )
 
     # Issue related, specific or corner cases
     @pytest.mark.parametrize("nrows", [2, None])
@@ -1206,21 +1177,13 @@ class TestCsv:
     def test_read_csv_file_handle(
         self, read_mode, make_csv_file, buffer_start_pos, set_async_read_mode
     ):
-        with ensure_clean() as unique_filename:
-            make_csv_file(filename=unique_filename)
-
-            with open(unique_filename, mode=read_mode) as buffer:
-                buffer.seek(buffer_start_pos)
-                pandas_df = pandas.read_csv(buffer)
-                buffer.seek(buffer_start_pos)
-                modin_df = pd.read_csv(buffer)
-            if AsyncReadMode.get():
-                # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean` context
-                # because the file may be deleted before actual reading starts
-                df_equals(modin_df, pandas_df)
-        if not AsyncReadMode.get():
-            df_equals(modin_df, pandas_df)
+        unique_filename = make_csv_file()
+        with open(unique_filename, mode=read_mode) as buffer:
+            buffer.seek(buffer_start_pos)
+            pandas_df = pandas.read_csv(buffer)
+            buffer.seek(buffer_start_pos)
+            modin_df = pd.read_csv(buffer)
+        df_equals(modin_df, pandas_df)
 
     def test_unnamed_index(self):
         def get_internal_df(df):
@@ -1344,21 +1307,19 @@ def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
 # TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
 # commment once we turn all default to pandas messages into errors.
 def test_read_csv_relative_to_user_home(make_csv_file):
-    with ensure_clean(".csv") as unique_filename:
-        make_csv_file(filename=unique_filename)
-        _check_relative_io("read_csv", unique_filename, "filepath_or_buffer")
+    unique_filename = make_csv_file()
+    _check_relative_io("read_csv", unique_filename, "filepath_or_buffer")
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestTable:
     def test_read_table(self, make_csv_file):
-        with ensure_clean() as unique_filename:
-            make_csv_file(filename=unique_filename, delimiter="\t")
-            eval_io(
-                fn_name="read_table",
-                # read_table kwargs
-                filepath_or_buffer=unique_filename,
-            )
+        unique_filename = make_csv_file(delimiter="\t")
+        eval_io(
+            fn_name="read_table",
+            # read_table kwargs
+            filepath_or_buffer=unique_filename,
+        )
 
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
     def test_read_table_within_decorator(self, make_csv_file, set_async_read_mode):
@@ -1370,34 +1331,26 @@ class TestTable:
             if method == "modin":
                 return pd.read_table(file)
 
-        with ensure_clean() as unique_filename:
-            make_csv_file(filename=unique_filename, delimiter="\t")
+        unique_filename = make_csv_file(delimiter="\t")
 
-            pandas_df = wrapped_read_table(unique_filename, method="pandas")
-            modin_df = wrapped_read_table(unique_filename, method="modin")
+        pandas_df = wrapped_read_table(unique_filename, method="pandas")
+        modin_df = wrapped_read_table(unique_filename, method="modin")
 
         if StorageFormat.get() == "Hdk":
             modin_df, pandas_df = align_datetime_dtypes(modin_df, pandas_df)
 
-            if AsyncReadMode.get():
-                # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean` context
-                # because the file may be deleted before actual reading starts
-                df_equals(modin_df, pandas_df)
-        if not AsyncReadMode.get():
-            df_equals(modin_df, pandas_df)
+        df_equals(modin_df, pandas_df)
 
     def test_read_table_empty_frame(self, make_csv_file):
-        with ensure_clean() as unique_filename:
-            make_csv_file(filename=unique_filename, delimiter="\t")
+        unique_filename = make_csv_file(delimiter="\t")
 
-            eval_io(
-                fn_name="read_table",
-                # read_table kwargs
-                filepath_or_buffer=unique_filename,
-                usecols=["col1"],
-                index_col="col1",
-            )
+        eval_io(
+            fn_name="read_table",
+            # read_table kwargs
+            filepath_or_buffer=unique_filename,
+            usecols=["col1"],
+            index_col="col1",
+        )
 
 
 @pytest.mark.parametrize("engine", ["pyarrow", "fastparquet"])
