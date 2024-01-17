@@ -15,6 +15,7 @@
 
 import abc
 from collections import namedtuple
+from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
@@ -521,9 +522,16 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
 
     return decorator
 
-from timeit import default_timer as timer
+
 def add_missing_categories_to_groupby(
-    dfs, by, operator, initial_columns, combined_cols, is_udf_agg, kwargs, initial_dtypes=None
+    dfs,
+    by,
+    operator,
+    initial_columns,
+    combined_cols,
+    is_udf_agg,
+    kwargs,
+    initial_dtypes=None,
 ):
     t1 = timer()
     kwargs["observed"] = False
@@ -536,11 +544,13 @@ def add_missing_categories_to_groupby(
     # on multiple groupers or not
     total_index = indices[0].append(indices[1:])
     if isinstance(total_index, pandas.MultiIndex):
-        if all(not isinstance(level, pandas.CategoricalIndex) for level in total_index.levels):
+        if all(
+            not isinstance(level, pandas.CategoricalIndex)
+            for level in total_index.levels
+        ):
             return {}
         missing_cats_dtype = {
-            name: level.dtype
-            if isinstance(level.dtype, pandas.CategoricalDtype)
+            name: level.dtype if isinstance(level.dtype, pandas.CategoricalDtype)
             # it's a bit confusing but we have to convert the remaining 'by' columns to categoricals
             # in order to compute a proper fill value later in the code
             else pandas.CategoricalDtype(level)
@@ -550,7 +560,12 @@ def add_missing_categories_to_groupby(
         # carthesian product of (actual_missing_categorical_values X all_values_of_another_groupers)
         # breakpoint()
         complete_index = pandas.MultiIndex.from_product(
-            [value.categories.astype(total_level.dtype) for total_level, value in zip(total_index.levels, missing_cats_dtype.values())],
+            [
+                value.categories.astype(total_level.dtype)
+                for total_level, value in zip(
+                    total_index.levels, missing_cats_dtype.values()
+                )
+            ],
             names=by,
         )
         missing_index = complete_index[~complete_index.isin(total_index)]
@@ -558,7 +573,7 @@ def add_missing_categories_to_groupby(
         if not isinstance(total_index, pandas.CategoricalIndex):
             return {}, new_combined_cols
         # if we're grouping on a single grouper then we simply compute the difference
-        # between categorical values in the result and the values defined in categorical dtype 
+        # between categorical values in the result and the values defined in categorical dtype
         missing_index = total_index.categories.difference(total_index.values)
         missing_cats_dtype = {by[0]: pandas.CategoricalDtype(missing_index)}
     missing_index.names = by
@@ -588,15 +603,15 @@ def add_missing_categories_to_groupby(
         # HACK: default 'object' dtype doesn't fit our needs, as most of the aggregations
         # fail on a non-numeric columns, ideally, we need dtypes of the original dataframe,
         # however, 'int64' also works fine here if the original schema is not available
-        empty_df = empty_df.astype("int64" if initial_dtypes is None else initial_dtypes)
+        empty_df = empty_df.astype(
+            "int64" if initial_dtypes is None else initial_dtypes
+        )
         empty_df = empty_df.astype(missing_cats_dtype)
         missing_values = operator(empty_df.groupby(by, **kwargs))
     print("getting fill value", timer() - t1)
     t1 = timer()
     if is_udf_agg and not isinstance(total_index, pandas.MultiIndex):
-        missing_values = missing_values.drop(
-            columns=by, errors="ignore"
-        )
+        missing_values = missing_values.drop(columns=by, errors="ignore")
         new_combined_cols = pandas.concat(
             [
                 pandas.DataFrame(columns=combined_cols),
@@ -609,7 +624,9 @@ def add_missing_categories_to_groupby(
         # If the aggregation has failed, the result would be empty. Assuming the
         # fill value to be `np.NaN` here (this may not always be correct!!!)
         fill_value = np.NaN if len(missing_values) == 0 else missing_values.iloc[0, 0]
-        missing_values = pandas.DataFrame(fill_value, index=missing_index, columns=combined_cols)
+        missing_values = pandas.DataFrame(
+            fill_value, index=missing_index, columns=combined_cols
+        )
     print("generating missing values", timer() - t1)
     t1 = timer()
     # restoring original categorical dtypes for the indices
@@ -686,7 +703,9 @@ def add_missing_categories_to_groupby(
     masks = {}
     if isinstance(total_index, pandas.MultiIndex):
         for idx, values in pandas.RangeIndex(len(lvl_zero)).groupby(part_idx).items():
-            masks[idx] = missing_values[pandas.Index(missing_values.index.codes[0]).isin(values)]
+            masks[idx] = missing_values[
+                pandas.Index(missing_values.index.codes[0]).isin(values)
+            ]
     else:
         frame_idx = missing_values.index.to_frame()
         for idx, values in lvl_zero.groupby(part_idx).items():

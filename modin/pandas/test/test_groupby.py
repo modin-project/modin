@@ -3165,6 +3165,7 @@ def _apply_transform(df):
         return df.squeeze()
     return df.sum()
 
+
 @pytest.mark.parametrize(
     "modify_config", [{RangePartitioningGroupby: True}], indirect=True
 )

@@ -3816,7 +3816,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if add_missing_cats and not groupby_kwargs.get("as_index", True):
             raise NotImplementedError(
                 "Range-partitioning groupby is not implemented for grouping on categorical columns with "
-                + "the following set of parameters \{'as_index': False, 'observed': False\}. Change either 'as_index' "
+                + "the following set of parameters {'as_index': False, 'observed': False}. Change either 'as_index' "
                 + "or 'observed' to True and try again. "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
@@ -3862,11 +3862,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         result_qc = self.__constructor__(result)
 
         if not is_transform and not groupby_kwargs.get("as_index", True):
-            try:
-                return result_qc.reset_index(drop=True)
-            except:
-                breakpoint()
-                print("sas")
+            return result_qc.reset_index(drop=True)
 
         return result_qc
 
