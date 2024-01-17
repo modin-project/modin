@@ -36,6 +36,7 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
     lazy_metadata_decorator,
     add_missing_categories_to_groupby,
+    missing_cats_insert,
 )
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
@@ -3837,6 +3838,7 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
+    
         # no need aligning columns if there's only one row partition
         if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column

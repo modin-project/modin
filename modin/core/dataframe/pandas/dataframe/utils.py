@@ -684,9 +684,6 @@ def add_missing_categories_to_groupby(
     ### In the end we build a dictionary mapping partition index to a dataframe with missing categoricals
     ### to be inserted into this partition
     masks = {}
-    # if isinstance(total_index, pandas.MultiIndex):
-    #     breakpoint()
-    # frame_idx = missing_values.index.to_frame()
     if isinstance(total_index, pandas.MultiIndex):
         for idx, values in pandas.RangeIndex(len(lvl_zero)).groupby(part_idx).items():
             masks[idx] = missing_values[pandas.Index(missing_values.index.codes[0]).isin(values)]
