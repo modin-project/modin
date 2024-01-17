@@ -297,26 +297,26 @@ Yields:
 def TestReadCSVFixture(tmp_path_factory):
     tmp_path = tmp_path_factory.mktemp("TestReadCSVFixture")
 
-    creater = _make_csv_file(data_dir=tmp_path)
+    creator = _make_csv_file(data_dir=tmp_path)
     # each xdist worker spawned in separate process with separate namespace and dataset
     pytest.csvs_names = {}
     # test_read_csv_col_handling, test_read_csv_parsing
-    pytest.csvs_names["test_read_csv_regular"] = creater()
+    pytest.csvs_names["test_read_csv_regular"] = creator()
     # test_read_csv_parsing
-    pytest.csvs_names["test_read_csv_yes_no"] = creater(
+    pytest.csvs_names["test_read_csv_yes_no"] = creator(
         additional_col_values=["Yes", "true", "No", "false"],
     )
     # test_read_csv_col_handling
-    pytest.csvs_names["test_read_csv_blank_lines"] = creater(
+    pytest.csvs_names["test_read_csv_blank_lines"] = creator(
         add_blank_lines=True,
     )
     # test_read_csv_nans_handling
-    pytest.csvs_names["test_read_csv_nans"] = creater(
+    pytest.csvs_names["test_read_csv_nans"] = creator(
         add_blank_lines=True,
         additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
     )
     # test_read_csv_error_handling
-    pytest.csvs_names["test_read_csv_bad_lines"] = creater(
+    pytest.csvs_names["test_read_csv_bad_lines"] = creator(
         add_bad_lines=True,
     )
     yield
