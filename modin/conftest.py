@@ -79,7 +79,6 @@ from modin.pandas.test.utils import (  # noqa: E402
     get_unique_filename,
     make_default_file,
 )
-from modin.utils import get_current_execution  # noqa: E402
 
 
 def pytest_addoption(parser):
@@ -88,12 +87,6 @@ def pytest_addoption(parser):
         action="store",
         default=None,
         help="specifies execution to run tests on",
-    )
-    parser.addoption(
-        "--extra-test-parameters",
-        action="store_true",
-        help="activate extra test parameter combinations",
-        default=False,
     )
 
 
@@ -255,10 +248,6 @@ def get_unique_base_execution():
 
 
 def pytest_configure(config):
-    import modin.pandas.test.utils as utils
-
-    utils.extra_test_parameters = config.getoption("--extra-test-parameters")
-
     execution = config.option.execution
 
     if execution is None:
@@ -284,7 +273,7 @@ def pytest_runtest_call(item):
             if not isinstance(executions, list):
                 executions = [executions]
 
-            current_execution = get_current_execution()
+            current_execution = modin.utils.get_current_execution()
             reason = marker.kwargs.pop("reason", "")
 
             item.add_marker(

@@ -340,7 +340,7 @@ class BasePandasDataset(ClassLogger):
         elif is_dict_like(other):
             other_dtypes = [
                 type(other[label])
-                for label in self._query_compiler.get_axis(axis)
+                for label in self._get_axis(axis)
                 # The binary operation is applied for intersection of axis labels
                 # and dictionary keys. So filtering out extra keys.
                 if label in other
@@ -359,9 +359,7 @@ class BasePandasDataset(ClassLogger):
                 # dictionary.
                 self_dtypes = [
                     dtype
-                    for label, dtype in zip(
-                        self._query_compiler.get_axis(axis), self._get_dtypes()
-                    )
+                    for label, dtype in zip(self._get_axis(axis), self._get_dtypes())
                     if label in other
                 ]
 
@@ -405,7 +403,7 @@ class BasePandasDataset(ClassLogger):
             [self._validate_function(fn, on_invalid) for fn in func.values()]
             return
             # We also could validate this, but it may be quite expensive for lazy-frames
-            # if not all(idx in self.axes[axis] for idx in func.keys()):
+            # if not all(idx in self._get_axis(axis) for idx in func.keys()):
             #     error_raiser("Invalid dict keys", KeyError)
 
         if not is_list_like(func):
@@ -625,6 +623,22 @@ class BasePandasDataset(ClassLogger):
         return self._query_compiler.index
 
     index = property(_get_index, _set_index)
+
+    def _get_axis(self, axis):
+        """
+        Return index labels of the specified axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+            0 is for index, when 1 is for columns.
+
+        Returns
+        -------
+        pandas.Index
+        """
+        return self.index if axis == 0 else self.columns
 
     def add(
         self, other, axis="columns", level=None, fill_value=None
@@ -2466,7 +2480,7 @@ class BasePandasDataset(ClassLogger):
         Rearrange index levels using input order.
         """
         axis = self._get_axis_number(axis)
-        new_labels = self.axes[axis].reorder_levels(order)
+        new_labels = self._get_axis(axis).reorder_levels(order)
         return self.set_axis(new_labels, axis=axis)
 
     def resample(
@@ -2727,7 +2741,7 @@ class BasePandasDataset(ClassLogger):
             # Index of the weights Series should correspond to the index of the
             # Dataframe in order to sample
             if isinstance(weights, BasePandasDataset):
-                weights = weights.reindex(self.axes[axis])
+                weights = weights.reindex(self._get_axis(axis))
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
             if isinstance(weights, str):
@@ -3357,9 +3371,9 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array or a Modin wrapper for NumPy array.
         """
-        from modin.config import ExperimentalNumPyAPI
+        from modin.config import ModinNumpy
 
-        if ExperimentalNumPyAPI.get():
+        if ModinNumpy.get():
             from ..numpy.arr import array
 
             return array(self, copy=copy)
@@ -3509,15 +3523,15 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         if (
-            not self.axes[axis].is_monotonic_increasing
-            and not self.axes[axis].is_monotonic_decreasing
+            not self._get_axis(axis).is_monotonic_increasing
+            and not self._get_axis(axis).is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
 
         if before is not None and after is not None and before > after:
             raise ValueError(f"Truncate: {after} must be after {before}")
 
-        s = slice(*self.axes[axis].slice_locs(before, after))
+        s = slice(*self._get_axis(axis).slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
 

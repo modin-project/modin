@@ -13,6 +13,7 @@
 
 import contextlib
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas
@@ -238,11 +239,12 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
+@pytest.mark.parametrize("pathlike", [False, True])
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
     "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
 )
-def test_distributed_pickling(tmp_path, filename, compression):
+def test_distributed_pickling(tmp_path, filename, compression, pathlike):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
@@ -250,16 +252,43 @@ def test_distributed_pickling(tmp_path, filename, compression):
     if compression:
         filename = f"{filename}.gz"
 
+    filename = Path(filename) if pathlike else filename
+
     with (
         warns_that_defaulting_to_pandas()
         if filename_param == "test_default_to_pickle.pkl"
         else contextlib.nullcontext()
     ):
-        df.to_pickle_distributed(str(tmp_path / filename), compression=compression)
-        pickled_df = pd.read_pickle_distributed(
-            str(tmp_path / filename), compression=compression
-        )
+        df.modin.to_pickle_distributed(str(tmp_path / filename), compression=compression)
+        pickled_df = pd.read_pickle_distributed(str(tmp_path / filename), compression=compression)
     df_equals(pickled_df, df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_parquet_glob.parquet", "test_parquet_glob*.parquet"],
+)
+def test_parquet_glob(filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_parquet_glob.parquet"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_parquet_glob(filename)
+        read_df = pd.read_parquet_glob(filename)
+    df_equals(read_df, df)
+
+    parquet_files = glob.glob(str(filename))
+    teardown_test_files(parquet_files)
 
 
 @pytest.mark.skipif(

@@ -422,7 +422,13 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
-            result = func(dataframe, *f_args, **f_kwargs)
+            try:
+                result = func(dataframe, *f_args, **f_kwargs)
+            except ValueError as err:
+                if "assignment destination is read-only" in str(err):
+                    result = func(dataframe.copy(), *f_args, **f_kwargs)
+                else:
+                    raise err
 
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
@@ -569,9 +575,16 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
     _length_cache = None
 
-    def length(self):
+    def length(self, materialize=True):
         """
         Get the length of this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -584,14 +597,23 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     obj.length() for obj in self.list_of_block_partitions
                 )
             else:
-                self._length_cache = self.list_of_block_partitions[0].length()
+                self._length_cache = self.list_of_block_partitions[0].length(
+                    materialize
+                )
         return self._length_cache
 
     _width_cache = None
 
-    def width(self):
+    def width(self, materialize=True):
         """
         Get the width of this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -604,7 +626,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     obj.width() for obj in self.list_of_block_partitions
                 )
             else:
-                self._width_cache = self.list_of_block_partitions[0].width()
+                self._width_cache = self.list_of_block_partitions[0].width(materialize)
         return self._width_cache
 
     def wait(self):

@@ -13,6 +13,8 @@
 
 """Implement experimental I/O public API."""
 
+from __future__ import annotations
+
 import inspect
 import pathlib
 import pickle
@@ -22,7 +24,6 @@ import pandas
 import pandas._libs.lib as lib
 from pandas._typing import CompressionOptions, StorageOptions
 
-from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
 from modin.utils import expanduser_path_arg
 
@@ -113,9 +114,7 @@ def read_sql(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
-    result = FactoryDispatcher.read_sql(**kwargs)
+    result = FactoryDispatcher.read_sql_distributed(**kwargs)
     if isinstance(result, BaseQueryCompiler):
         return DataFrame(query_compiler=result)
     return (DataFrame(query_compiler=qc) for qc in result)
@@ -160,8 +159,6 @@ def read_custom_text(
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    assert IsExperimental.get(), "This only works in experimental mode"
 
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
 
@@ -316,7 +313,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `to_pickle_distributed` function.
+    obtained, for example, by `DataFrame.modin.to_pickle_distributed` function.
 
     Parameters
     ----------
@@ -347,8 +344,6 @@ def read_pickle_distributed(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
     return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
 
 
@@ -359,7 +354,7 @@ def to_pickle_distributed(
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
-):
+) -> None:
     """
     Pickle (serialize) object to file.
 
@@ -368,7 +363,7 @@ def to_pickle_distributed(
 
     Parameters
     ----------
-    filepath_or_buffer : str, path object or file-like object
+    filepath_or_buffer : str
         File path where the pickled object will be stored.
     compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         A string representing the compression to use in the output file. By
@@ -403,4 +398,88 @@ def to_pickle_distributed(
         compression=compression,
         protocol=protocol,
         storage_options=storage_options,
+    )
+
+
+@expanduser_path_arg("path")
+def read_parquet_glob(
+    path,
+    engine: str = "auto",
+    columns: list[str] | None = None,
+    storage_options: StorageOptions = None,
+    use_nullable_dtypes: bool = lib.no_default,
+    dtype_backend=lib.no_default,
+    filesystem=None,
+    filters=None,
+    **kwargs,
+) -> DataFrame:  # noqa: PR01
+    """
+    Load a parquet object from the file path, returning a DataFrame.
+
+    This experimental feature provides parallel reading from multiple parquet files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_parquet_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.read_parquet`.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_parquet_glob(
+            path=path,
+            engine=engine,
+            columns=columns,
+            storage_options=storage_options,
+            use_nullable_dtypes=use_nullable_dtypes,
+            dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            filters=filters,
+            **kwargs,
+        )
+    )
+
+
+@expanduser_path_arg("path")
+def to_parquet_glob(
+    self,
+    path,
+    engine="auto",
+    compression="snappy",
+    index=None,
+    partition_cols=None,
+    storage_options: StorageOptions = None,
+    **kwargs,
+) -> None:  # noqa: PR01
+    """
+    Write a DataFrame to the binary parquet format.
+
+    This experimental feature provides parallel writing into multiple parquet files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.to_parquet`.
+    """
+    obj = self
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_parquet_glob(
+        obj,
+        path=path,
+        engine=engine,
+        compression=compression,
+        index=index,
+        partition_cols=partition_cols,
+        storage_options=storage_options,
+        **kwargs,
     )

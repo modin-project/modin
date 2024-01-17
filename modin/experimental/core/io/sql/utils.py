@@ -13,8 +13,6 @@
 
 """Utilities for experimental SQL format type IO functions implementations."""
 
-from collections import OrderedDict
-
 import pandas
 import pandas._libs.lib as lib
 from sqlalchemy import MetaData, Table, create_engine, inspect
@@ -109,10 +107,10 @@ def get_table_columns(metadata):
 
     Returns
     -------
-    OrderedDict
+    dict
         Dictionary with columns names and python types.
     """
-    cols = OrderedDict()
+    cols = dict()
     for col in metadata.c:
         name = str(col).rpartition(".")[2]
         cols[name] = col.type.python_type.__name__
@@ -165,14 +163,14 @@ def get_query_columns(engine, query):
 
     Returns
     -------
-    OrderedDict
+    dict
         Dictionary with columns names and python types.
     """
     con = engine.connect()
     result = con.execute(query).fetchone()
     values = list(result)
     cols_names = list(result.keys())
-    cols = OrderedDict()
+    cols = dict()
     for i in range(len(cols_names)):
         cols[cols_names[i]] = type(values[i]).__name__
     return cols
@@ -186,7 +184,7 @@ def check_partition_column(partition_column, cols):
     ----------
     partition_column : str
         Column name used for data partitioning between the workers.
-    cols : OrderedDict/dict
+    cols : dict
         Dictionary with columns names and python types.
     """
     for k, v in cols.items():

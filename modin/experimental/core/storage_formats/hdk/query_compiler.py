@@ -191,6 +191,9 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         # HDK-specific method
         self._modin_frame.force_import()
 
+    def support_materialization_in_worker_process(self) -> bool:
+        return True
+
     def to_pandas(self):
         return self._modin_frame.to_pandas()
 

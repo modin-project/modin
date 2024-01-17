@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import datetime
 import json
 import unittest.mock as mock
 
@@ -28,8 +29,9 @@ from pandas.errors import SpecificationError
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import get_current_execution, to_pandas, try_cast_to_pandas
+from modin.utils import get_current_execution, try_cast_to_pandas
 
 from .utils import (
     RAND_HIGH,
@@ -47,6 +49,7 @@ from .utils import (
     bool_arg_keys,
     bool_arg_values,
     categories_equals,
+    create_test_dfs,
     default_to_pandas_ignore_string,
     df_equals,
     df_equals_with_non_stable_indices,
@@ -1473,6 +1476,10 @@ def test_cumsum(data, skipna):
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
 
 
+def test_cumsum_6771():
+    _ = to_pandas(pd.Series([1, 2, 3], dtype="Int64").cumsum())
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data):
     modin_series, pandas_series = create_test_series(data)
@@ -2355,6 +2362,14 @@ def test_loc(data):
     pandas_result = pandas_series.loc[
         (slice(None), 1),
     ]  # fmt: skip
+    df_equals(modin_result, pandas_result)
+
+
+def test_loc_with_boolean_series():
+    modin_series, pandas_series = create_test_series([1, 2, 3])
+    modin_mask, pandas_mask = create_test_series([True, False, False])
+    modin_result = modin_series.loc[modin_mask]
+    pandas_result = pandas_series.loc[pandas_mask]
     df_equals(modin_result, pandas_result)
 
 
@@ -3337,6 +3352,17 @@ def test_sub(data):
     inter_df_math_helper(modin_series, pandas_series, "sub")
 
 
+def test_6782():
+    datetime_scalar = datetime.datetime(1970, 1, 1, 0, 0)
+    with pytest.warns(UserWarning) as warns:
+        _ = pd.Series([datetime.datetime(2000, 1, 1)]) - datetime_scalar
+        for warn in warns.list:
+            assert (
+                "Adding/subtracting object-dtype array to DatetimeArray not vectorized"
+                not in str(warn)
+            )
+
+
 @pytest.mark.skipif(
     StorageFormat.get() == "Hdk",
     reason="https://github.com/intel-ai/hdk/issues/272",
@@ -3472,6 +3498,15 @@ def test_to_period():
 def test_to_numpy(data):
     modin_series, pandas_series = create_test_series(data)
     assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
+
+
+def test_to_numpy_dtype():
+    modin_series, pandas_series = create_test_series(test_data["float_nan_data"])
+    assert_array_equal(
+        modin_series.to_numpy(dtype="int64"),
+        pandas_series.to_numpy(dtype="int64"),
+        strict=True,
+    )
 
 
 @pytest.mark.parametrize(
@@ -4794,3 +4829,29 @@ def test_binary_numpy_universal_function_issue_6483():
         *create_test_series(test_data["float_nan_data"]),
         lambda series: np.arctan2(series, np.sin(series)),
     )
+
+
+def test__reduce__():
+    # `Series.__reduce__` will be called implicitly when lambda expressions are
+    # pre-processed for the distributed engine.
+    series_data = ["Major League Baseball", "National Basketball Association"]
+    abbr_md, abbr_pd = create_test_series(series_data, index=["MLB", "NBA"])
+
+    dataframe_data = {
+        "name": ["Mariners", "Lakers"] * 500,
+        "league_abbreviation": ["MLB", "NBA"] * 500,
+    }
+    teams_md, teams_pd = create_test_dfs(dataframe_data)
+
+    result_md = (
+        teams_md.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_md.loc[abbr])
+        .rename("league")
+    )
+
+    result_pd = (
+        teams_pd.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_pd.loc[abbr])
+        .rename("league")
+    )
+    df_equals(result_md, result_pd)

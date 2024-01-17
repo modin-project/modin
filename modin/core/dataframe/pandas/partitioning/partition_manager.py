@@ -27,7 +27,13 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 
-from modin.config import BenchmarkMode, Engine, NPartitions, ProgressBar
+from modin.config import (
+    BenchmarkMode,
+    Engine,
+    NPartitions,
+    PersistentPickle,
+    ProgressBar,
+)
 from modin.core.dataframe.pandas.utils import concatenate
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
@@ -93,6 +99,37 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     _column_partitions_class = None
     # Row partitions class is the class to use to create the row partitions.
     _row_partition_class = None
+    _execution_wrapper = None
+
+    @classmethod
+    def materialize_futures(cls, input_list):
+        """
+        Materialize all futures in the input list.
+
+        Parameters
+        ----------
+        input_list : list
+            The list that has to be manipulated.
+
+        Returns
+        -------
+        list
+           A new list with materialized objects.
+        """
+        # Do nothing if input_list is None or [].
+        if input_list is None:
+            return None
+        filtered_list = []
+        filtered_idx = []
+        for idx, item in enumerate(input_list):
+            if cls._execution_wrapper.is_future(item):
+                filtered_idx.append(idx)
+                filtered_list.append(item)
+        filtered_list = cls._execution_wrapper.materialize(filtered_list)
+        result = input_list.copy()
+        for idx, item in zip(filtered_idx, filtered_list):
+            result[idx] = item
+        return result
 
     @classmethod
     def preprocess_func(cls, map_func):
@@ -121,7 +158,20 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
-        return cls._partition_class.preprocess_func(map_func)
+        old_value = PersistentPickle.get()
+        # When performing a function with Modin objects, it is more profitable to
+        # do the conversion to pandas once on the main process than several times
+        # on worker processes. Details: https://github.com/modin-project/modin/pull/6673/files#r1391086755
+        # For Dask, otherwise there may be an error: `coroutine 'Client._gather' was never awaited`
+        need_update = not PersistentPickle.get() and Engine.get() != "Dask"
+        if need_update:
+            PersistentPickle.put(True)
+        try:
+            result = cls._partition_class.preprocess_func(map_func)
+        finally:
+            if need_update:
+                PersistentPickle.put(old_value)
+        return result
 
     # END Abstract Methods
 
@@ -736,7 +786,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             )
 
         df_rows = [
-            pandas.concat([part for part in row], axis=axis)
+            pandas.concat([part for part in row], axis=axis, copy=False)
             for row in retrieved_objects
             if not all(is_part_empty(part) for part in row)
         ]

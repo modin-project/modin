@@ -93,11 +93,17 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/python-only
       - run: python -m pip install -e ".[all]"
-      - name: Ensure all engines start up
+      - name: Ensure Ray and Dask engines start up
         run: |
           MODIN_ENGINE=dask python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
           MODIN_ENGINE=ray python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+      - name: Ensure MPI engine start up
+        # Install a working MPI implementation beforehand so mpi4py can link to it
+        run: |
+          sudo apt install libmpich-dev
+          python -m pip install -e ".[mpi]"
           MODIN_ENGINE=unidist UNIDIST_BACKEND=mpi mpiexec -n 1 python -c "import modin.pandas as pd; print(pd.DataFrame([1,2,3]))"
+        if: matrix.os == 'ubuntu'
 
   test-internals:
     needs: [lint-flake8, lint-black-isort]
@@ -372,7 +378,15 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
       # these variables to test writing to the mock s3 filesystem.
-      - run: mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
+      - uses: nick-fields/retry@v2
+        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+        # for details see: https://github.com/modin-project/modin/pull/6776
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: |
+            conda run --no-capture-output -n modin_on_unidist mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key \
+              -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
       - run: mpiexec -n 1 python -m pytest modin/experimental/pandas/test/test_io_exp.py
       - run: mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
       - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
@@ -626,6 +640,15 @@ jobs:
         if: matrix.os != 'windows'
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
       - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+        if: matrix.execution.name != 'unidist'
+      - uses: nick-fields/retry@v2
+        # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
+        # for details see: https://github.com/modin-project/modin/pull/6776
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+        if: matrix.execution.name == 'unidist'
       - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
@@ -667,36 +690,6 @@ jobs:
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
       - run: python -m pytest modin/pandas/test/test_io.py --verbose
       - uses: ./.github/actions/upload-coverage
-
-  test-pyarrow:
-    needs: [lint-flake8, lint-black-isort]
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: ["3.9"]
-    env:
-      MODIN_STORAGE_FORMAT: pyarrow
-      MODIN_EXPERIMENTAL: "True"
-    name: test (pyarrow, python ${{matrix.python-version}})
-    services:
-      moto:
-        image: motoserver/moto
-        ports:
-          - 5000:5000
-        env:
-          AWS_ACCESS_KEY_ID: foobar_key
-          AWS_SECRET_ACCESS_KEY: foobar_secret
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/mamba-env
-        with:
-          environment-file: environment-dev.yml
-          python-version: ${{matrix.python-version}}
-      - run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/pandas/test/test_io.py::TestCsv --verbose
 
   test-spreadsheet:
     needs: [lint-flake8, lint-black-isort]

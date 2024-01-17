@@ -13,4 +13,6 @@ Experimental API Reference
 .. autofunction:: read_csv_glob
 .. autofunction:: read_custom_text
 .. autofunction:: read_pickle_distributed
-.. automethod:: modin.experimental.pandas.DataFrame.to_pickle_distributed
+.. autofunction:: read_parquet_glob
+.. automethod:: modin.pandas.DataFrame.modin::to_pickle_distributed
+.. automethod:: modin.pandas.DataFrame.modin::to_parquet_glob

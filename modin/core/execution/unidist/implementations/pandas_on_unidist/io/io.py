@@ -16,6 +16,7 @@
 import io
 
 import pandas
+from pandas.io.common import get_handle, stringify_path
 
 from modin.core.execution.unidist.common import SignalActor, UnidistWrapper
 from modin.core.execution.unidist.generic.io import UnidistIO
@@ -38,6 +39,18 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalCustomTextDispatcher,
+    ExperimentalGlobDispatcher,
+    ExperimentalSQLDispatcher,
+)
+from modin.experimental.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasParquetParser,
+    ExperimentalPandasPickleParser,
+)
 
 from ..dataframe import PandasOnUnidistDataframe
 from ..partitioning import PandasOnUnidistDataframePartition
@@ -74,6 +87,31 @@ class PandasOnUnidistIO(UnidistIO):
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
     to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    # experimental methods that don't exist in pandas
+    read_csv_glob = __make_read(
+        ExperimentalPandasCSVGlobParser, ExperimentalCSVGlobDispatcher
+    )
+    read_parquet_glob = __make_read(
+        ExperimentalPandasParquetParser, ExperimentalGlobDispatcher
+    )
+    to_parquet_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": UnidistIO.to_parquet},
+    )
+    read_pickle_distributed = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalGlobDispatcher
+    )
+    to_pickle_distributed = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": UnidistIO.to_pickle},
+    )
+    read_custom_text = __make_read(
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
+    )
+    read_sql_distributed = __make_read(
+        ExperimentalSQLDispatcher, build_args={**build_args, "base_read": read_sql}
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace
@@ -127,6 +165,7 @@ class PandasOnUnidistIO(UnidistIO):
         **kwargs : dict
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
+        kwargs["path_or_buf"] = stringify_path(kwargs["path_or_buf"])
         if not cls._to_csv_check_support(kwargs):
             return UnidistIO.to_csv(qc, **kwargs)
 
@@ -170,7 +209,7 @@ class PandasOnUnidistIO(UnidistIO):
             UnidistWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
-            with pandas.io.common.get_handle(
+            with get_handle(
                 path_or_buf,
                 # in case when using URL in implicit text mode
                 # pandas try to open `path_or_buf` in binary mode

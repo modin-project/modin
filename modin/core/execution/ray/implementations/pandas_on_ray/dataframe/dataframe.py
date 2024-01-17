@@ -13,6 +13,7 @@
 
 """Module houses class that implements ``PandasDataframe`` using Ray."""
 
+from modin.core.dataframe.base.dataframe.utils import Axis
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 
 from ..partitioning.partition_manager import PandasOnRayDataframePartitionManager
@@ -41,3 +42,25 @@ class PandasOnRayDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnRayDataframePartitionManager
+
+    def _get_lengths(self, parts, axis):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        axis : {0, 1}
+            The axis along which to get the lengths (0 - length across rows or, 1 - width across columns).
+
+        Returns
+        -------
+        list
+        """
+        if axis == Axis.ROW_WISE:
+            dims = [part.length(False) for part in parts]
+        else:
+            dims = [part.width(False) for part in parts]
+
+        return self._partition_mgr_cls.materialize_futures(dims)

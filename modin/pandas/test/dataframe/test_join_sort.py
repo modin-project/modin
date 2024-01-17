@@ -20,6 +20,7 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     arg_keys,
     axis_keys,
@@ -30,7 +31,6 @@ from modin.pandas.test.utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
-    extra_test_parameters,
     generate_multiindex,
     random_state,
     rotate_decimal_digits_or_symbols,
@@ -39,7 +39,6 @@ from modin.pandas.test.utils import (
     test_data_values,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import to_pandas
 
 NPartitions.put(4)
 
@@ -165,6 +164,19 @@ def test_join(test_data, test_data2):
         modin_join = modin_df.join([modin_df2, modin_df3], how=how)
         pandas_join = pandas_df.join([pandas_df2, pandas_df3], how=how)
         df_equals(modin_join, pandas_join)
+
+
+def test_join_cross_6786():
+    data = [[7, 8, 9], [10, 11, 12]]
+    modin_df, pandas_df = create_test_dfs(data, columns=["x", "y", "z"])
+
+    modin_join = modin_df.join(
+        modin_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    pandas_join = pandas_df.join(
+        pandas_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    df_equals(modin_join, pandas_join)
 
 
 def test_join_5203():
@@ -471,6 +483,36 @@ def test_merge_on_index(has_index_cache):
         )
 
 
+@pytest.mark.parametrize(
+    "left_index", [[], ["key"], ["key", "b"], ["key", "b", "c"], ["b"], ["b", "c"]]
+)
+@pytest.mark.parametrize(
+    "right_index", [[], ["key"], ["key", "e"], ["key", "e", "f"], ["e"], ["e", "f"]]
+)
+def test_merge_on_single_index(left_index, right_index):
+    """
+    Test ``.merge()`` method when merging on a single column, that is located in an index level of one of the frames.
+    """
+    modin_df1, pandas_df1 = create_test_dfs(
+        {"b": [3, 4, 4, 5], "key": [1, 1, 2, 2], "c": [2, 3, 2, 2], "d": [2, 1, 3, 1]}
+    )
+    if len(left_index):
+        modin_df1 = modin_df1.set_index(left_index)
+        pandas_df1 = pandas_df1.set_index(left_index)
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {"e": [3, 4, 4, 5], "f": [2, 3, 2, 2], "key": [1, 1, 2, 2], "h": [2, 1, 3, 1]}
+    )
+    if len(right_index):
+        modin_df2 = modin_df2.set_index(right_index)
+        pandas_df2 = pandas_df2.set_index(right_index)
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on="key"),
+    )
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
@@ -542,11 +584,11 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "first",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             "first,last",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "first,last,middle",
     ],
@@ -565,12 +607,12 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "mergesort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "quicksort",
         pytest.param(
             "heapsort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )

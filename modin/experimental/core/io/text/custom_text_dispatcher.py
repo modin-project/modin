@@ -14,6 +14,7 @@
 """Module houses `ExperimentalCustomTextDispatcher` class, that is used for reading custom text files."""
 
 import pandas
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
@@ -46,6 +47,7 @@ class ExperimentalCustomTextDispatcher(TextFileDispatcher):
         BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)

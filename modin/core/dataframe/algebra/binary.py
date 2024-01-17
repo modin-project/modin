@@ -13,6 +13,7 @@
 
 """Module houses builder class for Binary operator."""
 
+import warnings
 from typing import Optional
 
 import numpy as np
@@ -24,36 +25,12 @@ from modin.error_message import ErrorMessage
 from .operator import Operator
 
 
-def coerce_int_to_float64(dtype: np.dtype) -> np.dtype:
-    """
-    Coerce dtype to float64 if it is a variant of integer.
-
-    If dtype is integer, function returns float64 datatype.
-    If not, returns the datatype argument itself.
-
-    Parameters
-    ----------
-    dtype : np.dtype
-        NumPy datatype.
-
-    Returns
-    -------
-    dtype : np.dtype
-        Returns float64 for all int datatypes or returns the datatype itself
-        for other types.
-
-    Notes
-    -----
-    Used to precompute datatype in case of division in pandas.
-    """
-    if dtype in np.sctypes["int"] + np.sctypes["uint"]:
-        return np.dtype(np.float64)
-    else:
-        return dtype
-
-
 def maybe_compute_dtypes_common_cast(
-    first, second, trigger_computations=False, axis=0
+    first,
+    second,
+    trigger_computations=False,
+    axis=0,
+    func=None,
 ) -> Optional[pandas.Series]:
     """
     Precompute data types for binary operations by finding common type between operands.
@@ -70,6 +47,9 @@ def maybe_compute_dtypes_common_cast(
         have materialized dtypes.
     axis : int, default: 0
         Axis to perform the binary operation along.
+    func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame, optional
+        If specified, will use this function to perform the "try_sample" method
+        (see ``Binary.register()`` docs for more details).
 
     Returns
     -------
@@ -138,18 +118,35 @@ def maybe_compute_dtypes_common_cast(
 
     # If at least one column doesn't match, the result of the non matching column would be nan.
     nan_dtype = np.dtype(type(np.nan))
-    dtypes = pandas.Series(
-        [
-            pandas.core.dtypes.cast.find_common_type(
-                [
-                    dtypes_first[x],
-                    dtypes_second[x],
-                ]
-            )
-            for x in common_columns
-        ],
-        index=common_columns,
-    )
+    dtypes = None
+    if func is not None:
+        try:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore")
+                df1 = pandas.DataFrame([[1] * len(common_columns)]).astype(
+                    {i: dtypes_first[col] for i, col in enumerate(common_columns)}
+                )
+                df2 = pandas.DataFrame([[1] * len(common_columns)]).astype(
+                    {i: dtypes_second[col] for i, col in enumerate(common_columns)}
+                )
+                dtypes = func(df1, df2).dtypes.set_axis(common_columns)
+        # it sometimes doesn't work correctly with strings, so falling back to
+        # the "common_cast" method in this case
+        except TypeError:
+            pass
+    if dtypes is None:
+        dtypes = pandas.Series(
+            [
+                pandas.core.dtypes.cast.find_common_type(
+                    [
+                        dtypes_first[x],
+                        dtypes_second[x],
+                    ]
+                )
+                for x in common_columns
+            ],
+            index=common_columns,
+        )
     dtypes = pandas.concat(
         [
             dtypes,
@@ -211,7 +208,9 @@ def maybe_build_dtypes_series(
     return dtypes
 
 
-def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None, axis=0):
+def try_compute_new_dtypes(
+    first, second, infer_dtypes=None, result_dtype=None, axis=0, func=None
+):
     """
     Precompute resulting dtypes of the binary operation if possible.
 
@@ -225,12 +224,14 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None, 
         First operand of the binary operation.
     second : PandasQueryCompiler, list-like or scalar
         Second operand of the binary operation.
-    infer_dtypes : {"common_cast", "float", "bool", None}, default: None
+    infer_dtypes : {"common_cast", "try_sample", "bool", None}, default: None
         How dtypes should be infered (see ``Binary.register`` doc for more info).
     result_dtype : np.dtype, optional
         NumPy dtype of the result. If not specified it will be inferred from the `infer_dtypes` parameter.
     axis : int, default: 0
         Axis to perform the binary operation along.
+    func : callable(pandas.DataFrame, pandas.DataFrame) -> pandas.DataFrame, optional
+        A callable to be used for the "try_sample" method.
 
     Returns
     -------
@@ -243,11 +244,17 @@ def try_compute_new_dtypes(first, second, infer_dtypes=None, result_dtype=None, 
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
             dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
-            dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
-        elif infer_dtypes == "float":
-            dtypes = maybe_compute_dtypes_common_cast(first, second, axis=axis)
-            if dtypes is not None:
-                dtypes = dtypes.apply(coerce_int_to_float64)
+            dtypes = maybe_compute_dtypes_common_cast(
+                first, second, axis=axis, func=None
+            )
+        elif infer_dtypes == "try_sample":
+            if func is None:
+                raise ValueError(
+                    "'func' must be specified if dtypes infering method is 'try_sample'"
+                )
+            dtypes = maybe_compute_dtypes_common_cast(
+                first, second, axis=axis, func=func
+            )
         else:
             # For now we only know how to handle `result_dtype == bool` as that's
             # the only value that is being passed here right now, it's unclear
@@ -283,12 +290,12 @@ class Binary(Operator):
         labels : {"keep", "replace", "drop"}, default: "replace"
             Whether keep labels from left Modin DataFrame, replace them with labels
             from joined DataFrame or drop altogether to make them be computed lazily later.
-        infer_dtypes : {"common_cast", "float", "bool", None}, default: None
+        infer_dtypes : {"common_cast", "try_sample", "bool", None}, default: None
             How dtypes should be inferred.
                 * If "common_cast", casts to common dtype of operand columns.
-                * If "float", performs type casting by finding common dtype.
-                  If the common dtype is any of the integer types, perform type casting to float.
-                  Used in case of truediv.
+                * If "try_sample", creates small pandas DataFrames with dtypes of operands and
+                  runs the `func` on them to determine output dtypes. If a ``TypeError`` is raised
+                  during this process, fallback to "common_cast" method.
                 * If "bool", dtypes would be a boolean series with same size as that of operands.
                 * If ``None``, do not infer new dtypes (they will be computed manually once accessed).
 
@@ -339,7 +346,7 @@ class Binary(Operator):
                     other = other.transpose()
             if dtypes != "copy":
                 dtypes = try_compute_new_dtypes(
-                    query_compiler, other, infer_dtypes, dtypes, axis
+                    query_compiler, other, infer_dtypes, dtypes, axis, func
                 )
 
             shape_hint = None

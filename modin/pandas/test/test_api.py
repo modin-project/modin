@@ -39,7 +39,6 @@ def test_top_level_api_equality():
         "arrays",
         "api",
         "tseries",
-        "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished
         "Panel",  # This is deprecated and throws a warning every time.
         "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
@@ -153,17 +152,21 @@ def test_dataframe_api_equality():
     modin_dir = [obj for obj in dir(pd.DataFrame) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.DataFrame) if obj[0] != "_"]
 
-    ignore = ["timetuple"]
+    ignore_in_pandas = ["timetuple"]
+    # modin - namespace for using experimental functionality
+    ignore_in_modin = ["modin"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(
-        missing_from_modin - set(ignore)
-    ), "Differences found in API: {}".format(len(missing_from_modin - set(ignore)))
+        missing_from_modin - set(ignore_in_pandas)
+    ), "Differences found in API: {}".format(
+        len(missing_from_modin - set(ignore_in_pandas))
+    )
     assert not len(
-        set(modin_dir) - set(pandas_dir)
+        set(modin_dir) - set(ignore_in_modin) - set(pandas_dir)
     ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist"]
+    allowed_different = ["to_hdf", "hist", "modin"]
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 

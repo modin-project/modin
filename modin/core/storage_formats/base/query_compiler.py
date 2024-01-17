@@ -325,6 +325,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """Wait for all computations to complete without materializing data."""
         pass
 
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.support_materialization_in_worker_process()
+
     # END Data Management Methods
 
     # To/From Pandas
@@ -1242,11 +1252,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         if self._shape_hint == "column":
             return self
 
+        result = self
         if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
-            return self.transpose()
-        return self
+            result = self.transpose()
+        result._shape_hint = "column"
+        return result
 
     def is_series_like(self):
         """
@@ -4523,6 +4535,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Axis to set names along.
         """
         self.get_axis(axis).names = names
+
+    def get_dtypes_set(self):
+        """
+        Get a set of dtypes that are in this query compiler.
+
+        Returns
+        -------
+        set
+        """
+        return set(self.dtypes.values)
 
     # DateTime methods
     def between_time(self, **kwargs):  # noqa: PR01

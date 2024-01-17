@@ -14,15 +14,12 @@
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
 import re
-import typing
-from collections import OrderedDict
 from functools import lru_cache
-from typing import Any, List, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas
 import pyarrow as pa
-from pandas import Timestamp
 from pandas.core.arrays.arrow.extension_types import ArrowIntervalType
 from pandas.core.dtypes.common import _get_dtype, is_string_dtype
 from pyarrow.types import is_dictionary
@@ -40,7 +37,7 @@ class ColNameCodec:
 
     _IDX_NAME_PATTERN = re.compile(f"{IDX_COL_NAME}\\d+_(.*)")
     _RESERVED_NAMES = (MODIN_UNNAMED_SERIES_LABEL, ROWID_COL_NAME)
-    _COL_TYPES = Union[str, int, float, Timestamp, None]
+    _COL_TYPES = Union[str, int, float, pandas.Timestamp, None]
     _COL_NAME_TYPE = Union[_COL_TYPES, Tuple[_COL_TYPES, ...]]
 
     def _encode_tuple(values: Tuple[_COL_TYPES, ...]) -> str:  # noqa: GL08
@@ -73,7 +70,7 @@ class ColNameCodec:
         str: lambda v: "_E" if len(v) == 0 else "_S" + v[1:] if v[0] == "_" else v,
         int: lambda v: f"_I{v}",
         float: lambda v: f"_F{v}",
-        Timestamp: lambda v: f"_D{v.timestamp()}_{v.tz}",
+        pandas.Timestamp: lambda v: f"_D{v.timestamp()}_{v.tz}",
     }
 
     _DECODERS = {
@@ -83,7 +80,7 @@ class ColNameCodec:
         "S": lambda v: "_" + v[2:],
         "I": lambda v: int(v[2:]),
         "F": lambda v: float(v[2:]),
-        "D": lambda v: Timestamp.fromtimestamp(
+        "D": lambda v: pandas.Timestamp.fromtimestamp(
             float(v[2 : (idx := v.index("_", 2))]), tz=v[idx + 1 :]
         ),
     }
@@ -225,7 +222,7 @@ class ColNameCodec:
         return col
 
     @staticmethod
-    def concat_index_names(frames) -> typing.OrderedDict[str, Any]:
+    def concat_index_names(frames) -> Dict[str, Any]:
         """
         Calculate the index names and dtypes.
 
@@ -238,10 +235,10 @@ class ColNameCodec:
 
         Returns
         -------
-        typing.OrderedDict[str, Any]
+        Dict[str, Any]
         """
         first = frames[0]
-        names = OrderedDict()
+        names = {}
         if first._index_width() > 1:
             # When we're dealing with a MultiIndex case the resulting index
             # inherits the levels from the first frame in concatenation.
@@ -413,7 +410,7 @@ def get_data_for_join_by_index(
         return pandas.DataFrame(columns=df.columns, index=idx)
 
     new_dtypes = []
-    exprs = OrderedDict()
+    exprs = {}
     merged = to_empty_pandas_df(left).merge(
         to_empty_pandas_df(right),
         how=how,
@@ -586,8 +583,7 @@ class _CategoricalDtypeMapper:  # noqa: GL08
     @staticmethod
     def __from_arrow__(arr):  # noqa: GL08
         values = []
-        # Using OrderedDict as an ordered set to preserve the categories order
-        categories = OrderedDict()
+        categories = {}
         chunks = arr.chunks if isinstance(arr, pa.ChunkedArray) else (arr,)
         for chunk in chunks:
             assert isinstance(chunk, pa.DictionaryArray)

@@ -40,6 +40,18 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalCustomTextDispatcher,
+    ExperimentalGlobDispatcher,
+    ExperimentalSQLDispatcher,
+)
+from modin.experimental.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasParquetParser,
+    ExperimentalPandasPickleParser,
+)
 
 
 class PandasOnDaskIO(BaseIO):
@@ -73,6 +85,31 @@ class PandasOnDaskIO(BaseIO):
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
     to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    # experimental methods that don't exist in pandas
+    read_csv_glob = __make_read(
+        ExperimentalPandasCSVGlobParser, ExperimentalCSVGlobDispatcher
+    )
+    read_parquet_glob = __make_read(
+        ExperimentalPandasParquetParser, ExperimentalGlobDispatcher
+    )
+    to_parquet_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_parquet},
+    )
+    read_pickle_distributed = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalGlobDispatcher
+    )
+    to_pickle_distributed = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_pickle},
+    )
+    read_custom_text = __make_read(
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
+    )
+    read_sql_distributed = __make_read(
+        ExperimentalSQLDispatcher, build_args={**build_args, "base_read": read_sql}
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace

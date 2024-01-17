@@ -18,7 +18,6 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
-from collections import OrderedDict
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -28,7 +27,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import Engine, IsRayCluster, NPartitions
+from modin.config import IsRayCluster, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -36,6 +35,7 @@ from modin.core.dataframe.pandas.dataframe.utils import (
     lazy_metadata_decorator,
 )
 from modin.core.dataframe.pandas.metadata import (
+    DtypesDescriptor,
     LazyProxyCategoricalDtype,
     ModinDtypes,
     ModinIndex,
@@ -186,10 +186,45 @@ class PandasDataframe(ClassLogger):
         if self._row_lengths_cache is None:
             if len(self._partitions.T) > 0:
                 row_parts = self._partitions.T[0]
-                self._row_lengths_cache = [part.length() for part in row_parts]
+                self._row_lengths_cache = self._get_lengths(row_parts, Axis.ROW_WISE)
             else:
                 self._row_lengths_cache = []
         return self._row_lengths_cache
+
+    @classmethod
+    def _get_lengths(cls, parts, axis):
+        """
+        Get list of  dimensions for all the provided parts.
+
+        Parameters
+        ----------
+        parts : list
+            List of parttions.
+        axis : {0, 1}
+            The axis along which to get the lengths (0 - length across rows or, 1 - width across columns).
+
+        Returns
+        -------
+        list
+        """
+        if axis == Axis.ROW_WISE:
+            return [part.length() for part in parts]
+        else:
+            return [part.width() for part in parts]
+
+    def __len__(self) -> int:
+        """
+        Return length of index axis.
+
+        Returns
+        -------
+        int
+        """
+        if self.has_materialized_index:
+            _len = len(self.index)
+        else:
+            _len = sum(self.row_lengths)
+        return _len
 
     @property
     def column_widths(self):
@@ -204,22 +239,10 @@ class PandasDataframe(ClassLogger):
         if self._column_widths_cache is None:
             if len(self._partitions) > 0:
                 col_parts = self._partitions[0]
-                self._column_widths_cache = [part.width() for part in col_parts]
+                self._column_widths_cache = self._get_lengths(col_parts, Axis.COL_WISE)
             else:
                 self._column_widths_cache = []
         return self._column_widths_cache
-
-    @property
-    def _axes_lengths(self):
-        """
-        Get a pair of row partitions lengths and column partitions widths.
-
-        Returns
-        -------
-        list
-            The pair of row partitions lengths and column partitions widths.
-        """
-        return [self.row_lengths, self.column_widths]
 
     def _set_axis_lengths_cache(self, value, axis=0):
         """
@@ -312,14 +335,17 @@ class PandasDataframe(ClassLogger):
         new_parent : object, optional
             A new parent to link the proxies to. If not specified
             will consider the `self` to be a new parent.
+
+        Returns
+        -------
+        pandas.Series, ModinDtypes or callable
         """
         new_parent = new_parent or self
-        if isinstance(dtypes, pandas.Series) or (
-            isinstance(dtypes, ModinDtypes) and dtypes.is_materialized
-        ):
-            for key, value in dtypes.items():
-                if isinstance(value, LazyProxyCategoricalDtype):
-                    dtypes[key] = value._update_proxy(new_parent, column_name=key)
+        if isinstance(dtypes, ModinDtypes):
+            dtypes = dtypes.maybe_specify_new_frame_ref(new_parent)
+        if isinstance(dtypes, pandas.Series):
+            LazyProxyCategoricalDtype.update_dtypes(dtypes, new_parent)
+        return dtypes
 
     def set_dtypes_cache(self, dtypes):
         """
@@ -327,10 +353,21 @@ class PandasDataframe(ClassLogger):
 
         Parameters
         ----------
-        dtypes : pandas.Series, ModinDtypes or callable
+        dtypes : pandas.Series, ModinDtypes, callable or None
         """
-        self._maybe_update_proxies(dtypes)
-        if isinstance(dtypes, ModinDtypes) or dtypes is None:
+        dtypes = self._maybe_update_proxies(dtypes)
+        if dtypes is None and self.has_materialized_columns:
+            # try to set a descriptor instead of 'None' to be more flexible in
+            # dtypes computing
+            try:
+                self._dtypes = ModinDtypes(
+                    DtypesDescriptor(
+                        cols_with_unknown_dtypes=self.columns.tolist(), parent_df=self
+                    )
+                )
+            except NotImplementedError:
+                self._dtypes = None
+        elif isinstance(dtypes, ModinDtypes) or dtypes is None:
             self._dtypes = dtypes
         else:
             self._dtypes = ModinDtypes(dtypes)
@@ -351,6 +388,18 @@ class PandasDataframe(ClassLogger):
             dtypes = self._compute_dtypes()
             self.set_dtypes_cache(dtypes)
         return dtypes
+
+    def get_dtypes_set(self):
+        """
+        Get a set of dtypes that are in this dataframe.
+
+        Returns
+        -------
+        set
+        """
+        if isinstance(self._dtypes, ModinDtypes):
+            return self._dtypes.get_dtypes_set()
+        return set(self.dtypes.values)
 
     def _compute_dtypes(self, columns=None):
         """
@@ -374,7 +423,13 @@ class PandasDataframe(ClassLogger):
         if columns is not None:
             # Sorting positions to request columns in the order they're stored (it's more efficient)
             numeric_indices = sorted(self.columns.get_indexer_for(columns))
-            obj = self._take_2d_positional(col_positions=numeric_indices)
+            if any(pos < 0 for pos in numeric_indices):
+                raise KeyError(
+                    f"Some of the columns are not in index: subset={columns}; columns={self.columns}"
+                )
+            obj = self.take_2d_labels_or_positional(
+                col_labels=self.columns[numeric_indices].tolist()
+            )
         else:
             obj = self
 
@@ -673,9 +728,20 @@ class PandasDataframe(ClassLogger):
             ):
                 return
             new_columns = self._validate_set_axis(new_columns, self._columns_cache)
-            if self.has_materialized_dtypes:
-                self.dtypes.index = new_columns
+        if isinstance(self._dtypes, ModinDtypes):
+            try:
+                new_dtypes = self._dtypes.set_index(new_columns)
+            except NotImplementedError:
+                # can raise on duplicated labels
+                new_dtypes = None
+        elif isinstance(self._dtypes, pandas.Series):
+            new_dtypes = self.dtypes.set_axis(new_columns)
+        else:
+            new_dtypes = None
         self.set_columns_cache(new_columns)
+        # we have to set new dtypes cache after columns,
+        # so the 'self.columns' and 'new_dtypes.index' indices would match
+        self.set_dtypes_cache(new_dtypes)
         self.synchronize_labels(axis=1)
 
     columns = property(_get_columns, _set_columns)
@@ -741,15 +807,19 @@ class PandasDataframe(ClassLogger):
             Trigger the computations for partition sizes and labels if they're not done already.
         """
         if not compute_metadata and (
-            not self.has_materialized_index
-            or not self.has_materialized_columns
-            or self._row_lengths_cache is None
-            or self._column_widths_cache is None
+            self._row_lengths_cache is None or self._column_widths_cache is None
         ):
             # do not trigger the computations
             return
 
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+        if (
+            self.has_materialized_index
+            and len(self.index) == 0
+            or self.has_materialized_columns
+            and len(self.columns) == 0
+            or sum(self.row_lengths) == 0
+            or sum(self.column_widths) == 0
+        ):
             # This is the case for an empty frame. We don't want to completely remove
             # all metadata and partitions so for the moment, we won't prune if the frame
             # is empty.
@@ -766,8 +836,17 @@ class PandasDataframe(ClassLogger):
                 if i < len(self.row_lengths) and self.row_lengths[i] != 0
             ]
         )
-        self._column_widths_cache = [w for w in self.column_widths if w != 0]
-        self._row_lengths_cache = [r for r in self.row_lengths if r != 0]
+        new_col_widths = [w for w in self.column_widths if w != 0]
+        new_row_lengths = [r for r in self.row_lengths if r != 0]
+
+        # check whether an axis partitioning was modified and if we should reset the lengths id for 'ModinIndex'
+        if new_col_widths != self.column_widths:
+            self.set_columns_cache(self.copy_columns_cache(copy_lengths=False))
+        if new_row_lengths != self.row_lengths:
+            self.set_index_cache(self.copy_index_cache(copy_lengths=False))
+
+        self._column_widths_cache = new_col_widths
+        self._row_lengths_cache = new_row_lengths
 
     def synchronize_labels(self, axis=None):
         """
@@ -1067,7 +1146,7 @@ class PandasDataframe(ClassLogger):
         indexers = []
         for axis, indexer in enumerate((row_positions, col_positions)):
             if is_range_like(indexer):
-                if indexer.step == 1 and len(indexer) == len(self.axes[axis]):
+                if indexer.step == 1 and len(indexer) == len(self.get_axis(axis)):
                     # By this function semantics, `None` indexer is a full-axis access
                     indexer = None
                 elif indexer is not None and not isinstance(indexer, pandas.RangeIndex):
@@ -1140,6 +1219,14 @@ class PandasDataframe(ClassLogger):
 
             if self.has_materialized_dtypes:
                 new_dtypes = self.dtypes.iloc[monotonic_col_idx]
+            elif isinstance(self._dtypes, ModinDtypes):
+                try:
+                    new_dtypes = self._dtypes.lazy_get(
+                        monotonic_col_idx, numeric_index=True
+                    )
+                # can raise either on missing cache or on duplicated labels
+                except (ValueError, NotImplementedError):
+                    new_dtypes = None
             else:
                 new_dtypes = None
         else:
@@ -1273,11 +1360,13 @@ class PandasDataframe(ClassLogger):
                 if "index" not in self.columns
                 else "level_{}".format(0)
             ]
-        new_dtypes = None
-        if self.has_materialized_dtypes:
-            names = tuple(level_names) if len(level_names) > 1 else level_names[0]
-            new_dtypes = self.index.to_frame(name=names).dtypes
-            new_dtypes = pandas.concat([new_dtypes, self.dtypes])
+        names = tuple(level_names) if len(level_names) > 1 else level_names[0]
+        new_dtypes = self.index.to_frame(name=names).dtypes
+        try:
+            new_dtypes = ModinDtypes.concat([new_dtypes, self._dtypes])
+        except NotImplementedError:
+            # can raise on duplicated labels
+            new_dtypes = None
 
         # We will also use the `new_column_names` in the calculation of the internal metadata, so this is a
         # lightweight way of ensuring the metadata matches.
@@ -1435,6 +1524,12 @@ class PandasDataframe(ClassLogger):
             col_idx = self.columns[col_positions]
             if self.has_materialized_dtypes:
                 new_dtypes = self.dtypes.iloc[col_positions]
+            elif isinstance(self._dtypes, ModinDtypes):
+                try:
+                    new_dtypes = self._dtypes.lazy_get(col_idx)
+                # can raise on duplicated labels
+                except NotImplementedError:
+                    new_dtypes = None
 
             if len(col_idx) != len(self.columns):
                 # The frame was re-partitioned along the 1 axis during reordering using
@@ -1498,7 +1593,6 @@ class PandasDataframe(ClassLogger):
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
-        has_categorical_cast = False
         for column, dtype in col_dtypes.items():
             if not is_dtype_equal(dtype, self_dtypes[column]):
                 if new_dtypes is None:
@@ -1523,7 +1617,7 @@ class PandasDataframe(ClassLogger):
                             columns=[column]
                         )[column],
                     )
-                    use_full_axis_cast = has_categorical_cast = True
+                    use_full_axis_cast = True
                 else:
                     new_dtypes[column] = new_dtype
 
@@ -1532,14 +1626,7 @@ class PandasDataframe(ClassLogger):
 
         def astype_builder(df):
             """Compute new partition frame with dtypes updated."""
-            # TODO(https://github.com/modin-project/modin/issues/6266): Remove this
-            # copy, which is a workaround for https://github.com/pandas-dev/pandas/issues/53658
-            df_for_astype = (
-                df.copy(deep=True)
-                if Engine.get() == "Ray" and has_categorical_cast
-                else df
-            )
-            return df_for_astype.astype(
+            return df.astype(
                 {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
             )
 
@@ -1559,57 +1646,6 @@ class PandasDataframe(ClassLogger):
             self._column_widths_cache,
             new_dtypes,
         )
-
-    # Metadata modification methods
-    def add_prefix(self, prefix, axis):
-        """
-        Add a prefix to the current row or column labels.
-
-        Parameters
-        ----------
-        prefix : str
-            The prefix to add.
-        axis : int
-            The axis to update.
-
-        Returns
-        -------
-        PandasDataframe
-            A new dataframe with the updated labels.
-        """
-
-        def new_labels_mapper(x, prefix=str(prefix)):
-            return prefix + str(x)
-
-        if axis == 0:
-            return self.rename(new_row_labels=new_labels_mapper)
-        return self.rename(new_col_labels=new_labels_mapper)
-
-    def add_suffix(self, suffix, axis):
-        """
-        Add a suffix to the current row or column labels.
-
-        Parameters
-        ----------
-        suffix : str
-            The suffix to add.
-        axis : int
-            The axis to update.
-
-        Returns
-        -------
-        PandasDataframe
-            A new dataframe with the updated labels.
-        """
-
-        def new_labels_mapper(x, suffix=str(suffix)):
-            return str(x) + suffix
-
-        if axis == 0:
-            return self.rename(new_row_labels=new_labels_mapper)
-        return self.rename(new_col_labels=new_labels_mapper)
-
-    # END Metadata modification methods
 
     def numeric_columns(self, include_bool=True):
         """
@@ -1652,7 +1688,7 @@ class PandasDataframe(ClassLogger):
 
         Returns
         -------
-        OrderedDict
+        dict
             A mapping from partition index to list of internal indices which correspond to `indices` in each
             partition.
         """
@@ -1660,13 +1696,13 @@ class PandasDataframe(ClassLogger):
         if isinstance(indices, slice) and (
             indices.step is not None and indices.step != 1
         ):
-            indices = range(*indices.indices(len(self.axes[axis])))
+            indices = range(*indices.indices(len(self.get_axis(axis))))
         # Fasttrack slices
         if isinstance(indices, slice) or (is_range_like(indices) and indices.step == 1):
             # Converting range-like indexer to slice
             indices = slice(indices.start, indices.stop, indices.step)
-            if is_full_grab_slice(indices, sequence_len=len(self.axes[axis])):
-                return OrderedDict(
+            if is_full_grab_slice(indices, sequence_len=len(self.get_axis(axis))):
+                return dict(
                     zip(
                         range(self._partitions.shape[axis]),
                         [slice(None)] * self._partitions.shape[axis],
@@ -1674,25 +1710,23 @@ class PandasDataframe(ClassLogger):
                 )
             # Empty selection case
             if indices.start == indices.stop and indices.start is not None:
-                return OrderedDict()
+                return dict()
             if indices.start is None or indices.start == 0:
                 last_part, last_idx = list(
                     self._get_dict_of_block_index(axis, [indices.stop]).items()
                 )[0]
-                dict_of_slices = OrderedDict(
-                    zip(range(last_part), [slice(None)] * last_part)
-                )
+                dict_of_slices = dict(zip(range(last_part), [slice(None)] * last_part))
                 dict_of_slices.update({last_part: slice(last_idx[0])})
                 return dict_of_slices
-            elif indices.stop is None or indices.stop >= len(self.axes[axis]):
+            elif indices.stop is None or indices.stop >= len(self.get_axis(axis)):
                 first_part, first_idx = list(
                     self._get_dict_of_block_index(axis, [indices.start]).items()
                 )[0]
-                dict_of_slices = OrderedDict({first_part: slice(first_idx[0], None)})
+                dict_of_slices = dict({first_part: slice(first_idx[0], None)})
                 num_partitions = np.size(self._partitions, axis=axis)
                 part_list = range(first_part + 1, num_partitions)
                 dict_of_slices.update(
-                    OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                    dict(zip(part_list, [slice(None)] * len(part_list)))
                 )
                 return dict_of_slices
             else:
@@ -1703,10 +1737,10 @@ class PandasDataframe(ClassLogger):
                     self._get_dict_of_block_index(axis, [indices.stop]).items()
                 )[0]
                 if first_part == last_part:
-                    return OrderedDict({first_part: slice(first_idx[0], last_idx[0])})
+                    return dict({first_part: slice(first_idx[0], last_idx[0])})
                 else:
                     if last_part - first_part == 1:
-                        return OrderedDict(
+                        return dict(
                             # FIXME: this dictionary creation feels wrong - it might not maintain the order
                             {
                                 first_part: slice(first_idx[0], None),
@@ -1714,12 +1748,10 @@ class PandasDataframe(ClassLogger):
                             }
                         )
                     else:
-                        dict_of_slices = OrderedDict(
-                            {first_part: slice(first_idx[0], None)}
-                        )
+                        dict_of_slices = dict({first_part: slice(first_idx[0], None)})
                         part_list = range(first_part + 1, last_part)
                         dict_of_slices.update(
-                            OrderedDict(zip(part_list, [slice(None)] * len(part_list)))
+                            dict(zip(part_list, [slice(None)] * len(part_list)))
                         )
                         dict_of_slices.update({last_part: slice(None, last_idx[0])})
                         return dict_of_slices
@@ -1731,7 +1763,7 @@ class PandasDataframe(ClassLogger):
             # This will help preserve metadata stored in empty dataframes (indexes and dtypes)
             # Otherwise, we will get an empty `new_partitions` array, from which it will
             #  no longer be possible to obtain metadata
-            return OrderedDict([(0, np.array([], dtype=np.int64))])
+            return dict([(0, np.array([], dtype=np.int64))])
         negative_mask = np.less(indices, 0)
         has_negative = np.any(negative_mask)
         if has_negative:
@@ -1741,7 +1773,7 @@ class PandasDataframe(ClassLogger):
                 if isinstance(indices, np.ndarray)
                 else np.array(indices, dtype=np.int64)
             )
-            indices[negative_mask] = indices[negative_mask] % len(self.axes[axis])
+            indices[negative_mask] = indices[negative_mask] % len(self.get_axis(axis))
         # If the `indices` array was modified because of the negative indices conversion
         # then the original order was broken and so we have to sort anyway:
         if has_negative or not are_indices_sorted:
@@ -1793,7 +1825,7 @@ class PandasDataframe(ClassLogger):
             for i in range(1, len(count_for_each_partition))
             if count_for_each_partition[i] > count_for_each_partition[i - 1]
         ]
-        return OrderedDict(partition_ids_with_indices)
+        return dict(partition_ids_with_indices)
 
     @staticmethod
     def _join_index_objects(axis, indexes, how, sort):
@@ -1952,16 +1984,17 @@ class PandasDataframe(ClassLogger):
         new_axes, new_axes_lengths = [0, 0], [0, 0]
 
         new_axes[axis] = [MODIN_UNNAMED_SERIES_LABEL]
-        new_axes[axis ^ 1] = self.axes[axis ^ 1]
+        new_axes[axis ^ 1] = self.get_axis(axis ^ 1)
 
         new_axes_lengths[axis] = [1]
-        new_axes_lengths[axis ^ 1] = self._axes_lengths[axis ^ 1]
+        new_axes_lengths[axis ^ 1] = self._get_axis_lengths(axis ^ 1)
 
         if dtypes == "copy":
             dtypes = self.copy_dtypes_cache()
         elif dtypes is not None:
             dtypes = pandas.Series(
-                [np.dtype(dtypes)] * len(new_axes[1]), index=new_axes[1]
+                [pandas.api.types.pandas_dtype(dtypes)] * len(new_axes[1]),
+                index=new_axes[1],
             )
 
         result = self.__constructor__(
@@ -2273,7 +2306,6 @@ class PandasDataframe(ClassLogger):
         self,
         new_row_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
         new_col_labels: Optional[Union[Dict[Hashable, Hashable], Callable]] = None,
-        level: Optional[Union[int, List[int]]] = None,
     ) -> "PandasDataframe":
         """
         Replace the row and column labels with the specified new labels.
@@ -2284,60 +2316,22 @@ class PandasDataframe(ClassLogger):
             Mapping or callable that relates old row labels to new labels.
         new_col_labels : dictionary or callable, optional
             Mapping or callable that relates old col labels to new labels.
-        level : int, optional
-            Level whose row labels to replace.
 
         Returns
         -------
         PandasDataframe
             A new PandasDataframe with the new row and column labels.
-
-        Notes
-        -----
-        If level is not specified, the default behavior is to replace row labels in all levels.
         """
-        new_index = self.index.copy()
-
-        def make_label_swapper(label_dict):
-            if isinstance(label_dict, dict):
-                return lambda label: label_dict.get(label, label)
-            return label_dict
-
-        def swap_labels_levels(index_tuple):
-            if isinstance(new_row_labels, dict):
-                return tuple(new_row_labels.get(label, label) for label in index_tuple)
-            return tuple(new_row_labels(label) for label in index_tuple)
-
-        if new_row_labels:
-            swap_row_labels = make_label_swapper(new_row_labels)
-            if isinstance(self.index, pandas.MultiIndex):
-                if level is not None:
-                    new_index.set_levels(
-                        new_index.levels[level].map(swap_row_labels), level
-                    )
-                else:
-                    new_index = new_index.map(swap_labels_levels)
-            else:
-                new_index = new_index.map(swap_row_labels)
-        new_cols = self.columns.copy()
-        if new_col_labels:
-            new_cols = new_cols.map(make_label_swapper(new_col_labels))
-
-        def map_fn(df):
-            return df.rename(index=new_row_labels, columns=new_col_labels, level=level)
-
-        new_parts = self._partition_mgr_cls.map_partitions(self._partitions, map_fn)
-        new_dtypes = None
-        if self.has_materialized_dtypes:
-            new_dtypes = self.dtypes.set_axis(new_cols)
-        return self.__constructor__(
-            new_parts,
-            new_index,
-            new_cols,
-            self._row_lengths_cache,
-            self._column_widths_cache,
-            new_dtypes,
-        )
+        result = self.copy()
+        if new_row_labels is not None:
+            if callable(new_row_labels):
+                new_row_labels = result.index.map(new_row_labels)
+            result.index = new_row_labels
+        if new_col_labels is not None:
+            if callable(new_col_labels):
+                new_col_labels = result.columns.map(new_col_labels)
+            result.columns = new_col_labels
+        return result
 
     def combine_and_apply(
         self, func, new_index=None, new_columns=None, new_dtypes=None
@@ -2421,10 +2415,8 @@ class PandasDataframe(ClassLogger):
 
         # don't want to inherit over-partitioning so doing this 'min' check
         ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
-        m = len(self.index) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(
-            ideal_num_new_partitions * len(self.index)
-        )
+        m = len(self) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(self))
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
@@ -2435,8 +2427,8 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self.index) / MinPartitionSize.get())
-            if len(self.index) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(len(self) / MinPartitionSize.get())
+            if len(self) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
                 return self.combine_and_apply(func=func)
@@ -2541,7 +2533,7 @@ class PandasDataframe(ClassLogger):
             return df
 
         # If this df is empty, we don't want to try and shuffle or sort.
-        if len(self.axes[0]) == 0 or len(self.axes[1]) == 0:
+        if len(self.get_axis(1)) == 0 or len(self) == 0:
             return self.copy()
 
         axis = Axis(axis)
@@ -2756,6 +2748,7 @@ class PandasDataframe(ClassLogger):
         new_index=None,
         new_columns=None,
         keep_remaining=False,
+        new_dtypes=None,
     ):
         """
         Apply a function across an entire axis for a subset of the data.
@@ -2778,6 +2771,10 @@ class PandasDataframe(ClassLogger):
             advance, and if not provided it must be computed.
         keep_remaining : boolean, default: False
             Whether or not to drop the data that is not computed over.
+        new_dtypes : ModinDtypes or pandas.Series, optional
+            The data types of the result. This is an optimization
+            because there are functions that always result in a particular data
+            type, and allows us to avoid (re)computing it.
 
         Returns
         -------
@@ -2806,7 +2803,9 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        return self.__constructor__(new_partitions, new_index, new_columns, None, None)
+        return self.__constructor__(
+            new_partitions, new_index, new_columns, None, None, dtypes=new_dtypes
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_select_indices(
@@ -2860,7 +2859,7 @@ class PandasDataframe(ClassLogger):
             new_index = self.index if axis == 1 else None
         if new_columns is None:
             new_columns = self.columns if axis == 0 else None
-        if new_columns is not None and new_dtypes is not None:
+        if new_columns is not None and isinstance(new_dtypes, pandas.Series):
             assert new_dtypes.index.equals(
                 new_columns
             ), f"{new_dtypes=} doesn't have the same columns as in {new_columns=}"
@@ -2980,7 +2979,7 @@ class PandasDataframe(ClassLogger):
                 axis,
                 other,
                 join_type,
-                sort=not self.axes[axis].equals(other.axes[axis]),
+                sort=not self.get_axis(axis).equals(other.get_axis(axis)),
             )
             # unwrap list returned by `copartition`.
             right_parts = right_parts[0]
@@ -3121,7 +3120,7 @@ class PandasDataframe(ClassLogger):
 
         if other is None:
             if apply_indices is None:
-                apply_indices = self.axes[axis][numeric_indices]
+                apply_indices = self.get_axis(axis)[numeric_indices]
             return self.apply_select_indices(
                 axis=axis,
                 func=func,
@@ -3221,7 +3220,7 @@ class PandasDataframe(ClassLogger):
             other = [o._partitions for o in other] if len(other) else None
 
         if apply_indices is not None:
-            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
             apply_indices = self._get_dict_of_block_index(
                 axis ^ 1, numeric_indices
             ).keys()
@@ -3257,25 +3256,29 @@ class PandasDataframe(ClassLogger):
         kw = {"row_lengths": None, "column_widths": None}
         if isinstance(dtypes, str) and dtypes == "copy":
             kw["dtypes"] = self.copy_dtypes_cache()
+        elif isinstance(dtypes, DtypesDescriptor):
+            kw["dtypes"] = ModinDtypes(dtypes)
         elif dtypes is not None:
             if isinstance(dtypes, (pandas.Series, ModinDtypes)):
                 kw["dtypes"] = dtypes.copy()
             else:
                 if new_columns is None:
-                    (
-                        new_columns,
-                        kw["column_widths"],
-                    ) = self._compute_axis_labels_and_lengths(1, new_partitions)
-                kw["dtypes"] = (
-                    pandas.Series(dtypes, index=new_columns)
-                    if is_list_like(dtypes)
-                    else pandas.Series(
-                        [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                    kw["dtypes"] = ModinDtypes(
+                        DtypesDescriptor(remaining_dtype=np.dtype(dtypes))
                     )
-                )
+                else:
+                    kw["dtypes"] = (
+                        pandas.Series(dtypes, index=new_columns)
+                        if is_list_like(dtypes)
+                        else pandas.Series(
+                            [np.dtype(dtypes)] * len(new_columns), index=new_columns
+                        )
+                    )
 
         if not keep_partitioning:
-            if kw["row_lengths"] is None and new_index is not None:
+            if kw["row_lengths"] is None and ModinIndex.is_materialized_index(
+                new_index
+            ):
                 if axis == 0:
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
@@ -3287,7 +3290,9 @@ class PandasDataframe(ClassLogger):
                         kw["row_lengths"] = self._row_lengths_cache
                     elif len(new_index) == 1 and new_partitions.shape[0] == 1:
                         kw["row_lengths"] = [1]
-            if kw["column_widths"] is None and new_columns is not None:
+            if kw["column_widths"] is None and ModinIndex.is_materialized_index(
+                new_columns
+            ):
                 if axis == 1:
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
@@ -3300,6 +3305,27 @@ class PandasDataframe(ClassLogger):
                         kw["column_widths"] = self._column_widths_cache
                     elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
                         kw["column_widths"] = [1]
+        else:
+            if (
+                axis == 0
+                and kw["row_lengths"] is None
+                and self._row_lengths_cache is not None
+                and ModinIndex.is_materialized_index(new_index)
+                and len(new_index) == sum(self._row_lengths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(r != 0 for r in self._row_lengths_cache)
+            ):
+                kw["row_lengths"] = self._row_lengths_cache
+            if (
+                axis == 1
+                and kw["column_widths"] is None
+                and self._column_widths_cache is not None
+                and ModinIndex.is_materialized_index(new_columns)
+                and len(new_columns) == sum(self._column_widths_cache)
+                # to avoid problems that may arise when filtering empty dataframes
+                and all(w != 0 for w in self._column_widths_cache)
+            ):
+                kw["column_widths"] = self._column_widths_cache
 
         result = self.__constructor__(
             new_partitions, index=new_index, columns=new_columns, **kw
@@ -3377,8 +3403,8 @@ class PandasDataframe(ClassLogger):
         if isinstance(other, type(self)):
             other = [other]
 
-        self_index = self.axes[axis]
-        others_index = [o.axes[axis] for o in other]
+        self_index = self.get_axis(axis)
+        others_index = [o.get_axis(axis) for o in other]
         joined_index, make_reindexer = self._join_index_objects(
             axis, [self_index] + others_index, how, sort
         )
@@ -3404,7 +3430,7 @@ class PandasDataframe(ClassLogger):
 
         # Picking first non-empty frame
         base_frame = frames[non_empty_frames_idx[0]]
-        base_index = base_frame.axes[axis]
+        base_index = base_frame.get_axis(axis)
 
         # define conditions for reindexing and repartitioning `self` frame
         do_reindex_base = not base_index.equals(joined_index)
@@ -3427,11 +3453,11 @@ class PandasDataframe(ClassLogger):
             reindexed_base = base_frame._partitions
             base_lengths = base_frame.column_widths if axis else base_frame.row_lengths
 
-        others_lengths = [o._axes_lengths[axis] for o in other_frames]
+        others_lengths = [o._get_axis_lengths(axis) for o in other_frames]
 
         # define conditions for reindexing and repartitioning `other` frames
         do_reindex_others = [
-            not o.axes[axis].equals(joined_index) for o in other_frames
+            not o.get_axis(axis).equals(joined_index) for o in other_frames
         ]
 
         do_repartition_others = [None] * len(other_frames)
@@ -3638,16 +3664,7 @@ class PandasDataframe(ClassLogger):
                 new_index = self.index.append([other.index for other in others])
             new_columns = joined_index
             frames = [self] + others
-            if all(frame.has_materialized_dtypes for frame in frames):
-                all_dtypes = [frame.dtypes for frame in frames]
-                if not all(dtypes.empty for dtypes in all_dtypes):
-                    new_dtypes = pandas.concat(all_dtypes, axis=1)
-                    # 'nan' value will be placed in a row if a column doesn't exist in all frames;
-                    # this value is np.float64 type so we need an explicit conversion
-                    new_dtypes.fillna(np.dtype("float64"), inplace=True)
-                    new_dtypes = new_dtypes.apply(
-                        lambda row: find_common_type(row.values), axis=1
-                    )
+            new_dtypes = ModinDtypes.concat([frame._dtypes for frame in frames], axis=1)
             # If we have already cached the length of each row in at least one
             # of the row's partitions, we can build new_lengths for the new
             # frame. Typically, if we know the length for any partition in a
@@ -3656,20 +3673,22 @@ class PandasDataframe(ClassLogger):
             if not new_lengths:
                 new_lengths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions.T[0]:
-                        if part._length_cache is not None:
-                            new_lengths.append(part.length())
-                        else:
-                            new_lengths = None
-                            break
+                    if all(
+                        part._length_cache is not None for part in new_partitions.T[0]
+                    ):
+                        new_lengths = self._get_lengths(new_partitions.T[0], axis)
+                    else:
+                        new_lengths = None
         else:
             if all(obj.has_materialized_columns for obj in (self, *others)):
                 new_columns = self.columns.append([other.columns for other in others])
             new_index = joined_index
-            if self.has_materialized_dtypes and all(
-                o.has_materialized_dtypes for o in others
-            ):
-                new_dtypes = pandas.concat([self.dtypes] + [o.dtypes for o in others])
+            try:
+                new_dtypes = ModinDtypes.concat(
+                    [self.copy_dtypes_cache()] + [o.copy_dtypes_cache() for o in others]
+                )
+            except NotImplementedError:
+                new_dtypes = None
             # If we have already cached the width of each column in at least one
             # of the column's partitions, we can build new_widths for the new
             # frame. Typically, if we know the width for any partition in a
@@ -3678,12 +3697,11 @@ class PandasDataframe(ClassLogger):
             if not new_widths:
                 new_widths = []
                 if new_partitions.size > 0:
-                    for part in new_partitions[0]:
-                        if part._width_cache is not None:
-                            new_widths.append(part.width())
-                        else:
-                            new_widths = None
-                            break
+                    if all(part._width_cache is not None for part in new_partitions[0]):
+                        new_widths = self._get_lengths(new_partitions[0], axis)
+                    else:
+                        new_widths = None
+
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
@@ -3749,14 +3767,6 @@ class PandasDataframe(ClassLogger):
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
-            if any(
-                isinstance(dtype, pandas.CategoricalDtype)
-                for dtype in df.dtypes[by].values
-            ):
-                raise NotImplementedError(
-                    "Reshuffling groupby is not yet supported when grouping on a categorical column. "
-                    + "https://github.com/modin-project/modin/issues/5925"
-                )
             result = operator(df.groupby(by, **kwargs))
             if (
                 align_result_columns
@@ -3861,6 +3871,12 @@ class PandasDataframe(ClassLogger):
                 row_lengths=result._row_lengths_cache,
             )
 
+        if not result.has_materialized_index:
+            by_dtypes = ModinDtypes(self._dtypes).lazy_get(by)
+            if by_dtypes.is_materialized:
+                new_index = ModinIndex(value=result, axis=0, dtypes=by_dtypes)
+                result.set_index_cache(new_index)
+
         if result_schema is not None:
             new_dtypes = pandas.Series(result_schema)
 
@@ -3912,7 +3928,7 @@ class PandasDataframe(ClassLogger):
             self._propagate_index_objs(axis=0)
 
         if apply_indices is not None:
-            numeric_indices = self.axes[axis ^ 1].get_indexer_for(apply_indices)
+            numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
             apply_indices = list(
                 self._get_dict_of_block_index(axis ^ 1, numeric_indices).keys()
             )
@@ -4068,7 +4084,14 @@ class PandasDataframe(ClassLogger):
         -------
         np.ndarray
         """
-        return self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
+        arr = self._partition_mgr_cls.to_numpy(self._partitions, **kwargs)
+        ErrorMessage.catch_bugs_and_request_email(
+            self.has_materialized_index
+            and len(arr) != len(self.index)
+            or self.has_materialized_columns
+            and len(arr[0]) != len(self.columns)
+        )
+        return arr
 
     @lazy_metadata_decorator(apply_axis=None, transpose=True)
     def transpose(self):
@@ -4102,6 +4125,7 @@ class PandasDataframe(ClassLogger):
             dtypes=new_dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def finalize(self):
         """
         Perform all deferred calls on partitions.
@@ -4114,6 +4138,16 @@ class PandasDataframe(ClassLogger):
     def wait_computations(self):
         """Wait for all computations to complete without materializing data."""
         self._partition_mgr_cls.wait_partitions(self._partitions.flatten())
+
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return True
 
     def __dataframe__(self, nan_as_null: bool = False, allow_copy: bool = True):
         """

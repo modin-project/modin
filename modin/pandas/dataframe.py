@@ -18,6 +18,7 @@ from __future__ import annotations
 import datetime
 import functools
 import itertools
+import os
 import re
 import sys
 import warnings
@@ -43,25 +44,24 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
+from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
     expanduser_path_arg,
     hashable,
-    to_pandas,
     try_cast_to_pandas,
 )
 
-from .accessor import CachedAccessor, SparseFrameAccessor
+from .accessor import CachedAccessor, ExperimentalFunctions, SparseFrameAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
 from .utils import (
     SET_DATAFRAME_ATTRIBUTE_WARNING,
+    _doc_binary_op,
     cast_function_modin2pandas,
-    from_non_pandas,
-    from_pandas,
 )
 
 
@@ -516,7 +516,7 @@ class DataFrame(BasePandasDataset):
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
                     or (isinstance(o, pandas.Grouper) and o.key in self)
-                    or (is_list_like(o) and len(o) == len(self.axes[axis]))
+                    or (is_list_like(o) and len(o) == len(self._get_axis(axis)))
                 )
                 for o in by
             ):
@@ -546,7 +546,7 @@ class DataFrame(BasePandasDataset):
 
                 drop = True
             else:
-                mismatch = len(by) != len(self.axes[axis])
+                mismatch = len(by) != len(self._get_axis(axis))
                 if mismatch and all(
                     hashable(obj)
                     and (
@@ -1161,7 +1161,7 @@ class DataFrame(BasePandasDataset):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
             other = self.__constructor__(other)
-        if on is not None:
+        if on is not None or how == "cross":
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
                     other._query_compiler,
@@ -1972,9 +1972,12 @@ class DataFrame(BasePandasDataset):
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and len(self.columns) == 1:
+            self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
-            return Series(query_compiler=self.T._query_compiler)
+            qc = self.T._query_compiler
+            qc._shape_hint = "column"
+            return Series(query_compiler=qc)
         else:
             return self.copy()
 
@@ -2716,6 +2719,23 @@ class DataFrame(BasePandasDataset):
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
 
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        returns="tuple of two DataFrames",
+    )
+    def __divmod__(self, right):
+        return self._default_to_pandas(pandas.DataFrame.__divmod__, right)
+
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        right="left",
+        returns="tuple of two DataFrames",
+    )
+    def __rdivmod__(self, left):
+        return self._default_to_pandas(pandas.DataFrame.__rdivmod__, left)
+
     __add__ = add
     __iadd__ = add  # pragma: no cover
     __radd__ = radd
@@ -2875,8 +2895,9 @@ class DataFrame(BasePandasDataset):
         # Series.__getitem__ treating keys as positions is deprecated. In a future version,
         # integer keys will always be treated as labels (consistent with DataFrame behavior).
         # To access a value by position, use `ser.iloc[pos]`
-        dtype = self.dtypes.iloc[0]
-        for t in self.dtypes:
+        dtypes = self._query_compiler.get_dtypes_set()
+        dtype = next(iter(dtypes))
+        for t in dtypes:
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
             elif not numeric_only and t != dtype:
@@ -3104,7 +3125,7 @@ class DataFrame(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler):
+    def _inflate_light(cls, query_compiler, source_pid):
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -3114,16 +3135,23 @@ class DataFrame(BasePandasDataset):
         ----------
         query_compiler : BaseQueryCompiler
             Query compiler to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `query_compiler`.
         """
+        if os.getpid() != source_pid:
+            return query_compiler.to_pandas()
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler)
 
     @classmethod
-    def _inflate_full(cls, pandas_df):
+    def _inflate_full(cls, pandas_df, source_pid):
         """
         Re-creates the object from previously-serialized disk-storable representation.
 
@@ -3131,18 +3159,32 @@ class DataFrame(BasePandasDataset):
         ----------
         pandas_df : pandas.DataFrame
             Data to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `pandas_df`.
         """
+        if os.getpid() != source_pid:
+            return pandas_df
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):
         self._query_compiler.finalize()
-        if PersistentPickle.get():
-            return self._inflate_full, (self._to_pandas(),)
-        return self._inflate_light, (self._query_compiler,)
+        pid = os.getpid()
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
+            return self._inflate_full, (self._to_pandas(), pid)
+        return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
+
+    # Namespace for experimental functions
+    modin: ExperimentalFunctions = CachedAccessor("modin", ExperimentalFunctions)

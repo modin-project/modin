@@ -22,6 +22,7 @@ from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     axis_keys,
     axis_values,
@@ -43,7 +44,7 @@ from modin.pandas.test.utils import (
     test_data_values,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import get_current_execution, to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 

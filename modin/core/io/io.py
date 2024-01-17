@@ -17,7 +17,6 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
-from collections import OrderedDict
 from typing import Any
 
 import pandas
@@ -273,8 +272,8 @@ class BaseIO:
     @doc(
         _doc_default_io_method,
         summary="Read an Excel file into query compiler",
-        returns="""BaseQueryCompiler or dict/OrderedDict :
-    QueryCompiler or OrderedDict/dict with read data.""",
+        returns="""BaseQueryCompiler or dict :
+    QueryCompiler or dict with read data.""",
     )
     def read_excel(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_excel`")
@@ -285,7 +284,7 @@ class BaseIO:
             # pd.ExcelFile in `read_excel` isn't supported
             kwargs["io"]._set_pandas_mode()
         intermediate = pandas.read_excel(**kwargs)
-        if isinstance(intermediate, (OrderedDict, dict)):
+        if isinstance(intermediate, dict):
             parsed = type(intermediate)()
             for key in intermediate.keys():
                 parsed[key] = cls.from_pandas(intermediate.get(key))
@@ -652,7 +651,7 @@ class BaseIO:
     @_inherit_docstrings(
         pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
     )
-    def to_parquet(cls, obj, **kwargs):  # noqa: PR01
+    def to_parquet(cls, obj, path, **kwargs):  # noqa: PR01
         """
         Write object to the binary parquet format using pandas.
 
@@ -662,4 +661,4 @@ class BaseIO:
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return obj.to_parquet(**kwargs)
+        return obj.to_parquet(path, **kwargs)

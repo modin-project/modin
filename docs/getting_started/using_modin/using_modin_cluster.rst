@@ -4,7 +4,7 @@ Using Modin in a Cluster
 
 .. note::
   | *Estimated Reading Time: 15 minutes*
-  | You can follow along in a Jupyter notebook in this two-part tutorial:  [`Part 1 <https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb>`_], [`Part 2 <https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb>`_].
+  | You can follow along in a Jupyter notebook in this two-part tutorial: `Part 1`_, `Part 2`_.
 
 Often in practice we have a need to exceed the capabilities of a single machine. Modin
 works and performs well in both local mode and in a cluster environment. The key
@@ -15,8 +15,9 @@ transparently.
 
 Starting up a Ray Cluster
 -------------------------
-Modin is able to utilize Ray's built-in autoscaled cluster. To launch a Ray cluster using Amazon Web Service (AWS), you can use `this file <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml>`_
-as the config file.
+Modin is able to utilize Ray's built-in autoscaled cluster. To launch a Ray cluster
+using Amazon Web Service (AWS), you can use `Modin's cluster setup config`_ 
+(`Ray's autoscaler options`_).
 
 .. code-block:: bash
 
@@ -31,8 +32,11 @@ To start up the Ray cluster, run the following command in your terminal:
 
 This configuration script starts 1 head node (m5.24xlarge) and 7 workers (m5.24xlarge),
 768 total CPUs. For more information on how to launch a Ray cluster across different
-cloud providers or on-premise, you can also refer to the Ray documentation `here <https://docs.ray.io/en/latest/cluster/cloud.html>`_.
+cloud providers or on-premise, you can also refer to the `Ray's cluster docs`_.
 
+.. note::
+   By default, Modin on Ray uses 60% of the system memory. It is recommended to use the same
+   amount, when using your own cluster (for each node).
 
 Connecting to a Ray Cluster
 ---------------------------
@@ -56,13 +60,20 @@ Modin:
 
 Congratualions! You have successfully connected to the Ray cluster.
 
+.. note::
+   Be careful when using the Ray client to connect to a remote cluster.
+   This connection mode may not work. Known bugs:
+   - https://github.com/ray-project/ray/issues/38713,
+   - https://github.com/modin-project/modin/issues/6641.
+
 Using Modin on a Ray Cluster
 ----------------------------
 
 Now that we have a Ray cluster up and running, we can use Modin to perform pandas
 operation as if we were working with pandas on a single machine. We test Modin's
-performance on the 200MB `NYC Taxi dataset <https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv>`_ that was provided as part of our `cluster setup script <https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml>`_. We can time the following operation
-in a Jupyter notebook:
+performance on the 200MB `NYC Taxi dataset`_ that was provided as part of our
+`Modin's cluster setup config`_. We can time the following operation in a Jupyter
+notebook:
 
 .. code-block:: python
 
@@ -77,6 +88,10 @@ in a Jupyter notebook:
 
    %%time
    apply_result = df.map(str)
+
+.. note::
+   When using local paths, make sure that they are available on all nodes in the
+   cluster, for example using distributed file system like NFS.
 
 Modin performance scales as the number of nodes and cores increases. The following
 chart shows the performance of the above operations with 2, 4, and 8 nodes, with
@@ -93,7 +108,7 @@ Advanced: Configuring your Ray Environment
 In some cases, it may be useful to customize your Ray environment. Below, we have listed
 a few ways you can solve common problems in data management with Modin by customizing
 your Ray environment. It is possible to use any of Ray's initialization parameters,
-which are all found in `Ray's documentation`_.
+which are all found in `Ray's API docs`_.
 
 .. code-block:: python
 
@@ -108,4 +123,10 @@ you can customize your Ray environment for use in Modin!
 .. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
 .. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
 .. _`open an issue`: https://github.com/modin-project/modin/issues
-.. _`Ray's documentation`: https://ray.readthedocs.io/en/latest/api.html
+.. _`Ray's API docs`: https://ray.readthedocs.io/en/latest/api.html
+.. _`Part 1`: https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb
+.. _`Part 2`: https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb
+.. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
+.. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
+.. _`NYC Taxi dataset`: https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
+.. _`Modin's cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml

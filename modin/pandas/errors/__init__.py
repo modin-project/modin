@@ -11,4 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Experimental functionality related to Ray execution engine and optimized for PyArrow storage format."""
+
+"""The module is needed to allow the following import `import modin.pandas.errors`."""
+
+from pandas.errors import *  # noqa: F403, F401
+from pandas.errors import __all__  # noqa: F401

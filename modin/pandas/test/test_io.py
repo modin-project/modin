@@ -17,7 +17,7 @@ import inspect
 import os
 import sys
 import unittest.mock as mock
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from io import BytesIO, StringIO
 from pathlib import Path
 from typing import Dict
@@ -47,9 +47,8 @@ from modin.config import (
 )
 from modin.config.envvars import MinPartitionSize
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.utils import from_arrow
+from modin.pandas.io import from_arrow, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.utils import to_pandas
 
 from .utils import (
     check_file_leaks,
@@ -606,8 +605,11 @@ class TestCsv:
 
             df_equals(modin_df, pd_df)
 
-    def test_read_csv_encoding_976(self):
+    @pytest.mark.parametrize("pathlike", [False, True])
+    def test_read_csv_encoding_976(self, pathlike):
         file_name = "modin/pandas/test/data/issue_976.csv"
+        if pathlike:
+            file_name = Path(file_name)
         names = [str(i) for i in range(11)]
 
         kwargs = {
@@ -1072,6 +1074,10 @@ class TestCsv:
     @pytest.mark.parametrize("index_label", [None, False, "New index"])
     @pytest.mark.parametrize("columns", [None, ["col1", "col3", "col5"]])
     @pytest.mark.exclude_in_sanity
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_to_csv(
         self,
         tmp_path,
@@ -1106,6 +1112,10 @@ class TestCsv:
             columns=columns,
         )
 
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_dataframe_to_csv(self, tmp_path):
         pandas_df = pandas.read_csv(pytest.csvs_names["test_read_csv_regular"])
         modin_df = pd.DataFrame(pandas_df)
@@ -1116,6 +1126,10 @@ class TestCsv:
             extension="csv",
         )
 
+    @pytest.mark.skipif(
+        condition=Engine.get() == "Unidist" and os.name == "nt",
+        reason="https://github.com/modin-project/modin/issues/6846",
+    )
     def test_series_to_csv(self, tmp_path):
         pandas_s = pandas.read_csv(
             pytest.csvs_names["test_read_csv_regular"], usecols=["col1"]
@@ -1415,6 +1429,20 @@ class TestParquet:
                 path=unique_filename,
                 dtype_backend=dtype_backend,
                 comparator=comparator,
+            )
+
+    # Tests issue #6778
+    def test_read_parquet_no_extension(self, engine, make_parquet_file):
+        with ensure_clean(".parquet") as unique_filename:
+            # Remove the .parquet extension
+            no_ext_fname = unique_filename[: unique_filename.index(".parquet")]
+
+            make_parquet_file(filename=no_ext_fname)
+            eval_io(
+                fn_name="read_parquet",
+                # read_parquet kwargs
+                engine=engine,
+                path=no_ext_fname,
             )
 
     @pytest.mark.parametrize(
@@ -2030,12 +2058,14 @@ def test_read_parquet_relative_to_user_home(make_parquet_file):
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestJson:
+    @pytest.mark.parametrize("pathlike", [False, True])
     @pytest.mark.parametrize("lines", [False, True])
-    def test_read_json(self, make_json_file, lines):
+    def test_read_json(self, make_json_file, lines, pathlike):
+        unique_filename = make_json_file(lines=lines)
         eval_io(
             fn_name="read_json",
             # read_json kwargs
-            path_or_buf=make_json_file(lines=lines),
+            path_or_buf=Path(unique_filename) if pathlike else unique_filename,
             lines=lines,
         )
 
@@ -2205,7 +2235,7 @@ class TestExcel:
         pandas_df = pandas.read_excel(unique_filename, sheet_name=None)
         modin_df = pd.read_excel(unique_filename, sheet_name=None)
 
-        assert isinstance(pandas_df, (OrderedDict, dict))
+        assert isinstance(pandas_df, dict)
         assert isinstance(modin_df, type(pandas_df))
         assert pandas_df.keys() == modin_df.keys()
 
@@ -2624,7 +2654,8 @@ class TestHtml:
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestFwf:
-    def test_fwf_file(self, make_fwf_file):
+    @pytest.mark.parametrize("pathlike", [False, True])
+    def test_fwf_file(self, make_fwf_file, pathlike):
         fwf_data = (
             "id8141  360.242940  149.910199 11950.7\n"
             + "id1594  444.953632  166.985655 11788.4\n"
@@ -2635,7 +2666,12 @@ class TestFwf:
         unique_filename = make_fwf_file(fwf_data=fwf_data)
 
         colspecs = [(0, 6), (8, 20), (21, 33), (34, 43)]
-        df = pd.read_fwf(unique_filename, colspecs=colspecs, header=None, index_col=0)
+        df = pd.read_fwf(
+            Path(unique_filename) if pathlike else unique_filename,
+            colspecs=colspecs,
+            header=None,
+            index_col=0,
+        )
         assert isinstance(df, pd.DataFrame)
 
     @pytest.mark.parametrize(
@@ -3014,14 +3050,14 @@ class TestPickle:
         )
 
     def test_to_pickle(self, tmp_path):
-        modin_df, pandas_df = create_test_dfs(TEST_DATA)
-        eval_to_file(
-            tmp_path,
-            modin_obj=modin_df,
-            pandas_obj=pandas_df,
-            fn="to_pickle",
-            extension="pkl",
-        )
+        modin_df, _ = create_test_dfs(TEST_DATA)
+
+        unique_filename_modin = get_unique_filename(extension="pkl", data_dir=tmp_path)
+
+        modin_df.to_pickle(unique_filename_modin)
+        recreated_modin_df = pd.read_pickle(unique_filename_modin)
+
+        df_equals(modin_df, recreated_modin_df)
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -3137,7 +3173,6 @@ def test_to_dict_dataframe():
     [
         pytest.param({}, id="no_kwargs"),
         pytest.param({"into": dict}, id="into_dict"),
-        pytest.param({"into": OrderedDict}, id="into_ordered_dict"),
         pytest.param({"into": defaultdict(list)}, id="into_defaultdict"),
     ],
 )

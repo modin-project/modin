@@ -21,6 +21,7 @@ from typing import Optional
 import psutil
 import ray
 from packaging import version
+from ray.util.client.common import ClientObjectRef
 
 from modin.config import (
     CIAWSAccessKeyID,
@@ -49,11 +50,7 @@ _MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 
 _RAY_IGNORE_UNHANDLED_ERRORS_VAR = "RAY_IGNORE_UNHANDLED_ERRORS"
 
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+ObjectIDType = (ray.ObjectRef, ClientObjectRef)
 
 
 def initialize_ray(

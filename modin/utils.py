@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import types
+import warnings
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import (
@@ -48,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, ExperimentalNumPyAPI, IsExperimental, StorageFormat
+from modin.config import Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -96,12 +97,10 @@ MIN_UNIDIST_VERSION = version.parse("0.2.1")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
+# The '__reduced__' name is used internally by the query compiler as a column name to
+# represent pandas Series objects that are not explicitly assigned a name, so as to
+# distinguish between an N-element series and 1xN dataframe.
 MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
-"""
-The '__reduced__' name is used internally by the query compiler as a column name to
-represent pandas Series objects that are not explicitly assigned a name, so as to
-distinguish between an N-element series and 1xN dataframe.
-"""
 
 
 def _make_api_url(token: str) -> str:
@@ -490,46 +489,48 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     return decorator
 
 
-# TODO add proper type annotation
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def func_from_deprecated_location(
+    func_name: str, module: str, deprecation_message: str
+) -> Callable:
     """
-    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+    Create a function that decorates a function ``module.func_name`` with a ``FutureWarning``.
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin.Series
-        The Modin DataFrame/Series to convert.
+    func_name : str
+        Function name to decorate.
+    module : str
+        Module where the function is located.
+    deprecation_message : str
+        Message to print in a future warning.
 
     Returns
     -------
-    pandas.DataFrame or pandas.Series
-        Converted object with type depending on input.
+    callable
     """
-    return modin_obj._to_pandas()
+
+    def deprecated_func(*args: tuple[Any], **kwargs: dict[Any, Any]) -> Any:
+        """Call deprecated function."""
+        func = getattr(importlib.import_module(module), func_name)
+        # using 'FutureWarning' as 'DeprecationWarnings' are filtered out by default
+        warnings.warn(deprecation_message, FutureWarning)
+        return func(*args, **kwargs)
+
+    return deprecated_func
 
 
-def to_numpy(
-    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
-) -> np.ndarray:
-    """
-    Convert a Modin object to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
-        The Modin distributed object to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    if isinstance(modin_obj, SupportsPrivateToNumPy):
-        return modin_obj._to_numpy()
-    array = modin_obj.to_numpy()
-    if ExperimentalNumPyAPI.get():
-        array = array._to_numpy()
-    return array
+to_numpy = func_from_deprecated_location(
+    "to_numpy",
+    "modin.pandas.io",
+    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+to_pandas = func_from_deprecated_location(
+    "to_pandas",
+    "modin.pandas.io",
+    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
 
 
 def hashable(obj: bool) -> bool:
@@ -695,7 +696,7 @@ def get_current_execution() -> str:
     str
         Returns <StorageFormat>On<Engine>-like string.
     """
-    return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}On{Engine.get()}"
+    return f"{StorageFormat.get()}On{Engine.get()}"
 
 
 def instancer(_class: Callable[[], T]) -> T:
@@ -785,8 +786,6 @@ def _get_modin_deps_info() -> Mapping[str, Optional[JSONSerializable]]:
     return result
 
 
-# Disable flake8 checks for print() in this file
-# flake8: noqa: T001
 def show_versions(as_json: Union[str, bool] = False) -> None:
     """
     Provide useful information, important for bug reports.
@@ -833,17 +832,43 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
         sys_info["LOCALE"] = f"{language_code}.{encoding}"
 
         maxlen = max(max(len(x) for x in d) for d in (deps, modin_deps))
-        print("\nINSTALLED VERSIONS")
-        print("------------------")
+        print("\nINSTALLED VERSIONS\n------------------")  # noqa: T201
         for k, v in sys_info.items():
-            print(f"{k:<{maxlen}}: {v}")
+            print(f"{k:<{maxlen}}: {v}")  # noqa: T201
         for name, d in (("Modin", modin_deps), ("pandas", deps)):
-            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
+            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")  # noqa: T201
             for k, v in d.items():
-                print(f"{k:<{maxlen}}: {v}")
+                print(f"{k:<{maxlen}}: {v}")  # noqa: T201
 
 
 class ModinAssumptionError(Exception):
     """An exception that allows us defaults to pandas if any assumption fails."""
 
     pass
+
+
+class classproperty:
+    """
+    Decorator that allows creating read-only class properties.
+
+    Parameters
+    ----------
+    func : method
+
+    Examples
+    --------
+    >>> class A:
+    ...     field = 10
+    ...     @classproperty
+    ...     def field_x2(cls):
+    ...             return cls.field * 2
+    ...
+    >>> print(A.field_x2)
+    20
+    """
+
+    def __init__(self, func: Any):
+        self.fget = func
+
+    def __get__(self, instance: Any, owner: Any) -> Any:  # noqa: GL08
+        return self.fget(owner)

@@ -32,10 +32,7 @@ Examples
 >>> df = pd.read_csv_glob("data*.csv")
 """
 
-from modin.config import IsExperimental
-
-IsExperimental.put(True)
-
+import functools
 import warnings
 
 from modin.pandas import *  # noqa F401, F403
@@ -43,15 +40,23 @@ from modin.pandas import *  # noqa F401, F403
 from .io import (  # noqa F401
     read_csv_glob,
     read_custom_text,
+    read_parquet_glob,
     read_pickle_distributed,
     read_sql,
     to_pickle_distributed,
 )
 
-setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
+old_to_pickle_distributed = to_pickle_distributed
 
-warnings.warn(
-    "Thank you for using the Modin Experimental pandas API."
-    + "\nPlease note that some of these APIs deviate from pandas in order to "
-    + "provide improved performance."
-)
+
+@functools.wraps(to_pickle_distributed)
+def to_pickle_distributed(*args, **kwargs):
+    warnings.warn(
+        "`DataFrame.to_pickle_distributed` is deprecated and will be removed in a future version. "
+        + "Please use `DataFrame.modin.to_pickle_distributed` instead.",
+        category=FutureWarning,
+    )
+    return old_to_pickle_distributed(*args, **kwargs)
+
+
+setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405

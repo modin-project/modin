@@ -25,7 +25,8 @@ from pandas.core.dtypes.common import is_list_like
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import enable_logging
-from modin.utils import _inherit_docstrings, to_pandas
+from modin.pandas.io import to_pandas
+from modin.utils import _inherit_docstrings
 
 from .base import BasePandasDataset
 from .dataframe import DataFrame

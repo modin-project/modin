@@ -61,7 +61,7 @@ of the targets:
 
    pip install "modin[ray]" # Install Modin dependencies and Ray to run on Ray
    pip install "modin[dask]" # Install Modin dependencies and Dask to run on Dask
-   pip install "modin[unidist]" # Install Modin dependencies and Unidist to run on Unidist
+   pip install "modin[mpi]" # Install Modin dependencies and MPI to run on MPI through unidist
    pip install "modin[all]" # Install all of the above
 
 Modin will automatically detect which engine you have installed and use that for
@@ -77,7 +77,7 @@ variable ``MODIN_ENGINE`` and Modin will do computation with that engine:
    export MODIN_ENGINE=unidist # Modin will use Unidist
 
 If you want to choose the Unidist engine, you should set the additional environment 
-variable ``UNIDIST_BACKEND``, because currently Modin only supports Unidist on MPI:
+variable ``UNIDIST_BACKEND``, because currently Modin only supports MPI through unidist:
 
 .. code-block:: bash
 

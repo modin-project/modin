@@ -11,32 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Module houses ``ExperimentalPickleDispatcher`` class that is used for reading `.pkl` files."""
+"""Module houses ``ExperimentalGlobDispatcher`` class that is used to read/write files of different formats in parallel."""
 
 import glob
 import warnings
 
 import pandas
+from pandas.io.common import stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
 
 
-class ExperimentalPickleDispatcher(FileDispatcher):
-    """Class handles utils for reading pickle files."""
+class ExperimentalGlobDispatcher(FileDispatcher):
+    """Class implements reading/writing different formats, parallelizing by the number of files."""
 
     @classmethod
-    def _read(cls, filepath_or_buffer, **kwargs):
+    def _read(cls, **kwargs):
         """
         Read data from `filepath_or_buffer` according to `kwargs` parameters.
 
         Parameters
         ----------
         filepath_or_buffer : str, path object or file-like object
-            `filepath_or_buffer` parameter of `read_pickle` function.
+            `filepath_or_buffer` parameter of `read_*` function.
         **kwargs : dict
-            Parameters of `read_pickle` function.
+            Parameters of `read_*` function.
 
         Returns
         -------
@@ -45,10 +46,11 @@ class ExperimentalPickleDispatcher(FileDispatcher):
 
         Notes
         -----
-        In experimental mode, we can use `*` in the filename.
-
         The number of partitions is equal to the number of input files.
         """
+        path_key = "filepath_or_buffer" if "filepath_or_buffer" in kwargs else "path"
+        filepath_or_buffer = kwargs.pop(path_key)
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
@@ -102,36 +104,33 @@ class ExperimentalPickleDispatcher(FileDispatcher):
         - if `*` is in the filename, then it will be replaced by the ascending sequence 0, 1, 2, …
         - if `*` is not in the filename, then the default implementation will be used.
 
-        Example: 4 partitions and input filename="partition*.pkl.gz", then filenames will be:
-        `partition0.pkl.gz`, `partition1.pkl.gz`, `partition2.pkl.gz`, `partition3.pkl.gz`.
-
         Parameters
         ----------
         qc : BaseQueryCompiler
             The query compiler of the Modin dataframe that we want
-            to run ``to_pickle_distributed`` on.
+            to run ``to_<format>_glob`` on.
         **kwargs : dict
-            Parameters for ``pandas.to_pickle(**kwargs)``.
+            Parameters for ``pandas.to_<format>(**kwargs)``.
         """
+        path_key = "filepath_or_buffer" if "filepath_or_buffer" in kwargs else "path"
+        filepath_or_buffer = kwargs.pop(path_key)
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (
-            isinstance(kwargs["filepath_or_buffer"], str)
-            and "*" in kwargs["filepath_or_buffer"]
+            isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer
         ) or not isinstance(qc, PandasQueryCompiler):
             warnings.warn("Defaulting to Modin core implementation")
-            cls.base_io.to_pickle(qc, **kwargs)
+            cls.base_write(qc, filepath_or_buffer, **kwargs)
             return
+
+        # Be careful, this is a kind of limitation, but at the time of the first implementation,
+        # getting a name in this way is quite convenient.
+        # We can use this attribute because the names of the BaseIO's methods match pandas API.
+        write_func_name = cls.base_write.__name__
 
         def func(df, **kw):  # pragma: no cover
             idx = str(kw["partition_idx"])
-            # dask doesn't make a copy of kwargs on serialization;
-            # so take a copy ourselves, otherwise the error is:
-            #  kwargs["path"] = kwargs.pop("filepath_or_buffer").replace("*", idx)
-            #  KeyError: 'filepath_or_buffer'
-            dask_kwargs = dict(kwargs)
-            dask_kwargs["path"] = dask_kwargs.pop("filepath_or_buffer").replace(
-                "*", idx
-            )
-            df.to_pickle(**dask_kwargs)
+            path = filepath_or_buffer.replace("*", idx)
+            getattr(df, write_func_name)(path, **kwargs)
             return pandas.DataFrame()
 
         result = qc._modin_frame.apply_full_axis(
