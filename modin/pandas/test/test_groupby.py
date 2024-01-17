@@ -458,7 +458,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     )
     # breakpoint()
     eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
-   
+
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
@@ -487,7 +487,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ]
     for func in apply_functions:
         eval_apply(modin_groupby, pandas_groupby, func)
-    
+
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
@@ -1422,6 +1422,7 @@ def eval___getitem__(md_grp, pd_grp, item):
             return res
 
         return test
+
     md_grp[item].agg(["mean"])
     eval_general(
         md_grp,
@@ -2441,8 +2442,7 @@ def test_groupby_sort(sort, is_categorical_by):
     eval_general(md_grp, pd_grp, lambda grp: grp.sum(numeric_only=True))
     eval_general(md_grp, pd_grp, lambda grp: grp.size())
     eval_general(md_grp, pd_grp, lambda grp: grp.agg(lambda df: df.mean()))
-    # breakpoint()
-    # eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
+    eval_general(md_grp, pd_grp, lambda grp: grp.dtypes)
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
@@ -3157,12 +3157,17 @@ def test_groupby_agg_provided_callable_warning():
         ):
             pandas_groupby.agg(func)
 
+
 def _apply_transform(df):
     if len(df) == 0:
         df = df.copy()
         df.loc[0] = 10
         return df.squeeze()
     return df.sum()
+
+
+import os
+
 
 @pytest.mark.parametrize("observed", [False])
 @pytest.mark.parametrize("as_index", [True])
@@ -3173,7 +3178,7 @@ def _apply_transform(df):
         pytest.param(lambda grp: grp.size(), id="size"),
         pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
         pytest.param(lambda grp: grp.apply(_apply_transform), id="apply_transform"),
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "by_cols, cat_cols",
@@ -3192,7 +3197,7 @@ def _apply_transform(df):
         (["a", "b", "e"], ["e"]),
         (["a", "b", "e"], ["a", "e"]),
         (["a", "b", "e"], ["a", "b", "e"]),
-    ]
+    ],
 )
 @pytest.mark.parametrize(
     "exclude_values",
@@ -3200,12 +3205,26 @@ def _apply_transform(df):
         pytest.param(lambda row: ~row["a"].isin(["a", "e"]), id="exclude_from_a"),
         pytest.param(lambda row: ~row["b"].isin([4]), id="exclude_from_b"),
         pytest.param(lambda row: ~row["e"].isin(["x"]), id="exclude_from_e"),
-        pytest.param(lambda row: ~row["a"].isin(["a", "e"]) & ~row["b"].isin([4]), id="exclude_from_a_b"),
-        pytest.param(lambda row: ~row["b"].isin([4]) & ~row["e"].isin(["x"]), id="exclude_from_b_e"),
-        pytest.param(lambda row: ~row["a"].isin(["a", "e"]) & ~row["b"].isin([4]) & ~row["e"].isin(["x"]), id="exclude_from_a_b_e"),
-    ]
+        pytest.param(
+            lambda row: ~row["a"].isin(["a", "e"]) & ~row["b"].isin([4]),
+            id="exclude_from_a_b",
+        ),
+        pytest.param(
+            lambda row: ~row["b"].isin([4]) & ~row["e"].isin(["x"]),
+            id="exclude_from_b_e",
+        ),
+        pytest.param(
+            lambda row: ~row["a"].isin(["a", "e"])
+            & ~row["b"].isin([4])
+            & ~row["e"].isin(["x"]),
+            id="exclude_from_a_b_e",
+        ),
+    ],
 )
-def test_range_groupby_categories(observed, func, by_cols, cat_cols, exclude_values, as_index):
+def test_range_groupby_categories(
+    observed, func, by_cols, cat_cols, exclude_values, as_index
+):
+    np.random.seed(int(os.environ.get("TEST_SEED", 0)))
     data = {
         "a": ["a", "b", "c", "d", "e", "b", "g", "a"] * 32,
         "b": [1, 2, 3, 4] * 64,
