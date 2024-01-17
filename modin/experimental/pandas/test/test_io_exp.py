@@ -259,8 +259,12 @@ def test_distributed_pickling(tmp_path, filename, compression, pathlike):
         if filename_param == "test_default_to_pickle.pkl"
         else contextlib.nullcontext()
     ):
-        df.modin.to_pickle_distributed(str(tmp_path / filename), compression=compression)
-        pickled_df = pd.read_pickle_distributed(str(tmp_path / filename), compression=compression)
+        df.modin.to_pickle_distributed(
+            str(tmp_path / filename), compression=compression
+        )
+        pickled_df = pd.read_pickle_distributed(
+            str(tmp_path / filename), compression=compression
+        )
     df_equals(pickled_df, df)
 
 
@@ -272,7 +276,7 @@ def test_distributed_pickling(tmp_path, filename, compression, pathlike):
     "filename",
     ["test_parquet_glob.parquet", "test_parquet_glob*.parquet"],
 )
-def test_parquet_glob(filename):
+def test_parquet_glob(tmp_path, filename):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
@@ -283,12 +287,9 @@ def test_parquet_glob(filename):
         if filename_param == "test_parquet_glob.parquet"
         else contextlib.nullcontext()
     ):
-        df.modin.to_parquet_glob(filename)
-        read_df = pd.read_parquet_glob(filename)
+        df.modin.to_parquet_glob(str(tmp_path / filename))
+        read_df = pd.read_parquet_glob(str(tmp_path / filename))
     df_equals(read_df, df)
-
-    parquet_files = glob.glob(str(filename))
-    teardown_test_files(parquet_files)
 
 
 @pytest.mark.skipif(
