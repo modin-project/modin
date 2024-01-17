@@ -38,6 +38,8 @@ def concatenate(dfs):
         assert df.columns.equals(dfs[0].columns)
     for i in dfs[0].columns.get_indexer_for(dfs[0].select_dtypes("category").columns):
         columns = [df.iloc[:, i] for df in dfs]
+        if not all(isinstance(col.dtype, pandas.CategoricalDtype) for col in columns):
+            continue
         union = union_categoricals(columns)
         for df in dfs:
             df.isetitem(

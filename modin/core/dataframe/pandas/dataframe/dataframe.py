@@ -3831,16 +3831,12 @@ class PandasDataframe(ClassLogger):
                 result.attrs[skip_on_aligning_flag] = True
             return result
 
-        # breakpoint()
         result = self._apply_func_to_range_partitioning(
             key_columns=by,
             func=apply_func,
         )
-        # breakpoint()
         # no need aligning columns if there's only one row partition
-        if (
-            add_missing_cats or align_result_columns
-        ):  # and result._partitions.shape[0] > 1:
+        if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
             # partition in the result, so we should never hit this exception for now, however
             # in the future, we might want to make this implementation more broader
@@ -3854,7 +3850,7 @@ class PandasDataframe(ClassLogger):
             #      it gathers all the dataframes in a single ray-kernel.
             #   2. The second one works slower, but only gathers light pandas.Index objects,
             #      so there should be less stress on the network.
-            if not IsRayCluster.get():
+            if add_missing_cats or not IsRayCluster.get():
                 original_dtypes = self.dtypes if self.has_materialized_dtypes else None
 
                 def compute_aligned_columns(*dfs, initial_columns=None):

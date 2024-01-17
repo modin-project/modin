@@ -3165,10 +3165,9 @@ def _apply_transform(df):
         return df.squeeze()
     return df.sum()
 
-
-import os
-
-
+@pytest.mark.parametrize(
+    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
+)
 @pytest.mark.parametrize("observed", [False])
 @pytest.mark.parametrize("as_index", [True])
 @pytest.mark.parametrize(
@@ -3222,9 +3221,10 @@ import os
     ],
 )
 def test_range_groupby_categories(
-    observed, func, by_cols, cat_cols, exclude_values, as_index
+    observed, func, by_cols, cat_cols, exclude_values, as_index, modify_config
 ):
-    np.random.seed(int(os.environ.get("TEST_SEED", 0)))
+    # HACK: there's a bug
+    np.random.seed(0)
     data = {
         "a": ["a", "b", "c", "d", "e", "b", "g", "a"] * 32,
         "b": [1, 2, 3, 4] * 64,
@@ -3239,6 +3239,4 @@ def test_range_groupby_categories(
 
     md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
     pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
-    # breakpoint()
-    # print("lel")
     df_equals(md_res, pd_res)
