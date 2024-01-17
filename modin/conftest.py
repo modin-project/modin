@@ -558,8 +558,8 @@ def s3_storage_options(worker_id):
         # to do that is to use the `worker_id`, which is unique, to determine what port to point
         # to. We arbitrarily assign `5` as a worker id to the master worker, since we need a number
         # for each worker, and we never run tests with more than `pytest -n 4`.
-        worker_id = "5" if worker_id == "master" else worker_id.lstrip("gw")
-        url = f"http://127.0.0.1:555{worker_id}/"
+        worker_id = "0" if worker_id == "master" else worker_id.lstrip("gw")
+        url = f"http://127.0.0.1:550{worker_id}/"
     return {"client_kwargs": {"endpoint_url": url}}
 
 
@@ -700,6 +700,9 @@ def s3_resource(s3_base):
     s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
 
     s3.rm(bucket, recursive=True)
+    # bucket = conn.Bucket(bucket)
+    # bucket.objects.delete()
+    # bucket.delete()
     for _ in range(20):
         # We want to wait until the deletion finishes.
         if not cli.list_buckets()["Buckets"]:

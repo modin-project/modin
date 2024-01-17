@@ -2078,15 +2078,22 @@ class TestParquet:
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
-    def test_read_parquet_s3_with_column_partitioning(self, engine):
-        # This test case comes from
+    def test_read_parquet_s3_with_column_partitioning(
+        self, s3_resource, engine, s3_storage_options
+    ):
         # https://github.com/modin-project/modin/issues/4636
-        dataset_url = "s3://modin-datasets/modin-bugs/modin_bug_5159_parquet/df.parquet"
+        dataset_path = "modin/pandas/test/data/issue5159.parquet"
+        s3_path = "s3://modin-test/modin-bugs/issue5159.parquet"
+
+        # TODO: write files to local s3 storage not through pandas
+        pandas.read_parquet(dataset_path).to_parquet(
+            s3_path, engine=engine, storage_options=s3_storage_options
+        )
         eval_io(
             fn_name="read_parquet",
-            path=dataset_url,
+            path=s3_path,
             engine=engine,
-            storage_options={"anon": True},
+            storage_options=s3_storage_options,
         )
 
 
