@@ -12,6 +12,7 @@
    usage_guide/index
    supported_apis/index
    development/index
+   ecosystem
    contact
 
 .. raw:: html
