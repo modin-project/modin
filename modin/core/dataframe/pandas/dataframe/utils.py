@@ -521,10 +521,11 @@ def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
 
     return decorator
 
-
+from timeit import default_timer as timer
 def add_missing_categories_to_groupby(
     dfs, by, operator, initial_columns, combined_cols, is_udf_agg, kwargs, initial_dtypes=None
 ):
+    t1 = timer()
     kwargs["observed"] = False
     new_combined_cols = combined_cols
 
@@ -540,15 +541,16 @@ def add_missing_categories_to_groupby(
         missing_cats_dtype = {
             name: level.dtype
             if isinstance(level.dtype, pandas.CategoricalDtype)
-            # it's a bit confusing but we have to convert the remaining columns to categoricals
+            # it's a bit confusing but we have to convert the remaining 'by' columns to categoricals
             # in order to compute a proper fill value later in the code
             else pandas.CategoricalDtype(level)
             for level, name in zip(total_index.levels, total_index.names)
         }
         # if we're grouping on multiple groupers, then the missing categorical values is a
         # carthesian product of (actual_missing_categorical_values X all_values_of_another_groupers)
+        # breakpoint()
         complete_index = pandas.MultiIndex.from_product(
-            [value.categories for value in missing_cats_dtype.values()],
+            [value.categories.astype(total_level.dtype) for total_level, value in zip(total_index.levels, missing_cats_dtype.values())],
             names=by,
         )
         missing_index = complete_index[~complete_index.isin(total_index)]
@@ -560,7 +562,9 @@ def add_missing_categories_to_groupby(
         missing_index = total_index.categories.difference(total_index.values)
         missing_cats_dtype = {by[0]: pandas.CategoricalDtype(missing_index)}
     missing_index.names = by
-
+    print("generating missing", timer() - t1)
+    print(len(missing_index))
+    t1 = timer()
     if len(missing_index) == 0:
         return {}, new_combined_cols
     # breakpoint()
@@ -587,7 +591,8 @@ def add_missing_categories_to_groupby(
         empty_df = empty_df.astype("int64" if initial_dtypes is None else initial_dtypes)
         empty_df = empty_df.astype(missing_cats_dtype)
         missing_values = operator(empty_df.groupby(by, **kwargs))
-
+    print("getting fill value", timer() - t1)
+    t1 = timer()
     if is_udf_agg and not isinstance(total_index, pandas.MultiIndex):
         missing_values = missing_values.drop(
             columns=by, errors="ignore"
@@ -604,23 +609,24 @@ def add_missing_categories_to_groupby(
         # If the aggregation has failed, the result would be empty. Assuming the
         # fill value to be `np.NaN` here (this may not always be correct!!!)
         fill_value = np.NaN if len(missing_values) == 0 else missing_values.iloc[0, 0]
-        missing_values = pandas.DataFrame(index=missing_index, columns=combined_cols).fillna(
-            fill_value
-        )
-
+        missing_values = pandas.DataFrame(fill_value, index=missing_index, columns=combined_cols)
+    print("generating missing values", timer() - t1)
+    t1 = timer()
     # restoring original categorical dtypes for the indices
     if isinstance(missing_values.index, pandas.MultiIndex):
         # MultiIndex.astype() only takes a single dtype, the only way to cast
         # individual levels to different dtypes is to convert MI to DF do the
         # casting then
-        missing_values.index = pandas.MultiIndex.from_frame(
-            missing_values.index.to_frame().astype(
-                {name: dtype for name, dtype in total_index.dtypes.items()}
-            )
-        )
+        pass
+        # missing_values.index = pandas.MultiIndex.from_frame(
+        #     missing_values.index.to_frame().astype(
+        #         {name: dtype for name, dtype in total_index.dtypes.items()}
+        #     )
+        # )
     else:
         missing_values.index = missing_values.index.astype(total_index.dtype)
-
+    print("casting to original dtype", timer() - t1)
+    t1 = timer()
     ### Then we decide to which missing categorical values should go to which partition
     if not kwargs["sort"]:
         # If the result is allowed to be unsorted, simply insert all the missing
@@ -656,13 +662,14 @@ def add_missing_categories_to_groupby(
         # doesn't affect the result
         bins.append(idx[-1][0] if isinstance(idx, pandas.MultiIndex) else idx[-1])
     old_bins_to_new[len(bins)] = offset
-
+    # breakpoint()
     if len(bins) == 0:
         # insert values to the first non-empty partition
         return {old_bins_to_new.get(0, 0): missing_values}, new_combined_cols
 
     # we used the very first level of MultiIndex to build bins, meaning that we also have
     # to use values of the first index's level for 'digitize'
+    # breakpoint()
     lvl_zero = (
         missing_values.index.levels[0]
         if isinstance(missing_values.index, pandas.MultiIndex)
@@ -672,14 +679,23 @@ def add_missing_categories_to_groupby(
         part_idx = np.digitize(lvl_zero, bins, right=True)
     else:
         part_idx = np.searchsorted(bins, lvl_zero)
-
+    print("binning", timer() - t1)
+    t1 = timer()
     ### In the end we build a dictionary mapping partition index to a dataframe with missing categoricals
     ### to be inserted into this partition
     masks = {}
-    frame_idx = missing_values.index.to_frame()
-    for idx, values in lvl_zero.groupby(part_idx).items():
-        masks[idx] = missing_values[frame_idx.iloc[:, 0].isin(values)]
+    # if isinstance(total_index, pandas.MultiIndex):
+    #     breakpoint()
+    # frame_idx = missing_values.index.to_frame()
+    if isinstance(total_index, pandas.MultiIndex):
+        for idx, values in pandas.RangeIndex(len(lvl_zero)).groupby(part_idx).items():
+            masks[idx] = missing_values[pandas.Index(missing_values.index.codes[0]).isin(values)]
+    else:
+        frame_idx = missing_values.index.to_frame()
+        for idx, values in lvl_zero.groupby(part_idx).items():
+            masks[idx] = missing_values[frame_idx.iloc[:, 0].isin(values)]
 
     # Restore the original indexing by adding the amount of skipped missing partitions
     masks = {key + old_bins_to_new[key]: value for key, value in masks.items()}
+    print("generating masks", timer() - t1)
     return masks, new_combined_cols

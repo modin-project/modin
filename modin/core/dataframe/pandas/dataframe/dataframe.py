@@ -18,6 +18,8 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
+from timeit import default_timer as timer
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -3904,14 +3906,20 @@ class PandasDataframe(ClassLogger):
 
                 def apply_aligned(df, args, partition_idx):
                     combined_cols, mask = args
+                    t1 = timer()
                     if mask is not None and mask.get(partition_idx) is not None:
                         values = mask[partition_idx]
 
                         original_names = df.index.names
+                        # values = pandas.DataFrame(np.NaN, index=values.index, columns=df.columns)
                         df = pandas.concat([df, values])
+                        
+                        print("concating", timer() - t1)
+                        t1 = timer()
                         if kwargs["sort"]:
                             # TODO: write search-sorted insertion or sort the result after insertion
                             df = df.sort_index(axis=0)
+                        print("sorting", timer() - t1)
                         df.index.names = original_names
                     if combined_cols is not None:
                         df = df.reindex(columns=combined_cols)

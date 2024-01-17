@@ -3239,4 +3239,5 @@ def test_range_groupby_categories(
 
     md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
     pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
+    # breakpoint()
     df_equals(md_res, pd_res)
