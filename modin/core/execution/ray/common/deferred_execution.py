@@ -58,7 +58,7 @@ class DeferredExecution:
         The execution input.
     func : callable or ObjectRefType
         A function to be executed.
-    args : iterable
+    args : list or tuple
         Additional positional arguments to be passed in `func`.
     kwargs : dict
         Additional keyword arguments to be passed in `func`.
@@ -80,7 +80,7 @@ class DeferredExecution:
             List[Union[ObjectRefType, "DeferredExecution"]],
         ],
         func: Union[Callable, ObjectRefType],
-        args: Iterable[Any],
+        args: Union[List[Any], Tuple[Any]],
         kwargs: Dict[str, Any],
         num_returns=1,
         flat_args: Optional[bool] = None,
@@ -103,7 +103,11 @@ class DeferredExecution:
                 flat_kwargs = True
         ref(data)
         self.data = data
-        self.task = (func, args, kwargs, flat_args, flat_kwargs)
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+        self.flat_args = flat_args
+        self.flat_kwargs = flat_kwargs
         self.num_returns = num_returns
         self.ref_counter = 0
 
@@ -140,16 +144,15 @@ class DeferredExecution:
         if not self.has_result:
             data = self.data
             if self.num_returns == 1 and not isinstance(data, DeferredExecution):
-                task = self.task
-                if task[3] and task[4]:
+                if self.flat_kwargs and self.flat_kwargs:
                     result, length, width, ip = remote_exec_func.remote(
-                        task[0], data, *task[1], **task[2]
+                        self.func, data, *self.args, **self.kwargs
                     )
                     meta = MetaList([length, width, ip])
                     self._set_result(result, meta, 0)
                     return result, meta, 0
 
-            consumers, output = deconstruct(self)
+            consumers, output = _deconstruct(self)
             num_returns = sum(c.num_returns for c in consumers) + 1
             results = _remote_exec_chain(num_returns, *output)
             meta = MetaList(results.pop())
@@ -182,7 +185,7 @@ class DeferredExecution:
         meta : MetaList
         meta_off : int or list of int
         """
-        del self.task
+        del self.func, self.args, self.kwargs, self.flat_args, self.flat_kwargs
         self.data = result
         self.meta = meta
         self.meta_off = meta_off
@@ -196,7 +199,7 @@ class DeferredExecution:
         -------
         bool
         """
-        return not hasattr(self, "task")
+        return not hasattr(self, "func")
 
     def ref_count(self, diff: int):
         """
@@ -307,7 +310,7 @@ def has_list_or_de(it: Iterable):
     return any(isinstance(i, ListOrDe) for i in it)
 
 
-def deconstruct(de: DeferredExecution) -> Tuple[List[DeferredExecution], List[Any]]:
+def _deconstruct(de: DeferredExecution) -> Tuple[List[DeferredExecution], List[Any]]:
     """
     Convert the specified execution tree to a flat list.
 
@@ -398,18 +401,17 @@ def _deconstruct_chain(
 
     assert stack and isinstance(stack[-1], DeferredExecution)
     while stack and isinstance(stack[-1], DeferredExecution):
-        de = stack.pop()
-        task = de.task
-        args = task[1]
-        kwargs: Dict[str, Any] = task[2]
-        out_append(task[0])
-        if task[3]:
+        de: DeferredExecution = stack.pop()
+        args = de.args
+        kwargs = de.kwargs
+        out_append(de.func)
+        if de.flat_args:
             out_append(len(args))
             out_extend(args)
         else:
             out_append(-1)
             yield _deconstruct_list(args, output, stack, result_consumers, out_append)
-        if task[4]:
+        if de.flat_kwargs:
             out_append(len(kwargs))
             for item in kwargs.items():
                 out_extend(item)
@@ -466,139 +468,171 @@ def _deconstruct_list(
     out_append(_Tag.END)
 
 
-def construct(num_returns: int, args: Tuple) -> Generator:  # pragma: no cover
-    """
-    Construct and execute the specified chain.
-
-    This function is called in a worker process. The last value, returned by
-    this generator, is the meta list, containing the objects lengths and widths
-    and the worker ip address, as the last value in the list.
-
-    Parameters
-    ----------
-    num_returns : int
-    args : tuple
-
-    Returns
-    -------
-    Generator
-    """
-    chain = list(reversed(args))
-    meta = []
-    try:
-        stack = [_construct_chain(chain, {}, meta, None)]
-        while stack:
+class _RemoteExecutor:
+    @staticmethod
+    def exec_func(fn: Callable, obj: Any, args: Tuple, kwargs: Dict):  # noqa: GL08
+        try:
             try:
-                gen = stack.pop()
-                obj = next(gen)
-                stack.append(gen)
-                if isinstance(obj, GeneratorType):
-                    stack.append(obj)
+                return fn(obj, *args, **kwargs)
+                # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
+                # don't want the error to propagate to the user, and we want to avoid copying unless
+                # we absolutely have to.
+            except ValueError as err:
+                if isinstance(obj, (pandas.DataFrame, pandas.Series)):
+                    return fn(obj.copy(), *args, **kwargs)
                 else:
-                    yield obj
-            except StopIteration:
-                ...
-    except DeferredExecutionException as err:
-        for _ in range(num_returns - 1):
-            yield err
-    except Exception as err:
-        err = DeferredExecutionException(
-            f"args={args}, chain={list(reversed(chain))}", err
-        )
-        for _ in range(num_returns - 1):
-            yield err
-    meta.append(get_node_ip_address())
-    yield meta
+                    raise err
+        except Exception as err:
+            raise DeferredExecutionException(
+                f"fn={fn}, obj={obj}, args={args}, kwargs={kwargs}", err
+            )
 
+    @classmethod
+    def construct(cls, num_returns: int, args: Tuple) -> Generator:  # pragma: no cover
+        """
+        Construct and execute the specified chain.
 
-def _construct_chain(
-    chain: List,
-    refs: Dict[int, Any],
-    meta: List,
-    lst: Optional[List],
-):  # pragma: no cover # noqa: GL08
-    pop = chain.pop
-    tg_e = _Tag.END
+        This function is called in a worker process. The last value, returned by
+        this generator, is the meta list, containing the objects lengths and widths
+        and the worker ip address, as the last value in the list.
 
-    obj = pop()
-    if isinstance(obj, DeferredExecutionException):
-        raise obj
-    if obj is _Tag.REF:
-        obj = refs[pop()]
-    elif obj is _Tag.LIST:
-        obj = []
-        yield _construct_list(obj, chain, refs, meta)
-        if isinstance(obj[0], DeferredExecutionException):
-            raise obj[0]
+        Parameters
+        ----------
+        num_returns : int
+        args : tuple
 
-    while chain:
-        fn = pop()
-        if fn == tg_e:
-            lst.append(obj)
-            break
+        Returns
+        -------
+        Generator
+        """
+        chain = list(reversed(args))
+        meta = []
+        try:
+            stack = [cls.construct_chain(chain, {}, meta, None)]
+            while stack:
+                try:
+                    gen = stack.pop()
+                    obj = next(gen)
+                    stack.append(gen)
+                    if isinstance(obj, GeneratorType):
+                        stack.append(obj)
+                    else:
+                        yield obj
+                except StopIteration:
+                    ...
+        except DeferredExecutionException as err:
+            for _ in range(num_returns - 1):
+                yield err
+        except Exception as err:
+            err = DeferredExecutionException(
+                f"args={args}, chain={list(reversed(chain))}", err
+            )
+            for _ in range(num_returns - 1):
+                yield err
+        meta.append(get_node_ip_address())
+        yield meta
 
-        if (args_len := pop()) >= 0:
-            if args_len == 0:
-                args = []
-            else:
-                args = chain[-args_len:]
-                del chain[-args_len:]
-                args.reverse()
-        else:
-            args = []
-            yield _construct_list(args, chain, refs, meta)
-        if (args_len := pop()) >= 0:
-            kwargs = {pop(): pop() for _ in range(args_len)}
-        else:
-            values = []
-            yield _construct_list(values, chain, refs, meta)
-            kwargs = {pop(): v for v in values}
+    @classmethod
+    def construct_chain(
+        cls,
+        chain: List,
+        refs: Dict[int, Any],
+        meta: List,
+        lst: Optional[List],
+    ):  # pragma: no cover # noqa: GL08
+        pop = chain.pop
+        tg_e = _Tag.END
 
-        obj = _exec_func(fn, obj, args, kwargs)
-
-        if ref := pop():
-            refs[ref] = obj
-        if pop():
-            if isinstance(obj, ListOrTuple):
-                for o in obj:
-                    meta.append(len(o) if hasattr(o, "__len__") else 0)
-                    meta.append(len(o.columns) if hasattr(o, "columns") else 0)
-                    yield o
-            else:
-                meta.append(len(obj) if hasattr(obj, "__len__") else 0)
-                meta.append(len(obj.columns) if hasattr(obj, "columns") else 0)
-                yield obj
-
-
-def _construct_list(
-    lst: List,
-    chain: List,
-    refs: Dict[int, Any],
-    meta: List,
-):  # pragma: no cover # noqa: GL08
-    pop = chain.pop
-    lst_append = lst.append
-    while True:
         obj = pop()
-        if isinstance(obj, _Tag):
-            if obj == _Tag.END:
+        if isinstance(obj, DeferredExecutionException):
+            raise obj
+        if obj is _Tag.REF:
+            obj = refs[pop()]
+        elif obj is _Tag.LIST:
+            obj = []
+            yield cls.construct_list(obj, chain, refs, meta)
+            if isinstance(obj[0], DeferredExecutionException):
+                raise obj[0]
+
+        while chain:
+            fn = pop()
+            if fn == tg_e:
+                lst.append(obj)
                 break
-            elif obj == _Tag.CHAIN:
-                yield _construct_chain(chain, refs, meta, lst)
-            elif obj == _Tag.LIST:
-                lst_append([])
-                yield _construct_list(lst[-1], chain, refs, meta)
-            elif obj is _Tag.REF:
-                lst_append(refs[pop()])
+
+            if (args_len := pop()) >= 0:
+                if args_len == 0:
+                    args = []
+                else:
+                    args = chain[-args_len:]
+                    del chain[-args_len:]
+                    args.reverse()
             else:
-                raise ValueError(f"Unexpected tag {obj}")
-        else:
-            lst_append(obj)
+                args = []
+                yield cls.construct_list(args, chain, refs, meta)
+            if (args_len := pop()) >= 0:
+                kwargs = {pop(): pop() for _ in range(args_len)}
+            else:
+                values = []
+                yield cls.construct_list(values, chain, refs, meta)
+                kwargs = {pop(): v for v in values}
+
+            obj = cls.exec_func(fn, obj, args, kwargs)
+
+            if ref := pop():
+                refs[ref] = obj
+            if pop():
+                if isinstance(obj, ListOrTuple):
+                    for o in obj:
+                        meta.append(len(o) if hasattr(o, "__len__") else 0)
+                        meta.append(len(o.columns) if hasattr(o, "columns") else 0)
+                        yield o
+                else:
+                    meta.append(len(obj) if hasattr(obj, "__len__") else 0)
+                    meta.append(len(obj.columns) if hasattr(obj, "columns") else 0)
+                    yield obj
+
+    @classmethod
+    def construct_list(
+        cls,
+        lst: List,
+        chain: List,
+        refs: Dict[int, Any],
+        meta: List,
+    ):  # pragma: no cover # noqa: GL08
+        pop = chain.pop
+        lst_append = lst.append
+        while True:
+            obj = pop()
+            if isinstance(obj, _Tag):
+                if obj == _Tag.END:
+                    break
+                elif obj == _Tag.CHAIN:
+                    yield cls.construct_chain(chain, refs, meta, lst)
+                elif obj == _Tag.LIST:
+                    lst_append([])
+                    yield cls.construct_list(lst[-1], chain, refs, meta)
+                elif obj is _Tag.REF:
+                    lst_append(refs[pop()])
+                else:
+                    raise ValueError(f"Unexpected tag {obj}")
+            else:
+                lst_append(obj)
+
+    def __reduce__(self):
+        return "_REMOTE_EXEC"
+
+
+_REMOTE_EXEC = _RemoteExecutor()
 
 
 @ray.remote(num_returns=4)
 def remote_exec_func(
-    fn: Callable, obj: Any, *args: Tuple, **kwargs: Dict
+    fn: Callable,
+    obj: Any,
+    *args: Tuple,
+    remote_executor=_REMOTE_EXEC,
+    **kwargs: Dict,
 ):  # pragma: no cover
     """
     Execute the specified function in a worker process.
@@ -618,7 +652,7 @@ def remote_exec_func(
     The execution result, the result length and width, the worked address.
     """
     try:
-        obj = _exec_func(fn, obj, args, kwargs)
+        obj = remote_executor.exec_func(fn, obj, args, kwargs)
         return (
             obj,
             len(obj) if hasattr(obj, "__len__") else 0,
@@ -629,25 +663,7 @@ def remote_exec_func(
         return [err] * 4
 
 
-def _exec_func(fn: Callable, obj: Any, args: Tuple, kwargs: Dict):  # noqa: GL08
-    try:
-        try:
-            return fn(obj, *args, **kwargs)
-            # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-            # don't want the error to propagate to the user, and we want to avoid copying unless
-            # we absolutely have to.
-        except ValueError as err:
-            if isinstance(obj, (pandas.DataFrame, pandas.Series)):
-                return fn(obj.copy(), *args, **kwargs)
-            else:
-                raise err
-    except Exception as err:
-        raise DeferredExecutionException(
-            f"fn={fn}, obj={obj}, args={args}, kwargs={kwargs}", err
-        )
-
-
-def _remote_exec_chain(num_returns: int, *args: Tuple):
+def _remote_exec_chain(num_returns: int, *args: Tuple) -> List[Any]:
     """
     Execute the deconstructed chain in a worker process.
 
@@ -660,7 +676,7 @@ def _remote_exec_chain(num_returns: int, *args: Tuple):
 
     Returns
     -------
-    Generator
+    list
     """
     if num_returns == 2:
         return _remote_exec_single_chain.remote(*args)
@@ -671,7 +687,9 @@ def _remote_exec_chain(num_returns: int, *args: Tuple):
 
 
 @ray.remote(num_returns=2)
-def _remote_exec_single_chain(*args: Tuple) -> Generator:  # pragma: no cover
+def _remote_exec_single_chain(
+    *args: Tuple, remote_executor=_REMOTE_EXEC
+) -> Generator:  # pragma: no cover
     """
     Execute the deconstructed chain with a single return value in a worker process.
 
@@ -684,12 +702,12 @@ def _remote_exec_single_chain(*args: Tuple) -> Generator:  # pragma: no cover
     -------
     Generator
     """
-    return construct(2, args)
+    return remote_executor.construct(2, args)
 
 
 @ray.remote
 def _remote_exec_multi_chain(
-    num_returns: int, *args: Tuple
+    num_returns: int, *args: Tuple, remote_executor=_REMOTE_EXEC
 ) -> Generator:  # pragma: no cover
     """
     Execute the deconstructed chain with a multiple return values in a worker process.
@@ -705,4 +723,4 @@ def _remote_exec_multi_chain(
     -------
     Generator
     """
-    return construct(num_returns, args)
+    return remote_executor.construct(num_returns, args)
