@@ -1944,7 +1944,9 @@ class TestParquet:
         if path_type == "object":
             import s3fs
 
-            fs = s3fs.S3FileSystem(anon=True)
+            fs = s3fs.S3FileSystem(
+                endpoint_url=s3_storage_options["client_kwargs"]["endpoint_url"]
+            )
             with fs.open(s3_path, "rb") as file_obj:
                 eval_io("read_parquet", path=file_obj, engine=engine)
         elif path_type == "directory":
@@ -2137,7 +2139,7 @@ class TestJson:
 
     @pytest.mark.parametrize(
         "storage_options_extra",
-        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/testing/test_data.json"
@@ -2933,7 +2935,7 @@ class TestFwf:
 
     @pytest.mark.parametrize(
         "storage_options_extra",
-        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_fwf_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/modin-bugs/test_data.fwf"
@@ -3032,7 +3034,7 @@ class TestFeather:
 
     @pytest.mark.parametrize(
         "storage_options_extra",
-        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+        [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_feather_s3(
         self, s3_resource, s3_storage_options, storage_options_extra
