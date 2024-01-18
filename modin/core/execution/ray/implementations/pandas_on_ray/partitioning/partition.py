@@ -12,6 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module houses class that wraps data (block partition) and its metadata."""
+
 from typing import Callable, Union
 
 import pandas
@@ -66,12 +67,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             data.ref_count(1)
         self._data_ref = data
         # The metadata is stored in the MetaList at 0 offset. If the data is
-        # a DeferredExecution, the meta will be replaced with the list, returned
+        # a DeferredExecution, the _meta will be replaced with the list, returned
         # by the remote function. The returned list may contain data for multiple
-        # results and, in this case, meta_off corresponds to the meta related to
+        # results and, in this case, _meta_offset corresponds to the meta related to
         # this partition.
-        self.meta = MetaList([length, width, ip])
-        self.meta_off = 0
+        self._meta = MetaList([length, width, ip])
+        self._meta_offset = 0
 
     def __del__(self):
         """Decrement the reference counter."""
@@ -136,7 +137,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             (
                 self._data_ref,
                 self._meta,
-                self._meta_off,
+                self._meta_offset,
             ) = data.exec()
             data.ref_count(-1)
 
@@ -320,27 +321,27 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     @property
     def _length_cache(self):  # noqa: GL08
-        return self.meta[self.meta_off]
+        return self._meta[self._meta_offset]
 
     @_length_cache.setter
     def _length_cache(self, value):  # noqa: GL08
-        self.meta[self.meta_off] = value
+        self._meta[self._meta_offset] = value
 
     @property
     def _width_cache(self):  # noqa: GL08
-        return self.meta[self.meta_off + 1]
+        return self._meta[self._meta_offset + 1]
 
     @_width_cache.setter
     def _width_cache(self, value):  # noqa: GL08
-        self.meta[self.meta_off + 1] = value
+        self._meta[self._meta_offset + 1] = value
 
     @property
     def _ip_cache(self):  # noqa: GL08
-        return self.meta[-1]
+        return self._meta[-1]
 
     @_ip_cache.setter
     def _ip_cache(self, value):  # noqa: GL08
-        self.meta[-1] = value
+        self._meta[-1] = value
 
 
 @ray.remote(num_returns=2)
