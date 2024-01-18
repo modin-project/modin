@@ -47,7 +47,9 @@ class JSONDispatcher(TextFileDispatcher):
         path_or_buf = stringify_path(path_or_buf)
         path_or_buf = cls.get_path_or_buffer(path_or_buf)
         if isinstance(path_or_buf, str):
-            if not cls.file_exists(path_or_buf):
+            if not cls.file_exists(
+                path_or_buf, storage_options=kwargs.get("storage_options")
+            ):
                 return cls.single_worker_read(
                     path_or_buf, reason=cls._file_not_found_msg(path_or_buf), **kwargs
                 )
@@ -60,12 +62,21 @@ class JSONDispatcher(TextFileDispatcher):
             return cls.single_worker_read(
                 path_or_buf, reason="`lines` argument not supported", **kwargs
             )
-        with OpenFile(path_or_buf, "rb") as f:
+        with OpenFile(
+            path_or_buf,
+            "rb",
+            **(kwargs.get("storage_options", None) or {}),
+        ) as f:
             columns = pandas.read_json(BytesIO(b"" + f.readline()), lines=True).columns
         kwargs["columns"] = columns
         empty_pd_df = pandas.DataFrame(columns=columns)
 
-        with OpenFile(path_or_buf, "rb", kwargs.get("compression", "infer")) as f:
+        with OpenFile(
+            path_or_buf,
+            "rb",
+            kwargs.get("compression", "infer"),
+            **(kwargs.get("storage_options", None) or {}),
+        ) as f:
             column_widths, num_splits = cls._define_metadata(empty_pd_df, columns)
             args = {"fname": path_or_buf, "num_splits": num_splits, **kwargs}
             splits, _ = cls.partitioned_file(

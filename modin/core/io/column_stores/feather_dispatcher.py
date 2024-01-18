@@ -75,5 +75,9 @@ class FeatherDispatcher(ColumnStoreDispatcher):
             # Filtering out the columns that describe the frame's index
             columns = [col for col in reader.schema.names if col not in index_cols]
         return cls.build_query_compiler(
-            path, columns, use_threads=False, dtype_backend=kwargs["dtype_backend"]
+            path,
+            columns,
+            use_threads=False,
+            storage_options=kwargs["storage_options"],
+            dtype_backend=kwargs["dtype_backend"],
         )
