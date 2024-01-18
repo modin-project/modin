@@ -1939,7 +1939,7 @@ class TestParquet:
         "path_type",
         ["object", "directory", "url"],
     )
-    def test_read_parquet_s3(self, s3_resource, path_type, engine, storage_options):
+    def test_read_parquet_s3(self, s3_resource, path_type, engine, s3_storage_options):
         s3_path = "s3://modin-test/modin-bugs/test_data.parquet"
         if path_type == "object":
             import s3fs
@@ -1952,14 +1952,14 @@ class TestParquet:
             eval_io(
                 "read_parquet",
                 path=s3_path,
-                storage_options=storage_options,
+                storage_options=s3_storage_options,
                 engine=engine,
             )
         else:
             eval_io(
                 "read_parquet",
                 path=s3_path,
-                storage_options=storage_options,
+                storage_options=s3_storage_options,
                 engine=engine,
             )
 
@@ -2136,17 +2136,17 @@ class TestJson:
         )
 
     @pytest.mark.parametrize(
-        "storage_options",
+        "storage_options_extra",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
-    def test_read_json_s3(self, s3_resource, storage_options):
+    def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/testing/test_data.json"
         eval_io(
             fn_name="read_json",
             path_or_buf=s3_path,
             lines=True,
             orient="records",
-            storage_options=storage_options,
+            storage_options=s3_storage_options | storage_options_extra,
         )
 
     def test_read_json_categories(self):
@@ -2932,15 +2932,15 @@ class TestFwf:
         df_equals(modin_df, pandas_df)
 
     @pytest.mark.parametrize(
-        "storage_options",
+        "storage_options_extra",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
-    def test_read_fwf_s3(self, s3_resource, storage_options):
+    def test_read_fwf_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/modin-bugs/test_data.fwf"
         eval_io(
             fn_name="read_fwf",
             filepath_or_buffer=s3_path,
-            storage_options=storage_options,
+            storage_options=s3_storage_options | storage_options_extra,
         )
 
 
@@ -3031,15 +3031,17 @@ class TestFeather:
         )
 
     @pytest.mark.parametrize(
-        "storage_options",
+        "storage_options_extra",
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
     )
-    def test_read_feather_s3(self, s3_resource, storage_options):
+    def test_read_feather_s3(
+        self, s3_resource, s3_storage_options, storage_options_extra
+    ):
         s3_path = "s3://modin-test/modin-bugs/test_data.feather"
         eval_io(
             fn_name="read_feather",
             path=s3_path,
-            storage_options=storage_options,
+            storage_options=s3_storage_options | storage_options_extra,
         )
 
     def test_read_feather_path_object(self, make_feather_file):
