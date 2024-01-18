@@ -3837,7 +3837,6 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
-
         # no need aligning columns if there's only one row partition
         if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
@@ -3907,20 +3906,15 @@ class PandasDataframe(ClassLogger):
 
                 def apply_aligned(df, args, partition_idx):
                     combined_cols, mask = args
-                    t1 = timer()
                     if mask is not None and mask.get(partition_idx) is not None:
                         values = mask[partition_idx]
 
                         original_names = df.index.names
                         # values = pandas.DataFrame(np.NaN, index=values.index, columns=df.columns)
                         df = pandas.concat([df, values])
-
-                        print("concating", timer() - t1)
-                        t1 = timer()
                         if kwargs["sort"]:
                             # TODO: write search-sorted insertion or sort the result after insertion
                             df = df.sort_index(axis=0)
-                        print("sorting", timer() - t1)
                         df.index.names = original_names
                     if combined_cols is not None:
                         df = df.reindex(columns=combined_cols)

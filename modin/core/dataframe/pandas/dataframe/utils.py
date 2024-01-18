@@ -15,7 +15,6 @@
 
 import abc
 from collections import namedtuple
-from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Callable, Optional, Union
 
 import numpy as np
@@ -533,7 +532,24 @@ def add_missing_categories_to_groupby(
     kwargs,
     initial_dtypes=None,
 ):
-    t1 = timer()
+    """
+    Generate missing categories.
+
+    Parameters
+    ----------
+    dfs : list of pandas.DataFrames
+    by : list of hashable
+    operator : callable
+    initial_columns : pandas.Index
+    combined_cols : pandas.Index
+    is_udf_agg : bool
+    kwargs : dict
+    initial_dtypes : pandas.Series, optional
+
+    Returns
+    -------
+    tuple[dict, pandas.Index]
+    """
     kwargs["observed"] = False
     new_combined_cols = combined_cols
 
@@ -558,7 +574,6 @@ def add_missing_categories_to_groupby(
         }
         # if we're grouping on multiple groupers, then the missing categorical values is a
         # carthesian product of (actual_missing_categorical_values X all_values_of_another_groupers)
-        # breakpoint()
         complete_index = pandas.MultiIndex.from_product(
             [
                 value.categories.astype(total_level.dtype)
@@ -577,12 +592,10 @@ def add_missing_categories_to_groupby(
         missing_index = total_index.categories.difference(total_index.values)
         missing_cats_dtype = {by[0]: pandas.CategoricalDtype(missing_index)}
     missing_index.names = by
-    print("generating missing", timer() - t1)
-    print(len(missing_index))
-    t1 = timer()
+
     if len(missing_index) == 0:
         return {}, new_combined_cols
-    # breakpoint()
+
     ### At this stage we want to get a fill_value for missing categorical values
     if is_udf_agg and isinstance(total_index, pandas.MultiIndex):
         # if grouping on multiple columns and aggregating with an UDF, then the
@@ -608,8 +621,7 @@ def add_missing_categories_to_groupby(
         )
         empty_df = empty_df.astype(missing_cats_dtype)
         missing_values = operator(empty_df.groupby(by, **kwargs))
-    print("getting fill value", timer() - t1)
-    t1 = timer()
+
     if is_udf_agg and not isinstance(total_index, pandas.MultiIndex):
         missing_values = missing_values.drop(columns=by, errors="ignore")
         new_combined_cols = pandas.concat(
@@ -627,8 +639,7 @@ def add_missing_categories_to_groupby(
         missing_values = pandas.DataFrame(
             fill_value, index=missing_index, columns=combined_cols
         )
-    print("generating missing values", timer() - t1)
-    t1 = timer()
+
     # restoring original categorical dtypes for the indices
     if isinstance(missing_values.index, pandas.MultiIndex):
         # MultiIndex.astype() only takes a single dtype, the only way to cast
@@ -642,8 +653,7 @@ def add_missing_categories_to_groupby(
         # )
     else:
         missing_values.index = missing_values.index.astype(total_index.dtype)
-    print("casting to original dtype", timer() - t1)
-    t1 = timer()
+
     ### Then we decide to which missing categorical values should go to which partition
     if not kwargs["sort"]:
         # If the result is allowed to be unsorted, simply insert all the missing
@@ -679,14 +689,13 @@ def add_missing_categories_to_groupby(
         # doesn't affect the result
         bins.append(idx[-1][0] if isinstance(idx, pandas.MultiIndex) else idx[-1])
     old_bins_to_new[len(bins)] = offset
-    # breakpoint()
+
     if len(bins) == 0:
         # insert values to the first non-empty partition
         return {old_bins_to_new.get(0, 0): missing_values}, new_combined_cols
 
     # we used the very first level of MultiIndex to build bins, meaning that we also have
     # to use values of the first index's level for 'digitize'
-    # breakpoint()
     lvl_zero = (
         missing_values.index.levels[0]
         if isinstance(missing_values.index, pandas.MultiIndex)
@@ -696,8 +705,7 @@ def add_missing_categories_to_groupby(
         part_idx = np.digitize(lvl_zero, bins, right=True)
     else:
         part_idx = np.searchsorted(bins, lvl_zero)
-    print("binning", timer() - t1)
-    t1 = timer()
+
     ### In the end we build a dictionary mapping partition index to a dataframe with missing categoricals
     ### to be inserted into this partition
     masks = {}
@@ -713,5 +721,4 @@ def add_missing_categories_to_groupby(
 
     # Restore the original indexing by adding the amount of skipped missing partitions
     masks = {key + old_bins_to_new[key]: value for key, value in masks.items()}
-    print("generating masks", timer() - t1)
     return masks, new_combined_cols
