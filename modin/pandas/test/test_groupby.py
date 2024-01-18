@@ -453,7 +453,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
         modin_df_almost_equals_pandas,
     )
     eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
-
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
@@ -515,6 +514,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
         # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
+
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -1414,7 +1414,6 @@ def eval___getitem__(md_grp, pd_grp, item):
 
         return test
 
-    md_grp[item].agg(["mean"])
     eval_general(
         md_grp,
         pd_grp,
@@ -2979,6 +2978,7 @@ def test_groupby_apply_series_result(modify_config):
         np.random.randint(5, 10, size=5), index=[f"s{i+1}" for i in range(5)]
     )
     df["group"] = [1, 1, 2, 2, 3]
+
     # res = df.groupby('group').apply(lambda x: x.name+2)
     eval_general(
         df, df._to_pandas(), lambda df: df.groupby("group").apply(lambda x: x.name + 2)

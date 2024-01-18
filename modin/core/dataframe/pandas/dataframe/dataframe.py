@@ -3910,7 +3910,6 @@ class PandasDataframe(ClassLogger):
                         values = mask[partition_idx]
 
                         original_names = df.index.names
-                        # values = pandas.DataFrame(np.NaN, index=values.index, columns=df.columns)
                         df = pandas.concat([df, values])
                         if kwargs["sort"]:
                             # TODO: write search-sorted insertion or sort the result after insertion
@@ -3924,7 +3923,6 @@ class PandasDataframe(ClassLogger):
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                     result._partitions,
                     apply_aligned,
-                    # lambda df, columns: df.reindex(columns=columns),
                     func_args=(aligned_columns._data,),
                     enumerate_partitions=True,
                 )

@@ -627,6 +627,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             Positional arguments for the 'map_func'.
         func_kwargs : dict, optional
             Keyword arguments for the 'map_func'.
+        enumerate_partitions : bool, default: False
 
         Returns
         -------

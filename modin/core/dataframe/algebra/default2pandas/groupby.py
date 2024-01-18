@@ -56,6 +56,8 @@ class GroupBy:
         bool
         """
         return hashable(agg_func) and agg_func in transformation_kernels.union(
+            # these methods are also producing transpose-like result in a sense we understand it
+            # (they're non-aggregative functions), however are missing in the pandas dictionary
             {"nth", "head", "tail"}
         )
 

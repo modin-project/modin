@@ -28,6 +28,7 @@ from typing import Hashable, List
 import numpy as np
 import pandas
 from pandas._libs import lib
+from pandas.api.extensions import no_default
 from pandas.api.types import is_scalar
 from pandas.core.apply import reconstruct_func
 from pandas.core.common import is_bool_indexer
@@ -3795,9 +3796,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
-        from pandas.api.extensions import no_default
 
-        # breakpoint()
         # This check materializes dtypes for 'by' columns
         if not is_transform and (
             not groupby_kwargs.get("observed", False)

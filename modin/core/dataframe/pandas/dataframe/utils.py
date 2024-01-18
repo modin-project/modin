@@ -338,7 +338,6 @@ class ShuffleSortFunctions(ShuffleFunctions):
         tuple[pandas.DataFrame]
             A tuple of the splits from this partition.
         """
-        # breakpoint()
         if len(columns_info) == 0:
             # We can return the dataframe with zero changes if there were no pivots passed
             return (df,)
