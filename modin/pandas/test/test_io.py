@@ -2142,7 +2142,7 @@ class TestJson:
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
-        s3_path = "s3://modin-test/testing/test_data.json"
+        s3_path = "s3://modin-test/modin-bugs/test_data.json"
         eval_io(
             fn_name="read_json",
             path_or_buf=s3_path,
