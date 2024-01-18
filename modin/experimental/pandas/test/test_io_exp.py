@@ -178,11 +178,15 @@ class TestCsvGlob:
 @pytest.mark.parametrize(
     "path",
     [
-        "s3://modin-datasets/testing/multiple_csv/test_data*.csv",
+        "s3://modin-test/modin-bugs/multiple_csv/test_data*.csv",
         "gs://modin-testing/testing/multiple_csv/test_data*.csv",
     ],
 )
-def test_read_multiple_csv_cloud_store(path):
+def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
+    storage_options_new = {"anon": True}
+    if path.startswith("s3"):
+        storage_options_new = s3_storage_options
+
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
             pandas.read_csv(
@@ -198,7 +202,7 @@ def test_read_multiple_csv_cloud_store(path):
         lambda module, **kwargs: pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
         if hasattr(module, "read_csv_glob")
         else _pandas_read_csv_glob(path, **kwargs),
-        storage_options={"anon": True},
+        storage_options=storage_options_new,
     )
 
 
@@ -207,17 +211,19 @@ def test_read_multiple_csv_cloud_store(path):
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize(
-    "storage_options",
-    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    "storage_options_extra",
+    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
 )
-def test_read_multiple_csv_s3_storage_opts(storage_options):
-    path = "s3://modin-datasets/testing/multiple_csv/"
+def test_read_multiple_csv_s3_storage_opts(
+    s3_resource, s3_storage_options, storage_options_extra
+):
+    s3_path = "s3://modin-test/modin-bugs/multiple_csv/"
 
     def _pandas_read_csv_glob(path, storage_options):
         pandas_df = pandas.concat(
             [
                 pandas.read_csv(
-                    f"{path}test_data{i}.csv",
+                    f"{s3_path}test_data{i}.csv",
                     storage_options=storage_options,
                 )
                 for i in range(2)
@@ -228,10 +234,10 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     eval_general(
         pd,
         pandas,
-        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs)
+        lambda module, **kwargs: pd.read_csv_glob(s3_path, **kwargs)
         if hasattr(module, "read_csv_glob")
-        else _pandas_read_csv_glob(path, **kwargs),
-        storage_options=storage_options,
+        else _pandas_read_csv_glob(s3_path, **kwargs),
+        storage_options=s3_storage_options | storage_options_extra,
     )
 
 

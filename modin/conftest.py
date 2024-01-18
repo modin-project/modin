@@ -671,9 +671,25 @@ def s3_resource(s3_base):
         raise RuntimeError("Could not create bucket")
 
     s3fs.S3FileSystem.clear_instance_cache()
-    yield conn
 
     s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
+
+    test_s3_files = [
+        ("modin-bugs/multiple_csv/", "modin/pandas/test/data/multiple_csv/"),
+        (
+            "modin-bugs/test_data_dir.parquet/",
+            "modin/pandas/test/data/test_data_dir.parquet/",
+        ),
+        ("modin-bugs/test_data.parquet", "modin/pandas/test/data/test_data.parquet"),
+        ("modin-bugs/test_data.json", "modin/pandas/test/data/test_data.json"),
+        ("modin-bugs/test_data.fwf", "modin/pandas/test/data/test_data.fwf"),
+        ("modin-bugs/test_data.feather", "modin/pandas/test/data/test_data.feather"),
+        ("modin-bugs/issue5159.parquet/", "modin/pandas/test/data/issue5159.parquet/"),
+    ]
+    for s3_key, file_name in test_s3_files:
+        s3.put(file_name, f"{bucket}/{s3_key}", recursive=s3_key.endswith("/"))
+
+    yield conn
 
     s3.rm(bucket, recursive=True)
     for _ in range(20):
