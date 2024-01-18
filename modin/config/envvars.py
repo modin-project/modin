@@ -823,6 +823,13 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
+class LazyExec(EnvironmentVariable, type=bool):
+    """Prefer the lazy execution, when it's possible."""
+
+    varname = "MODIN_LAZY_EXEC"
+    default = False
+
+
 def _check_vars() -> None:
     """
     Check validity of environment variables.

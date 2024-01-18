@@ -18,6 +18,7 @@ import pandas
 import ray
 from ray.util.client.common import ClientObjectRef
 
+from modin.config import LazyExec
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.common.deferred_execution import (
@@ -102,6 +103,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
         Note: the function is not applied immediately but is added to the execution tree.
         """
+        if LazyExec.get():
+            de = DeferredExecution(self._data_ref, func, args, kwargs)
+            return self.__constructor__(de)
+
         data = self._data_ref
         if not isinstance(data, DeferredExecution):
             flat_args = not has_list_or_de(args)
