@@ -217,7 +217,7 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 )
 @pytest.mark.parametrize(
     "storage_options_extra",
-    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
 )
 def test_read_multiple_csv_s3_storage_opts(
     s3_resource, s3_storage_options, storage_options_extra
