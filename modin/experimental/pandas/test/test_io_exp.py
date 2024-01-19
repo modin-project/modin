@@ -185,7 +185,7 @@ class TestCsvGlob:
 def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
     storage_options_new = {"anon": True}
     if path.startswith("s3"):
-        storage_options_new = s3_storage_options
+        storage_options_new = s3_storage_options | storage_options_new
 
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
