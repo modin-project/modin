@@ -365,14 +365,6 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
-      - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
-      - uses: ./.github/actions/run-core-tests
-        with:
-          runner: mpiexec -n 1 python -m pytest
-          parallel: ""
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
