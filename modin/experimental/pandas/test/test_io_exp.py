@@ -185,7 +185,7 @@ class TestCsvGlob:
 def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
     storage_options_new = {"anon": True}
     if path.startswith("s3"):
-        storage_options_new = s3_storage_options | storage_options_new
+        storage_options_new = s3_storage_options
 
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
@@ -195,6 +195,12 @@ def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
             for i in range(2)
         ]
         return pandas.concat(pandas_dfs).reset_index(drop=True)
+
+    print(  # noqa
+        pd.read_csv_glob(path, storage_options=storage_options_new).reset_index(
+            drop=True
+        )
+    )
 
     eval_general(
         pd,
