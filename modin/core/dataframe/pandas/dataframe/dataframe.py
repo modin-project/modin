@@ -3785,6 +3785,7 @@ class PandasDataframe(ClassLogger):
             This flag is helpful when dealing with UDFs as they can change the partition's shape
             and labeling unpredictably, resulting in an invalid dataframe.
         add_missing_cats : bool, default: False
+            Whether to add missing categories from `by` columns to the result.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 

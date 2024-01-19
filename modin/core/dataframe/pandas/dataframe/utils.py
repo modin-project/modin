@@ -532,22 +532,39 @@ def add_missing_categories_to_groupby(
     initial_dtypes=None,
 ):
     """
-    Generate missing categories.
+    Generate values for missing categorical values to be inserted into groupby result.
+
+    This function is used to emulate behavior of ``groupby(observed=False)`` parameter.
+    The function takes groupby result that was computed using ``groupby(observed=True)``
+    and computes results for categorical values that are not presented in `dfs`.
 
     Parameters
     ----------
     dfs : list of pandas.DataFrames
+        Row partitions containing groupby results.
     by : list of hashable
+        Column labels that were used to perform groupby.
     operator : callable
+        Aggregation function that was used during groupby.
     initial_columns : pandas.Index
+        Column labels of the original dataframe.
     combined_cols : pandas.Index
+        Column labels of the groupby result.
     is_udf_agg : bool
+        Whether ``operator`` is a UDF.
     kwargs : dict
+        Parameters that were passed to ``groupby(by, **kwargs)``.
     initial_dtypes : pandas.Series, optional
+        Dtypes of the original dataframe. If not specified, assume it's ``int64``.
 
     Returns
     -------
-    tuple[dict, pandas.Index]
+    masks : dict[int, pandas.DataFrame]
+        Mapping between partition idx and a dataframe with results for missing categorical values
+        to insert to this partition.
+    new_combined_cols : pandas.Index
+        New column labels of the groupby result. If ``is_udf_agg is True``, then ``operator``
+        may change the resulted columns.
     """
     kwargs["observed"] = False
     new_combined_cols = combined_cols
@@ -563,7 +580,7 @@ def add_missing_categories_to_groupby(
             not isinstance(level, pandas.CategoricalIndex)
             for level in total_index.levels
         ):
-            return {}
+            return {}, new_combined_cols
         missing_cats_dtype = {
             name: level.dtype if isinstance(level.dtype, pandas.CategoricalDtype)
             # it's a bit confusing but we have to convert the remaining 'by' columns to categoricals
@@ -639,18 +656,8 @@ def add_missing_categories_to_groupby(
             fill_value, index=missing_index, columns=combined_cols
         )
 
-    # restoring original categorical dtypes for the indices
-    if isinstance(missing_values.index, pandas.MultiIndex):
-        # MultiIndex.astype() only takes a single dtype, the only way to cast
-        # individual levels to different dtypes is to convert MI to DF do the
-        # casting then
-        pass
-        # missing_values.index = pandas.MultiIndex.from_frame(
-        #     missing_values.index.to_frame().astype(
-        #         {name: dtype for name, dtype in total_index.dtypes.items()}
-        #     )
-        # )
-    else:
+    # restoring original categorical dtypes for the indices (MultiIndex already have proper dtypes)
+    if not isinstance(missing_values.index, pandas.MultiIndex):
         missing_values.index = missing_values.index.astype(total_index.dtype)
 
     ### Then we decide to which missing categorical values should go to which partition
