@@ -196,12 +196,6 @@ def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
         ]
         return pandas.concat(pandas_dfs).reset_index(drop=True)
 
-    print(  # noqa
-        pd.read_csv_glob(path, storage_options=storage_options_new).reset_index(
-            drop=True
-        )
-    )
-
     eval_general(
         pd,
         pandas,
