@@ -14,7 +14,6 @@ dependencies:
 
   # optional dependencies
   - s3fs>=2022.05.0
-  - gcsfs
   - openpyxl>=3.0.10
   - xlrd>=2.0.1
   - sqlalchemy>=1.4.0,<1.4.46
