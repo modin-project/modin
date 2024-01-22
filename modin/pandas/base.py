@@ -3241,8 +3241,12 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the object to a JSON string.
         """
-        return self._default_to_pandas(
-            "to_json",
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_json(
+            self._query_compiler,
             path_or_buf,
             orient=orient,
             date_format=date_format,
