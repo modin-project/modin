@@ -3214,7 +3214,9 @@ def _apply_transform(df):
 def test_range_groupby_categories(
     observed, func, by_cols, cat_cols, exclude_values, as_index, modify_config
 ):
-    # HACK: there's a bug
+    # HACK: there's a bug in range-partitioning impl that can be triggered
+    # here on certain seeds, manually setting the seed so it won't show up
+    # https://github.com/modin-project/modin/issues/6875
     np.random.seed(0)
     data = {
         "a": ["a", "b", "c", "d", "e", "b", "g", "a"] * 32,
