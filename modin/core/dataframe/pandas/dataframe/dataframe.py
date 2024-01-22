@@ -2762,6 +2762,36 @@ class PandasDataframe(ClassLogger):
             partitions, new_index, new_columns, row_lengths, column_widths
         )
 
+    def force_materialization(self) -> "PandasDataframe":
+        """
+        Materialize axis partitions into a single partition.
+
+        Applies the identity function first across rows, and thereafter across columns
+        to get a df single  partition.
+
+        Returns
+        -------
+        PandasDataframe
+            An PandasDataframe containing only a single partition.
+        """
+        single_col_aggregated_df = self.apply_full_axis(
+            axis=0,
+            func=lambda x: x,
+            keep_partitioning=False,
+            num_splits=1,
+            sync_labels=True,
+            pass_axis_lengths_to_partitions=False,
+        )
+        single_partition_df = single_col_aggregated_df.apply_full_axis(
+            axis=1,
+            func=lambda x: x,
+            keep_partitioning=False,
+            num_splits=1,
+            sync_labels=True,
+            pass_axis_lengths_to_partitions=False,
+        )
+        return single_partition_df
+
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
         self,

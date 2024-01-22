@@ -520,7 +520,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
-
+        right = self.__constructor__(right._modin_frame.force_materialization())
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
 
