@@ -18,7 +18,7 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
-from os import environ
+import os
 from types import FunctionType
 
 import ray
@@ -143,7 +143,7 @@ class RayWrapper:
                         cls._func_cache[data] = ref
                     else:
                         msg = "To many functions in the RayWrapper cache!"
-                        assert "MODIN_GITHUB_CI" not in environ, msg
+                        assert "MODIN_GITHUB_CI" not in os.environ, msg
                         ErrorMessage.warn(msg)
                 return ref
         return ray.put(data, **kwargs)
