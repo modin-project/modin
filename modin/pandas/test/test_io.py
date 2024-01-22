@@ -2034,6 +2034,17 @@ class TestParquet:
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
+    def test_read_parquet_6855(self, tmp_path, engine):
+        if engine == "fastparquet":
+            pytest.skip("integer columns aren't supported")
+        test_df = pandas.DataFrame(np.random.rand(10**2, 10))
+        path = tmp_path / "data"
+        path.mkdir()
+        file_name = "issue6855.parquet"
+        test_df.to_parquet(path / file_name, engine=engine)
+        read_df = pd.read_parquet(path / file_name, engine=engine)
+        df_equals(test_df, read_df)
+
     def test_read_parquet_s3_with_column_partitioning(
         self, s3_resource, engine, s3_storage_options
     ):
