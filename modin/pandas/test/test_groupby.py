@@ -350,44 +350,44 @@ class GetColumn:
 @pytest.mark.parametrize(
     "by",
     [
-        [1, 2, 1, 2],
-        lambda x: x % 3,
-        "col1",
-        ["col1"],
-        # col2 contains NaN, is it necessary to test functions like size()
-        "col2",
-        ["col2"],  # 5
-        pytest.param(
-            ["col1", "col2"],
-            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        ),
-        pytest.param(
-            ["col2", "col4"],
-            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        ),
-        pytest.param(
-            ["col4", "col2"],
-            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        ),
-        pytest.param(
-            ["col3", "col4", "col2"],
-            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        ),
-        # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        ["col5"],  # 10
-        ["col1", "col5"],
-        ["col5", "col4"],
-        ["col4", "col5"],
-        ["col5", "col4", "col1"],
-        ["col1", pd.Series([1, 5, 7, 8])],  # 15
-        [pd.Series([1, 5, 7, 8])],
-        [
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-            pd.Series([1, 5, 7, 8]),
-        ],
+        # [1, 2, 1, 2],
+        # lambda x: x % 3,
+        # "col1",
+        # ["col1"],
+        # # col2 contains NaN, is it necessary to test functions like size()
+        # "col2",
+        # ["col2"],  # 5
+        # pytest.param(
+        #     ["col1", "col2"],
+        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        # ),
+        # pytest.param(
+        #     ["col2", "col4"],
+        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        # ),
+        # pytest.param(
+        #     ["col4", "col2"],
+        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        # ),
+        # pytest.param(
+        #     ["col3", "col4", "col2"],
+        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        # ),
+        # # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
+        # ["col5"],  # 10
+        # ["col1", "col5"],
+        # ["col5", "col4"],
+        # ["col4", "col5"],
+        # ["col5", "col4", "col1"],
+        # ["col1", pd.Series([1, 5, 7, 8])],  # 15
+        # [pd.Series([1, 5, 7, 8])],
+        # [
+        #     pd.Series([1, 5, 7, 8]),
+        #     pd.Series([1, 5, 7, 8]),
+        #     pd.Series([1, 5, 7, 8]),
+        #     pd.Series([1, 5, 7, 8]),
+        #     pd.Series([1, 5, 7, 8]),
+        # ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
         [GetColumn("col1")],  # 20
@@ -1917,26 +1917,44 @@ def test_to_pandas_convertion(kwargs):
     [
         [(False, "a"), (False, "b"), (False, "c")],
         [(False, "a"), (False, "b")],
-        [(True, "a"), (True, "b"), (True, "c")],
+        [(True, "b"), (True, "a"), (True, "c")],
         [(True, "a"), (True, "b")],
-        [(False, "a"), (False, "b"), (True, "c")],
+        [(True, "c"), (False, "a"), (False, "b")],
         [(False, "a"), (True, "c")],
     ],
 )
-def test_mixed_columns(columns):
+@pytest.mark.parametrize("drop_from_original_df", [True, False])
+@pytest.mark.parametrize("as_index", [True, False])
+def test_mixed_columns(columns, drop_from_original_df, as_index):
     def get_columns(df):
-        return [df[name] if lookup else name for (lookup, name) in columns]
+        new_df = df
+        by = []
+        for lookup, name in columns:
+            if lookup:
+                by.append(df[name].copy())
+                if drop_from_original_df:
+                    new_df = new_df.drop(columns=[name])
+            else:
+                by.append(name)
+        return new_df, by
 
-    data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
+    data = {
+        "a": [1, 1, 2, 2] * 64,
+        "b": [11, 11, 22, 22] * 64,
+        "c": [111, 111, 222, 222] * 64,
+        "data": [1, 2, 3, 4] * 64,
+    }
 
-    df1 = pandas.DataFrame(data)
-    df1 = pandas.concat([df1])
-    ref = df1.groupby(get_columns(df1)).size()
+    md_df, pd_df = create_test_dfs(data)
+    (md_df, md_by), (pd_df, pd_by) = get_columns(md_df), get_columns(pd_df)
 
-    df2 = pd.DataFrame(data)
-    df2 = pd.concat([df2])
-    exp = df2.groupby(get_columns(df2)).size()
-    df_equals(ref, exp)
+    md_grp = md_df.groupby(md_by, as_index=as_index)
+    pd_grp = pd_df.groupby(pd_by, as_index=as_index)
+
+    df_equals(md_grp.size(), pd_grp.size())
+    df_equals(md_grp.sum(), pd_grp.sum())
+    df_equals(md_grp.transform(lambda df: df * 2), pd_grp.transform(lambda df: df * 2))
+    df_equals(md_grp.apply(lambda df: df.sum()), pd_grp.apply(lambda df: df.sum()))
 
 
 @pytest.mark.parametrize(

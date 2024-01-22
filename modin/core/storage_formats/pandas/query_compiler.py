@@ -3473,24 +3473,29 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if isinstance(by, type(self)):
             if drop:
                 internal_by = by.columns
-                by = [by]
+                external_by = []
+                by_positions = [-i - 1 for i in range(len(internal_by))]
             else:
                 internal_by = []
-                by = [by]
+                external_by = [by]
+                by_positions = [i for i in range(len(external_by))]
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
             internal_by = []
-            for o in by:
+            external_by = []
+            by_positions = []
+            for idx, o in enumerate(by):
                 if isinstance(o, pandas.Grouper) and o.key in self.columns:
                     internal_by.append(o.key)
+                    by_positions.append(-len(internal_by))
                 elif hashable(o) and o in self.columns:
                     internal_by.append(o)
-            internal_qc = (
-                [self.getitem_column_array(internal_by)] if len(internal_by) else []
-            )
-            by = internal_qc + by[len(internal_by) :]
-        return by, internal_by
+                    by_positions.append(-len(internal_by))
+                else:
+                    external_by.append(o)
+                    by_positions.append(len(external_by) - 1)
+        return external_by, internal_by, by_positions
 
     groupby_all = GroupbyReduceImpl.build_qc_method("all")
     groupby_any = GroupbyReduceImpl.build_qc_method("any")
@@ -3536,7 +3541,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
-        _, internal_by = self._groupby_internal_columns(by, drop)
+        _, internal_by, _ = self._groupby_internal_columns(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
@@ -3764,28 +3769,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if isinstance(by, type(self)) and drop:
-            by = by.columns.tolist()
-
-        if not isinstance(by, list):
-            by = [by]
-
-        is_all_labels = all(isinstance(col, (str, tuple)) for col in by)
-        is_all_column_names = (
-            all(col in self.columns for col in by) if is_all_labels else False
-        )
-
-        if not is_all_column_names:
+        if groupby_kwargs.get("level") is not None:
             raise NotImplementedError(
-                "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
+                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        # This check materializes dtypes for 'by' columns
-        if isinstance(self._modin_frame._dtypes, ModinDtypes):
-            by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
-        else:
-            by_dtypes = self.dtypes[by]
+        external_by, internal_by, by_positions = self._groupby_internal_columns(
+            by, drop
+        )
+
+        all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
+        if not all_external_are_qcs:
+            raise NotImplementedError(
+                "Grouping on an external grouper with range-partitioning groupby is only supported with pandas.Series'es: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
+
+        # The following 'dtypes' check materializes dtypes for 'by' columns
+        internal_dtypes = pandas.Series()
+        external_dtypes = pandas.Series()
+        if len(internal_by) > 0:
+            internal_dtypes = (
+                self._modin_frame._dtypes.lazy_get(internal_by).get()
+                if isinstance(self._modin_frame._dtypes, ModinDtypes)
+                else self.dtypes[internal_by]
+            )
+        if len(external_by) > 0:
+            for obj in external_by:
+                if not isinstance(obj, type(self)):
+                    # we're only interested in categorical dtypes here, which can only
+                    # appear in pandas objects
+                    continue
+                external_dtypes = pandas.concat([external_dtypes, obj.dtypes])
+
+        by_dtypes = pandas.concat([internal_dtypes, external_dtypes])
         if any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
             raise NotImplementedError(
                 "Range-partitioning groupby is not yet supported when grouping on a categorical column. "
@@ -3830,7 +3848,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = obj._modin_frame.groupby(
             axis=axis,
-            by=by,
+            internal_by=internal_by,
+            external_by=[
+                obj._modin_frame if isinstance(obj, type(self)) else obj
+                for obj in external_by
+            ],
+            by_positions=by_positions,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
             # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
             # that's why we have to align the partition's shapes/labeling across different
@@ -4014,7 +4037,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        by, internal_by = self._groupby_internal_columns(by, drop)
+        external_by, internal_by, _ = self._groupby_internal_columns(by, drop)
+        internal_qc = (
+            [self.getitem_column_array(internal_by)] if len(internal_by) else []
+        )
+        by = internal_qc + external_by
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]
