@@ -559,7 +559,7 @@ def is_supported_arrow_type(dtype: pa.lib.DataType) -> bool:
         return False
 
 
-def ensure_supported_dtype(dtype: pa.lib.DataType):
+def ensure_supported_dtype(dtype):
     """
     Check if the specified `dtype` is supported by HDK.
 
@@ -572,8 +572,8 @@ def ensure_supported_dtype(dtype: pa.lib.DataType):
     try:
         if is_supported_arrow_type(pa.from_numpy_dtype(dtype)):
             return
-    except pa.ArrowNotImplementedError:
-        ...
+    except pa.ArrowNotImplementedError as err:
+        raise NotImplementedError(f"Type {dtype}") from err
     raise NotImplementedError(f"Type {dtype}")
 
 

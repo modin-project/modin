@@ -1019,30 +1019,3 @@ def test_insert_list(data, index, value, part_type, insert_scalar):
         insert(0, f"C{i}", value)
         insert(len(pdf.columns) // 2, f"D{i}", value)
     df_equals(mdf, pdf)
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        None,
-        {"A": range(10)},
-        pandas.Series(range(10)),
-        pandas.DataFrame({"A": range(10)}),
-    ],
-)
-@pytest.mark.parametrize(
-    "index", [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)]
-)
-@pytest.mark.parametrize("columns", [None, ["A"], ["A", "B", "C"]])
-@pytest.mark.parametrize("dtype", [None, float])
-def test_df_constructor(data, index, columns, dtype):
-    if (
-        isinstance(data, pandas.Series)
-        and data.name is None
-        and columns is not None
-        and len(columns) > 1
-    ):
-        data = data.copy()
-        data.name = "D"
-    mdf, pdf = create_test_dfs(data, index=index, columns=columns, dtype=dtype)
-    df_equals(mdf, pdf)

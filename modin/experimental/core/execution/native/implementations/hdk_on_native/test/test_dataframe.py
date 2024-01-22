@@ -24,6 +24,7 @@ from pyhdk import __version__ as hdk_version
 
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
+    create_test_dfs,
     default_to_pandas_ignore_string,
     io_ops_bad_exc,
     random_state,
@@ -2504,6 +2505,33 @@ class TestUnsupportedColumns:
 
 
 class TestConstructor:
+    @pytest.mark.parametrize(
+        "data",
+        [
+            None,
+            {"A": range(10)},
+            pandas.Series(range(10)),
+            pandas.DataFrame({"A": range(10)}),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "index",
+        [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)],
+    )
+    @pytest.mark.parametrize("columns", [None, ["A"], ["A", "B", "C"]])
+    @pytest.mark.parametrize("dtype", [None, float])
+    def test_raw_data(self, data, index, columns, dtype):
+        if (
+            isinstance(data, pandas.Series)
+            and data.name is None
+            and columns is not None
+            and len(columns) > 1
+        ):
+            data = data.copy()
+            data.name = "D"
+        mdf, pdf = create_test_dfs(data, index=index, columns=columns, dtype=dtype)
+        df_equals(mdf, pdf)
+
     @pytest.mark.parametrize(
         "index",
         [

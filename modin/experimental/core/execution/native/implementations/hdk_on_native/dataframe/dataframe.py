@@ -1435,7 +1435,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             lhs = lhs._reset_index_names()
 
         if ignore_index:
-            new_columns = Index.__new__(RangeIndex, data=range(len(lhs.columns)))
+            new_columns = RangeIndex(range(len(lhs.columns)))
             lhs = lhs._set_columns(new_columns)
 
         return lhs
@@ -1463,7 +1463,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             and isinstance(f._execute(), (DbTable, pyarrow.Table))
             for f in frames
         ):
-            tables = [f._partitions[0][0].get(True) for f in frames]
+            tables = [f._partitions[0][0].get(to_arrow=True) for f in frames]
             column_names = [c for t in tables for c in t.column_names]
             if len(column_names) != len(set(column_names)):
                 raise NotImplementedError("Duplicate column names")
@@ -1760,7 +1760,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 dtype = rhs.dtypes[loc]
         else:
             lexprs = self._index_exprs()
-            rexprs = OrderedDict()
+            rexprs = {}
             for i, col in enumerate(self.columns):
                 (lexprs if i < loc else rexprs)[col] = self.ref(col)
             lhs = self.__constructor__(
@@ -2348,7 +2348,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             return (cols, [len(cols)])
 
         if self._index_cols is None:
-            index = Index.__new__(RangeIndex, data=range(len(obj)))
+            index = RangeIndex(range(len(obj)))
             return (index, [len(index)])
         if isinstance(obj, DbTable):
             # TODO: Get the index columns only
@@ -2374,7 +2374,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         """Materialize index and store it in the cache."""
         if self._partitions and not self._index_cols:
             nrows = self._partitions[0][0]._length_cache
-            self.set_index_cache(Index.__new__(RangeIndex, data=range(nrows)))
+            self.set_index_cache(RangeIndex(range(nrows)))
         else:
             index, _ = self._compute_axis_labels_and_lengths(axis=0)
             self.set_index_cache(index)

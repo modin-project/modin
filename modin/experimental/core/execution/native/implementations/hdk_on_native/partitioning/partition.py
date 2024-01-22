@@ -130,7 +130,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         ----------
         idx : int
         name : str
-        value : Collection
+        value : AnyArrayLike
 
         Returns
         -------
