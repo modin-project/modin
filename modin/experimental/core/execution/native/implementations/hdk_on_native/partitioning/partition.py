@@ -145,8 +145,9 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
             dtype = data.dtypes[idx]
         elif isinstance(data, pa.Table):
             try:
-                data = data.add_column(idx, name, [value])
-                dtype = data.field(idx).type.to_pandas_dtype()
+                new_data = data.add_column(idx, name, [value])
+                dtype = new_data.field(idx).type.to_pandas_dtype()
+                data = new_data
             except Exception:
                 try:
                     df = pandas.DataFrame({name: value})
