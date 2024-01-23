@@ -2215,6 +2215,7 @@ class PandasDataframe(ClassLogger):
                             ]
                         )
                         parts_to_join.append(masked_new_parts)
+                    break
                 else:
                     # window continues into next part, so just add this part to parts_to_join
                     if axis == Axis.COL_WISE:
