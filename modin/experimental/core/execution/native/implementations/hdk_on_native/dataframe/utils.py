@@ -570,11 +570,11 @@ def ensure_supported_dtype(dtype):
     dtype : dtype
     """
     try:
-        if is_supported_arrow_type(pa.from_numpy_dtype(dtype)):
-            return
+        dtype = pa.from_numpy_dtype(dtype)
     except pa.ArrowNotImplementedError as err:
         raise NotImplementedError(f"Type {dtype}") from err
-    raise NotImplementedError(f"Type {dtype}")
+    if not is_supported_arrow_type(dtype):
+        raise NotImplementedError(f"Type {dtype}")
 
 
 def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:

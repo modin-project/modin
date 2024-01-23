@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 """Module provides a partition class for ``HdkOnNativeDataframe`` frame."""
-from typing import Tuple, Union
+from typing import Union
 
 import pandas
 import pyarrow as pa
@@ -120,9 +120,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         """
         return cls(obj)
 
-    def insert(
-        self, idx: int, name: str, value: AnyArrayLike
-    ) -> Tuple["HdkOnNativeDataframePartition", pa.lib.DataType]:
+    def insert(self, idx: int, name: str, value: AnyArrayLike):
         """
         Insert column into this raw partition.
 
@@ -134,7 +132,7 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
 
         Returns
         -------
-        Tuple[HdkOnNativeDataframePartition, pa.lib.DataType]
+        tuple of HdkOnNativeDataframePartition, dtype
         """
         data = self._data
         name = ColNameCodec.encode(name)
