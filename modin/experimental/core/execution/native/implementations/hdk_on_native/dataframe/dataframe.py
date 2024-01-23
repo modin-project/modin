@@ -1674,7 +1674,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         if is_list_like(value):
             if isinstance(value, pd.Series) and not self.index.equals(value.index):
                 # Align by index
-                value = pd.Series(value, index=self.index)
+                value = value.reindex(self.index)
                 value.reset_index(drop=True, inplace=True)
             return self._insert_list(loc, column, value)
 
