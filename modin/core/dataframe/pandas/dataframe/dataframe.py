@@ -1161,11 +1161,21 @@ class PandasDataframe(ClassLogger):
                     extra_log="Mask takes only list-like numeric indexers, "
                     + f"received: {type(indexer)}",
                 )
+                if isinstance(indexer, list):
+                    indexer = np.array(indexer, dtype=np.int64)
             indexers.append(indexer)
         row_positions, col_positions = indexers
 
         if col_positions is None and row_positions is None:
             return self.copy()
+
+        # quite fast check that allows skip sorting
+        must_sort_row_pos = row_positions is not None and not np.all(
+            row_positions[1:] >= row_positions[:-1]
+        )
+        must_sort_col_pos = col_positions is not None and not np.all(
+            col_positions[1:] >= col_positions[:-1]
+        )
 
         if col_positions is None and row_positions is not None:
             # Check if the optimization that first takes part of the data using the mask
@@ -1175,18 +1185,40 @@ class PandasDataframe(ClassLogger):
             all_rows = None
             if self.has_materialized_index:
                 all_rows = len(self.index)
-            elif self._row_lengths_cache:
+            elif self._row_lengths_cache or must_sort_row_pos:
                 all_rows = sum(self._row_lengths_cache)
-            if all_rows:
-                if len(row_positions) > 0.9 * all_rows:
-                    return self._reorder_labels(
-                        row_positions=row_positions, col_positions=col_positions
-                    )
 
+            # 'base_num_cols' specifies the number of columns that the dataframe should have
+            # in order to jump to 'reordered_labels' in case of len(row_positions) / len(self) >= base_ratio;
+            # these variables may be a subject to change in order to tune performance more accurately
+            base_num_cols = 10
+            base_ratio = 0.2
+            # Example:
+            #   len(self.columns): 10 == base_num_cols -> min ratio to jump to reorder_labels: 0.2 == base_ratio
+            #   len(self.columns): 15 -> min ratio to jump to reorder_labels: 0.3
+            #   len(self.columns): 20 -> min ratio to jump to reorder_labels: 0.4
+            #   ...
+            #   len(self.columns): 49 -> min ratio to jump to reorder_labels: 0.98
+            #   len(self.columns): 50 -> min ratio to jump to reorder_labels: 1.0
+            #   len(self.columns): 55 -> min ratio to jump to reorder_labels: 1.0
+            #   ...
+            if (all_rows and len(row_positions) > 0.9 * all_rows) or (
+                must_sort_row_pos
+                and len(row_positions) * base_num_cols
+                >= min(
+                    all_rows * len(self.columns) * base_ratio,
+                    len(row_positions) * base_num_cols,
+                )
+            ):
+                return self._reorder_labels(
+                    row_positions=row_positions, col_positions=col_positions
+                )
         sorted_row_positions = sorted_col_positions = None
-
         if row_positions is not None:
-            sorted_row_positions = self._get_sorted_positions(row_positions)
+            if must_sort_row_pos:
+                sorted_row_positions = self._get_sorted_positions(row_positions)
+            else:
+                sorted_row_positions = row_positions
             # Get dict of row_parts as {row_index: row_internal_indices}
             row_partitions_dict = self._get_dict_of_block_index(
                 0, sorted_row_positions, are_indices_sorted=True
@@ -1201,7 +1233,10 @@ class PandasDataframe(ClassLogger):
             new_index = self.copy_index_cache(copy_lengths=True)
 
         if col_positions is not None:
-            sorted_col_positions = self._get_sorted_positions(col_positions)
+            if must_sort_col_pos:
+                sorted_col_positions = self._get_sorted_positions(col_positions)
+            else:
+                sorted_col_positions = col_positions
             # Get dict of col_parts as {col_index: col_internal_indices}
             col_partitions_dict = self._get_dict_of_block_index(
                 1, sorted_col_positions, are_indices_sorted=True
