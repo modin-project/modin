@@ -296,3 +296,51 @@ class ExperimentalFunctions:
             storage_options=storage_options,
             **kwargs,
         )
+
+    def to_json_glob(
+        self,
+        path_or_buf=None,
+        orient=None,
+        date_format=None,
+        double_precision=10,
+        force_ascii=True,
+        date_unit="ms",
+        default_handler=None,
+        lines=False,
+        compression="infer",
+        index=None,
+        indent=None,
+        storage_options: StorageOptions = None,
+        mode="w",
+    ) -> None:  # noqa: PR01
+        """
+        Convert the object to a JSON string.
+
+        Notes
+        -----
+        * Only string type supported for `path_or_buf` argument.
+        * The rest of the arguments are the same as for `pandas.to_json`.
+        """
+        from modin.experimental.pandas.io import to_json_glob
+
+        if path_or_buf is None:
+            raise NotImplementedError(
+                "`to_json_glob` doesn't support path_or_buf=None, use `to_json` in that case."
+            )
+
+        to_json_glob(
+            self._data,
+            path_or_buf=path_or_buf,
+            orient=orient,
+            date_format=date_format,
+            double_precision=double_precision,
+            force_ascii=force_ascii,
+            date_unit=date_unit,
+            default_handler=default_handler,
+            lines=lines,
+            compression=compression,
+            index=index,
+            indent=indent,
+            storage_options=storage_options,
+            mode=mode,
+        )

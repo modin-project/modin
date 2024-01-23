@@ -40,6 +40,7 @@ from modin.pandas import *  # noqa F401, F403
 from .io import (  # noqa F401
     read_csv_glob,
     read_custom_text,
+    read_json_glob,
     read_parquet_glob,
     read_pickle_distributed,
     read_sql,

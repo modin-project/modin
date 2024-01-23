@@ -300,6 +300,30 @@ def test_parquet_glob(tmp_path, filename):
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_json_glob.json", "test_json_glob*.json"],
+)
+def test_json_glob(tmp_path, filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_json_glob.json"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_json_glob(str(tmp_path / filename))
+        read_df = pd.read_json_glob(str(tmp_path / filename))
+    df_equals(read_df, df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)

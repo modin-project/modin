@@ -648,6 +648,20 @@ class BaseIO:
         return obj.to_csv(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_json, apilink="pandas.DataFrame.to_json")
+    def to_json(cls, obj, path, **kwargs):  # noqa: PR01
+        """
+        Convert the object to a JSON string.
+
+        For parameters description please refer to pandas API.
+        """
+        ErrorMessage.default_to_pandas("`to_json`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_json(path, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(
         pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
     )

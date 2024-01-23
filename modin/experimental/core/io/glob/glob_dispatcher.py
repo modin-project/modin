@@ -48,7 +48,12 @@ class ExperimentalGlobDispatcher(FileDispatcher):
         -----
         The number of partitions is equal to the number of input files.
         """
-        path_key = "filepath_or_buffer" if "filepath_or_buffer" in kwargs else "path"
+        if "filepath_or_buffer" in kwargs:
+            path_key = "filepath_or_buffer"
+        elif "path" in kwargs:
+            path_key = "path"
+        elif "path_or_buf" in kwargs:
+            path_key = "path_or_buf"
         filepath_or_buffer = kwargs.pop(path_key)
         filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
@@ -112,7 +117,12 @@ class ExperimentalGlobDispatcher(FileDispatcher):
         **kwargs : dict
             Parameters for ``pandas.to_<format>(**kwargs)``.
         """
-        path_key = "filepath_or_buffer" if "filepath_or_buffer" in kwargs else "path"
+        if "filepath_or_buffer" in kwargs:
+            path_key = "filepath_or_buffer"
+        elif "path" in kwargs:
+            path_key = "path"
+        elif "path_or_buf" in kwargs:
+            path_key = "path_or_buf"
         filepath_or_buffer = kwargs.pop(path_key)
         filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (
