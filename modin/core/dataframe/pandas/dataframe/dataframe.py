@@ -1186,7 +1186,7 @@ class PandasDataframe(ClassLogger):
             if self.has_materialized_index:
                 all_rows = len(self.index)
             elif self._row_lengths_cache or must_sort_row_pos:
-                all_rows = sum(self._row_lengths_cache)
+                all_rows = sum(self.row_lengths)
 
             # 'base_num_cols' specifies the number of columns that the dataframe should have
             # in order to jump to 'reordered_labels' in case of len(row_positions) / len(self) >= base_ratio;
