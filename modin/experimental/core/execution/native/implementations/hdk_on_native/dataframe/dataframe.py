@@ -256,6 +256,7 @@ class HdkOnNativeDataframe(PandasDataframe):
         op=no_default,
         index_cols=no_default,
         uses_rowid=no_default,
+        has_unsupported_data=no_default,
     ):
         """
         Copy this DataFrame.
@@ -280,6 +281,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         uses_rowid : bool, optional
             True for frames which require access to the virtual 'rowid' column
             for its execution.
+        has_unsupported_data : bool, optional
+            True for frames holding data not supported by Arrow or HDK storage format.
 
         Returns
         -------
@@ -300,6 +303,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols = self._index_cols
         if uses_rowid is no_default:
             uses_rowid = self._uses_rowid
+        if has_unsupported_data is no_default:
+            has_unsupported_data = self._has_unsupported_data
         return self.__constructor__(
             partitions=partitions,
             index=index,
@@ -311,7 +316,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             index_cols=index_cols,
             uses_rowid=uses_rowid,
             force_execution_mode=self._force_execution_mode,
-            has_unsupported_data=self._has_unsupported_data,
+            has_unsupported_data=has_unsupported_data,
         )
 
     def id_str(self):
@@ -1800,16 +1805,28 @@ class HdkOnNativeDataframe(PandasDataframe):
         """
         cols = self.columns.tolist()
         cols.insert(idx, name)
+        has_unsupported_data = self._has_unsupported_data
         if self._index_cols:
             idx += len(self._index_cols)
         if dtype is None:
             part, dtype = self._partitions[0][0].insert(idx, name, value)
             part = np.array([[part]])
+            if not has_unsupported_data:
+                try:
+                    ensure_supported_dtype(dtype)
+                except NotImplementedError:
+                    has_unsupported_data = True
         else:
             part = None
         dtypes = self._dtypes.tolist()
         dtypes.insert(idx, dtype)
-        return self.copy(partitions=part, columns=cols, dtypes=dtypes, op=op)
+        return self.copy(
+            partitions=part,
+            columns=cols,
+            dtypes=dtypes,
+            op=op,
+            has_unsupported_data=has_unsupported_data,
+        )
 
     def _list_to_df(self, name, value, add_index):
         """

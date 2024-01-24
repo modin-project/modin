@@ -20,7 +20,7 @@ from pandas._typing import AnyArrayLike
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
-from ..dataframe.utils import ColNameCodec, arrow_to_pandas, ensure_supported_dtype
+from ..dataframe.utils import ColNameCodec, arrow_to_pandas
 from ..db_worker import DbTable
 
 
@@ -157,7 +157,6 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         else:
             raise NotImplementedError(f"Insertion into {type(data)}")
 
-        ensure_supported_dtype(dtype)
         return HdkOnNativeDataframePartition(data), dtype
 
     @property
