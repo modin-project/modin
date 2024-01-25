@@ -823,10 +823,10 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
-class LazyExec(EnvironmentVariable, type=bool):
+class LazyExecution(EnvironmentVariable, type=bool):
     """Prefer the lazy execution, when it's possible."""
 
-    varname = "MODIN_LAZY_EXEC"
+    varname = "MODIN_LAZY_EXECUTION"
     default = False
 
 

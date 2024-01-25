@@ -19,7 +19,7 @@ import pandas
 import ray
 from ray.util.client.common import ClientObjectRef
 
-from modin.config import LazyExec
+from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.common.deferred_execution import (
@@ -43,8 +43,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     Parameters
     ----------
     data : ObjectIDType or DeferredExecution
-        A reference to ``pandas.DataFrame`` that need to be wrapped with this class
-        or a reference to DeferredExecution that need to be executed on demand.
+        A reference to ``pandas.DataFrame`` that needs to be wrapped with this class
+        or a reference to DeferredExecution that needs to be executed on demand.
     length : ObjectIDType or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
     width : ObjectIDType or int, optional
@@ -102,9 +102,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
 
-        Note: the function is not applied immediately but is added to the execution tree.
+        If ``LazyExecution`` is enabled, the function is not applied immediately,
+        but is added to the execution tree.
         """
-        if LazyExec.get():
+        if LazyExecution.get():
             de = DeferredExecution(self._data_ref, func, args, kwargs)
             return self.__constructor__(de)
 

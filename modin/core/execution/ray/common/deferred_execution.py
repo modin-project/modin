@@ -13,10 +13,8 @@
 
 """Module with classes and utilities for deferred remote execution in Ray workers."""
 
-from builtins import NotImplementedError
 from enum import Enum
 from itertools import islice
-from types import GeneratorType
 from typing import (
     Any,
     Callable,
@@ -142,7 +140,7 @@ class DeferredExecution:
             width = meta_list[offset + 1], ip = meta_list[-1].
         """
         if self.has_result:
-            return self.data, self.meta, self.meta_off
+            return self.data, self.meta, self.meta_offset
 
         data = self.data
         if self.num_returns == 1 and not isinstance(data, DeferredExecution):
@@ -155,21 +153,23 @@ class DeferredExecution:
                 return result, meta, 0
 
         consumers, output = self._deconstruct()
-        num_returns = sum(c.num_returns for c in consumers) + 1
+        num_returns = (
+            sum(c.num_returns for c in consumers) + 1
+        )  # The last result is meta
         results = self._remote_exec_chain(num_returns, *output)
         meta = MetaList(results.pop())
-        meta_off = 0
+        meta_offset = 0
         results = iter(results)
         for de in consumers:
             if de.num_returns == 1:
-                de._set_result(next(results), meta, meta_off)
-                meta_off += 2
+                de._set_result(next(results), meta, meta_offset)
+                meta_offset += 2
             else:
                 res = list(islice(results, num_returns))
                 offsets = list(range(0, 2 * num_returns, 2))
                 de._set_result(res, meta, offsets)
-                meta_off += 2 * num_returns
-        return self.data, self.meta, self.meta_off
+                meta_offset += 2 * num_returns
+        return self.data, self.meta, self.meta_offset
 
     @property
     def has_result(self):
@@ -203,8 +203,8 @@ class DeferredExecution:
         The format of the list is the following:
         <input object> sequence<<function> <n><args> <n><kwargs> <ref> <res>>...
         If <n> before <args> is >= 0, then the next n objects are the function arguments.
-        If <n> before <kwargs> is -1, it means that the method arguments contain list
-        and/or DeferredExecution (chain) objects. In this case the next values are read
+        If it is -1, it means that the method arguments contain list and/or
+        DeferredExecution (chain) objects. In this case the next values are read
         one by one until `_Tag.END` is encountered. If the value is `_Tag.LIST`,
         then the next sequence of values up to `_Tag.END` is converted to list.
         If the value is `_Tag.CHAIN`, then the next sequence of values up to
@@ -234,7 +234,7 @@ class DeferredExecution:
                 should be returned and saved in order to avoid duplicate executions.
                 These DeferredExecution tasks are added to this list and, after the
                 execution, the results are passed to the ``_set_result()`` method of
-                each tasks.
+                each task.
             * The second is a flat list of arguments that could be passed to the remote executor.
         """
         stack = []
@@ -327,7 +327,8 @@ class DeferredExecution:
 
             out_append(0)  # Placeholder for ref id
             if de.ref_counter > 0:
-                de.out_pos = len(output) - 1  # Ref id position
+                # Ref id. This is the index in the output list.
+                de.out_pos = len(output) - 1
                 result_consumers.append(de)
                 out_append(1)  # Return result for this node
             else:
@@ -402,6 +403,8 @@ class DeferredExecution:
         list
             The execution results. The last element of this list is the ``MetaList``.
         """
+        # Prefer _remote_exec_single_chain(). It has fewer arguments and
+        # does not require the num_returns to be specified in options.
         if num_returns == 2:
             return _remote_exec_single_chain.remote(*args)
         else:
@@ -413,7 +416,7 @@ class DeferredExecution:
         self,
         result: ObjectRefOrListType,
         meta: "MetaList",
-        meta_off: Union[int, List[int]],
+        meta_offset: Union[int, List[int]],
     ):
         """
         Set the execution result.
@@ -422,12 +425,12 @@ class DeferredExecution:
         ----------
         result : ObjectRefOrListType
         meta : MetaList
-        meta_off : int or list of int
+        meta_offset : int or list of int
         """
         del self.func, self.args, self.kwargs, self.flat_args, self.flat_kwargs
         self.data = result
         self.meta = meta
-        self.meta_off = meta_off
+        self.meta_offset = meta_offset
 
     def __reduce__(self):
         """Not serializable."""
@@ -575,7 +578,7 @@ class _RemoteExecutor:
                     gen = stack.pop()
                     obj = next(gen)
                     stack.append(gen)
-                    if isinstance(obj, GeneratorType):
+                    if isinstance(obj, Generator):
                         stack.append(obj)
                     else:
                         yield obj
@@ -797,7 +800,7 @@ def _remote_exec_single_chain(
     -------
     Generator
     """
-    return remote_executor.construct(2, args)
+    return remote_executor.construct(num_returns=2, args=args)
 
 
 @ray.remote
