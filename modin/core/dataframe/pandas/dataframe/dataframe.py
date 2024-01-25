@@ -1638,12 +1638,8 @@ class PandasDataframe(ClassLogger):
                 except TypeError:
                     new_dtype = dtype
 
-                if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtypes[column] = np.dtype("int64")
-                elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
-                elif isinstance(new_dtype, str) and new_dtype == "category":
+                if isinstance(new_dtype, str) and new_dtype == "category":
                     new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
                         # Actual parent will substitute `None` at `.set_dtypes_cache`
                         parent=None,
