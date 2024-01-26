@@ -337,7 +337,7 @@ class DeferredExecution:
                 result_consumers.append(de)
                 out_append(1)  # Return result for this node
             else:
-                out_append(0)
+                out_append(0)  # Do not return result for this node
 
     @classmethod
     def _deconstruct_list(
