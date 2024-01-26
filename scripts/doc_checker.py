@@ -537,7 +537,8 @@ def monkeypatching():
     sys.setdlopenflags = Mock()
     xgboost_mock = Mock()
 
-    class Booster: ...
+    class Booster:
+        pass
 
     xgboost_mock.Booster = Booster
     sys.modules["xgboost"] = xgboost_mock
