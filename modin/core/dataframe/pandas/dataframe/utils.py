@@ -406,11 +406,13 @@ class ShuffleSortFunctions(ShuffleFunctions):
         if len(non_na_rows) == 1:
             groups = [
                 # taking an empty slice for an index's metadata
-                pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
-                    df.dtypes
+                (
+                    pandas.DataFrame(index=df.index[:0], columns=df.columns).astype(
+                        df.dtypes
+                    )
+                    if key != groupby_codes[0]
+                    else non_na_rows
                 )
-                if key != groupby_codes[0]
-                else non_na_rows
                 for key in group_keys
             ]
         else:

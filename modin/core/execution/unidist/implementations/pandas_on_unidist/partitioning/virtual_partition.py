@@ -112,9 +112,11 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         extract_metadata=False,
     ):
         return _deploy_unidist_func.options(
-            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
-            if extract_metadata
-            else num_splits,
+            num_returns=(
+                num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+                if extract_metadata
+                else num_splits
+            ),
         ).remote(
             cls._get_deploy_split_func(),
             axis,

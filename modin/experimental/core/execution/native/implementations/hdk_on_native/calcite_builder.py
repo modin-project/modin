@@ -1024,9 +1024,11 @@ class CalciteBuilder:
         ):
             trans = self._input_ctx()._maybe_copy_and_translate_expr
             proj_exprs = [
-                trans(frame.ref(c).cast(bool_cols[c]))
-                if c in bool_cols
-                else self._ref(frame, c)
+                (
+                    trans(frame.ref(c).cast(bool_cols[c]))
+                    if c in bool_cols
+                    else self._ref(frame, c)
+                )
                 for c in proj_cols
             ]
         else:

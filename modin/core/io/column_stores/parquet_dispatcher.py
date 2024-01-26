@@ -848,9 +848,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             """
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
-            kwargs[
-                "path"
-            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            kwargs["path"] = (
+                f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            )
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 

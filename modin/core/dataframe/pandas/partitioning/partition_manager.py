@@ -383,13 +383,15 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         new_partitions = np.array(
             [
-                partitions_for_apply[i]
-                if i not in left_indices
-                else cls._apply_func_to_list_of_partitions_broadcast(
-                    apply_func,
-                    partitions_for_apply[i],
-                    internal_indices=left_indices[i],
-                    **get_partitions(i),
+                (
+                    partitions_for_apply[i]
+                    if i not in left_indices
+                    else cls._apply_func_to_list_of_partitions_broadcast(
+                        apply_func,
+                        partitions_for_apply[i],
+                        internal_indices=left_indices[i],
+                        **get_partitions(i),
+                    )
                 )
                 for i in range(len(partitions_for_apply))
                 if i in left_indices or keep_remaining
@@ -946,15 +948,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             return parts
         else:
             row_lengths = [
-                row_chunksize
-                if i + row_chunksize < len(df)
-                else len(df) % row_chunksize or row_chunksize
+                (
+                    row_chunksize
+                    if i + row_chunksize < len(df)
+                    else len(df) % row_chunksize or row_chunksize
+                )
                 for i in range(0, len(df), row_chunksize)
             ]
             col_widths = [
-                col_chunksize
-                if i + col_chunksize < len(df.columns)
-                else len(df.columns) % col_chunksize or col_chunksize
+                (
+                    col_chunksize
+                    if i + col_chunksize < len(df.columns)
+                    else len(df.columns) % col_chunksize or col_chunksize
+                )
                 for i in range(0, len(df.columns), col_chunksize)
             ]
             return parts, row_lengths, col_widths
@@ -1206,14 +1212,18 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             else:
                 result = np.array(
                     [
-                        partitions_for_apply[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            func,
-                            partitions_for_apply[i],
-                            func_dict={
-                                idx: dict_func[idx] for idx in indices[i] if idx >= 0
-                            },
+                        (
+                            partitions_for_apply[i]
+                            if i not in indices
+                            else cls._apply_func_to_list_of_partitions(
+                                func,
+                                partitions_for_apply[i],
+                                func_dict={
+                                    idx: dict_func[idx]
+                                    for idx in indices[i]
+                                    if idx >= 0
+                                },
+                            )
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -1239,10 +1249,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # remaining (non-updated) blocks in their original position.
                 result = np.array(
                     [
-                        partitions_for_apply[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            func, partitions_for_apply[i], internal_indices=indices[i]
+                        (
+                            partitions_for_apply[i]
+                            if i not in indices
+                            else cls._apply_func_to_list_of_partitions(
+                                func,
+                                partitions_for_apply[i],
+                                internal_indices=indices[i],
+                            )
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -1331,12 +1345,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             else:
                 result = np.array(
                     [
-                        partitions_for_remaining[i]
-                        if i not in indices
-                        else cls._apply_func_to_list_of_partitions(
-                            preprocessed_func,
-                            partitions_for_apply[i],
-                            func_dict={idx: dict_func[idx] for idx in indices[i]},
+                        (
+                            partitions_for_remaining[i]
+                            if i not in indices
+                            else cls._apply_func_to_list_of_partitions(
+                                preprocessed_func,
+                                partitions_for_apply[i],
+                                func_dict={idx: dict_func[idx] for idx in indices[i]},
+                            )
                         )
                         for i in range(len(partitions_for_apply))
                     ]
@@ -1354,10 +1370,12 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # See notes in `apply_func_to_select_indices`
                 result = np.array(
                     [
-                        partitions_for_remaining[i]
-                        if i not in indices
-                        else partitions_for_apply[i].apply(
-                            preprocessed_func, internal_indices=indices[i]
+                        (
+                            partitions_for_remaining[i]
+                            if i not in indices
+                            else partitions_for_apply[i].apply(
+                                preprocessed_func, internal_indices=indices[i]
+                            )
                         )
                         for i in range(len(partitions_for_remaining))
                     ]

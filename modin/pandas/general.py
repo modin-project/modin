@@ -496,11 +496,15 @@ def concat(
     # dataframe to a series on axis=0, pandas ignores the name of the series,
     # and this check aims to mirror that (possibly buggy) functionality
     list_of_objs = [
-        obj._query_compiler
-        if isinstance(obj, DataFrame)
-        else DataFrame(obj.rename())._query_compiler
-        if isinstance(obj, (pandas.Series, Series)) and axis == 0
-        else DataFrame(obj)._query_compiler
+        (
+            obj._query_compiler
+            if isinstance(obj, DataFrame)
+            else (
+                DataFrame(obj.rename())._query_compiler
+                if isinstance(obj, (pandas.Series, Series)) and axis == 0
+                else DataFrame(obj)._query_compiler
+            )
+        )
         for obj in list_of_objs
     ]
     if keys is None and isinstance(objs, dict):
