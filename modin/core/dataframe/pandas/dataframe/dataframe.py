@@ -3788,13 +3788,13 @@ class PandasDataframe(ClassLogger):
             Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
             Indices for `external_by` are positive and starts from 0. Indices for `internal_by` are negative
             and starts from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``).
-            ```
+            '''
             by_positions = [0, -1, 1, -2, 2, 3]
             internal_by = ["col1", "col2"]
             external_by = [sr1, sr2, sr3, sr4]
 
             df.groupby([sr1, "col1", sr2, "col3", sr3, sr4])
-            ```.
+            '''.
         operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
