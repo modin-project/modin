@@ -78,7 +78,6 @@ from modin.pandas.test.utils import (  # noqa: E402
     _make_csv_file,
     get_unique_filename,
     make_default_file,
-    teardown_test_files,
 )
 
 
@@ -295,65 +294,44 @@ Yields:
 
 
 @pytest.fixture(scope="class")
-def TestReadCSVFixture():
-    filenames = []
-    files_ids = [
-        "test_read_csv_regular",
-        "test_read_csv_blank_lines",
-        "test_read_csv_yes_no",
-        "test_read_csv_nans",
-        "test_read_csv_bad_lines",
-    ]
+def TestReadCSVFixture(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("TestReadCSVFixture")
+
+    creator = _make_csv_file(data_dir=tmp_path)
     # each xdist worker spawned in separate process with separate namespace and dataset
-    pytest.csvs_names = {file_id: get_unique_filename() for file_id in files_ids}
+    pytest.csvs_names = {}
     # test_read_csv_col_handling, test_read_csv_parsing
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_regular"],
-    )
+    pytest.csvs_names["test_read_csv_regular"] = creator()
     # test_read_csv_parsing
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_yes_no"],
+    pytest.csvs_names["test_read_csv_yes_no"] = creator(
         additional_col_values=["Yes", "true", "No", "false"],
     )
     # test_read_csv_col_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_blank_lines"],
+    pytest.csvs_names["test_read_csv_blank_lines"] = creator(
         add_blank_lines=True,
     )
     # test_read_csv_nans_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_nans"],
+    pytest.csvs_names["test_read_csv_nans"] = creator(
         add_blank_lines=True,
         additional_col_values=["<NA>", "N/A", "NA", "NULL", "custom_nan", "73"],
     )
     # test_read_csv_error_handling
-    _make_csv_file(filenames)(
-        filename=pytest.csvs_names["test_read_csv_bad_lines"],
+    pytest.csvs_names["test_read_csv_bad_lines"] = creator(
         add_bad_lines=True,
     )
-
     yield
-    # Delete csv files that were created
-    teardown_test_files(filenames)
 
 
 @pytest.fixture
 @doc(_doc_pytest_fixture, file_type="csv")
-def make_csv_file():
-    filenames = []
-
-    yield _make_csv_file(filenames)
-
-    # Delete csv files that were created
-    teardown_test_files(filenames)
+def make_csv_file(tmp_path):
+    yield _make_csv_file(data_dir=tmp_path)
 
 
 def create_fixture(file_type):
     @doc(_doc_pytest_fixture, file_type=file_type)
-    def fixture():
-        func, filenames = make_default_file(file_type=file_type)
-        yield func
-        teardown_test_files(filenames)
+    def fixture(tmp_path):
+        yield make_default_file(file_type=file_type, data_dir=tmp_path)
 
     return fixture
 
@@ -465,19 +443,17 @@ def make_sql_connection():
 
 
 @pytest.fixture(scope="class")
-def TestReadGlobCSVFixture():
-    filenames = []
+def TestReadGlobCSVFixture(tmp_path_factory):
+    tmp_path = tmp_path_factory.mktemp("TestReadGlobCSVFixture")
 
     base_name = get_unique_filename(extension="")
-    pytest.glob_path = "{}_*.csv".format(base_name)
-    pytest.files = ["{}_{}.csv".format(base_name, i) for i in range(11)]
+    pytest.glob_path = str(tmp_path / "{}_*.csv".format(base_name))
+    pytest.files = [str(tmp_path / "{}_{}.csv".format(base_name, i)) for i in range(11)]
     for fname in pytest.files:
         # Glob does not guarantee ordering so we have to remove the randomness in the generated csvs.
-        _make_csv_file(filenames)(fname, row_size=11, remove_randomness=True)
+        _make_csv_file(data_dir=tmp_path)(fname, row_size=11, remove_randomness=True)
 
     yield
-
-    teardown_test_files(filenames)
 
 
 @pytest.fixture
@@ -695,9 +671,25 @@ def s3_resource(s3_base):
         raise RuntimeError("Could not create bucket")
 
     s3fs.S3FileSystem.clear_instance_cache()
-    yield conn
 
     s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
+
+    test_s3_files = [
+        ("modin-bugs/multiple_csv/", "modin/pandas/test/data/multiple_csv/"),
+        (
+            "modin-bugs/test_data_dir.parquet/",
+            "modin/pandas/test/data/test_data_dir.parquet/",
+        ),
+        ("modin-bugs/test_data.parquet", "modin/pandas/test/data/test_data.parquet"),
+        ("modin-bugs/test_data.json", "modin/pandas/test/data/test_data.json"),
+        ("modin-bugs/test_data.fwf", "modin/pandas/test/data/test_data.fwf"),
+        ("modin-bugs/test_data.feather", "modin/pandas/test/data/test_data.feather"),
+        ("modin-bugs/issue5159.parquet/", "modin/pandas/test/data/issue5159.parquet/"),
+    ]
+    for s3_key, file_name in test_s3_files:
+        s3.put(file_name, f"{bucket}/{s3_key}", recursive=s3_key.endswith("/"))
+
+    yield conn
 
     s3.rm(bucket, recursive=True)
     for _ in range(20):

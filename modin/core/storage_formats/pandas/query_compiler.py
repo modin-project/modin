@@ -846,9 +846,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # into the data. We will replace the old levels later.
                 new_copy.index = self.index.droplevel(keep_levels)
                 new_copy.index.names = [
-                    "level_{}".format(level_value)
-                    if new_copy.index.names[level_index] is None
-                    else new_copy.index.names[level_index]
+                    (
+                        "level_{}".format(level_value)
+                        if new_copy.index.names[level_index] is None
+                        else new_copy.index.names[level_index]
+                    )
                     for level_index, level_value in enumerate(uniq_sorted_level)
                 ]
                 new_modin_frame = new_copy._modin_frame.from_labels()
@@ -1418,9 +1420,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         other_for_pandas = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         if len(self.columns) > 1:
             # computing covariance for each column requires having the other columns,
@@ -1466,9 +1470,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         other_for_pandas = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         if len(self.columns) > 1:
             # computing correlation for each column requires having the other columns,
@@ -1774,9 +1780,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = (
                 get_unique_level_values(index)
                 if consider_index
-                else index
-                if isinstance(index, list)
-                else [index]
+                else index if isinstance(index, list) else [index]
             )
 
             new_columns = (
@@ -2644,9 +2648,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             axis,
             lambda df: df.rank(**kwargs),
             new_index=self._modin_frame.copy_index_cache(copy_lengths=True),
-            new_columns=self._modin_frame.copy_columns_cache(copy_lengths=True)
-            if not numeric_only
-            else None,
+            new_columns=(
+                self._modin_frame.copy_columns_cache(copy_lengths=True)
+                if not numeric_only
+                else None
+            ),
             dtypes=np.float64,
             sync_labels=False,
         )
@@ -4193,10 +4199,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     )
                 else:
                     new_index_names = tuple(
-                        None
-                        if isinstance(name, str)
-                        and name.startswith(MODIN_UNNAMED_SERIES_LABEL)
-                        else name
+                        (
+                            None
+                            if isinstance(name, str)
+                            and name.startswith(MODIN_UNNAMED_SERIES_LABEL)
+                            else name
+                        )
                         for name in result.index.names
                     )
                     result.index.names = new_index_names

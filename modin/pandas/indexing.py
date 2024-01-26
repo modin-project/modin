@@ -390,9 +390,7 @@ class _LocationIndexerBase(ClassLogger):
                 None
                 if (col_scalar and row_scalar)
                 or (row_multiindex_full_lookup and col_multiindex_full_lookup)
-                else 1
-                if col_scalar or col_multiindex_full_lookup
-                else 0
+                else 1 if col_scalar or col_multiindex_full_lookup else 0
             )
 
         res_df = self.df.__constructor__(query_compiler=qc_view)
@@ -477,9 +475,11 @@ class _LocationIndexerBase(ClassLogger):
             return self.qc.index if axis == 0 else self.qc.columns
 
         row_lookup_len, col_lookup_len = [
-            len(lookup)
-            if not isinstance(lookup, slice)
-            else compute_sliced_len(lookup, len(get_axis(i)))
+            (
+                len(lookup)
+                if not isinstance(lookup, slice)
+                else compute_sliced_len(lookup, len(get_axis(i)))
+            )
             for i, lookup in enumerate([row_lookup, col_lookup])
         ]
 

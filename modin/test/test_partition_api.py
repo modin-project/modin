@@ -154,16 +154,12 @@ def test_from_partitions(axis, index, columns, row_lengths, column_widths):
     row_lengths = (
         None
         if row_lengths is None
-        else [num_rows, num_rows]
-        if axis == 0
-        else [num_rows]
+        else [num_rows, num_rows] if axis == 0 else [num_rows]
     )
     column_widths = (
         None
         if column_widths is None
-        else [num_cols]
-        if axis == 0
-        else [num_cols, num_cols]
+        else [num_cols] if axis == 0 else [num_cols, num_cols]
     )
     futures = []
     if axis is None:

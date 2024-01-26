@@ -6301,9 +6301,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         other_for_default = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         return ExpandingDefault.register(
             pandas.core.window.expanding.Expanding.corr,
@@ -6347,9 +6349,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         other_for_default = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         return ExpandingDefault.register(
             pandas.core.window.expanding.Expanding.cov,

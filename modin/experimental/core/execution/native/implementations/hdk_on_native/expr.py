@@ -485,7 +485,7 @@ class BaseExpr(abc.ABC):
         OpExpr
             The resulting bitwise inverse expression.
         """
-        return OpExpr("~", [self], self._dtype)
+        return OpExpr("BIT_NOT", [self], self._dtype)
 
     def _cmp_op(self, other, op_name):
         """
@@ -983,7 +983,7 @@ class OpExpr(BaseExpr):
         "POWER": lambda self: self._fold_arithm("__pow__"),
         "/": lambda self: self._fold_arithm("__truediv__"),
         "//": lambda self: self._fold_arithm("__floordiv__"),
-        "~": lambda self: self._fold_invert(),
+        "BIT_NOT": lambda self: self._fold_invert(),
         "CAST": lambda self: self._fold_literal("cast", self._dtype),
         "IS NULL": lambda self: self._fold_literal("is_null"),
         "IS NOT NULL": lambda self: self._fold_literal("is_not_null"),
@@ -996,7 +996,7 @@ class OpExpr(BaseExpr):
         "POWER": lambda self, table: self._pc("power", table),
         "/": lambda self, table: self._pc("divide", table),
         "//": lambda self, table: self._pc("divide", table),
-        "~": lambda self, table: self._invert(table),
+        "BIT_NOT": lambda self, table: self._invert(table),
         "CAST": lambda self, table: self._col(table).cast(to_arrow_type(self._dtype)),
         "IS NULL": lambda self, table: self._col(table).is_null(nan_is_null=True),
         "IS NOT NULL": lambda self, table: pc.invert(
@@ -1004,7 +1004,7 @@ class OpExpr(BaseExpr):
         ),
     }
 
-    _UNSUPPORTED_HDK_OPS = {"~"}
+    _UNSUPPORTED_HDK_OPS = {}
 
     def __init__(self, op, operands, dtype):
         self.op = op

@@ -686,6 +686,14 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
             row_lengths = None
+
+        if (
+            dataset.pandas_metadata
+            and "column_indexes" in dataset.pandas_metadata
+            and dataset.pandas_metadata["column_indexes"][0]["numpy_type"] == "int64"
+        ):
+            columns = pandas.Index(columns).astype("int64").to_list()
+
         frame = cls.frame_cls(
             remote_parts,
             index,
@@ -840,9 +848,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             """
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
-            kwargs[
-                "path"
-            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            kwargs["path"] = (
+                f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            )
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 

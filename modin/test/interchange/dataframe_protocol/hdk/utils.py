@@ -202,7 +202,12 @@ def get_data_of_all_types(
     )
     if has_nulls:
         string_data["string_null"] = np.array(
-            ["English: test string", None, "Chinese: 测试字符串", "Russian: тестовая строка"]
+            [
+                "English: test string",
+                None,
+                "Chinese: 测试字符串",
+                "Russian: тестовая строка",
+            ]
             * 10
         )
 

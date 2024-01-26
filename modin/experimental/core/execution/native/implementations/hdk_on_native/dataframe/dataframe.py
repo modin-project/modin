@@ -1462,9 +1462,11 @@ class HdkOnNativeDataframe(PandasDataframe):
             for f in frames
         ):
             tables = [
-                t
-                if isinstance(t := f._partitions[0][0].get(), pyarrow.Table)
-                else t.to_arrow()
+                (
+                    t
+                    if isinstance(t := f._partitions[0][0].get(), pyarrow.Table)
+                    else t.to_arrow()
+                )
                 for f in frames
             ]
             column_names = [c for t in tables for c in t.column_names]
@@ -2323,9 +2325,11 @@ class HdkOnNativeDataframe(PandasDataframe):
                 Index,
                 data=exprs.keys(),
                 dtype="O",
-                name=self.columns.names
-                if isinstance(self.columns, MultiIndex)
-                else self.columns.name,
+                name=(
+                    self.columns.names
+                    if isinstance(self.columns, MultiIndex)
+                    else self.columns.name
+                ),
             )
             return self.__constructor__(
                 columns=new_columns,

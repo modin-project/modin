@@ -1101,6 +1101,12 @@ def test_astype(data):
     # dict to astype() for a series with no name.
 
 
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
+def test_astype_32_types(dtype):
+    # https://github.com/modin-project/modin/issues/6881
+    assert pd.Series([1, 2, 6]).astype(dtype).dtype == dtype
+
+
 @pytest.mark.parametrize(
     "data", [["A", "A", "B", "B", "A"], [1, 1, 2, 1, 2, 2, 3, 1, 2, 1, 2]]
 )

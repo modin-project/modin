@@ -301,9 +301,11 @@ def test_indexing_duplicate_axis(data):
         lambda df: df.columns[0],
         lambda df: df.index,
         lambda df: [df.index, df.columns[0]],
-        lambda df: pandas.Series(list(range(len(df.index))))
-        if isinstance(df, pandas.DataFrame)
-        else pd.Series(list(range(len(df)))),
+        lambda df: (
+            pandas.Series(list(range(len(df.index))))
+            if isinstance(df, pandas.DataFrame)
+            else pd.Series(list(range(len(df))))
+        ),
     ],
     ids=[
         "non_existing_column",
@@ -1567,18 +1569,24 @@ def test_reset_index_with_multi_index_no_drop(
         [f"level_{i}" for i in range(index.nlevels)]
         if multiindex_levels_names_max_levels == 0
         else [
-            tuple(
-                [
-                    f"level_{i}_name_{j}"
-                    for j in range(
-                        0,
-                        max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0)
-                        + i,
-                    )
-                ]
+            (
+                tuple(
+                    [
+                        f"level_{i}_name_{j}"
+                        for j in range(
+                            0,
+                            max(
+                                multiindex_levels_names_max_levels + 1 - index.nlevels,
+                                0,
+                            )
+                            + i,
+                        )
+                    ]
+                )
+                if max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0) + i
+                > 0
+                else f"level_{i}"
             )
-            if max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0) + i > 0
-            else f"level_{i}"
             for i in range(index.nlevels)
         ]
     )
@@ -1596,9 +1604,11 @@ def test_reset_index_with_multi_index_no_drop(
 
     if isinstance(level, list):
         level = [
-            index.names[int(x[len("level_name_") :])]
-            if isinstance(x, str) and x.startswith("level_name_")
-            else x
+            (
+                index.names[int(x[len("level_name_") :])]
+                if isinstance(x, str) and x.startswith("level_name_")
+                else x
+            )
             for x in level
         ]
 
@@ -2356,8 +2366,8 @@ def test_setitem_unhashable_key():
 def test_setitem_2d_insertion():
     def build_value_picker(modin_value, pandas_value):
         """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
-        return (
-            lambda source_df, *args, **kwargs: modin_value
+        return lambda source_df, *args, **kwargs: (
+            modin_value
             if isinstance(source_df, (pd.DataFrame, pd.Series))
             else pandas_value
         )
@@ -2573,9 +2583,9 @@ def test__getitem_bool_with_empty_partition():
     eval_general(
         modin_tmp_result,
         pandas_tmp_result,
-        lambda df: df[modin_series]
-        if isinstance(df, pd.DataFrame)
-        else df[pandas_series],
+        lambda df: (
+            df[modin_series] if isinstance(df, pd.DataFrame) else df[pandas_series]
+        ),
     )
 
 

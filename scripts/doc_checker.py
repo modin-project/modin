@@ -538,7 +538,7 @@ def monkeypatching():
     xgboost_mock = Mock()
 
     class Booster:
-        ...
+        pass
 
     xgboost_mock.Booster = Booster
     sys.modules["xgboost"] = xgboost_mock

@@ -498,9 +498,11 @@ class DtypesDescriptor:
                         # otherwise, it may indicate missing columns that this 'val' has no info about,
                         # meaning that we shouldn't try computing a new dtype for this column,
                         # so marking it as 'unknown'
-                        i: np.dtype(float)
-                        if val._know_all_names and val._remaining_dtype is None
-                        else "unknown"
+                        i: (
+                            np.dtype(float)
+                            if val._know_all_names and val._remaining_dtype is None
+                            else "unknown"
+                        )
                     },
                     inplace=True,
                 )
@@ -732,8 +734,8 @@ class ModinDtypes:
         elif callable(self._value):
             new_self = self.copy()
             old_value = new_self._value
-            new_self._value = (
-                lambda: old_value().iloc[ids] if numeric_index else old_value()[ids]
+            new_self._value = lambda: (
+                old_value().iloc[ids] if numeric_index else old_value()[ids]
             )
             return new_self
         ErrorMessage.catch_bugs_and_request_email(

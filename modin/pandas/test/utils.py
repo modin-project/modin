@@ -76,9 +76,11 @@ test_data = {
     },
     "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x
-            if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
-            else np.NaN
+            (
+                x
+                if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
+                else np.NaN
+            )
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
             )
@@ -1192,9 +1194,11 @@ def get_unique_filename(
                     char_counter += 1
         parameters_values = "_".join(
             [
-                str(value)
-                if not isinstance(value, (list, tuple))
-                else "_".join([str(x) for x in value])
+                (
+                    str(value)
+                    if not isinstance(value, (list, tuple))
+                    else "_".join([str(x) for x in value])
+                )
                 for value in kwargs_name.values()
             ]
         )
@@ -1353,9 +1357,9 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None, idx_name=None
     return pandas.DataFrame(data, index=index)
 
 
-def _make_csv_file(filenames):
+def _make_csv_file(data_dir):
     def _csv_file_maker(
-        filename,
+        filename=None,
         row_size=NROWS,
         force=True,
         delimiter=",",
@@ -1375,8 +1379,10 @@ def _make_csv_file(filenames):
         escapechar=None,
         lineterminator=None,
     ):
+        if filename is None:
+            filename = get_unique_filename(data_dir=data_dir)
         if os.path.exists(filename) and not force:
-            pass
+            return None
         else:
             df = generate_dataframe(row_size, additional_col_values)
             if remove_randomness:
@@ -1446,24 +1452,9 @@ def _make_csv_file(filenames):
                     encoding=encoding,
                     **csv_reader_writer_params,
                 )
-            filenames.append(filename)
-            return df
+            return filename
 
     return _csv_file_maker
-
-
-def teardown_test_file(test_path):
-    if os.path.exists(test_path):
-        # PermissionError can occure because of issue #2533
-        try:
-            os.remove(test_path)
-        except PermissionError:
-            pass
-
-
-def teardown_test_files(test_paths: list):
-    for path in test_paths:
-        teardown_test_file(path)
 
 
 def sort_index_for_equal_values(df, ascending=True):
@@ -1503,11 +1494,10 @@ def rotate_decimal_digits_or_symbols(value):
         return tens + ones * 10
 
 
-def make_default_file(file_type: str):
+def make_default_file(file_type: str, data_dir: str):
     """Helper function for pytest fixtures."""
-    filenames = []
 
-    def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+    def _create_file(filename, force, nrows, ncols, func: str, func_kw=None):
         """
         Helper function that creates a dataframe before writing it to a file.
 
@@ -1524,7 +1514,6 @@ def make_default_file(file_type: str):
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
             getattr(df, func)(filename, **func_kw if func_kw else {})
-            filenames.append(filename)
 
     file_type_to_extension = {
         "excel": "xlsx",
@@ -1533,19 +1522,18 @@ def make_default_file(file_type: str):
     }
     extension = file_type_to_extension.get(file_type, file_type)
 
-    def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
-        if filename is None:
-            filename = get_unique_filename(extension=extension)
+    def _make_default_file(nrows=NROWS, ncols=2, force=True, **kwargs):
+        filename = get_unique_filename(extension=extension, data_dir=data_dir)
 
         if file_type == "json":
             lines = kwargs.get("lines")
             func_kw = {"lines": lines, "orient": "records"} if lines else {}
-            _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
+            _create_file(filename, force, nrows, ncols, "to_json", func_kw)
         elif file_type in ("html", "excel", "feather", "stata", "pickle"):
-            _create_file(filenames, filename, force, nrows, ncols, f"to_{file_type}")
+            _create_file(filename, force, nrows, ncols, f"to_{file_type}")
         elif file_type == "hdf":
             func_kw = {"key": "df", "format": kwargs.get("format")}
-            _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+            _create_file(filename, force, nrows, ncols, "to_hdf", func_kw)
         elif file_type == "fwf":
             if force or not os.path.exists(filename):
                 fwf_data = kwargs.get("fwf_data")
@@ -1554,12 +1542,11 @@ def make_default_file(file_type: str):
                         fwf_data = fwf_file.read()
                 with open(filename, "w") as f:
                     f.write(fwf_data)
-                filenames.append(filename)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
         return filename
 
-    return _make_default_file, filenames
+    return _make_default_file
 
 
 def value_equals(obj1, obj2):

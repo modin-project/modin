@@ -457,12 +457,9 @@ def read_excel(
     header: int | Sequence[int] | None = 0,
     names: list[str] | None = None,
     index_col: int | Sequence[int] | None = None,
-    usecols: int
-    | str
-    | Sequence[int]
-    | Sequence[str]
-    | Callable[[str], bool]
-    | None = None,
+    usecols: (
+        int | str | Sequence[int] | Sequence[str] | Callable[[str], bool] | None
+    ) = None,
     dtype: DtypeArg | None = None,
     engine: Literal[("xlrd", "openpyxl", "odf", "pyxlsb")] | None = None,
     converters: dict[str, Callable] | dict[int, Callable] | None = None,
@@ -861,9 +858,11 @@ class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
                     if item[0] != "_":
                         ErrorMessage.default_to_pandas("`{}`".format(item))
                     args = [
-                        to_pandas(arg)
-                        if isinstance(arg, ModinObjects.DataFrame)
-                        else arg
+                        (
+                            to_pandas(arg)
+                            if isinstance(arg, ModinObjects.DataFrame)
+                            else arg
+                        )
                         for arg in args
                     ]
                     kwargs = {
@@ -925,9 +924,11 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
                     if item[0] != "_":
                         ErrorMessage.default_to_pandas("`{}`".format(item))
                     args = [
-                        to_pandas(arg)
-                        if isinstance(arg, ModinObjects.DataFrame)
-                        else arg
+                        (
+                            to_pandas(arg)
+                            if isinstance(arg, ModinObjects.DataFrame)
+                            else arg
+                        )
                         for arg in args
                     ]
                     kwargs = {

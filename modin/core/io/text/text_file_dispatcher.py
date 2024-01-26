@@ -582,11 +582,15 @@ class TextFileDispatcher(FileDispatcher):
             # if num_splits == 4, len(column_names) == 80 and column_chunksize == 32,
             # column_widths will be [32, 32, 16, 0]
             column_widths = [
-                column_chunksize
-                if len(column_names) > (column_chunksize * (i + 1))
-                else 0
-                if len(column_names) < (column_chunksize * i)
-                else len(column_names) - (column_chunksize * i)
+                (
+                    column_chunksize
+                    if len(column_names) > (column_chunksize * (i + 1))
+                    else (
+                        0
+                        if len(column_names) < (column_chunksize * i)
+                        else len(column_names) - (column_chunksize * i)
+                    )
+                )
                 for i in range(num_splits)
             ]
 

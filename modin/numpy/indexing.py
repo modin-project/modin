@@ -451,9 +451,11 @@ class ArrayIndexer(object):
             )
 
         row_lookup_len, col_lookup_len = [
-            len(lookup)
-            if not isinstance(lookup, slice)
-            else compute_sliced_len(lookup, len(get_axis(i)))
+            (
+                len(lookup)
+                if not isinstance(lookup, slice)
+                else compute_sliced_len(lookup, len(get_axis(i)))
+            )
             for i, lookup in enumerate([row_lookup, col_lookup])
         ]
 

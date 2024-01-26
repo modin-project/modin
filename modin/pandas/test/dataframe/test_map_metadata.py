@@ -1605,9 +1605,11 @@ def test_update(data, other_data, raise_errors):
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.update(other_modin_df)
-        if isinstance(df, pd.DataFrame)
-        else df.update(other_pandas_df),
+        lambda df: (
+            df.update(other_modin_df)
+            if isinstance(df, pd.DataFrame)
+            else df.update(other_pandas_df)
+        ),
         __inplace__=True,
         **kwargs,
     )

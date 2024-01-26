@@ -48,6 +48,7 @@ from modin.experimental.core.io import (
 from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalCustomTextParser,
     ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasJsonParser,
     ExperimentalPandasParquetParser,
     ExperimentalPandasPickleParser,
 )
@@ -98,6 +99,13 @@ class PandasOnRayIO(RayIO):
     to_parquet_glob = __make_write(
         ExperimentalGlobDispatcher,
         build_args={**build_args, "base_write": RayIO.to_parquet},
+    )
+    read_json_glob = __make_read(
+        ExperimentalPandasJsonParser, ExperimentalGlobDispatcher
+    )
+    to_json_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_json},
     )
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalGlobDispatcher

@@ -1162,11 +1162,21 @@ class PandasDataframe(ClassLogger):
                     extra_log="Mask takes only list-like numeric indexers, "
                     + f"received: {type(indexer)}",
                 )
+                if isinstance(indexer, list):
+                    indexer = np.array(indexer, dtype=np.int64)
             indexers.append(indexer)
         row_positions, col_positions = indexers
 
         if col_positions is None and row_positions is None:
             return self.copy()
+
+        # quite fast check that allows skip sorting
+        must_sort_row_pos = row_positions is not None and not np.all(
+            row_positions[1:] >= row_positions[:-1]
+        )
+        must_sort_col_pos = col_positions is not None and not np.all(
+            col_positions[1:] >= col_positions[:-1]
+        )
 
         if col_positions is None and row_positions is not None:
             # Check if the optimization that first takes part of the data using the mask
@@ -1176,18 +1186,40 @@ class PandasDataframe(ClassLogger):
             all_rows = None
             if self.has_materialized_index:
                 all_rows = len(self.index)
-            elif self._row_lengths_cache:
-                all_rows = sum(self._row_lengths_cache)
-            if all_rows:
-                if len(row_positions) > 0.9 * all_rows:
-                    return self._reorder_labels(
-                        row_positions=row_positions, col_positions=col_positions
-                    )
+            elif self._row_lengths_cache or must_sort_row_pos:
+                all_rows = sum(self.row_lengths)
 
+            # 'base_num_cols' specifies the number of columns that the dataframe should have
+            # in order to jump to 'reordered_labels' in case of len(row_positions) / len(self) >= base_ratio;
+            # these variables may be a subject to change in order to tune performance more accurately
+            base_num_cols = 10
+            base_ratio = 0.2
+            # Example:
+            #   len(self.columns): 10 == base_num_cols -> min ratio to jump to reorder_labels: 0.2 == base_ratio
+            #   len(self.columns): 15 -> min ratio to jump to reorder_labels: 0.3
+            #   len(self.columns): 20 -> min ratio to jump to reorder_labels: 0.4
+            #   ...
+            #   len(self.columns): 49 -> min ratio to jump to reorder_labels: 0.98
+            #   len(self.columns): 50 -> min ratio to jump to reorder_labels: 1.0
+            #   len(self.columns): 55 -> min ratio to jump to reorder_labels: 1.0
+            #   ...
+            if (all_rows and len(row_positions) > 0.9 * all_rows) or (
+                must_sort_row_pos
+                and len(row_positions) * base_num_cols
+                >= min(
+                    all_rows * len(self.columns) * base_ratio,
+                    len(row_positions) * base_num_cols,
+                )
+            ):
+                return self._reorder_labels(
+                    row_positions=row_positions, col_positions=col_positions
+                )
         sorted_row_positions = sorted_col_positions = None
-
         if row_positions is not None:
-            sorted_row_positions = self._get_sorted_positions(row_positions)
+            if must_sort_row_pos:
+                sorted_row_positions = self._get_sorted_positions(row_positions)
+            else:
+                sorted_row_positions = row_positions
             # Get dict of row_parts as {row_index: row_internal_indices}
             row_partitions_dict = self._get_dict_of_block_index(
                 0, sorted_row_positions, are_indices_sorted=True
@@ -1202,7 +1234,10 @@ class PandasDataframe(ClassLogger):
             new_index = self.copy_index_cache(copy_lengths=True)
 
         if col_positions is not None:
-            sorted_col_positions = self._get_sorted_positions(col_positions)
+            if must_sort_col_pos:
+                sorted_col_positions = self._get_sorted_positions(col_positions)
+            else:
+                sorted_col_positions = col_positions
             # Get dict of col_parts as {col_index: col_internal_indices}
             col_partitions_dict = self._get_dict_of_block_index(
                 1, sorted_col_positions, are_indices_sorted=True
@@ -1348,18 +1383,22 @@ class PandasDataframe(ClassLogger):
         new_row_labels = pandas.RangeIndex(len(self.index))
         if self.index.nlevels > 1:
             level_names = [
-                self.index.names[i]
-                if self.index.names[i] is not None
-                else "level_{}".format(i)
+                (
+                    self.index.names[i]
+                    if self.index.names[i] is not None
+                    else "level_{}".format(i)
+                )
                 for i in range(self.index.nlevels)
             ]
         else:
             level_names = [
-                self.index.names[0]
-                if self.index.names[0] is not None
-                else "index"
-                if "index" not in self.columns
-                else "level_{}".format(0)
+                (
+                    self.index.names[0]
+                    if self.index.names[0] is not None
+                    else (
+                        "index" if "index" not in self.columns else "level_{}".format(0)
+                    )
+                )
             ]
         names = tuple(level_names) if len(level_names) > 1 else level_names[0]
         new_dtypes = self.index.to_frame(name=names).dtypes
@@ -1604,12 +1643,8 @@ class PandasDataframe(ClassLogger):
                 except TypeError:
                     new_dtype = dtype
 
-                if dtype != np.int32 and new_dtype == np.int32:
-                    new_dtypes[column] = np.dtype("int64")
-                elif dtype != np.float32 and new_dtype == np.float32:
-                    new_dtypes[column] = np.dtype("float64")
                 # We cannot infer without computing the dtype if
-                elif isinstance(new_dtype, str) and new_dtype == "category":
+                if isinstance(new_dtype, str) and new_dtype == "category":
                     new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
                         # Actual parent will substitute `None` at `.set_dtypes_cache`
                         parent=None,
@@ -2094,6 +2129,8 @@ class PandasDataframe(ClassLogger):
         func: Callable,
         dtypes: Optional[str] = None,
         new_columns: Optional[pandas.Index] = None,
+        func_args=None,
+        func_kwargs=None,
     ) -> "PandasDataframe":
         """
         Perform a function that maps across the entire dataset.
@@ -2109,13 +2146,19 @@ class PandasDataframe(ClassLogger):
         new_columns : pandas.Index, optional
             New column labels of the result, its length has to be identical
             to the older columns. If not specified, old column labels are preserved.
+        func_args : iterable, optional
+            Positional arguments for the 'func' callable.
+        func_kwargs : dict, optional
+            Keyword arguments for the 'func' callable.
 
         Returns
         -------
         PandasDataframe
             A new dataframe.
         """
-        new_partitions = self._partition_mgr_cls.map_partitions(self._partitions, func)
+        new_partitions = self._partition_mgr_cls.map_partitions(
+            self._partitions, func, func_args, func_kwargs
+        )
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns
@@ -2938,9 +2981,11 @@ class PandasDataframe(ClassLogger):
             # `axis` given may have changed, we currently just recompute it.
             # TODO Determine lengths from current lengths if `keep_remaining=False`
             lengths_objs = {
-                axis: [len(apply_indices)]
-                if not keep_remaining
-                else [self.row_lengths, self.column_widths][axis],
+                axis: (
+                    [len(apply_indices)]
+                    if not keep_remaining
+                    else [self.row_lengths, self.column_widths][axis]
+                ),
                 axis ^ 1: [self.row_lengths, self.column_widths][axis ^ 1],
             }
             return self.__constructor__(
@@ -4002,9 +4047,11 @@ class PandasDataframe(ClassLogger):
                 # Getting futures for columns of non-empty partitions
                 cols = [
                     part.apply(
-                        lambda df: None
-                        if df.attrs.get(skip_on_aligning_flag, False)
-                        else df.columns
+                        lambda df: (
+                            None
+                            if df.attrs.get(skip_on_aligning_flag, False)
+                            else df.columns
+                        )
                     )._data
                     for part in result._partitions.flatten()
                 ]
