@@ -39,6 +39,10 @@ from .utils import (
 
 if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+else:
+    pytestmark = pytest.mark.filterwarnings(
+        "default:`DataFrame.insert` for empty DataFrame is not currently supported.*:UserWarning"
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

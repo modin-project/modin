@@ -16,10 +16,11 @@ from typing import Union
 
 import pandas
 import pyarrow as pa
+from pandas._typing import AnyArrayLike
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 
-from ..dataframe.utils import arrow_to_pandas
+from ..dataframe.utils import ColNameCodec, arrow_to_pandas
 from ..db_worker import DbTable
 
 
@@ -82,14 +83,24 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
         """
         return self.to_pandas().to_numpy(**kwargs)
 
-    def get(self):
+    def get(self, to_arrow: bool = False) -> Union[DbTable, pandas.DataFrame, pa.Table]:
         """
         Get partition data.
 
+        Parameters
+        ----------
+        to_arrow : bool, default: False
+            Convert the data to ``pyarrow.Table``.
+
         Returns
         -------
-        DbTable or pandas.DataFrame or pyarrow.Table
+        ``DbTable`` or ``pandas.DataFrame`` or ``pyarrow.Table``
         """
+        if to_arrow:
+            if isinstance(self._data, pandas.DataFrame):
+                self._data = pa.Table.from_pandas(self._data, preserve_index=False)
+            elif isinstance(self._data, DbTable):
+                return self._data.to_arrow()
         return self._data
 
     @classmethod
@@ -108,6 +119,58 @@ class HdkOnNativeDataframePartition(PandasDataframePartition):
             The new partition.
         """
         return cls(obj)
+
+    def insert(self, idx: int, name: str, value: AnyArrayLike):
+        """
+        Insert column into this raw partition.
+
+        Parameters
+        ----------
+        idx : int
+        name : str
+        value : AnyArrayLike
+
+        Returns
+        -------
+        tuple of HdkOnNativeDataframePartition, dtype
+        """
+        data = self._data
+        name = ColNameCodec.encode(name)
+
+        if isinstance(data, pandas.DataFrame):
+            data = data.copy(False)
+            data.insert(idx, name, value)
+            dtype = data.dtypes[idx]
+        elif isinstance(data, pa.Table):
+            try:
+                new_data = data.add_column(idx, name, [value])
+                dtype = new_data.field(idx).type.to_pandas_dtype()
+                data = new_data
+            except Exception:
+                try:
+                    df = pandas.DataFrame({name: value})
+                    at = pa.Table.from_pandas(df, preserve_index=False)
+                    data = data.add_column(idx, at.field(0), at.column(0))
+                    dtype = df.dtypes[0]
+                except Exception as err:
+                    raise NotImplementedError(repr(err))
+        else:
+            raise NotImplementedError(f"Insertion into {type(data)}")
+
+        return HdkOnNativeDataframePartition(data), dtype
+
+    @property
+    def raw(self):
+        """
+        True if the partition contains a raw data.
+
+        The raw data is either ``pandas.DataFrame`` or ``pyarrow.Table``.
+
+        Returns
+        -------
+        bool
+        """
+        return isinstance(self._data, (pandas.DataFrame, pa.Table))
 
     @property
     def _length_cache(self):

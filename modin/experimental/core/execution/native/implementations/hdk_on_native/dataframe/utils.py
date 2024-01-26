@@ -531,6 +531,52 @@ def get_common_arrow_type(t1: pa.lib.DataType, t2: pa.lib.DataType) -> pa.lib.Da
     return pa.from_numpy_dtype(np.promote_types(t1, t2))
 
 
+def is_supported_arrow_type(dtype: pa.lib.DataType) -> bool:
+    """
+    Return True if the specified arrow type is supported by HDK.
+
+    Parameters
+    ----------
+    dtype : pa.lib.DataType
+
+    Returns
+    -------
+    bool
+    """
+    if (
+        pa.types.is_string(dtype)
+        or pa.types.is_time(dtype)
+        or pa.types.is_dictionary(dtype)
+        or pa.types.is_null(dtype)
+    ):
+        return True
+    if isinstance(dtype, pa.ExtensionType) or pa.types.is_duration(dtype):
+        return False
+    try:
+        pandas_dtype = dtype.to_pandas_dtype()
+        return pandas_dtype != np.dtype("O")
+    except NotImplementedError:
+        return False
+
+
+def ensure_supported_dtype(dtype):
+    """
+    Check if the specified `dtype` is supported by HDK.
+
+    If `dtype` is not supported, `NotImplementedError` is raised.
+
+    Parameters
+    ----------
+    dtype : dtype
+    """
+    try:
+        dtype = pa.from_numpy_dtype(dtype)
+    except pa.ArrowNotImplementedError as err:
+        raise NotImplementedError(f"Type {dtype}") from err
+    if not is_supported_arrow_type(dtype):
+        raise NotImplementedError(f"Type {dtype}")
+
+
 def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
     """
     Convert the specified arrow table to pandas.
