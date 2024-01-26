@@ -235,7 +235,9 @@ class Series(BasePandasDataset):
         This is developed and maintained outside of Modin.
         Please report any issues to https://github.com/data-apis/dataframe-api-compat.
         """
-        dataframe_api_compat = import_optional_dependency("dataframe_api_compat")
+        dataframe_api_compat = import_optional_dependency(
+            "dataframe_api_compat", "implementation"
+        )
         return dataframe_api_compat.modin_standard.convert_to_standard_compliant_column(
             self, api_version=api_version
         )
