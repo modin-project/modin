@@ -1924,8 +1924,49 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
         )
 
+    def validate_func_kwargs(self, kwargs: dict):
+        """
+        Validates types of user-provided "named aggregation" kwargs.
+        `TypeError` is raised if aggfunc is not `str` or callable.
+
+        Parameters
+        ----------
+        kwargs : dict
+
+        Returns
+        -------
+        columns : List[str]
+            List of user-provided keys.
+        func : List[Union[str, callable[...,Any]]]
+            List of user-provided aggfuncs
+
+        Examples
+        --------
+        >>> validate_func_kwargs({'one': 'min', 'two': 'max'})
+        (['one', 'two'], ['min', 'max'])
+
+        Notes
+        -----
+        Copied from pandas
+        """
+        tuple_given_message = "func is expected but received {} in **kwargs."
+        columns = list(kwargs)
+        func = []
+        for col_func in kwargs.values():
+            if not (isinstance(col_func, str) or callable(col_func)):
+                raise TypeError(tuple_given_message.format(type(col_func).__name__))
+            func.append(col_func)
+        if not columns:
+            no_arg_message = "Must provide 'func' or named aggregation **kwargs."
+            raise TypeError(no_arg_message)
+        return columns, func
+
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
         engine_default = engine is None and engine_kwargs is None
+        # if func is None, will switch to user-provided "named aggregation" kwargs
+        if func_is_none := func is None:
+            columns, func = self.validate_func_kwargs(kwargs)
+            kwargs = {}
         if isinstance(func, dict) and engine_default:
             raise SpecificationError("nested renamer is not supported")
         elif is_list_like(func) and engine_default:
@@ -1946,6 +1987,8 @@ class SeriesGroupBy(DataFrameGroupBy):
             # because there is no need to identify which original column's aggregation
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
+            if func_is_none:
+                return result.set_axis(labels=columns, axis=1, copy=False)
             return result.set_axis(
                 labels=self._try_get_str_func(func), axis=1, copy=False
             )

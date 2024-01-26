@@ -655,6 +655,12 @@ class BasePandasDataset(ClassLogger):
         Aggregate using one or more operations over the specified axis.
         """
         axis = self._get_axis_number(axis)
+
+        # if func is None, will switch to user-provided "named aggregation" kwargs
+        # if func is None:
+        #    func = dict(kwargs.items())
+        #    kwargs = {}
+
         result = None
 
         if axis == 0:

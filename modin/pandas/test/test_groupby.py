@@ -2989,6 +2989,14 @@ def test_groupby_apply_series_result(modify_config):
     )
 
 
+def test_groupby_named_aggregation():
+    ser = pd.Series([10, 10, 10, 1, 1, 1, 2, 3], name="data")
+
+    eval_general(
+        ser, ser._to_pandas(), lambda ser: ser.groupby(level=0).agg(result=("max"))
+    )
+
+
 ### TEST GROUPBY WARNINGS ###
 
 
