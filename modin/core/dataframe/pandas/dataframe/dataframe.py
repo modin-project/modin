@@ -2402,6 +2402,12 @@ class PandasDataframe(ClassLogger):
             Whether the range should be built in ascending or descending order.
         preserve_columns : bool, default: False
             If the columns cache should be preserved (specify this flag if `func` doesn't change column labels).
+        data : PandasDataframe, optional
+            Dataframe to range-partition along with the `self` frame. If specified, the `func` will recieve
+            a dataframe with an additional MultiIndex level in columns that separates `self` and `data`:
+            ``df["grouper"] # self`` and ``df["data"] # data``.
+        data_key_columns : list of hashables, optional
+            Additional key columns from `data`. Will be combined with `key_columns`.
         **kwargs : dict
             Additional arguments to forward to the range builder function.
 
@@ -2411,22 +2417,33 @@ class PandasDataframe(ClassLogger):
             A new dataframe.
         """
         if data is not None:
+            # adding an extra MultiIndex level in order to separate `self grouper` from the `data`
+            # after concatenation
             new_grouper_cols = pandas.MultiIndex.from_tuples(
                 [
                     ("grouper", *col) if isinstance(col, tuple) else ("grouper", col)
                     for col in self.columns
                 ]
             )
-            key_columns = [
-                ("grouper", *col) if isinstance(col, tuple) else ("grouper", col)
-                for col in key_columns
-            ]
+            grouper = self.copy()
+            grouper.columns = new_grouper_cols
+
             new_data_cols = pandas.MultiIndex.from_tuples(
                 [
                     ("data", *col) if isinstance(col, tuple) else ("data", col)
                     for col in data.columns
                 ]
             )
+            data = data.copy()
+            data.columns = new_data_cols
+
+            grouper = grouper.concat(axis=1, others=[data], how="right", sort=False)
+
+            # since original column names were modified, have to modify 'key_columns' as well
+            key_columns = [
+                ("grouper", *col) if isinstance(col, tuple) else ("grouper", col)
+                for col in key_columns
+            ]
             if data_key_columns is None:
                 data_key_columns = []
             else:
@@ -2435,14 +2452,6 @@ class PandasDataframe(ClassLogger):
                     for col in data_key_columns
                 ]
             key_columns += data_key_columns
-
-            grouper = self.copy()
-            grouper.columns = new_grouper_cols
-
-            data = data.copy()
-            data.columns = new_data_cols
-
-            grouper = grouper.concat(axis=1, others=[data], how="right", sort=False)
         else:
             grouper = self
 
@@ -3757,10 +3766,10 @@ class PandasDataframe(ClassLogger):
         internal_by: List[str],
         external_by: List["PandasDataframe"],
         by_positions: List[int],
-        series_groupby: bool,
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
-        align_result_columns=False,
+        align_result_columns: bool = False,
+        series_groupby: bool = False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3771,9 +3780,21 @@ class PandasDataframe(ClassLogger):
         axis : int or modin.core.dataframe.base.utils.Axis
             The axis to apply the grouping over.
         internal_by : list of strings
-            One or more column labels to use for grouping.
+            One or more column labels from the `self` dataframe to use for grouping.
         external_by : list of PandasDataframes
+            PandasDataframes to group by (may be specified along with or without `internal_by`).
         by_positions : list of ints
+            Specifies the order of grouping by `internal_by` and `external_by` columns.
+            Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
+            Indices for `external_by` are positive and starts from 0. Indices for `internal_by` are negative
+            and starts from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``).
+            ```
+            by_positions = [0, -1, 1, -2, 2, 3]
+            internal_by = ["col1", "col2"]
+            external_by = [sr1, sr2, sr3, sr4]
+
+            df.groupby([sr1, "col1", sr2, "col3", sr3, sr4])
+            ```.
         operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
@@ -3784,6 +3805,8 @@ class PandasDataframe(ClassLogger):
             Whether to manually align columns between all the resulted row partitions.
             This flag is helpful when dealing with UDFs as they can change the partition's shape
             and labeling unpredictably, resulting in an invalid dataframe.
+        series_groupby : bool, default: False
+            Whether to convert a one-column DataFrame to a Series before performing groupby.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
@@ -3819,10 +3842,13 @@ class PandasDataframe(ClassLogger):
             if has_external_grouper:
                 external_grouper = df["grouper"]
                 external_grouper = [
+                    # `df.groupby()` can only take a list of Series'es, so splitting
+                    # the df into a list of individual Series'es
                     external_grouper.iloc[:, i]
                     for i in range(len(external_grouper.columns))
                 ]
 
+                # renaming 'None' and duplicated names back to their original names
                 for obj in external_grouper:
                     if not isinstance(obj, pandas.Series):
                         continue
@@ -3845,19 +3871,16 @@ class PandasDataframe(ClassLogger):
                 external_grouper = []
 
             by = []
+            # restoring original order of 'by' columns
             for idx in by_positions:
                 if idx >= 0:
                     by.append(external_grouper[idx])
                 else:
                     by.append(internal_by[-idx - 1])
+
             if series_groupby:
                 df = df.squeeze(axis=1)
-            try:
-                result = operator(df.groupby(by, **kwargs))
-            except ValueError:
-                if len(df) != 0:
-                    raise
-                result = df.copy()
+            result = operator(df.groupby(by, **kwargs))
 
             if (
                 align_result_columns
@@ -3885,7 +3908,8 @@ class PandasDataframe(ClassLogger):
             new_grouper_cols = []
             columns_were_changed = False
             same_columns = {}
-            # duplicated names will break
+            # duplicated names break range-partitioning mechanism, so renaming them.
+            # original names will be reverted in the actual groupby kernel
             for col in grouper.columns:
                 suffix = same_columns.get(col)
                 if suffix is None:

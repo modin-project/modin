@@ -3466,9 +3466,22 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        by : list of BaseQueryCompiler, column or index label, or Grouper
+        external_by : list of BaseQueryCompiler and arrays
+            Values to group by.
         internal_by : list of str
-            List of internal column name to be dropped during groupby.
+            List of column names from `self` to group by.
+        by_positions : list of ints
+            Specifies the order of grouping by `internal_by` and `external_by` columns.
+            Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
+            Indices for `external_by` are positive and starts from 0. Indices for `internal_by` are negative
+            and starts from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``)
+            ```
+            by_positions = [0, -1, 1, -2, 2, 3]
+            internal_by = ["col1", "col2"]
+            external_by = [sr1, sr2, sr3, sr4]
+
+            df.groupby([sr1, "col1", sr2, "col3", sr3, sr4])
+            ```.
         """
         if isinstance(by, type(self)):
             if drop:
@@ -3784,7 +3797,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             for obj in (by if isinstance(by, list) else [by])
         ):
             raise NotImplementedError(
-                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
+                "Grouping on a pandas.Grouper with range-partitioning groupby is not yet supported: "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
@@ -3795,17 +3808,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:
             raise NotImplementedError(
-                "Grouping on an external grouper with range-partitioning groupby is only supported with pandas.Series'es: "
-                + "https://github.com/modin-project/modin/issues/5926"
-            )
-
-        # breakpoint()
-        all_internal_are_cols = all(
-            isinstance(obj, (str, tuple)) for obj in internal_by
-        )
-        if not all_internal_are_cols:
-            raise NotImplementedError(
-                "Grouping on an external grouper with range-partitioning groupby is only supported with pandas.Series'es: "
+                "Grouping on an external grouper with range-partitioning groupby is only supported with Series'es: "
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
@@ -3841,7 +3844,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 operation="range-partitioning groupby",
                 message="the order of rows may be shuffled for the result",
             )
-        # breakpoint()
+
         if isinstance(agg_func, dict):
             assert (
                 how == "axis_wise"

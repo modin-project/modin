@@ -1370,7 +1370,6 @@ def eval_quantile(modin_groupby, pandas_groupby):
 
 
 def eval___getattr__(modin_groupby, pandas_groupby, item):
-    # breakpoint()
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -1955,8 +1954,6 @@ def test_mixed_columns(columns, drop_from_original_df, as_index):
 
     df_equals(md_grp.size(), pd_grp.size())
     df_equals(md_grp.sum(), pd_grp.sum())
-    # breakpoint()
-    # eval_transform(md_grp, pd_grp, lambda df: df * 2)
     df_equals(md_grp.apply(lambda df: df.sum()), pd_grp.apply(lambda df: df.sum()))
 
 
