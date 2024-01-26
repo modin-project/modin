@@ -341,9 +341,9 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
         eval_general(
             modin_df2,
             pandas_df2,
-            lambda df: df / modin_df1.a
-            if isinstance(df, pd.DataFrame)
-            else df / pandas_df1.a,
+            lambda df: (
+                df / modin_df1.a if isinstance(df, pd.DataFrame) else df / pandas_df1.a
+            ),
         )
         return
 

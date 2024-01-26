@@ -76,9 +76,11 @@ test_data = {
     },
     "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x
-            if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
-            else np.NaN
+            (
+                x
+                if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
+                else np.NaN
+            )
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
             )
@@ -1179,9 +1181,11 @@ def get_unique_filename(
                     char_counter += 1
         parameters_values = "_".join(
             [
-                str(value)
-                if not isinstance(value, (list, tuple))
-                else "_".join([str(x) for x in value])
+                (
+                    str(value)
+                    if not isinstance(value, (list, tuple))
+                    else "_".join([str(x) for x in value])
+                )
                 for value in kwargs_name.values()
             ]
         )

@@ -81,7 +81,11 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else contextlib.nullcontext():
+        with (
+            warns_that_defaulting_to_pandas()
+            if how == "outer"
+            else contextlib.nullcontext()
+        ):
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
@@ -920,7 +924,11 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else contextlib.nullcontext():
+    with (
+        warns_that_defaulting_to_pandas()
+        if StorageFormat.get() != "Hdk"
+        else contextlib.nullcontext()
+    ):
         df[(df.a == 1) & (df.b == 2)]
 
 

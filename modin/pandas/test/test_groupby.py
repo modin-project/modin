@@ -626,10 +626,12 @@ def test_simple_row_groupby(by, as_index, col1_category):
         if not isinstance(by, list):
             by = [by]
         by_from_workaround = [
-            modin_df[getattr(col, "name", col)].copy()
-            if (hashable(col) and col in modin_groupby._internal_by)
-            or isinstance(col, GetColumn)
-            else col
+            (
+                modin_df[getattr(col, "name", col)].copy()
+                if (hashable(col) and col in modin_groupby._internal_by)
+                or isinstance(col, GetColumn)
+                else col
+            )
             for col in by
         ]
         # GroupBy result with 'as_index=False' depends on the 'by' origin, since we forcibly changed
@@ -1430,9 +1432,11 @@ def eval___getitem__(md_grp, pd_grp, item):
         md_grp,
         pd_grp,
         # Defaulting to pandas only for Modin groupby objects
-        lambda grp: grp[item].sum()
-        if not isinstance(grp, pd.groupby.DataFrameGroupBy)
-        else grp[item]._default_to_pandas(lambda df: df.sum()),
+        lambda grp: (
+            grp[item].sum()
+            if not isinstance(grp, pd.groupby.DataFrameGroupBy)
+            else grp[item]._default_to_pandas(lambda df: df.sum())
+        ),
         comparator=build_types_asserter(df_equals),
     )
 

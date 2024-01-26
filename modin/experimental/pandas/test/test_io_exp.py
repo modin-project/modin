@@ -194,9 +194,11 @@ def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
     eval_general(
         pd,
         pandas,
-        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
-        if hasattr(module, "read_csv_glob")
-        else _pandas_read_csv_glob(path, **kwargs),
+        lambda module, **kwargs: (
+            pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
+            if hasattr(module, "read_csv_glob")
+            else _pandas_read_csv_glob(path, **kwargs)
+        ),
         storage_options=s3_storage_options,
     )
 
@@ -229,9 +231,11 @@ def test_read_multiple_csv_s3_storage_opts(
     eval_general(
         pd,
         pandas,
-        lambda module, **kwargs: pd.read_csv_glob(s3_path, **kwargs)
-        if hasattr(module, "read_csv_glob")
-        else _pandas_read_csv_glob(s3_path, **kwargs),
+        lambda module, **kwargs: (
+            pd.read_csv_glob(s3_path, **kwargs)
+            if hasattr(module, "read_csv_glob")
+            else _pandas_read_csv_glob(s3_path, **kwargs)
+        ),
         storage_options=s3_storage_options | storage_options_extra,
     )
 

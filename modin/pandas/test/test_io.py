@@ -1249,9 +1249,7 @@ class TestCsv:
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
     def test_read_csv_issue_5150(self, set_async_read_mode):
         with ensure_clean(".csv") as unique_filename:
-            pandas_df = pandas.DataFrame(
-                np.random.randint(0, 100, size=(2**6, 2**6))
-            )
+            pandas_df = pandas.DataFrame(np.random.randint(0, 100, size=(2**6, 2**6)))
             pandas_df.to_csv(unique_filename, index=False)
             expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
             modin_df = pd.read_csv(unique_filename, index_col=False)
@@ -1281,7 +1279,11 @@ def _check_relative_io(fn_name, unique_filename, path_arg, storage_default=()):
     pinned_home = {envvar: dirname for envvar in ("HOME", "USERPROFILE", "HOMEPATH")}
     should_default = Engine.get() == "Python" or StorageFormat.get() in storage_default
     with mock.patch.dict(os.environ, pinned_home):
-        with warns_that_defaulting_to_pandas() if should_default else contextlib.nullcontext():
+        with (
+            warns_that_defaulting_to_pandas()
+            if should_default
+            else contextlib.nullcontext()
+        ):
             eval_io(
                 fn_name=fn_name,
                 **{path_arg: f"~/{basename}"},

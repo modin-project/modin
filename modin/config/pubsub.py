@@ -153,13 +153,15 @@ _TYPE_PARAMS = {
             for key_value in value.split(",")
             for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
         },
-        normalize=lambda value: value
-        if isinstance(value, dict)
-        else {
-            key: int(val) if val.isdigit() else val
-            for key_value in str(value).split(",")
-            for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
-        },
+        normalize=lambda value: (
+            value
+            if isinstance(value, dict)
+            else {
+                key: int(val) if val.isdigit() else val
+                for key_value in str(value).split(",")
+                for key, val in [[v.strip() for v in key_value.split("=", maxsplit=1)]]
+            }
+        ),
         verify=lambda value: isinstance(value, dict)
         or (
             isinstance(value, str)

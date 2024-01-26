@@ -118,9 +118,9 @@ def test_hdk_envvar():
         # This test is intended to check pyhdk internals. If pyhdk is not available, skip the version check test.
         pass
 
-    os.environ[
-        cfg.HdkLaunchParameters.varname
-    ] = "enable_union=4,enable_thrift_logs=5,enable_lazy_dict_materialization=6"
+    os.environ[cfg.HdkLaunchParameters.varname] = (
+        "enable_union=4,enable_thrift_logs=5,enable_lazy_dict_materialization=6"
+    )
     del cfg.HdkLaunchParameters._value
     params = cfg.HdkLaunchParameters.get()
     assert params["enable_union"] == 4

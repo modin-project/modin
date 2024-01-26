@@ -39,7 +39,7 @@ dependencies:
   - pytest-xdist>=3.2.0
 
   # code linters
-  - black>=23.1.0
+  - black>=24.1.0
   - flake8>=6.0.0
   - flake8-no-implicit-concat>=0.3.4
   - flake8-print>=5.0.0

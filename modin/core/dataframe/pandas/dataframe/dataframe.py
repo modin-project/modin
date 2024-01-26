@@ -1382,18 +1382,22 @@ class PandasDataframe(ClassLogger):
         new_row_labels = pandas.RangeIndex(len(self.index))
         if self.index.nlevels > 1:
             level_names = [
-                self.index.names[i]
-                if self.index.names[i] is not None
-                else "level_{}".format(i)
+                (
+                    self.index.names[i]
+                    if self.index.names[i] is not None
+                    else "level_{}".format(i)
+                )
                 for i in range(self.index.nlevels)
             ]
         else:
             level_names = [
-                self.index.names[0]
-                if self.index.names[0] is not None
-                else "index"
-                if "index" not in self.columns
-                else "level_{}".format(0)
+                (
+                    self.index.names[0]
+                    if self.index.names[0] is not None
+                    else (
+                        "index" if "index" not in self.columns else "level_{}".format(0)
+                    )
+                )
             ]
         names = tuple(level_names) if len(level_names) > 1 else level_names[0]
         new_dtypes = self.index.to_frame(name=names).dtypes
@@ -2924,9 +2928,11 @@ class PandasDataframe(ClassLogger):
             # `axis` given may have changed, we currently just recompute it.
             # TODO Determine lengths from current lengths if `keep_remaining=False`
             lengths_objs = {
-                axis: [len(apply_indices)]
-                if not keep_remaining
-                else [self.row_lengths, self.column_widths][axis],
+                axis: (
+                    [len(apply_indices)]
+                    if not keep_remaining
+                    else [self.row_lengths, self.column_widths][axis]
+                ),
                 axis ^ 1: [self.row_lengths, self.column_widths][axis ^ 1],
             }
             return self.__constructor__(
@@ -3891,9 +3897,11 @@ class PandasDataframe(ClassLogger):
                 # Getting futures for columns of non-empty partitions
                 cols = [
                     part.apply(
-                        lambda df: None
-                        if df.attrs.get(skip_on_aligning_flag, False)
-                        else df.columns
+                        lambda df: (
+                            None
+                            if df.attrs.get(skip_on_aligning_flag, False)
+                            else df.columns
+                        )
                     )._data
                     for part in result._partitions.flatten()
                 ]

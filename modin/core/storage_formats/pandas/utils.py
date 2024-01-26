@@ -98,9 +98,13 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     return [
         # Sliced MultiIndex still stores all encoded values of the original index, explicitly
         # asking it to drop unused values in order to save memory.
-        chunk.set_axis(chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False)
-        if isinstance(chunk.axes[axis], pandas.MultiIndex)
-        else chunk
+        (
+            chunk.set_axis(
+                chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False
+            )
+            if isinstance(chunk.axes[axis], pandas.MultiIndex)
+            else chunk
+        )
         for chunk in chunked
     ]
 
@@ -123,9 +127,11 @@ def get_length_list(axis_len: int, num_splits: int) -> list:
     """
     chunksize = compute_chunksize(axis_len, num_splits)
     return [
-        chunksize
-        if (i + 1) * chunksize <= axis_len
-        else max(0, axis_len - i * chunksize)
+        (
+            chunksize
+            if (i + 1) * chunksize <= axis_len
+            else max(0, axis_len - i * chunksize)
+        )
         for i in range(num_splits)
     ]
 

@@ -94,9 +94,11 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 *partitions,
             ),
             f_kwargs={"extract_metadata": extract_metadata},
-            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
-            if extract_metadata
-            else num_splits,
+            num_returns=(
+                num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+                if extract_metadata
+                else num_splits
+            ),
             pure=False,
         )
 
