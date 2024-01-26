@@ -116,7 +116,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             if flat_args and flat_kwargs:
                 result = remote_exec_func.remote(func, data, *args, **kwargs)
                 return self.__constructor__(*result)
-            de = DeferredExecution(data, func, args, kwargs, 1, flat_args, flat_kwargs)
+            de = DeferredExecution(
+                data, func, args, kwargs, flat_args, flat_kwargs, num_returns=1
+            )
         else:
             de = DeferredExecution(data, func, args, kwargs)
         part = self.__constructor__(de)

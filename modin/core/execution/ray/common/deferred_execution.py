@@ -60,14 +60,14 @@ class DeferredExecution:
         Additional positional arguments to be passed in `func`.
     kwargs : dict
         Additional keyword arguments to be passed in `func`.
-    num_returns : int
-        The number of the return values.
     flat_args : bool, optional
         True means that there are no lists or DeferredExecution objects in `args`.
         In this case, no arguments processing is performed and `args` is passed
         to the remote method as is.
     flat_kwargs : bool, optional
         The same as `flat_args` but for the `kwargs` values.
+    num_returns : int
+        The number of the return values.
     """
 
     def __init__(
@@ -80,9 +80,9 @@ class DeferredExecution:
         func: Union[Callable, ObjectRefType],
         args: Union[List[Any], Tuple[Any]],
         kwargs: Dict[str, Any],
-        num_returns=1,
         flat_args: Optional[bool] = None,
         flat_kwargs: Optional[bool] = None,
+        num_returns=1,
     ):
         ref = DeferredExecution._ref
         if flat_args is None:
@@ -153,9 +153,8 @@ class DeferredExecution:
                 return result, meta, 0
 
         consumers, output = self._deconstruct()
-        num_returns = (
-            sum(c.num_returns for c in consumers) + 1
-        )  # The last result is meta
+        # The last result is the MetaList, so adding +1 here.
+        num_returns = sum(c.num_returns for c in consumers) + 1
         results = self._remote_exec_chain(num_returns, *output)
         meta = MetaList(results.pop())
         meta_offset = 0
@@ -241,6 +240,7 @@ class DeferredExecution:
         result_consumers = []
         output = []
         self.ref_count(1)
+        # Using stack and generators to avoid the ``RecursionError``s.
         stack.append(self._deconstruct_chain(self, output, stack, result_consumers))
         while stack:
             try:
@@ -273,6 +273,11 @@ class DeferredExecution:
             Used to eliminate recursive calls, that may lead to the RecursionError.
         result_consumers : list of DeferredExecution
             The result consumers.
+
+        Yields
+        ------
+        Generator
+            The ``_deconstruct_list()`` generator.
         """
         out_append = output.append
         out_extend = output.extend
@@ -354,6 +359,11 @@ class DeferredExecution:
         result_consumers : list
         out_append : Callable
             The reference to the ``list.append()`` method.
+
+        Yields
+        ------
+        Generator
+            Either ``_deconstruct_list()`` or ``_deconstruct_chain()`` generator.
         """
         for obj in lst:
             if isinstance(obj, DeferredExecution):
@@ -552,7 +562,7 @@ class _RemoteExecutor:
             )
 
     @classmethod
-    def construct(cls, num_returns: int, args: Tuple) -> Generator:  # pragma: no cover
+    def construct(cls, num_returns: int, args: Tuple):  # pragma: no cover
         """
         Construct and execute the specified chain.
 
@@ -565,9 +575,10 @@ class _RemoteExecutor:
         num_returns : int
         args : tuple
 
-        Returns
-        -------
-        Generator
+        Yields
+        ------
+        Any
+            The execution results and the MetaList as the last value.
         """
         chain = list(reversed(args))
         meta = []
@@ -621,6 +632,11 @@ class _RemoteExecutor:
             If specified, the execution result is added to this list.
             This is used when a chain is passed as an argument to a
             DeferredExecution task.
+
+        Yields
+        ------
+        Any
+            Either the ``construct_list()`` generator or the execution results.
         """
         pop = chain.pop
         tg_e = _Tag.END
@@ -691,6 +707,11 @@ class _RemoteExecutor:
         chain : list
         refs : dict
         meta : list
+
+        Yields
+        ------
+        Any
+            Either ``construct_chain()`` or ``construct_list()`` generator.
         """
         pop = chain.pop
         lst_append = lst.append
