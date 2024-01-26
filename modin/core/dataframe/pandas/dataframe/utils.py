@@ -415,6 +415,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
             ]
         else:
             grouped = non_na_rows.groupby(groupby_codes)
+            # breakpoint()
             groups = [get_group(grouped, key, df) for key in group_keys]
         index_to_insert_na_vals = (
             -1 if kwargs.get("na_position", "last") == "last" else 0

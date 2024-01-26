@@ -3472,20 +3472,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
         """
         if isinstance(by, type(self)):
             if drop:
-                internal_by = by.columns
+                internal_by = by.columns.tolist()
                 external_by = []
                 by_positions = [-i - 1 for i in range(len(internal_by))]
             else:
                 internal_by = []
                 external_by = [by]
-                by_positions = [i for i in range(len(external_by))]
+                by_positions = [i for i in range(len(external_by[0].columns))]
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
             internal_by = []
             external_by = []
+            external_by_counter = 0
             by_positions = []
-            for idx, o in enumerate(by):
+            for o in by:
                 if isinstance(o, pandas.Grouper) and o.key in self.columns:
                     internal_by.append(o.key)
                     by_positions.append(-len(internal_by))
@@ -3494,7 +3495,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     by_positions.append(-len(internal_by))
                 else:
                     external_by.append(o)
-                    by_positions.append(len(external_by) - 1)
+                    for _ in range(len(o.columns) if isinstance(o, type(self)) else 1):
+                        by_positions.append(external_by_counter)
+                        external_by_counter += 1
         return external_by, internal_by, by_positions
 
     groupby_all = GroupbyReduceImpl.build_qc_method("all")
@@ -3759,6 +3762,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
         how="axis_wise",
+        series_groupby=False,
     ):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3775,12 +3779,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
+        if any(
+            isinstance(obj, pandas.Grouper)
+            for obj in (by if isinstance(by, list) else [by])
+        ):
+            raise NotImplementedError(
+                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
+
         external_by, internal_by, by_positions = self._groupby_internal_columns(
             by, drop
         )
 
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:
+            raise NotImplementedError(
+                "Grouping on an external grouper with range-partitioning groupby is only supported with pandas.Series'es: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
+
+        # breakpoint()
+        all_internal_are_cols = all(
+            isinstance(obj, (str, tuple)) for obj in internal_by
+        )
+        if not all_internal_are_cols:
             raise NotImplementedError(
                 "Grouping on an external grouper with range-partitioning groupby is only supported with pandas.Series'es: "
                 + "https://github.com/modin-project/modin/issues/5926"
@@ -3818,13 +3841,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 operation="range-partitioning groupby",
                 message="the order of rows may be shuffled for the result",
             )
-
+        # breakpoint()
         if isinstance(agg_func, dict):
             assert (
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
 
-            subset = by + list(agg_func.keys())
+            subset = internal_by + list(agg_func.keys())
             # extracting unique values; no we can't use np.unique here as it would
             # convert a list of tuples to a 2D matrix and so mess up the result
             subset = list(dict.fromkeys(subset))
@@ -3832,7 +3855,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             obj = self
 
-        agg_method = GroupByDefault.get_aggregation_method(how)
+        agg_method = (
+            SeriesGroupByDefault if series_groupby else GroupByDefault
+        ).get_aggregation_method(how)
         original_agg_func = agg_func
 
         def agg_func(grp, *args, **kwargs):
@@ -3854,6 +3879,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 for obj in external_by
             ],
             by_positions=by_positions,
+            series_groupby=series_groupby,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
             # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
             # that's why we have to align the partition's shapes/labeling across different
@@ -3996,6 +4022,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     agg_kwargs=agg_kwargs,
                     drop=drop,
                     how=how,
+                    series_groupby=series_groupby,
                 )
             except NotImplementedError as e:
                 # if a user wants to use range-partitioning groupby explicitly, then we should print a visible

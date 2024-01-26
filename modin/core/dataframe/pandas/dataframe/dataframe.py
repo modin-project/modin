@@ -18,6 +18,7 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
+import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -3756,6 +3757,7 @@ class PandasDataframe(ClassLogger):
         internal_by: List[str],
         external_by: List["PandasDataframe"],
         by_positions: List[int],
+        series_groupby: bool,
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
         align_result_columns=False,
@@ -3810,6 +3812,8 @@ class PandasDataframe(ClassLogger):
 
         has_external_grouper = len(external_by) > 0
         skip_on_aligning_flag = "__skip_me_on_aligning__"
+        duplicated_suffix = "__duplicated_suffix__"
+        duplicated_pattern = r"_[\d]*__duplicated_suffix__"
 
         def apply_func(df):  # pragma: no cover
             if has_external_grouper:
@@ -3818,19 +3822,43 @@ class PandasDataframe(ClassLogger):
                     external_grouper.iloc[:, i]
                     for i in range(len(external_grouper.columns))
                 ]
+
+                for obj in external_grouper:
+                    if not isinstance(obj, pandas.Series):
+                        continue
+                    name = obj.name
+                    if isinstance(name, str):
+                        if name.startswith(MODIN_UNNAMED_SERIES_LABEL):
+                            name = None
+                        elif name.endswith(duplicated_suffix):
+                            name = re.sub(duplicated_pattern, "", name)
+                    elif isinstance(name, tuple):
+                        if name[-1].endswith(duplicated_suffix):
+                            name = (
+                                *name[:-1],
+                                re.sub(duplicated_pattern, "", name[-1]),
+                            )
+                    obj.name = name
+
                 df = df["data"]
             else:
                 external_grouper = []
 
             by = []
-            # breakpoint()
             for idx in by_positions:
                 if idx >= 0:
                     by.append(external_grouper[idx])
                 else:
                     by.append(internal_by[-idx - 1])
+            if series_groupby:
+                df = df.squeeze(axis=1)
+            try:
+                result = operator(df.groupby(by, **kwargs))
+            except ValueError:
+                if len(df) != 0:
+                    raise
+                result = df.copy()
 
-            result = operator(df.groupby(by, **kwargs))
             if (
                 align_result_columns
                 and df.empty
@@ -3843,14 +3871,6 @@ class PandasDataframe(ClassLogger):
                 # executed over this partition and so it has incorrect columns
                 # that shouldn't be considered on the aligning phase
                 result.attrs[skip_on_aligning_flag] = True
-            # breakpoint()
-            new_index_names = tuple(
-                None
-                if isinstance(name, str) and name.startswith(MODIN_UNNAMED_SERIES_LABEL)
-                else name
-                for name in result.index.names
-            )
-            result.index.names = new_index_names
             return result
 
         if len(external_by) > 0:
@@ -3861,6 +3881,23 @@ class PandasDataframe(ClassLogger):
                     axis=1, others=external_by[1:], how="left", sort=False
                 )
             )
+
+            new_grouper_cols = []
+            columns_were_changed = False
+            same_columns = {}
+            # duplicated names will break
+            for col in grouper.columns:
+                suffix = same_columns.get(col)
+                if suffix is None:
+                    same_columns[col] = 0
+                else:
+                    same_columns[col] += 1
+                    col = f"{col}_{suffix}{duplicated_suffix}"
+                    columns_were_changed = True
+                new_grouper_cols.append(col)
+
+            if columns_were_changed:
+                grouper.columns = pandas.Index(new_grouper_cols)
             grouper_key_columns = grouper.columns
             data = self
             data_key_columns = internal_by

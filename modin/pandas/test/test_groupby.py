@@ -40,6 +40,7 @@ from modin.utils import (
 from .utils import (
     check_df_columns_have_nans,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     dict_equals,
@@ -350,44 +351,44 @@ class GetColumn:
 @pytest.mark.parametrize(
     "by",
     [
-        # [1, 2, 1, 2],
-        # lambda x: x % 3,
-        # "col1",
-        # ["col1"],
-        # # col2 contains NaN, is it necessary to test functions like size()
-        # "col2",
-        # ["col2"],  # 5
-        # pytest.param(
-        #     ["col1", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        #     ["col2", "col4"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        #     ["col4", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # pytest.param(
-        #     ["col3", "col4", "col2"],
-        #     marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
-        # ),
-        # # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
-        # ["col5"],  # 10
-        # ["col1", "col5"],
-        # ["col5", "col4"],
-        # ["col4", "col5"],
-        # ["col5", "col4", "col1"],
-        # ["col1", pd.Series([1, 5, 7, 8])],  # 15
-        # [pd.Series([1, 5, 7, 8])],
-        # [
-        #     pd.Series([1, 5, 7, 8]),
-        #     pd.Series([1, 5, 7, 8]),
-        #     pd.Series([1, 5, 7, 8]),
-        #     pd.Series([1, 5, 7, 8]),
-        #     pd.Series([1, 5, 7, 8]),
-        # ],
+        [1, 2, 1, 2],
+        lambda x: x % 3,
+        "col1",
+        ["col1"],
+        # col2 contains NaN, is it necessary to test functions like size()
+        "col2",
+        ["col2"],  # 5
+        pytest.param(
+            ["col1", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col2", "col4"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        pytest.param(
+            ["col3", "col4", "col2"],
+            marks=pytest.mark.xfail(reason="Excluded because of bug #1554"),
+        ),
+        # but cum* functions produce undefined results with NaNs so we need to test the same combinations without NaN too
+        ["col5"],  # 10
+        ["col1", "col5"],
+        ["col5", "col4"],
+        ["col4", "col5"],
+        ["col5", "col4", "col1"],
+        ["col1", pd.Series([1, 5, 7, 8])],  # 15
+        [pd.Series([1, 5, 7, 8])],
+        [
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+            pd.Series([1, 5, 7, 8]),
+        ],
         ["col1", GetColumn("col5")],
         [GetColumn("col1"), GetColumn("col5")],
         [GetColumn("col1")],  # 20
@@ -1369,6 +1370,7 @@ def eval_quantile(modin_groupby, pandas_groupby):
 
 
 def eval___getattr__(modin_groupby, pandas_groupby, item):
+    # breakpoint()
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -1953,8 +1955,45 @@ def test_mixed_columns(columns, drop_from_original_df, as_index):
 
     df_equals(md_grp.size(), pd_grp.size())
     df_equals(md_grp.sum(), pd_grp.sum())
-    df_equals(md_grp.transform(lambda df: df * 2), pd_grp.transform(lambda df: df * 2))
+    # breakpoint()
+    # eval_transform(md_grp, pd_grp, lambda df: df * 2)
     df_equals(md_grp.apply(lambda df: df.sum()), pd_grp.apply(lambda df: df.sum()))
+
+
+@pytest.mark.parametrize("as_index", [True, False])
+def test_groupby_external_grouper_duplicated_names(as_index):
+    data = {
+        "a": [1, 1, 2, 2] * 64,
+        "b": [11, 11, 22, 22] * 64,
+        "c": [111, 111, 222, 222] * 64,
+        "data": [1, 2, 3, 4] * 64,
+    }
+
+    md_df, pd_df = create_test_dfs(data)
+
+    md_unnamed_series1, pd_unnamed_series1 = create_test_series([1, 1, 2, 2] * 64)
+    md_unnamed_series2, pd_unnamed_series2 = create_test_series([10, 10, 20, 20] * 64)
+
+    md_grp = md_df.groupby([md_unnamed_series1, md_unnamed_series2], as_index=as_index)
+    pd_grp = pd_df.groupby([pd_unnamed_series1, pd_unnamed_series2], as_index=as_index)
+
+    df_equals(md_grp.sum(), pd_grp.sum())
+
+    md_same_named_series1, pd_same_named_series1 = create_test_series(
+        [1, 1, 2, 2] * 64, name="series_name"
+    )
+    md_same_named_series2, pd_same_named_series2 = create_test_series(
+        [10, 10, 20, 20] * 64, name="series_name"
+    )
+
+    md_grp = md_df.groupby(
+        [md_same_named_series1, md_same_named_series2], as_index=as_index
+    )
+    pd_grp = pd_df.groupby(
+        [pd_same_named_series1, pd_same_named_series2], as_index=as_index
+    )
+
+    df_equals(md_grp.sum(), pd_grp.sum())
 
 
 @pytest.mark.parametrize(

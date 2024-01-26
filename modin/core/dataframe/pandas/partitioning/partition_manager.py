@@ -1725,7 +1725,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             new_partitions = [
                 [
                     cls._column_partitions_class(row_partition, full_axis=False).apply(
-                        final_shuffle_func,
+                        final_shuffle_func
                     )
                 ]
                 for row_partition in split_row_partitions
