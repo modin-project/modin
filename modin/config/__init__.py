@@ -53,7 +53,7 @@ from modin.config.envvars import (
     TestReadFromSqlServer,
     TrackFileLeaks,
 )
-from modin.config.pubsub import Parameter, ValueSource  # noqa: F401
+from modin.config.pubsub import Parameter, ValueSource
 
 __all__ = [
     "EnvironmentVariable",
