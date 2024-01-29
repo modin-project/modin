@@ -23,7 +23,7 @@ from typing import Any, Optional
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import (
+from modin.config.pubsub import (
     _TYPE_PARAMS,
     _UNSET,
     DeprecationDescriptor,
@@ -863,53 +863,3 @@ def _check_vars() -> None:
 
 
 _check_vars()
-
-
-__all__ = [
-    "EnvironmentVariable",
-    # General settings
-    "IsDebug",
-    "Engine",
-    "StorageFormat",
-    "CpuCount",
-    "GpuCount",
-    "Memory",
-    # Ray specific
-    "IsRayCluster",
-    "RayRedisAddress",
-    "RayRedisPassword",
-    "TestRayClient",
-    # Partitioning
-    "NPartitions",
-    "MinPartitionSize",
-    # HDK specific
-    "HdkFragmentSize",
-    "DoUseCalcite",
-    "HdkLaunchParameters",
-    # ASV specific
-    "TestDatasetSize",
-    "AsvImplementation",
-    "AsvDataSizeConfig",
-    # Specific features
-    "ProgressBar",
-    "BenchmarkMode",
-    "PersistentPickle",
-    "ModinNumpy",
-    "ExperimentalNumPyAPI",
-    "RangePartitioningGroupby",
-    "ExperimentalGroupbyImpl",
-    "AsyncReadMode",
-    "ReadSqlEngine",
-    "IsExperimental",
-    # For tests
-    "TrackFileLeaks",
-    "TestReadFromSqlServer",
-    "TestReadFromPostgres",
-    "GithubCI",
-    "CIAWSSecretAccessKey",
-    "CIAWSAccessKeyID",
-    # Logging
-    "LogMode",
-    "LogMemoryInterval",
-    "LogFileSize",
-]

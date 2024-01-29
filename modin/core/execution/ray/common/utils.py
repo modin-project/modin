@@ -35,8 +35,8 @@ from modin.config import (
     RayRedisAddress,
     RayRedisPassword,
     StorageFormat,
+    ValueSource,
 )
-from modin.config.pubsub import ValueSource
 from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
 

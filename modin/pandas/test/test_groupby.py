@@ -21,8 +21,12 @@ import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
-from modin.config.envvars import IsRayCluster, RangePartitioningGroupby
+from modin.config import (
+    IsRayCluster,
+    NPartitions,
+    RangePartitioningGroupby,
+    StorageFormat,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
