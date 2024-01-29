@@ -655,7 +655,6 @@ class BasePandasDataset(ClassLogger):
         Aggregate using one or more operations over the specified axis.
         """
         axis = self._get_axis_number(axis)
-
         result = None
 
         if axis == 0:

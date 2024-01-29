@@ -1928,8 +1928,6 @@ class SeriesGroupBy(DataFrameGroupBy):
         """
         Validate types of user-provided "named aggregation" kwargs.
 
-        `TypeError` is raised if aggfunc is not `str` or callable.
-
         Parameters
         ----------
         kwargs : dict
@@ -1938,24 +1936,28 @@ class SeriesGroupBy(DataFrameGroupBy):
         -------
         columns : List[str]
             List of user-provided keys.
-        func : List[Union[str, callable[...,Any]]]
+        funcs : List[Union[str, callable[...,Any]]]
             List of user-provided aggfuncs.
+
+        Raises
+        ------
+        `TypeError` is raised if aggfunc is not `str` or callable.
 
         Notes
         -----
-        Copied from pandas
+        Copied from pandas.
         """
         tuple_given_message = "func is expected but received {} in **kwargs."
         columns = list(kwargs)
-        func = []
+        funcs = []
         for col_func in kwargs.values():
             if not (isinstance(col_func, str) or callable(col_func)):
                 raise TypeError(tuple_given_message.format(type(col_func).__name__))
-            func.append(col_func)
+            funcs.append(col_func)
         if not columns:
             no_arg_message = "Must provide 'func' or named aggregation **kwargs."
             raise TypeError(no_arg_message)
-        return columns, func
+        return columns, funcs
 
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
         engine_default = engine is None and engine_kwargs is None

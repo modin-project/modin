@@ -40,6 +40,7 @@ from modin.utils import (
 from .utils import (
     check_df_columns_have_nans,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     dict_equals,
@@ -2990,10 +2991,9 @@ def test_groupby_apply_series_result(modify_config):
 
 
 def test_groupby_named_aggregation():
-    ser = pd.Series([10, 10, 10, 1, 1, 1, 2, 3], name="data")
-
+    modin_ser, pandas_ser = create_test_series([10, 10, 10, 1, 1, 1, 2, 3], name="data")
     eval_general(
-        ser, ser._to_pandas(), lambda ser: ser.groupby(level=0).agg(result=("max"))
+        modin_ser, pandas_ser, lambda ser: ser.groupby(level=0).agg(result=("max"))
     )
 
 
