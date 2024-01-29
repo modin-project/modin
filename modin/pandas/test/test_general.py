@@ -295,7 +295,7 @@ def test_merge_asof_bad_arguments():
     modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
 
     # Can't mix by with left_by/right_by
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
         )
@@ -303,7 +303,7 @@ def test_merge_asof_bad_arguments():
         pd.merge_asof(
             modin_left, modin_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
         )
@@ -313,11 +313,11 @@ def test_merge_asof_bad_arguments():
         )
 
     # Can't mix on with left_on/right_on
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", right_on="can't do with by"
         )
@@ -347,7 +347,7 @@ def test_merge_asof_bad_arguments():
         pandas.merge_asof(pandas_left, pandas_right, right_on="a")
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, right_on="a")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right)
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right)
