@@ -612,7 +612,12 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     @wait_computations_if_benchmark_mode
     def lazy_map_partitions(
-        cls, partitions, map_func, func_args=None, enumerate_partitions=False
+        cls,
+        partitions,
+        map_func,
+        func_args=None,
+        func_kwargs=None,
+        enumerate_partitions=False,
     ):
         """
         Apply `map_func` to every partition in `partitions` *lazily*.
@@ -641,6 +646,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     part.add_to_apply_calls(
                         preprocessed_map_func,
                         *(tuple() if func_args is None else func_args),
+                        **func_kwargs if func_kwargs is not None else {},
                         **({"partition_idx": i} if enumerate_partitions else {}),
                     )
                     for part in row
