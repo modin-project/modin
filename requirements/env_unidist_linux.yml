@@ -41,7 +41,7 @@ dependencies:
   # test dependencies
   - coverage>=7.1.0
   - moto>=4.1.0
-  - pytest>=7.3.2
+  - pytest>=7.3.2,<8.0.0
   - pytest-cov>=4.0.0
   - pytest-xdist>=3.2.0
 
@@ -54,6 +54,7 @@ dependencies:
   - pandas-stubs>=2.0.0
 
   - pip:
+      - dataframe-api-compat>=0.2.6
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - connectorx>=0.2.6a4

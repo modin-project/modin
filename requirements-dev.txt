@@ -50,7 +50,7 @@ fuzzydata>=0.0.6
 # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0
 moto>=4.1.0
-pytest>=7.3.2
+pytest>=7.3.2,<8.0.0
 pytest-benchmark>=4.0.0
 pytest-cov>=4.0.0
 pytest-xdist>=3.2.0
