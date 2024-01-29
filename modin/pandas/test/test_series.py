@@ -213,15 +213,18 @@ def inter_df_math_helper_one_side(
     )
     modin_df_multi_level = modin_series.copy()
     modin_df_multi_level.index = new_idx
-
+    # When 'level' parameter is passed, modin's implementation must raise a default-to-pandas warning,
+    # here we first detect whether 'op' takes 'level' parameter at all and only then perform the warning check
+    # reasoning: https://github.com/modin-project/modin/issues/6893
     try:
-        # Defaults to pandas
-        with warns_that_defaulting_to_pandas():
-            # Operation against self for sanity check
-            getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
     except TypeError:
-        # Some operations don't support multilevel `level` parameter
+        # Operation doesn't support 'level' parameter
         pass
+    else:
+        # Operation supports 'level' parameter, so it makes sense to check for a warning
+        with warns_that_defaulting_to_pandas():
+            getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
 
 
 def create_test_series(vals, sort=False, **kwargs):
