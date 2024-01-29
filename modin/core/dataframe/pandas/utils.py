@@ -17,6 +17,8 @@
 import pandas
 from pandas.api.types import union_categoricals
 
+from modin.error_message import ErrorMessage
+
 
 def concatenate(dfs):
     """
@@ -38,7 +40,21 @@ def concatenate(dfs):
         assert df.columns.equals(dfs[0].columns)
     for i in dfs[0].columns.get_indexer_for(dfs[0].select_dtypes("category").columns):
         columns = [df.iloc[:, i] for df in dfs]
-        if not all(isinstance(col.dtype, pandas.CategoricalDtype) for col in columns):
+        all_categorical_parts_are_empty = None
+        has_non_categorical_parts = False
+        for col in columns:
+            if isinstance(col.dtype, pandas.CategoricalDtype):
+                if all_categorical_parts_are_empty is None:
+                    all_categorical_parts_are_empty = len(col) == 0
+                    continue
+                all_categorical_parts_are_empty &= len(col) == 0
+            else:
+                has_non_categorical_parts = True 
+        # 'union_categoricals' raises an error if some of the passed values don't have categorical dtype,
+        # if it happens, we only want to continue when all parts with categorical dtypes are actually empty.
+        # This can happen if there were an aggregation that discards categorical dtypes and that aggregation
+        # doesn't properly do so for empty partitions
+        if has_non_categorical_parts and all_categorical_parts_are_empty:
             continue
         union = union_categoricals(columns)
         for df in dfs:

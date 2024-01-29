@@ -534,8 +534,8 @@ def add_missing_categories_to_groupby(
     """
     Generate values for missing categorical values to be inserted into groupby result.
 
-    This function is used to emulate behavior of ``groupby(observed=False)`` parameter.
-    The function takes groupby result that was computed using ``groupby(observed=True)``
+    This function is used to emulate behavior of ``groupby(observed=False)`` parameter,
+    it takes groupby result that was computed using ``groupby(observed=True)``
     and computes results for categorical values that are not presented in `dfs`.
 
     Parameters
@@ -649,7 +649,7 @@ def add_missing_categories_to_groupby(
             join="outer",
         ).columns
     else:
-        # If the aggregation has failed, the result would be empty. Assuming the
+        # HACK: If the aggregation has failed, the result would be empty. Assuming the
         # fill value to be `np.NaN` here (this may not always be correct!!!)
         fill_value = np.NaN if len(missing_values) == 0 else missing_values.iloc[0, 0]
         missing_values = pandas.DataFrame(

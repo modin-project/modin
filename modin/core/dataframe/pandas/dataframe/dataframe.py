@@ -18,8 +18,6 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
-from collections import OrderedDict
-from timeit import default_timer as timer
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -3815,7 +3813,6 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
-        kwargs = kwargs.copy()
         kwargs["observed"] = True
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
@@ -3858,9 +3855,7 @@ class PandasDataframe(ClassLogger):
                 original_dtypes = self.dtypes if self.has_materialized_dtypes else None
 
                 def compute_aligned_columns(*dfs, initial_columns=None):
-                    """Take row partitions, filter empty ones, and return joined columns for them."""
-                    combined_cols = None
-                    masks = None
+                    """Take row partitions, filter empty ones, and return joined columns for them."""                    
                     if align_result_columns:
                         valid_dfs = [
                             df
@@ -3880,6 +3875,7 @@ class PandasDataframe(ClassLogger):
                     else:
                         combined_cols = dfs[0].columns
 
+                    masks = None
                     if add_missing_cats:
                         masks, combined_cols = add_missing_categories_to_groupby(
                             dfs,
@@ -3912,9 +3908,10 @@ class PandasDataframe(ClassLogger):
                         values = mask[partition_idx]
 
                         original_names = df.index.names
+                        # TODO: inserting 'values' based on 'searchsorted' result might be more efficient
+                        # in cases of small amount of 'values'
                         df = pandas.concat([df, values])
                         if kwargs["sort"]:
-                            # TODO: write search-sorted insertion or sort the result after insertion
                             df = df.sort_index(axis=0)
                         df.index.names = original_names
                     if combined_cols is not None:
