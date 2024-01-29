@@ -3831,8 +3831,8 @@ class PandasDataframe(ClassLogger):
         by_positions : list of ints
             Specifies the order of grouping by `internal_by` and `external_by` columns.
             Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
-            Indices for `external_by` are positive and starts from 0. Indices for `internal_by` are negative
-            and starts from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``).
+            Indices for `external_by` are positive and start from 0. Indices for `internal_by` are negative
+            and start from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``).
             '''
             by_positions = [0, -1, 1, -2, 2, 3]
             internal_by = ["col1", "col2"]
@@ -3961,7 +3961,11 @@ class PandasDataframe(ClassLogger):
                     same_columns[col] = 0
                 else:
                     same_columns[col] += 1
-                    col = f"{col}_{suffix}{duplicated_suffix}"
+                    col = (
+                        (*col[:-1], f"{col[-1]}_{suffix}{duplicated_suffix}")
+                        if isinstance(col, tuple)
+                        else f"{col}_{suffix}{duplicated_suffix}"
+                    )
                     columns_were_changed = True
                 new_grouper_cols.append(col)
 
