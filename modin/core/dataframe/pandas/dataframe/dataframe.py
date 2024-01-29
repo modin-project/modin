@@ -2774,22 +2774,12 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             An PandasDataframe containing only a single partition.
         """
-        single_col_aggregated_df = self.apply_full_axis(
-            axis=0,
-            func=lambda x: x,
-            keep_partitioning=False,
-            num_splits=1,
-            sync_labels=True,
-            pass_axis_lengths_to_partitions=False,
+        row_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
+        col_partition = self._partition_mgr_cls.column_partitions(
+            np.asarray([row_partitions]).T
         )
-        single_partition_df = single_col_aggregated_df.apply_full_axis(
-            axis=1,
-            func=lambda x: x,
-            keep_partitioning=False,
-            num_splits=1,
-            sync_labels=True,
-            pass_axis_lengths_to_partitions=False,
-        )
+        new_frame = np.array([col_partition[0].apply(lambda df: df, num_splits=1)])
+        single_partition_df = self.__constructor__(new_frame)
         return single_partition_df
 
     @lazy_metadata_decorator(apply_axis="both")
