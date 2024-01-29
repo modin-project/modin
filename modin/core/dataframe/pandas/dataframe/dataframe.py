@@ -32,6 +32,7 @@ from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
 from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
+    add_missing_categories_to_groupby,
     lazy_metadata_decorator,
 )
 from modin.core.dataframe.pandas.metadata import (
@@ -3758,7 +3759,8 @@ class PandasDataframe(ClassLogger):
         by: Union[str, List[str]],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
-        align_result_columns=False,
+        align_result_columns: bool = False,
+        add_missing_cats: bool = False,
         **kwargs: dict,
     ) -> "PandasDataframe":
         """
@@ -3780,6 +3782,8 @@ class PandasDataframe(ClassLogger):
             Whether to manually align columns between all the resulted row partitions.
             This flag is helpful when dealing with UDFs as they can change the partition's shape
             and labeling unpredictably, resulting in an invalid dataframe.
+        add_missing_cats : bool, default: False
+            Whether to add missing categories from `by` columns to the result.
         **kwargs : dict
             Additional arguments to pass to the ``df.groupby`` method (besides the 'by' argument).
 
@@ -3809,6 +3813,7 @@ class PandasDataframe(ClassLogger):
         if not isinstance(by, list):
             by = [by]
 
+        kwargs["observed"] = True
         skip_on_aligning_flag = "__skip_me_on_aligning__"
 
         def apply_func(df):  # pragma: no cover
@@ -3831,9 +3836,8 @@ class PandasDataframe(ClassLogger):
             key_columns=by,
             func=apply_func,
         )
-
         # no need aligning columns if there's only one row partition
-        if align_result_columns and result._partitions.shape[0] > 1:
+        if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
             # FIXME: the current reshuffling implementation guarantees us that there's only one column
             # partition in the result, so we should never hit this exception for now, however
             # in the future, we might want to make this implementation more broader
@@ -3847,37 +3851,79 @@ class PandasDataframe(ClassLogger):
             #      it gathers all the dataframes in a single ray-kernel.
             #   2. The second one works slower, but only gathers light pandas.Index objects,
             #      so there should be less stress on the network.
-            if not IsRayCluster.get():
+            if add_missing_cats or not IsRayCluster.get():
+                original_dtypes = self.dtypes if self.has_materialized_dtypes else None
 
-                def compute_aligned_columns(*dfs):
+                def compute_aligned_columns(*dfs, initial_columns=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
-                    valid_dfs = [
-                        df
-                        for df in dfs
-                        if not df.attrs.get(skip_on_aligning_flag, False)
-                    ]
-                    if len(valid_dfs) == 0 and len(dfs) != 0:
-                        valid_dfs = dfs
+                    if align_result_columns:
+                        valid_dfs = [
+                            df
+                            for df in dfs
+                            if not df.attrs.get(skip_on_aligning_flag, False)
+                        ]
 
-                    # Using '.concat()' on empty-slices instead of 'Index.join()'
-                    # in order to get identical behavior to pandas when it joins
-                    # results of different groups
-                    return pandas.concat(
-                        [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
-                    ).columns
+                        if len(valid_dfs) == 0 and len(dfs) != 0:
+                            valid_dfs = dfs
+
+                        # Using '.concat()' on empty-slices instead of 'Index.join()'
+                        # in order to get identical behavior to pandas when it joins
+                        # results of different groups
+                        combined_cols = pandas.concat(
+                            [df.iloc[:0] for df in valid_dfs], axis=0, join="outer"
+                        ).columns
+                    else:
+                        combined_cols = dfs[0].columns
+
+                    masks = None
+                    if add_missing_cats:
+                        masks, combined_cols = add_missing_categories_to_groupby(
+                            dfs,
+                            by,
+                            operator,
+                            initial_columns,
+                            combined_cols,
+                            is_udf_agg=align_result_columns,
+                            kwargs=kwargs.copy(),
+                            initial_dtypes=original_dtypes,
+                        )
+                    return (
+                        (combined_cols, masks)
+                        if align_result_columns
+                        else (None, masks)
+                    )
 
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
                 parts = result._partitions.flatten()
                 aligned_columns = parts[0].apply(
-                    compute_aligned_columns, *[part._data for part in parts[1:]]
+                    compute_aligned_columns,
+                    *[part._data for part in parts[1:]],
+                    initial_columns=self.columns,
                 )
+
+                def apply_aligned(df, args, partition_idx):
+                    combined_cols, mask = args
+                    if mask is not None and mask.get(partition_idx) is not None:
+                        values = mask[partition_idx]
+
+                        original_names = df.index.names
+                        # TODO: inserting 'values' based on 'searchsorted' result might be more efficient
+                        # in cases of small amount of 'values'
+                        df = pandas.concat([df, values])
+                        if kwargs["sort"]:
+                            df = df.sort_index(axis=0)
+                        df.index.names = original_names
+                    if combined_cols is not None:
+                        df = df.reindex(columns=combined_cols)
+                    return df
 
                 # Lazily applying aligned columns to partitions
                 new_partitions = self._partition_mgr_cls.lazy_map_partitions(
                     result._partitions,
-                    lambda df, columns: df.reindex(columns=columns),
+                    apply_aligned,
                     func_args=(aligned_columns._data,),
+                    enumerate_partitions=True,
                 )
             else:
 
