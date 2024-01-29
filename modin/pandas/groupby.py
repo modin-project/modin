@@ -1924,9 +1924,10 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
         )
 
-    def validate_func_kwargs(self, kwargs: dict):
+    def _validate_func_kwargs(self, kwargs: dict):
         """
-        Validates types of user-provided "named aggregation" kwargs.
+        Validate types of user-provided "named aggregation" kwargs.
+
         `TypeError` is raised if aggfunc is not `str` or callable.
 
         Parameters
@@ -1938,12 +1939,7 @@ class SeriesGroupBy(DataFrameGroupBy):
         columns : List[str]
             List of user-provided keys.
         func : List[Union[str, callable[...,Any]]]
-            List of user-provided aggfuncs
-
-        Examples
-        --------
-        >>> validate_func_kwargs({'one': 'min', 'two': 'max'})
-        (['one', 'two'], ['min', 'max'])
+            List of user-provided aggfuncs.
 
         Notes
         -----
@@ -1965,7 +1961,7 @@ class SeriesGroupBy(DataFrameGroupBy):
         engine_default = engine is None and engine_kwargs is None
         # if func is None, will switch to user-provided "named aggregation" kwargs
         if func_is_none := func is None:
-            columns, func = self.validate_func_kwargs(kwargs)
+            columns, func = self._validate_func_kwargs(kwargs)
             kwargs = {}
         if isinstance(func, dict) and engine_default:
             raise SpecificationError("nested renamer is not supported")
