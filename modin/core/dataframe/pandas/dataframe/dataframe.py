@@ -3855,7 +3855,7 @@ class PandasDataframe(ClassLogger):
                 original_dtypes = self.dtypes if self.has_materialized_dtypes else None
 
                 def compute_aligned_columns(*dfs, initial_columns=None):
-                    """Take row partitions, filter empty ones, and return joined columns for them."""                    
+                    """Take row partitions, filter empty ones, and return joined columns for them."""
                     if align_result_columns:
                         valid_dfs = [
                             df

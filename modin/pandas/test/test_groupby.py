@@ -2963,9 +2963,13 @@ def test_reshuffling_groupby_on_strings(modify_config):
     modin_df = modin_df.astype({"col1": "string"})
     pandas_df = pandas_df.astype({"col1": "string"})
 
-    eval_general(
-        modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
-    )
+    md_grp = modin_df.groupby("col1")
+    pd_grp = pandas_df.groupby("col1")
+
+    eval_general(md_grp, pd_grp, lambda grp: grp.mean())
+    eval_general(md_grp, pd_grp, lambda grp: grp.nth())
+    eval_general(md_grp, pd_grp, lambda grp: grp.head(10))
+    eval_general(md_grp, pd_grp, lambda grp: grp.tail(10))
 
 
 @pytest.mark.parametrize(

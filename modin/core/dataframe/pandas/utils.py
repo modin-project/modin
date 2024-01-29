@@ -17,8 +17,6 @@
 import pandas
 from pandas.api.types import union_categoricals
 
-from modin.error_message import ErrorMessage
-
 
 def concatenate(dfs):
     """
@@ -49,7 +47,7 @@ def concatenate(dfs):
                     continue
                 all_categorical_parts_are_empty &= len(col) == 0
             else:
-                has_non_categorical_parts = True 
+                has_non_categorical_parts = True
         # 'union_categoricals' raises an error if some of the passed values don't have categorical dtype,
         # if it happens, we only want to continue when all parts with categorical dtypes are actually empty.
         # This can happen if there were an aggregation that discards categorical dtypes and that aggregation

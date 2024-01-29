@@ -582,10 +582,13 @@ def add_missing_categories_to_groupby(
         ):
             return {}, new_combined_cols
         missing_cats_dtype = {
-            name: level.dtype if isinstance(level.dtype, pandas.CategoricalDtype)
-            # it's a bit confusing but we have to convert the remaining 'by' columns to categoricals
-            # in order to compute a proper fill value later in the code
-            else pandas.CategoricalDtype(level)
+            name: (
+                level.dtype
+                if isinstance(level.dtype, pandas.CategoricalDtype)
+                # it's a bit confusing but we have to convert the remaining 'by' columns to categoricals
+                # in order to compute a proper fill value later in the code
+                else pandas.CategoricalDtype(level)
+            )
             for level, name in zip(total_index.levels, total_index.names)
         }
         # if we're grouping on multiple groupers, then the missing categorical values is a

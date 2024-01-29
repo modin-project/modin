@@ -28,7 +28,6 @@ from typing import Hashable, List
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas.api.extensions import no_default
 from pandas.api.types import is_scalar
 from pandas.core.apply import reconstruct_func
 from pandas.core.common import is_bool_indexer
@@ -3798,9 +3797,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # This check materializes dtypes for 'by' columns
-        if not is_transform and (
-            not groupby_kwargs.get("observed", False)
-            or groupby_kwargs.get("observed", False) is no_default
+        if not is_transform and groupby_kwargs.get("observed", False) in (
+            False,
+            lib.no_default,
         ):
             if isinstance(self._modin_frame._dtypes, ModinDtypes):
                 by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
