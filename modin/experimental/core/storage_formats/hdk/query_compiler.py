@@ -23,7 +23,7 @@ import numpy as np
 import pandas
 from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
-from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype, is_list_like
+from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
 from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler import (
@@ -830,10 +830,6 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
         if isinstance(value, type(self)):
             value.columns = [column]
             return self.insert_item(axis=1, loc=loc, value=value)
-
-        if is_list_like(value):
-            raise NotImplementedError("HDK's insert does not support list-like values.")
-
         return self.__constructor__(self._modin_frame.insert(loc, column, value))
 
     def sort_rows_by_column_values(self, columns, ascending=True, **kwargs):
