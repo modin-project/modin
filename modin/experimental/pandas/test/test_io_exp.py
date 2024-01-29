@@ -126,8 +126,8 @@ class TestCsvGlob:
         df_equals(modin_df, pandas_df)
 
     def test_read_csv_without_glob(self):
-        with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
-            with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
+            with warns_that_defaulting_to_pandas():
                 pd.read_csv_glob(
                     "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-",
                     storage_options={"anon": True},
