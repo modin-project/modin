@@ -1947,16 +1947,14 @@ class SeriesGroupBy(DataFrameGroupBy):
         -----
         Copied from pandas.
         """
-        tuple_given_message = "func is expected but received {} in **kwargs."
         columns = list(kwargs)
         funcs = []
         for col_func in kwargs.values():
             if not (isinstance(col_func, str) or callable(col_func)):
-                raise TypeError(tuple_given_message.format(type(col_func).__name__))
+                raise TypeError(f"func is expected but received {type(col_func).__name__} in **kwargs.")
             funcs.append(col_func)
         if not columns:
-            no_arg_message = "Must provide 'func' or named aggregation **kwargs."
-            raise TypeError(no_arg_message)
+            raise TypeError("Must provide 'func' or named aggregation **kwargs.")
         return columns, funcs
 
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
