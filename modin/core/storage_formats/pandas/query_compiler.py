@@ -3818,37 +3818,49 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        # The following 'dtypes' check materializes dtypes for 'by' columns
-        internal_dtypes = pandas.Series()
-        external_dtypes = pandas.Series()
-        if len(internal_by) > 0:
-            internal_dtypes = (
-                self._modin_frame._dtypes.lazy_get(internal_by).get()
-                if isinstance(self._modin_frame._dtypes, ModinDtypes)
-                else self.dtypes[internal_by]
-            )
-        if len(external_by) > 0:
-            for obj in external_by:
-                if not isinstance(obj, type(self)):
-                    # we're only interested in categorical dtypes here, which can only
-                    # appear in pandas objects
-                    continue
-                external_dtypes = pandas.concat([external_dtypes, obj.dtypes])
-
-        by_dtypes = pandas.concat([internal_dtypes, external_dtypes])
-        if any(isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes):
-            raise NotImplementedError(
-                "Range-partitioning groupby is not yet supported when grouping on a categorical column. "
-                + "https://github.com/modin-project/modin/issues/5925"
-            )
-
         is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
-
         if is_transform:
             # https://github.com/modin-project/modin/issues/5924
             ErrorMessage.missmatch_with_pandas(
                 operation="range-partitioning groupby",
                 message="the order of rows may be shuffled for the result",
+            )
+
+        # This check materializes dtypes for 'by' columns
+        if not is_transform and groupby_kwargs.get("observed", False) in (
+            False,
+            lib.no_default,
+        ):
+            # The following 'dtypes' check materializes dtypes for 'by' columns
+            internal_dtypes = pandas.Series()
+            external_dtypes = pandas.Series()
+            if len(internal_by) > 0:
+                internal_dtypes = (
+                    self._modin_frame._dtypes.lazy_get(internal_by).get()
+                    if isinstance(self._modin_frame._dtypes, ModinDtypes)
+                    else self.dtypes[internal_by]
+                )
+            if len(external_by) > 0:
+                for obj in external_by:
+                    if not isinstance(obj, type(self)):
+                        # we're only interested in categorical dtypes here, which can only
+                        # appear in pandas objects
+                        continue
+                    external_dtypes = pandas.concat([external_dtypes, obj.dtypes])
+
+            by_dtypes = pandas.concat([internal_dtypes, external_dtypes])
+            add_missing_cats = any(
+                isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes
+            )
+        else:
+            add_missing_cats = False
+
+        if add_missing_cats and not groupby_kwargs.get("as_index", True):
+            raise NotImplementedError(
+                "Range-partitioning groupby is not implemented for grouping on categorical columns with "
+                + "the following set of parameters {'as_index': False, 'observed': False}. Change either 'as_index' "
+                + "or 'observed' to True and try again. "
+                + "https://github.com/modin-project/modin/issues/5926"
             )
 
         if isinstance(agg_func, dict):
@@ -3894,6 +3906,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             # that's why we have to align the partition's shapes/labeling across different
             # row partitions
             align_result_columns=how == "group_wise",
+            add_missing_cats=add_missing_cats,
             **groupby_kwargs,
         )
         result_qc = self.__constructor__(result)

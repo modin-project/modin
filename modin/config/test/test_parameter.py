@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import pytest
 
-from modin.config.pubsub import Parameter
+from modin.config import Parameter
 
 
 def make_prefilled(vartype, varinit):

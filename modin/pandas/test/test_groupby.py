@@ -21,8 +21,12 @@ import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
-from modin.config.envvars import IsRayCluster, RangePartitioningGroupby
+from modin.config import (
+    IsRayCluster,
+    NPartitions,
+    RangePartitioningGroupby,
+    StorageFormat,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -3017,9 +3021,13 @@ def test_reshuffling_groupby_on_strings(modify_config):
     modin_df = modin_df.astype({"col1": "string"})
     pandas_df = pandas_df.astype({"col1": "string"})
 
-    eval_general(
-        modin_df.groupby("col1"), pandas_df.groupby("col1"), lambda grp: grp.mean()
-    )
+    md_grp = modin_df.groupby("col1")
+    pd_grp = pandas_df.groupby("col1")
+
+    eval_general(md_grp, pd_grp, lambda grp: grp.mean())
+    eval_general(md_grp, pd_grp, lambda grp: grp.nth())
+    eval_general(md_grp, pd_grp, lambda grp: grp.head(10))
+    eval_general(md_grp, pd_grp, lambda grp: grp.tail(10))
 
 
 @pytest.mark.parametrize(
@@ -3200,3 +3208,90 @@ def test_groupby_agg_provided_callable_warning():
             match="In a future version of pandas, the provided callable will be used directly",
         ):
             pandas_groupby.agg(func)
+
+
+def _apply_transform(df):
+    if len(df) == 0:
+        df = df.copy()
+        df.loc[0] = 10
+        return df.squeeze()
+    return df.sum()
+
+
+@pytest.mark.parametrize(
+    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
+)
+@pytest.mark.parametrize("observed", [False])
+@pytest.mark.parametrize("as_index", [True])
+@pytest.mark.parametrize(
+    "func",
+    [
+        pytest.param(lambda grp: grp.sum(), id="sum"),
+        pytest.param(lambda grp: grp.size(), id="size"),
+        pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
+        pytest.param(lambda grp: grp.apply(_apply_transform), id="apply_transform"),
+    ],
+)
+@pytest.mark.parametrize(
+    "by_cols, cat_cols",
+    [
+        ("a", ["a"]),
+        ("b", ["b"]),
+        ("e", ["e"]),
+        (["a", "e"], ["a"]),
+        (["a", "e"], ["e"]),
+        (["a", "e"], ["a", "e"]),
+        (["b", "e"], ["b"]),
+        (["b", "e"], ["e"]),
+        (["b", "e"], ["b", "e"]),
+        (["a", "b", "e"], ["a"]),
+        (["a", "b", "e"], ["b"]),
+        (["a", "b", "e"], ["e"]),
+        (["a", "b", "e"], ["a", "e"]),
+        (["a", "b", "e"], ["a", "b", "e"]),
+    ],
+)
+@pytest.mark.parametrize(
+    "exclude_values",
+    [
+        pytest.param(lambda row: ~row["a"].isin(["a", "e"]), id="exclude_from_a"),
+        pytest.param(lambda row: ~row["b"].isin([4]), id="exclude_from_b"),
+        pytest.param(lambda row: ~row["e"].isin(["x"]), id="exclude_from_e"),
+        pytest.param(
+            lambda row: ~row["a"].isin(["a", "e"]) & ~row["b"].isin([4]),
+            id="exclude_from_a_b",
+        ),
+        pytest.param(
+            lambda row: ~row["b"].isin([4]) & ~row["e"].isin(["x"]),
+            id="exclude_from_b_e",
+        ),
+        pytest.param(
+            lambda row: ~row["a"].isin(["a", "e"])
+            & ~row["b"].isin([4])
+            & ~row["e"].isin(["x"]),
+            id="exclude_from_a_b_e",
+        ),
+    ],
+)
+def test_range_groupby_categories(
+    observed, func, by_cols, cat_cols, exclude_values, as_index, modify_config
+):
+    # HACK: there's a bug in range-partitioning impl that can be triggered
+    # here on certain seeds, manually setting the seed so it won't show up
+    # https://github.com/modin-project/modin/issues/6875
+    np.random.seed(0)
+    data = {
+        "a": ["a", "b", "c", "d", "e", "b", "g", "a"] * 32,
+        "b": [1, 2, 3, 4] * 64,
+        "c": range(256),
+        "d": range(256),
+        "e": ["x", "y"] * 128,
+    }
+
+    md_df, pd_df = create_test_dfs(data)
+    md_df = md_df.astype({col: "category" for col in cat_cols})[exclude_values]
+    pd_df = pd_df.astype({col: "category" for col in cat_cols})[exclude_values]
+
+    md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
+    pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
+    df_equals(md_res, pd_res)
