@@ -13,11 +13,13 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-from typing import Callable, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import pandas
 import ray
-from ray.util.client.common import ClientObjectRef
+
+if TYPE_CHECKING:
+    from ray.util.client.common import ClientObjectRef
 
 from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -57,7 +59,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def __init__(
         self,
-        data: Union[ray.ObjectRef, ClientObjectRef, DeferredExecution],
+        data: Union[ray.ObjectRef, "ClientObjectRef", DeferredExecution],
         length: int = None,
         width: int = None,
         ip: str = None,

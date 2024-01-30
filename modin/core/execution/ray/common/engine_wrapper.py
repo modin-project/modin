@@ -117,12 +117,12 @@ class RayWrapper:
         object
             Whatever was identified by `obj_id`.
         """
-        if isinstance(obj_id, (list, tuple)):
-            return [cls.materialize(o) for o in obj_id]
-        obj = ray.get(obj_id)
-        if isinstance(obj, DeferredExecutionException):
-            raise obj.args[1] from obj
-        return obj
+        materialized = ray.get(obj_id)
+        for obj in materialized if isinstance(materialized, list) else [materialized]:
+            if isinstance(obj, DeferredExecutionException):
+                # Raise the original exception
+                raise obj.args[1] from obj
+        return materialized
 
     @classmethod
     def put(cls, data, **kwargs):

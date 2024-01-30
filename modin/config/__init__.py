@@ -33,6 +33,7 @@ from modin.config.envvars import (
     IsDebug,
     IsExperimental,
     IsRayCluster,
+    LazyExecution,
     LogFileSize,
     LogMemoryInterval,
     LogMode,
@@ -71,6 +72,7 @@ __all__ = [
     "RayRedisAddress",
     "RayRedisPassword",
     "TestRayClient",
+    "LazyExecution",
     # Partitioning
     "NPartitions",
     "MinPartitionSize",
