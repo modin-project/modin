@@ -1951,7 +1951,9 @@ class SeriesGroupBy(DataFrameGroupBy):
         funcs = []
         for col_func in kwargs.values():
             if not (isinstance(col_func, str) or callable(col_func)):
-                raise TypeError(f"func is expected but received {type(col_func).__name__} in **kwargs.")
+                raise TypeError(
+                    f"func is expected but received {type(col_func).__name__} in **kwargs."
+                )
             funcs.append(col_func)
         if not columns:
             raise TypeError("Must provide 'func' or named aggregation **kwargs.")
