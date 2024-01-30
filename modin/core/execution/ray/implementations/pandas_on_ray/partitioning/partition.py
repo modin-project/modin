@@ -76,6 +76,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._meta = MetaList([length, width, ip])
         self._meta_offset = 0
 
+        log = get_logger()
+        self._is_debug(log) and log.debug(
+            "Partition ID: {}, Height: {}, Width: {}, Node IP: {}".format(
+                self._identity,
+                str(self._length_cache),
+                str(self._width_cache),
+                str(self._ip_cache),
+            )
+        )
+
     def __del__(self):
         """Decrement the reference counter."""
         if isinstance(self._data_ref, DeferredExecution):
