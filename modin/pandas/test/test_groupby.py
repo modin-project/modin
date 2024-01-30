@@ -111,6 +111,52 @@ pytestmark = [
 ]
 
 
+def get_external_groupers(df, columns, drop_from_original_df=False, add_plus_one=False):
+    """
+    Construct ``by`` argument containing external groupers.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame or modin.pandas.DataFrame
+    columns : list[tuple[str, bool]]
+        Columns to group on. If ``True`` do ``df[col]``, otherwise keep the column name.
+        '''
+        >>> columns = [(True, "a"), (False, "b")]
+        >>> get_external_groupers(df, columns)
+        [
+            pandas.Series(..., name="a"),
+            "b"
+        ]
+        '''
+    drop_from_original_df : bool, default: False
+        Whether to drop selected external columns from `df`.
+    add_plus_one : bool, default: False
+        Whether to do ``df[name] + 1`` for external groupers (so they won't be considered as
+        sibling with `df`).
+
+    Returns
+    -------
+    new_df : pandas.DataFrame or modin.pandas.DataFrame
+        If `drop_from_original_df` was True, returns a new dataframe with
+        dropped external columns, otherwise returns `df`.
+    by : list
+        Groupers to pass to `df.groupby(by)`.
+    """
+    new_df = df
+    by = []
+    for lookup, name in columns:
+        if lookup:
+            sr = df[name].copy()
+            if add_plus_one:
+                sr = sr + 1
+            by.append(sr)
+            if drop_from_original_df:
+                new_df = new_df.drop(columns=[name])
+        else:
+            by.append(name)
+    return new_df, by
+
+
 def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     eval_general(
         modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
@@ -1935,18 +1981,6 @@ def test_to_pandas_convertion(kwargs):
 @pytest.mark.parametrize("drop_from_original_df", [True, False])
 @pytest.mark.parametrize("as_index", [True, False])
 def test_mixed_columns(columns, drop_from_original_df, as_index):
-    def get_columns(df):
-        new_df = df
-        by = []
-        for lookup, name in columns:
-            if lookup:
-                by.append(df[name].copy())
-                if drop_from_original_df:
-                    new_df = new_df.drop(columns=[name])
-            else:
-                by.append(name)
-        return new_df, by
-
     data = {
         "a": [1, 1, 2, 2] * 64,
         "b": [11, 11, 22, 22] * 64,
@@ -1955,7 +1989,9 @@ def test_mixed_columns(columns, drop_from_original_df, as_index):
     }
 
     md_df, pd_df = create_test_dfs(data)
-    (md_df, md_by), (pd_df, pd_by) = get_columns(md_df), get_columns(pd_df)
+    (md_df, md_by), (pd_df, pd_by) = get_external_groupers(
+        md_df, columns, drop_from_original_df
+    ), get_external_groupers(pd_df, columns, drop_from_original_df)
 
     md_grp = md_df.groupby(md_by, as_index=as_index)
     pd_grp = pd_df.groupby(pd_by, as_index=as_index)
@@ -2015,13 +2051,10 @@ def test_groupby_external_grouper_duplicated_names(as_index):
     ],
 )
 def test_internal_by_detection(columns):
-    def get_columns(df):
-        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
-
     data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
 
     md_df = pd.DataFrame(data)
-    by = get_columns(md_df)
+    _, by = get_external_groupers(md_df, columns, add_plus_one=True)
     md_grp = md_df.groupby(by)
 
     ref = frozenset(
@@ -2049,15 +2082,13 @@ def test_mixed_columns_not_from_df(columns, as_index):
     Unlike the previous test, in this case the Series is not just a column from
     the original DataFrame, so you can't use a fasttrack.
     """
-
-    def get_columns(df):
-        return [(df[name] + 1) if lookup else name for (lookup, name) in columns]
-
     data = {"a": [1, 1, 2], "b": [11, 11, 22], "c": [111, 111, 222]}
     groupby_kw = {"as_index": as_index}
 
     md_df, pd_df = create_test_dfs(data)
-    by_md, by_pd = map(get_columns, [md_df, pd_df])
+    (_, by_md), (_, by_pd) = map(
+        lambda df: get_external_groupers(df, columns, add_plus_one=True), [md_df, pd_df]
+    )
 
     pd_grp = pd_df.groupby(by_pd, **groupby_kw)
     md_grp = md_df.groupby(by_md, **groupby_kw)
@@ -2084,16 +2115,13 @@ def test_mixed_columns_not_from_df(columns, as_index):
     ],
 )
 def test_unknown_groupby(columns):
-    def get_columns(df):
-        return [df[name] if lookup else name for (lookup, name) in columns]
-
     data = {"b": [11, 11, 22, 200], "c": [111, 111, 222, 7000]}
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     with pytest.raises(KeyError):
-        pandas_df.groupby(by=get_columns(pandas_df))
+        pandas_df.groupby(by=get_external_groupers(pandas_df, columns)[1])
     with pytest.raises(KeyError):
-        modin_df.groupby(by=get_columns(modin_df))
+        modin_df.groupby(by=get_external_groupers(modin_df, columns)[1])
 
 
 @pytest.mark.parametrize(
@@ -3294,4 +3322,28 @@ def test_range_groupby_categories(
 
     md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
     pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
+    df_equals(md_res, pd_res)
+
+
+@pytest.mark.parametrize("cat_cols", [["a"], ["b"], ["a", "b"]])
+@pytest.mark.parametrize(
+    "columns", [[(False, "a"), (True, "b")], [(True, "a")], [(True, "a"), (True, "b")]]
+)
+def test_range_groupby_categories_external_grouper(columns, cat_cols):
+    data = {
+        "a": [1, 1, 2, 2] * 64,
+        "b": [11, 11, 22, 22] * 64,
+        "c": [111, 111, 222, 222] * 64,
+        "data": [1, 2, 3, 4] * 64,
+    }
+
+    md_df, pd_df = create_test_dfs(data)
+    md_df = md_df.astype({col: "category" for col in cat_cols})
+    pd_df = pd_df.astype({col: "category" for col in cat_cols})
+
+    md_df, md_by = get_external_groupers(md_df, columns, drop_from_original_df=True)
+    pd_df, pd_by = get_external_groupers(pd_df, columns, drop_from_original_df=True)
+
+    md_res = md_df.groupby(md_by).count()
+    pd_res = pd_df.groupby(pd_by).count()
     df_equals(md_res, pd_res)

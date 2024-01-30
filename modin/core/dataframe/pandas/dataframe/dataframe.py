@@ -4031,6 +4031,18 @@ class PandasDataframe(ClassLogger):
 
                     masks = None
                     if add_missing_cats:
+                        external_by_cols = [
+                            None if col.startswith(MODIN_UNNAMED_SERIES_LABEL) else col
+                            for obj in external_by
+                            for col in obj.columns
+                        ]
+                        by = []
+                        # restoring original order of 'by' columns
+                        for idx in by_positions:
+                            if idx >= 0:
+                                by.append(external_by_cols[idx])
+                            else:
+                                by.append(internal_by[-idx - 1])
                         masks, combined_cols = add_missing_categories_to_groupby(
                             dfs,
                             by,
