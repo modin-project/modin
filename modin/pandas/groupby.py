@@ -1924,8 +1924,47 @@ class SeriesGroupBy(DataFrameGroupBy):
             )
         )
 
+    def _validate_func_kwargs(self, kwargs: dict):
+        """
+        Validate types of user-provided "named aggregation" kwargs.
+
+        Parameters
+        ----------
+        kwargs : dict
+
+        Returns
+        -------
+        columns : List[str]
+            List of user-provided keys.
+        funcs : List[Union[str, callable[...,Any]]]
+            List of user-provided aggfuncs.
+
+        Raises
+        ------
+        `TypeError` is raised if aggfunc is not `str` or callable.
+
+        Notes
+        -----
+        Copied from pandas.
+        """
+        columns = list(kwargs)
+        funcs = []
+        for col_func in kwargs.values():
+            if not (isinstance(col_func, str) or callable(col_func)):
+                raise TypeError(
+                    f"func is expected but received {type(col_func).__name__} in **kwargs."
+                )
+            funcs.append(col_func)
+        if not columns:
+            raise TypeError("Must provide 'func' or named aggregation **kwargs.")
+        return columns, funcs
+
     def aggregate(self, func=None, *args, engine=None, engine_kwargs=None, **kwargs):
         engine_default = engine is None and engine_kwargs is None
+        # if func is None, will switch to user-provided "named aggregation" kwargs
+        if func_is_none := func is None:
+            columns, func = self._validate_func_kwargs(kwargs)
+            kwargs = {}
         if isinstance(func, dict) and engine_default:
             raise SpecificationError("nested renamer is not supported")
         elif is_list_like(func) and engine_default:
@@ -1946,6 +1985,8 @@ class SeriesGroupBy(DataFrameGroupBy):
             # because there is no need to identify which original column's aggregation
             # the new column represents. alternatively we could give the query compiler
             # a hint that it's for a series, not a dataframe.
+            if func_is_none:
+                return result.set_axis(labels=columns, axis=1, copy=False)
             return result.set_axis(
                 labels=self._try_get_str_func(func), axis=1, copy=False
             )
