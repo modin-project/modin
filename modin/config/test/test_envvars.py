@@ -19,16 +19,11 @@ import pytest
 from packaging import version
 
 import modin.config as cfg
-from modin.config.envvars import (
-    _UNSET,
-    EnvironmentVariable,
-    ExactStr,
-    Parameter,
-    _check_vars,
-)
+from modin.config.envvars import _check_vars
+from modin.config.pubsub import _UNSET, ExactStr
 
 
-def reset_vars(*vars: tuple[Parameter]):
+def reset_vars(*vars: tuple[cfg.Parameter]):
     """
     Reset value for the passed parameters.
 
@@ -51,7 +46,7 @@ def make_unknown_env():
 
 @pytest.fixture(params=[str, ExactStr])
 def make_custom_envvar(request):
-    class CustomVar(EnvironmentVariable, type=request.param):
+    class CustomVar(cfg.EnvironmentVariable, type=request.param):
         """custom var"""
 
         default = 10

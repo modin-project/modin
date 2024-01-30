@@ -23,7 +23,7 @@ from typing import Any, Optional
 from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import (
+from modin.config.pubsub import (
     _TYPE_PARAMS,
     _UNSET,
     DeprecationDescriptor,

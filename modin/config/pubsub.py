@@ -28,7 +28,7 @@ from typing import (
 )
 
 if TYPE_CHECKING:
-    from .envvars import EnvironmentVariable
+    from modin.config.envvars import EnvironmentVariable
 
 
 class DeprecationDescriptor:

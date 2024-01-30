@@ -24,15 +24,18 @@ from textwrap import dedent
 
 import pandas
 
-from . import *  # noqa: F403, F401
-from .pubsub import Parameter
+import modin.config as cfg
 
 
 def print_config_help() -> None:
     """Print configs help messages."""
-    for objname in sorted(globals()):
-        obj = globals()[objname]
-        if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
+    for objname in sorted(cfg.__all__):
+        obj = getattr(cfg, objname)
+        if (
+            isinstance(obj, type)
+            and issubclass(obj, cfg.Parameter)
+            and not obj.is_abstract
+        ):
             print(f"{obj.get_help()}\n\tCurrent value: {obj.get()}")  # noqa: T201
 
 
@@ -51,9 +54,13 @@ def export_config_help(filename: str) -> None:
         CpuCount="multiprocessing.cpu_count()",
         NPartitions="equals to MODIN_CPUS env",
     )
-    for objname in sorted(globals()):
-        obj = globals()[objname]
-        if isinstance(obj, type) and issubclass(obj, Parameter) and not obj.is_abstract:
+    for objname in sorted(cfg.__all__):
+        obj = getattr(cfg, objname)
+        if (
+            isinstance(obj, type)
+            and issubclass(obj, cfg.Parameter)
+            and not obj.is_abstract
+        ):
             data = {
                 "Config Name": obj.__name__,
                 "Env. Variable Name": getattr(

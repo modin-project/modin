@@ -101,9 +101,13 @@ _is_first_update = {}
 
 
 def _update_engine(publisher: Parameter):
-    from modin.config import CpuCount, Engine, StorageFormat
-    from modin.config.envvars import IsExperimental
-    from modin.config.pubsub import ValueSource
+    from modin.config import (
+        CpuCount,
+        Engine,
+        IsExperimental,
+        StorageFormat,
+        ValueSource,
+    )
 
     # Set this so that Pandas doesn't try to multithread by itself
     os.environ["OMP_NUM_THREADS"] = "1"

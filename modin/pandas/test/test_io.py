@@ -39,13 +39,13 @@ from modin.config import (
     AsyncReadMode,
     Engine,
     IsExperimental,
+    MinPartitionSize,
     ReadSqlEngine,
     StorageFormat,
     TestDatasetSize,
     TestReadFromPostgres,
     TestReadFromSqlServer,
 )
-from modin.config.envvars import MinPartitionSize
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.pandas.io import from_arrow, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
