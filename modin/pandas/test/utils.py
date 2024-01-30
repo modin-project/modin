@@ -1033,6 +1033,11 @@ def create_test_dfs(*args, **kwargs):
     )
 
 
+def create_test_series(*args, **kwargs):
+    post_fn = kwargs.pop("post_fn", lambda df: df)
+    return map(post_fn, [pd.Series(*args, **kwargs), pandas.Series(*args, **kwargs)])
+
+
 def generate_dfs():
     df = pandas.DataFrame(
         {
