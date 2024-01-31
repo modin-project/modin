@@ -53,6 +53,10 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         Width or reference to it of wrapped ``pandas.DataFrame``.
     ip : ObjectIDType or str, optional
         Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
+    meta : MetaList
+        Meta information, containing the lengths and the worker address (the last value).
+    meta_offset : int
+        The lengths offset in the meta list.
     """
 
     execution_wrapper = RayWrapper
@@ -63,6 +67,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         length: int = None,
         width: int = None,
         ip: str = None,
+        meta: MetaList = None,
+        meta_offset=0,
     ):
         super().__init__()
         if isinstance(data, DeferredExecution):
@@ -73,8 +79,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         # by the remote function. The returned list may contain data for multiple
         # results and, in this case, _meta_offset corresponds to the meta related to
         # this partition.
-        self._meta = MetaList([length, width, ip])
-        self._meta_offset = 0
+        if meta is None:
+            self._meta = MetaList([length, width, ip])
+            self._meta_offset = 0
+        else:
+            self._meta = meta
+            self._meta_offset = meta_offset
 
         log = get_logger()
         self._is_debug(log) and log.debug(
@@ -133,9 +143,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         else:
             de = DeferredExecution(data, func, args, kwargs)
-        part = self.__constructor__(de)
-        part.drain_call_queue()
-        return part
+        de.ref_count(1)
+        data, meta, meta_offset = de.exec()
+        return self.__constructor__(data, meta=meta, meta_offset=meta_offset)
 
     @_inherit_docstrings(PandasDataframePartition.add_to_apply_calls)
     def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
@@ -148,13 +158,22 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     @_inherit_docstrings(PandasDataframePartition.drain_call_queue)
     def drain_call_queue(self):
         data = self._data_ref
-        if isinstance(data, DeferredExecution):
-            (
-                self._data_ref,
-                self._meta,
-                self._meta_offset,
-            ) = data.exec()
-            data.ref_count(-1)
+        if not isinstance(data, DeferredExecution):
+            return data
+
+        log = get_logger()
+        self._is_debug(log) and log.debug(
+            f"ENTER::Partition.drain_call_queue::{self._identity}"
+        )
+        (
+            self._data_ref,
+            self._meta,
+            self._meta_offset,
+        ) = data.exec()
+        data.ref_count(-1)
+        self._is_debug(log) and log.debug(
+            f"EXIT::Partition.drain_call_queue::{self._identity}"
+        )
 
     @_inherit_docstrings(PandasDataframePartition.wait)
     def wait(self):
@@ -172,9 +191,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         """
         return self.__constructor__(
             self._data_ref,
-            length=self._length_cache,
-            width=self._width_cache,
-            ip=self._ip_cache,
+            meta=self._meta,
+            meta_offset=self._meta_offset,
         )
 
     def mask(self, row_labels, col_labels):
@@ -330,7 +348,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return ip
 
     @property
-    def _data(self):  # noqa: GL08
+    def _data(self) -> pandas.DataFrame:  # noqa: GL08
         self.drain_call_queue()
         return self._data_ref
 
