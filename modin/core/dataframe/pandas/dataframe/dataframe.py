@@ -4023,7 +4023,7 @@ class PandasDataframe(ClassLogger):
                 else:
                     original_dtypes = None
 
-                def compute_aligned_columns(*dfs, initial_columns=None):
+                def compute_aligned_columns(*dfs, initial_columns=None, by=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
                     if align_result_columns:
                         valid_dfs = [
@@ -4046,18 +4046,6 @@ class PandasDataframe(ClassLogger):
 
                     masks = None
                     if add_missing_cats:
-                        external_by_cols = [
-                            None if col.startswith(MODIN_UNNAMED_SERIES_LABEL) else col
-                            for obj in external_by
-                            for col in obj.columns
-                        ]
-                        by = []
-                        # restoring original order of 'by' columns
-                        for idx in by_positions:
-                            if idx >= 0:
-                                by.append(external_by_cols[idx])
-                            else:
-                                by.append(internal_by[-idx - 1])
                         masks, combined_cols = add_missing_categories_to_groupby(
                             dfs,
                             by,
@@ -4074,6 +4062,19 @@ class PandasDataframe(ClassLogger):
                         else (None, masks)
                     )
 
+                external_by_cols = [
+                    None if col.startswith(MODIN_UNNAMED_SERIES_LABEL) else col
+                    for obj in external_by
+                    for col in obj.columns
+                ]
+                by = []
+                # restoring original order of 'by' columns
+                for idx in by_positions:
+                    if idx >= 0:
+                        by.append(external_by_cols[idx])
+                    else:
+                        by.append(internal_by[-idx - 1])
+
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
                 parts = result._partitions.flatten()
@@ -4082,7 +4083,8 @@ class PandasDataframe(ClassLogger):
                     # otherwise, the execution fails. Look into the issue later.
                     self._partition_mgr_cls.preprocess_func(compute_aligned_columns),
                     *[part._data for part in parts[1:]],
-                    initial_columns=self.columns,
+                    initial_columns=pandas.Index(external_by_cols).append(self.columns),
+                    by=by,
                 )
 
                 def apply_aligned(df, args, partition_idx):
