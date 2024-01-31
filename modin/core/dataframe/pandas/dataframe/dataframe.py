@@ -3852,7 +3852,22 @@ class PandasDataframe(ClassLogger):
             #   2. The second one works slower, but only gathers light pandas.Index objects,
             #      so there should be less stress on the network.
             if add_missing_cats or not IsRayCluster.get():
-                original_dtypes = self.dtypes if self.has_materialized_dtypes else None
+                if self.has_materialized_dtypes:
+                    original_dtypes = pandas.Series(
+                        {
+                            # lazy proxies hold a reference to another modin's DataFrame which can be
+                            # a problem during serialization, in this scenario we don't need actual
+                            # categorical values, so a "category" string will be enough
+                            name: (
+                                "category"
+                                if isinstance(dtype, LazyProxyCategoricalDtype)
+                                else dtype
+                            )
+                            for name, dtype in self.dtypes.items()
+                        }
+                    )
+                else:
+                    original_dtypes = None
 
                 def compute_aligned_columns(*dfs, initial_columns=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
