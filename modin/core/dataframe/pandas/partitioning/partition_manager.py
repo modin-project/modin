@@ -1142,6 +1142,30 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
+    def convert_partitions_to_pandas_in_remote_func(cls, partitions):
+        """
+        Call to_pandas for the given NumPy array of partitions.
+
+        For a NumPy array of partitions create a single partition
+        that has the data for all partitions.
+
+        Parameters
+        ----------
+        partitions : np.ndarray
+            The partitions which have to be converted to a single partition.
+
+        Returns
+        -------
+        PandasDataframePartition
+            A PandasDataframePartition object which holds the data of all partitions.
+        """
+
+        def call_to_pandas(data, partitions):
+            return cls.to_pandas(partitions)
+
+        return partitions.flat[0].apply(call_to_pandas, partitions=partitions)
+
+    @classmethod
     @wait_computations_if_benchmark_mode
     def apply_func_to_select_indices(
         cls, axis, partitions, func, indices, keep_remaining=False

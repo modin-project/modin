@@ -2762,25 +2762,27 @@ class PandasDataframe(ClassLogger):
             partitions, new_index, new_columns, row_lengths, column_widths
         )
 
-    def force_materialization(self) -> "PandasDataframe":
+    def to_pandas_in_remote_function(self) -> "PandasDataframe":
         """
-        Materialize axis partitions into a single partition.
-
-        Applies the identity function first across rows, and thereafter across columns
-        to get a df single  partition.
+        Create a PandasFrame with single partition from the partitions of the current dataframe.
 
         Returns
         -------
         PandasDataframe
             An PandasDataframe containing only a single partition.
         """
-        row_partitions = self._partition_mgr_cls.row_partitions(self._partitions)
-        col_partition = self._partition_mgr_cls.column_partitions(
-            np.asarray([row_partitions]).T
+        partition_with_to_pandas_data = [
+            self._partition_mgr_cls.convert_partitions_to_pandas_in_remote_func(
+                self._partitions
+            )
+        ]
+        partitions = np.array(partition_with_to_pandas_data).reshape(1, -1)
+
+        result = self.__constructor__(
+            partitions, self.index, columns=self.columns, dtypes=self.dtypes
         )
-        new_frame = np.array([col_partition[0].apply(lambda df: df, num_splits=1)])
-        single_partition_df = self.__constructor__(new_frame)
-        return single_partition_df
+        result.synchronize_labels()
+        return result
 
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
