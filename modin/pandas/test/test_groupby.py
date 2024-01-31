@@ -3245,14 +3245,6 @@ def test_groupby_agg_provided_callable_warning():
             pandas_groupby.agg(func)
 
 
-def _apply_transform(df):
-    if len(df) == 0:
-        df = df.copy()
-        df.loc[0] = 10
-        return df.squeeze()
-    return df.sum()
-
-
 @pytest.mark.parametrize(
     "modify_config", [{RangePartitioningGroupby: True}], indirect=True
 )
@@ -3264,7 +3256,16 @@ def _apply_transform(df):
         pytest.param(lambda grp: grp.sum(), id="sum"),
         pytest.param(lambda grp: grp.size(), id="size"),
         pytest.param(lambda grp: grp.apply(lambda df: df.sum()), id="apply_sum"),
-        pytest.param(lambda grp: grp.apply(_apply_transform), id="apply_transform"),
+        pytest.param(
+            lambda grp: grp.apply(
+                lambda df: (
+                    df.sum()
+                    if len(df) > 0
+                    else pandas.Series([10] * len(df.columns), index=df.columns)
+                )
+            ),
+            id="apply_transform",
+        ),
     ],
 )
 @pytest.mark.parametrize(
