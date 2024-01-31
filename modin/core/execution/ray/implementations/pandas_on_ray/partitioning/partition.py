@@ -348,7 +348,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return ip
 
     @property
-    def _data(self) -> pandas.DataFrame:  # noqa: GL08
+    def _data(self) -> Union[ray.ObjectRef, "ClientObjectRef"]:  # noqa: GL08
         self.drain_call_queue()
         return self._data_ref
 
