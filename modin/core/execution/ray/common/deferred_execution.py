@@ -32,6 +32,9 @@ import ray
 from ray._private.services import get_node_ip_address
 from ray.util.client.common import ClientObjectRef
 
+from modin.core.execution.ray.common import RayWrapper
+from modin.logging import get_logger
+
 ObjectRefType = Union[ray.ObjectRef, ClientObjectRef, None]
 ObjectRefOrListType = Union[ObjectRefType, List[ObjectRefType]]
 ListOrTuple = (list, tuple)
@@ -484,8 +487,6 @@ class MetaList:
         """
         obj = self._obj
         if not isinstance(obj, list):
-            from modin.core.execution.ray.common import RayWrapper
-
             self._obj = obj = RayWrapper.materialize(obj)
         return obj[index]
 
@@ -500,24 +501,8 @@ class MetaList:
         """
         obj = self._obj
         if not isinstance(obj, list):
-            from modin.core.execution.ray.common import RayWrapper
-
             self._obj = obj = RayWrapper.materialize(obj)
         obj[index] = value
-
-
-class DeferredExecutionException(Exception):
-    """
-    Execution exception wrapper.
-
-    Parameters
-    ----------
-    msg : str
-    cause : Exception
-    """
-
-    def __init__(self, msg: str, cause: Exception):
-        super().__init__(msg, cause)
 
 
 class _Tag(Enum):  # noqa: PR01
@@ -568,9 +553,10 @@ class _RemoteExecutor:
                 else:
                     raise err
         except Exception as err:
-            raise DeferredExecutionException(
-                f"fn={fn}, obj={obj}, args={args}, kwargs={kwargs}", err
+            get_logger().error(
+                f"{err}. fn={fn}, obj={obj}, args={args}, kwargs={kwargs}"
             )
+            raise err
 
     @classmethod
     def construct(cls, num_returns: int, args: Tuple):  # pragma: no cover
@@ -606,15 +592,9 @@ class _RemoteExecutor:
                         yield obj
                 except StopIteration:
                     ...
-        except DeferredExecutionException as err:
-            for _ in range(num_returns - 1):
-                yield err
         except Exception as err:
-            err = DeferredExecutionException(
-                f"args={args}, chain={list(reversed(chain))}", err
-            )
-            for _ in range(num_returns - 1):
-                yield err
+            get_logger().error(f"{err}. args={args}, chain={list(reversed(chain))}")
+            raise err
         meta.append(get_node_ip_address())
         yield meta
 
@@ -653,15 +633,11 @@ class _RemoteExecutor:
         tg_e = _Tag.END
 
         obj = pop()
-        if isinstance(obj, DeferredExecutionException):
-            raise obj
         if obj is _Tag.REF:
             obj = refs[pop()]
         elif obj is _Tag.LIST:
             obj = []
             yield cls.construct_list(obj, chain, refs, meta)
-            if isinstance(obj[0], DeferredExecutionException):
-                raise obj[0]
 
         while chain:
             fn = pop()
@@ -786,16 +762,13 @@ def remote_exec_func(
     tuple[Any, int, int, str]
     The execution result, the result length and width, the worked address.
     """
-    try:
-        obj = remote_executor.exec_func(fn, obj, flat_args, flat_kwargs)
-        return (
-            obj,
-            len(obj) if hasattr(obj, "__len__") else 0,
-            len(obj.columns) if hasattr(obj, "columns") else 0,
-            get_node_ip_address(),
-        )
-    except DeferredExecutionException as err:
-        return [err] * 4
+    obj = remote_executor.exec_func(fn, obj, flat_args, flat_kwargs)
+    return (
+        obj,
+        len(obj) if hasattr(obj, "__len__") else 0,
+        len(obj.columns) if hasattr(obj, "columns") else 0,
+        get_node_ip_address(),
+    )
 
 
 @ray.remote(num_returns=2)

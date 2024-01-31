@@ -24,9 +24,6 @@ from types import FunctionType
 import ray
 from ray.util.client.common import ClientObjectRef
 
-from modin.core.execution.ray.common.deferred_execution import (
-    DeferredExecutionException,
-)
 from modin.error_message import ErrorMessage
 
 
@@ -117,12 +114,7 @@ class RayWrapper:
         object
             Whatever was identified by `obj_id`.
         """
-        materialized = ray.get(obj_id)
-        for obj in materialized if isinstance(materialized, list) else [materialized]:
-            if isinstance(obj, DeferredExecutionException):
-                # Raise the original exception
-                raise obj.args[1] from obj
-        return materialized
+        return ray.get(obj_id)
 
     @classmethod
     def put(cls, data, **kwargs):
