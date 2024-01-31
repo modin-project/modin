@@ -60,14 +60,27 @@ class DeferredExecution:
         Additional positional arguments to be passed in `func`.
     kwargs : dict
         Additional keyword arguments to be passed in `func`.
-    flat_args : bool, optional
+    num_returns : int, optional
+        The number of the return values.
+
+    Attributes
+    ----------
+    data : ObjectRefType or DeferredExecution
+        The execution input.
+    func : callable or ObjectRefType
+        A function to be executed.
+    args : list or tuple
+        Additional positional arguments to be passed in `func`.
+    kwargs : dict
+        Additional keyword arguments to be passed in `func`.
+    num_returns : int
+        The number of the return values.
+    flat_args : bool
         True means that there are no lists or DeferredExecution objects in `args`.
         In this case, no arguments processing is performed and `args` is passed
         to the remote method as is.
-    flat_kwargs : bool, optional
+    flat_kwargs : bool
         The same as `flat_args` but for the `kwargs` values.
-    num_returns : int
-        The number of the return values.
     """
 
     def __init__(
@@ -80,50 +93,45 @@ class DeferredExecution:
         func: Union[Callable, ObjectRefType],
         args: Union[List[Any], Tuple[Any]],
         kwargs: Dict[str, Any],
-        flat_args: Optional[bool] = None,
-        flat_kwargs: Optional[bool] = None,
         num_returns=1,
     ):
         ref = DeferredExecution._ref
-        if flat_args is None:
-            if has_list_or_de(args):
-                flat_args = False
-                for a in args:
-                    ref(a)
-            else:
-                flat_args = True
-        if flat_kwargs is None:
-            if has_list_or_de(kwargs.values()):
-                flat_kwargs = False
-                for a in kwargs.values():
-                    ref(a)
-            else:
-                flat_kwargs = True
         ref(data)
         self.data = data
         self.func = func
         self.args = args
         self.kwargs = kwargs
-        self.flat_args = flat_args
-        self.flat_kwargs = flat_kwargs
         self.num_returns = num_returns
-        self.ref_counter = 0
+        self.flat_args = sum(ref(a) for a in args) == 0
+        self.flat_kwargs = sum(ref(a) for a in kwargs.values()) == 0
+        self.ref_counter = 1
 
     @staticmethod
     def _ref(obj):
         """
         Increment the `ref_counter` if `obj` is a `DeferredExecution`.
 
+        If `obj` is a `ListOrTuple`, this method is called recursively for each element.
+
         Parameters
         ----------
         obj : Any
+
+        Returns
+        -------
+        int
+            The number of `ListOrTuple` or `DeferredExecution` objects found.
         """
         if isinstance(obj, DeferredExecution):
             obj.ref_count(1)
-        elif isinstance(obj, ListOrTuple):
+            return 1
+        if isinstance(obj, ListOrTuple):
             ref = DeferredExecution._ref
+            result = 1
             for o in obj:
-                ref(o)
+                result += ref(o)
+            return result
+        return 0
 
     def exec(
         self,
@@ -142,15 +150,18 @@ class DeferredExecution:
         if self.has_result:
             return self.data, self.meta, self.meta_offset
 
-        data = self.data
-        if self.num_returns == 1 and not isinstance(data, DeferredExecution):
-            if self.flat_kwargs and self.flat_kwargs:
-                result, length, width, ip = remote_exec_func.remote(
-                    self.func, data, *self.args, **self.kwargs
-                )
-                meta = MetaList([length, width, ip])
-                self._set_result(result, meta, 0)
-                return result, meta, 0
+        if (
+            not isinstance(self.data, DeferredExecution)
+            and self.flat_args
+            and self.flat_kwargs
+            and self.num_returns == 1
+        ):
+            result, length, width, ip = remote_exec_func.remote(
+                self.func, self.data, *self.args, **self.kwargs
+            )
+            meta = MetaList([length, width, ip])
+            self._set_result(result, meta, 0)
+            return result, meta, 0
 
         consumers, output = self._deconstruct()
         # The last result is the MetaList, so adding +1 here.
@@ -745,22 +756,6 @@ class _RemoteExecutor:
 
 
 _REMOTE_EXEC = _RemoteExecutor()
-_ListOrDe = (DeferredExecution, list, tuple)
-
-
-def has_list_or_de(it: Iterable):
-    """
-    Check if the specified iterable contains either a list or a DeferredExecution object.
-
-    Parameters
-    ----------
-    it : Iterable
-
-    Returns
-    -------
-    bool
-    """
-    return any(isinstance(i, _ListOrDe) for i in it)
 
 
 @ray.remote(num_returns=4)

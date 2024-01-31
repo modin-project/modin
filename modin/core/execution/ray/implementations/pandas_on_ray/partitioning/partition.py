@@ -27,8 +27,6 @@ from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.common.deferred_execution import (
     DeferredExecution,
     MetaList,
-    has_list_or_de,
-    remote_exec_func,
 )
 from modin.core.execution.ray.common.utils import ObjectIDType
 from modin.logging import get_logger
@@ -71,8 +69,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         meta_offset=0,
     ):
         super().__init__()
-        if isinstance(data, DeferredExecution):
-            data.ref_count(1)
         self._data_ref = data
         # The metadata is stored in the MetaList at 0 offset. If the data is
         # a DeferredExecution, the _meta will be replaced with the list, returned
@@ -127,24 +123,13 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         If ``LazyExecution`` is enabled, the function is not applied immediately,
         but is added to the execution tree.
         """
+        de = DeferredExecution(self._data_ref, func, args, kwargs)
         if LazyExecution.get():
-            de = DeferredExecution(self._data_ref, func, args, kwargs)
             return self.__constructor__(de)
-
-        data = self._data_ref
-        if not isinstance(data, DeferredExecution):
-            flat_args = not has_list_or_de(args)
-            flat_kwargs = not has_list_or_de(kwargs.values())
-            if flat_args and flat_kwargs:
-                result = remote_exec_func.remote(func, data, *args, **kwargs)
-                return self.__constructor__(*result)
-            de = DeferredExecution(
-                data, func, args, kwargs, flat_args, flat_kwargs, num_returns=1
-            )
-        else:
-            de = DeferredExecution(data, func, args, kwargs)
-        de.ref_count(1)
+        log = get_logger()
+        self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
         data, meta, meta_offset = de.exec()
+        self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
         return self.__constructor__(data, meta=meta, meta_offset=meta_offset)
 
     @_inherit_docstrings(PandasDataframePartition.add_to_apply_calls)
@@ -165,11 +150,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         self._is_debug(log) and log.debug(
             f"ENTER::Partition.drain_call_queue::{self._identity}"
         )
-        (
-            self._data_ref,
-            self._meta,
-            self._meta_offset,
-        ) = data.exec()
+        self._data_ref, self._meta, self._meta_offset = data.exec()
         data.ref_count(-1)
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
@@ -189,8 +170,11 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A copy of this partition.
         """
+        data = self._data_ref
+        if isinstance(data, DeferredExecution):
+            data.ref_count(1)
         return self.__constructor__(
-            self._data_ref,
+            data,
             meta=self._meta,
             meta_offset=self._meta_offset,
         )
