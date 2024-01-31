@@ -3897,8 +3897,8 @@ class PandasDataframe(ClassLogger):
                 # aligned columns
                 parts = result._partitions.flatten()
                 aligned_columns = parts[0].apply(
-                    # Unidist execution requires for the functions to be preprocessed
-                    # in a certain way
+                    # TODO: unidist on MPI execution requires for this function to be preprocessed,
+                    # otherwise, the execution fails. Look into the issue later.
                     self._partition_mgr_cls.preprocess_func(compute_aligned_columns),
                     *[part._data for part in parts[1:]],
                     initial_columns=self.columns,
