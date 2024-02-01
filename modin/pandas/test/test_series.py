@@ -50,6 +50,7 @@ from .utils import (
     bool_arg_values,
     categories_equals,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     df_equals_with_non_stable_indices,
@@ -225,19 +226,6 @@ def inter_df_math_helper_one_side(
         # Operation supports 'level' parameter, so it makes sense to check for a warning
         with warns_that_defaulting_to_pandas():
             getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
-
-
-def create_test_series(vals, sort=False, **kwargs):
-    if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
-    else:
-        modin_series = pd.Series(vals, **kwargs)
-        pandas_series = pandas.Series(vals, **kwargs)
-    if sort:
-        modin_series = modin_series.sort_values().reset_index(drop=True)
-        pandas_series = pandas_series.sort_values().reset_index(drop=True)
-    return modin_series, pandas_series
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

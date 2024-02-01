@@ -3459,9 +3459,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    def _groupby_internal_columns(self, by, drop):
+    def _groupby_separate_by(self, by, drop):
         """
-        Extract internal columns from by argument of groupby.
+        Separate internal and external groupers in `by` argument of groupby.
 
         Parameters
         ----------
@@ -3472,31 +3472,52 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         Returns
         -------
-        by : list of BaseQueryCompiler, column or index label, or Grouper
+        external_by : list of BaseQueryCompiler and arrays
+            Values to group by.
         internal_by : list of str
-            List of internal column name to be dropped during groupby.
+            List of column names from `self` to group by.
+        by_positions : list of ints
+            Specifies the order of grouping by `internal_by` and `external_by` columns.
+            Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
+            Indices for `external_by` are positive and start from 0. Indices for `internal_by` are negative
+            and start from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``)
+            '''
+            by_positions = [0, -1, 1, -2, 2, 3]
+            internal_by = ["col1", "col2"]
+            external_by = [sr1, sr2, sr3, sr4]
+
+            df.groupby([sr1, "col1", sr2, "col2", sr3, sr4])
+            '''.
         """
         if isinstance(by, type(self)):
             if drop:
-                internal_by = by.columns
-                by = [by]
+                internal_by = by.columns.tolist()
+                external_by = []
+                by_positions = [-i - 1 for i in range(len(internal_by))]
             else:
                 internal_by = []
-                by = [by]
+                external_by = [by]
+                by_positions = [i for i in range(len(external_by[0].columns))]
         else:
             if not isinstance(by, list):
                 by = [by] if by is not None else []
             internal_by = []
+            external_by = []
+            external_by_counter = 0
+            by_positions = []
             for o in by:
                 if isinstance(o, pandas.Grouper) and o.key in self.columns:
                     internal_by.append(o.key)
+                    by_positions.append(-len(internal_by))
                 elif hashable(o) and o in self.columns:
                     internal_by.append(o)
-            internal_qc = (
-                [self.getitem_column_array(internal_by)] if len(internal_by) else []
-            )
-            by = internal_qc + by[len(internal_by) :]
-        return by, internal_by
+                    by_positions.append(-len(internal_by))
+                else:
+                    external_by.append(o)
+                    for _ in range(len(o.columns) if isinstance(o, type(self)) else 1):
+                        by_positions.append(external_by_counter)
+                        external_by_counter += 1
+        return external_by, internal_by, by_positions
 
     groupby_all = GroupbyReduceImpl.build_qc_method("all")
     groupby_any = GroupbyReduceImpl.build_qc_method("any")
@@ -3542,7 +3563,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
-        _, internal_by = self._groupby_internal_columns(by, drop)
+        _, internal_by, _ = self._groupby_separate_by(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
@@ -3760,6 +3781,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
         how="axis_wise",
+        series_groupby=False,
     ):
         # Defaulting to pandas in case of an empty frame as we can't process it properly.
         # Higher API level won't pass empty data here unless the frame has delayed
@@ -3770,19 +3792,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if isinstance(by, type(self)) and drop:
-            by = by.columns.tolist()
+        if groupby_kwargs.get("level") is not None:
+            raise NotImplementedError(
+                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
 
-        if not isinstance(by, list):
-            by = [by]
+        if any(
+            isinstance(obj, pandas.Grouper)
+            for obj in (by if isinstance(by, list) else [by])
+        ):
+            raise NotImplementedError(
+                "Grouping on a pandas.Grouper with range-partitioning groupby is not yet supported: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
 
-        is_all_labels = all(isinstance(col, (str, tuple)) for col in by)
-        is_all_column_names = (
-            all(col in self.columns for col in by) if is_all_labels else False
-        )
+        external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
+
+        all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
+        if not all_external_are_qcs:
+            raise NotImplementedError(
+                "Grouping on an external grouper with range-partitioning groupby is only supported with Series'es: "
+                + "https://github.com/modin-project/modin/issues/5926"
+            )
 
         is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
-
         if is_transform:
             # https://github.com/modin-project/modin/issues/5924
             ErrorMessage.mismatch_with_pandas(
@@ -3790,21 +3824,31 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 message="the order of rows may be shuffled for the result",
             )
 
-        if not is_all_column_names:
-            raise NotImplementedError(
-                "Range-partitioning groupby is only supported when grouping on a column(s) of the same frame. "
-                + "https://github.com/modin-project/modin/issues/5926"
-            )
-
         # This check materializes dtypes for 'by' columns
         if not is_transform and groupby_kwargs.get("observed", False) in (
             False,
             lib.no_default,
         ):
-            if isinstance(self._modin_frame._dtypes, ModinDtypes):
-                by_dtypes = self._modin_frame._dtypes.lazy_get(by).get()
-            else:
-                by_dtypes = self.dtypes[by]
+            # The following 'dtypes' check materializes dtypes for 'by' columns
+            internal_dtypes = pandas.Series()
+            external_dtypes = pandas.Series()
+            if len(internal_by) > 0:
+                internal_dtypes = (
+                    self._modin_frame._dtypes.lazy_get(internal_by).get()
+                    if isinstance(self._modin_frame._dtypes, ModinDtypes)
+                    else self.dtypes[internal_by]
+                )
+            if len(external_by) > 0:
+                dtypes_list = []
+                for obj in external_by:
+                    if not isinstance(obj, type(self)):
+                        # we're only interested in categorical dtypes here, which can only
+                        # appear in modin objects
+                        continue
+                    dtypes_list.append(obj.dtypes)
+                external_dtypes = pandas.concat(dtypes_list)
+
+            by_dtypes = pandas.concat([internal_dtypes, external_dtypes])
             add_missing_cats = any(
                 isinstance(dtype, pandas.CategoricalDtype) for dtype in by_dtypes
             )
@@ -3824,7 +3868,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 how == "axis_wise"
             ), f"Only 'axis_wise' aggregation is supported with dictionary functions, got: {how}"
 
-            subset = by + list(agg_func.keys())
+            subset = internal_by + list(agg_func.keys())
             # extracting unique values; no we can't use np.unique here as it would
             # convert a list of tuples to a 2D matrix and so mess up the result
             subset = list(dict.fromkeys(subset))
@@ -3832,7 +3876,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             obj = self
 
-        agg_method = GroupByDefault.get_aggregation_method(how)
+        agg_method = (
+            SeriesGroupByDefault if series_groupby else GroupByDefault
+        ).get_aggregation_method(how)
         original_agg_func = agg_func
 
         def agg_func(grp, *args, **kwargs):
@@ -3848,7 +3894,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         result = obj._modin_frame.groupby(
             axis=axis,
-            by=by,
+            internal_by=internal_by,
+            external_by=[
+                obj._modin_frame if isinstance(obj, type(self)) else obj
+                for obj in external_by
+            ],
+            by_positions=by_positions,
+            series_groupby=series_groupby,
             operator=lambda grp: agg_func(grp, *agg_args, **agg_kwargs),
             # UDFs passed to '.apply()' are allowed to produce results with arbitrary shapes,
             # that's why we have to align the partition's shapes/labeling across different
@@ -3992,6 +4044,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     agg_kwargs=agg_kwargs,
                     drop=drop,
                     how=how,
+                    series_groupby=series_groupby,
                 )
             except NotImplementedError as e:
                 # if a user wants to use range-partitioning groupby explicitly, then we should print a visible
@@ -4033,7 +4086,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        by, internal_by = self._groupby_internal_columns(by, drop)
+        external_by, internal_by, _ = self._groupby_separate_by(by, drop)
+        internal_qc = (
+            [self.getitem_column_array(internal_by)] if len(internal_by) else []
+        )
+        by = internal_qc + external_by
 
         broadcastable_by = [o._modin_frame for o in by if isinstance(o, type(self))]
         not_broadcastable_by = [o for o in by if not isinstance(o, type(self))]

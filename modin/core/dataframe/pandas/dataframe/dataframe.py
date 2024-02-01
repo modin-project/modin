@@ -18,6 +18,7 @@ PandasDataframe is a parent abstract class for any dataframe class
 for pandas storage format.
 """
 import datetime
+import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
 import numpy as np
@@ -2423,7 +2424,14 @@ class PandasDataframe(ClassLogger):
         )
 
     def _apply_func_to_range_partitioning(
-        self, key_columns, func, ascending=True, preserve_columns=False, **kwargs
+        self,
+        key_columns,
+        func,
+        ascending=True,
+        preserve_columns=False,
+        data=None,
+        data_key_columns=None,
+        **kwargs,
     ):
         """
         Reshuffle data so it would be range partitioned and then apply the passed function row-wise.
@@ -2438,6 +2446,12 @@ class PandasDataframe(ClassLogger):
             Whether the range should be built in ascending or descending order.
         preserve_columns : bool, default: False
             If the columns cache should be preserved (specify this flag if `func` doesn't change column labels).
+        data : PandasDataframe, optional
+            Dataframe to range-partition along with the `self` frame. If specified, the `func` will recieve
+            a dataframe with an additional MultiIndex level in columns that separates `self` and `data`:
+            ``df["grouper"] # self`` and ``df["data"] # data``.
+        data_key_columns : list of hashables, optional
+            Additional key columns from `data`. Will be combined with `key_columns`.
         **kwargs : dict
             Additional arguments to forward to the range builder function.
 
@@ -2446,21 +2460,60 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A new dataframe.
         """
+        if data is not None:
+            # adding an extra MultiIndex level in order to separate `self grouper` from the `data`
+            # after concatenation
+            new_grouper_cols = pandas.MultiIndex.from_tuples(
+                [
+                    ("grouper", *col) if isinstance(col, tuple) else ("grouper", col)
+                    for col in self.columns
+                ]
+            )
+            grouper = self.copy()
+            grouper.columns = new_grouper_cols
+
+            new_data_cols = pandas.MultiIndex.from_tuples(
+                [
+                    ("data", *col) if isinstance(col, tuple) else ("data", col)
+                    for col in data.columns
+                ]
+            )
+            data = data.copy()
+            data.columns = new_data_cols
+
+            grouper = grouper.concat(axis=1, others=[data], how="right", sort=False)
+
+            # since original column names were modified, have to modify 'key_columns' as well
+            key_columns = [
+                ("grouper", *col) if isinstance(col, tuple) else ("grouper", col)
+                for col in key_columns
+            ]
+            if data_key_columns is None:
+                data_key_columns = []
+            else:
+                data_key_columns = [
+                    ("data", *col) if isinstance(col, tuple) else ("data", col)
+                    for col in data_key_columns
+                ]
+            key_columns += data_key_columns
+        else:
+            grouper = self
+
         # If there's only one row partition can simply apply the function row-wise without the need to reshuffle
-        if self._partitions.shape[0] == 1:
-            result = self.apply_full_axis(
+        if grouper._partitions.shape[0] == 1:
+            result = grouper.apply_full_axis(
                 axis=1,
                 func=func,
-                new_columns=self.copy_columns_cache() if preserve_columns else None,
+                new_columns=grouper.copy_columns_cache() if preserve_columns else None,
             )
             if preserve_columns:
-                result._set_axis_lengths_cache(self._column_widths_cache, axis=1)
+                result._set_axis_lengths_cache(grouper._column_widths_cache, axis=1)
             return result
 
         # don't want to inherit over-partitioning so doing this 'min' check
-        ideal_num_new_partitions = min(len(self._partitions), NPartitions.get())
-        m = len(self) / ideal_num_new_partitions
-        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(self))
+        ideal_num_new_partitions = min(len(grouper._partitions), NPartitions.get())
+        m = len(grouper) / ideal_num_new_partitions
+        sampling_probability = (1 / m) * np.log(ideal_num_new_partitions * len(grouper))
         # If this df is overpartitioned, we try to sample each partition with probability
         # greater than 1, which leads to an error. In this case, we can do one of the following
         # two things. If there is only enough rows for one partition, and we have only 1 column
@@ -2471,39 +2524,39 @@ class PandasDataframe(ClassLogger):
         if sampling_probability >= 1:
             from modin.config import MinPartitionSize
 
-            ideal_num_new_partitions = round(len(self) / MinPartitionSize.get())
-            if len(self) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
+            ideal_num_new_partitions = round(len(grouper) / MinPartitionSize.get())
+            if len(grouper) < MinPartitionSize.get() or ideal_num_new_partitions < 2:
                 # If the data is too small, we shouldn't try reshuffling/repartitioning but rather
                 # simply combine all partitions and apply the sorting to the whole dataframe
-                return self.combine_and_apply(func=func)
+                return grouper.combine_and_apply(func=func)
 
-            if ideal_num_new_partitions < len(self._partitions):
-                if len(self._partitions) % ideal_num_new_partitions == 0:
+            if ideal_num_new_partitions < len(grouper._partitions):
+                if len(grouper._partitions) % ideal_num_new_partitions == 0:
                     joining_partitions = np.split(
-                        self._partitions, ideal_num_new_partitions
+                        grouper._partitions, ideal_num_new_partitions
                     )
                 else:
-                    step = round(len(self._partitions) / ideal_num_new_partitions)
+                    step = round(len(grouper._partitions) / ideal_num_new_partitions)
                     joining_partitions = np.split(
-                        self._partitions,
-                        range(step, len(self._partitions), step),
+                        grouper._partitions,
+                        range(step, len(grouper._partitions), step),
                     )
 
                 new_partitions = np.array(
                     [
-                        self._partition_mgr_cls.column_partitions(
+                        grouper._partition_mgr_cls.column_partitions(
                             ptn_grp, full_axis=False
                         )
                         for ptn_grp in joining_partitions
                     ]
                 )
             else:
-                new_partitions = self._partitions
+                new_partitions = grouper._partitions
         else:
-            new_partitions = self._partitions
+            new_partitions = grouper._partitions
 
         shuffling_functions = ShuffleSortFunctions(
-            self,
+            grouper,
             key_columns,
             ascending[0] if is_list_like(ascending) else ascending,
             ideal_num_new_partitions,
@@ -2511,25 +2564,25 @@ class PandasDataframe(ClassLogger):
         )
 
         # here we want to get indices of those partitions that hold the key columns
-        key_indices = self.columns.get_indexer_for(key_columns)
+        key_indices = grouper.columns.get_indexer_for(key_columns)
         partition_indices = np.unique(
-            np.digitize(key_indices, np.cumsum(self.column_widths))
+            np.digitize(key_indices, np.cumsum(grouper.column_widths))
         )
 
-        new_partitions = self._partition_mgr_cls.shuffle_partitions(
+        new_partitions = grouper._partition_mgr_cls.shuffle_partitions(
             new_partitions,
             partition_indices,
             shuffling_functions,
             func,
         )
 
-        result = self.__constructor__(new_partitions)
+        result = grouper.__constructor__(new_partitions)
         if preserve_columns:
-            result.set_columns_cache(self.copy_columns_cache())
+            result.set_columns_cache(grouper.copy_columns_cache())
             # We perform the final steps of the sort on full axis partitions, so we know that the
             # length of each partition is the full length of the dataframe.
-            if self.has_materialized_columns:
-                result._set_axis_lengths_cache([len(self.columns)], axis=1)
+            if grouper.has_materialized_columns:
+                result._set_axis_lengths_cache([len(grouper.columns)], axis=1)
         return result
 
     @lazy_metadata_decorator(apply_axis="both")
@@ -3756,10 +3809,13 @@ class PandasDataframe(ClassLogger):
     def groupby(
         self,
         axis: Union[int, Axis],
-        by: Union[str, List[str]],
+        internal_by: List[str],
+        external_by: List["PandasDataframe"],
+        by_positions: List[int],
         operator: Callable,
         result_schema: Optional[Dict[Hashable, type]] = None,
         align_result_columns: bool = False,
+        series_groupby: bool = False,
         add_missing_cats: bool = False,
         **kwargs: dict,
     ) -> "PandasDataframe":
@@ -3770,8 +3826,22 @@ class PandasDataframe(ClassLogger):
         ----------
         axis : int or modin.core.dataframe.base.utils.Axis
             The axis to apply the grouping over.
-        by : string or list of strings
-            One or more column labels to use for grouping.
+        internal_by : list of strings
+            One or more column labels from the `self` dataframe to use for grouping.
+        external_by : list of PandasDataframes
+            PandasDataframes to group by (may be specified along with or without `internal_by`).
+        by_positions : list of ints
+            Specifies the order of grouping by `internal_by` and `external_by` columns.
+            Each element in `by_positions` specifies an index from either `external_by` or `internal_by`.
+            Indices for `external_by` are positive and start from 0. Indices for `internal_by` are negative
+            and start from -1 (so in order to convert them to a valid indices one should do ``-idx - 1``).
+            '''
+            by_positions = [0, -1, 1, -2, 2, 3]
+            internal_by = ["col1", "col2"]
+            external_by = [sr1, sr2, sr3, sr4]
+
+            df.groupby([sr1, "col1", sr2, "col2", sr3, sr4])
+            '''.
         operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
             algebraic operator with its own user-defined function parameter, depending
@@ -3782,6 +3852,8 @@ class PandasDataframe(ClassLogger):
             Whether to manually align columns between all the resulted row partitions.
             This flag is helpful when dealing with UDFs as they can change the partition's shape
             and labeling unpredictably, resulting in an invalid dataframe.
+        series_groupby : bool, default: False
+            Whether to convert a one-column DataFrame to a Series before performing groupby.
         add_missing_cats : bool, default: False
             Whether to add missing categories from `by` columns to the result.
         **kwargs : dict
@@ -3810,14 +3882,56 @@ class PandasDataframe(ClassLogger):
                 f"Algebra groupby only implemented row-wise. {axis.name} axis groupby not implemented yet!"
             )
 
-        if not isinstance(by, list):
-            by = [by]
-
-        kwargs["observed"] = True
+        has_external_grouper = len(external_by) > 0
         skip_on_aligning_flag = "__skip_me_on_aligning__"
+        duplicated_suffix = "__duplicated_suffix__"
+        duplicated_pattern = r"_[\d]*__duplicated_suffix__"
+        kwargs["observed"] = True
 
         def apply_func(df):  # pragma: no cover
+            if has_external_grouper:
+                external_grouper = df["grouper"]
+                external_grouper = [
+                    # `df.groupby()` can only take a list of Series'es, so splitting
+                    # the df into a list of individual Series'es
+                    external_grouper.iloc[:, i]
+                    for i in range(len(external_grouper.columns))
+                ]
+
+                # renaming 'None' and duplicated names back to their original names
+                for obj in external_grouper:
+                    if not isinstance(obj, pandas.Series):
+                        continue
+                    name = obj.name
+                    if isinstance(name, str):
+                        if name.startswith(MODIN_UNNAMED_SERIES_LABEL):
+                            name = None
+                        elif name.endswith(duplicated_suffix):
+                            name = re.sub(duplicated_pattern, "", name)
+                    elif isinstance(name, tuple):
+                        if name[-1].endswith(duplicated_suffix):
+                            name = (
+                                *name[:-1],
+                                re.sub(duplicated_pattern, "", name[-1]),
+                            )
+                    obj.name = name
+
+                df = df["data"]
+            else:
+                external_grouper = []
+
+            by = []
+            # restoring original order of 'by' columns
+            for idx in by_positions:
+                if idx >= 0:
+                    by.append(external_grouper[idx])
+                else:
+                    by.append(internal_by[-idx - 1])
+
+            if series_groupby:
+                df = df.squeeze(axis=1)
             result = operator(df.groupby(by, **kwargs))
+
             if (
                 align_result_columns
                 and df.empty
@@ -3832,9 +3946,49 @@ class PandasDataframe(ClassLogger):
                 result.attrs[skip_on_aligning_flag] = True
             return result
 
-        result = self._apply_func_to_range_partitioning(
-            key_columns=by,
+        if has_external_grouper:
+            grouper = (
+                external_by[0]
+                if len(external_by) == 1
+                else external_by[0].concat(
+                    axis=1, others=external_by[1:], how="left", sort=False
+                )
+            )
+
+            new_grouper_cols = []
+            columns_were_changed = False
+            same_columns = {}
+            # duplicated names break range-partitioning mechanism, so renaming them.
+            # original names will be reverted in the actual groupby kernel
+            for col in grouper.columns:
+                suffix = same_columns.get(col)
+                if suffix is None:
+                    same_columns[col] = 0
+                else:
+                    same_columns[col] += 1
+                    col = (
+                        (*col[:-1], f"{col[-1]}_{suffix}{duplicated_suffix}")
+                        if isinstance(col, tuple)
+                        else f"{col}_{suffix}{duplicated_suffix}"
+                    )
+                    columns_were_changed = True
+                new_grouper_cols.append(col)
+
+            if columns_were_changed:
+                grouper.columns = pandas.Index(new_grouper_cols)
+            grouper_key_columns = grouper.columns
+            data = self
+            data_key_columns = internal_by
+        else:
+            grouper = self
+            grouper_key_columns = internal_by
+            data, data_key_columns = None, None
+
+        result = grouper._apply_func_to_range_partitioning(
+            key_columns=grouper_key_columns,
             func=apply_func,
+            data=data,
+            data_key_columns=data_key_columns,
         )
         # no need aligning columns if there's only one row partition
         if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
@@ -3869,7 +4023,7 @@ class PandasDataframe(ClassLogger):
                 else:
                     original_dtypes = None
 
-                def compute_aligned_columns(*dfs, initial_columns=None):
+                def compute_aligned_columns(*dfs, initial_columns=None, by=None):
                     """Take row partitions, filter empty ones, and return joined columns for them."""
                     if align_result_columns:
                         valid_dfs = [
@@ -3908,13 +4062,27 @@ class PandasDataframe(ClassLogger):
                         else (None, masks)
                     )
 
+                external_by_cols = [
+                    None if col.startswith(MODIN_UNNAMED_SERIES_LABEL) else col
+                    for obj in external_by
+                    for col in obj.columns
+                ]
+                by = []
+                # restoring original order of 'by' columns
+                for idx in by_positions:
+                    if idx >= 0:
+                        by.append(external_by_cols[idx])
+                    else:
+                        by.append(internal_by[-idx - 1])
+
                 # Passing all partitions to the 'compute_aligned_columns' kernel to get
                 # aligned columns
                 parts = result._partitions.flatten()
                 aligned_columns = parts[0].apply(
                     compute_aligned_columns,
                     *[part._data for part in parts[1:]],
-                    initial_columns=self.columns,
+                    initial_columns=pandas.Index(external_by_cols).append(self.columns),
+                    by=by,
                 )
 
                 def apply_aligned(df, args, partition_idx):
@@ -3979,8 +4147,8 @@ class PandasDataframe(ClassLogger):
                 row_lengths=result._row_lengths_cache,
             )
 
-        if not result.has_materialized_index:
-            by_dtypes = ModinDtypes(self._dtypes).lazy_get(by)
+        if not result.has_materialized_index and not has_external_grouper:
+            by_dtypes = ModinDtypes(self._dtypes).lazy_get(internal_by)
             if by_dtypes.is_materialized:
                 new_index = ModinIndex(value=result, axis=0, dtypes=by_dtypes)
                 result.set_index_cache(new_index)
