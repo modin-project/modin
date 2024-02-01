@@ -254,7 +254,7 @@ class PandasParser(ClassLogger):
         frame_dtypes.name = None
 
         if not combined_part_dtypes.eq(frame_dtypes, axis=0).all(axis=None):
-            ErrorMessage.missmatch_with_pandas(
+            ErrorMessage.mismatch_with_pandas(
                 operation="read_*",
                 message="Data types of partitions are different! "
                 + "Please refer to the troubleshooting section of the Modin documentation "

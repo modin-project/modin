@@ -772,7 +772,7 @@ def test_groupby_with_empty_partition():
     )
     md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby("a")
-    # check index error due to partitioning missmatching
+    # check index error due to partitioning mismatching
     grp_obj.count()
 
     md_df = construct_modin_df_by_scheme(
