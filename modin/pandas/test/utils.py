@@ -951,7 +951,7 @@ def eval_io(
     comparator: obj
         Function to perform comparison.
     cast_to_str: bool
-        There could be some missmatches in dtypes, so we're
+        There could be some mismatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
     check_exception_type: bool

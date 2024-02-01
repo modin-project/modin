@@ -778,7 +778,7 @@ class DataFrameGroupBy(ClassLogger):
         if make_dataframe:
             internal_by = frozenset(self._internal_by)
             if len(internal_by.intersection(key)) != 0:
-                ErrorMessage.missmatch_with_pandas(
+                ErrorMessage.mismatch_with_pandas(
                     operation="GroupBy.__getitem__",
                     message=(
                         "intersection of the selection and 'by' columns is not yet supported, "
@@ -933,7 +933,7 @@ class DataFrameGroupBy(ClassLogger):
                 and not self._as_index
                 and any(col in func_dict for col in self._internal_by)
             ):
-                ErrorMessage.missmatch_with_pandas(
+                ErrorMessage.mismatch_with_pandas(
                     operation="GroupBy.aggregate(**dictionary_renaming_aggregation)",
                     message=(
                         "intersection of the columns to aggregate and 'by' is not yet supported when 'as_index=False', "

@@ -272,7 +272,7 @@ class RollingGroupby(Rolling):
         super().__init__(self._groupby_obj._df, *args, **kwargs)
 
     def sem(self, *args, **kwargs):
-        ErrorMessage.missmatch_with_pandas(
+        ErrorMessage.mismatch_with_pandas(
             operation="RollingGroupby.sem() when 'as_index=False'",
             message=(
                 "The group columns won't be involved in the aggregation.\n"

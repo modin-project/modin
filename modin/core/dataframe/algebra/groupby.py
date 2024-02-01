@@ -379,7 +379,7 @@ class GroupByReduce(TreeReduce):
         if not groupby_kwargs.get("sort", True) and isinstance(
             by, type(query_compiler)
         ):
-            ErrorMessage.missmatch_with_pandas(
+            ErrorMessage.mismatch_with_pandas(
                 operation="df.groupby(categorical_by, sort=False)",
                 message=(
                     "the groupby keys will be sorted anyway, although the 'sort=False' was passed. "

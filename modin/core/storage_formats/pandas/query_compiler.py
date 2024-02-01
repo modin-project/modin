@@ -2706,7 +2706,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         col_level=None,
         ignore_index=True,
     ):
-        ErrorMessage.missmatch_with_pandas(
+        ErrorMessage.mismatch_with_pandas(
             operation="melt", message="Order of rows could be different from pandas"
         )
 
@@ -3821,7 +3821,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         is_transform = how == "transform" or GroupBy.is_transformation_kernel(agg_func)
         if is_transform:
             # https://github.com/modin-project/modin/issues/5924
-            ErrorMessage.missmatch_with_pandas(
+            ErrorMessage.mismatch_with_pandas(
                 operation="range-partitioning groupby",
                 message="the order of rows may be shuffled for the result",
             )
@@ -4401,7 +4401,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         observed,
         sort,
     ):
-        ErrorMessage.missmatch_with_pandas(
+        ErrorMessage.mismatch_with_pandas(
             operation="pivot_table",
             message="Order of columns could be different from pandas",
         )

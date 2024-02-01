@@ -101,7 +101,7 @@ class ErrorMessage(object):
         )
 
     @classmethod
-    def missmatch_with_pandas(cls, operation: str, message: str) -> None:
+    def mismatch_with_pandas(cls, operation: str, message: str) -> None:
         get_logger().debug(
             f"Modin Warning: {operation} mismatch with pandas: {message}"
         )
