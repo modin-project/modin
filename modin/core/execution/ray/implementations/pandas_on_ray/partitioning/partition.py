@@ -69,6 +69,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         meta_offset: int = 0,
     ):
         super().__init__()
+        if isinstance(data, DeferredExecution):
+            data.subscribe()
         self._data_ref = data
         # The metadata is stored in the MetaList at 0 offset. If the data is
         # a DeferredExecution, the _meta will be replaced with the list, returned
@@ -93,9 +95,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         )
 
     def __del__(self):
-        """Decrement the reference counter."""
+        """Unsubscribe from DeferredExecution."""
         if isinstance(self._data_ref, DeferredExecution):
-            self._data_ref.ref_count(-1)
+            self._data_ref.unsubscribe()
 
     def apply(self, func: Callable, *args, **kwargs):
         """
@@ -151,7 +153,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             f"ENTER::Partition.drain_call_queue::{self._identity}"
         )
         self._data_ref, self._meta, self._meta_offset = data.exec()
-        data.ref_count(-1)
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
         )
@@ -170,11 +171,8 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         PandasOnRayDataframePartition
             A copy of this partition.
         """
-        data = self._data_ref
-        if isinstance(data, DeferredExecution):
-            data.ref_count(1)
         return self.__constructor__(
-            data,
+            self._data_ref,
             meta=self._meta,
             meta_offset=self._meta_offset,
         )
