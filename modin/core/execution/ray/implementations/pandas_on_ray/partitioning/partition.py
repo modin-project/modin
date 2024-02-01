@@ -66,7 +66,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         width: int = None,
         ip: str = None,
         meta: MetaList = None,
-        meta_offset=0,
+        meta_offset: int = 0,
     ):
         super().__init__()
         self._data_ref = data
@@ -224,12 +224,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     @classmethod
     def put(cls, obj: pandas.DataFrame):
         """
-        Put an object into Plasma store and wrap it with partition object.
+        Put the data frame into Plasma store and wrap it with partition object.
 
         Parameters
         ----------
-        obj : any
-            An object to be put.
+        obj : pandas.DataFrame
+            A data frame to be put.
 
         Returns
         -------

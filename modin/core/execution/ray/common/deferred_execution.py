@@ -263,7 +263,7 @@ class DeferredExecution:
                 stack.append(gen)
                 stack.append(next_gen)
             except StopIteration:
-                ...
+                pass
         return result_consumers, output
 
     @classmethod
@@ -591,7 +591,7 @@ class _RemoteExecutor:
                     else:
                         yield obj
                 except StopIteration:
-                    ...
+                    pass
         except Exception as err:
             get_logger().error(f"{err}. args={args}, chain={list(reversed(chain))}")
             raise err
