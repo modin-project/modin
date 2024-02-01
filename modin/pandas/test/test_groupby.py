@@ -118,7 +118,7 @@ def get_external_groupers(df, columns, drop_from_original_df=False, add_plus_one
     Parameters
     ----------
     df : pandas.DataFrame or modin.pandas.DataFrame
-    columns : list[tuple[str, bool]]
+    columns : list[tuple[bool, str]]
         Columns to group on. If ``True`` do ``df[col]``, otherwise keep the column name.
         '''
         >>> columns = [(True, "a"), (False, "b")]
@@ -146,10 +146,10 @@ def get_external_groupers(df, columns, drop_from_original_df=False, add_plus_one
     by = []
     for lookup, name in columns:
         if lookup:
-            sr = df[name].copy()
+            ser = df[name].copy()
             if add_plus_one:
-                sr = sr + 1
-            by.append(sr)
+                ser = ser + 1
+            by.append(ser)
             if drop_from_original_df:
                 new_df = new_df.drop(columns=[name])
         else:
@@ -1989,9 +1989,8 @@ def test_mixed_columns(columns, drop_from_original_df, as_index):
     }
 
     md_df, pd_df = create_test_dfs(data)
-    (md_df, md_by), (pd_df, pd_by) = get_external_groupers(
-        md_df, columns, drop_from_original_df
-    ), get_external_groupers(pd_df, columns, drop_from_original_df)
+    md_df, md_by = get_external_groupers(md_df, columns, drop_from_original_df)
+    pd_df, pd_by = get_external_groupers(pd_df, columns, drop_from_original_df)
 
     md_grp = md_df.groupby(md_by, as_index=as_index)
     pd_grp = pd_df.groupby(pd_by, as_index=as_index)
@@ -3326,6 +3325,7 @@ def test_range_groupby_categories(
 
     md_res = func(md_df.groupby(by_cols, observed=observed, as_index=as_index))
     pd_res = func(pd_df.groupby(by_cols, observed=observed, as_index=as_index))
+
     # HACK, FIXME: there's a bug in range-partitioning impl that apparently can
     # break the order of rows in the result for multi-column groupbys. Placing the sorting-hack for now
     # https://github.com/modin-project/modin/issues/6875
@@ -3351,6 +3351,4 @@ def test_range_groupby_categories_external_grouper(columns, cat_cols):
     md_df, md_by = get_external_groupers(md_df, columns, drop_from_original_df=True)
     pd_df, pd_by = get_external_groupers(pd_df, columns, drop_from_original_df=True)
 
-    md_res = md_df.groupby(md_by).count()
-    pd_res = pd_df.groupby(pd_by).count()
-    df_equals(md_res, pd_res)
+    eval_general(md_df.groupby(md_by), pd_df.groupby(pd_by), lambda grp: grp.count())

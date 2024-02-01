@@ -3840,7 +3840,7 @@ class PandasDataframe(ClassLogger):
             internal_by = ["col1", "col2"]
             external_by = [sr1, sr2, sr3, sr4]
 
-            df.groupby([sr1, "col1", sr2, "col3", sr3, sr4])
+            df.groupby([sr1, "col1", sr2, "col2", sr3, sr4])
             '''.
         operator : callable(pandas.core.groupby.DataFrameGroupBy) -> pandas.DataFrame
             The operation to carry out on each of the groups. The operator is another
@@ -3946,7 +3946,7 @@ class PandasDataframe(ClassLogger):
                 result.attrs[skip_on_aligning_flag] = True
             return result
 
-        if len(external_by) > 0:
+        if has_external_grouper:
             grouper = (
                 external_by[0]
                 if len(external_by) == 1

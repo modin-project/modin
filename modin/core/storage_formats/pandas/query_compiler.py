@@ -3459,9 +3459,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # nature. They require certain data to exist on the same partition, and
     # after the shuffle, there should be only a local map required.
 
-    def _groupby_internal_columns(self, by, drop):
+    def _groupby_separate_by(self, by, drop):
         """
-        Extract internal columns from by argument of groupby.
+        Separate internal and external groupers in `by` argument of groupby.
 
         Parameters
         ----------
@@ -3486,7 +3486,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             internal_by = ["col1", "col2"]
             external_by = [sr1, sr2, sr3, sr4]
 
-            df.groupby([sr1, "col1", sr2, "col3", sr3, sr4])
+            df.groupby([sr1, "col1", sr2, "col2", sr3, sr4])
             '''.
         """
         if isinstance(by, type(self)):
@@ -3563,7 +3563,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a TreeReduce implementation."
                 )
 
-        _, internal_by, _ = self._groupby_internal_columns(by, drop)
+        _, internal_by, _ = self._groupby_separate_by(by, drop)
 
         numeric_only = agg_kwargs.get("numeric_only", False)
         datetime_cols = (
@@ -3807,9 +3807,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        external_by, internal_by, by_positions = self._groupby_internal_columns(
-            by, drop
-        )
+        external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
 
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:
@@ -3841,12 +3839,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     else self.dtypes[internal_by]
                 )
             if len(external_by) > 0:
+                dtypes_list = []
                 for obj in external_by:
                     if not isinstance(obj, type(self)):
                         # we're only interested in categorical dtypes here, which can only
-                        # appear in pandas objects
+                        # appear in modin objects
                         continue
-                    external_dtypes = pandas.concat([external_dtypes, obj.dtypes])
+                    dtypes_list.append(obj.dtypes)
+                external_dtypes = pandas.concat(dtypes_list)
 
             by_dtypes = pandas.concat([internal_dtypes, external_dtypes])
             add_missing_cats = any(
@@ -4086,7 +4086,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         groupby_kwargs = groupby_kwargs.copy()
 
         as_index = groupby_kwargs.get("as_index", True)
-        external_by, internal_by, _ = self._groupby_internal_columns(by, drop)
+        external_by, internal_by, _ = self._groupby_separate_by(by, drop)
         internal_qc = (
             [self.getitem_column_array(internal_by)] if len(internal_by) else []
         )
