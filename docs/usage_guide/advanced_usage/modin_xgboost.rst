@@ -55,6 +55,7 @@ To start the Ray runtime on a single node:
 .. code-block:: python
 
   import ray
+  # Look at the Ray documentation with respect to the Ray configuration suited to you most.
   ray.init()
 
 If you already had the Ray cluster you can connect to it by next way:
@@ -78,6 +79,7 @@ All processing will be in a `single node` mode.
   from sklearn import datasets
 
   import ray
+  # Look at the Ray documentation with respect to the Ray configuration suited to you most.
   ray.init() # Start the Ray runtime for single-node
 
   import modin.pandas as pd

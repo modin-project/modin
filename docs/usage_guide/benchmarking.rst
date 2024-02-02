@@ -35,6 +35,7 @@ Consider the following ipython script:
     import time
     import ray
 
+    # Look at the Ray documentation with respect to the Ray configuration suited to you most.
     ray.init()
     df = pd.DataFrame(list(range(MinPartitionSize.get() * 2)))
     %time result = df.map(lambda x: time.sleep(0.1) or x)
@@ -146,6 +147,7 @@ That will typically block on any asynchronous computation:
         time.sleep(10)
       return x + 1
 
+    # Look at the Ray documentation with respect to the Ray configuration suited to you most.
     ray.init()
     df1 = pd.DataFrame(list(range(10_000)), columns=['A'])
     result = df1.map(slow_add_one)

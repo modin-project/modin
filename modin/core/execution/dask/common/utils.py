@@ -24,7 +24,6 @@ from modin.config import (
     NPartitions,
 )
 from modin.core.execution.utils import set_env
-from modin.error_message import ErrorMessage
 
 
 def initialize_dask():
@@ -44,15 +43,6 @@ def initialize_dask():
     except ValueError:
         from distributed import Client
 
-        # The indentation here is intentional, we want the code to be indented.
-        ErrorMessage.not_initialized(
-            "Dask",
-            """
-    from distributed import Client
-
-    client = Client()
-""",
-        )
         num_cpus = CpuCount.get()
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"

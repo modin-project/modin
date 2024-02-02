@@ -12,6 +12,7 @@ Advanced Usage
    modin_xgboost
    modin_logging
    batch
+   modin_engines
 
 .. meta::
     :description lang=en:
@@ -21,6 +22,16 @@ Modin aims to not only optimize pandas, but also provide a comprehensive,
 integrated toolkit for data scientists. We are actively developing data science tools
 such as DataFrame spreadsheet integration, DataFrame algebra, progress bars, SQL queries
 on DataFrames, and more. Join us on `Slack`_ and `Discourse`_ for the latest updates!
+
+Modin engines
+-------------
+
+Modin supports a series of execution engines such as Ray_, Dask_, `MPI through unidist`_, `HDK`_,
+each of which might be a more beneficial choice for a specific scenario. When doing the first operation
+with Modin it automatically initializes one of the engines to further perform distributed/parallel computation.
+If you are familiar with a concrete execution engine, it is possible to initialize the engine on your own and
+Modin will automatically attach to it. Refer to :doc:`Modin engines </usage_guide/advanced_usage/modin_engines>` page
+for more details.
 
 Experimental APIs
 -----------------
@@ -118,3 +129,7 @@ downloaded as an artifact from the GitHub Actions tab for further inspection. Se
 .. _`tqdm`: https://github.com/tqdm/tqdm
 .. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720
 .. _`fuzzydata`: https://github.com/suhailrehman/fuzzydata
+.. _Ray: https://github.com/ray-project/ray
+.. _Dask: https://github.com/dask/distributed
+.. _`MPI through unidist`: https://github.com/modin-project/unidist
+.. _HDK: https://github.com/intel-ai/hdk
