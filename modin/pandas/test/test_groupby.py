@@ -1721,7 +1721,7 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     )
     modin_df = from_pandas(pandas_df)
 
-    new_index = pandas.date_range("1/12/2020", periods=4, freq="S")
+    new_index = pandas.date_range("1/12/2020", periods=4, freq="s")
     if groupby_axis == 0 and shift_axis == 0:
         pandas_df.index = modin_df.index = new_index
         by = [["col2", "col3"], ["col2"], ["col4"], [0, 1, 0, 2]]
@@ -1736,7 +1736,7 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
         eval_general(
             modin_groupby,
             pandas_groupby,
-            lambda groupby: groupby.shift(axis=shift_axis, freq="S"),
+            lambda groupby: groupby.shift(axis=shift_axis, freq="s"),
         )
 
 

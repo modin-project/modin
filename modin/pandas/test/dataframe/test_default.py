@@ -132,7 +132,7 @@ def test_partition_to_numpy(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
     with warns_that_defaulting_to_pandas():
@@ -889,7 +889,7 @@ def test_resample_specific(rule, closed, label, on, level):
 
     if on is None and level is not None:
         index = pandas.MultiIndex.from_product(
-            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="H")]
+            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="h")]
         )
         pandas_df.index = index
         modin_df.index = index
@@ -897,8 +897,8 @@ def test_resample_specific(rule, closed, label, on, level):
         level = None
 
     if on is not None:
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
+        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
 
     pandas_resampler = pandas_df.resample(
         rule,
@@ -948,7 +948,7 @@ def test_resample_specific(rule, closed, label, on, level):
     ],
 )
 def test_resample_getitem(columns):
-    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    index = pandas.date_range("1/1/2013", periods=9, freq="min")
     data = {
         "price": range(9),
         "volume": range(10, 19),

@@ -542,7 +542,7 @@ def test___repr__(name, dt_index, data):
     pandas_series.name = modin_series.name = name
     if dt_index:
         index = pandas.date_range(
-            "1/1/2000", periods=len(pandas_series.index), freq="T"
+            "1/1/2000", periods=len(pandas_series.index), freq="min"
         )
         pandas_series.index = modin_series.index = index
 
@@ -1019,7 +1019,7 @@ def test_argsort(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
@@ -1560,7 +1560,7 @@ def test_diff(data, periods):
 
 
 def test_diff_with_dates():
-    data = pandas.date_range("2018-01-01", periods=15, freq="H").values
+    data = pandas.date_range("2018-01-01", periods=15, freq="h").values
     pandas_series = pandas.Series(data)
     modin_series = pd.Series(pandas_series)
 
@@ -1811,9 +1811,9 @@ def test_dt(timezone):
         modin_series.dt.strftime("%B %d, %Y, %r"),
         pandas_series.dt.strftime("%B %d, %Y, %r"),
     )
-    df_equals(modin_series.dt.round("H"), pandas_series.dt.round("H"))
-    df_equals(modin_series.dt.floor("H"), pandas_series.dt.floor("H"))
-    df_equals(modin_series.dt.ceil("H"), pandas_series.dt.ceil("H"))
+    df_equals(modin_series.dt.round("h"), pandas_series.dt.round("h"))
+    df_equals(modin_series.dt.floor("h"), pandas_series.dt.floor("h"))
+    df_equals(modin_series.dt.ceil("h"), pandas_series.dt.ceil("h"))
     df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
     df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
 
@@ -1863,7 +1863,7 @@ def test_dt(timezone):
         data = pd.period_range("2016-12-31", periods=128, freq="D")
         modin_series = pd.Series(data)
         pandas_series = pandas.Series(data)
-        df_equals(modin_series.dt.asfreq("T"), pandas_series.dt.asfreq("T"))
+        df_equals(modin_series.dt.asfreq("min"), pandas_series.dt.asfreq("min"))
 
 
 @pytest.mark.parametrize(
@@ -2937,7 +2937,7 @@ def test_replace():
 @pytest.mark.exclude_in_sanity
 def test_resample(closed, label, level):
     rule = "5T"
-    freq = "H"
+    freq = "h"
 
     index = pandas.date_range("1/1/2000", periods=12, freq=freq)
     pandas_series = pandas.Series(range(12), index=index)

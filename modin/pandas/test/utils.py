@@ -168,7 +168,7 @@ test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)
 
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
-    "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
+    "index": pandas.date_range("31/12/2000", periods=12, freq="h"),
 }
 
 test_data_with_duplicates = {
