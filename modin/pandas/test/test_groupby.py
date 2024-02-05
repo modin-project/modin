@@ -103,6 +103,9 @@ pytestmark = [
         "ignore:The default of observed=False is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
+        "ignore:When grouping with a length-1 list-like, you will need to pass a length-1 tuple to get_group in a future:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
         "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
@@ -663,9 +666,7 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
-    eval_groups(
-        modin_groupby, pandas_groupby, use_tuple=isinstance(by, list) and len(by) == 1
-    )
+    eval_groups(modin_groupby, pandas_groupby)
     # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
         # Potential selection starts only from the second column, because the first may
@@ -1497,7 +1498,7 @@ def eval___getitem__(md_grp, pd_grp, item):
     )
 
 
-def eval_groups(modin_groupby, pandas_groupby, use_tuple=False):
+def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
     if RangePartitioningGroupby.get():
@@ -1505,8 +1506,6 @@ def eval_groups(modin_groupby, pandas_groupby, use_tuple=False):
         # https://github.com/modin-project/modin/issues/6093
         return
     for name in pandas_groupby.groups:
-        if use_tuple:
-            name = (name,)
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
