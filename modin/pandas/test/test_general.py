@@ -971,3 +971,15 @@ def test_series_to_timedelta(data):
 def test_get(key):
     modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
     eval_general(modin_df, pandas_df, lambda df: df.get(key))
+
+
+def test_df_immutability():
+    """
+    Verify that modifications of the source data doesn't propagate to Modin's DataFrame objects.
+    """
+    src_data = pandas.DataFrame({"a": [1]})
+
+    md_df = pd.DataFrame(src_data)
+    src_data.iloc[0, 0] = 100
+
+    assert md_df._to_pandas().iloc[0, 0] == 1
