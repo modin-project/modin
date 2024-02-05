@@ -230,7 +230,7 @@ def pivot_table(
     margins=False,
     dropna=True,
     margins_name="All",
-    observed=False,
+    observed=no_default,
     sort=True,
 ):
     if not isinstance(data, DataFrame):
@@ -247,6 +247,7 @@ def pivot_table(
         margins=margins,
         dropna=dropna,
         margins_name=margins_name,
+        observed=observed,
         sort=sort,
     )
 

@@ -645,7 +645,17 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=numeric_only,
         )
 
-    def apply(self, func, *args, **kwargs):
+    def apply(self, func, *args, include_groups=True, **kwargs):
+        if not include_groups:
+            return self._default_to_pandas(
+                lambda df: df.apply(
+                    func,
+                    *args,
+                    include_groups=include_groups,
+                    **kwargs,
+                )
+            )
+
         func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
@@ -1172,8 +1182,10 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def resample(self, rule, *args, **kwargs):
-        return self._default_to_pandas(lambda df: df.resample(rule, *args, **kwargs))
+    def resample(self, rule, *args, include_groups=True, **kwargs):
+        return self._default_to_pandas(
+            lambda df: df.resample(rule, *args, include_groups=include_groups, **kwargs)
+        )
 
     def median(self, numeric_only=False):
         return self._check_index(
@@ -1828,8 +1840,15 @@ class SeriesGroupBy(DataFrameGroupBy):
             agg_kwargs=dict(other=other, min_periods=min_periods, ddof=ddof),
         )
 
-    def describe(self, **kwargs):
-        return self._default_to_pandas(lambda df: df.describe(**kwargs))
+    def describe(self, percentiles=None, include=None, exclude=None):
+        return self._default_to_pandas(
+            lambda df: df.describe(
+                percentiles=percentiles, include=include, exclude=exclude
+            )
+        )
+
+    def apply(self, func, *args, **kwargs):
+        return super().apply(func, *args, **kwargs)
 
     def idxmax(self, axis=lib.no_default, skipna=True):
         if axis is not lib.no_default:

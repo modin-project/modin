@@ -242,7 +242,7 @@ def test_groupby_api_equality(obj):
     pandas_dir = [x for x in dir(getattr(pandas.core.groupby, obj)) if x[0] != "_"]
     # These attributes are hidden in the DataFrameGroupBy/SeriesGroupBy instance,
     # but available in the DataFrameGroupBy/SeriesGroupBy class in pandas.
-    ignore = ["keys", "level"]
+    ignore = ["keys", "level", "grouper"]
     missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         len(missing_from_modin)

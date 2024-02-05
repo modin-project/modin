@@ -88,7 +88,7 @@ class Series(BasePandasDataset):
         dtype=None,
         name=None,
         copy=None,
-        fastpath=False,
+        fastpath=lib.no_default,
         query_compiler=None,
     ):
         from modin.numpy import array
