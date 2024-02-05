@@ -13,19 +13,25 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+from typing import TYPE_CHECKING, Callable, Union
+
 import pandas
 import ray
-from ray.util import get_node_ip_address
 
+if TYPE_CHECKING:
+    from ray.util.client.common import ClientObjectRef
+
+from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.ray.common import RayWrapper
-from modin.core.execution.ray.common.utils import (
-    ObjectIDType,
-    deconstruct_call_queue,
-    reconstruct_call_queue,
+from modin.core.execution.ray.common.deferred_execution import (
+    DeferredExecution,
+    MetaList,
 )
+from modin.core.execution.ray.common.utils import ObjectIDType
 from modin.logging import get_logger
 from modin.pandas.indexing import compute_sliced_len
+from modin.utils import _inherit_docstrings
 
 compute_sliced_len = ray.remote(compute_sliced_len)
 
@@ -36,30 +42,47 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     Parameters
     ----------
-    data : ray.ObjectRef
-        A reference to ``pandas.DataFrame`` that need to be wrapped with this class.
-    length : ray.ObjectRef or int, optional
+    data : ObjectIDType or DeferredExecution
+        A reference to ``pandas.DataFrame`` that needs to be wrapped with this class
+        or a reference to DeferredExecution that needs to be executed on demand.
+    length : ObjectIDType or int, optional
         Length or reference to it of wrapped ``pandas.DataFrame``.
-    width : ray.ObjectRef or int, optional
+    width : ObjectIDType or int, optional
         Width or reference to it of wrapped ``pandas.DataFrame``.
-    ip : ray.ObjectRef or str, optional
+    ip : ObjectIDType or str, optional
         Node IP address or reference to it that holds wrapped ``pandas.DataFrame``.
-    call_queue : list
-        Call queue that needs to be executed on wrapped ``pandas.DataFrame``.
+    meta : MetaList
+        Meta information, containing the lengths and the worker address (the last value).
+    meta_offset : int
+        The lengths offset in the meta list.
     """
 
     execution_wrapper = RayWrapper
 
-    def __init__(self, data, length=None, width=None, ip=None, call_queue=None):
+    def __init__(
+        self,
+        data: Union[ray.ObjectRef, "ClientObjectRef", DeferredExecution],
+        length: int = None,
+        width: int = None,
+        ip: str = None,
+        meta: MetaList = None,
+        meta_offset: int = 0,
+    ):
         super().__init__()
-        assert isinstance(data, ObjectIDType)
-        self._data = data
-        if call_queue is None:
-            call_queue = []
-        self.call_queue = call_queue
-        self._length_cache = length
-        self._width_cache = width
-        self._ip_cache = ip
+        if isinstance(data, DeferredExecution):
+            data.subscribe()
+        self._data_ref = data
+        # The metadata is stored in the MetaList at 0 offset. If the data is
+        # a DeferredExecution, the _meta will be replaced with the list, returned
+        # by the remote function. The returned list may contain data for multiple
+        # results and, in this case, _meta_offset corresponds to the meta related to
+        # this partition.
+        if meta is None:
+            self._meta = MetaList([length, width, ip])
+            self._meta_offset = 0
+        else:
+            self._meta = meta
+            self._meta_offset = meta_offset
 
         log = get_logger()
         self._is_debug(log) and log.debug(
@@ -71,7 +94,12 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         )
 
-    def apply(self, func, *args, **kwargs):
+    def __del__(self):
+        """Unsubscribe from DeferredExecution."""
+        if isinstance(self._data_ref, DeferredExecution):
+            self._data_ref.unsubscribe()
+
+    def apply(self, func: Callable, *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -93,76 +121,46 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         -----
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
+
+        If ``LazyExecution`` is enabled, the function is not applied immediately,
+        but is added to the execution tree.
         """
+        de = DeferredExecution(self._data_ref, func, args, kwargs)
+        if LazyExecution.get():
+            return self.__constructor__(de)
         log = get_logger()
         self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
-        data = self._data
-        call_queue = self.call_queue + [[func, args, kwargs]]
-        if len(call_queue) > 1:
-            self._is_debug(log) and log.debug(
-                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
-            )
-            result, length, width, ip = _apply_list_of_funcs.remote(
-                data, *deconstruct_call_queue(call_queue)
-            )
-        else:
-            # We handle `len(call_queue) == 1` in a different way because
-            # this dramatically improves performance.
-            func, f_args, f_kwargs = call_queue[0]
-            result, length, width, ip = _apply_func.remote(
-                data, func, *f_args, **f_kwargs
-            )
-            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
+        data, meta, meta_offset = de.exec()
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
-        return self.__constructor__(result, length, width, ip)
+        return self.__constructor__(data, meta=meta, meta_offset=meta_offset)
 
+    @_inherit_docstrings(PandasDataframePartition.add_to_apply_calls)
+    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
+        return self.__constructor__(
+            data=DeferredExecution(self._data_ref, func, args, kwargs),
+            length=length,
+            width=width,
+        )
+
+    @_inherit_docstrings(PandasDataframePartition.drain_call_queue)
     def drain_call_queue(self):
-        """Execute all operations stored in the call queue on the object wrapped by this partition."""
+        data = self._data_ref
+        if not isinstance(data, DeferredExecution):
+            return data
+
         log = get_logger()
         self._is_debug(log) and log.debug(
             f"ENTER::Partition.drain_call_queue::{self._identity}"
         )
-        if len(self.call_queue) == 0:
-            return
-        data = self._data
-        call_queue = self.call_queue
-        if len(call_queue) > 1:
-            self._is_debug(log) and log.debug(
-                f"SUBMIT::_apply_list_of_funcs::{self._identity}"
-            )
-            (
-                self._data,
-                new_length,
-                new_width,
-                self._ip_cache,
-            ) = _apply_list_of_funcs.remote(data, *deconstruct_call_queue(call_queue))
-        else:
-            # We handle `len(call_queue) == 1` in a different way because
-            # this dramatically improves performance.
-            func, f_args, f_kwargs = call_queue[0]
-            self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
-            (
-                self._data,
-                new_length,
-                new_width,
-                self._ip_cache,
-            ) = _apply_func.remote(data, func, *f_args, **f_kwargs)
+        self._data_ref, self._meta, self._meta_offset = data.exec()
         self._is_debug(log) and log.debug(
             f"EXIT::Partition.drain_call_queue::{self._identity}"
         )
-        self.call_queue = []
 
-        # GH#4732 if we already have evaluated width/length cached as ints,
-        #  don't overwrite that cache with non-evaluated values.
-        if not isinstance(self._length_cache, int):
-            self._length_cache = new_length
-        if not isinstance(self._width_cache, int):
-            self._width_cache = new_width
-
+    @_inherit_docstrings(PandasDataframePartition.wait)
     def wait(self):
-        """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        RayWrapper.wait(self._data)
+        RayWrapper.wait(self._data_ref)
 
     def __copy__(self):
         """
@@ -174,11 +172,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             A copy of this partition.
         """
         return self.__constructor__(
-            self._data,
-            length=self._length_cache,
-            width=self._width_cache,
-            ip=self._ip_cache,
-            call_queue=self.call_queue,
+            self._data_ref,
+            meta=self._meta,
+            meta_offset=self._meta_offset,
         )
 
     def mask(self, row_labels, col_labels):
@@ -224,14 +220,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return new_obj
 
     @classmethod
-    def put(cls, obj):
+    def put(cls, obj: pandas.DataFrame):
         """
-        Put an object into Plasma store and wrap it with partition object.
+        Put the data frame into Plasma store and wrap it with partition object.
 
         Parameters
         ----------
-        obj : any
-            An object to be put.
+        obj : pandas.DataFrame
+            A data frame to be put.
 
         Returns
         -------
@@ -273,16 +269,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int or ray.ObjectRef
             The length of the object.
         """
-        if self._length_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
+        if (length := self._length_cache) is None:
+            self.drain_call_queue()
+            if (length := self._length_cache) is None:
+                length, self._width_cache = _get_index_and_columns.remote(
+                    self._data_ref
                 )
-        if materialize and isinstance(self._length_cache, ObjectIDType):
-            self._length_cache = RayWrapper.materialize(self._length_cache)
-        return self._length_cache
+                self._length_cache = length
+        if materialize and isinstance(length, ObjectIDType):
+            self._length_cache = length = RayWrapper.materialize(length)
+        return length
 
     def width(self, materialize=True):
         """
@@ -300,16 +296,16 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         int or ray.ObjectRef
             The width of the object.
         """
-        if self._width_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._length_cache, self._width_cache = _get_index_and_columns.remote(
-                    self._data
+        if (width := self._width_cache) is None:
+            self.drain_call_queue()
+            if (width := self._width_cache) is None:
+                self._length_cache, width = _get_index_and_columns.remote(
+                    self._data_ref
                 )
-        if materialize and isinstance(self._width_cache, ObjectIDType):
-            self._width_cache = RayWrapper.materialize(self._width_cache)
-        return self._width_cache
+                self._width_cache = width
+        if materialize and isinstance(width, ObjectIDType):
+            self._width_cache = width = RayWrapper.materialize(width)
+        return width
 
     def ip(self, materialize=True):
         """
@@ -327,14 +323,40 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         str
             IP address of the node that holds the data.
         """
-        if self._ip_cache is None:
-            if len(self.call_queue):
-                self.drain_call_queue()
-            else:
-                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
-        if materialize and isinstance(self._ip_cache, ObjectIDType):
-            self._ip_cache = RayWrapper.materialize(self._ip_cache)
-        return self._ip_cache
+        if (ip := self._ip_cache) is None:
+            self.drain_call_queue()
+        if materialize and isinstance(ip, ObjectIDType):
+            self._ip_cache = ip = RayWrapper.materialize(ip)
+        return ip
+
+    @property
+    def _data(self) -> Union[ray.ObjectRef, "ClientObjectRef"]:  # noqa: GL08
+        self.drain_call_queue()
+        return self._data_ref
+
+    @property
+    def _length_cache(self):  # noqa: GL08
+        return self._meta[self._meta_offset]
+
+    @_length_cache.setter
+    def _length_cache(self, value):  # noqa: GL08
+        self._meta[self._meta_offset] = value
+
+    @property
+    def _width_cache(self):  # noqa: GL08
+        return self._meta[self._meta_offset + 1]
+
+    @_width_cache.setter
+    def _width_cache(self, value):  # noqa: GL08
+        self._meta[self._meta_offset + 1] = value
+
+    @property
+    def _ip_cache(self):  # noqa: GL08
+        return self._meta[-1]
+
+    @_ip_cache.setter
+    def _ip_cache(self, value):  # noqa: GL08
+        self._meta[-1] = value
 
 
 @ray.remote(num_returns=2)
@@ -355,106 +377,3 @@ def _get_index_and_columns(df):  # pragma: no cover
         The number of columns.
     """
     return len(df.index), len(df.columns)
-
-
-@ray.remote(num_returns=4)
-def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
-    """
-    Execute a function on the partition in a worker process.
-
-    Parameters
-    ----------
-    partition : pandas.DataFrame
-        A pandas DataFrame the function needs to be executed on.
-    func : callable
-        The function to perform on the partition.
-    *args : list
-        Positional arguments to pass to ``func``.
-    **kwargs : dict
-        Keyword arguments to pass to ``func``.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-
-    Notes
-    -----
-    Directly passing a call queue entry (i.e. a list of [func, args, kwargs]) instead of
-    destructuring it causes a performance penalty.
-    """
-    try:
-        result = func(partition, *args, **kwargs)
-    # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-    # don't want the error to propagate to the user, and we want to avoid copying unless
-    # we absolutely have to.
-    except ValueError:
-        result = func(partition.copy(), *args, **kwargs)
-    return (
-        result,
-        len(result) if hasattr(result, "__len__") else 0,
-        len(result.columns) if hasattr(result, "columns") else 0,
-        get_node_ip_address(),
-    )
-
-
-@ray.remote(num_returns=4)
-def _apply_list_of_funcs(
-    partition, num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, *futures
-):  # pragma: no cover
-    """
-    Execute all operations stored in the call queue on the partition in a worker process.
-
-    Parameters
-    ----------
-    partition : pandas.DataFrame
-        A pandas DataFrame the call queue needs to be executed on.
-    num_funcs : int
-        The number of functions in the call queue.
-    arg_lengths : list of ints
-        The number of positional arguments for each function in the call queue.
-    kw_key_lengths : list of ints
-        The number of key-word arguments for each function in the call queue.
-    kw_value_lengths : 2D list of dict{"len": int, "was_iterable": bool}
-        Description of keyword arguments for each function. For example, `kw_value_lengths[i][j]`
-        describes the j-th keyword argument of the i-th function in the call queue.
-        The describtion contains of the lengths of the argument and whether it's a list at all
-        (for example, {"len": 1, "was_iterable": False} describes a non-list argument).
-    *futures : list
-        A 1D call queue that is result of the ``deconstruct_call_queue()`` function.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The resulting pandas DataFrame.
-    int
-        The number of rows of the resulting pandas DataFrame.
-    int
-        The number of columns of the resulting pandas DataFrame.
-    str
-        The node IP address of the worker process.
-    """
-    call_queue = reconstruct_call_queue(
-        num_funcs, arg_lengths, kw_key_lengths, kw_value_lengths, futures
-    )
-    for func, args, kwargs in call_queue:
-        try:
-            partition = func(partition, *args, **kwargs)
-        # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
-        # don't want the error to propagate to the user, and we want to avoid copying unless
-        # we absolutely have to.
-        except ValueError:
-            partition = func(partition.copy(), *args, **kwargs)
-
-    return (
-        partition,
-        len(partition) if hasattr(partition, "__len__") else 0,
-        len(partition.columns) if hasattr(partition, "columns") else 0,
-        get_node_ip_address(),
-    )
