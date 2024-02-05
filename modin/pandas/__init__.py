@@ -16,7 +16,7 @@ import warnings
 import pandas
 from packaging import version
 
-__pandas_version__ = "2.1"
+__pandas_version__ = "2.2"
 
 if (
     version.parse(pandas.__version__).release[:2]
