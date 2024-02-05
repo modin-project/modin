@@ -869,14 +869,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         put_func = cls._partition_class.put
         # even a full-axis slice can cost something (https://github.com/pandas-dev/pandas/issues/55202)
         # so we try not to do it if unnecessary.
-        # FIXME: it appears that this optimization doesn't work for Unidist correctly as it
-        # doesn't explicitly copy the data when putting it into storage (as the rest engines do)
-        # causing it to eventially share memory with a pandas object that was provided by user.
-        # Everything works fine if we do this column slicing as pandas then would set some flags
-        # to perform in COW mode apparently (and so it wouldn't crash our tests).
-        # @YarShev promised that this will be eventially fixed on Unidist's side, but for now there's
-        # this hacky condition
-        if col_chunksize >= len(df.columns) and Engine.get() != "Unidist":
+        if col_chunksize >= len(df.columns):
             col_parts = [df]
         else:
             col_parts = [
