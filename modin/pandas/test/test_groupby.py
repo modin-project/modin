@@ -90,7 +90,10 @@ pytestmark = [
         "ignore:DataFrameGroupBy.shift with axis=1 is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:(DataFrameGroupBy|SeriesGroupBy|DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
+        "ignore:(DataFrameGroupBy|SeriesGroupBy).fillna is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:(DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
     ),
     # FIXME: these cases inconsistent between modin and pandas
     pytest.mark.filterwarnings(
@@ -660,7 +663,9 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
         eval___getitem__(modin_groupby, pandas_groupby, "col3")
-    eval_groups(modin_groupby, pandas_groupby)
+    eval_groups(
+        modin_groupby, pandas_groupby, use_tuple=isinstance(by, list) and len(by) == 1
+    )
     # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
         # Potential selection starts only from the second column, because the first may
@@ -1492,7 +1497,7 @@ def eval___getitem__(md_grp, pd_grp, item):
     )
 
 
-def eval_groups(modin_groupby, pandas_groupby):
+def eval_groups(modin_groupby, pandas_groupby, use_tuple=False):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
     if RangePartitioningGroupby.get():
@@ -1500,6 +1505,8 @@ def eval_groups(modin_groupby, pandas_groupby):
         # https://github.com/modin-project/modin/issues/6093
         return
     for name in pandas_groupby.groups:
+        if use_tuple:
+            name = (name,)
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
@@ -2715,7 +2722,7 @@ def test_skew_corner_cases():
     "by",
     [
         pandas.Grouper(key="time_stamp", freq="3D"),
-        [pandas.Grouper(key="time_stamp", freq="1M"), "count"],
+        [pandas.Grouper(key="time_stamp", freq="1ME"), "count"],
     ],
 )
 def test_groupby_with_grouper(by):
@@ -3212,12 +3219,12 @@ def test_groupby_fillna_axis_1_warning():
 
     with pytest.warns(
         FutureWarning,
-        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+        match="DataFrameGroupBy.fillna is deprecated",
     ):
         modin_groupby.fillna(method="ffill")
     with pytest.warns(
         FutureWarning,
-        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+        match="DataFrameGroupBy.fillna is deprecated",
     ):
         pandas_groupby.fillna(method="ffill")
 

@@ -1253,13 +1253,12 @@ class DataFrameGroupBy(ClassLogger):
         if axis is not lib.no_default:
             self._deprecate_axis(axis, "fillna")
 
-        if method is not None:
-            warnings.warn(
-                f"{type(self).__name__}.fillna with 'method' is deprecated and "
-                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
-                + "instead.",
-                FutureWarning,
-            )
+        warnings.warn(
+            f"{type(self).__name__}.fillna is deprecated and will be removed "
+            + "in a future version. Use obj.ffill(), obj.bfill(), "
+            + "or obj.nearest() instead.",
+            FutureWarning,
+        )
 
         # default behaviour for aggregations; for the reference see
         # `_op_via_apply` func in pandas==2.0.2
