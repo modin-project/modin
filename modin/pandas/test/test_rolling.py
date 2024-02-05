@@ -21,6 +21,7 @@ from modin.config import NPartitions
 
 from .utils import (
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
@@ -48,16 +49,6 @@ pytestmark = [
         "ignore:.*In a future version of pandas, the provided callable will be used directly.*:FutureWarning"
     ),
 ]
-
-
-def create_test_series(vals):
-    if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))])
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
-    else:
-        modin_series = pd.Series(vals)
-        pandas_series = pandas.Series(vals)
-    return modin_series, pandas_series
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
