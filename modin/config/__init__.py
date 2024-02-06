@@ -49,7 +49,6 @@ from modin.config.envvars import (
     ReadSqlEngine,
     StorageFormat,
     TestDatasetSize,
-    TestRayClient,
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
@@ -71,7 +70,6 @@ __all__ = [
     "IsRayCluster",
     "RayRedisAddress",
     "RayRedisPassword",
-    "TestRayClient",
     "LazyExecution",
     # Partitioning
     "NPartitions",
