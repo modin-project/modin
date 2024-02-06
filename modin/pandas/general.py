@@ -496,7 +496,7 @@ def concat(
     list_of_objs = [
         (
             obj._query_compiler
-            if isinstance(obj, (DataFrame, Series))
+            if isinstance(obj, DataFrame)
             else DataFrame(obj)._query_compiler
         )
         for obj in list_of_objs
