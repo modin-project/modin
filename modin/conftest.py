@@ -57,13 +57,10 @@ import modin.config  # noqa: E402
 from modin.config import (  # noqa: E402
     AsyncReadMode,
     BenchmarkMode,
-    CIAWSAccessKeyID,
-    CIAWSSecretAccessKey,
     GithubCI,
     IsExperimental,
     MinPartitionSize,
     NPartitions,
-    TestRayClient,
 )
 from modin.core.execution.dispatching.factories import factories  # noqa: E402
 from modin.core.execution.python.implementations.pandas_on_python.io import (  # noqa: E402
@@ -494,31 +491,6 @@ def set_min_partition_size(request):
 
 
 ray_client_server = None
-
-
-def pytest_sessionstart(session):
-    if TestRayClient.get():
-        import ray
-        import ray.util.client.server.server as ray_server
-
-        addr = "localhost:50051"
-        global ray_client_server
-        ray_client_server = ray_server.serve(addr)
-        env_vars = {
-            "AWS_ACCESS_KEY_ID": CIAWSAccessKeyID.get(),
-            "AWS_SECRET_ACCESS_KEY": CIAWSSecretAccessKey.get(),
-        }
-        extra_init_kw = {"runtime_env": {"env_vars": env_vars}}
-        ray.util.connect(addr, ray_init_kwargs=extra_init_kw)
-
-
-def pytest_sessionfinish(session, exitstatus):
-    if TestRayClient.get():
-        import ray
-
-        ray.util.disconnect()
-        if ray_client_server:
-            ray_client_server.stop(0)
 
 
 @pytest.fixture
