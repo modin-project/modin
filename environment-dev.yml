@@ -14,8 +14,6 @@ dependencies:
   # optional dependencies
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
   - ray-default>=1.13.0,!=2.5.0
-  # https://github.com/modin-project/modin/issues/6336
-  - pydantic<2
   - pyarrow>=7.0.0
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
