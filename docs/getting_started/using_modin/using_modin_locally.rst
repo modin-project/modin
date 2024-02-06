@@ -23,55 +23,6 @@ just like you would pandas, since the API is identical to pandas.
 
 **That's it. You're ready to use Modin on your previous pandas workflows!**
 
-Optional Configurations
------------------------
-
-When using Modin locally on a single machine or laptop (without a cluster), Modin will
-automatically create and manage a local Dask or Ray cluster for the executing your
-code. So when you run an operation for the first time with Modin, you will see a
-message like this, indicating that a Modin has automatically initialized a local
-cluster for you:
-
-.. code-block:: python
-
-  df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-
-.. code-block:: text
-
-   UserWarning: Ray execution environment not yet initialized. Initializing...
-   To remove this warning, run the following python code before doing dataframe operations:
-
-    import ray
-    ray.init()
-
- If you prefer to use Dask over Ray as your execution backend, you can use the
- following code to modify the default configuration:
-
-.. code-block:: python
-
-   import modin
-   modin.config.Engine.put("Dask")
-
-.. code-block:: python
-
-   df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
-
-
-.. code-block:: text
-
-   UserWarning: Dask execution environment not yet initialized. Initializing...
-   To remove this warning, run the following python code before doing dataframe operations:
-
-      from distributed import Client
-
-      client = Client()
-
-Finally, if you already have an Ray or Dask engine initialized, Modin will
-automatically attach to whichever engine is available. If you are interested in using
-Modin with HDK engine, please refer to :doc:`these instructions </development/using_hdk>`.
-For additional information on other settings you can configure, see
-:doc:`Modin's config </flow/modin/config>` page for more details.
-
 Advanced: Configuring the resources Modin uses
 ----------------------------------------------
 

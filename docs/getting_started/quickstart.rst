@@ -61,6 +61,7 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as
   #############################################
   import time
   import ray
+  # Look at the Ray documentation with respect to the Ray configuration suited to you most.
   ray.init()
   #############################################
 

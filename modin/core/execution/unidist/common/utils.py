@@ -17,7 +17,6 @@ import unidist
 import unidist.config as unidist_cfg
 
 import modin.config as modin_cfg
-from modin.error_message import ErrorMessage
 
 from .engine_wrapper import UnidistWrapper
 
@@ -35,15 +34,6 @@ def initialize_unidist():
     if not unidist.is_initialized():
         modin_cfg.CpuCount.subscribe(
             lambda cpu_count: unidist_cfg.CpuCount.put(cpu_count.get())
-        )
-        # This string is intentionally formatted this way. We want it indented in
-        # the warning message.
-        ErrorMessage.not_initialized(
-            "unidist",
-            """
-            import unidist
-            unidist.init()
-            """,
         )
         unidist_cfg.MpiRuntimeEnv.put(
             {"env_vars": {"PYTHONWARNINGS": "ignore::FutureWarning"}}

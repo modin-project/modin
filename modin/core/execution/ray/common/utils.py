@@ -118,15 +118,6 @@ def initialize_ray(
                 **extra_init_kw,
             )
         else:
-            # This string is intentionally formatted this way. We want it indented in
-            # the warning message.
-            ErrorMessage.not_initialized(
-                "Ray",
-                f"""
-    import ray
-    ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
-""",
-            )
             object_store_memory = _get_object_store_memory()
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
