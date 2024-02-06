@@ -383,45 +383,37 @@ PandasOnRayDataframePartition._lazy_exec_func = (
 )
 
 
-def _set_lazy_exec_mode(mode, put_func=LazyExecution.put):
-    """
-    Configure lazy execution mode for PandasOnRayDataframePartition.
-
-    Parameters
-    ----------
-    mode : str
-    put_func : Callable, default: LazyExecution.put
-        The original reference to the LazyExecution.put function.
-    """
+def _configure_lazy_exec(cls: LazyExecution):
+    """Configure lazy execution mode for PandasOnRayDataframePartition."""
+    mode = cls.get()
     get_logger().debug(f"Ray lazy execution mode: {mode}")
-    if put_func is not None:
-        put_func(mode)
-    if mode == "auto":
+    if mode == "Auto":
         PandasOnRayDataframePartition.apply = (
             PandasOnRayDataframePartition._eager_exec_func
         )
         PandasOnRayDataframePartition.add_to_apply_calls = (
             PandasOnRayDataframePartition._lazy_exec_func
         )
-    elif mode == "on":
+    elif mode == "On":
 
         def lazy_exec(self, func, *args, **kwargs):
-            self._lazy_exec_func(func, *args, length=None, width=None, **kwargs)
+            return self._lazy_exec_func(func, *args, length=None, width=None, **kwargs)
 
         PandasOnRayDataframePartition.apply = lazy_exec
         PandasOnRayDataframePartition.add_to_apply_calls = (
             PandasOnRayDataframePartition._lazy_exec_func
         )
-    elif mode == "off":
+    elif mode == "Off":
 
         def eager_exec(self, func, *args, length=None, width=None, **kwargs):
-            self._eager_exec_func(func, *args, **kwargs)
+            return self._eager_exec_func(func, *args, **kwargs)
 
         PandasOnRayDataframePartition.apply = (
             PandasOnRayDataframePartition._eager_exec_func
         )
         PandasOnRayDataframePartition.add_to_apply_calls = eager_exec
+    else:
+        raise ValueError(f"Invalid lazy execution mode: {mode}")
 
 
-_set_lazy_exec_mode(LazyExecution.get(), None)
-LazyExecution.put = _set_lazy_exec_mode
+LazyExecution.subscribe(_configure_lazy_exec)

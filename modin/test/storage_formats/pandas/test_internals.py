@@ -2435,30 +2435,36 @@ def test_ray_lazy_exec_mode(mode):
         PandasOnRayDataframePartition,
     )
 
-    if mode is None:
-        mode = LazyExecution.get()
-    else:
-        LazyExecution.put(mode)
-        assert mode == LazyExecution.get()
+    orig_mode = LazyExecution.get()
+    try:
+        if mode is None:
+            mode = LazyExecution.get()
+        else:
+            LazyExecution.put(mode)
+            assert mode == LazyExecution.get()
 
-    df = pandas.DataFrame({"A": [1, 2, 3]})
-    part = PandasOnRayDataframePartition(ray.put(df))
+        df = pandas.DataFrame({"A": [1, 2, 3]})
+        part = PandasOnRayDataframePartition(ray.put(df))
 
-    def func(df):
-        return len(df)
+        def func(df):
+            return len(df)
 
-    ray_func = ray.put(func)
+        ray_func = ray.put(func)
 
-    if mode == "auto":
-        assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
-        assert isinstance(
-            part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
-        )
-    elif mode == "on":
-        assert isinstance(part.apply(ray_func)._data_ref, DeferredExecution)
-        assert isinstance(
-            part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
-        )
-    elif mode == "off":
-        assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
-        assert isinstance(part.add_to_apply_calls(ray_func)._data_ref, ObjectIDType)
+        if mode == "Auto":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "On":
+            assert isinstance(part.apply(ray_func)._data_ref, DeferredExecution)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "Off":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(part.add_to_apply_calls(ray_func)._data_ref, ObjectIDType)
+        else:
+            pytest.fail(f"Invalid value: {mode}")
+    finally:
+        LazyExecution.put(orig_mode)
