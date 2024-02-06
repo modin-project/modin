@@ -834,7 +834,7 @@ class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     """Number of threads per Dask worker."""
 
     varname = "MODIN_DASK_THREADS_PER_WORKER"
-    default = 1
+    default = None
 
 
 def _check_vars() -> None:
