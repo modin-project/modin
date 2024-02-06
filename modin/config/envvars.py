@@ -816,10 +816,18 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     choices = ("Pandas", "Connectorx")
 
 
-class LazyExecution(EnvironmentVariable, type=bool):
-    """Prefer the lazy execution, when it's possible."""
+class LazyExecution(EnvironmentVariable, type=str):
+    """
+    Lazy execution mode.
+
+    Supported values:
+        `Auto` - the execution mode is chosen by the backend for each operation (default value).
+        `On`   - the lazy execution is performed wherever it's possible.
+        `Off`  - the lazy execution is disabled.
+    """
 
     varname = "MODIN_LAZY_EXECUTION"
+    choices = ("Auto", "On", "Off")
     default = False
 
 
