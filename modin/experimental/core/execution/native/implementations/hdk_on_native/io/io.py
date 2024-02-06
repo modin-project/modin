@@ -185,7 +185,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             usecols_md = cls._prepare_pyarrow_usecols(kwargs)
 
             po = ParseOptions(
-                delimiter="\\s+" if kwargs["delim_whitespace"] else delimiter,
+                delimiter="\\s+" if kwargs["delim_whitespace"] is True else delimiter,
                 quote_char=kwargs["quotechar"],
                 double_quote=kwargs["doublequote"],
                 escape_char=kwargs["escapechar"],
@@ -426,7 +426,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
                 )
-        if delimiter is not None and read_csv_kwargs["delim_whitespace"]:
+        if delimiter is not None and read_csv_kwargs["delim_whitespace"] is True:
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
@@ -541,7 +541,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         if delimiter is None:
             delimiter = sep
 
-        if delim_whitespace and (delimiter is not lib.no_default):
+        if delim_whitespace is True and (delimiter is not lib.no_default):
             raise ValueError(
                 "Specified a delimiter with both sep and "
                 + "delim_whitespace=True; you can only specify one."
