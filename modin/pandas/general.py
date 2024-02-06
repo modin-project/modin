@@ -478,14 +478,25 @@ def concat(
                 sort=sort,
             )
         )
-    if join not in ("inner", "outer"):
+    if join == "outer":
+        # Filter out empties
+        list_of_objs = [
+            obj
+            for obj in list_of_objs
+            if (
+                isinstance(obj, (Series, pandas.Series))
+                or (isinstance(obj, DataFrame) and obj._query_compiler.lazy_execution)
+                or sum(obj.shape) > 0
+            )
+        ]
+    elif join != "inner":
         raise ValueError(
             "Only can inner (intersect) or outer (union) join the other axis"
         )
     list_of_objs = [
         (
             obj._query_compiler
-            if isinstance(obj, DataFrame)
+            if isinstance(obj, (DataFrame, Series))
             else DataFrame(obj)._query_compiler
         )
         for obj in list_of_objs
