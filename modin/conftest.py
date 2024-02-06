@@ -57,8 +57,6 @@ import modin.config  # noqa: E402
 from modin.config import (  # noqa: E402
     AsyncReadMode,
     BenchmarkMode,
-    CIAWSAccessKeyID,
-    CIAWSSecretAccessKey,
     GithubCI,
     IsExperimental,
     MinPartitionSize,
