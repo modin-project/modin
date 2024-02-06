@@ -21,6 +21,7 @@ from modin.config.envvars import (
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     CpuCount,
+    DaskThreadsPerWorker,
     DoUseCalcite,
     Engine,
     EnvironmentVariable,
@@ -73,6 +74,8 @@ __all__ = [
     "RayRedisPassword",
     "TestRayClient",
     "LazyExecution",
+    # Dask specific
+    "DaskThreadsPerWorker",
     # Partitioning
     "NPartitions",
     "MinPartitionSize",

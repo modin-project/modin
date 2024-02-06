@@ -19,6 +19,7 @@ from modin.config import (
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     CpuCount,
+    DaskThreadsPerWorker,
     GithubCI,
     Memory,
     NPartitions,
@@ -44,12 +45,17 @@ def initialize_dask():
         from distributed import Client
 
         num_cpus = CpuCount.get()
+        threads_per_worker = DaskThreadsPerWorker.get()
         memory_limit = Memory.get()
         worker_memory_limit = memory_limit // num_cpus if memory_limit else "auto"
 
         # when the client is initialized, environment variables are inherited
         with set_env(PYTHONWARNINGS="ignore::FutureWarning"):
-            client = Client(n_workers=num_cpus, memory_limit=worker_memory_limit)
+            client = Client(
+                n_workers=num_cpus,
+                threads_per_worker=threads_per_worker,
+                memory_limit=worker_memory_limit,
+            )
 
         if GithubCI.get():
             # set these keys to run tests that write to the mock s3 service. this seems

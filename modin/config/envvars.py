@@ -830,6 +830,13 @@ class LazyExecution(EnvironmentVariable, type=bool):
     default = False
 
 
+class DaskThreadsPerWorker(EnvironmentVariable, type=int):
+    """Number of threads per Dask worker."""
+
+    varname = "MODIN_DASK_THREADS_PER_WORKER"
+    default = None
+
+
 def _check_vars() -> None:
     """
     Check validity of environment variables.
