@@ -821,7 +821,7 @@ class LazyExecution(EnvironmentVariable, type=str):
     Lazy execution mode.
 
     Supported values:
-        `Auto` - the execution mode is chosen by the backend for each operation (default value).
+        `Auto` - the execution mode is chosen by the engine for each operation (default value).
         `On`   - the lazy execution is performed wherever it's possible.
         `Off`  - the lazy execution is disabled.
     """
