@@ -43,7 +43,7 @@ To get more details on all possible parameters for initialization refer to `Dask
 MPI through unidist
 -------------------
 
-You can initialize MPI thought unidist engine with a specific number of CPUs (worker processes) to perform computation.
+You can initialize MPI through unidist engine with a specific number of CPUs (worker processes) to perform computation.
 
 .. code-block:: python
 
