@@ -159,7 +159,10 @@ class DtypesDescriptor:
         if self._parent_df is None or not self._parent_df.has_materialized_columns:
             return None
 
-        self._columns_order = {i: col for i, col in enumerate(self._parent_df.columns)}
+        actual_columns = self._parent_df.columns
+        self._normalize_self_levels(actual_columns)
+
+        self._columns_order = {i: col for i, col in enumerate(actual_columns)}
         # we got information about new columns and thus can potentially
         # extend our knowledge about missing dtypes
         if len(self._columns_order) > (
@@ -360,6 +363,7 @@ class DtypesDescriptor:
             return
 
         all_cols = self._parent_df.columns
+        self._normalize_self_levels(all_cols)
         for col in all_cols:
             if (
                 col not in self._known_dtypes
@@ -403,6 +407,7 @@ class DtypesDescriptor:
 
         if self._remaining_dtype is not None:
             cols = self._parent_df.columns
+            self._normalize_self_levels(cols)
             self._known_dtypes.update(
                 {
                     col: self._remaining_dtype
@@ -628,6 +633,105 @@ class DtypesDescriptor:
             parent_df=None,
             _schema_is_known=schema_is_known,
             know_all_names=know_all_names,
+        )
+
+    @staticmethod
+    def _normalize_levels(columns, reference=None):
+        """
+        Normalize levels of MultiIndex column names.
+
+        The function fills missing levels with empty strings as pandas do:
+        '''
+        >>> columns = ["a", ("l1", "l2"), ("l1a", "l2a", "l3a")]
+        >>> _normalize_levels(columns)
+        [("a", "", ""), ("l1", "l2", ""), ("l1a", "l2a", "l3a")]
+        >>> # with a reference
+        >>> idx = pandas.MultiIndex(...)
+        >>> idx.nlevels
+        4
+        >>> _normalize_levels(columns, reference=idx)
+        [("a", "", "", ""), ("l1", "l2", "", ""), ("l1a", "l2a", "l3a", "")]
+        '''
+
+        Parameters
+        ----------
+        columns : sequence
+            Labels to normalize. If dictionary, will replace keys with normalized columns.
+        reference : pandas.Index, optional
+            An index to match the number of levels with. If reference is a MultiIndex, then the reference number
+            of levels should not be greater than the maximum number of levels in `columns`. If not specified,
+            the `columns` themselves become a `reference`.
+
+        Returns
+        -------
+        sequence
+            Column values with normalized levels.
+        dict[hashable, hashable]
+            Mapping from old column names to new names, only contains column names that
+            were changed.
+
+        Raises
+        ------
+        ValueError
+            When the reference number of levels is greater than the maximum number of levels
+            in `columns`.
+        """
+        if reference is None:
+            reference = columns
+
+        if isinstance(reference, pandas.Index):
+            max_nlevels = reference.nlevels
+        else:
+            max_nlevels = 1
+            for col in reference:
+                if isinstance(col, tuple):
+                    max_nlevels = max(max_nlevels, len(col))
+
+        # if the reference is a regular flat index, then no actions are required (the result will be
+        # a flat index containing tuples of different lengths, this behavior fully matches pandas).
+        # Yes, this shortcut skips the 'if max_columns_nlevels > max_nlevels' below check on purpose.
+        if max_nlevels == 1:
+            return columns, {}
+
+        max_columns_nlevels = 1
+        for col in columns:
+            if isinstance(col, tuple):
+                max_columns_nlevels = max(max_columns_nlevels, len(col))
+
+        if max_columns_nlevels > max_nlevels:
+            raise ValueError(
+                f"The reference number of levels is greater than the maximum number of levels in columns: {max_columns_nlevels} > {max_nlevels}"
+            )
+
+        new_columns = []
+        old_to_new_mapping = {}
+        for col in columns:
+            old_col = col
+            if not isinstance(col, tuple):
+                col = (col,)
+            col = col + ("",) * (max_nlevels - len(col))
+            new_columns.append(col)
+            if old_col != col:
+                old_to_new_mapping[old_col] = col
+
+        return new_columns, old_to_new_mapping
+
+    def _normalize_self_levels(self, reference=None):
+        """
+        Call ``self._normalize_levels()`` for known and unknown dtypes of this object.
+
+        Parameters
+        ----------
+        reference : pandas.Index, optional
+        """
+        _, old_to_new_mapping = self._normalize_levels(
+            self._known_dtypes.keys(), reference
+        )
+        for old_col, new_col in old_to_new_mapping.items():
+            value = self._known_dtypes.pop(old_col)
+            self._known_dtypes[new_col] = value
+        self._cols_with_unknown_dtypes, _ = self._normalize_levels(
+            self._cols_with_unknown_dtypes, reference
         )
 
 

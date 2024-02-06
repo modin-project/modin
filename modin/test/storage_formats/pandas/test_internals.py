@@ -30,7 +30,12 @@ from modin.core.dataframe.pandas.metadata import (
 )
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
-from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
+from modin.pandas.test.utils import (
+    create_test_dfs,
+    df_equals,
+    eval_general,
+    test_data_values,
+)
 from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
@@ -2120,6 +2125,32 @@ class TestModinDtypes:
         assert df.dtypes.equals(
             pandas.Series([np.dtype(int), np.dtype("float64")], index=["a", "a"])
         )
+
+    def test_reset_index_mi_columns(self):
+        # reproducer from: https://github.com/modin-project/modin/issues/6904
+        md_df, pd_df = create_test_dfs({"a": [1, 1, 2, 2], "b": [3, 3, 4, 4]})
+        eval_general(
+            md_df,
+            pd_df,
+            lambda df: df.groupby("a").agg({"b": ["min", "std"]}).reset_index().dtypes,
+        )
+
+    def test_concat_mi(self):
+        """
+        Verify that concatenating dfs with non-MultiIndex and MultiIndex columns results into valid indices for lazy dtypes.
+        """
+        md_df1, pd_df1 = create_test_dfs({"a": [1, 1, 2, 2], "b": [3, 3, 4, 4]})
+        md_df2, pd_df2 = create_test_dfs(
+            {("l1", "v1"): [1, 1, 2, 2], ("l1", "v2"): [3, 3, 4, 4]}
+        )
+
+        # Drop actual dtypes in order to use partially-known dtypes
+        md_df1._query_compiler._modin_frame.set_dtypes_cache(None)
+        md_df2._query_compiler._modin_frame.set_dtypes_cache(None)
+
+        md_res = pd.concat([md_df1, md_df2], axis=1)
+        pd_res = pandas.concat([pd_df1, pd_df2], axis=1)
+        df_equals(md_res.dtypes, pd_res.dtypes)
 
 
 class TestZeroComputationDtypes:
