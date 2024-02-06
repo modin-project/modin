@@ -19,10 +19,10 @@ from modin.config import (
     CIAWSAccessKeyID,
     CIAWSSecretAccessKey,
     CpuCount,
+    DaskThreadsPerWorker,
     GithubCI,
     Memory,
     NPartitions,
-    DaskThreadsPerWorker,
 )
 from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
