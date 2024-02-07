@@ -2153,7 +2153,7 @@ class PandasDataframe(ClassLogger):
         func_kwargs : dict, optional
             Keyword arguments for the 'func' callable.
         lazy : bool, default: False
-            Prefer lazy execution.
+            Whether to prefer lazy execution or not.
 
         Returns
         -------
