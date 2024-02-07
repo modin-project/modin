@@ -419,6 +419,7 @@ class Binary(Operator):
                         func_args=(other, *args),
                         func_kwargs=kwargs,
                         dtypes=dtypes,
+                        lazy=True,
                     )
                 return query_compiler.__constructor__(
                     new_modin_frame, shape_hint=shape_hint
