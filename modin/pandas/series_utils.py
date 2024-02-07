@@ -31,6 +31,83 @@ if TYPE_CHECKING:
     from pandas._typing import npt
 
 
+@_inherit_docstrings(pandas.core.arrays.arrow.ListAccessor)
+class ListAccessor(ClassLogger):
+    def __init__(self, data):
+        self._series = data
+        self._query_compiler = data._query_compiler
+
+    def flatten(self):
+        return self._default_to_pandas(pandas.Series.list.flatten)
+
+    def len(self):
+        return self._default_to_pandas(pandas.Series.list.len)
+
+    def __getitem__(self, key):
+        return self._default_to_pandas(pandas.Series.list.__getitem__, key)
+
+    def _default_to_pandas(self, op, *args, **kwargs):
+        """
+        Convert `self` to pandas type and call a pandas list.`op` on it.
+
+        Parameters
+        ----------
+        op : str
+            Name of pandas function.
+        *args : list
+            Additional positional arguments to be passed in `op`.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `op`.
+
+        Returns
+        -------
+        object
+            Result of operation.
+        """
+        return self._series._default_to_pandas(
+            lambda series: op(series.list, *args, **kwargs)
+        )
+
+
+@_inherit_docstrings(pandas.core.arrays.arrow.StructAccessor)
+class StructAccessor(ClassLogger):
+    def __init__(self, data):
+        self._series = data
+        self._query_compiler = data._query_compiler
+
+    @property
+    def dtypes(self):
+        return self._series._default_to_pandas(pandas.Series.struct).dtypes
+
+    def field(self, name_or_index):
+        return self._default_to_pandas(pandas.Series.struct.field, name_or_index)
+
+    def explode(self):
+        return self._default_to_pandas(pandas.Series.struct.explode)
+
+    def _default_to_pandas(self, op, *args, **kwargs):
+        """
+        Convert `self` to pandas type and call a pandas struct.`op` on it.
+
+        Parameters
+        ----------
+        op : str
+            Name of pandas function.
+        *args : list
+            Additional positional arguments to be passed in `op`.
+        **kwargs : dict
+            Additional keywords arguments to be passed in `op`.
+
+        Returns
+        -------
+        object
+            Result of operation.
+        """
+        return self._series._default_to_pandas(
+            lambda series: op(series.struct, *args, **kwargs)
+        )
+
+
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(ClassLogger):
     def __init__(self, data):

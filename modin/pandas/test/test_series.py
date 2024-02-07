@@ -4585,6 +4585,66 @@ def test_str_decode(encoding, errors, str_encode_decode_test_data):
     )
 
 
+def test_list_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            [1, 2, 3],
+            [3],
+        ],
+        dtype=pd.ArrowDtype(pa.list_(pa.int64())),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.list.flatten())
+    eval_general(modin_series, pandas_series, lambda series: series.list.list())
+    eval_general(modin_series, pandas_series, lambda series: series.list.list[0])
+
+
+def test_struct_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": 1, "project": "pandas"},
+            {"version": 2, "project": "pandas"},
+            {"version": 1, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", pa.int64()), ("project", pa.string())])
+        ),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.dtypes)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.struct.field("project")
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.explode())
+
+    # nested struct types
+    version_type = pa.struct(
+        [
+            ("major", pa.int64()),
+            ("minor", pa.int64()),
+        ]
+    )
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": {"major": 1, "minor": 5}, "project": "pandas"},
+            {"version": {"major": 2, "minor": 1}, "project": "pandas"},
+            {"version": {"major": 1, "minor": 26}, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", version_type), ("project", pa.string())])
+        ),
+    )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.struct.field(["version", "minor"]),
+    )
+
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_non_commutative_add_string_to_series(data):
     # This test checks that add and radd do different things when addition is

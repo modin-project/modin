@@ -38,7 +38,13 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 from .accessor import CachedAccessor, SparseAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .iterator import PartitionIterator
-from .series_utils import CategoryMethods, DatetimeProperties, StringMethods
+from .series_utils import (
+    CategoryMethods,
+    DatetimeProperties,
+    ListAccessor,
+    StringMethods,
+    StructAccessor,
+)
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
@@ -1003,6 +1009,15 @@ class Series(BasePandasDataset):
             use_na_sentinel=use_na_sentinel,
         )
 
+    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the conditions are True.
+        """
+        return self._default_to_pandas(
+            pandas.Series.case_when,
+            caselist=caselist,
+        )
+
     def fillna(
         self,
         value=None,
@@ -1800,6 +1815,8 @@ class Series(BasePandasDataset):
     sparse = CachedAccessor("sparse", SparseAccessor)
     str = CachedAccessor("str", StringMethods)
     dt = CachedAccessor("dt", DatetimeProperties)
+    list = CachedAccessor("list", ListAccessor)
+    struct = CachedAccessor("struct", StructAccessor)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
