@@ -71,13 +71,14 @@ class Resampler(ClassLogger):
             Groups as specified by resampling arguments.
         """
         df = self._dataframe if self.axis == 0 else self._dataframe.T
+        convention = self.resample_kwargs["convention"]
         groups = df.groupby(
             pandas.Grouper(
                 key=self.resample_kwargs["on"],
                 freq=self.resample_kwargs["rule"],
                 closed=self.resample_kwargs["closed"],
                 label=self.resample_kwargs["label"],
-                convention=self.resample_kwargs["convention"],
+                convention=convention if convention is not lib.no_default else "start",
                 level=self.resample_kwargs["level"],
                 origin=self.resample_kwargs["origin"],
                 offset=self.resample_kwargs["offset"],

@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 
 @_inherit_docstrings(pandas.core.arrays.arrow.ListAccessor)
 class ListAccessor(ClassLogger):
-    def __init__(self, data):
+    def __init__(self, data=None):
         self._series = data
         self._query_compiler = data._query_compiler
 
@@ -71,7 +71,7 @@ class ListAccessor(ClassLogger):
 
 @_inherit_docstrings(pandas.core.arrays.arrow.StructAccessor)
 class StructAccessor(ClassLogger):
-    def __init__(self, data):
+    def __init__(self, data=None):
         self._series = data
         self._query_compiler = data._query_compiler
 

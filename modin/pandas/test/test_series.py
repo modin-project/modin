@@ -2936,7 +2936,7 @@ def test_replace():
 @pytest.mark.parametrize("level", [None, 1])
 @pytest.mark.exclude_in_sanity
 def test_resample(closed, label, level):
-    rule = "5T"
+    rule = "5min"
     freq = "h"
 
     index = pandas.date_range("1/1/2000", periods=12, freq=freq)

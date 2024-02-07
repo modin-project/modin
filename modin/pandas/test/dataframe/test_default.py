@@ -789,7 +789,7 @@ def test_replace():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
+@pytest.mark.parametrize("rule", ["5min", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
     data, index = (
@@ -808,7 +808,7 @@ def test_resampler(rule, axis):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method",
@@ -833,7 +833,7 @@ def test_resampler_functions(rule, axis, method):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method_arg",
@@ -861,7 +861,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
 @pytest.mark.parametrize(
@@ -955,7 +955,7 @@ def test_resample_getitem(columns):
     }
     eval_general(
         *create_test_dfs(data, index=index),
-        lambda df: df.resample("3T")[columns].mean(),
+        lambda df: df.resample("3min")[columns].mean(),
     )
 
 

@@ -1106,11 +1106,26 @@ class BasePandasDataset(ClassLogger):
         return downcast
 
     def bfill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "bfill",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "bfill")
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -1599,11 +1614,26 @@ class BasePandasDataset(ClassLogger):
         )
 
     def ffill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "ffill",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "ffill")
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -2489,8 +2519,8 @@ class BasePandasDataset(ClassLogger):
         axis: Axis = lib.no_default,
         closed: Optional[str] = None,
         label: Optional[str] = None,
-        convention: str = "start",
-        kind: Optional[str] = None,
+        convention: str = lib.no_default,
+        kind: Optional[str] = lib.no_default,
         on: Level = None,
         level: Level = None,
         origin: Union[str, TimestampConvertibleTypes] = "start_day",

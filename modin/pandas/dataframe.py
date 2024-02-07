@@ -394,12 +394,14 @@ class DataFrame(BasePandasDataset):
         result_type=None,
         args=(),
         by_row="compat",
+        engine="python",
+        engine_kwargs=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
-        if by_row != "compat":
+        if by_row != "compat" or engine != "python":
             # TODO: add test
             return self._default_to_pandas(
                 pandas.DataFrame.apply,
@@ -409,6 +411,8 @@ class DataFrame(BasePandasDataset):
                 result_type=result_type,
                 args=args,
                 by_row=by_row,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
                 **kwargs,
             )
 
@@ -1446,7 +1450,7 @@ class DataFrame(BasePandasDataset):
         margins=False,
         dropna=True,
         margins_name="All",
-        observed=False,
+        observed=lib.no_default,
         sort=True,
     ):  # noqa: PR01, RT01, D200
         """
