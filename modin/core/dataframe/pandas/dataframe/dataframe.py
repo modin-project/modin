@@ -2772,14 +2772,26 @@ class PandasDataframe(ClassLogger):
             An PandasDataframe containing only a single partition.
         """
         partition_with_to_pandas_data = [
-            self._partition_mgr_cls.convert_partitions_to_pandas_in_remote_func(
-                self._partitions
-            )
+            self._partition_mgr_cls.to_single_partition(self._partitions)
         ]
         partitions = np.array(partition_with_to_pandas_data).reshape(1, -1)
-
+        new_row_lengths = (
+            [sum(self._row_lengths_cache)]
+            if self._row_lengths_cache is not None
+            else None
+        )
+        new_column_widths = (
+            [sum(self._column_widths_cache)]
+            if self._column_widths_cache is not None
+            else None
+        )
         result = self.__constructor__(
-            partitions, self.index, columns=self.columns, dtypes=self.dtypes
+            partitions,
+            self.index,
+            columns=self.columns,
+            dtypes=self.dtypes,
+            row_lengths=new_row_lengths,
+            column_widths=new_column_widths,
         )
         result.synchronize_labels()
         return result

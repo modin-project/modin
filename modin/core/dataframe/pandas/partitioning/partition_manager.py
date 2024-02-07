@@ -1142,7 +1142,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
-    def convert_partitions_to_pandas_in_remote_func(cls, partitions):
+    def to_single_partition(cls, partitions):
         """
         Call to_pandas for the given NumPy array of partitions.
 
@@ -1159,9 +1159,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         PandasDataframePartition
             A PandasDataframePartition object which holds the data of all partitions.
         """
-        cls.finalize(partitions)
 
-        def convert_to_pandas(data, partition_shape, *partition_data):
+        def to_pandas_remote(data, partition_shape, *partition_data):
             if all(
                 isinstance(obj, (pandas.DataFrame, pandas.Series))
                 for obj in partition_data
@@ -1177,7 +1176,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 # This implementation comes from the fact that calling `partition.get`
                 # function is not always equivalent to `partition.to_pandas`.
                 partition_data = [
-                    [obj.to_pandas() for obj in part] for part in partitions
+                    [obj.to_pandas() for obj in part] for part in partition_data
                 ]
             if all(
                 isinstance(part, pandas.Series)
@@ -1209,7 +1208,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             else:
                 return concatenate(df_rows)
 
-        preprocessed_func = cls.preprocess_func(convert_to_pandas)
+        preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape
         partitions_flattened = partitions.flatten()
         for idx, part in enumerate(partitions_flattened):
