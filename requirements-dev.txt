@@ -44,7 +44,7 @@ pygit2>=1.9.2
 asv==0.5.1
 coverage>=7.1.0
 # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
-fuzzydata>=0.0.6
+# fuzzydata>=0.0.6
 # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
 numpydoc==1.1.0
 moto>=4.1.0
