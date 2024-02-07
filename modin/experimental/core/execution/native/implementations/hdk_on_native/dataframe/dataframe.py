@@ -440,9 +440,9 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         row_positions = maybe_range(row_positions)
 
-        # If row_positions is not range, then MaskNode will generate a filter,
+        # If row_positions is not a range, then MaskNode will generate a filter,
         # containing enumeration of all the positions. Filtering rows in this
-        # way is not efficient and, in casse of too many values in row_positions,
+        # way is not efficient and, in case of too many values in row_positions,
         # may result in a huge JSON query. To workaround this issue, creating an
         # empty frame with row_positions index and inner joining with this one.
         # If row_positions has less than 10 values, MaskNode is used.
