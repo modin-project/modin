@@ -2421,3 +2421,50 @@ class TestZeroComputationDtypes:
             assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
 
         patch.assert_not_called()
+
+
+@pytest.mark.skipif(Engine.get() != "Ray", reason="Ray specific")
+@pytest.mark.parametrize("mode", [None, "Auto", "On", "Off"])
+def test_ray_lazy_exec_mode(mode):
+    import ray
+
+    from modin.config import LazyExecution
+    from modin.core.execution.ray.common.deferred_execution import DeferredExecution
+    from modin.core.execution.ray.common.utils import ObjectIDType
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframePartition,
+    )
+
+    orig_mode = LazyExecution.get()
+    try:
+        if mode is None:
+            mode = LazyExecution.get()
+        else:
+            LazyExecution.put(mode)
+            assert mode == LazyExecution.get()
+
+        df = pandas.DataFrame({"A": [1, 2, 3]})
+        part = PandasOnRayDataframePartition(ray.put(df))
+
+        def func(df):
+            return len(df)
+
+        ray_func = ray.put(func)
+
+        if mode == "Auto":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "On":
+            assert isinstance(part.apply(ray_func)._data_ref, DeferredExecution)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "Off":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(part.add_to_apply_calls(ray_func)._data_ref, ObjectIDType)
+        else:
+            pytest.fail(f"Invalid value: {mode}")
+    finally:
+        LazyExecution.put(orig_mode)

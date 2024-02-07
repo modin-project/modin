@@ -125,11 +125,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         If ``LazyExecution`` is enabled, the function is not applied immediately,
         but is added to the execution tree.
         """
-        de = DeferredExecution(self._data_ref, func, args, kwargs)
-        if LazyExecution.get():
-            return self.__constructor__(de)
         log = get_logger()
         self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
+        de = DeferredExecution(self._data_ref, func, args, kwargs)
         data, meta, meta_offset = de.exec()
         self._is_debug(log) and log.debug(f"EXIT::Partition.apply::{self._identity}")
         return self.__constructor__(data, meta=meta, meta_offset=meta_offset)
@@ -377,3 +375,45 @@ def _get_index_and_columns(df):  # pragma: no cover
         The number of columns.
     """
     return len(df.index), len(df.columns)
+
+
+PandasOnRayDataframePartition._eager_exec_func = PandasOnRayDataframePartition.apply
+PandasOnRayDataframePartition._lazy_exec_func = (
+    PandasOnRayDataframePartition.add_to_apply_calls
+)
+
+
+def _configure_lazy_exec(cls: LazyExecution):
+    """Configure lazy execution mode for PandasOnRayDataframePartition."""
+    mode = cls.get()
+    get_logger().debug(f"Ray lazy execution mode: {mode}")
+    if mode == "Auto":
+        PandasOnRayDataframePartition.apply = (
+            PandasOnRayDataframePartition._eager_exec_func
+        )
+        PandasOnRayDataframePartition.add_to_apply_calls = (
+            PandasOnRayDataframePartition._lazy_exec_func
+        )
+    elif mode == "On":
+
+        def lazy_exec(self, func, *args, **kwargs):
+            return self._lazy_exec_func(func, *args, length=None, width=None, **kwargs)
+
+        PandasOnRayDataframePartition.apply = lazy_exec
+        PandasOnRayDataframePartition.add_to_apply_calls = (
+            PandasOnRayDataframePartition._lazy_exec_func
+        )
+    elif mode == "Off":
+
+        def eager_exec(self, func, *args, length=None, width=None, **kwargs):
+            return self._eager_exec_func(func, *args, **kwargs)
+
+        PandasOnRayDataframePartition.apply = (
+            PandasOnRayDataframePartition._eager_exec_func
+        )
+        PandasOnRayDataframePartition.add_to_apply_calls = eager_exec
+    else:
+        raise ValueError(f"Invalid lazy execution mode: {mode}")
+
+
+LazyExecution.subscribe(_configure_lazy_exec)
