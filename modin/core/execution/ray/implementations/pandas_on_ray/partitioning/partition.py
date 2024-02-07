@@ -99,7 +99,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if isinstance(self._data_ref, DeferredExecution):
             self._data_ref.unsubscribe()
 
-    def apply(self, func: Callable, *args, **kwargs):
+    def apply(self, func: Union[Callable, ray.ObjectRef], *args, **kwargs):
         """
         Apply a function to the object wrapped by this partition.
 
@@ -121,9 +121,6 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         -----
         It does not matter if `func` is callable or an ``ray.ObjectRef``. Ray will
         handle it correctly either way. The keyword arguments are sent as a dictionary.
-
-        If ``LazyExecution`` is enabled, the function is not applied immediately,
-        but is added to the execution tree.
         """
         log = get_logger()
         self._is_debug(log) and log.debug(f"ENTER::Partition.apply::{self._identity}")
@@ -133,7 +130,14 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return self.__constructor__(data, meta=meta, meta_offset=meta_offset)
 
     @_inherit_docstrings(PandasDataframePartition.add_to_apply_calls)
-    def add_to_apply_calls(self, func, *args, length=None, width=None, **kwargs):
+    def add_to_apply_calls(
+        self,
+        func: Union[Callable, ray.ObjectRef],
+        *args,
+        length=None,
+        width=None,
+        **kwargs,
+    ):
         return self.__constructor__(
             data=DeferredExecution(self._data_ref, func, args, kwargs),
             length=length,
