@@ -1159,11 +1159,68 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         PandasDataframePartition
             A PandasDataframePartition object which holds the data of all partitions.
         """
+        cls.finalize(partitions)
 
-        def call_to_pandas(data, partitions):
-            return cls.to_pandas(partitions)
+        def convert_to_pandas(data, partition_shape, *partition_data):
+            if all(
+                isinstance(obj, (pandas.DataFrame, pandas.Series))
+                for obj in partition_data
+            ):
+                height, width, *_ = tuple(partition_shape) + (0,)
+                # restore 2d array
+                objs = iter(partition_data)
+                partition_data = [
+                    [next(objs) for _ in range(width)] for __ in range(height)
+                ]
+            else:
+                # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
+                # This implementation comes from the fact that calling `partition.get`
+                # function is not always equivalent to `partition.to_pandas`.
+                partition_data = [
+                    [obj.to_pandas() for obj in part] for part in partitions
+                ]
+            if all(
+                isinstance(part, pandas.Series)
+                for row in partition_data
+                for part in row
+            ):
+                axis = 0
+            elif all(
+                isinstance(part, pandas.DataFrame)
+                for row in partition_data
+                for part in row
+            ):
+                axis = 1
+            else:
+                ErrorMessage.catch_bugs_and_request_email(True)
 
-        return partitions.flat[0].apply(call_to_pandas, partitions=partitions)
+            def is_part_empty(part):
+                return part.empty and (
+                    not isinstance(part, pandas.DataFrame) or (len(part.columns) == 0)
+                )
+
+            df_rows = [
+                pandas.concat([part for part in row], axis=axis, copy=False)
+                for row in partition_data
+                if not all(is_part_empty(part) for part in row)
+            ]
+            if len(df_rows) == 0:
+                return pandas.DataFrame()
+            else:
+                return concatenate(df_rows)
+
+        preprocessed_func = cls.preprocess_func(convert_to_pandas)
+        partition_shape = partitions.shape
+        partitions_flattened = partitions.flatten()
+        for idx, part in enumerate(partitions_flattened):
+            if hasattr(part, "force_materialization"):
+                partitions_flattened[idx] = part.force_materialization()
+        partition_data = [
+            partition.list_of_blocks[0] for partition in partitions_flattened
+        ]
+        return partitions.flat[0].apply(
+            preprocessed_func, partition_shape, *partition_data
+        )
 
     @classmethod
     @wait_computations_if_benchmark_mode
