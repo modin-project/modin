@@ -2764,7 +2764,7 @@ class PandasDataframe(ClassLogger):
 
     def to_pandas_in_remote_function(self) -> "PandasDataframe":
         """
-        Create a PandasFrame with single partition from the partitions of the current dataframe.
+        Create a single partition PandasDataframe from the partitions of the current dataframe.
 
         Returns
         -------
