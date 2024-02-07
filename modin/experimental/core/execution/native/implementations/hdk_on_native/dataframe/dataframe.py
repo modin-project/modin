@@ -439,6 +439,36 @@ class HdkOnNativeDataframe(PandasDataframe):
             return base
 
         row_positions = maybe_range(row_positions)
+
+        # If row_positions is not a range, then MaskNode will generate a filter,
+        # containing enumeration of all the positions. Filtering rows in this
+        # way is not efficient and, in case of too many values in row_positions,
+        # may result in a huge JSON query. To workaround this issue, creating an
+        # empty frame with row_positions index and inner joining with this one.
+        # If row_positions has less than 10 values, MaskNode is used.
+        if (
+            not is_range_like(row_positions)
+            and is_list_like(row_positions)
+            and len(row_positions) > 10
+        ):
+            lhs = base._maybe_materialize_rowid()
+            if len(lhs._index_cols) == 1 and is_integer_dtype(lhs._dtypes[0]):
+                pdf = pd.DataFrame(index=row_positions)
+                rhs = self.from_pandas(pdf)
+                exprs = lhs._index_exprs()
+                for col in lhs.columns:
+                    exprs[col] = lhs.ref(col)
+                condition = lhs._build_equi_join_condition(
+                    rhs, lhs._index_cols, rhs._index_cols
+                )
+                op = JoinNode(
+                    lhs,
+                    rhs,
+                    exprs=exprs,
+                    condition=condition,
+                )
+                return lhs.copy(op=op, index=pdf.index, partitions=None)
+
         base = base._maybe_materialize_rowid()
         op = MaskNode(base, row_labels=row_labels, row_positions=row_positions)
         base = self.__constructor__(
