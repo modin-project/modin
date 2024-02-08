@@ -4,7 +4,8 @@ import ray
 import modin.pandas as pd
 
 ray.init(address="auto")
-# assert ray.cluster_resources()["CPU"] == 768, "The CPU count is not expected"
+cpu_count = ray.cluster_resources()["CPU"]
+assert cpu_count == 768, f"Expected 768 CPUs, but found {cpu_count}"
 
 file_size = os.path.getsize("big_yellow.csv")
 
