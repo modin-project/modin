@@ -10,7 +10,7 @@
 
 **NOTE**: This exercise has extra requirements. Read instructions carefully before attempting. 
 
-**This exercise instructs users on how to start a 700+ core Ray cluster,
+**This exercise instructs users on how to start a 500+ core Ray cluster,
 and it is not shut down until the end of exercise. Read instructions carefully.**
 
 Often in practice we have a need to exceed the capabilities of a single machine.
@@ -40,7 +40,7 @@ aws configure
 
 ## Starting and connecting to the cluster
 
-This example starts 1 head node (m5.24xlarge) and 7 worker nodes (m5.24xlarge), 768 total CPUs.
+This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 576 total CPUs.
 
 Cost of this cluster can be found here: https://aws.amazon.com/ec2/pricing/on-demand/.
 
@@ -102,12 +102,14 @@ some other Python modules that should be available to execute your own script or
 
 ```bash
 # download a file from the cluster to the local computer:
-ray rsync_down cluster.yaml '/path/on/cluster' '/local/path'
+ray rsync_down modin-cluster.yaml '/path/on/cluster' '/local/path'
 # upload a file from the local computer to the cluster:
-ray rsync_up cluster.yaml '/local/path' '/path/on/cluster'
+ray rsync_up modin-cluster.yaml '/local/path' '/path/on/cluster'
 ```
 
-By running the script on clusters of different sizes, we can see how the CSV file reading time decreases as the number of nodes increases.
+Modin performance scales as the number of nodes and cores increases. The following chart shows
+the performance of the read_csv operation with different number of nodes, with improvements in
+performance as we increase the number of resources Modin can use.
 
 ![ClusterPerf](../../../img/modin_cluster_perf.png)
 

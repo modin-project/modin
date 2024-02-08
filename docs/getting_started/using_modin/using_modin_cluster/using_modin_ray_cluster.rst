@@ -12,7 +12,7 @@ local development and cluster execution. Users are not required to think about
 how many workers exist or how to distribute and partition their data;
 Modin handles all of this seamlessly and transparently.
 
-.. image:: ../../../examples/tutorial/jupyter/img/modin_cluster.png
+.. image:: ../../examples/tutorial/jupyter/img/modin_cluster.png
    :alt: Modin cluster
    :align: center
    :scale: 90%
@@ -37,7 +37,7 @@ just run the following command:
 Starting and connecting to the cluster
 --------------------------------------
 
-This example starts 1 head node (m5.24xlarge) and 7 worker nodes (m5.24xlarge), 768 total CPUs.
+This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 576 total CPUs.
 You can check the `Amazon EC2 pricing`_ .
 
 You can manually create AWS EC2 instances and configure them or just use the `Ray autoscaler` to 
@@ -76,7 +76,7 @@ Executing on a cluster environment
 Modin lets you instantly speed up your workflows with a large data by scaling pandas
 on a cluster. In this tutorial, we will use a 12.5 GB `big_yellow.csv` file that was
 created by concatenating a 200MB `NYC Taxi dataset`_ file 64 times. Preparing this
-file was provided as part of our `Modin's cluster setup config`_.
+file was provided as part of our `Modin's Ray cluster setup config`_.
 
 If you want use another dataset in your own script, you should provide it to each of
 the cluster nodes in the same path. We recomnend doing this by customizing the
@@ -119,7 +119,7 @@ with improvements in performance as we increase the number of resources Modin ca
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
 .. _`NYC Taxi dataset`: https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
-.. _`Modin's cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
+.. _`Modin's Ray cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
 .. _`Amazon EC2 pricing`: https://aws.amazon.com/ec2/pricing/on-demand/
 .. _`exercise_5.py`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
 .. _`Ray client`: https://docs.ray.io/en/latest/cluster/running-applications/job-submission/ray-client.html
