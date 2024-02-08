@@ -142,7 +142,12 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     kwargs["filepath_or_buffer"], nrows=0, engine="c"
                 ).columns.tolist()
 
-            if dtype := kwargs["dtype"]:
+            dtype = kwargs["dtype"]
+            # For details: https://github.com/pandas-dev/pandas/issues/57024
+            dtype_for_whole_dataframe = dtype is not None and not isinstance(
+                dtype, dict
+            )
+            if dtype:
                 if isinstance(dtype, dict):
                     column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
                 else:
@@ -151,7 +156,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             else:
                 column_types = {}
 
-            if parse_dates := kwargs["parse_dates"]:
+            if parse_dates := (
+                None if dtype_for_whole_dataframe else kwargs["parse_dates"]
+            ):
                 # Either list of column names or list of column indices is supported.
                 if isinstance(parse_dates, list) and (
                     all(isinstance(col, str) for col in parse_dates)
