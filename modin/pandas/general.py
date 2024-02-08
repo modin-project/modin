@@ -621,7 +621,7 @@ def get_dummies(
     """
     if sparse:
         raise NotImplementedError(
-            "SparseDataFrame is not implemented. "
+            "SparseArray is not implemented. "
             + "To contribute to Modin, please visit "
             + "github.com/modin-project/modin."
         )

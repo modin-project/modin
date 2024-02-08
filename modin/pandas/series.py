@@ -2538,7 +2538,13 @@ class Series(BasePandasDataset):
             New Series based on the `query_compiler`.
         """
         if os.getpid() != source_pid:
-            return query_compiler.to_pandas()
+            res = query_compiler.to_pandas()
+            # at the query compiler level, `to_pandas` always returns a DataFrame,
+            # even if it stores a Series, as a single-column DataFrame
+            if res.columns == [MODIN_UNNAMED_SERIES_LABEL]:
+                res = res.squeeze(axis=1)
+                res.name = None
+            return res
         # The current logic does not involve creating Modin objects
         # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler, name=name)

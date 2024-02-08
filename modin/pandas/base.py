@@ -520,15 +520,7 @@ class BasePandasDataset(ClassLogger):
                     failure_condition=True,
                     extra_log="{} is an unsupported operation".format(op),
                 )
-        # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
-        # For now we will use pandas.
-        if isinstance(result, type(self)) and not isinstance(
-            result, (pandas.SparseDataFrame, pandas.SparseSeries)
-        ):
-            return self._create_or_update_from_compiler(
-                result, inplace=kwargs.get("inplace", False)
-            )
-        elif isinstance(result, pandas.DataFrame):
+        if isinstance(result, pandas.DataFrame):
             from .dataframe import DataFrame
 
             return DataFrame(result)

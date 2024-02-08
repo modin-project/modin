@@ -28,7 +28,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution, try_cast_to_pandas
@@ -4902,7 +4902,6 @@ def test_binary_numpy_universal_function_issue_6483():
     )
 
 
-@pytest.mark.skipif(Engine.get() == "Dask", reason="TODO: Dask failed for some reason")
 def test__reduce__():
     # `Series.__reduce__` will be called implicitly when lambda expressions are
     # pre-processed for the distributed engine.
