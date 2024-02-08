@@ -1142,7 +1142,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return [obj.apply(preprocessed_func, **kwargs) for obj in partitions]
 
     @classmethod
-    def to_single_partition(cls, partitions):
+    def combine(cls, partitions):
         """
         Convert a NumPy 2D array of partitions to a NumPy 2D array of a single partition.
 
@@ -1154,7 +1154,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         Returns
         -------
         np.ndarray
-                    A NumPy 2D array of a single partition.
+            A NumPy 2D array of a single partition.
         """
 
         def to_pandas_remote(data, partition_shape, *partition_data):

@@ -2771,27 +2771,22 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A single partition PandasDataframe.
         """
-        partitions = self._partition_mgr_cls.to_single_partition(self._partitions)
-        new_row_lengths = (
-            [sum(self._row_lengths_cache)]
-            if self._row_lengths_cache is not None
-            else None
-        )
-        new_column_widths = (
-            [sum(self._column_widths_cache)]
-            if self._column_widths_cache is not None
-            else None
-        )
-        index = self.copy_index_cache()
-        columns = self.copy_columns_cache()
-        dtypes = self.copy_dtypes_cache()
+        partitions = self._partition_mgr_cls.combine(self._partitions)
         result = self.__constructor__(
             partitions,
-            index=index,
-            columns=columns,
-            dtypes=dtypes,
-            row_lengths=new_row_lengths,
-            column_widths=new_column_widths,
+            index=self.copy_index_cache(),
+            columns=self.copy_columns_cache(),
+            row_lengths=(
+                [sum(self._row_lengths_cache)]
+                if self._row_lengths_cache is not None
+                else None
+            ),
+            column_widths=(
+                [sum(self._column_widths_cache)]
+                if self._column_widths_cache is not None
+                else None
+            ),
+            dtypes=self.copy_dtypes_cache(),
         )
         result.synchronize_labels()
         return result
