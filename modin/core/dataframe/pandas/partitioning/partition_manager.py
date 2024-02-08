@@ -1144,10 +1144,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     @classmethod
     def to_single_partition(cls, partitions):
         """
-        Call to_pandas for the given NumPy array of partitions.
-
-        For a NumPy array of partitions create a single partition
-        that has the data for all partitions.
+        Convert a NumPy 2D array of partitions to a NumPy 2D array of a single partition.
 
         Parameters
         ----------
@@ -1156,12 +1153,12 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         Returns
         -------
-        PandasDataframePartition
-            A PandasDataframePartition object which holds the data of all partitions.
+        np.ndarray
+                    A NumPy 2D array of a single partition.
         """
 
         def to_pandas_remote(data, partition_shape, *partition_data):
-        """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
+            """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
             if all(
                 isinstance(obj, (pandas.DataFrame, pandas.Series))
                 for obj in partition_data
@@ -1218,9 +1215,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         partition_refs = [
             partition.list_of_blocks[0] for partition in partitions_flattened
         ]
-        return partitions.flat[0].apply(
-            preprocessed_func, partition_shape, *partition_refs
-        )
+        result = np.array(
+            [
+                partitions.flat[0].apply(
+                    preprocessed_func, partition_shape, *partition_refs
+                )
+            ]
+        ).reshape(1, -1)
+        return result
 
     @classmethod
     @wait_computations_if_benchmark_mode

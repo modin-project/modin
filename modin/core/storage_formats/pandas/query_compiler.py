@@ -1781,9 +1781,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = (
                 get_unique_level_values(index)
                 if consider_index
-                else index
-                if isinstance(index, list)
-                else [index]
+                else index if isinstance(index, list) else [index]
             )
 
             new_columns = (

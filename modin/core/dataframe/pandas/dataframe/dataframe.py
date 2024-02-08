@@ -2771,10 +2771,7 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             A single partition PandasDataframe.
         """
-        single_partition = [
-            self._partition_mgr_cls.to_single_partition(self._partitions)
-        ]
-        partitions = np.array(single_partition).reshape(1, -1)
+        partitions = self._partition_mgr_cls.to_single_partition(self._partitions)
         new_row_lengths = (
             [sum(self._row_lengths_cache)]
             if self._row_lengths_cache is not None
