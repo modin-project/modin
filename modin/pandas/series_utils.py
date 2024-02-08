@@ -48,7 +48,7 @@ class ListAccessor(ClassLogger):
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """
-        Convert `self` to pandas type and call a pandas list.`op` on it.
+        Convert `self` to pandas type and call a pandas list.<op> on it.
 
         Parameters
         ----------
@@ -87,7 +87,7 @@ class StructAccessor(ClassLogger):
 
     def _default_to_pandas(self, op, *args, **kwargs):
         """
-        Convert `self` to pandas type and call a pandas struct.`op` on it.
+        Convert `self` to pandas type and call a pandas struct.<op> on it.
 
         Parameters
         ----------
