@@ -615,6 +615,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                         .set_index(list(left_renamer.values()))
                     )
                     new_dtypes = ModinDtypes.concat([left_dtypes, right_dtypes])
+
             new_self = self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
                     axis=1,

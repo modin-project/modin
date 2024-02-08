@@ -1215,14 +1215,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         partition_refs = [
             partition.list_of_blocks[0] for partition in partitions_flattened
         ]
-        result = np.array(
-            [
-                partitions.flat[0].apply(
-                    preprocessed_func, partition_shape, *partition_refs
-                )
-            ]
-        ).reshape(1, -1)
-        return result
+        combined_partition = partitions.flat[0].apply(
+            preprocessed_func, partition_shape, *partition_refs
+        )
+        return np.array([combined_partition]).reshape(1, -1)
 
     @classmethod
     @wait_computations_if_benchmark_mode
