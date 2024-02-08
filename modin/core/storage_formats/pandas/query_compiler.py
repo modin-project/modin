@@ -520,7 +520,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.to_pandas_in_remote_function()
+        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
@@ -681,7 +681,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.to_pandas_in_remote_function()
+        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"]:
 
@@ -1781,7 +1781,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_index = (
                 get_unique_level_values(index)
                 if consider_index
-                else index if isinstance(index, list) else [index]
+                else index
+                if isinstance(index, list)
+                else [index]
             )
 
             new_columns = (

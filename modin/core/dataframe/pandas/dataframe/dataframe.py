@@ -2762,19 +2762,19 @@ class PandasDataframe(ClassLogger):
             partitions, new_index, new_columns, row_lengths, column_widths
         )
 
-    def to_pandas_in_remote_function(self) -> "PandasDataframe":
+    def combine(self) -> "PandasDataframe":
         """
         Create a single partition PandasDataframe from the partitions of the current dataframe.
 
         Returns
         -------
         PandasDataframe
-            An PandasDataframe containing only a single partition.
+            A single partition PandasDataframe.
         """
-        partition_with_to_pandas_data = [
+        single_partition = [
             self._partition_mgr_cls.to_single_partition(self._partitions)
         ]
-        partitions = np.array(partition_with_to_pandas_data).reshape(1, -1)
+        partitions = np.array(single_partition).reshape(1, -1)
         new_row_lengths = (
             [sum(self._row_lengths_cache)]
             if self._row_lengths_cache is not None
@@ -2785,11 +2785,14 @@ class PandasDataframe(ClassLogger):
             if self._column_widths_cache is not None
             else None
         )
+        index = self.copy_index_cache()
+        columns = self.copy_columns_cache()
+        dtypes = self.copy_dtypes_cache()
         result = self.__constructor__(
             partitions,
-            self.index,
-            columns=self.columns,
-            dtypes=self.dtypes,
+            index=index,
+            columns=columns,
+            dtypes=dtypes,
             row_lengths=new_row_lengths,
             column_widths=new_column_widths,
         )

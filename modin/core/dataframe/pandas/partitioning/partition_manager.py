@@ -1214,11 +1214,11 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         for idx, part in enumerate(partitions_flattened):
             if hasattr(part, "force_materialization"):
                 partitions_flattened[idx] = part.force_materialization()
-        partition_data = [
+        partition_refs = [
             partition.list_of_blocks[0] for partition in partitions_flattened
         ]
         return partitions.flat[0].apply(
-            preprocessed_func, partition_shape, *partition_data
+            preprocessed_func, partition_shape, *partition_refs
         )
 
     @classmethod
