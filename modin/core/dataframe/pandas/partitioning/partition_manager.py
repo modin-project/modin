@@ -1161,6 +1161,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         """
 
         def to_pandas_remote(data, partition_shape, *partition_data):
+        """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
             if all(
                 isinstance(obj, (pandas.DataFrame, pandas.Series))
                 for obj in partition_data
