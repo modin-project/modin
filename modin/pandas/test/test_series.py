@@ -4645,6 +4645,20 @@ def test_struct_general():
     )
 
 
+def test_case_when():
+    # Copied from pandas
+    c_md, c_pd = create_test_series([6, 7, 8, 9], name="c")
+    a_md, a_pd = create_test_series([0, 0, 1, 2])
+    b_md, b_pd = create_test_series([0, 3, 4, 5])
+
+    results = [None, None]
+    for idx, (c, a, b) in enumerate(((c_md, a_md, b_md), (c_pd, a_pd, b_pd))):
+        results[idx] = c.case_when(
+            caselist=[(a.gt(0), a), (b.gt(0), b)]  # condition, replacement
+        )
+    df_equals(*results)
+
+
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 def test_non_commutative_add_string_to_series(data):
     # This test checks that add and radd do different things when addition is
