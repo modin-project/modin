@@ -12,7 +12,7 @@ local development and cluster execution. Users are not required to think about
 how many workers exist or how to distribute and partition their data;
 Modin handles all of this seamlessly and transparently.
 
-.. image:: ../../examples/tutorial/jupyter/img/modin_cluster.png
+.. image:: ../../../img/modin_cluster.png
    :alt: Modin cluster
    :align: center
    :scale: 90%
@@ -111,7 +111,7 @@ Modin performance scales as the number of nodes and cores increases. The followi
 chart shows the performance of the read_csv operation with different number of nodes,
 with improvements in performance as we increase the number of resources Modin can use.
 
-.. image:: ../../../examples/tutorial/jupyter/img/modin_cluster_perf.png
+.. image:: ../../../../examples/tutorial/jupyter/img/modin_cluster_perf.png
    :alt: Cluster Performance
    :align: center
    :scale: 90%
