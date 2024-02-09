@@ -4606,8 +4606,8 @@ def test_list_general():
         dtype=pd.ArrowDtype(pa.list_(pa.int64())),
     )
     eval_general(modin_series, pandas_series, lambda series: series.list.flatten())
-    eval_general(modin_series, pandas_series, lambda series: series.list.list())
-    eval_general(modin_series, pandas_series, lambda series: series.list.list[0])
+    eval_general(modin_series, pandas_series, lambda series: series.list.len())
+    eval_general(modin_series, pandas_series, lambda series: series.list[0])
 
 
 def test_struct_general():

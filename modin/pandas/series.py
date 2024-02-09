@@ -1013,9 +1013,8 @@ class Series(BasePandasDataset):
         """
         Replace values where the conditions are True.
         """
-        return self._default_to_pandas(
-            pandas.Series.case_when,
-            caselist=caselist,
+        return self.__constructor__(
+            query_compiler=self._query_compiler.case_when(caselist=caselist)
         )
 
     def fillna(

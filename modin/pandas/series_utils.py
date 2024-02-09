@@ -37,35 +37,22 @@ class ListAccessor(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
+    @pandas.util.cache_readonly
+    def _Series(self):  # noqa: GL08
+        # to avoid cyclic import
+        from .series import Series
+
+        return Series
+
     def flatten(self):
-        return self._default_to_pandas(pandas.Series.list.flatten)
+        return self._Series(query_compiler=self._query_compiler.list_flatten())
 
     def len(self):
-        return self._default_to_pandas(pandas.Series.list.len)
+        return self._Series(query_compiler=self._query_compiler.list_len())
 
     def __getitem__(self, key):
-        return self._default_to_pandas(pandas.Series.list.__getitem__, key)
-
-    def _default_to_pandas(self, op, *args, **kwargs):
-        """
-        Convert `self` to pandas type and call a pandas list.<op> on it.
-
-        Parameters
-        ----------
-        op : str
-            Name of pandas function.
-        *args : list
-            Additional positional arguments to be passed in `op`.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `op`.
-
-        Returns
-        -------
-        object
-            Result of operation.
-        """
-        return self._series._default_to_pandas(
-            lambda series: op(series.list, *args, **kwargs)
+        return self._Series(
+            query_compiler=self._query_compiler.list__getitem__(key=key)
         )
 
 
@@ -75,37 +62,28 @@ class StructAccessor(ClassLogger):
         self._series = data
         self._query_compiler = data._query_compiler
 
+    @pandas.util.cache_readonly
+    def _Series(self):  # noqa: GL08
+        # to avoid cyclic import
+        from modin.pandas.series import Series
+
+        return Series
+
     @property
     def dtypes(self):
-        return self._series._default_to_pandas(pandas.Series.struct).dtypes
+        return self._Series(query_compiler=self._query_compiler.struct_dtypes())
 
     def field(self, name_or_index):
-        return self._default_to_pandas(pandas.Series.struct.field, name_or_index)
+        return self._Series(
+            query_compiler=self._query_compiler.struct_field(
+                name_or_index=name_or_index
+            )
+        )
 
     def explode(self):
-        return self._default_to_pandas(pandas.Series.struct.explode)
+        from modin.pandas.dataframe import DataFrame
 
-    def _default_to_pandas(self, op, *args, **kwargs):
-        """
-        Convert `self` to pandas type and call a pandas struct.<op> on it.
-
-        Parameters
-        ----------
-        op : str
-            Name of pandas function.
-        *args : list
-            Additional positional arguments to be passed in `op`.
-        **kwargs : dict
-            Additional keywords arguments to be passed in `op`.
-
-        Returns
-        -------
-        object
-            Result of operation.
-        """
-        return self._series._default_to_pandas(
-            lambda series: op(series.struct, *args, **kwargs)
-        )
+        return DataFrame(query_compiler=self._query_compiler.struct_explode())
 
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
@@ -117,7 +95,7 @@ class CategoryMethods(ClassLogger):
     @pandas.util.cache_readonly
     def _Series(self):  # noqa: GL08
         # to avoid cyclic import
-        from .series import Series
+        from modin.pandas.series import Series
 
         return Series
 

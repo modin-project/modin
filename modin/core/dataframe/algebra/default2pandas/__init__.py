@@ -19,10 +19,12 @@ from .dataframe import DataFrameDefault
 from .datetime import DateTimeDefault
 from .default import DefaultMethod
 from .groupby import GroupByDefault, SeriesGroupByDefault
+from .list import ListDefault
 from .resample import ResampleDefault
 from .rolling import ExpandingDefault, RollingDefault
 from .series import SeriesDefault
 from .str import StrDefault
+from .struct import StructDefault
 
 __all__ = [
     "DataFrameDefault",
@@ -37,4 +39,6 @@ __all__ = [
     "CatDefault",
     "GroupByDefault",
     "SeriesGroupByDefault",
+    "ListDefault",
+    "StructDefault",
 ]

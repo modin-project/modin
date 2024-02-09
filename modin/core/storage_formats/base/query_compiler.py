@@ -35,11 +35,13 @@ from modin.core.dataframe.algebra.default2pandas import (
     DateTimeDefault,
     ExpandingDefault,
     GroupByDefault,
+    ListDefault,
     ResampleDefault,
     RollingDefault,
     SeriesDefault,
     SeriesGroupByDefault,
     StrDefault,
+    StructDefault,
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
@@ -6563,6 +6565,88 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of Categories methods
 
+    # List accessor's methods
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.flatten")
+    def list_flatten(self):
+        """
+        Flatten list values.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.flatten)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.len")
+    def list_len(self):
+        """
+        Return the length of each list in the Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.len)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.__getitem__")
+    def list__getitem__(self, key):  # noqa: PR01
+        """
+        Index or slice lists in the Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.__getitem__)(self, key=key)
+
+    # End of List accessor's methods
+
+    # Struct accessor's methods
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.dtypes")
+    def struct_dtypes(self):
+        """
+        Return the dtype object of each child field of the struct.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.dtypes)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.field")
+    def struct_field(self, name_or_index):  # noqa: PR01
+        """
+        Extract a child field of a struct as a Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.field)(
+            self, name_or_index=name_or_index
+        )
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.explode")
+    def struct_explode(self):
+        """
+        Extract all child fields of a struct as a DataFrame.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.explode)(self)
+
+    # End of Struct accessor's methods
+
     # DataFrame methods
 
     def invert(self):
@@ -6616,6 +6700,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             keep_equal=keep_equal,
             result_names=result_names,
         )
+
+    @doc_utils.add_refer_to("Series.case_when")
+    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the conditions are True.
+        """
+        return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
     def repartition(self, axis=None):
         """
