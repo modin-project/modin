@@ -401,7 +401,7 @@ class DataFrame(BasePandasDataset):
         """
         Apply a function along an axis of the ``DataFrame``.
         """
-        if by_row != "compat" or engine != "python":
+        if by_row != "compat" or engine != "python" or engine_kwargs:
             # TODO: add test
             return self._default_to_pandas(
                 pandas.DataFrame.apply,

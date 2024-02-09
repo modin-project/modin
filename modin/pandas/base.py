@@ -471,7 +471,7 @@ class BasePandasDataset(ClassLogger):
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
-    def _default_to_pandas(self, op, *args, **kwargs):
+    def _default_to_pandas(self, op, *args, reason: str = None, **kwargs):
         """
         Convert dataset to pandas type and call a pandas function on it.
 
@@ -481,6 +481,7 @@ class BasePandasDataset(ClassLogger):
             Name of pandas function.
         *args : list
             Additional positional arguments to be passed to `op`.
+        reason : str, optional
         **kwargs : dict
             Additional keywords arguments to be passed to `op`.
 
@@ -495,7 +496,8 @@ class BasePandasDataset(ClassLogger):
                 type(self).__name__,
                 op if isinstance(op, str) else op.__name__,
                 empty_self_str,
-            )
+            ),
+            reason=reason,
         )
 
         args = try_cast_to_pandas(args)
@@ -1112,6 +1114,7 @@ class BasePandasDataset(ClassLogger):
         if limit_area is not None:
             return self._default_to_pandas(
                 "bfill",
+                reason="'limit_area' parameter isn't supported",
                 axis=axis,
                 inplace=inplace,
                 limit=limit,
@@ -1620,6 +1623,7 @@ class BasePandasDataset(ClassLogger):
         if limit_area is not None:
             return self._default_to_pandas(
                 "ffill",
+                reason="'limit_area' parameter isn't supported",
                 axis=axis,
                 inplace=inplace,
                 limit=limit,

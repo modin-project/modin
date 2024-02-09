@@ -1997,6 +1997,15 @@ def test_ffill(data):
     df_equals(modin_series_cp, pandas_series_cp)
 
 
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_ser, pandas_ser = create_test_series([1, None, 2, None])
+    eval_general(
+        modin_ser, pandas_ser, lambda ser: getattr(ser, method)(limit_area=limit_area)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("reindex", [None, 2, -2])
 @pytest.mark.parametrize("limit", [None, 1, 2, 0.5, -1, -2, 1.5])

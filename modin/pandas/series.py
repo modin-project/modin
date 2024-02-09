@@ -2539,7 +2539,7 @@ class Series(BasePandasDataset):
         """
         if os.getpid() != source_pid:
             res = query_compiler.to_pandas()
-            # at the query compiler level, `to_pandas` always returns a DataFrame,
+            # at the query compiler layer, `to_pandas` always returns a DataFrame,
             # even if it stores a Series, as a single-column DataFrame
             if res.columns == [MODIN_UNNAMED_SERIES_LABEL]:
                 res = res.squeeze(axis=1)

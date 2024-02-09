@@ -197,6 +197,15 @@ def test_bfill(data):
     df_equals(modin_df.bfill(), pandas_df.bfill())
 
 
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_df, pandas_df = create_test_dfs([1, None, 2, None])
+    eval_general(
+        modin_df, pandas_df, lambda df: getattr(df, method)(limit_area=limit_area)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
