@@ -90,7 +90,10 @@ pytestmark = [
         "ignore:DataFrameGroupBy.shift with axis=1 is deprecated:FutureWarning"
     ),
     pytest.mark.filterwarnings(
-        "ignore:(DataFrameGroupBy|SeriesGroupBy|DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
+        "ignore:(DataFrameGroupBy|SeriesGroupBy).fillna is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:(DataFrame|Series).fillna with 'method' is deprecated:FutureWarning"
     ),
     # FIXME: these cases inconsistent between modin and pandas
     pytest.mark.filterwarnings(
@@ -98,6 +101,9 @@ pytestmark = [
     ),
     pytest.mark.filterwarnings(
         "ignore:The default of observed=False is deprecated:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:When grouping with a length-1 list-like, you will need to pass a length-1 tuple to get_group in a future:FutureWarning"
     ),
     pytest.mark.filterwarnings(
         "ignore:.*DataFrame.idxmax with all-NA values, or any-NA and skipna=False, is deprecated:FutureWarning"
@@ -1721,7 +1727,7 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
     )
     modin_df = from_pandas(pandas_df)
 
-    new_index = pandas.date_range("1/12/2020", periods=4, freq="S")
+    new_index = pandas.date_range("1/12/2020", periods=4, freq="s")
     if groupby_axis == 0 and shift_axis == 0:
         pandas_df.index = modin_df.index = new_index
         by = [["col2", "col3"], ["col2"], ["col4"], [0, 1, 0, 2]]
@@ -1736,7 +1742,7 @@ def test_shift_freq(groupby_axis, shift_axis, groupby_sort):
         eval_general(
             modin_groupby,
             pandas_groupby,
-            lambda groupby: groupby.shift(axis=shift_axis, freq="S"),
+            lambda groupby: groupby.shift(axis=shift_axis, freq="s"),
         )
 
 
@@ -2715,7 +2721,7 @@ def test_skew_corner_cases():
     "by",
     [
         pandas.Grouper(key="time_stamp", freq="3D"),
-        [pandas.Grouper(key="time_stamp", freq="1M"), "count"],
+        [pandas.Grouper(key="time_stamp", freq="1ME"), "count"],
     ],
 )
 def test_groupby_with_grouper(by):
@@ -3212,12 +3218,12 @@ def test_groupby_fillna_axis_1_warning():
 
     with pytest.warns(
         FutureWarning,
-        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+        match="DataFrameGroupBy.fillna is deprecated",
     ):
         modin_groupby.fillna(method="ffill")
     with pytest.warns(
         FutureWarning,
-        match="DataFrameGroupBy.fillna with 'method' is deprecated",
+        match="DataFrameGroupBy.fillna is deprecated",
     ):
         pandas_groupby.fillna(method="ffill")
 

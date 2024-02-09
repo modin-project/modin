@@ -132,7 +132,7 @@ def test_partition_to_numpy(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
     with warns_that_defaulting_to_pandas():
@@ -195,6 +195,15 @@ def test_bfill(data):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
     df_equals(modin_df.bfill(), pandas_df.bfill())
+
+
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_df, pandas_df = create_test_dfs([1, None, 2, None])
+    eval_general(
+        modin_df, pandas_df, lambda df: getattr(df, method)(limit_area=limit_area)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -789,7 +798,7 @@ def test_replace():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
+@pytest.mark.parametrize("rule", ["5min", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
     data, index = (
@@ -808,7 +817,7 @@ def test_resampler(rule, axis):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method",
@@ -833,7 +842,7 @@ def test_resampler_functions(rule, axis, method):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method_arg",
@@ -861,7 +870,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
 @pytest.mark.parametrize(
@@ -889,7 +898,7 @@ def test_resample_specific(rule, closed, label, on, level):
 
     if on is None and level is not None:
         index = pandas.MultiIndex.from_product(
-            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="H")]
+            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="h")]
         )
         pandas_df.index = index
         modin_df.index = index
@@ -897,8 +906,8 @@ def test_resample_specific(rule, closed, label, on, level):
         level = None
 
     if on is not None:
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
+        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
 
     pandas_resampler = pandas_df.resample(
         rule,
@@ -948,14 +957,14 @@ def test_resample_specific(rule, closed, label, on, level):
     ],
 )
 def test_resample_getitem(columns):
-    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    index = pandas.date_range("1/1/2013", periods=9, freq="min")
     data = {
         "price": range(9),
         "volume": range(10, 19),
     }
     eval_general(
         *create_test_dfs(data, index=index),
-        lambda df: df.resample("3T")[columns].mean(),
+        lambda df: df.resample("3min")[columns].mean(),
     )
 
 

@@ -471,7 +471,7 @@ class BasePandasDataset(ClassLogger):
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
-    def _default_to_pandas(self, op, *args, **kwargs):
+    def _default_to_pandas(self, op, *args, reason: str = None, **kwargs):
         """
         Convert dataset to pandas type and call a pandas function on it.
 
@@ -481,6 +481,7 @@ class BasePandasDataset(ClassLogger):
             Name of pandas function.
         *args : list
             Additional positional arguments to be passed to `op`.
+        reason : str, optional
         **kwargs : dict
             Additional keywords arguments to be passed to `op`.
 
@@ -495,7 +496,8 @@ class BasePandasDataset(ClassLogger):
                 type(self).__name__,
                 op if isinstance(op, str) else op.__name__,
                 empty_self_str,
-            )
+            ),
+            reason=reason,
         )
 
         args = try_cast_to_pandas(args)
@@ -520,15 +522,7 @@ class BasePandasDataset(ClassLogger):
                     failure_condition=True,
                     extra_log="{} is an unsupported operation".format(op),
                 )
-        # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
-        # For now we will use pandas.
-        if isinstance(result, type(self)) and not isinstance(
-            result, (pandas.SparseDataFrame, pandas.SparseSeries)
-        ):
-            return self._create_or_update_from_compiler(
-                result, inplace=kwargs.get("inplace", False)
-            )
-        elif isinstance(result, pandas.DataFrame):
+        if isinstance(result, pandas.DataFrame):
             from .dataframe import DataFrame
 
             return DataFrame(result)
@@ -1106,11 +1100,27 @@ class BasePandasDataset(ClassLogger):
         return downcast
 
     def bfill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "bfill",
+                reason="'limit_area' parameter isn't supported",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "bfill")
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -1599,11 +1609,27 @@ class BasePandasDataset(ClassLogger):
         )
 
     def ffill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "ffill",
+                reason="'limit_area' parameter isn't supported",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "ffill")
         with warnings.catch_warnings():
             warnings.filterwarnings(
@@ -2489,8 +2515,8 @@ class BasePandasDataset(ClassLogger):
         axis: Axis = lib.no_default,
         closed: Optional[str] = None,
         label: Optional[str] = None,
-        convention: str = "start",
-        kind: Optional[str] = None,
+        convention: str = lib.no_default,
+        kind: Optional[str] = lib.no_default,
         on: Level = None,
         level: Level = None,
         origin: Union[str, TimestampConvertibleTypes] = "start_day",

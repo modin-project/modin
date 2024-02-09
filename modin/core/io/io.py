@@ -478,6 +478,8 @@ class BaseIO:
         widths=None,
         infer_nrows=100,
         dtype_backend=no_default,
+        iterator=False,
+        chunksize=None,
         **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
@@ -487,6 +489,8 @@ class BaseIO:
             widths=widths,
             infer_nrows=infer_nrows,
             dtype_backend=dtype_backend,
+            iterator=iterator,
+            chunksize=chunksize,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):

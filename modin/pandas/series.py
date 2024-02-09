@@ -38,7 +38,13 @@ from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 from .accessor import CachedAccessor, SparseAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .iterator import PartitionIterator
-from .series_utils import CategoryMethods, DatetimeProperties, StringMethods
+from .series_utils import (
+    CategoryMethods,
+    DatetimeProperties,
+    ListAccessor,
+    StringMethods,
+    StructAccessor,
+)
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
@@ -88,7 +94,7 @@ class Series(BasePandasDataset):
         dtype=None,
         name=None,
         copy=None,
-        fastpath=False,
+        fastpath=lib.no_default,
         query_compiler=None,
     ):
         from modin.numpy import array
@@ -1003,6 +1009,14 @@ class Series(BasePandasDataset):
             use_na_sentinel=use_na_sentinel,
         )
 
+    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the conditions are True.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.case_when(caselist=caselist)
+        )
+
     def fillna(
         self,
         value=None,
@@ -1800,6 +1814,8 @@ class Series(BasePandasDataset):
     sparse = CachedAccessor("sparse", SparseAccessor)
     str = CachedAccessor("str", StringMethods)
     dt = CachedAccessor("dt", DatetimeProperties)
+    list = CachedAccessor("list", ListAccessor)
+    struct = CachedAccessor("struct", StructAccessor)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -2521,7 +2537,13 @@ class Series(BasePandasDataset):
             New Series based on the `query_compiler`.
         """
         if os.getpid() != source_pid:
-            return query_compiler.to_pandas()
+            res = query_compiler.to_pandas()
+            # at the query compiler layer, `to_pandas` always returns a DataFrame,
+            # even if it stores a Series, as a single-column DataFrame
+            if res.columns == [MODIN_UNNAMED_SERIES_LABEL]:
+                res = res.squeeze(axis=1)
+                res.name = None
+            return res
         # The current logic does not involve creating Modin objects
         # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler, name=name)

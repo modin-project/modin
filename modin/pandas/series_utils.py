@@ -31,6 +31,61 @@ if TYPE_CHECKING:
     from pandas._typing import npt
 
 
+@_inherit_docstrings(pandas.core.arrays.arrow.ListAccessor)
+class ListAccessor(ClassLogger):
+    def __init__(self, data=None):
+        self._series = data
+        self._query_compiler = data._query_compiler
+
+    @pandas.util.cache_readonly
+    def _Series(self):  # noqa: GL08
+        # to avoid cyclic import
+        from .series import Series
+
+        return Series
+
+    def flatten(self):
+        return self._Series(query_compiler=self._query_compiler.list_flatten())
+
+    def len(self):
+        return self._Series(query_compiler=self._query_compiler.list_len())
+
+    def __getitem__(self, key):
+        return self._Series(
+            query_compiler=self._query_compiler.list__getitem__(key=key)
+        )
+
+
+@_inherit_docstrings(pandas.core.arrays.arrow.StructAccessor)
+class StructAccessor(ClassLogger):
+    def __init__(self, data=None):
+        self._series = data
+        self._query_compiler = data._query_compiler
+
+    @pandas.util.cache_readonly
+    def _Series(self):  # noqa: GL08
+        # to avoid cyclic import
+        from modin.pandas.series import Series
+
+        return Series
+
+    @property
+    def dtypes(self):
+        return self._Series(query_compiler=self._query_compiler.struct_dtypes())
+
+    def field(self, name_or_index):
+        return self._Series(
+            query_compiler=self._query_compiler.struct_field(
+                name_or_index=name_or_index
+            )
+        )
+
+    def explode(self):
+        from modin.pandas.dataframe import DataFrame
+
+        return DataFrame(query_compiler=self._query_compiler.struct_explode())
+
+
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(ClassLogger):
     def __init__(self, data):
@@ -40,7 +95,7 @@ class CategoryMethods(ClassLogger):
     @pandas.util.cache_readonly
     def _Series(self):  # noqa: GL08
         # to avoid cyclic import
-        from .series import Series
+        from modin.pandas.series import Series
 
         return Series
 

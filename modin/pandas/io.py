@@ -181,12 +181,12 @@ def read_csv(
     na_values=None,
     keep_default_na: bool = True,
     na_filter: bool = True,
-    verbose: bool = False,
+    verbose: bool = no_default,
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=None,
     infer_datetime_format: bool = no_default,
-    keep_date_col: bool = False,
+    keep_date_col: bool = no_default,
     date_parser=no_default,
     date_format=None,
     dayfirst: bool = False,
@@ -210,7 +210,7 @@ def read_csv(
     # Error Handling
     on_bad_lines="error",
     # Internal
-    delim_whitespace: bool = False,
+    delim_whitespace: bool = no_default,
     low_memory=_c_parser_defaults["low_memory"],
     memory_map: bool = False,
     float_precision: Literal["high", "legacy"] | None = None,
@@ -253,12 +253,12 @@ def read_table(
     na_values=None,
     keep_default_na: bool = True,
     na_filter: bool = True,
-    verbose: bool = False,
+    verbose: bool = no_default,
     skip_blank_lines: bool = True,
     # Datetime Handling
     parse_dates=False,
     infer_datetime_format: bool = no_default,
-    keep_date_col: bool = False,
+    keep_date_col: bool = no_default,
     date_parser=no_default,
     date_format: str = None,
     dayfirst: bool = False,
@@ -282,7 +282,7 @@ def read_table(
     # Error Handling
     on_bad_lines="error",
     # Internal
-    delim_whitespace=False,
+    delim_whitespace: bool = no_default,
     low_memory=_c_parser_defaults["low_memory"],
     memory_map: bool = False,
     float_precision: str | None = None,
@@ -656,6 +656,8 @@ def read_fwf(
     widths=None,
     infer_nrows=100,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
+    iterator: bool = False,
+    chunksize: Optional[int] = None,
     **kwds,
 ):  # noqa: PR01, RT01, D200
     """

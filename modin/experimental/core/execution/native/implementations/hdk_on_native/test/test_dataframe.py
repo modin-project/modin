@@ -1440,6 +1440,10 @@ class TestAgg:
                         # TODO: make sure we can ignore this warning
                         or "Frame contain columns with unsupported data-types"
                         in message
+                        # Looks like the warning comes from pyarrow, more details:
+                        # https://github.com/pandas-dev/pandas/pull/52419
+                        or "Passing a BlockManager to DataFrame is deprecated"
+                        in message
                     ):
                         continue
                     assert (

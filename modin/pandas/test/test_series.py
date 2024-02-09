@@ -542,7 +542,7 @@ def test___repr__(name, dt_index, data):
     pandas_series.name = modin_series.name = name
     if dt_index:
         index = pandas.date_range(
-            "1/1/2000", periods=len(pandas_series.index), freq="T"
+            "1/1/2000", periods=len(pandas_series.index), freq="min"
         )
         pandas_series.index = modin_series.index = index
 
@@ -1019,7 +1019,7 @@ def test_argsort(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
@@ -1560,7 +1560,7 @@ def test_diff(data, periods):
 
 
 def test_diff_with_dates():
-    data = pandas.date_range("2018-01-01", periods=15, freq="H").values
+    data = pandas.date_range("2018-01-01", periods=15, freq="h").values
     pandas_series = pandas.Series(data)
     modin_series = pd.Series(pandas_series)
 
@@ -1811,9 +1811,9 @@ def test_dt(timezone):
         modin_series.dt.strftime("%B %d, %Y, %r"),
         pandas_series.dt.strftime("%B %d, %Y, %r"),
     )
-    df_equals(modin_series.dt.round("H"), pandas_series.dt.round("H"))
-    df_equals(modin_series.dt.floor("H"), pandas_series.dt.floor("H"))
-    df_equals(modin_series.dt.ceil("H"), pandas_series.dt.ceil("H"))
+    df_equals(modin_series.dt.round("h"), pandas_series.dt.round("h"))
+    df_equals(modin_series.dt.floor("h"), pandas_series.dt.floor("h"))
+    df_equals(modin_series.dt.ceil("h"), pandas_series.dt.ceil("h"))
     df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
     df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
 
@@ -1863,7 +1863,7 @@ def test_dt(timezone):
         data = pd.period_range("2016-12-31", periods=128, freq="D")
         modin_series = pd.Series(data)
         pandas_series = pandas.Series(data)
-        df_equals(modin_series.dt.asfreq("T"), pandas_series.dt.asfreq("T"))
+        df_equals(modin_series.dt.asfreq("min"), pandas_series.dt.asfreq("min"))
 
 
 @pytest.mark.parametrize(
@@ -1995,6 +1995,15 @@ def test_ffill(data):
     modin_series_cp.ffill(inplace=True)
     pandas_series_cp.ffill(inplace=True)
     df_equals(modin_series_cp, pandas_series_cp)
+
+
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_ser, pandas_ser = create_test_series([1, None, 2, None])
+    eval_general(
+        modin_ser, pandas_ser, lambda ser: getattr(ser, method)(limit_area=limit_area)
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -2936,8 +2945,8 @@ def test_replace():
 @pytest.mark.parametrize("level", [None, 1])
 @pytest.mark.exclude_in_sanity
 def test_resample(closed, label, level):
-    rule = "5T"
-    freq = "H"
+    rule = "5min"
+    freq = "h"
 
     index = pandas.date_range("1/1/2000", periods=12, freq=freq)
     pandas_series = pandas.Series(range(12), index=index)
@@ -4583,6 +4592,80 @@ def test_str_decode(encoding, errors, str_encode_decode_test_data):
         ),
         lambda s: s.str.decode(encoding, errors=errors),
     )
+
+
+def test_list_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            [1, 2, 3],
+            [3],
+        ],
+        dtype=pd.ArrowDtype(pa.list_(pa.int64())),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.list.flatten())
+    eval_general(modin_series, pandas_series, lambda series: series.list.len())
+    eval_general(modin_series, pandas_series, lambda series: series.list[0])
+
+
+def test_struct_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": 1, "project": "pandas"},
+            {"version": 2, "project": "pandas"},
+            {"version": 1, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", pa.int64()), ("project", pa.string())])
+        ),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.dtypes)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.struct.field("project")
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.explode())
+
+    # nested struct types
+    version_type = pa.struct(
+        [
+            ("major", pa.int64()),
+            ("minor", pa.int64()),
+        ]
+    )
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": {"major": 1, "minor": 5}, "project": "pandas"},
+            {"version": {"major": 2, "minor": 1}, "project": "pandas"},
+            {"version": {"major": 1, "minor": 26}, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", version_type), ("project", pa.string())])
+        ),
+    )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.struct.field(["version", "minor"]),
+    )
+
+
+def test_case_when():
+    # Copied from pandas
+    c_md, c_pd = create_test_series([6, 7, 8, 9], name="c")
+    a_md, a_pd = create_test_series([0, 0, 1, 2])
+    b_md, b_pd = create_test_series([0, 3, 4, 5])
+
+    results = [None, None]
+    for idx, (c, a, b) in enumerate(((c_md, a_md, b_md), (c_pd, a_pd, b_pd))):
+        results[idx] = c.case_when(
+            caselist=[(a.gt(0), a), (b.gt(0), b)]  # condition, replacement
+        )
+    df_equals(*results)
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

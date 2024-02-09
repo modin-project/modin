@@ -41,8 +41,6 @@ def test_top_level_api_equality():
         "tseries",
         "to_msgpack",  # This one is experimental, and doesn't look finished
         "Panel",  # This is deprecated and throws a warning every time.
-        "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
-        "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
     ]
 
     ignore_modin = [
@@ -240,9 +238,9 @@ def test_sparse_accessor_api_equality(obj):
 def test_groupby_api_equality(obj):
     modin_dir = [x for x in dir(getattr(pd.groupby, obj)) if x[0] != "_"]
     pandas_dir = [x for x in dir(getattr(pandas.core.groupby, obj)) if x[0] != "_"]
-    # These attributes are hidden in the DataFrameGroupBy/SeriesGroupBy instance,
-    # but available in the DataFrameGroupBy/SeriesGroupBy class in pandas.
-    ignore = ["keys", "level"]
+    # These attributes are not mentioned in the pandas documentation,
+    # but we might want to implement them someday.
+    ignore = ["keys", "level", "grouper"]
     missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         len(missing_from_modin)

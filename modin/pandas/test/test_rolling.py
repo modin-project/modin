@@ -159,13 +159,13 @@ def test_dataframe_window(data, window, min_periods, axis, method, kwargs):
 @pytest.mark.parametrize("closed", ["both", "right"])
 @pytest.mark.parametrize("window", [3, "3s"])
 def test_dataframe_dt_index(axis, on, closed, window):
-    index = pandas.date_range("31/12/2000", periods=12, freq="T")
+    index = pandas.date_range("31/12/2000", periods=12, freq="min")
     data = {"A": range(12), "B": range(12)}
     pandas_df = pandas.DataFrame(data, index=index)
     modin_df = pd.DataFrame(data, index=index)
     if on is not None and axis == lib.no_default and isinstance(window, str):
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-        modin_df[on] = pd.date_range("22/06/1941", periods=12, freq="T")
+        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
+        modin_df[on] = pd.date_range("22/06/1941", periods=12, freq="min")
     else:
         on = None
     if axis == "columns":
@@ -305,7 +305,7 @@ def test_series_window(data, window, min_periods, method, kwargs):
 
 @pytest.mark.parametrize("closed", ["both", "right"])
 def test_series_dt_index(closed):
-    index = pandas.date_range("1/1/2000", periods=12, freq="T")
+    index = pandas.date_range("1/1/2000", periods=12, freq="min")
     pandas_series = pandas.Series(range(12), index=index)
     modin_series = pd.Series(range(12), index=index)
 
@@ -343,7 +343,7 @@ def test_issue_3512():
 
 
 def test_rolling_axis_1_depr():
-    index = pandas.date_range("31/12/2000", periods=12, freq="T")
+    index = pandas.date_range("31/12/2000", periods=12, freq="min")
     data = {"A": range(12), "B": range(12)}
     modin_df = pd.DataFrame(data, index=index)
     with pytest.warns(

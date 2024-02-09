@@ -142,7 +142,10 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     kwargs["filepath_or_buffer"], nrows=0, engine="c"
                 ).columns.tolist()
 
-            if dtype := kwargs["dtype"]:
+            dtype = kwargs["dtype"]
+            # For details: https://github.com/pandas-dev/pandas/issues/57024
+            entire_dataframe_dtype = dtype is not None and not isinstance(dtype, dict)
+            if dtype:
                 if isinstance(dtype, dict):
                     column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
                 else:
@@ -151,7 +154,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             else:
                 column_types = {}
 
-            if parse_dates := kwargs["parse_dates"]:
+            if parse_dates := (
+                None if entire_dataframe_dtype else kwargs["parse_dates"]
+            ):
                 # Either list of column names or list of column indices is supported.
                 if isinstance(parse_dates, list) and (
                     all(isinstance(col, str) for col in parse_dates)
@@ -185,7 +190,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             usecols_md = cls._prepare_pyarrow_usecols(kwargs)
 
             po = ParseOptions(
-                delimiter="\\s+" if kwargs["delim_whitespace"] else delimiter,
+                delimiter="\\s+" if kwargs["delim_whitespace"] is True else delimiter,
                 quote_char=kwargs["quotechar"],
                 double_quote=kwargs["doublequote"],
                 escape_char=kwargs["escapechar"],
@@ -426,7 +431,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
                 )
-        if delimiter is not None and read_csv_kwargs["delim_whitespace"]:
+        if delimiter is not None and read_csv_kwargs["delim_whitespace"] is True:
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
@@ -541,7 +546,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         if delimiter is None:
             delimiter = sep
 
-        if delim_whitespace and (delimiter is not lib.no_default):
+        if delim_whitespace is True and (delimiter is not lib.no_default):
             raise ValueError(
                 "Specified a delimiter with both sep and "
                 + "delim_whitespace=True; you can only specify one."
