@@ -64,8 +64,7 @@ dependencies:
       - asv==0.5.1
       # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
-      # experimental version of fuzzydata requires at least 0.0.6 to successfully resolve all dependencies
-      - fuzzydata>=0.0.6
+      - fuzzydata>=0.0.11
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
