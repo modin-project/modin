@@ -36,6 +36,19 @@ def doc_urls(get_generated_doc_urls):
 
 def test_all_urls_exist(doc_urls):
     broken = []
+    # TODO: remove the hack after pandas fixes it
+    broken_urls = (
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.DataFrame.flags.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.Series.info.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.DataFrame.isetitem.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.Series.swapaxes.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.DataFrame.to_numpy.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.Series.axes.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.Series.divmod.html",
+        "https://pandas.pydata.org/pandas-docs/version/2.2.0/reference/api/pandas.Series.rdivmod.html",
+    )
+    for broken_url in broken_urls:
+        doc_urls.remove(broken_url)
 
     def _test_url(url):
         try:
