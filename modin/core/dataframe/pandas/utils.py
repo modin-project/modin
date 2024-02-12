@@ -77,6 +77,7 @@ def create_dataframe_from_partition_data(partition_data, partition_shape):
     ----------
     partition_data : list
         List of pandas DataFrames/Object references holding pandas DataFrames.
+    partition_shape : int or tuple
     partition_shape : tuple
         Shape of the partitions numpy array.
 
