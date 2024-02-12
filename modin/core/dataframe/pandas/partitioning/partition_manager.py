@@ -34,7 +34,7 @@ from modin.config import (
     PersistentPickle,
     ProgressBar,
 )
-from modin.core.dataframe.pandas.utils import create_dataframe_from_partition_data
+from modin.core.dataframe.pandas.utils import create_pandas_df_from_partitions
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
@@ -781,7 +781,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A pandas DataFrame
         """
         retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        return create_dataframe_from_partition_data(retrieved_objects, partitions.shape)
+        return create_pandas_df_from_partitions(retrieved_objects, partitions.shape)
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
@@ -1116,7 +1116,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         def to_pandas_remote(data, partition_shape, *partition_data):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
-            return create_dataframe_from_partition_data(
+            return create_pandas_df_from_partitions(
                 partition_data, partition_shape, called_from_remote=True
             )
 

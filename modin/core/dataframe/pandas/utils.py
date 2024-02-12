@@ -20,7 +20,7 @@ from pandas.api.types import union_categoricals
 from modin.error_message import ErrorMessage
 
 
-def concatenate(dfs, make_copy=True):
+def concatenate(dfs, copy=True):
     """
     Concatenate pandas DataFrames with saving 'category' dtype.
 
@@ -30,7 +30,7 @@ def concatenate(dfs, make_copy=True):
     ----------
     dfs : list
         List of pandas DataFrames to concatenate.
-    make_copy : bool, default: True
+    copy : bool, default: True
         Make explicit copy when creating dataframe.
 
     Returns
@@ -64,14 +64,14 @@ def concatenate(dfs, make_copy=True):
                 i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
     # `ValueError: buffer source array is read-only` if copy==False
-    if len(dfs) == 1 and make_copy:
+    if len(dfs) == 1 and copy:
         # concat doesn't make a copy if len(dfs) == 1,
         # so do it explicitly
         return dfs[0].copy()
-    return pandas.concat(dfs, copy=make_copy)
+    return pandas.concat(dfs, copy=copy)
 
 
-def create_dataframe_from_partition_data(
+def create_pandas_df_from_partitions(
     partition_data, partition_shape, called_from_remote=False
 ):
     """
@@ -122,8 +122,8 @@ def create_dataframe_from_partition_data(
         for row in partition_data
         if not all(is_part_empty(part) for part in row)
     ]
-    make_copy = not called_from_remote
+    copy = not called_from_remote
     if len(df_rows) == 0:
         return pandas.DataFrame()
     else:
-        return concatenate(df_rows, make_copy)
+        return concatenate(df_rows, copy)
