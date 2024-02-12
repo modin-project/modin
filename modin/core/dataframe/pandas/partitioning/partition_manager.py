@@ -34,7 +34,7 @@ from modin.config import (
     PersistentPickle,
     ProgressBar,
 )
-from modin.core.dataframe.pandas.utils import concatenate
+from modin.core.dataframe.pandas.utils import create_dataframe_from_partition_data
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
@@ -781,50 +781,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A pandas DataFrame
         """
         retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        if all(
-            isinstance(obj, (pandas.DataFrame, pandas.Series))
-            for obj in retrieved_objects
-        ):
-            height, width, *_ = tuple(partitions.shape) + (0,)
-            # restore 2d array
-            objs = iter(retrieved_objects)
-            retrieved_objects = [
-                [next(objs) for _ in range(width)] for __ in range(height)
-            ]
-        else:
-            # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
-            # This implementation comes from the fact that calling `partition.get`
-            # function is not always equivalent to `partition.to_pandas`.
-            retrieved_objects = [
-                [obj.to_pandas() for obj in part] for part in partitions
-            ]
-        if all(
-            isinstance(part, pandas.Series) for row in retrieved_objects for part in row
-        ):
-            axis = 0
-        elif all(
-            isinstance(part, pandas.DataFrame)
-            for row in retrieved_objects
-            for part in row
-        ):
-            axis = 1
-        else:
-            ErrorMessage.catch_bugs_and_request_email(True)
-
-        def is_part_empty(part):
-            return part.empty and (
-                not isinstance(part, pandas.DataFrame) or (len(part.columns) == 0)
-            )
-
-        df_rows = [
-            pandas.concat([part for part in row], axis=axis, copy=False)
-            for row in retrieved_objects
-            if not all(is_part_empty(part) for part in row)
-        ]
-        if len(df_rows) == 0:
-            return pandas.DataFrame()
-        else:
-            return concatenate(df_rows)
+        return create_dataframe_from_partition_data(retrieved_objects, partitions.shape)
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
@@ -1159,52 +1116,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         def to_pandas_remote(data, partition_shape, *partition_data):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
-            if all(
-                isinstance(obj, (pandas.DataFrame, pandas.Series))
-                for obj in partition_data
-            ):
-                height, width, *_ = tuple(partition_shape) + (0,)
-                # restore 2d array
-                objs = iter(partition_data)
-                partition_data = [
-                    [next(objs) for _ in range(width)] for __ in range(height)
-                ]
-            else:
-                # Partitions do not always contain pandas objects, for example, hdk uses pyarrow tables.
-                # This implementation comes from the fact that calling `partition.get`
-                # function is not always equivalent to `partition.to_pandas`.
-                partition_data = [
-                    [obj.to_pandas() for obj in part] for part in partition_data
-                ]
-            if all(
-                isinstance(part, pandas.Series)
-                for row in partition_data
-                for part in row
-            ):
-                axis = 0
-            elif all(
-                isinstance(part, pandas.DataFrame)
-                for row in partition_data
-                for part in row
-            ):
-                axis = 1
-            else:
-                ErrorMessage.catch_bugs_and_request_email(True)
-
-            def is_part_empty(part):
-                return part.empty and (
-                    not isinstance(part, pandas.DataFrame) or (len(part.columns) == 0)
-                )
-
-            df_rows = [
-                pandas.concat([part for part in row], axis=axis, copy=False)
-                for row in partition_data
-                if not all(is_part_empty(part) for part in row)
-            ]
-            if len(df_rows) == 0:
-                return pandas.DataFrame()
-            else:
-                return concatenate(df_rows)
+            return create_dataframe_from_partition_data(partition_data, partition_shape)
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape
