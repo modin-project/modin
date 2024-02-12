@@ -20,7 +20,7 @@ from pandas.api.types import union_categoricals
 from modin.error_message import ErrorMessage
 
 
-def concatenate(dfs):
+def concatenate(dfs, make_copy=True):
     """
     Concatenate pandas DataFrames with saving 'category' dtype.
 
@@ -30,6 +30,8 @@ def concatenate(dfs):
     ----------
     dfs : list
         List of pandas DataFrames to concatenate.
+    make_copy : bool, default: True
+        Make explicit copy when creating dataframe.
 
     Returns
     -------
@@ -62,24 +64,27 @@ def concatenate(dfs):
                 i, pandas.Categorical(df.iloc[:, i], categories=union.categories)
             )
     # `ValueError: buffer source array is read-only` if copy==False
-    if len(dfs) == 1:
+    if len(dfs) == 1 and make_copy:
         # concat doesn't make a copy if len(dfs) == 1,
         # so do it explicitly
         return dfs[0].copy()
-    return pandas.concat(dfs, copy=True)
+    return pandas.concat(dfs, copy=make_copy)
 
 
-def create_dataframe_from_partition_data(partition_data, partition_shape):
+def create_dataframe_from_partition_data(
+    partition_data, partition_shape, called_from_remote=False
+):
     """
     Convert partition data of multiple dataframes to a single dataframe.
 
     Parameters
     ----------
     partition_data : list
-        List of pandas DataFrames/Object references holding pandas DataFrames.
+        List of pandas DataFrames or list of Object references holding pandas DataFrames.
     partition_shape : int or tuple
-    partition_shape : tuple
-        Shape of the partitions numpy array.
+        Shape of the partitions NumPy array.
+    called_from_remote : bool, default: False
+        Flag used to check if explicit copy should be done in concat.
 
     Returns
     -------
@@ -117,7 +122,8 @@ def create_dataframe_from_partition_data(partition_data, partition_shape):
         for row in partition_data
         if not all(is_part_empty(part) for part in row)
     ]
+    make_copy = not called_from_remote
     if len(df_rows) == 0:
         return pandas.DataFrame()
     else:
-        return concatenate(df_rows)
+        return concatenate(df_rows, make_copy)

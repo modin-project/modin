@@ -1116,7 +1116,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
 
         def to_pandas_remote(data, partition_shape, *partition_data):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
-            return create_dataframe_from_partition_data(partition_data, partition_shape)
+            return create_dataframe_from_partition_data(
+                partition_data, partition_shape, called_from_remote=True
+            )
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape
