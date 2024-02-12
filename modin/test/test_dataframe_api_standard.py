@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-
 import modin.pandas
 
 
@@ -23,7 +21,6 @@ def test_dataframe_consortium() -> None:
     Full testing is done at https://github.com/data-apis/dataframe-api-compat,
     this is just to check that the entry point works as expected.
     """
-    pytest.importorskip("dataframe_api_compat")
     df_pd = modin.pandas.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     df = df_pd.__dataframe_consortium_standard__()
     result_1 = df.get_column_names()

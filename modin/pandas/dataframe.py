@@ -50,7 +50,6 @@ from modin.utils import (
     _inherit_docstrings,
     expanduser_path_arg,
     hashable,
-    import_optional_dependency,
     try_cast_to_pandas,
 )
 
@@ -2818,11 +2817,10 @@ class DataFrame(BasePandasDataset):
         This is developed and maintained outside of Modin.
         Please report any issues to https://github.com/data-apis/dataframe-api-compat.
         """
-        dataframe_api_compat = import_optional_dependency(
-            "dataframe_api_compat", "implementation"
-        )
+        import modin.dataframe_api_standard as dataframe_api_standard
+
         convert_to_standard_compliant_dataframe = (
-            dataframe_api_compat.modin_standard.convert_to_standard_compliant_dataframe
+            dataframe_api_standard.convert_to_standard_compliant_dataframe
         )
         return convert_to_standard_compliant_dataframe(self, api_version=api_version)
 

@@ -33,11 +33,7 @@ from pandas.util._validators import validate_bool_kwarg
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
-from modin.utils import (
-    MODIN_UNNAMED_SERIES_LABEL,
-    _inherit_docstrings,
-    import_optional_dependency,
-)
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
 from .accessor import CachedAccessor, SparseAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
@@ -227,10 +223,9 @@ class Series(BasePandasDataset):
         This is developed and maintained outside of Modin.
         Please report any issues to https://github.com/data-apis/dataframe-api-compat.
         """
-        dataframe_api_compat = import_optional_dependency(
-            "dataframe_api_compat", "implementation"
-        )
-        return dataframe_api_compat.modin_standard.convert_to_standard_compliant_column(
+        import modin.dataframe_api_standard as dataframe_api_standard
+
+        return dataframe_api_standard.convert_to_standard_compliant_column(
             self, api_version=api_version
         )
 

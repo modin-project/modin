@@ -127,7 +127,7 @@ jobs:
       - run: python -m pytest modin/test/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
       - run: python -m pytest modin/test/interchange/dataframe_protocol/base
-      - run: python -m pytest modin/test/test_dataframe_api_standard.py
+      - run: python -m pytest modin/dataframe_api_standard/tests
       - run: python -m pytest modin/test/test_logging.py
       - uses: ./.github/actions/upload-coverage
 
