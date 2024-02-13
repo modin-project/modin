@@ -219,9 +219,6 @@ class Series(BasePandasDataset):
     ):  # noqa: PR01, RT01
         """
         Provide entry point to the Consortium DataFrame Standard API.
-
-        This is developed and maintained outside of Modin.
-        Please report any issues to https://github.com/data-apis/dataframe-api-compat.
         """
         import modin.dataframe_api_standard as dataframe_api_standard
 

@@ -17,9 +17,6 @@ import modin.pandas
 def test_dataframe_consortium() -> None:
     """
     Test some basic methods of the dataframe consortium standard.
-
-    Full testing is done at https://github.com/data-apis/dataframe-api-compat,
-    this is just to check that the entry point works as expected.
     """
     df_pd = modin.pandas.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     df = df_pd.__dataframe_consortium_standard__()
