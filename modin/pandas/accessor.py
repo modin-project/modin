@@ -344,3 +344,57 @@ class ExperimentalFunctions:
             storage_options=storage_options,
             mode=mode,
         )
+
+    def to_xml_glob(
+        self,
+        path_or_buffer=None,
+        index=True,
+        root_name="data",
+        row_name="row",
+        na_rep=None,
+        attr_cols=None,
+        elem_cols=None,
+        namespaces=None,
+        prefix=None,
+        encoding="utf-8",
+        xml_declaration=True,
+        pretty_print=True,
+        parser="lxml",
+        stylesheet=None,
+        compression="infer",
+        storage_options=None,
+    ) -> None:  # noqa: PR01
+        """
+        Render a DataFrame to an XML document.
+
+        Notes
+        -----
+        * Only string type supported for `path_or_buffer` argument.
+        * The rest of the arguments are the same as for `pandas.to_xml`.
+        """
+        from modin.experimental.pandas.io import to_xml_glob
+
+        if path_or_buffer is None:
+            raise NotImplementedError(
+                "`to_xml_glob` doesn't support path_or_buffer=None, use `to_xml` in that case."
+            )
+
+        to_xml_glob(
+            self._data,
+            path_or_buffer=path_or_buffer,
+            index=index,
+            root_name=root_name,
+            row_name=row_name,
+            na_rep=na_rep,
+            attr_cols=attr_cols,
+            elem_cols=elem_cols,
+            namespaces=namespaces,
+            prefix=prefix,
+            encoding=encoding,
+            xml_declaration=xml_declaration,
+            pretty_print=pretty_print,
+            parser=parser,
+            stylesheet=stylesheet,
+            compression=compression,
+            storage_options=storage_options,
+        )

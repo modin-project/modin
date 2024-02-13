@@ -44,9 +44,11 @@ Modin also supports these experimental APIs on top of pandas that are under acti
 - :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple pickle files in a directory
 - :py:func:`~modin.experimental.pandas.read_parquet_glob`  -- read multiple parquet files in a directory
 - :py:func:`~modin.experimental.pandas.read_json_glob`  -- read multiple json files in a directory
+- :py:func:`~modin.experimental.pandas.read_xml_glob`  -- read multiple xml files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_distributed` -- write to multiple pickle files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_parquet_glob` -- write to multiple parquet files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_json_glob` -- write to multiple json files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_xml_glob` -- write to multiple xml files in a directory
 
 DataFrame partitioning API
 --------------------------

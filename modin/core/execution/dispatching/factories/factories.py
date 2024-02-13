@@ -428,6 +428,20 @@ class BaseFactory(object):
         return cls.io_cls.to_json(*args, **kwargs)
 
     @classmethod
+    def _to_xml(cls, *args, **kwargs):
+        """
+        Write query compiler content to a XML file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_xml(*args, **kwargs)
+
+    @classmethod
     def _to_parquet(cls, *args, **kwargs):
         """
         Write query compiler content to a parquet file.
@@ -595,6 +609,39 @@ class BaseFactory(object):
                 f"`_to_json_glob()` is not implemented for {current_execution} execution."
             )
         return cls.io_cls.to_json_glob(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="XML files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_xml_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_xml_glob(**kwargs)
+
+    @classmethod
+    def _to_xml_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several XML files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_xml_glob(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="PandasOnRay")

@@ -52,6 +52,7 @@ from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalPandasJsonParser,
     ExperimentalPandasParquetParser,
     ExperimentalPandasPickleParser,
+    ExperimentalPandasXmlParser,
 )
 
 
@@ -104,6 +105,11 @@ class PandasOnDaskIO(BaseIO):
     to_json_glob = __make_write(
         ExperimentalGlobDispatcher,
         build_args={**build_args, "base_write": BaseIO.to_json},
+    )
+    read_xml_glob = __make_read(ExperimentalPandasXmlParser, ExperimentalGlobDispatcher)
+    to_xml_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_xml},
     )
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalGlobDispatcher

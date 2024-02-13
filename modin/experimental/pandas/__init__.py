@@ -44,6 +44,7 @@ from .io import (  # noqa F401
     read_parquet_glob,
     read_pickle_distributed,
     read_sql,
+    read_xml_glob,
     to_pickle_distributed,
 )
 
