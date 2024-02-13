@@ -1722,6 +1722,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         index,
         shuffle_functions: "ShuffleFunctions",
         final_shuffle_func,
+        right_partitions=None,
+        right_indices=None,
     ):
         """
         Return shuffled partitions.
@@ -1774,6 +1776,30 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for partition in row_partitions
                 ]
             ).T
+
+            if right_partitions is not None:
+                right_shuffle = shuffle_functions.replace_frame(right_partitions)
+                r_row_parts = cls.row_partitions(right_partitions._partitions)
+                rsplit_row_partitions = np.array(
+                    [
+                        partition.split(
+                            right_shuffle.split_fn,
+                            num_splits=num_bins,
+                            # The partition's metadata will never be accessed for the split partitions,
+                            # thus no need to compute it.
+                            extract_metadata=False,
+                        )
+                        for partition in r_row_parts
+                    ]
+                ).T
+                new_partitions = [
+                    cls._column_partitions_class(row_partition, full_axis=False).apply(
+                        final_shuffle_func, other_axis_partition=cls._column_partitions_class(r_row_partitions)
+                    )
+                    for r_row_partitions, row_partition in zip(rsplit_row_partitions, split_row_partitions)
+                ]
+                return np.array(new_partitions)
+
             # We need to convert every partition that came from the splits into a full-axis column partition.
             new_partitions = [
                 [

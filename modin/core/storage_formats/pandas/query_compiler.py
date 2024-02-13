@@ -522,6 +522,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         sort = kwargs.get("sort", False)
         right_to_broadcast = right._modin_frame.combine()
 
+        return self.__constructor__(self._modin_frame.merge(right._modin_frame, on=on, how=how))
+
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
 

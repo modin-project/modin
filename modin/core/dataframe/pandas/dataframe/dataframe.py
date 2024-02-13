@@ -2582,6 +2582,9 @@ class PandasDataframe(ClassLogger):
             func,
         )
 
+        if func is None:
+            return new_partitions
+
         result = grouper.__constructor__(new_partitions)
         if preserve_columns:
             result.set_columns_cache(grouper.copy_columns_cache())
@@ -3858,6 +3861,42 @@ class PandasDataframe(ClassLogger):
         return self.__constructor__(
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
+
+    def merge(self, right, on, how):
+        def func(left, right):
+            # breakpoint()
+            return left.merge(right, on=on, how=how)
+
+        shuffling_functions = ShuffleSortFunctions(
+            self,
+            on,
+            True,
+            self._partitions.shape[0],
+            # **kwargs,
+        )
+
+        # here we want to get indices of those partitions that hold the key columns
+        key_indices = self.columns.get_indexer_for(on)
+        lpartition_indices = np.unique(
+            np.digitize(key_indices, np.cumsum(self.column_widths))
+        )
+
+        key_indices = right.columns.get_indexer_for(on)
+        rpartition_indices = np.unique(
+            np.digitize(key_indices, np.cumsum(right.column_widths))
+        )
+
+        new_partitions = self._partition_mgr_cls.shuffle_partitions(
+            self._partitions,
+            lpartition_indices,
+            shuffling_functions,
+            func,
+            right_partitions=right,
+            right_indices=rpartition_indices,
+        )
+
+        return self.__constructor__(new_partitions)
+
 
     @lazy_metadata_decorator(apply_axis="both")
     def groupby(

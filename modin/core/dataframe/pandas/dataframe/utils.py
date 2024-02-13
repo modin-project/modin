@@ -139,6 +139,12 @@ class ShuffleSortFunctions(ShuffleFunctions):
         self.kwargs = kwargs.copy()
         self.columns_info = None
 
+    
+    def replace_frame(self, new_frame):
+        res = type(self)(new_frame, self.columns, self.ascending, self.ideal_num_new_partitions, **self.kwargs)
+        res.columns_info = self.columns_info
+        return res
+
     def sample_fn(self, partition: pandas.DataFrame) -> pandas.DataFrame:
         return self.pick_samples_for_quantiles(
             partition[self.columns], self.ideal_num_new_partitions, self.frame_len
