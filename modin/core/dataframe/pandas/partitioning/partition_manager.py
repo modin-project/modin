@@ -1114,10 +1114,10 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A NumPy 2D array of a single partition.
         """
 
-        def to_pandas_remote(data, partition_shape, *partition_data):
+        def to_pandas_remote(df, partition_shape, *dfs):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
             return create_pandas_df_from_partitions(
-                partition_data, partition_shape, called_from_remote=True
+                (df,) + dfs, partition_shape, called_from_remote=True
             )
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
@@ -1127,7 +1127,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             if hasattr(part, "force_materialization"):
                 partitions_flattened[idx] = part.force_materialization()
         partition_refs = [
-            partition.list_of_blocks[0] for partition in partitions_flattened
+            partition.list_of_blocks[0] for partition in partitions_flattened[1:]
         ]
         combined_partition = partitions.flat[0].apply(
             preprocessed_func, partition_shape, *partition_refs
