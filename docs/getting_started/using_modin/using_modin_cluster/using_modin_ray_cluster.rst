@@ -1,6 +1,5 @@
-================================
-Using Modin in a AWS Ray Cluster
-================================
+Using Modin on Ray in a Cluster
+===============================
 
 .. note::
   | *Estimated Reading Time: 15 minutes*
@@ -26,8 +25,8 @@ First of all, install the necessary dependencies in your environment:
 
    pip install boto3
 
-The next step is to setup your AWS credentials. One can set  `AWS_ACCESS_KEY_ID`, 
-`AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN` environment variables or  
+The next step is to setup your AWS credentials. One can set  ``AWS_ACCESS_KEY_ID``, 
+``AWS_SECRET_ACCESS_KEY`` and ``AWS_SESSION_TOKEN`` environment variables or  
 just run the following command:
 
 .. code-block:: bash
@@ -41,10 +40,10 @@ This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 
 You can check the `Amazon EC2 pricing`_ .
 
 You can manually create AWS EC2 instances and configure them or just use the `Ray autoscaler` to 
-create and initialize a Ray cluster on Amazon Web Service (AWS) using `Modin's Ray cluster setup config`_ .
-You can read more about how to modify `Ray's autoscaler options`_ .
+create and initialize a Ray cluster on AWS using `Modin's Ray cluster setup config`_ .
+You can read more about how to modify the file on `Ray's autoscaler options`_ .
 
-Detailed instructions can be found in `Ray's cluster docs`_.
+More details on how to launch a Ray cluster can be found on `Ray's cluster docs`_.
 
 To start up the Ray cluster, run the following command in your terminal:
 
@@ -64,7 +63,7 @@ To exit the ssh session and return back into your local shell session, type:
 
    exit
 
-Executing on a cluster environment
+Executing in a cluster environment
 ----------------------------------
 
 .. note::
@@ -78,15 +77,15 @@ on a cluster. In this tutorial, we will use a 12.5 GB `big_yellow.csv` file that
 created by concatenating a 200MB `NYC Taxi dataset`_ file 64 times. Preparing this
 file was provided as part of our `Modin's Ray cluster setup config`_.
 
-If you want use another dataset in your own script, you should provide it to each of
-the cluster nodes in the same path. We recomnend doing this by customizing the
+If you want to use the other dataset, you should provide it to each of
+the cluster nodes with the same path. We recomnend doing this by customizing the
 `setup_commands` section of the [configuration file](https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml).
 
-To run any scripts on a remote cluster, you need to submit it to the ray. In this way,
+To run any script in a remote cluster, you need to submit it to the ray. In this way,
 the script file is sent to the the remote cluster head node and executed there. 
 
-In this tutorial, we provide the `exercise_5.py`_ script, which read the data from the
-CSV file and executed some pandas Dataframe function such as count, groupby and applymap.
+In this tutorial, we provide the `exercise_5.py`_ script, which reads the data from the
+CSV file and executes such pandas operations as count, groupby and applymap.
 As a result of the script, you will see the size of the file being read and the execution
 time of each function.
 

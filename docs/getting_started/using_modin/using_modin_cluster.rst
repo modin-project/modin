@@ -1,9 +1,9 @@
-Using Modin
-===========
+Using Modin in a Cluster
+========================
 
-In this section, we show how Modin can be used to accelerate your pandas workflows on a cluster.
-Different Modin engines have some specifics in running and using a cluster,so you can choose
-one of the following instructions to suit the engine you are using.
+In this section, we show how Modin can be used to accelerate your pandas workflows in a cluster.
+Each Modin distributed engine has its own specifics regarding running and using a cluster so
+you can choose one of the following instructions to suit the engine you are using.
 
 .. toctree::
     :maxdepth: 4
