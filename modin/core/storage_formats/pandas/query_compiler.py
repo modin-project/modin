@@ -520,6 +520,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
+        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
@@ -620,7 +621,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     axis=1,
                     func=map_func,
                     enumerate_partitions=how == "left",
-                    other=right._modin_frame,
+                    other=right_to_broadcast,
                     # We're going to explicitly change the shape across the 1-axis,
                     # so we want for partitioning to adapt as well
                     keep_partitioning=False,
@@ -681,6 +682,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
+        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"]:
 
@@ -697,7 +699,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     num_splits=merge_partitioning(
                         self._modin_frame, right._modin_frame, axis=1
                     ),
-                    other=right._modin_frame,
+                    other=right_to_broadcast,
                 )
             )
             return new_self.sort_rows_by_column_values(on) if sort else new_self

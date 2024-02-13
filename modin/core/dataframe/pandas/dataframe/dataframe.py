@@ -2762,6 +2762,35 @@ class PandasDataframe(ClassLogger):
             partitions, new_index, new_columns, row_lengths, column_widths
         )
 
+    def combine(self) -> "PandasDataframe":
+        """
+        Create a single partition PandasDataframe from the partitions of the current dataframe.
+
+        Returns
+        -------
+        PandasDataframe
+            A single partition PandasDataframe.
+        """
+        partitions = self._partition_mgr_cls.combine(self._partitions)
+        result = self.__constructor__(
+            partitions,
+            index=self.copy_index_cache(),
+            columns=self.copy_columns_cache(),
+            row_lengths=(
+                [sum(self._row_lengths_cache)]
+                if self._row_lengths_cache is not None
+                else None
+            ),
+            column_widths=(
+                [sum(self._column_widths_cache)]
+                if self._column_widths_cache is not None
+                else None
+            ),
+            dtypes=self.copy_dtypes_cache(),
+        )
+        result.synchronize_labels()
+        return result
+
     @lazy_metadata_decorator(apply_axis="both")
     def apply_full_axis(
         self,
