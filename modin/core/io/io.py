@@ -667,7 +667,7 @@ class BaseIO:
 
     @classmethod
     @_inherit_docstrings(pandas.DataFrame.to_xml, apilink="pandas.DataFrame.to_xml")
-    def to_xml(cls, obj, path, **kwargs):  # noqa: PR01
+    def to_xml(cls, obj, path_or_buffer, **kwargs):  # noqa: PR01
         """
         Convert the object to a XML string.
 
@@ -677,7 +677,7 @@ class BaseIO:
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return obj.to_xml(path, **kwargs)
+        return obj.to_xml(path_or_buffer, **kwargs)
 
     @classmethod
     @_inherit_docstrings(

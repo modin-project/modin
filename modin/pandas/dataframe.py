@@ -2307,7 +2307,7 @@ class DataFrame(BasePandasDataset):
             FactoryDispatcher,
         )
 
-        return FactoryDispatcher.to_json(
+        return FactoryDispatcher.to_xml(
             self._query_compiler,
             path_or_buffer=path_or_buffer,
             index=index,
