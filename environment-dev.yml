@@ -61,7 +61,6 @@ dependencies:
   - isort>=5.12
 
   - pip:
-      - dataframe-api-compat>=0.2.6
       - asv==0.5.1
       # no conda package for windows so we install it with pip
       - connectorx>=0.2.6a4
