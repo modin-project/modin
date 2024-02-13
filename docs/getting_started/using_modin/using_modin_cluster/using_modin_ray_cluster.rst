@@ -6,15 +6,18 @@ Using Modin on Ray in a Cluster
 
 Often in practice we have a need to exceed the capabilities of a single machine.
 Modin works and performs well in both local mode and in a cluster environment.
-The key advantage of Modin is that your notebook does not change between
+The key advantage of Modin is that your python code does not change between
 local development and cluster execution. Users are not required to think about
 how many workers exist or how to distribute and partition their data;
 Modin handles all of this seamlessly and transparently.
 
+.. note::
+   You can also use a Jupyter notebook, but you need to deploy a Jupyter server 
+   on the remote cluster head node and connect to it.
+
 .. image:: ../../../img/modin_cluster.png
    :alt: Modin cluster
    :align: center
-   :scale: 90%
 
 Extra requirements for AWS authentication
 -----------------------------------------
@@ -39,7 +42,7 @@ Starting and connecting to the cluster
 This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 576 total CPUs.
 You can check the `Amazon EC2 pricing`_ .
 
-You can manually create AWS EC2 instances and configure them or just use the `Ray autoscaler` to 
+You can manually create AWS EC2 instances and configure them or just use the `Ray CLI`_ to 
 create and initialize a Ray cluster on AWS using `Modin's Ray cluster setup config`_ .
 You can read more about how to modify the file on `Ray's autoscaler options`_ .
 
@@ -89,11 +92,16 @@ CSV file and executes such pandas operations as count, groupby and applymap.
 As a result of the script, you will see the size of the file being read and the execution
 time of each function.
 
+.. note::
+   Some Dataframe functions are executed asynchronously, so to correctly measure execution time 
+   we need to wait for the execution result. We use the special `execute` function for this, 
+   but you should not use this function as it will slow down your script.
+
 You can submit this script to the existing remote cluster by running the following command.
 
 .. code-block:: bash
 
-   ray modin-cluster.yaml exercise_5.py
+   ray submit modin-cluster.yaml exercise_5.py
 
 To download or upload files to the cluster head node, use `ray rsync_down` or `ray rsync_up`.
 It may help you if you want to use some other Python modules that should be available to
@@ -113,7 +121,6 @@ with improvements in performance as we increase the number of resources Modin ca
 .. image:: ../../../../examples/tutorial/jupyter/img/modin_cluster_perf.png
    :alt: Cluster Performance
    :align: center
-   :scale: 90%
 
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
@@ -122,3 +129,4 @@ with improvements in performance as we increase the number of resources Modin ca
 .. _`Amazon EC2 pricing`: https://aws.amazon.com/ec2/pricing/on-demand/
 .. _`exercise_5.py`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
 .. _`Ray client`: https://docs.ray.io/en/latest/cluster/running-applications/job-submission/ray-client.html
+.. _`Ray CLI`: https://docs.ray.io/en/latest/cluster/vms/getting-started.html#running-applications-on-a-ray-cluster

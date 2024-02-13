@@ -15,10 +15,13 @@ and it is not shut down until the end of exercise. Read instructions carefully.*
 
 Often in practice we have a need to exceed the capabilities of a single machine.
 Modin works and performs well in both local mode and in a cluster environment.
-The key advantage of Modin is that your notebook does not change between
+The key advantage of Modin is that your python code not change between
 local development and cluster execution. Users are not required to think about
 how many workers exist or how to distribute and partition their data;
 Modin handles all of this seamlessly and transparently.
+
+**Note**: You can also use a Jupyter notebook, but you need to deploy a Jupyter server 
+on the remote cluster head node and connect to it.
 
 ![Cluster](../../../img/modin_cluster.png)
 
@@ -44,8 +47,9 @@ This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 
 
 Cost of this cluster can be found here: https://aws.amazon.com/ec2/pricing/on-demand/.
 
-You can manually create AWS EC2 instances and configure them or just use the `Ray autoscaler` to create and initialize
-a Ray cluster using the configuration file. This file is included in this directory and is called
+You can manually create AWS EC2 instances and configure them or just use the 
+[`Ray CLI`](https://docs.ray.io/en/latest/cluster/vms/getting-started.html#running-applications-on-a-ray-cluster)
+to create and initialize a Ray cluster using the configuration file. This file is included in this directory and is called
 [`modin-cluster.yaml`](https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml).
 You can read more about how to modify `Ray cluster YAML Configuration file` here:
 https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-yaml-configuration-options
@@ -90,6 +94,10 @@ is sent to the the remote cluster head node and executed there.
 In this exercise, we provide the `exercise_5.py` script, which read the data from the CSV file and executed 
 some pandas Dataframe function such as count, groupby and applymap. As a result of the script, you will see 
 the size of the file being read and the execution time of each function.
+
+**Note**: Some Dataframe functions are executed asynchronously, so to correctly measure execution time 
+we need to wait for the execution result. We use the special `execute` function for this, 
+but you should not use this function as it will slow down your script.
 
 You can submit this script to the existing remote cluster by running the following command.
 
