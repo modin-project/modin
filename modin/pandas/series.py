@@ -217,9 +217,7 @@ class Series(BasePandasDataset):
     def __column_consortium_standard__(
         self, *, api_version: str | None = None
     ):  # noqa: PR01, RT01
-        """
-        Provide entry point to the Consortium DataFrame Standard API.
-        """
+        """Provide entry point to the Consortium DataFrame Standard API."""
         import modin.dataframe_api_standard as dataframe_api_standard
 
         return dataframe_api_standard.convert_to_standard_compliant_column(
