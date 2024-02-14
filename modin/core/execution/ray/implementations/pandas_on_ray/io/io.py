@@ -51,6 +51,7 @@ from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalPandasJsonParser,
     ExperimentalPandasParquetParser,
     ExperimentalPandasPickleParser,
+    ExperimentalPandasXmlParser,
 )
 
 from ..dataframe import PandasOnRayDataframe
@@ -106,6 +107,11 @@ class PandasOnRayIO(RayIO):
     to_json_glob = __make_write(
         ExperimentalGlobDispatcher,
         build_args={**build_args, "base_write": RayIO.to_json},
+    )
+    read_xml_glob = __make_read(ExperimentalPandasXmlParser, ExperimentalGlobDispatcher)
+    to_xml_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_xml},
     )
     read_pickle_distributed = __make_read(
         ExperimentalPandasPickleParser, ExperimentalGlobDispatcher

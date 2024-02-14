@@ -323,6 +323,33 @@ def test_json_glob(tmp_path, filename):
 
 @pytest.mark.skipif(
     Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_xml_glob.xml", "test_xml_glob*.xml"],
+)
+def test_xml_glob(tmp_path, filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_xml_glob.xml"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_xml_glob(str(tmp_path / filename), index=False)
+        read_df = pd.read_xml_glob(str(tmp_path / filename))
+
+    # Index get messed up when concatting so we reset it.
+    read_df = read_df.reset_index(drop=True)
+    df_equals(read_df, df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)

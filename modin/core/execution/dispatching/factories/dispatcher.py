@@ -317,6 +317,16 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_json_glob(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_xml_glob)
+    def read_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_xml_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_xml_glob)
+    def to_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml_glob(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.PandasOnRayFactory._read_custom_text)
     def read_custom_text(cls, **kwargs):
         return cls.get_factory()._read_custom_text(**kwargs)
@@ -330,6 +340,11 @@ class FactoryDispatcher(object):
     @_inherit_docstrings(factories.BaseFactory._to_json)
     def to_json(cls, *args, **kwargs):
         return cls.get_factory()._to_json(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_xml)
+    def to_xml(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_parquet)

@@ -54,6 +54,8 @@ class ExperimentalGlobDispatcher(FileDispatcher):
             path_key = "path"
         elif "path_or_buf" in kwargs:
             path_key = "path_or_buf"
+        elif "path_or_buffer" in kwargs:
+            path_key = "path_or_buffer"
         filepath_or_buffer = kwargs.pop(path_key)
         filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (isinstance(filepath_or_buffer, str) and "*" in filepath_or_buffer):
@@ -123,6 +125,8 @@ class ExperimentalGlobDispatcher(FileDispatcher):
             path_key = "path"
         elif "path_or_buf" in kwargs:
             path_key = "path_or_buf"
+        elif "path_or_buffer" in kwargs:
+            path_key = "path_or_buffer"
         filepath_or_buffer = kwargs.pop(path_key)
         filepath_or_buffer = stringify_path(filepath_or_buffer)
         if not (

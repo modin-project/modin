@@ -666,6 +666,20 @@ class BaseIO:
         return obj.to_json(path, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_xml, apilink="pandas.DataFrame.to_xml")
+    def to_xml(cls, obj, path_or_buffer, **kwargs):  # noqa: PR01
+        """
+        Convert the object to a XML string.
+
+        For parameters description please refer to pandas API.
+        """
+        ErrorMessage.default_to_pandas("`to_xml`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_xml(path_or_buffer, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(
         pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
     )

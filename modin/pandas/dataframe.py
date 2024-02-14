@@ -2303,26 +2303,28 @@ class DataFrame(BasePandasDataset):
         compression="infer",
         storage_options=None,
     ):
-        return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.DataFrame.to_xml,
-                path_or_buffer=path_or_buffer,
-                index=index,
-                root_name=root_name,
-                row_name=row_name,
-                na_rep=na_rep,
-                attr_cols=attr_cols,
-                elem_cols=elem_cols,
-                namespaces=namespaces,
-                prefix=prefix,
-                encoding=encoding,
-                xml_declaration=xml_declaration,
-                pretty_print=pretty_print,
-                parser=parser,
-                stylesheet=stylesheet,
-                compression=compression,
-                storage_options=storage_options,
-            )
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_xml(
+            self._query_compiler,
+            path_or_buffer=path_or_buffer,
+            index=index,
+            root_name=root_name,
+            row_name=row_name,
+            na_rep=na_rep,
+            attr_cols=attr_cols,
+            elem_cols=elem_cols,
+            namespaces=namespaces,
+            prefix=prefix,
+            encoding=encoding,
+            xml_declaration=xml_declaration,
+            pretty_print=pretty_print,
+            parser=parser,
+            stylesheet=stylesheet,
+            compression=compression,
+            storage_options=storage_options,
         )
 
     def to_timestamp(

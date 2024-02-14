@@ -3209,6 +3209,15 @@ def test_to_latex():
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_to_xml():
+    # `lxml` is a required dependency for `to_xml`, but optional for Modin.
+    # For some engines we do not install it (like for HDK).
+    pytest.importorskip("lxml")
+    modin_df, _ = create_test_dfs(TEST_DATA)
+    assert modin_df.to_xml() == to_pandas(modin_df).to_xml()
+
+
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_to_period():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
