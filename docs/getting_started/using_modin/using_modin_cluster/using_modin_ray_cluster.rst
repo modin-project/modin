@@ -12,7 +12,7 @@ how many workers exist or how to distribute and partition their data;
 Modin handles all of this seamlessly and transparently.
 
 .. note::
-   You can also use a Jupyter notebook, but you need to deploy a Jupyter server 
+   It is possible to use a Jupyter notebook, but you will have to deploy a Jupyter server 
    on the remote cluster head node and connect to it.
 
 .. image:: ../../../img/modin_cluster.png
@@ -40,11 +40,12 @@ Starting and connecting to the cluster
 --------------------------------------
 
 This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 576 total CPUs.
-You can check the `Amazon EC2 pricing`_ .
+You can check the `Amazon EC2 pricing`_ page.
 
-You can manually create AWS EC2 instances and configure them or just use the `Ray CLI`_ to 
-create and initialize a Ray cluster on AWS using `Modin's Ray cluster setup config`_ .
-You can read more about how to modify the file on `Ray's autoscaler options`_ .
+It is possble to manually create AWS EC2 instances and configure them or just use the `Ray CLI`_ to 
+create and initialize a Ray cluster on AWS using `Modin's Ray cluster setup config`_,
+which we are going to utilize in this example.
+Refer to `Ray's autoscaler options`_ page on how to modify the file.
 
 More details on how to launch a Ray cluster can be found on `Ray's cluster docs`_.
 
@@ -82,9 +83,9 @@ file was provided as part of our `Modin's Ray cluster setup config`_.
 
 If you want to use the other dataset, you should provide it to each of
 the cluster nodes with the same path. We recomnend doing this by customizing the
-`setup_commands` section of the [configuration file](https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml).
+``setup_commands`` section of the [configuration file](https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml).
 
-To run any script in a remote cluster, you need to submit it to the ray. In this way,
+To run any script in a remote cluster, you need to submit it to the Ray. In this way,
 the script file is sent to the the remote cluster head node and executed there. 
 
 In this tutorial, we provide the `exercise_5.py`_ script, which reads the data from the
@@ -94,8 +95,8 @@ time of each function.
 
 .. note::
    Some Dataframe functions are executed asynchronously, so to correctly measure execution time 
-   we need to wait for the execution result. We use the special `execute` function for this, 
-   but you should not use this function as it will slow down your script.
+   of each function we need to wait for the execution result. We use the special ``execute`` function for this, 
+   but you shouldn't use it in a real case scenario.
 
 You can submit this script to the existing remote cluster by running the following command.
 
@@ -109,13 +110,13 @@ execute your own script or download a result file after executing the script.
 
 .. code-block:: bash
 
-   # download a file from the cluster to the local computer:
+   # download a file from the cluster to the local machine:
    ray rsync_down modin-cluster.yaml '/path/on/cluster' '/local/path'
-   # upload a file from the local computer to the cluster:
+   # upload a file from the local machine to the cluster:
    ray rsync_up modin-cluster.yaml '/local/path' '/path/on/cluster'
 
 Modin performance scales as the number of nodes and cores increases. The following
-chart shows the performance of the read_csv operation with different number of nodes,
+chart shows the performance of the ``read_csv`` operation with different number of nodes,
 with improvements in performance as we increase the number of resources Modin can use.
 
 .. image:: ../../../../examples/tutorial/jupyter/img/modin_cluster_perf.png

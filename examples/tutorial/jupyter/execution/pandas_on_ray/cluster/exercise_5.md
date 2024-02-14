@@ -4,14 +4,14 @@
 <h1>Scale your pandas workflows by changing one line of code</h2>
 </center>
 
-# Exercise 5: Setting up cluster environment and executing on a cluster environment
+# Exercise 5: Setting up a cluster environment and executing on it
 
 **GOAL**: Learn how to set up a Ray cluster for Modin, connect Modin to a Ray cluster and run pandas queries on a cluster.
 
 **NOTE**: This exercise has extra requirements. Read instructions carefully before attempting. 
 
 **This exercise instructs users on how to start a 500+ core Ray cluster,
-and it is not shut down until the end of exercise. Read instructions carefully.**
+and it is not shut down until the end of exercise.**
 
 Often in practice we have a need to exceed the capabilities of a single machine.
 Modin works and performs well in both local mode and in a cluster environment.
