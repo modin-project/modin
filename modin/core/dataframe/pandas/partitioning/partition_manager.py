@@ -1120,6 +1120,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 (df,) + dfs, partition_shape, called_from_remote=True
             )
 
+        if partitions.size == 0:
+            return np.array([[]])
+
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape
         partitions_flattened = partitions.flatten()
