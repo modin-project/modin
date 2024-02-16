@@ -2029,15 +2029,19 @@ class TestParquet:
         # both Modin and pandas read column "b" as a category
         df_equals(test_df, read_df.astype("int64"))
 
-    def test_read_parquet_6855(self, tmp_path, engine):
+    @pytest.mark.parametrize("index", [False, True])
+    def test_read_parquet_6855(self, tmp_path, engine, index):
         if engine == "fastparquet":
             pytest.skip("integer columns aren't supported")
         test_df = pandas.DataFrame(np.random.rand(10**2, 10))
         path = tmp_path / "data"
         path.mkdir()
         file_name = "issue6855.parquet"
-        test_df.to_parquet(path / file_name, engine=engine)
+        test_df.to_parquet(path / file_name, index=index, engine=engine)
         read_df = pd.read_parquet(path / file_name, engine=engine)
+        if not index:
+            # In that case pyarrow cannot preserve index dtype
+            read_df.columns = pandas.Index(read_df.columns).astype("int64").to_list()
         df_equals(test_df, read_df)
 
     def test_read_parquet_s3_with_column_partitioning(

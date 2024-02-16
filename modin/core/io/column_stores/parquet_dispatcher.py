@@ -690,6 +690,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if (
             dataset.pandas_metadata
             and "column_indexes" in dataset.pandas_metadata
+            and len(dataset.pandas_metadata["column_indexes"]) == 1
             and dataset.pandas_metadata["column_indexes"][0]["numpy_type"] == "int64"
         ):
             columns = pandas.Index(columns).astype("int64").to_list()
