@@ -69,8 +69,8 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
     SupportsPrivateToNumPy,
-    SupportsPublicToPandas,
     SupportsPublicToNumPy,
+    SupportsPublicToPandas,
     _inherit_docstrings,
     classproperty,
     expanduser_path_arg,
