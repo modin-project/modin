@@ -283,7 +283,7 @@ def assert_parameters_eq(objects, attributes, allowed_different):
     pandas_obj, modin_obj = objects
     difference = []
 
-    # Check that Modin functions/methods don't have extra paramsf
+    # Check that Modin functions/methods don't have extra params
     for m in attributes:
         if m in allowed_different:
             continue
