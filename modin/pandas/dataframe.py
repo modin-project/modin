@@ -3026,6 +3026,8 @@ class DataFrame(BasePandasDataset):
         """
         return self._query_compiler.to_pandas()
 
+    to_pandas = _to_pandas
+
     def _validate_eval_query(self, expr, **kwargs):
         """
         Validate the arguments of ``eval`` and ``query`` functions.
