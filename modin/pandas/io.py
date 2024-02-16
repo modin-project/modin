@@ -69,8 +69,8 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
     SupportsPrivateToNumPy,
-    SupportsPrivateToPandas,
     SupportsPublicToNumPy,
+    SupportsPublicToPandas,
     _inherit_docstrings,
     classproperty,
     expanduser_path_arg,
@@ -1034,7 +1034,7 @@ def from_dataframe(df):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
 

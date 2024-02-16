@@ -2225,6 +2225,8 @@ class Series(BasePandasDataset):
             series.name = None
         return series
 
+    to_pandas = _to_pandas
+
     def _to_datetime(self, **kwargs):
         """
         Convert `self` to datetime.

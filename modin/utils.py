@@ -59,15 +59,6 @@ Fn = TypeVar("Fn", bound=Callable)
 
 
 @runtime_checkable
-class SupportsPrivateToPandas(Protocol):  # noqa: PR01
-    """Structural type for objects with a ``_to_pandas`` method (note the leading underscore)."""
-
-    def _to_pandas(self) -> Any:  # noqa: GL08
-        # TODO add proper return type
-        pass
-
-
-@runtime_checkable
 class SupportsPublicToPandas(Protocol):  # noqa: PR01
     """Structural type for objects with a ``to_pandas`` method (without a leading underscore)."""
 
@@ -576,16 +567,12 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     object
         Converted object.
     """
-    if isinstance(obj, SupportsPrivateToPandas):
-        result = obj._to_pandas()
-        if squeeze:
-            result = result.squeeze(axis=1)
-        return result
     if isinstance(obj, SupportsPublicToPandas):
         result = obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
-        # Query compiler case, it doesn't have logic about convertion to Series
+
+        # QueryCompiler/low-level ModinFrame case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
             and result.name == MODIN_UNNAMED_SERIES_LABEL
