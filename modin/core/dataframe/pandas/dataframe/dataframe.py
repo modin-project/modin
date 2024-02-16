@@ -3971,7 +3971,10 @@ class PandasDataframe(ClassLogger):
                 align_result_columns
                 and df.empty
                 and result.empty
-                and df.columns.equals(result.columns)
+                and (
+                    df.columns.equals(result.columns)
+                    or not kwargs.get("as_index", True)
+                )
             ):
                 # We want to align columns only of those frames that actually performed
                 # some groupby aggregation, if an empty frame was originally passed

@@ -646,16 +646,6 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, include_groups=True, **kwargs):
-        if not include_groups:
-            return self._default_to_pandas(
-                lambda df: df.apply(
-                    func,
-                    *args,
-                    include_groups=include_groups,
-                    **kwargs,
-                )
-            )
-
         func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
@@ -665,7 +655,7 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=False,
             agg_func=func,
             agg_args=args,
-            agg_kwargs=kwargs,
+            agg_kwargs={**kwargs, "include_groups": include_groups},
             how="group_wise",
         )
         reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
