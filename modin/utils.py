@@ -572,14 +572,11 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
         if squeeze:
             result = result.squeeze(axis=1)
 
-        from modin.core.storage_formats import BaseQueryCompiler
-
+        # QueryCompiler/low-level ModinFrame case, it doesn't have logic about convertion to Series
         if (
-            isinstance(obj, BaseQueryCompiler)
-            and isinstance(getattr(result, "name", None), str)
+            isinstance(getattr(result, "name", None), str)
             and result.name == MODIN_UNNAMED_SERIES_LABEL
         ):
-            # Query compiler case, it doesn't have logic about convertion to Series
             result.name = None
         return result
     if isinstance(obj, (list, tuple)):
