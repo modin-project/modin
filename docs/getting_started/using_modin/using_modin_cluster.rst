@@ -91,8 +91,7 @@ the script file is sent to the the remote cluster head node and executed there.
 
 In this tutorial, we provide the `exercise_5.py`_ script, which reads the data from the
 CSV file and executes such pandas operations as count, groupby and map.
-As a result of the script, you will see the size of the file being read and the execution
-time of each function.
+As the result, you will see the size of the file being read and the execution time of the entire script.
 
 .. note::
    Some Dataframe functions are executed asynchronously, so to correctly measure execution time 
