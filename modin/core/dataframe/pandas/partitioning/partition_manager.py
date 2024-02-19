@@ -176,6 +176,23 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     # END Abstract Methods
 
     @classmethod
+    def create_partition_from_data(cls, data):
+        """
+        Create NumPy array of partitions that wrapps the given data.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame or pandas.Series
+            Data that has to be wrapped in partition.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy 2D array of a single partition which contains the data.
+        """
+        return np.array([[cls._partition_class.put(data)]])
+
+    @classmethod
     def column_partitions(cls, partitions, full_axis=True):
         """
         Get the list of `BaseDataframeAxisPartition` objects representing column-wise partitions.
@@ -1120,8 +1137,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 (df,) + dfs, partition_shape, called_from_remote=True
             )
 
-        if partitions.size == 0:
-            return np.array([[]])
+        if partitions.size <= 1:
+            return partitions
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape

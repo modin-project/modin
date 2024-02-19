@@ -3348,10 +3348,21 @@ class PandasDataframe(ClassLogger):
         PandasDataframe
             New Modin DataFrame.
         """
+
+        def get_partitions(df):
+            """Deal with the corner case if the "other" dataframe has no partitions."""
+            if df._partitions.size > 0:
+                return df._partitions
+            else:
+                empty_partition = self._partition_mgr_cls.create_partition_from_data(
+                    pandas.DataFrame(index=df.index, columns=df.columns)
+                )
+                return empty_partition
+
         if other is not None:
             if not isinstance(other, list):
                 other = [other]
-            other = [o._partitions for o in other] if len(other) else None
+            other = [get_partitions(o) for o in other] if len(other) else None
 
         if apply_indices is not None:
             numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
