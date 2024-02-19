@@ -4,7 +4,7 @@
 <h1>Scale your pandas workflows on a Ray cluster</h2>
 </center>
 
-**NOTE**: Before completing the exercise, please read the full instructions in the 
+**NOTE**: Before starting the exercise, please read the full instructions in the 
 [Modin documenation](https://modin--6872.org.readthedocs.build/en/6872/getting_started/using_modin/using_modin_cluster.html).
 
 The basic steps to run the script on a remote Ray cluster are:

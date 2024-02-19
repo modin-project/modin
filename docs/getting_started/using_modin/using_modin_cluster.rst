@@ -15,7 +15,7 @@ Modin handles all of this seamlessly and transparently.
    It is possible to use a Jupyter notebook, but you will have to deploy a Jupyter server 
    on the remote cluster head node and connect to it.
 
-.. image:: ../../../img/modin_cluster.png
+.. image:: ../../img/modin_cluster.png
    :alt: Modin cluster
    :align: center
 
@@ -29,7 +29,8 @@ First of all, install the necessary dependencies in your environment:
    pip install boto3
 
 The next step is to setup your AWS credentials. One can set  ``AWS_ACCESS_KEY_ID``, 
-``AWS_SECRET_ACCESS_KEY`` and ``AWS_SESSION_TOKEN``(Optional) `AWS CLI environment variables`_ or  
+``AWS_SECRET_ACCESS_KEY`` and ``AWS_SESSION_TOKEN`` (Optional)
+(refer to `AWS CLI environment variables`_ to get more insight on this) or  
 just run the following command:
 
 .. code-block:: bash
@@ -77,7 +78,7 @@ Executing in a cluster environment
    - https://github.com/modin-project/modin/issues/6641.
 
 Modin lets you instantly speed up your workflows with a large data by scaling pandas
-on a cluster. In this tutorial, we will use a 12.5 GB `big_yellow.csv` file that was
+on a cluster. In this tutorial, we will use a 12.5 GB ``big_yellow.csv`` file that was
 created by concatenating a 200MB `NYC Taxi dataset`_ file 64 times. Preparing this
 file was provided as part of our `Modin's Ray cluster setup config`_.
 
@@ -89,7 +90,7 @@ To run any script in a remote cluster, you need to submit it to the Ray. In this
 the script file is sent to the the remote cluster head node and executed there. 
 
 In this tutorial, we provide the `exercise_5.py`_ script, which reads the data from the
-CSV file and executes such pandas operations as count, groupby and applymap.
+CSV file and executes such pandas operations as count, groupby and map.
 As a result of the script, you will see the size of the file being read and the execution
 time of each function.
 
@@ -104,8 +105,8 @@ You can submit this script to the existing remote cluster by running the followi
 
    ray submit modin-cluster.yaml exercise_5.py
 
-To download or upload files to the cluster head node, use `ray rsync_down` or `ray rsync_up`.
-It may help you if you want to use some other Python modules that should be available to
+To download or upload files to the cluster head node, use ``ray rsync_down`` or ``ray rsync_up``.
+It may help if you want to use some other Python modules that should be available to
 execute your own script or download a result file after executing the script.
 
 .. code-block:: bash
@@ -115,13 +116,14 @@ execute your own script or download a result file after executing the script.
    # upload a file from the local machine to the cluster:
    ray rsync_up modin-cluster.yaml '/local/path' '/path/on/cluster'
 
-Modin performance scales as the number of nodes and cores increases. The following
-chart shows the performance of the ``read_csv`` operation with different number of nodes,
-with improvements in performance as we increase the number of resources Modin can use.
+Shutting down the cluster
+--------------------------
 
-.. image:: ../../../../examples/tutorial/jupyter/img/modin_cluster_perf.png
-   :alt: Cluster Performance
-   :align: center
+Now that we have finished the computation, we need to shut down the cluster with `ray down` command.
+
+.. code-block:: bash
+
+   ray down modin-cluster.yaml
 
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
