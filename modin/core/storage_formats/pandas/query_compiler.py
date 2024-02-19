@@ -3993,23 +3993,30 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             assert callable(agg_func)
 
-        if unsupported_groupby:
-            obj = super(PandasQueryCompiler, self)
-        else:
-            obj = self
-
-        return obj.groupby_agg(
-            by=by,
-            agg_func=lambda grp, *args, **kwargs: agg_func(
+        kwargs = {
+            "by": by,
+            "agg_func": lambda grp, *args, **kwargs: agg_func(
                 grp.rolling(**rolling_kwargs), *args, **kwargs
             ),
-            axis=axis,
-            groupby_kwargs=groupby_kwargs,
-            agg_args=agg_args,
-            agg_kwargs=agg_kwargs,
-            how="direct",
-            drop=drop,
-        )
+            "axis": axis,
+            "groupby_kwargs": groupby_kwargs,
+            "agg_args": agg_args,
+            "agg_kwargs": agg_kwargs,
+            "how": "direct",
+            "drop": drop,
+        }
+
+        if unsupported_groupby:
+            return super(PandasQueryCompiler, self).groupby_agg(**kwargs)
+
+        try:
+            return self._groupby_shuffle(**kwargs)
+        except NotImplementedError as e:
+            get_logger().info(
+                f"Can't use range-partitioning groupby implementation because of: {e}"
+                + "\nFalling back to a full-axis implementation."
+            )
+            return self.groupby_agg(**kwargs)
 
     def groupby_agg(
         self,
