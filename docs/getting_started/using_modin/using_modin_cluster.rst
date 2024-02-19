@@ -1,28 +1,54 @@
-========================
 Using Modin in a Cluster
 ========================
 
 .. note::
   | *Estimated Reading Time: 15 minutes*
-  | You can follow along in a Jupyter notebook in this two-part tutorial: `Part 1`_, `Part 2`_.
 
-Often in practice we have a need to exceed the capabilities of a single machine. Modin
-works and performs well in both local mode and in a cluster environment. The key
-advantage of Modin is that your notebook does not change between local development and
-cluster execution. Users are not required to think about how many workers exist or how
-to distribute and partition their data; Modin handles all of this seamlessly and
-transparently.
+Often in practice we have a need to exceed the capabilities of a single machine.
+Modin works and performs well in both local mode and in a cluster environment.
+The key advantage of Modin is that your python code does not change between
+local development and cluster execution. Users are not required to think about
+how many workers exist or how to distribute and partition their data;
+Modin handles all of this seamlessly and transparently.
 
-Starting up a Ray Cluster
--------------------------
-Modin is able to utilize Ray's built-in autoscaled cluster. To launch a Ray cluster
-using Amazon Web Service (AWS), you can use `Modin's cluster setup config`_ 
-(`Ray's autoscaler options`_).
+.. note::
+   It is possible to use a Jupyter notebook, but you will have to deploy a Jupyter server 
+   on the remote cluster head node and connect to it.
+
+.. image:: ../../img/modin_cluster.png
+   :alt: Modin cluster
+   :align: center
+
+Extra requirements for AWS authentication
+-----------------------------------------
+
+First of all, install the necessary dependencies in your environment:
 
 .. code-block:: bash
 
    pip install boto3
+
+The next step is to setup your AWS credentials. One can set  ``AWS_ACCESS_KEY_ID``, 
+``AWS_SECRET_ACCESS_KEY`` and ``AWS_SESSION_TOKEN`` (Optional)
+(refer to `AWS CLI environment variables`_ to get more insight on this) or  
+just run the following command:
+
+.. code-block:: bash
+
    aws configure
+
+Starting and connecting to the cluster
+--------------------------------------
+
+This example starts 1 head node (m5.24xlarge) and 5 worker nodes (m5.24xlarge), 576 total CPUs.
+You can check the `Amazon EC2 pricing`_ page.
+
+It is possble to manually create AWS EC2 instances and configure them or just use the `Ray CLI`_ to 
+create and initialize a Ray cluster on AWS using `Modin's Ray cluster setup config`_,
+which we are going to utilize in this example.
+Refer to `Ray's autoscaler options`_ page on how to modify the file.
+
+More details on how to launch a Ray cluster can be found on `Ray's cluster docs`_.
 
 To start up the Ray cluster, run the following command in your terminal:
 
@@ -30,103 +56,75 @@ To start up the Ray cluster, run the following command in your terminal:
 
    ray up modin-cluster.yaml
 
-This configuration script starts 1 head node (m5.24xlarge) and 7 workers (m5.24xlarge),
-768 total CPUs. For more information on how to launch a Ray cluster across different
-cloud providers or on-premise, you can also refer to the `Ray's cluster docs`_.
-
-.. note::
-   By default, Modin on Ray uses 60% of the system memory. It is recommended to use the same
-   amount, when using your own cluster (for each node).
-
-Connecting to a Ray Cluster
----------------------------
-
-To connect to the Ray cluster, run the following command in your terminal:
+Once the head node has completed initialization, you can optionally connect to it by running the following command.
 
 .. code-block:: bash
 
    ray attach modin-cluster.yaml
 
-The following code checks that the Ray cluster is properly configured and attached to
-Modin:
+To exit the ssh session and return back into your local shell session, type:
 
-.. code-block:: python
+.. code-block:: bash
 
-   import ray
-   ray.init(address="auto")
-   from modin.config import NPartitions
-   assert NPartitions.get() == 768, "Not all Ray nodes are started up yet"
-   ray.shutdown()
+   exit
 
-Congratualions! You have successfully connected to the Ray cluster.
+Executing in a cluster environment
+----------------------------------
 
 .. note::
-   Be careful when using the Ray client to connect to a remote cluster.
-   This connection mode may not work. Known bugs:
+   Be careful when using the `Ray client`_ to connect to a remote cluster.
+   We don't recommend this connection mode, beacuse it may not work. Known bugs:
    - https://github.com/ray-project/ray/issues/38713,
    - https://github.com/modin-project/modin/issues/6641.
 
-Using Modin on a Ray Cluster
-----------------------------
+Modin lets you instantly speed up your workflows with a large data by scaling pandas
+on a cluster. In this tutorial, we will use a 12.5 GB ``big_yellow.csv`` file that was
+created by concatenating a 200MB `NYC Taxi dataset`_ file 64 times. Preparing this
+file was provided as part of our `Modin's Ray cluster setup config`_.
 
-Now that we have a Ray cluster up and running, we can use Modin to perform pandas
-operation as if we were working with pandas on a single machine. We test Modin's
-performance on the 200MB `NYC Taxi dataset`_ that was provided as part of our
-`Modin's cluster setup config`_. We can time the following operation in a Jupyter
-notebook:
+If you want to use the other dataset, you should provide it to each of
+the cluster nodes with the same path. We recomnend doing this by customizing the
+``setup_commands`` section of the `Modin's Ray cluster setup config`_.
 
-.. code-block:: python
+To run any script in a remote cluster, you need to submit it to the Ray. In this way,
+the script file is sent to the the remote cluster head node and executed there. 
 
-   %%time
-   df = pd.read_csv("big_yellow.csv", quoting=3)
+In this tutorial, we provide the `exercise_5.py`_ script, which reads the data from the
+CSV file and executes such pandas operations as count, groupby and map.
+As the result, you will see the size of the file being read and the execution time of the entire script.
 
-   %%time
-   count_result = df.count()
+You can submit this script to the existing remote cluster by running the following command.
 
-   %%time
-   groupby_result = df.groupby("passenger_count").count()
+.. code-block:: bash
 
-   %%time
-   apply_result = df.map(str)
+   ray submit modin-cluster.yaml exercise_5.py
 
-.. note::
-   When using local paths, make sure that they are available on all nodes in the
-   cluster, for example using distributed file system like NFS.
+To download or upload files to the cluster head node, use ``ray rsync_down`` or ``ray rsync_up``.
+It may help if you want to use some other Python modules that should be available to
+execute your own script or download a result file after executing the script.
 
-Modin performance scales as the number of nodes and cores increases. The following
-chart shows the performance of the above operations with 2, 4, and 8 nodes, with
-improvements in performance as we increase the number of resources Modin can use.
+.. code-block:: bash
 
-.. image:: ../../../examples/tutorial/jupyter/img/modin_cluster_perf.png
-   :alt: Cluster Performance
-   :align: center
-   :scale: 90%
+   # download a file from the cluster to the local machine:
+   ray rsync_down modin-cluster.yaml '/path/on/cluster' '/local/path'
+   # upload a file from the local machine to the cluster:
+   ray rsync_up modin-cluster.yaml '/local/path' '/path/on/cluster'
 
-Advanced: Configuring your Ray Environment
-------------------------------------------
+Shutting down the cluster
+--------------------------
 
-In some cases, it may be useful to customize your Ray environment. Below, we have listed
-a few ways you can solve common problems in data management with Modin by customizing
-your Ray environment. It is possible to use any of Ray's initialization parameters,
-which are all found in `Ray's API docs`_.
+Now that we have finished the computation, we need to shut down the cluster with `ray down` command.
 
-.. code-block:: python
+.. code-block:: bash
 
-   import ray
-   ray.init()
-   import modin.pandas as pd
+   ray down modin-cluster.yaml
 
-Modin will automatically connect to the Ray instance that is already running. This way,
-you can customize your Ray environment for use in Modin!
-
-
-.. _`DataFrame`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.html
-.. _`pandas`: https://pandas.pydata.org/pandas-docs/stable/
-.. _`open an issue`: https://github.com/modin-project/modin/issues
-.. _`Ray's API docs`: https://ray.readthedocs.io/en/latest/api.html
-.. _`Part 1`: https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.ipynb
-.. _`Part 2`: https://github.com/modin-project/modin/tree/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_6.ipynb
 .. _`Ray's autoscaler options`: https://docs.ray.io/en/latest/cluster/vms/references/ray-cluster-configuration.html#cluster-config
 .. _`Ray's cluster docs`: https://docs.ray.io/en/latest/cluster/getting-started.html
 .. _`NYC Taxi dataset`: https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
-.. _`Modin's cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
+.. _`Modin's Ray cluster setup config`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/modin-cluster.yaml
+.. _`Amazon EC2 pricing`: https://aws.amazon.com/ec2/pricing/on-demand/
+.. _`exercise_5.py`: https://github.com/modin-project/modin/blob/master/examples/tutorial/jupyter/execution/pandas_on_ray/cluster/exercise_5.py
+.. _`Ray client`: https://docs.ray.io/en/latest/cluster/running-applications/job-submission/ray-client.html
+.. _`Ray CLI`: https://docs.ray.io/en/latest/cluster/vms/getting-started.html#running-applications-on-a-ray-cluster
+.. _`AWS CLI environment variables`: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
