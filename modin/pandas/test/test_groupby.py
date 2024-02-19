@@ -3362,7 +3362,8 @@ def test_range_groupby_categories_external_grouper(columns, cat_cols):
 
 @pytest.mark.parametrize("by", [["a"], ["a", "b"]])
 @pytest.mark.parametrize("as_index", [True, False])
-def test_include_groups_False(by, as_index):
+@pytest.mark.parametrize("include_groups", [True, False])
+def test_include_groups(by, as_index, include_groups):
     data = {
         "a": [1, 1, 2, 2] * 64,
         "b": [11, 11, 22, 22] * 64,
@@ -3371,11 +3372,17 @@ def test_include_groups_False(by, as_index):
     }
 
     def func(df):
-        assert len(df.columns.intersection(by)) == 0
+        if include_groups:
+            assert len(df.columns.intersection(by)) == len(by)
+        else:
+            assert len(df.columns.intersection(by)) == 0
         return df.sum()
 
     md_df, pd_df = create_test_dfs(data)
-
-    md_res = md_df.groupby(by, as_index=as_index).apply(func, include_groups=False)
-    pd_res = pd_df.groupby(by, as_index=as_index).apply(func, include_groups=False)
-    df_equals(md_res, pd_res)
+    eval_general(
+        md_df,
+        pd_df,
+        lambda df: df.groupby(by, as_index=as_index).apply(
+            func, include_groups=include_groups
+        ),
+    )
