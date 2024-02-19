@@ -66,7 +66,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     strategy:
       matrix:
         os:
@@ -94,7 +94,7 @@ jobs:
         if: matrix.os == 'ubuntu'
 
   test-internals:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -119,7 +119,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -150,7 +150,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-hdk:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -207,7 +207,7 @@ jobs:
 
   test-asv-benchmarks:
     if: github.event_name == 'pull_request'
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -312,7 +312,7 @@ jobs:
               "${{ steps.filter.outputs.ray }}" "${{ steps.filter.outputs.dask }}" >> $GITHUB_OUTPUT
 
   test-all-unidist:
-    needs: [lint-flake8, lint-black-isort, execution-filter]
+    needs: [lint-flake8, execution-filter]
     if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
     runs-on: ubuntu-latest
     defaults:
@@ -387,7 +387,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-all:
-    needs: [lint-flake8, lint-black-isort, execution-filter]
+    needs: [lint-flake8, execution-filter]
     strategy:
       matrix:
         os:
@@ -521,7 +521,7 @@ jobs:
         if: matrix.os == 'windows'
 
   test-sanity:
-    needs: [lint-flake8, lint-black-isort, execution-filter]
+    needs: [lint-flake8, execution-filter]
     if: github.event_name == 'pull_request'
     strategy:
       matrix:
@@ -653,7 +653,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -682,7 +682,7 @@ jobs:
       - uses: ./.github/actions/upload-coverage
 
   test-spreadsheet:
-    needs: [lint-flake8, lint-black-isort]
+    needs: [lint-flake8]
     runs-on: ubuntu-latest
     defaults:
       run:
