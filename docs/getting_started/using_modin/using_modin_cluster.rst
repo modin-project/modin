@@ -93,11 +93,6 @@ In this tutorial, we provide the `exercise_5.py`_ script, which reads the data f
 CSV file and executes such pandas operations as count, groupby and map.
 As the result, you will see the size of the file being read and the execution time of the entire script.
 
-.. note::
-   Some Dataframe functions are executed asynchronously, so to correctly measure execution time 
-   of each function we need to wait for the execution result. We use the special ``execute`` function for this, 
-   but you shouldn't use it in a real case scenario.
-
 You can submit this script to the existing remote cluster by running the following command.
 
 .. code-block:: bash
