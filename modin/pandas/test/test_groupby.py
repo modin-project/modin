@@ -3087,6 +3087,40 @@ def test_groupby_named_aggregation():
     )
 
 
+def test_groupby_several_column_partitions():
+    # see details in #6948
+    columns = [
+        "l_returnflag",
+        "l_linestatus",
+        "l_discount",
+        "l_extendedprice",
+        "l_quantity",
+    ]
+    df = pd.DataFrame(
+        np.random.randint(0, 100, size=(1000, len(columns))), columns=columns
+    )
+
+    # to create another column partition
+    df["a"] = (df.l_extendedprice) * (1 - (df.l_discount))
+
+    eval_general(
+        df,
+        df._to_pandas(),
+        lambda df: df.groupby("l_returnflag", "l_linestatus")
+        .agg(
+            sum_qty=("l_quantity", "sum"),
+            sum_base_price=("l_extendedprice", "sum"),
+            sum_disc_price=("a", "sum"),
+            # sum_charge=("b", "sum"),
+            avg_qty=("l_quantity", "mean"),
+            avg_price=("l_extendedprice", "mean"),
+            avg_disc=("l_discount", "mean"),
+            count_order=("l_returnflag", "count"),
+        )
+        .reset_index(),
+    )
+
+
 ### TEST GROUPBY WARNINGS ###
 
 

@@ -904,14 +904,20 @@ class DataFrameGroupBy(ClassLogger):
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
-            relabeling_required, func_dict, new_columns, order = reconstruct_func(
+            # the order from `reconstruct_func` cannot be used correctly if there
+            # is more than one columnar partition
+            old_kwargs = dict(kwargs)
+            relabeling_required, func_dict, new_columns, _ = reconstruct_func(
                 func, **kwargs
             )
 
             if relabeling_required:
 
                 def do_relabel(obj_to_relabel):  # noqa: F811
-                    new_order, new_columns_idx = order, pandas.Index(new_columns)
+                    new_order = obj_to_relabel.columns.get_indexer(
+                        [x for x in old_kwargs.values()]
+                    )
+                    new_columns_idx = pandas.Index(new_columns)
                     if not self._as_index:
                         nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)
                         new_order = np.concatenate(
