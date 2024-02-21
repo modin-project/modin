@@ -3106,7 +3106,7 @@ def test_groupby_several_column_partitions():
     eval_general(
         df,
         df._to_pandas(),
-        lambda df: df.groupby("l_returnflag", "l_linestatus")
+        lambda df: df.groupby(["l_returnflag", "l_linestatus"])
         .agg(
             sum_qty=("l_quantity", "sum"),
             sum_base_price=("l_extendedprice", "sum"),

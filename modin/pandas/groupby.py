@@ -22,6 +22,7 @@ import pandas
 import pandas.core.common as com
 import pandas.core.groupby
 from pandas._libs import lib
+from pandas.api.types import is_scalar
 from pandas.core.apply import reconstruct_func
 from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
@@ -914,15 +915,27 @@ class DataFrameGroupBy(ClassLogger):
             if relabeling_required:
 
                 def do_relabel(obj_to_relabel):  # noqa: F811
-                    new_order = obj_to_relabel.columns.get_indexer(
-                        [x for x in old_kwargs.values()]
-                    )
+                    # unwrap nested labels into one level tuple
+                    labels = [None] * len(old_kwargs)
+                    for idx, x in enumerate(old_kwargs.values()):
+                        if is_scalar(x) or callable(x):
+                            labels[idx] = x if not callable(x) else x.__name__
+                            continue
+                        new_elem = []
+                        for y in x:
+                            if is_scalar(y) or callable(y):
+                                new_elem.append(y if not callable(y) else y.__name__)
+                            else:
+                                new_elem.extend(y)
+                        for el in new_elem:
+                            assert is_scalar(el)
+                        labels[idx] = tuple(new_elem)
+
+                    new_order = obj_to_relabel.columns.get_indexer(labels)
                     new_columns_idx = pandas.Index(new_columns)
                     if not self._as_index:
                         nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)
-                        new_order = np.concatenate(
-                            [np.arange(nby_cols), new_order + nby_cols]
-                        )
+                        new_order = np.concatenate([np.arange(nby_cols), new_order])
                         by_cols = obj_to_relabel.columns[:nby_cols]
                         if by_cols.nlevels != new_columns_idx.nlevels:
                             by_cols = by_cols.remove_unused_levels()
