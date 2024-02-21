@@ -3121,6 +3121,25 @@ def test_groupby_several_column_partitions():
     )
 
 
+def test_groupby_named_agg():
+    # from pandas docs
+
+    data = {
+        "A": [1, 1, 2, 2],
+        "B": [1, 2, 3, 4],
+        "C": [0.362838, 0.227877, 1.267767, -0.562860],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby("A").agg(
+            b_min=pd.NamedAgg(column="B", aggfunc="min"),
+            c_sum=pd.NamedAgg(column="C", aggfunc="sum"),
+        ),
+    )
+
+
 ### TEST GROUPBY WARNINGS ###
 
 
