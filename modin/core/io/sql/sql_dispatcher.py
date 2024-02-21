@@ -149,7 +149,9 @@ class SQLDispatcher(FileDispatcher):
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
         if cls._is_supported_sqlalchemy_object(kwargs["con"]):
-            kwargs["con"] = str(kwargs["con"].engine.url)
+            kwargs["con"] = kwargs["con"].engine.url.render_as_string(
+                hide_password=False
+            )
 
         empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
         empty_df.to_sql(**kwargs)
