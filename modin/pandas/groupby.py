@@ -927,8 +927,6 @@ class DataFrameGroupBy(ClassLogger):
                                 new_elem.append(y if not callable(y) else y.__name__)
                             else:
                                 new_elem.extend(y)
-                        for el in new_elem:
-                            assert is_scalar(el)
                         labels[idx] = tuple(new_elem)
 
                     new_order = obj_to_relabel.columns.get_indexer(labels)
