@@ -870,7 +870,7 @@ def eval_general(
     comparator=df_equals,
     __inplace__=False,
     check_exception_type=True,
-    raising_exceptions=(Exception,),
+    raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
@@ -903,9 +903,12 @@ def eval_general(
                     type(md_e.value), type(pd_e)
                 )
                 if raising_exceptions:
-                    assert not isinstance(
-                        md_e.value, tuple(raising_exceptions)
-                    ), f"not acceptable exception type: {md_e.value}"
+                    assert (
+                        type(md_e.value) is type(raising_exceptions)
+                        and md_e.value.args == raising_exceptions.args
+                    ), f"not acceptable exception: [{md_e.typename}: {md_e.value}]"
+                else:
+                    raise
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
