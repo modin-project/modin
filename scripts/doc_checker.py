@@ -35,6 +35,9 @@ from typing import List
 from numpydoc.docscrape import NumpyDocString
 from numpydoc.validate import Docstring
 
+# Let the other modules to know that the doc checker is running.
+os.environ["_MODIN_DOC_CHECKER_"] = "1"
+
 # fake cuDF-related modules if they're missing
 for mod_name in ("cudf", "cupy"):
     try:

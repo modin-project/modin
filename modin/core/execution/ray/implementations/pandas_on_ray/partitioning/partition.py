@@ -148,7 +148,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def drain_call_queue(self):
         data = self._data_ref
         if not isinstance(data, DeferredExecution):
-            return data
+            return
 
         log = get_logger()
         self._is_debug(log) and log.debug(
@@ -419,7 +419,7 @@ def _configure_lazy_exec(cls: LazyExecution):
 LazyExecution.subscribe(_configure_lazy_exec)
 
 
-class SlicerHook(MaterializationHook):
+class SlicerHook(MaterializationHook, DeferredExecution):
     """
     Used by mask() for the slilced length computation.
 
@@ -432,6 +432,7 @@ class SlicerHook(MaterializationHook):
     """
 
     def __init__(self, ref: ObjectIDType, slc: slice):
+        super().__init__(slc, compute_sliced_len, [ref])
         self.ref = ref
         self.slc = slc
 
