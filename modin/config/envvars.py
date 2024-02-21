@@ -868,7 +868,7 @@ class LazyExecution(EnvironmentVariable, type=str):
     """
 
     varname = "MODIN_LAZY_EXECUTION"
-    choices = ("Auto", "On", "Off")
+    choices = ("Auto", "On", "Off", "Axis")
     default = "Auto"
 
 

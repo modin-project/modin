@@ -29,13 +29,20 @@ from typing import (
 
 import pandas
 import ray
+import ray.exceptions
 from ray._private.services import get_node_ip_address
 from ray.util.client.common import ClientObjectRef
 
-from modin.core.execution.ray.common import MaterializationHook, RayWrapper
+from modin.core.execution.ray.common import (
+    MaterializationHook,
+    RayObjectRefTypes,
+    RayWrapper,
+)
+from modin.core.execution.utils import remote_function
 from modin.logging import get_logger
+from modin.utils import _inherit_docstrings
 
-ObjectRefType = Union[ray.ObjectRef, ClientObjectRef, None]
+ObjectRefType = Union[ray.ObjectRef, ClientObjectRef]
 ObjectRefOrListType = Union[ObjectRefType, List[ObjectRefType]]
 ListOrTuple = (list, tuple)
 
@@ -68,16 +75,18 @@ class DeferredExecution:
 
     Attributes
     ----------
-    data : ObjectRefType or DeferredExecution
+    data : object
         The execution input.
     func : callable or ObjectRefType
         A function to be executed.
-    args : list or tuple
+    args : list or tuple, optional
         Additional positional arguments to be passed in `func`.
-    kwargs : dict
+    kwargs : dict, optional
         Additional keyword arguments to be passed in `func`.
-    num_returns : int
+    num_returns : int, default: 1
         The number of the return values.
+    flat_data : bool
+        True means that the data is neither DeferredExecution nor list.
     flat_args : bool
         True means that there are no lists or DeferredExecution objects in `args`.
         In this case, no arguments processing is performed and `args` is passed
@@ -88,26 +97,29 @@ class DeferredExecution:
 
     def __init__(
         self,
-        data: Union[
-            ObjectRefType,
-            "DeferredExecution",
-            List[Union[ObjectRefType, "DeferredExecution"]],
-        ],
+        data: Any,
         func: Union[Callable, ObjectRefType],
-        args: Union[List[Any], Tuple[Any]],
-        kwargs: Dict[str, Any],
+        args: Optional[Union[List[Any], Tuple[Any]]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
         num_returns=1,
     ):
-        if isinstance(data, DeferredExecution):
-            data.subscribe()
+        self.flat_data = self._flat_args((data,))
         self.data = data
         self.func = func
-        self.args = args
-        self.kwargs = kwargs
         self.num_returns = num_returns
-        self.flat_args = self._flat_args(args)
-        self.flat_kwargs = self._flat_args(kwargs.values())
         self.subscribers = 0
+        if args is not None:
+            self.args = args
+            self.flat_args = self._flat_args(args)
+        else:
+            self.args = ()
+            self.flat_args = True
+        if kwargs is not None:
+            self.kwargs = kwargs
+            self.flat_kwargs = self._flat_args(kwargs.values())
+        else:
+            self.kwargs = {}
+            self.flat_kwargs = True
 
     @classmethod
     def _flat_args(cls, args: Iterable):
@@ -134,7 +146,7 @@ class DeferredExecution:
 
     def exec(
         self,
-    ) -> Tuple[ObjectRefOrListType, Union["MetaList", List], Union[int, List[int]]]:
+    ) -> Tuple[ObjectRefOrListType, "MetaList", Union[int, List[int]]]:
         """
         Execute this task, if required.
 
@@ -150,7 +162,7 @@ class DeferredExecution:
             return self.data, self.meta, self.meta_offset
 
         if (
-            not isinstance(self.data, DeferredExecution)
+            self.flat_data
             and self.flat_args
             and self.flat_kwargs
             and self.num_returns == 1
@@ -166,6 +178,7 @@ class DeferredExecution:
         # it back. After the execution, the result is saved and the counter has no effect.
         self.subscribers += 2
         consumers, output = self._deconstruct()
+
         # The last result is the MetaList, so adding +1 here.
         num_returns = sum(c.num_returns for c in consumers) + 1
         results = self._remote_exec_chain(num_returns, *output)
@@ -173,12 +186,13 @@ class DeferredExecution:
         meta_offset = 0
         results = iter(results)
         for de in consumers:
-            if de.num_returns == 1:
+            num_returns = de.num_returns
+            if num_returns == 1:
                 de._set_result(next(results), meta, meta_offset)
                 meta_offset += 2
             else:
                 res = list(islice(results, num_returns))
-                offsets = list(range(0, 2 * num_returns, 2))
+                offsets = list(range(meta_offset, meta_offset + 2 * num_returns, 2))
                 de._set_result(res, meta, offsets)
                 meta_offset += 2 * num_returns
         return self.data, self.meta, self.meta_offset
@@ -303,7 +317,9 @@ class DeferredExecution:
         out_extend = output.extend
         while True:
             de.unsubscribe()
-            if (out_pos := getattr(de, "out_pos", None)) and not de.has_result:
+            if not (has_result := de.has_result) and (
+                out_pos := getattr(de, "out_pos", None)
+            ):
                 out_append(_Tag.REF)
                 out_append(out_pos)
                 output[out_pos] = out_pos
@@ -318,12 +334,13 @@ class DeferredExecution:
                 break
             elif not isinstance(data := de.data, DeferredExecution):
                 if isinstance(data, ListOrTuple):
+                    out_append(_Tag.LIST)
                     yield cls._deconstruct_list(
                         data, output, stack, result_consumers, out_append
                     )
                 else:
                     out_append(data)
-                if not de.has_result:
+                if not has_result:
                     stack.append(de)
                 break
             else:
@@ -391,22 +408,24 @@ class DeferredExecution:
         """
         for obj in lst:
             if isinstance(obj, DeferredExecution):
-                if out_pos := getattr(obj, "out_pos", None):
+                if obj.has_result:
+                    obj = obj.data
+                elif out_pos := getattr(obj, "out_pos", None):
                     obj.unsubscribe()
-                    if obj.has_result:
-                        out_append(obj.data)
-                    else:
-                        out_append(_Tag.REF)
-                        out_append(out_pos)
-                        output[out_pos] = out_pos
-                        if obj.subscribers == 0:
-                            output[out_pos + 1] = 0
-                            result_consumers.remove(obj)
+                    out_append(_Tag.REF)
+                    out_append(out_pos)
+                    output[out_pos] = out_pos
+                    if obj.subscribers == 0:
+                        output[out_pos + 1] = 0
+                        result_consumers.remove(obj)
+                    continue
                 else:
                     out_append(_Tag.CHAIN)
                     yield cls._deconstruct_chain(obj, output, stack, result_consumers)
                     out_append(_Tag.END)
-            elif isinstance(obj, ListOrTuple):
+                    continue
+
+            if isinstance(obj, ListOrTuple):
                 out_append(_Tag.LIST)
                 yield cls._deconstruct_list(
                     obj, output, stack, result_consumers, out_append
@@ -432,20 +451,20 @@ class DeferredExecution:
         list
             The execution results. The last element of this list is the ``MetaList``.
         """
-        # Prefer _remote_exec_single_chain(). It has fewer arguments and
-        # does not require the num_returns to be specified in options.
+        # Prefer _remote_exec_single_chain(). It does not require the num_returns
+        # to be specified in options.
         if num_returns == 2:
             return _remote_exec_single_chain.remote(*args)
         else:
             return _remote_exec_multi_chain.options(num_returns=num_returns).remote(
-                num_returns, *args
+                *args
             )
 
     def _set_result(
         self,
         result: ObjectRefOrListType,
-        meta: "MetaList",
-        meta_offset: Union[int, List[int]],
+        meta: Optional["MetaList"] = None,
+        meta_offset: Optional[Union[int, List[int]]] = 0,
     ):
         """
         Set the execution result.
@@ -453,17 +472,83 @@ class DeferredExecution:
         Parameters
         ----------
         result : ObjectRefOrListType
-        meta : MetaList
-        meta_offset : int or list of int
+        meta : MetaList, default: None
+        meta_offset : int or list of int, default: 0
         """
-        del self.func, self.args, self.kwargs, self.flat_args, self.flat_kwargs
+        del self.func, self.args, self.kwargs
         self.data = result
-        self.meta = meta
+        self.meta = MetaList([0]) if meta is None else meta
         self.meta_offset = meta_offset
 
     def __reduce__(self):
         """Not serializable."""
         raise NotImplementedError("DeferredExecution is not serializable!")
+
+
+ObjectRefOrDeType = Union[ObjectRefType, DeferredExecution]
+
+
+class DeferredGetItem(DeferredExecution):
+    """
+    Deferred execution task that returns an item at the specified index.
+
+    Parameters
+    ----------
+    data : ObjectRefOrDeType
+        The object to get the item from.
+    index : int
+        The item index.
+    """
+
+    def __init__(self, data: ObjectRefOrDeType, index: int):
+        super().__init__(data, self._remote_fn, [index])
+        self.index = index
+
+    @property
+    @_inherit_docstrings(DeferredExecution.has_result)
+    def has_result(self):
+        if super().has_result:
+            return True
+
+        if isinstance(self.data, RayObjectRefTypes):
+            # Set the result if the object is already in the local store.
+            try:
+                self._set_result(ray.get(self.data, timeout=0)[self.index])
+                return True
+            except ray.exceptions.GetTimeoutError:
+                return False
+
+        if (
+            isinstance(self.data, DeferredExecution)
+            and self.data.has_result
+            and self.data.num_returns != 1
+        ):
+            # If `data` is a `DeferredExecution`, that returns multiple results, we
+            # don't need to execute `_remote_fn`, but can get the result by index instead.
+            self._set_result(
+                self.data.data[self.index],
+                self.data.meta,
+                self.data.meta_offset[self.index],
+            )
+            return True
+
+        return False
+
+    @remote_function
+    def _remote_fn(obj, index):  # pragma: no cover
+        """
+        Return the item by index.
+
+        Parameters
+        ----------
+        obj : collection
+        index : int
+
+        Returns
+        -------
+        object
+        """
+        return obj[index]
 
 
 class MetaList:
@@ -477,6 +562,11 @@ class MetaList:
 
     def __init__(self, obj: Union[ray.ObjectID, ClientObjectRef, List]):
         self._obj = obj
+
+    def materialize(self):
+        """Materialized the list, if required."""
+        if not isinstance(self._obj, list):
+            self._obj = RayWrapper.materialize(self._obj)
 
     def __getitem__(self, index):
         """
@@ -508,7 +598,7 @@ class MetaList:
         obj[index] = value
 
 
-class MetaListHook(MaterializationHook):
+class MetaListHook(MaterializationHook, DeferredGetItem):
     """
     Used by MetaList.__getitem__() for lazy materialization and getting a single value from the list.
 
@@ -516,13 +606,13 @@ class MetaListHook(MaterializationHook):
     ----------
     meta : MetaList
         Non-materialized list to get the value from.
-    idx : int
+    index : int
         The value index in the list.
     """
 
-    def __init__(self, meta: MetaList, idx: int):
+    def __init__(self, meta: MetaList, index: int):
+        super().__init__(meta._obj, index)
         self.meta = meta
-        self.idx = idx
 
     def pre_materialize(self):
         """
@@ -533,7 +623,7 @@ class MetaListHook(MaterializationHook):
         object
         """
         obj = self.meta._obj
-        return obj[self.idx] if isinstance(obj, list) else obj
+        return obj[self.index] if isinstance(obj, list) else obj
 
     def post_materialize(self, materialized):
         """
@@ -548,7 +638,7 @@ class MetaListHook(MaterializationHook):
         object
         """
         self.meta._obj = materialized
-        return materialized[self.idx]
+        return materialized[self.index]
 
 
 class _Tag(Enum):  # noqa: PR01
@@ -605,7 +695,7 @@ class _RemoteExecutor:
             raise err
 
     @classmethod
-    def construct(cls, num_returns: int, args: Tuple):  # pragma: no cover
+    def construct(cls, args: Tuple):  # pragma: no cover
         """
         Construct and execute the specified chain.
 
@@ -615,7 +705,6 @@ class _RemoteExecutor:
 
         Parameters
         ----------
-        num_returns : int
         args : tuple
 
         Yields
@@ -687,7 +776,7 @@ class _RemoteExecutor:
 
         while chain:
             fn = pop()
-            if fn == tg_e:
+            if fn is tg_e:
                 lst.append(obj)
                 break
 
@@ -717,10 +806,10 @@ class _RemoteExecutor:
 
             itr = iter([obj] if num_returns == 1 else obj)
             for _ in range(num_returns):
-                obj = next(itr)
-                meta.append(len(obj) if hasattr(obj, "__len__") else 0)
-                meta.append(len(obj.columns) if hasattr(obj, "columns") else 0)
-                yield obj
+                o = next(itr)
+                meta.append(len(o) if hasattr(o, "__len__") else 0)
+                meta.append(len(o.columns) if hasattr(o, "columns") else 0)
+                yield o
 
     @classmethod
     def construct_list(
@@ -834,20 +923,18 @@ def _remote_exec_single_chain(
     -------
     Generator
     """
-    return remote_executor.construct(num_returns=2, args=args)
+    return remote_executor.construct(args=args)
 
 
 @ray.remote
 def _remote_exec_multi_chain(
-    num_returns: int, *args: Tuple, remote_executor=_REMOTE_EXEC
+    *args: Tuple, remote_executor=_REMOTE_EXEC
 ) -> Generator:  # pragma: no cover
     """
     Execute the deconstructed chain with a multiple return values in a worker process.
 
     Parameters
     ----------
-    num_returns : int
-        The number of return values.
     *args : tuple
         A deconstructed chain to be executed.
     remote_executor : _RemoteExecutor, default: _REMOTE_EXEC
@@ -857,4 +944,4 @@ def _remote_exec_multi_chain(
     -------
     Generator
     """
-    return remote_executor.construct(num_returns, args)
+    return remote_executor.construct(args)

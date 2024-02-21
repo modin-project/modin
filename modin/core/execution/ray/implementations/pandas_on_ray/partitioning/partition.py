@@ -23,13 +23,18 @@ if TYPE_CHECKING:
 
 from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.core.execution.ray.common import MaterializationHook, RayWrapper
+from modin.core.execution.ray.common import (
+    MaterializationHook,
+    RayObjectRefTypes,
+    RayWrapper,
+)
 from modin.core.execution.ray.common.deferred_execution import (
     DeferredExecution,
     MetaList,
     MetaListHook,
 )
 from modin.core.execution.ray.common.utils import ObjectIDType
+from modin.core.execution.utils import remote_function
 from modin.logging import disable_logging, get_logger
 from modin.pandas.indexing import compute_sliced_len
 from modin.utils import _inherit_docstrings
@@ -148,7 +153,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
     def drain_call_queue(self):
         data = self._data_ref
         if not isinstance(data, DeferredExecution):
-            return data
+            return
 
         log = get_logger()
         self._is_debug(log) and log.debug(
@@ -387,7 +392,7 @@ def _configure_lazy_exec(cls: LazyExecution):
     """Configure lazy execution mode for PandasOnRayDataframePartition."""
     mode = cls.get()
     get_logger().debug(f"Ray lazy execution mode: {mode}")
-    if mode == "Auto":
+    if mode == "Auto" or mode == "Axis":
         PandasOnRayDataframePartition.apply = (
             PandasOnRayDataframePartition._eager_exec_func
         )
@@ -419,7 +424,7 @@ def _configure_lazy_exec(cls: LazyExecution):
 LazyExecution.subscribe(_configure_lazy_exec)
 
 
-class SlicerHook(MaterializationHook):
+class SlicerHook(MaterializationHook, DeferredExecution):
     """
     Used by mask() for the slilced length computation.
 
@@ -432,8 +437,31 @@ class SlicerHook(MaterializationHook):
     """
 
     def __init__(self, ref: ObjectIDType, slc: slice):
+        super().__init__(slc, remote_function(compute_sliced_len), [ref])
         self.ref = ref
         self.slc = slc
+
+    @_inherit_docstrings(DeferredExecution.has_result)
+    def has_result(self):
+        if super().has_result:
+            return True
+
+        ref = self.ref
+        if isinstance(ref, MetaListHook):
+            if ref.has_result:
+                ref = ref.data
+            else:
+                return False
+        elif isinstance(ref, RayObjectRefTypes):
+            try:
+                ref = ray.get(ref, timeout=0)
+            except ray.exceptions.GetTimeoutError:
+                return False
+        else:
+            return False
+
+        self._set_result(compute_sliced_len(self.slc, ref))
+        return True
 
     def pre_materialize(self):
         """

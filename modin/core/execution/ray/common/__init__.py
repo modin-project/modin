@@ -13,7 +13,12 @@
 
 """Common utilities for Ray execution engine."""
 
-from .engine_wrapper import MaterializationHook, RayWrapper, SignalActor
+from .engine_wrapper import (
+    MaterializationHook,
+    RayObjectRefTypes,
+    RayWrapper,
+    SignalActor,
+)
 from .utils import initialize_ray
 
 __all__ = [
@@ -21,4 +26,5 @@ __all__ = [
     "RayWrapper",
     "MaterializationHook",
     "SignalActor",
+    "RayObjectRefTypes",
 ]
