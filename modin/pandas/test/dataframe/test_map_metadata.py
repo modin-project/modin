@@ -563,8 +563,6 @@ def test_astype_int64_to_astype_category_github_issue_6259():
             index=["a", "b", "c", "d", "e"],
         ),
         lambda df: df["c0"].astype("Int64").astype("category"),
-        # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=(Exception,),
     )
 
 

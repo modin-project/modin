@@ -2797,9 +2797,6 @@ def test_groupby_agg_with_empty_column_partition_6175(method):
         df,
         df._to_pandas(),
         lambda df: getattr(df.groupby(["col33", "index"]), method)(),
-        # work around https://github.com/modin-project/modin/issues/6016: we don't
-        # expect any exceptions.
-        raising_exceptions=(Exception,),
     )
 
 

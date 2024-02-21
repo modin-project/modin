@@ -3200,9 +3200,6 @@ def test_to_dict_series(kwargs):
     eval_general(
         *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
         lambda df: df.to_dict(**kwargs),
-        # TODO(https://github.com/modin-project/modin/issues/6016): fix eval_general
-        # and remove this raising_exceptions
-        raising_exceptions=(Exception,),
     )
 
 

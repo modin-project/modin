@@ -870,7 +870,7 @@ def eval_general(
     comparator=df_equals,
     __inplace__=False,
     check_exception_type=True,
-    raising_exceptions=None,
+    raising_exceptions=(Exception,),
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
