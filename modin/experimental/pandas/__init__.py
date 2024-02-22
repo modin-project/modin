@@ -32,9 +32,6 @@ Examples
 >>> df = pd.read_csv_glob("data*.csv")
 """
 
-import functools
-import warnings
-
 from modin.pandas import *  # noqa F401, F403
 
 from .io import (  # noqa F401
@@ -45,20 +42,4 @@ from .io import (  # noqa F401
     read_pickle_distributed,
     read_sql,
     read_xml_glob,
-    to_pickle_distributed,
 )
-
-old_to_pickle_distributed = to_pickle_distributed
-
-
-@functools.wraps(to_pickle_distributed)
-def to_pickle_distributed(*args, **kwargs):
-    warnings.warn(
-        "`DataFrame.to_pickle_distributed` is deprecated and will be removed in a future version. "
-        + "Please use `DataFrame.modin.to_pickle_distributed` instead.",
-        category=FutureWarning,
-    )
-    return old_to_pickle_distributed(*args, **kwargs)
-
-
-setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
