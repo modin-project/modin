@@ -906,7 +906,8 @@ class DataFrameGroupBy(ClassLogger):
         do_relabel = None
         if isinstance(func, dict) or func is None:
             # the order from `reconstruct_func` cannot be used correctly if there
-            # is more than one columnar partition
+            # is more than one columnar partition, since for correct use all columns
+            # must be available within one partition.
             old_kwargs = dict(kwargs)
             relabeling_required, func_dict, new_columns, _ = reconstruct_func(
                 func, **kwargs
@@ -916,20 +917,24 @@ class DataFrameGroupBy(ClassLogger):
 
                 def do_relabel(obj_to_relabel):  # noqa: F811
                     # unwrap nested labels into one level tuple
-                    labels = [None] * len(old_kwargs)
-                    for idx, x in enumerate(old_kwargs.values()):
-                        if is_scalar(x) or callable(x):
-                            labels[idx] = x if not callable(x) else x.__name__
+                    result_labels = [None] * len(old_kwargs)
+                    for idx, labels in enumerate(old_kwargs.values()):
+                        if is_scalar(labels) or callable(labels):
+                            result_labels[idx] = (
+                                labels if not callable(labels) else labels.__name__
+                            )
                             continue
                         new_elem = []
-                        for y in x:
-                            if is_scalar(y) or callable(y):
-                                new_elem.append(y if not callable(y) else y.__name__)
+                        for label in labels:
+                            if is_scalar(label) or callable(label):
+                                new_elem.append(
+                                    label if not callable(label) else label.__name__
+                                )
                             else:
-                                new_elem.extend(y)
-                        labels[idx] = tuple(new_elem)
+                                new_elem.extend(label)
+                        result_labels[idx] = tuple(new_elem)
 
-                    new_order = obj_to_relabel.columns.get_indexer(labels)
+                    new_order = obj_to_relabel.columns.get_indexer(result_labels)
                     new_columns_idx = pandas.Index(new_columns)
                     if not self._as_index:
                         nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)

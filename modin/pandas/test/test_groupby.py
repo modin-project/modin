@@ -3096,16 +3096,17 @@ def test_groupby_several_column_partitions():
         "l_extendedprice",
         "l_quantity",
     ]
-    df = pd.DataFrame(
+    modin_df, pandas_df = create_test_dfs(
         np.random.randint(0, 100, size=(1000, len(columns))), columns=columns
     )
 
+    pandas_df["a"] = (pandas_df.l_extendedprice) * (1 - (pandas_df.l_discount))
     # to create another column partition
-    df["a"] = (df.l_extendedprice) * (1 - (df.l_discount))
+    modin_df["a"] = (modin_df.l_extendedprice) * (1 - (modin_df.l_discount))
 
     eval_general(
-        df,
-        df._to_pandas(),
+        modin_df,
+        pandas_df,
         lambda df: df.groupby(["l_returnflag", "l_linestatus"])
         .agg(
             sum_qty=("l_quantity", "sum"),
