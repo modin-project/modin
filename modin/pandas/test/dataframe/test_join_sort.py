@@ -383,6 +383,13 @@ def test_merge(test_data, test_data2):
         modin_df.merge("Non-valid type")
 
 
+def test_merge_empty():
+    data = np.random.uniform(0, 100, size=(2**6, 2**6))
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.merge(df.iloc[:0]))
+
+
 def test_merge_with_mi_columns():
     modin_df1, pandas_df1 = create_test_dfs(
         {

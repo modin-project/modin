@@ -3203,6 +3203,25 @@ class PandasDataframe(ClassLogger):
             passed_len += len(internal)
         return result_dict
 
+    def _extract_partitions(self):
+        """
+        Extract partitions if partitions are present.
+
+        If partitions are empty return a dummy partition with empty data but
+        index and columns of current dataframe.
+
+        Returns
+        -------
+        np.ndarray
+            NumPy array with extracted partitions.
+        """
+        if self._partitions.size > 0:
+            return self._partitions
+        else:
+            return self._partition_mgr_cls.create_partition_from_metadata(
+                index=self.index, columns=self.columns
+            )
+
     @lazy_metadata_decorator(apply_axis="both")
     def broadcast_apply_select_indices(
         self,
@@ -3351,7 +3370,7 @@ class PandasDataframe(ClassLogger):
         if other is not None:
             if not isinstance(other, list):
                 other = [other]
-            other = [o._partitions for o in other] if len(other) else None
+            other = [o._extract_partitions() for o in other] if len(other) else None
 
         if apply_indices is not None:
             numeric_indices = self.get_axis(axis ^ 1).get_indexer_for(apply_indices)
