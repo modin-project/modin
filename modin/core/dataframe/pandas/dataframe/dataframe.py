@@ -3354,10 +3354,9 @@ class PandasDataframe(ClassLogger):
             if df._partitions.size > 0:
                 return df._partitions
             else:
-                empty_partition = self._partition_mgr_cls.create_partition_from_data(
+                return np.array([[self._partition_mgr_cls._partition_class.put(
                     pandas.DataFrame(index=df.index, columns=df.columns)
-                )
-                return empty_partition
+                ]])
 
         if other is not None:
             if not isinstance(other, list):
