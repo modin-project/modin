@@ -3087,6 +3087,60 @@ def test_groupby_named_aggregation():
     )
 
 
+def test_groupby_several_column_partitions():
+    # see details in #6948
+    columns = [
+        "l_returnflag",
+        "l_linestatus",
+        "l_discount",
+        "l_extendedprice",
+        "l_quantity",
+    ]
+    modin_df, pandas_df = create_test_dfs(
+        np.random.randint(0, 100, size=(1000, len(columns))), columns=columns
+    )
+
+    pandas_df["a"] = (pandas_df.l_extendedprice) * (1 - (pandas_df.l_discount))
+    # to create another column partition
+    modin_df["a"] = (modin_df.l_extendedprice) * (1 - (modin_df.l_discount))
+
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby(["l_returnflag", "l_linestatus"])
+        .agg(
+            sum_qty=("l_quantity", "sum"),
+            sum_base_price=("l_extendedprice", "sum"),
+            sum_disc_price=("a", "sum"),
+            # sum_charge=("b", "sum"),
+            avg_qty=("l_quantity", "mean"),
+            avg_price=("l_extendedprice", "mean"),
+            avg_disc=("l_discount", "mean"),
+            count_order=("l_returnflag", "count"),
+        )
+        .reset_index(),
+    )
+
+
+def test_groupby_named_agg():
+    # from pandas docs
+
+    data = {
+        "A": [1, 1, 2, 2],
+        "B": [1, 2, 3, 4],
+        "C": [0.362838, 0.227877, 1.267767, -0.562860],
+    }
+    modin_df, pandas_df = create_test_dfs(data)
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.groupby("A").agg(
+            b_min=pd.NamedAgg(column="B", aggfunc="min"),
+            c_sum=pd.NamedAgg(column="C", aggfunc="sum"),
+        ),
+    )
+
+
 ### TEST GROUPBY WARNINGS ###
 
 
