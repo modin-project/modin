@@ -176,21 +176,22 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
     # END Abstract Methods
 
     @classmethod
-    def create_partition_from_data(cls, data):
+    def create_partition_from_metadata(cls, **metadata):
         """
-        Create NumPy array of partitions that wrapps the given data.
+        Create NumPy array of partitions that holds an empty dataframe with given metadata.
 
         Parameters
         ----------
-        data : pandas.DataFrame or pandas.Series
-            Data that has to be wrapped in partition.
+        **metadata : dict
+            Metadata that has to be wrapped in a partition.
 
         Returns
         -------
         np.ndarray
             A NumPy 2D array of a single partition which contains the data.
         """
-        return np.array([[cls._partition_class.put(data)]])
+        metadata_dataframe = pandas.DataFrame(**metadata)
+        return np.array([[cls._partition_class.put(metadata_dataframe)]])
 
     @classmethod
     def column_partitions(cls, partitions, full_axis=True):
@@ -1130,15 +1131,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy 2D array of a single partition.
         """
+        if partitions.size <= 1:
+            return partitions
 
         def to_pandas_remote(df, partition_shape, *dfs):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
             return create_pandas_df_from_partitions(
                 (df,) + dfs, partition_shape, called_from_remote=True
             )
-
-        if partitions.size <= 1:
-            return partitions
 
         preprocessed_func = cls.preprocess_func(to_pandas_remote)
         partition_shape = partitions.shape
