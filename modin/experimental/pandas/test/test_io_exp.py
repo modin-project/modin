@@ -249,7 +249,11 @@ def test_read_multiple_csv_s3_storage_opts(
 @pytest.mark.parametrize(
     "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
 )
-def test_distributed_pickling(tmp_path, filename, compression, pathlike):
+@pytest.mark.parametrize("read_func", ["read_pickle_glob", "read_pickle_distributed"])
+@pytest.mark.parametrize("to_func", ["to_pickle_glob", "to_pickle_distributed"])
+def test_distributed_pickling(
+    tmp_path, filename, compression, pathlike, read_func, to_func
+):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
@@ -264,10 +268,8 @@ def test_distributed_pickling(tmp_path, filename, compression, pathlike):
         if filename_param == "test_default_to_pickle.pkl"
         else contextlib.nullcontext()
     ):
-        df.modin.to_pickle_distributed(
-            str(tmp_path / filename), compression=compression
-        )
-        pickled_df = pd.read_pickle_distributed(
+        getattr(df.modin, to_func)(str(tmp_path / filename), compression=compression)
+        pickled_df = getattr(pd, read_func)(
             str(tmp_path / filename), compression=compression
         )
     df_equals(pickled_df, df)

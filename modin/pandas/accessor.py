@@ -22,6 +22,7 @@ CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
 import pickle
+import warnings
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
@@ -209,7 +210,7 @@ class ExperimentalFunctions:
     def __init__(self, data):
         self._data = data
 
-    def to_pickle_distributed(
+    def to_pickle_glob(
         self,
         filepath_or_buffer,
         compression: CompressionOptions = "infer",
@@ -248,14 +249,30 @@ class ExperimentalFunctions:
             this argument with a non-fsspec URL. See the fsspec and backend storage
             implementation docs for the set of allowed keys and values.
         """
-        from modin.experimental.pandas.io import to_pickle_distributed
+        from modin.experimental.pandas.io import to_pickle_glob
 
-        to_pickle_distributed(
+        to_pickle_glob(
             self._data,
             filepath_or_buffer=filepath_or_buffer,
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,
+        )
+
+    def to_pickle_distributed(
+        self,
+        filepath_or_buffer,
+        compression: CompressionOptions = "infer",
+        protocol: int = pickle.HIGHEST_PROTOCOL,
+        storage_options: StorageOptions = None,
+    ) -> None:  # noqa
+        warnings.warn(
+            "`DataFrame.modin.to_pickle_distributed` is deprecated and will be removed in a future version. "
+            + "Please use `DataFrame.modin.to_pickle_glob` instead.",
+            category=FutureWarning,
+        )
+        return self.to_pickle_glob(
+            filepath_or_buffer, compression, protocol, storage_options
         )
 
     def to_parquet_glob(

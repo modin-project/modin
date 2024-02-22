@@ -303,7 +303,7 @@ read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def read_pickle_distributed(
+def read_pickle_glob(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
@@ -313,7 +313,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `DataFrame.modin.to_pickle_distributed` function.
+    obtained, for example, by `DataFrame.modin.to_pickle_glob` function.
 
     Parameters
     ----------
@@ -344,11 +344,11 @@ def read_pickle_distributed(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
+    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_glob(**kwargs))
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def to_pickle_distributed(
+def to_pickle_glob(
     self,
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
@@ -392,7 +392,7 @@ def to_pickle_distributed(
 
     if isinstance(self, DataFrame):
         obj = self._query_compiler
-    FactoryDispatcher.to_pickle_distributed(
+    FactoryDispatcher.to_pickle_glob(
         obj,
         filepath_or_buffer=filepath_or_buffer,
         compression=compression,
