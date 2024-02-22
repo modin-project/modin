@@ -1,9 +1,9 @@
 from typing import Any, Union
 
+import modin.pandas
+from modin.pandas import _PD_EXTENSIONS_
 from modin.pandas.dataframe import _DATAFRAME_EXTENSIONS_, DataFrame
 from modin.pandas.series import _SERIES_EXTENSIONS_, Series
-from modin.pandas import _PD_EXTENSIONS_
-import modin.pandas
 
 
 def _set_attribute_on_obj(
