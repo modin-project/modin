@@ -43,7 +43,13 @@ from pandas.testing import (
 )
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
+from modin.config import (
+    Engine,
+    MinPartitionSize,
+    NPartitions,
+    TestDatasetSize,
+    TrackFileLeaks,
+)
 from modin.pandas.io import to_pandas
 from modin.utils import try_cast_to_pandas
 
@@ -903,10 +909,17 @@ def eval_general(
                     type(md_e.value), type(pd_e)
                 )
                 if raising_exceptions:
+                    modin_exception = md_e.value
+                    if Engine.get() == "Ray":
+                        from ray.exceptions import RayTaskError
+
+                        # unwrap ray exceptions from remote worker
+                        if isinstance(modin_exception, RayTaskError):
+                            modin_exception = modin_exception.args[0]
                     assert (
-                        type(md_e.value) is type(raising_exceptions)
-                        and md_e.value.args == raising_exceptions.args
-                    ), f"not acceptable exception: [{md_e.typename}: {md_e.value}]"
+                        type(modin_exception) is type(raising_exceptions)
+                        and modin_exception.args == raising_exceptions.args
+                    ), f"not acceptable exception: [{modin_exception}]"
                 else:
                     raise
         else:
