@@ -81,6 +81,7 @@ from .utils import (
     ensure_supported_dtype,
     get_data_for_join_by_index,
     maybe_range,
+    shallow_copy_df,
 )
 
 IDX_COL_NAME = ColNameCodec.IDX_COL_NAME
@@ -2828,6 +2829,9 @@ class HdkOnNativeDataframe(PandasDataframe):
         -------
         pandas.DataFrame
         """
+        if (df := getattr(self, "_pandas_df", None)) is not None:
+            return shallow_copy_df(df)
+
         if self._force_execution_mode == "lazy":
             raise RuntimeError("unexpected to_pandas triggered on lazy frame")
 
@@ -2857,7 +2861,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             # to preserve the categorical dtypes
             df = concatenate([arrow_to_pandas(obj)])
         else:
-            df = obj.copy()
+            df = shallow_copy_df(obj)
 
         # If we make dataframe from Arrow table then we might need to set
         # index columns.
@@ -2882,7 +2886,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         # restrictions on column names.
         df.columns = self.columns
 
-        return df
+        self._pandas_df = df
+        return shallow_copy_df(df)
 
     def _find_index_or_col(self, col):
         """
