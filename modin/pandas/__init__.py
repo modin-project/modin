@@ -244,7 +244,10 @@ def __getattr__(name: str):
         Returns the extension attribute, if it exists, otherwise returns the attribute
         imported in this file.
     """
-    return _PD_EXTENSIONS_.get(name, globals()[name])
+    try:
+        return _PD_EXTENSIONS_.get(name, globals()[name])
+    except KeyError:
+        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
 
 
 __all__ = [  # noqa: F405
