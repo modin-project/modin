@@ -21,7 +21,7 @@ Advanced Usage
 Modin aims to not only optimize pandas, but also provide a comprehensive,
 integrated toolkit for data scientists. We are actively developing data science tools
 such as DataFrame spreadsheet integration, DataFrame algebra, progress bars, SQL queries
-on DataFrames, and more. Join us on `Slack`_ and `Discourse`_ for the latest updates!
+on DataFrames, and more. Join us on `Slack`_ for the latest updates!
 
 Modin engines
 -------------
@@ -126,7 +126,6 @@ downloaded as an artifact from the GitHub Actions tab for further inspection. Se
 .. _`Modin Spreadsheet API documentation`: spreadsheets_api.html
 .. _`Progress Bar documentation`: progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
-.. _`Discourse`: https://discuss.modin.org
 .. _`Slack`: https://modin.org/slack.html
 .. _`tqdm`: https://github.com/tqdm/tqdm
 .. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720

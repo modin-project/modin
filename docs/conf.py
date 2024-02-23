@@ -186,11 +186,6 @@ html_theme_options = {
             "icon": "fab fa-slack",
         },
         {
-            "name": "Discourse",
-            "url": "https://discuss.modin.org/",
-            "icon": "fab fa-discourse",
-        },
-        {
             "name": "Mailing List",
             "url": "https://groups.google.com/forum/#!forum/modin-dev",
             "icon": "fas fa-envelope-square",

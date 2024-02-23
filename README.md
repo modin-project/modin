@@ -252,7 +252,6 @@ to be modular so we can plug in different components as they develop and improve
 #### Modin Community
 
 - [Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
-- [Discourse](https://discuss.modin.org)
 - [Twitter](https://twitter.com/modin_project)
 - [Mailing List](https://groups.google.com/g/modin-dev)
 - [GitHub Issues](https://github.com/modin-project/modin/issues)
