@@ -10,7 +10,7 @@ def _set_attribute_on_obj(
     name: str, extensions_dict: dict, obj: Union[DataFrame, Series, modin.pandas]
 ):
     """
-    Create a new or override existing attribute on obj
+    Create a new or override existing attribute on obj.
 
     Parameters
     ----------
@@ -83,7 +83,7 @@ def register_dataframe_accessor(name: str):
 
 def register_series_accessor(name: str):
     """
-    Registers a dataframe attribute with the name provided.
+    Registers a series attribute with the name provided.
 
     This is a decorator that assigns a new attribute to Series. It can be used
     with the following syntax:
@@ -116,7 +116,7 @@ def register_series_accessor(name: str):
 
 def register_pd_accessor(name: str):
     """
-    Registers a dataframe attribute with the name provided.
+    Registers a pd namespace attribute with the name provided.
 
     This is a decorator that assigns a new attribute to modin.pandas. It can be used
     with the following syntax:
