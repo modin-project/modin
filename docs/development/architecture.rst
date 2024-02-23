@@ -114,8 +114,8 @@ More documentation can be found internally in the code_. This API is not complet
 represents an overwhelming majority of operations and behaviors.
 
 This API can be implemented by other distributed/parallel DataFrame libraries and
-plugged in to Modin as well. Create an issue_ or discuss on our Discourse_ or `Slack <https://modin.org/slack.html>`_ for more
-information!
+plugged in to Modin as well. Create an issue_ or discuss
+on our `Slack <https://modin.org/slack.html>`_ for more information!
 
 The :doc:`Core Modin Dataframe </flow/modin/core/dataframe/base/index>` is responsible for the data layout and shuffling, partitioning,
 and serializing the tasks that get sent to each partition. Other implementations of the
@@ -352,6 +352,5 @@ details. The documentation covers most modules, with more docs being added every
 .. _Dask: https://github.com/dask/dask
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues
-.. _Discourse: https://discuss.modin.org
 .. _task parallel: https://en.wikipedia.org/wiki/Task_parallelism
 .. _experimental features: /usage_guide/advanced_usage/index.html
