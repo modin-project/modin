@@ -33,13 +33,21 @@ Examples
 """
 
 from modin.pandas import *  # noqa F401, F403
+from modin.utils import func_from_deprecated_location
 
 from .io import (  # noqa F401
     read_csv_glob,
     read_custom_text,
     read_json_glob,
     read_parquet_glob,
-    read_pickle_distributed,
+    read_pickle_glob,
     read_sql,
     read_xml_glob,
+)
+
+read_pickle_distributed = func_from_deprecated_location(
+    "read_pickle_glob",
+    "modin.experimental.pandas.io",
+    "`modin.experimental.pandas.read_pickle_distributed` is deprecated and will be removed in a future version. "
+    + "Please use `modin.experimental.pandas.to_pickle_glob` instead.",
 )
