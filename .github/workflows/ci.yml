@@ -650,6 +650,7 @@ jobs:
           mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
           find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
         if: matrix.os == 'windows'
+      - run: ${{ matrix.execution.shell-ex }} modin/extension/test
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
