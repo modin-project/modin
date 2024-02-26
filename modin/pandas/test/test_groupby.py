@@ -3440,3 +3440,19 @@ def test_include_groups(by, as_index, include_groups):
             func, include_groups=include_groups
         ),
     )
+
+
+@pytest.mark.parametrize("skipna", [True, False])
+@pytest.mark.parametrize("how", ["first", "last"])
+def test_first_last_skipna(how, skipna):
+    md_df, pd_df = create_test_dfs(
+        {
+            "a": [2, 1, 1, 2, 3, 3] * 20,
+            "b": [np.nan, 3.0, np.nan, 4.0, np.nan, np.nan] * 20,
+            "c": [np.nan, 3.0, np.nan, 4.0, np.nan, np.nan] * 20,
+        }
+    )
+
+    pd_res = getattr(pd_df.groupby("a"), how)(skipna=skipna)
+    md_res = getattr(md_df.groupby("a"), how)(skipna=skipna)
+    df_equals(md_res, pd_res)

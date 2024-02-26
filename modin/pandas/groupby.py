@@ -682,17 +682,17 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def first(self, numeric_only=False, min_count=-1):
+    def first(self, numeric_only=False, min_count=-1, skipna=True):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_first,
-            agg_kwargs=dict(min_count=min_count),
+            agg_kwargs=dict(min_count=min_count, skipna=skipna),
             numeric_only=numeric_only,
         )
 
-    def last(self, numeric_only=False, min_count=-1):
+    def last(self, numeric_only=False, min_count=-1, skipna=True):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_last,
-            agg_kwargs=dict(min_count=min_count),
+            agg_kwargs=dict(min_count=min_count, skipna=skipna),
             numeric_only=numeric_only,
         )
 

@@ -706,13 +706,19 @@ class Series(BasePandasDataset):
             result = -1
         return result
 
-    def argsort(self, axis=0, kind="quicksort", order=None):  # noqa: PR01, RT01, D200
+    def argsort(
+        self, axis=0, kind="quicksort", order=None, stable=None
+    ):  # noqa: PR01, RT01, D200
         """
         Return the integer indices that would sort the Series values.
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.argsort(
-                axis=axis, kind=kind, order=order
+                # 'stable' parameter has no effect in Pandas and is only accepted
+                # for compatibility with NumPy, so we're not passing it forward on purpose
+                axis=axis,
+                kind=kind,
+                order=order,
             )
         )
 
