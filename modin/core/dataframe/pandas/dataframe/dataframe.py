@@ -2582,9 +2582,6 @@ class PandasDataframe(ClassLogger):
             func,
         )
 
-        if func is None:
-            return new_partitions
-
         result = grouper.__constructor__(new_partitions)
         if preserve_columns:
             result.set_columns_cache(grouper.copy_columns_cache())
@@ -3888,22 +3885,16 @@ class PandasDataframe(ClassLogger):
 
         # here we want to get indices of those partitions that hold the key columns
         key_indices = self.columns.get_indexer_for(on)
-        lpartition_indices = np.unique(
+        partition_indices = np.unique(
             np.digitize(key_indices, np.cumsum(self.column_widths))
-        )
-
-        key_indices = right.columns.get_indexer_for(on)
-        rpartition_indices = np.unique(
-            np.digitize(key_indices, np.cumsum(right.column_widths))
         )
 
         new_partitions = self._partition_mgr_cls.shuffle_partitions(
             self._partitions,
-            lpartition_indices,
+            partition_indices,
             shuffling_functions,
             func,
-            right_partitions=right,
-            right_indices=rpartition_indices,
+            right_partitions=right._partitions,
         )
 
         return self.__constructor__(new_partitions)

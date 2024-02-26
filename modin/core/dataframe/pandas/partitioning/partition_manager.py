@@ -1777,59 +1777,56 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 ]
             ).T
 
-            if right_partitions is not None:
-                right_shuffle = shuffle_functions.replace_frame(right_partitions)
-                r_row_parts = cls.row_partitions(right_partitions._partitions)
-                rsplit_row_partitions = np.array(
+            if right_partitions is None:
+                # We need to convert every partition that came from the splits into a full-axis column partition.
+                return np.array(
                     [
-                        partition.split(
-                            right_shuffle.split_fn,
-                            num_splits=num_bins,
-                            # The partition's metadata will never be accessed for the split partitions,
-                            # thus no need to compute it.
-                            extract_metadata=False,
-                        )
-                        for partition in r_row_parts
+                        [
+                            cls._column_partitions_class(
+                                row_partition, full_axis=False
+                            ).apply(final_shuffle_func)
+                        ]
+                        for row_partition in split_row_partitions
                     ]
-                ).T
-                new_partitions = [
+                )
+
+            right_row_parts = cls.row_partitions(right_partitions)
+            right_split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_fn,
+                        num_splits=num_bins,
+                        extract_metadata=False,
+                    )
+                    for partition in right_row_parts
+                ]
+            ).T
+            return np.array(
+                [
                     cls._column_partitions_class(row_partition, full_axis=False).apply(
                         final_shuffle_func,
                         other_axis_partition=cls._column_partitions_class(
-                            r_row_partitions
+                            right_row_partitions
                         ),
                     )
-                    for r_row_partitions, row_partition in zip(
-                        rsplit_row_partitions, split_row_partitions
+                    for right_row_partitions, row_partition in zip(
+                        right_split_row_partitions, split_row_partitions
                     )
                 ]
-                return np.array(new_partitions)
+            )
 
-            # We need to convert every partition that came from the splits into a full-axis column partition.
-            new_partitions = [
-                [
-                    cls._column_partitions_class(row_partition, full_axis=False).apply(
-                        final_shuffle_func
-                    )
-                ]
-                for row_partition in split_row_partitions
-            ]
-            return np.array(new_partitions)
         else:
             # If there are not pivots we can simply apply the function row-wise
             if right_partitions is None:
                 return np.array(
                     [row_part.apply(final_shuffle_func) for row_part in row_partitions]
                 )
-            else:
-                right_row_parts = cls.row_partitions(right_partitions._partitions)
-                return np.array(
-                    [
-                        row_part.apply(
-                            final_shuffle_func, other_axis_partition=right_row_part
-                        )
-                        for right_row_part, row_part in zip(
-                            right_row_parts, row_partitions
-                        )
-                    ]
-                )
+            right_row_parts = cls.row_partitions(right_partitions)
+            return np.array(
+                [
+                    row_part.apply(
+                        final_shuffle_func, other_axis_partition=right_row_part
+                    )
+                    for right_row_part, row_part in zip(right_row_parts, row_partitions)
+                ]
+            )
