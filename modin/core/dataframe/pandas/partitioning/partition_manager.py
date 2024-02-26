@@ -1723,7 +1723,6 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         shuffle_functions: "ShuffleFunctions",
         final_shuffle_func,
         right_partitions=None,
-        right_indices=None,
     ):
         """
         Return shuffled partitions.
@@ -1738,6 +1737,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             An object implementing the functions that we will be using to perform this shuffle.
         final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
             Function that shuffles the data within each new partition.
+        right_partitions : np.ndarray
 
         Returns
         -------
@@ -1794,9 +1794,14 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                 ).T
                 new_partitions = [
                     cls._column_partitions_class(row_partition, full_axis=False).apply(
-                        final_shuffle_func, other_axis_partition=cls._column_partitions_class(r_row_partitions)
+                        final_shuffle_func,
+                        other_axis_partition=cls._column_partitions_class(
+                            r_row_partitions
+                        ),
                     )
-                    for r_row_partitions, row_partition in zip(rsplit_row_partitions, split_row_partitions)
+                    for r_row_partitions, row_partition in zip(
+                        rsplit_row_partitions, split_row_partitions
+                    )
                 ]
                 return np.array(new_partitions)
 
@@ -1812,6 +1817,19 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             return np.array(new_partitions)
         else:
             # If there are not pivots we can simply apply the function row-wise
-            return np.array(
-                [row_part.apply(final_shuffle_func) for row_part in row_partitions]
-            )
+            if right_partitions is None:
+                return np.array(
+                    [row_part.apply(final_shuffle_func) for row_part in row_partitions]
+                )
+            else:
+                right_row_parts = cls.row_partitions(right_partitions._partitions)
+                return np.array(
+                    [
+                        row_part.apply(
+                            final_shuffle_func, other_axis_partition=right_row_part
+                        )
+                        for right_row_part, row_part in zip(
+                            right_row_parts, row_partitions
+                        )
+                    ]
+                )

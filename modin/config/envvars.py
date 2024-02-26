@@ -770,6 +770,15 @@ ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
+class RangePartitioningMerge(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's range-partitioning merge implementation.
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING_MERGE"
+    default = False
+
+
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
     """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
 

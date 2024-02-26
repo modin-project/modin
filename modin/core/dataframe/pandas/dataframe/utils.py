@@ -139,9 +139,25 @@ class ShuffleSortFunctions(ShuffleFunctions):
         self.kwargs = kwargs.copy()
         self.columns_info = None
 
-    
     def replace_frame(self, new_frame):
-        res = type(self)(new_frame, self.columns, self.ascending, self.ideal_num_new_partitions, **self.kwargs)
+        """
+        Replace dataframe.
+
+        Parameters
+        ----------
+        new_frame : PandasDataframe
+
+        Returns
+        -------
+        ShuffleFunction
+        """
+        res = type(self)(
+            new_frame,
+            self.columns,
+            self.ascending,
+            self.ideal_num_new_partitions,
+            **self.kwargs,
+        )
         res.columns_info = self.columns_info
         return res
 

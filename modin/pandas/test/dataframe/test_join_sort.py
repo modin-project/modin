@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NPartitions, RangePartitioningMerge, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     arg_keys,
@@ -214,6 +214,12 @@ def test_join_6602():
         teams.set_index("league_abbreviation").join(abbreviations.rename("league_name"))
 
 
+def df_equals_and_sort(df1, df2):
+    df1 = df1.sort_values(by=df1.columns.tolist(), ignore_index=True)
+    df2 = df2.sort_values(by=df2.columns.tolist(), ignore_index=True)
+    df_equals(df1, df2)
+
+
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
@@ -236,6 +242,8 @@ def test_join_6602():
     ],
 )
 def test_merge(test_data, test_data2):
+    comparator = df_equals_and_sort if RangePartitioningMerge.get() else df_equals
+
     modin_df = pd.DataFrame(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
@@ -268,7 +276,7 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
-            df_equals(modin_result, pandas_result)
+            comparator(modin_result, pandas_result)
 
             modin_result = modin_df.merge(
                 modin_df2,
@@ -284,7 +292,7 @@ def test_merge(test_data, test_data2):
                 right_on="key",
                 sort=sorts[j],
             )
-            df_equals(modin_result, pandas_result)
+            comparator(modin_result, pandas_result)
 
     # Test for issue #1771
     modin_df = pd.DataFrame({"name": np.arange(40)})
@@ -293,7 +301,7 @@ def test_merge(test_data, test_data2):
     pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
     modin_result = modin_df.merge(modin_df2, on="name", how="inner")
     pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
-    df_equals(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -314,7 +322,7 @@ def test_merge(test_data, test_data2):
         # Defaults
         modin_result = modin_df.merge(modin_df2, how=how)
         pandas_result = pandas_df.merge(pandas_df2, how=how)
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_index
         modin_result = modin_df.merge(
@@ -323,7 +331,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_index=True
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_index and right_on
         modin_result = modin_df.merge(
@@ -332,7 +340,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_on="col1"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_on col1
         modin_result = modin_df.merge(
@@ -341,7 +349,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_on="col1"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_on col2
         modin_result = modin_df.merge(
@@ -350,7 +358,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col2", right_on="col2"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -359,7 +367,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_index=True
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
     # Cannot merge a Series without a name
     ps = pandas.Series(frame_data2.get("col1"))
@@ -368,6 +376,7 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+        comparator=comparator,
     )
 
     # merge a Series with a name
@@ -377,6 +386,7 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+        comparator=comparator,
     )
 
     with pytest.raises(TypeError):

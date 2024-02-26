@@ -3862,17 +3862,28 @@ class PandasDataframe(ClassLogger):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    def merge(self, right, on, how):
-        def func(left, right):
-            # breakpoint()
-            return left.merge(right, on=on, how=how)
+    def _apply_func_to_range_partitioning_broadcast(self, right, func, on):
+        """
+        Apply `func` against two dataframes using range-partitioning implementation.
+
+        Parameters
+        ----------
+        right : PandasDataframe
+        func : callable
+        on : list of labels
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        if not isinstance(on, list):
+            on = [on]
 
         shuffling_functions = ShuffleSortFunctions(
             self,
             on,
-            True,
-            self._partitions.shape[0],
-            # **kwargs,
+            ascending=True,
+            ideal_num_new_partitions=self._partitions.shape[0],
         )
 
         # here we want to get indices of those partitions that hold the key columns
@@ -3896,7 +3907,6 @@ class PandasDataframe(ClassLogger):
         )
 
         return self.__constructor__(new_partitions)
-
 
     @lazy_metadata_decorator(apply_axis="both")
     def groupby(
