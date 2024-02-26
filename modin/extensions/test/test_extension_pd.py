@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.extension import register_pd_accessor
+from modin.extensions import register_pd_accessor
 
 
 def test_dataframe_extension_simple_method():

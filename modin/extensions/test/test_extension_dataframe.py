@@ -12,43 +12,43 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.extension import register_series_accessor
+from modin.extensions import register_dataframe_accessor
 
 
-def test_series_extension_simple_method():
+def test_dataframe_extension_simple_method():
     expected_string_val = "Some string value"
     method_name = "new_method"
-    ser = pd.Series([1, 2, 3])
+    df = pd.DataFrame([1, 2, 3])
 
-    @register_series_accessor(method_name)
+    @register_dataframe_accessor(method_name)
     def my_method_implementation(self):
         return expected_string_val
 
-    assert method_name in pd.series._SERIES_EXTENSIONS_.keys()
-    assert pd.series._SERIES_EXTENSIONS_[method_name] is my_method_implementation
-    assert ser.new_method() == expected_string_val
+    assert method_name in pd.dataframe._DATAFRAME_EXTENSIONS_.keys()
+    assert pd.dataframe._DATAFRAME_EXTENSIONS_[method_name] is my_method_implementation
+    assert df.new_method() == expected_string_val
 
 
-def test_series_extension_non_method():
+def test_dataframe_extension_non_method():
     expected_val = 4
     attribute_name = "four"
-    register_series_accessor(attribute_name)(expected_val)
-    ser = pd.Series([1, 2, 3])
+    register_dataframe_accessor(attribute_name)(expected_val)
+    df = pd.DataFrame([1, 2, 3])
 
-    assert attribute_name in pd.series._SERIES_EXTENSIONS_.keys()
-    assert pd.series._SERIES_EXTENSIONS_[attribute_name] == 4
-    assert ser.four == expected_val
+    assert attribute_name in pd.dataframe._DATAFRAME_EXTENSIONS_.keys()
+    assert pd.dataframe._DATAFRAME_EXTENSIONS_[attribute_name] == 4
+    assert df.four == expected_val
 
 
-def test_series_extension_accessing_existing_methods():
-    ser = pd.Series([1, 2, 3])
+def test_dataframe_extension_accessing_existing_methods():
+    df = pd.DataFrame([1, 2, 3])
     method_name = "self_accessor"
-    expected_result = ser.sum() / ser.count()
+    expected_result = df.sum() / df.count()
 
-    @register_series_accessor(method_name)
+    @register_dataframe_accessor(method_name)
     def my_average(self):
         return self.sum() / self.count()
 
-    assert method_name in pd.series._SERIES_EXTENSIONS_.keys()
-    assert pd.series._SERIES_EXTENSIONS_[method_name] is my_average
-    assert ser.self_accessor() == expected_result
+    assert method_name in pd.dataframe._DATAFRAME_EXTENSIONS_.keys()
+    assert pd.dataframe._DATAFRAME_EXTENSIONS_[method_name] is my_average
+    assert df.self_accessor().equals(expected_result)
