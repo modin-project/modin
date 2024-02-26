@@ -5,8 +5,7 @@ dependencies:
   - pip
 
   # required dependencies
-  # excluding 2.2.0 because of https://github.com/modin-project/modin/issues/6968
-  - pandas>=2.2,<2.3,!=2.2.0
+  - pandas>=2.2,<2.3
   - numpy>=1.22.4
   - pyhdk==0.9
   - fsspec>=2022.11.0

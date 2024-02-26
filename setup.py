@@ -51,8 +51,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[
-        # excluding 2.2.0 because of https://github.com/modin-project/modin/issues/6968
-        "pandas>=2.2,<2.3,!=2.2.0",
+        "pandas>=2.2,<2.3",
         "packaging>=21.0",
         "numpy>=1.22.4",
         "fsspec>=2022.11.0",
