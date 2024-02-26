@@ -12,14 +12,11 @@
 # governing permissions and limitations under the License.
 from typing import Any, Union
 
-import modin.pandas
-from modin.pandas import _PD_EXTENSIONS_
-from modin.pandas.dataframe import _DATAFRAME_EXTENSIONS_, DataFrame
-from modin.pandas.series import _SERIES_EXTENSIONS_, Series
+import modin.pandas as pd
 
 
 def _set_attribute_on_obj(
-    name: str, extensions_dict: dict, obj: Union[DataFrame, Series, modin.pandas]
+    name: str, extensions_dict: dict, obj: Union[pd.DataFrame, pd.Series, pd]
 ):
     """
     Create a new or override existing attribute on obj.
@@ -90,7 +87,9 @@ def register_dataframe_accessor(name: str):
     decorator
         Returns the decorator function.
     """
-    return _set_attribute_on_obj(name, _DATAFRAME_EXTENSIONS_, DataFrame)
+    return _set_attribute_on_obj(
+        name, pd.dataframe._DATAFRAME_EXTENSIONS_, pd.DataFrame
+    )
 
 
 def register_series_accessor(name: str):
@@ -123,7 +122,7 @@ def register_series_accessor(name: str):
     decorator
         Returns the decorator function.
     """
-    return _set_attribute_on_obj(name, _SERIES_EXTENSIONS_, Series)
+    return _set_attribute_on_obj(name, pd.series._SERIES_EXTENSIONS_, pd.Series)
 
 
 def register_pd_accessor(name: str):
@@ -159,4 +158,4 @@ def register_pd_accessor(name: str):
     decorator
         Returns the decorator function.
     """
-    return _set_attribute_on_obj(name, _PD_EXTENSIONS_, modin.pandas)
+    return _set_attribute_on_obj(name, pd._PD_EXTENSIONS_, pd)
