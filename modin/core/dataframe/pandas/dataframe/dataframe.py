@@ -3875,6 +3875,12 @@ class PandasDataframe(ClassLogger):
         func : callable(left : pandas.DataFrame, right : pandas.DataFrame) -> pandas.DataFrame
         key : list of labels
             Columns to use to build range-partitioning. Must present in both dataframes.
+        new_index : pandas.Index, optional
+            Index values to write to the result's cache.
+        new_columns : pandas.Index, optional
+            Column values to write to the result's cache.
+        new_dtypes : pandas.Series or ModinDtypes, optional
+            Dtype values to write to the result's cache.
 
         Returns
         -------
