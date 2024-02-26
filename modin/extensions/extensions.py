@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from types import ModuleType
 from typing import Any, Union
 
 import modin.pandas as pd
 
 
 def _set_attribute_on_obj(
-    name: str, extensions_dict: dict, obj: Union[pd.DataFrame, pd.Series, pd]
+    name: str, extensions_dict: dict, obj: Union[pd.DataFrame, pd.Series, ModuleType]
 ):
     """
     Create a new or override existing attribute on obj.
