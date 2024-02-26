@@ -920,7 +920,7 @@ def eval_general(
                         type(modin_exception) is type(raising_exceptions)
                         and modin_exception.args == raising_exceptions.args
                     ), f"not acceptable exception: [{modin_exception}]"
-                else:
+                elif raising_exceptions is not False:
                     raise
         else:
             md_result = fn(modin_df, **md_kwargs)

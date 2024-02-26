@@ -194,7 +194,7 @@ def test_comparison(data, op, other, request):
 
     raising_exceptions = None
     if "int_data" in request.node.callspec.id and other == "a":
-        raising_exceptions = TypeError("Invalid comparison between dtype=int32 and str")
+        raising_exceptions = TypeError("Invalid comparison between dtype=int64 and str")
     elif "float_nan_data" in request.node.callspec.id and other == "a":
         raising_exceptions = TypeError(
             "Invalid comparison between dtype=float64 and str"
