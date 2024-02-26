@@ -682,14 +682,34 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def first(self, numeric_only=False, min_count=-1):
+    def first(self, numeric_only=False, min_count=-1, skipna=True):
+        # TODO: check if it works properly if we simply pass 'skipna' to
+        # the query compiler level
+        if not skipna:
+            return self._default_to_pandas(
+                lambda df: df.first(
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    skipna=skipna,
+                )
+            )
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_first,
             agg_kwargs=dict(min_count=min_count),
             numeric_only=numeric_only,
         )
 
-    def last(self, numeric_only=False, min_count=-1):
+    def last(self, numeric_only=False, min_count=-1, skipna=True):
+        # TODO: check if it works properly if we simply pass 'skipna' to
+        # the query compiler level
+        if not skipna:
+            return self._default_to_pandas(
+                lambda df: df.first(
+                    numeric_only=numeric_only,
+                    min_count=min_count,
+                    skipna=skipna,
+                )
+            )
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_last,
             agg_kwargs=dict(min_count=min_count),
