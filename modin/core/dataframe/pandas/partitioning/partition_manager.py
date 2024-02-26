@@ -1737,7 +1737,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             An object implementing the functions that we will be using to perform this shuffle.
         final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
             Function that shuffles the data within each new partition.
-        right_partitions : np.ndarray
+        right_partitions : np.ndarray, optional
+            Partitions to broadcast to the `self` partitions. If specified, the method builds range-partitioning
+            for the `right_partitions` basing on bins calculated for `partitions`, then performs broadcasting.
 
         Returns
         -------

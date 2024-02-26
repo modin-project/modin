@@ -23,6 +23,7 @@ from modin.core.dataframe.pandas.metadata import ModinDtypes
 from .utils import merge_partitioning
 
 
+# TODO: add methods for 'join' here
 class MergeImpl:
     """Provide implementations for merge/join."""
 
@@ -49,23 +50,42 @@ class MergeImpl:
             or kwargs.get("left_on", None) is not None
             or kwargs.get("how", "left") not in ("left", "inner")
         ):
-            raise NotImplementedError()
+            raise NotImplementedError(
+                f"The passed parameters are not yet supported by range-partitioning merge: {kwargs=}"
+            )
 
         on = kwargs.get("on", None)
         if on is not None and not isinstance(on, list):
             on = [on]
         if on is None or len(on) > 1:
-            raise NotImplementedError()
+            raise NotImplementedError(
+                f"Merging on multiple columns is not yet supported by range-partitioning merge: {on=}"
+            )
 
         if any(col not in left.columns or col not in right.columns for col in on):
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "Merging on an index level is not yet supported by range-partitioning merge."
+            )
 
         def func(left, right):
             return left.merge(right, **kwargs)
 
+        new_columns, new_dtypes = cls._compute_result_metadata(
+            left,
+            right,
+            on,
+            left_on=None,
+            right_on=None,
+            suffixes=kwargs.get("suffixes", ("_x", "_y")),
+        )
+
         return left.__constructor__(
             left._modin_frame._apply_func_to_range_partitioning_broadcast(
-                right._modin_frame, func=func, on=on
+                right._modin_frame,
+                func=func,
+                key=on,
+                new_columns=new_columns,
+                new_dtypes=new_dtypes,
             )
         ).reset_index(drop=True)
 
@@ -206,21 +226,27 @@ class MergeImpl:
     @classmethod
     def _compute_result_metadata(cls, left, right, on, left_on, right_on, suffixes):
         """
-        Compute columns and dtypes for the result of merge.
+        Compute columns and dtypes metadata for the result of merge if possible.
 
         Parameters
         ----------
         left : PandasQueryCompiler
         right : PandasQueryCompiler
-        on : list of labels
-        left_on : list of labels
-        right_on : list of labels
+        on : label, list of labels or None
+            `on` argument that was passed to ``pandas.merge()``.
+        left_on : label, list of labels or None
+            `left_on` argument that was passed to ``pandas.merge()``.
+        right_on : label, list of labels or None
+            `right_on` argument that was passed to ``pandas.merge()``.
         suffixes : list of strings
+            `suffixes` argument that was passed to ``pandas.merge()``.
 
         Returns
         -------
-        new_columns : pandas.Index
-        new_dtypes : ModinDtypes
+        new_columns : pandas.Index or None
+            Columns for the result of merge. ``None`` if not enought metadata to compute.
+        new_dtypes : ModinDtypes or None
+            Dtypes for the result of merge. ``None`` if not enought metadata to compute.
         """
         new_columns = None
         new_dtypes = None

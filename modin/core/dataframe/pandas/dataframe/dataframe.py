@@ -3859,32 +3859,49 @@ class PandasDataframe(ClassLogger):
             new_partitions, new_index, new_columns, new_lengths, new_widths, new_dtypes
         )
 
-    def _apply_func_to_range_partitioning_broadcast(self, right, func, on):
+    def _apply_func_to_range_partitioning_broadcast(
+        self, right, func, key, new_index=None, new_columns=None, new_dtypes=None
+    ):
         """
         Apply `func` against two dataframes using range-partitioning implementation.
+
+        The method first builds range-partitioning for both dataframes using the data from
+        `self[key]`, after that, the it applies the `func` row-wise to the `self` frame and
+        broadcasts row-parts of `right` to the `self`.
 
         Parameters
         ----------
         right : PandasDataframe
-        func : callable
-        on : list of labels
+        func : callable(left : pandas.DataFrame, right : pandas.DataFrame) -> pandas.DataFrame
+        key : list of labels
+            Columns to use to build range-partitioning. Must present in both dataframes.
 
         Returns
         -------
         PandasDataframe
         """
-        if not isinstance(on, list):
-            on = [on]
+        if self._partitions.shape[0] == 1:
+            result = self.broadcast_apply_full_axis(
+                axis=1,
+                func=func,
+                new_columns=new_columns,
+                dtypes=new_dtypes,
+                other=right,
+            )
+            return result
+
+        if not isinstance(key, list):
+            key = [key]
 
         shuffling_functions = ShuffleSortFunctions(
             self,
-            on,
+            key,
             ascending=True,
             ideal_num_new_partitions=self._partitions.shape[0],
         )
 
         # here we want to get indices of those partitions that hold the key columns
-        key_indices = self.columns.get_indexer_for(on)
+        key_indices = self.columns.get_indexer_for(key)
         partition_indices = np.unique(
             np.digitize(key_indices, np.cumsum(self.column_widths))
         )
@@ -3897,7 +3914,12 @@ class PandasDataframe(ClassLogger):
             right_partitions=right._partitions,
         )
 
-        return self.__constructor__(new_partitions)
+        return self.__constructor__(
+            new_partitions,
+            index=new_index,
+            columns=new_columns,
+            dtypes=new_dtypes,
+        )
 
     @lazy_metadata_decorator(apply_axis="both")
     def groupby(
