@@ -1873,7 +1873,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         return dict(partition_ids_with_indices)
 
     @staticmethod
-    def _join_index_objects(axis, indexes, how, sort):
+    def _join_index_objects(axis, indexes, how, sort, fill_value=None):
         """
         Join the pair of index objects (columns or rows) by a given strategy.
 
@@ -1891,6 +1891,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index.
+        fill_value : any, default: None
+            Value to use for missing values.
 
         Returns
         -------
@@ -1953,8 +1955,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     {0: [joined_index, indexers[frame_idx]]},
                     copy=True,
                     allow_dups=True,
+                    fill_value=fill_value,
                 )
-            return lambda df: df.reindex(joined_index, axis=axis)
+            return lambda df: df.reindex(joined_index, axis=axis, fill_value=fill_value)
 
         return joined_index, make_reindexer
 
@@ -3545,7 +3548,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             other.get_axis(axis)
         ) and self._get_axis_lengths(axis) == other._get_axis_lengths(axis)
 
-    def _copartition(self, axis, other, how, sort, force_repartition=False):
+    def _copartition(
+        self, axis, other, how, sort, force_repartition=False, fill_value=None
+    ):
         """
         Copartition two Modin DataFrames.
 
@@ -3566,6 +3571,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
+        fill_value : any, default: None
+            Value to use for missing values.
 
         Returns
         -------
@@ -3594,7 +3601,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         self_index = self.get_axis(axis)
         others_index = [o.get_axis(axis) for o in other]
         joined_index, make_reindexer = self._join_index_objects(
-            axis, [self_index] + others_index, how, sort
+            axis, [self_index] + others_index, how, sort, fill_value
         )
 
         frames = [self] + other

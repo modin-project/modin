@@ -14,7 +14,9 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 import json
+import math
 import unittest.mock as mock
 
 import matplotlib
@@ -27,7 +29,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -4681,18 +4683,60 @@ def test_struct_general():
     )
 
 
-def test_case_when():
-    # Copied from pandas
-    c_md, c_pd = create_test_series([6, 7, 8, 9], name="c")
-    a_md, a_pd = create_test_series([0, 0, 1, 2])
-    b_md, b_pd = create_test_series([0, 3, 4, 5])
+def _case_when_caselists():
+    def permutations(values):
+        return [
+            p
+            for r in range(1, len(values) + 1)
+            for p in itertools.permutations(values, r)
+        ]
 
-    results = [None, None]
-    for idx, (c, a, b) in enumerate(((c_md, a_md, b_md), (c_pd, a_pd, b_pd))):
-        results[idx] = c.case_when(
-            caselist=[(a.gt(0), a), (b.gt(0), b)]  # condition, replacement
-        )
-    df_equals(*results)
+    conditions = permutations(
+        [
+            [True, False, False, False] * 10,
+            pandas.Series([True, False, False, False] * 10),
+            pandas.Series([True, False, False, False] * 10, index=range(78, -2, -2)),
+            lambda df: df.gt(0),
+        ]
+    )
+    replacements = permutations([[0, 3, 4, 5] * 10, 0, lambda df: 1])
+    caselists = []
+    for c in conditions:
+        for r in replacements:
+            if len(c) == len(r):
+                caselists.append(list(zip(c, r)))
+    return caselists
+
+
+@pytest.mark.parametrize(
+    "base",
+    [
+        pandas.Series(range(40)),
+        pandas.Series([0, 7, 8, 9] * 10, name="c", index=range(0, 80, 2)),
+    ],
+)
+@pytest.mark.parametrize(
+    "caselist",
+    _case_when_caselists(),
+)
+def test_case_when(base, caselist):
+    pd_result = base.case_when(caselist)
+    nparts = NPartitions.get()
+    part_size = MinPartitionSize.get()
+    new_nparts = max(1, min(math.ceil(len(base) / part_size), part_size)) + 1
+    NPartitions.put(new_nparts)
+    MinPartitionSize.put(math.ceil(len(base) / new_nparts))
+    base_repart = pd.Series(base)
+    NPartitions.put(nparts)
+    MinPartitionSize.put(part_size)
+    for df in (pd.Series(base), base_repart):
+        df_equals(pd_result, df.case_when(caselist))
+        if any(isinstance(d, pandas.Series) for c in caselist for d in c):
+            caselist = [
+                tuple(pd.Series(d) if isinstance(d, pandas.Series) else d for d in c)
+                for c in caselist
+            ]
+            df_equals(pd_result, df.case_when(caselist))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
