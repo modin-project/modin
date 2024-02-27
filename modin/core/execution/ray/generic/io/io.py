@@ -18,3 +18,15 @@ from modin.core.io import BaseIO
 
 class RayIO(BaseIO):
     """Base class for doing I/O operations over Ray."""
+
+    @classmethod
+    def from_ray(cls, ray_obj):
+        raise NotImplementedError(
+            f"Modin dataset cann't be created from `ray.data.Dataset` using {cls}."
+        )
+
+    @classmethod
+    def to_ray(cls, modin_obj):
+        raise NotImplementedError(
+            f"`ray.data.Dataset` cann't be created from Modin DataFrame using {cls}."
+        )

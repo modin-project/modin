@@ -1034,6 +1034,29 @@ def from_dataframe(df):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
+def from_ray(ray_obj):
+    """
+    Convert a Ray Dataset into Modin DataFrame.
+
+    Parameters
+    ----------
+    ray_obj : ray.data.Dataset
+        The Ray Dataset to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Ray Dataset may only be converted to Modin Dataframe if Modin uses a Ray engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
+
+
 def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
@@ -1073,6 +1096,29 @@ def to_numpy(
     if ExperimentalNumPyAPI.get():
         array = array._to_numpy()
     return array
+
+
+def to_ray(modin_obj):
+    """
+    Convert a Modin DataFrame to a Ray Dataset.
+
+    Parameters
+    ----------
+    modin_obj : modin.DataFrame
+        The Modin DataFrame to convert.
+
+    Returns
+    -------
+    ray.data.Dataset
+        Converted object with type depending on input.
+
+    Notes
+    -----
+    Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return FactoryDispatcher.to_ray(modin_obj)
 
 
 __all__ = [

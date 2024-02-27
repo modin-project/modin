@@ -44,7 +44,7 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
+from modin.pandas.io import from_non_pandas, from_pandas, to_pandas, from_ray, to_ray
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
@@ -920,6 +920,27 @@ class DataFrame(BasePandasDataset):
                 data, orient=orient, dtype=dtype, columns=columns
             )
         )
+
+    @classmethod
+    def from_ray(cls, ray_obj):
+        """
+        Convert a Ray Dataset into Modin DataFrame.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        DataFrame
+            A new Modin DataFrame object.
+
+        Notes
+        -----
+        Ray Dataset may only be converted to Modin Dataframe if Modin uses a Ray engine.
+        """
+        return from_ray(ray_obj)
 
     @classmethod
     def from_records(
@@ -2228,6 +2249,26 @@ class DataFrame(BasePandasDataset):
             storage_options=storage_options,
             **kwargs,
         )
+
+    def to_ray(self):
+        """
+        Convert a Modin DataFrame to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.DataFrame
+            The Modin DataFrame to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return to_ray(self)
 
     def to_period(
         self, freq=None, axis=0, copy=None

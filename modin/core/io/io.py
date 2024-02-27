@@ -117,6 +117,30 @@ class BaseIO:
         return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
 
     @classmethod
+    def from_ray(cls, ray_obj):
+        """
+        Create a Modin `query_compiler` from a Ray Dataset.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Ray Dataset.
+
+        Notes
+        -----
+        Ray Dataset may only be converted to a Modin Dataframe if Modin uses a Ray engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine."
+        )
+
+    @classmethod
     @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
     @doc(
         _doc_default_io_method,
@@ -694,3 +718,27 @@ class BaseIO:
             obj = obj.to_pandas()
 
         return obj.to_parquet(path, **kwargs)
+
+    @classmethod
+    def to_ray(cls, modin_df):
+        """
+        Convert a Modin DataFrame to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.DataFrame
+            The Modin DataFrame to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine."
+        )
