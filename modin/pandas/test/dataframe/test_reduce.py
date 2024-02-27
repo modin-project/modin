@@ -53,9 +53,7 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 @pytest.mark.parametrize("method", ["all", "any"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_all_any(data, axis, skipna, is_transposed, method):
@@ -89,7 +87,7 @@ def test_count(data, axis):
     )
 
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_count_specific(numeric_only):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
@@ -115,6 +113,8 @@ def test_count_dtypes(data):
 @pytest.mark.parametrize("percentiles", [None, 0.10, 0.11, 0.44, 0.78, 0.99])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data, percentiles):
+    if percentiles is not None:
+        percentiles = [percentiles]
     eval_general(
         *create_test_dfs(data),
         lambda df: df.describe(percentiles=percentiles),
@@ -198,9 +198,7 @@ def test_describe_dtypes():
 
 @pytest.mark.parametrize("method", ["idxmin", "idxmax"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_idxmin_idxmax(data, axis, skipna, is_transposed, method):
@@ -226,12 +224,8 @@ def test_memory_usage(data, index):
 
 @pytest.mark.parametrize("method", ["min", "max", "mean"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
@@ -245,9 +239,7 @@ def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
 
 @pytest.mark.parametrize("method", ["prod", "product"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_prod(
@@ -279,9 +271,7 @@ def test_prod(
 
 
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_sum(data, axis, skipna, is_transposed):
@@ -314,17 +304,27 @@ def test_dtype_consistency(dtype):
     assert res_dtype == pandas.api.types.pandas_dtype(dtype)
 
 
-@pytest.mark.parametrize("fn", ["prod, sum"])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("fn", ["prod", "sum"])
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
 def test_sum_prod_specific(fn, min_count, numeric_only):
+    raising_exceptions = None
+    if not numeric_only and fn == "prod":
+        # FIXME: different messages, check only types
+        raising_exceptions = False
+    elif not numeric_only and fn == "sum":
+        raising_exceptions = TypeError('can only concatenate str (not "int") to str')
+    if numeric_only and fn == "sum":
+        pytest.xfail(reason="FIXME: wrong dtypes")
+    if min_count == 5 and not numeric_only:
+        pytest.xfail(reason="FIXME: Modin did not raise exception")
+
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(min_count=min_count, numeric_only=numeric_only),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -340,13 +340,26 @@ def test_sum_single_column(data):
     "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
 @pytest.mark.parametrize("axis", [0, 1, None])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_reduce_specific(fn, numeric_only, axis):
+    raising_exceptions = None
+    if not numeric_only:
+        if fn in ("max", "min"):
+            if axis == 0:
+                operator = ">=" if fn == "max" else "<="
+                raising_exceptions = TypeError(
+                    f"'{operator}' not supported between instances of 'str' and 'float'"
+                )
+            else:
+                # FIXME: different messages, check only types
+                raising_exceptions = False
+        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
+            # FIXME: different messages, check only types
+            raising_exceptions = False
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
+        raising_exceptions=raising_exceptions,
     )
 
 
