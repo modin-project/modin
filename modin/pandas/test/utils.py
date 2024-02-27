@@ -331,7 +331,7 @@ agg_func = {
     "sum of certain elements": lambda axis: (
         axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
     ),
-    "should raise TypeError": 1,
+    "should raise AssertionError": 1,
 }
 agg_func_keys = list(agg_func.keys())
 agg_func_values = list(agg_func.values())

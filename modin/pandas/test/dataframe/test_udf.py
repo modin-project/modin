@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._libs.lib import no_default
 from pandas.core.dtypes.common import is_list_like
 
 import modin.pandas as pd
@@ -60,13 +59,13 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_agg_dict():
     md_df, pd_df = create_test_dfs(test_data_values[0])
     agg_dict = {pd_df.columns[0]: "sum", pd_df.columns[-1]: ("sum", "count")}
-    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict), raising_exceptions=True)
+    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict))
 
     agg_dict = {
         "new_col1": (pd_df.columns[0], "sum"),
         "new_col2": (pd_df.columns[-1], "count"),
     }
-    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict), raising_exceptions=True)
+    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict))
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -76,11 +75,19 @@ def test_agg_dict():
     ids=agg_func_keys + agg_func_except_keys,
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
-def test_agg_apply(axis, func, op):
+def test_agg_apply(axis, func, op, request):
+    raising_exceptions = None
+    if "sum sum" in request.node.callspec.id:
+        raising_exceptions = pandas.errors.SpecificationError(
+            "Function names must be unique if there is no new column names assigned"
+        )
+    elif "should raise AssertionError" in request.node.callspec.id:
+        # FIXME: different messages
+        raising_exceptions = False
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
-        check_exception_type=True,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -136,19 +143,17 @@ def test_apply_key_error(func):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("level", [no_default, None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
-def test_apply_text_func_with_level(level, data, func, axis):
-    func_kwargs = {"level": level, "axis": axis}
+def test_apply_text_func(data, func, axis):
+    func_kwargs = {"axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
     level_1 = np.random.choice([3, 4, 5], rows_number)
     index = pd.MultiIndex.from_arrays([level_0, level_1])
 
     eval_general(
-        pd.DataFrame(data, index=index),
-        pandas.DataFrame(data, index=index),
+        *create_test_dfs(data, index=index),
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         **func_kwargs,
     )
