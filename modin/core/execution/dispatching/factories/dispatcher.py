@@ -197,9 +197,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_csv_glob(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_distributed)
-    def read_pickle_distributed(cls, **kwargs):
-        return cls.get_factory()._read_pickle_distributed(**kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_glob)
+    def read_pickle_glob(cls, **kwargs):
+        return cls.get_factory()._read_pickle_glob(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
@@ -292,9 +292,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_pickle(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_distributed)
-    def to_pickle_distributed(cls, *args, **kwargs):
-        return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_glob)
+    def to_pickle_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_pickle_glob(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.PandasOnRayFactory._read_parquet_glob)

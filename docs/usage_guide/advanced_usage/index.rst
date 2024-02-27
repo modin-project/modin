@@ -21,7 +21,7 @@ Advanced Usage
 Modin aims to not only optimize pandas, but also provide a comprehensive,
 integrated toolkit for data scientists. We are actively developing data science tools
 such as DataFrame spreadsheet integration, DataFrame algebra, progress bars, SQL queries
-on DataFrames, and more. Join us on `Slack`_ and `Discourse`_ for the latest updates!
+on DataFrames, and more. Join us on `Slack`_ for the latest updates!
 
 Modin engines
 -------------
@@ -41,11 +41,11 @@ Modin also supports these experimental APIs on top of pandas that are under acti
 - :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
 - :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
 - :py:func:`~modin.experimental.pandas.read_custom_text` -- read custom text data from file
-- :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple pickle files in a directory
+- :py:func:`~modin.experimental.pandas.read_pickle_glob`  -- read multiple pickle files in a directory
 - :py:func:`~modin.experimental.pandas.read_parquet_glob`  -- read multiple parquet files in a directory
 - :py:func:`~modin.experimental.pandas.read_json_glob`  -- read multiple json files in a directory
 - :py:func:`~modin.experimental.pandas.read_xml_glob`  -- read multiple xml files in a directory
-- :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_distributed` -- write to multiple pickle files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_glob` -- write to multiple pickle files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_parquet_glob` -- write to multiple parquet files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_json_glob` -- write to multiple json files in a directory
 - :py:meth:`~modin.pandas.DataFrame.modin.to_xml_glob` -- write to multiple xml files in a directory
@@ -126,7 +126,6 @@ downloaded as an artifact from the GitHub Actions tab for further inspection. Se
 .. _`Modin Spreadsheet API documentation`: spreadsheets_api.html
 .. _`Progress Bar documentation`: progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
-.. _`Discourse`: https://discuss.modin.org
 .. _`Slack`: https://modin.org/slack.html
 .. _`tqdm`: https://github.com/tqdm/tqdm
 .. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720

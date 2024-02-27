@@ -137,6 +137,5 @@ to make new Modin release appear in `conda-forge` channel. For detailed instruct
 on how to ensure the PR passes CI and is merge-able, check out [the how-to page in the modin-feedstock repo](https://github.com/conda-forge/modin-feedstock/blob/main/HOWTO.md)!
 
 ## Publicize Release
-Once the release has been finalized, make sure to post an announcement in the #general channel of
-the public Modin Slack, as well as in the discourse (discuss.modin.org)! Make sure to unpin the
-previous announcement on discourse, and globally pin the new announcement!
+Once the release has been finalized, make sure to post an announcement
+in the #general channel of the public Modin Slack!

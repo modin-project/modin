@@ -476,13 +476,13 @@ class BaseFactory(object):
         source="Pickle files",
         params=_doc_io_method_kwargs_params,
     )
-    def _read_pickle_distributed(cls, **kwargs):
+    def _read_pickle_glob(cls, **kwargs):
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
-                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
+                f"`_read_pickle_glob()` is not implemented for {current_execution} execution."
             )
-        return cls.io_cls.read_pickle_distributed(**kwargs)
+        return cls.io_cls.read_pickle_glob(**kwargs)
 
     @classmethod
     @doc(
@@ -526,7 +526,7 @@ class BaseFactory(object):
         return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
+    def _to_pickle_glob(cls, *args, **kwargs):
         """
         Distributed pickle query compiler object.
 
@@ -540,9 +540,9 @@ class BaseFactory(object):
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
-                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
+                f"`_to_pickle_glob()` is not implemented for {current_execution} execution."
             )
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
+        return cls.io_cls.to_pickle_glob(*args, **kwargs)
 
     @classmethod
     @doc(
