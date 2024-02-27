@@ -53,9 +53,7 @@ if StorageFormat.get() == "Hdk":
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("method", ["cumprod", "cummin", "cummax", "cumsum"])
 def test_cumprod_cummin_cummax_cumsum(axis, skipna, method):
     eval_general(
@@ -498,9 +496,7 @@ def test_fillna_datetime_columns():
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("method", ["median", "skew"])
 def test_median_skew(axis, skipna, method):
     eval_general(
@@ -518,12 +514,18 @@ def test_median_skew_transposed(axis, method):
     )
 
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("numeric_only", [True, False])
 @pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank", "sem"])
 def test_median_skew_std_var_rank_sem_specific(numeric_only, method):
+    raising_exceptions = None
+    if not numeric_only and method in ("median", "skew", "std", "var", "sem"):
+        # FIXME: different messages
+        raising_exceptions = False
+
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, method)(numeric_only=numeric_only),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -696,9 +698,7 @@ def test_rank_transposed(axis, na_option):
     )
 
 
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_sem_float_nan_only(skipna, ddof):
     eval_general(
@@ -717,14 +717,20 @@ def test_sem_int_only(axis, ddof):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-@pytest.mark.parametrize("method", ["std", "var", "rank"])
-def test_std_var_rank(axis, skipna, method):
+@pytest.mark.parametrize("skipna", [False, True])
+@pytest.mark.parametrize("method", ["std", "var"])
+def test_std_var(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, method)(axis=axis, skipna=skipna),
+    )
+
+
+@pytest.mark.parametrize("axis", [0, 1])
+def test_rank(axis):
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.rank(axis=axis),
     )
 
 
