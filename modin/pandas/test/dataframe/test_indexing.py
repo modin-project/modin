@@ -297,7 +297,7 @@ def test_indexing_duplicate_axis(data):
     "key_func",
     [
         # test for the case from https://github.com/modin-project/modin/issues/4308
-        "non_existing_column",
+        lambda df: "non_existing_column",
         lambda df: df.columns[0],
         lambda df: df.index,
         lambda df: [df.index, df.columns[0]],
@@ -328,8 +328,15 @@ def test_set_index(data, key_func, drop_kwargs, request):
         pytest.xfail(
             reason="KeyError: https://github.com/modin-project/modin/issues/5636"
         )
+    raising_exceptions = None
+    if "non_existing_column" in request.node.callspec.id:
+        raising_exceptions = KeyError(
+            "None of ['non_existing_column'] are in the columns"
+        )
     eval_general(
-        *create_test_dfs(data), lambda df: df.set_index(key_func(df), **drop_kwargs)
+        *create_test_dfs(data),
+        lambda df: df.set_index(key_func(df), **drop_kwargs),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -707,12 +714,20 @@ def test_loc_empty():
 @pytest.mark.parametrize("locator_name", ["iloc", "loc"])
 def test_loc_iloc_2064(locator_name):
     modin_df, pandas_df = create_test_dfs(columns=["col1", "col2"])
-
+    if locator_name == "iloc":
+        raising_exceptions = IndexError(
+            "index 1 is out of bounds for axis 0 with size 0"
+        )
+    else:
+        raising_exceptions = KeyError(
+            "None of [Index([1], dtype='int32')] are in the [index]"
+        )
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df, locator_name).__setitem__([1], [11, 22]),
         __inplace__=True,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -2114,7 +2129,7 @@ def test___setitem__(data):
     arr = np.arange(nrows * 2).reshape(-1, 2)
 
     eval_setitem(*create_test_dfs(data), loc=-1, value=arr)
-    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr)
+    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr.T[0])
     eval_setitem(*create_test_dfs(data), loc=0, value=np.arange(nrows))
 
     modin_df = pd.DataFrame(columns=data.keys())
@@ -2281,6 +2296,14 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
+    raising_exceptions = None
+    if not convert_to_series:
+        values_length = len(value)
+        index_length = len(pandas_df.index)
+        raising_exceptions = ValueError(
+            f"Length of values ({values_length}) does not match length of index ({index_length})"
+        )
+
     eval_general(
         modin_df,
         pandas_df,
@@ -2289,6 +2312,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         comparator_kwargs={
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },
+        raising_exceptions=raising_exceptions,
     )
 
 
