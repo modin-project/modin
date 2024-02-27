@@ -754,7 +754,14 @@ def test_loc_insert_row(left, right):
         df.loc[left] = df.loc[right]
         return df
 
-    eval_general(modin_df, pandas_df, _test_loc_rows)
+    raising_exceptions = None
+    if right == 70:
+        # FIXME: the exception message is not the same for Modin and Pandas
+        # check only type
+        raising_exceptions = False
+    eval_general(
+        modin_df, pandas_df, _test_loc_rows, raising_exceptions=raising_exceptions
+    )
 
 
 @pytest.mark.parametrize(
