@@ -846,7 +846,9 @@ def test_resampler_functions(rule, axis, method):
     modin_df = pd.DataFrame(data, index=index)
     pandas_df = pandas.DataFrame(data, index=index)
     if axis == "columns":
-        columns = pandas.date_range("31/12/2000", periods=len(data), freq="min")
+        columns = pandas.date_range(
+            "31/12/2000", periods=len(pandas_df.columns), freq="min"
+        )
         modin_df.columns = columns
         pandas_df.columns = columns
 
@@ -882,13 +884,24 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     )
     modin_df = pd.DataFrame(data, index=index)
     pandas_df = pandas.DataFrame(data, index=index)
+    if axis == "columns":
+        columns = pandas.date_range(
+            "31/12/2000", periods=len(pandas_df.columns), freq="min"
+        )
+        modin_df.columns = columns
+        pandas_df.columns = columns
 
     method, arg = method_arg[0], method_arg[1]
+
+    raising_exceptions = None
+    if method in ("apply", "aggregate"):
+        raising_exceptions = NotImplementedError("axis other than 0 is not supported")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df.resample(rule, axis=axis), method)(arg),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -959,7 +972,6 @@ def test_resample_specific(rule, closed, label, on, level):
         "volume",
         "date",
         ["volume"],
-        ["price", "date"],
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
@@ -968,25 +980,30 @@ def test_resample_specific(rule, closed, label, on, level):
     ],
     ids=[
         "column",
-        "missed_column",
+        "only_missed_column",
         "list",
-        "missed_column",
         "tuple",
         "series",
         "index",
         "duplicate_column",
-        "missed_columns",
+        "missed_column",
     ],
 )
-def test_resample_getitem(columns):
+def test_resample_getitem(columns, request):
     index = pandas.date_range("1/1/2013", periods=9, freq="min")
     data = {
         "price": range(9),
         "volume": range(10, 19),
     }
+    raising_exceptions = None
+    if "only_missed_column" in request.node.callspec.id:
+        raising_exceptions = KeyError("Column not found: date")
+    elif "missed_column" in request.node.callspec.id:
+        raising_exceptions = KeyError("Columns not found: 'date'")
     eval_general(
         *create_test_dfs(data, index=index),
         lambda df: df.resample("3min")[columns].mean(),
+        raising_exceptions=raising_exceptions,
     )
 
 
