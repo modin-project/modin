@@ -3238,7 +3238,7 @@ def test_to_ray():
 
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
-    if Engine.get() != "Ray":
+    if Engine.get() == "Ray":
         ray_df = modin_df.to_ray()
         df_equals(ray_df.to_pandas(), pandas_df)
     else:
@@ -3246,7 +3246,7 @@ def test_to_ray():
             RuntimeError,
             match="Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.",
         ):
-            ray_df = modin_df.to_ray()
+            _= modin_df.to_ray()
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -3260,7 +3260,7 @@ def test_from_ray():
 
     ray_df = from_pandas(pandas_df)
 
-    if Engine.get() != "Ray":
+    if Engine.get() == "Ray":
         result_df = from_ray(ray_df)
         df_equals(result_df, modin_df)
     else:
@@ -3268,4 +3268,4 @@ def test_from_ray():
             RuntimeError,
             match="Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.",
         ):
-            result_df = from_ray(ray_df)
+            _ = from_ray(ray_df)
