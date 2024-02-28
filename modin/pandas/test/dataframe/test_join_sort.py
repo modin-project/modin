@@ -19,7 +19,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, RangePartitioningMerge, StorageFormat
+from modin.config import Engine, NPartitions, RangePartitioning, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     arg_keys,
@@ -222,7 +222,7 @@ def test_join_6602():
 
 
 @pytest.mark.skipif(
-    RangePartitioningMerge.get() and StorageFormat.get() == "Hdk",
+    RangePartitioning.get() and StorageFormat.get() == "Hdk",
     reason="Doesn't work on HDK",
 )
 @pytest.mark.parametrize(
@@ -249,7 +249,7 @@ def test_join_6602():
 def test_merge(test_data, test_data2):
     # RangePartitioning merge always produces sorted result, so we have to sort
     # pandas' result as well in order them to match
-    comparator = df_equals_and_sort if RangePartitioningMerge.get() else df_equals
+    comparator = df_equals_and_sort if RangePartitioning.get() else df_equals
 
     modin_df = pd.DataFrame(
         test_data,

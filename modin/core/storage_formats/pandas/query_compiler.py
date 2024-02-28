@@ -43,7 +43,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioningGroupby, RangePartitioningMerge
+from modin.config import CpuCount, RangePartitioning, RangePartitioningGroupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -513,7 +513,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def merge(self, right, **kwargs):
-        if RangePartitioningMerge.get():
+        if RangePartitioning.get():
             try:
                 return MergeImpl.range_partitioning_merge(self, right, kwargs)
             except NotImplementedError as e:

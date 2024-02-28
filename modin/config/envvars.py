@@ -770,16 +770,15 @@ ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioningMerge(EnvironmentVariable, type=bool):
+class RangePartitioning(EnvironmentVariable, type=bool):
     """
-    Set to true to use Modin's range-partitioning merge implementation.
+    Set to true to use Modin's range-partitioning implementation where possible.
 
-    It is recommended to use this implementation if the right dataframe
-    in merge is as big as the left dataframe. In this case, range-partitioning
-    implementation works faster and consumes less RAM.
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
     """
 
-    varname = "MODIN_RANGE_PARTITIONING_MERGE"
+    varname = "MODIN_RANGE_PARTITIONING"
     default = False
 
 
