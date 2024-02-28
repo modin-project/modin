@@ -21,12 +21,48 @@ class RayIO(BaseIO):
 
     @classmethod
     def from_ray(cls, ray_obj):
+        """
+        Create a Modin `query_compiler` from a Ray Dataset.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Ray Dataset.
+
+        Notes
+        -----
+        This function must be implemented in every subclass 
+        otherwise NotImplementedError will be raised.
+        """
         raise NotImplementedError(
             f"Modin dataset cann't be created from `ray.data.Dataset` using {cls}."
         )
 
     @classmethod
     def to_ray(cls, modin_obj):
+        """
+        Convert a Modin DataFrame to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.DataFrame
+            The Modin DataFrame to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        This function must be implemented in every subclass 
+        otherwise NotImplementedError will be raised.
+        """
         raise NotImplementedError(
             f"`ray.data.Dataset` cann't be created from Modin DataFrame using {cls}."
         )

@@ -39,6 +39,10 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.distributed.dataframe.pandas.partitions import (
+    from_partitions,
+    unwrap_partitions,
+)
 from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
@@ -52,10 +56,6 @@ from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalPandasParquetParser,
     ExperimentalPandasPickleParser,
     ExperimentalPandasXmlParser,
-)
-from modin.distributed.dataframe.pandas.partitions import (
-    from_partitions,
-    unwrap_partitions,
 )
 
 from ..dataframe import PandasOnRayDataframe

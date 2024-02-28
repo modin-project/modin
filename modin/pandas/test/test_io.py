@@ -47,7 +47,7 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, to_pandas, from_ray
+from modin.pandas.io import from_arrow, from_ray, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -3246,9 +3246,13 @@ def test_to_ray():
             RuntimeError,
             match="Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.",
         ):
-            _= modin_df.to_ray()
+            _ = modin_df.to_ray()
 
 
+@pytest.mark.skipif(
+    condition=Engine.get() != "Ray",
+    reason="Ray Dataset creation is only available for Ray engine",
+)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_ray():
     index = pandas.DatetimeIndex(
@@ -3256,16 +3260,7 @@ def test_from_ray():
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
-    from ray.data import from_pandas
+    ray_df = ray.data.from_pandas(pandas_df)
 
-    ray_df = from_pandas(pandas_df)
-
-    if Engine.get() == "Ray":
-        result_df = from_ray(ray_df)
-        df_equals(result_df, modin_df)
-    else:
-        with pytest.raises(
-            RuntimeError,
-            match="Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.",
-        ):
-            _ = from_ray(ray_df)
+    result_df = from_ray(ray_df)
+    df_equals(result_df, modin_df)

@@ -720,7 +720,7 @@ class BaseIO:
         return obj.to_parquet(path, **kwargs)
 
     @classmethod
-    def to_ray(cls, modin_df):
+    def to_ray(cls, modin_obj):
         """
         Convert a Modin DataFrame to a Ray Dataset.
 
