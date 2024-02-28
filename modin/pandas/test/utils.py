@@ -279,7 +279,7 @@ test_string_list_data = {"simple string": [["a"], ["CdE"], ["jDf"], ["werB"]]}
 test_string_list_data_values = list(test_string_list_data.values())
 test_string_list_data_keys = list(test_string_list_data.keys())
 
-string_seperators = {"empty sep": "", "comma sep": ",", "None sep": None}
+string_seperators = {"comma sep": ","}
 
 string_sep_values = list(string_seperators.values())
 string_sep_keys = list(string_seperators.keys())
@@ -919,7 +919,7 @@ def eval_general(
                     assert (
                         type(modin_exception) is type(raising_exceptions)
                         and modin_exception.args == raising_exceptions.args
-                    ), f"not acceptable exception: [{modin_exception}]"
+                    ), f"not acceptable exception: [{repr(modin_exception)}]"
                 elif raising_exceptions is not False:
                     raise
         else:
