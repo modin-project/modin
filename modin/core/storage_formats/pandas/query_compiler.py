@@ -4580,7 +4580,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             data,
             data_offset,
             fill_value,
-            trivial=[is_trivial_idx],
+            frame=frame,
         ):
             if isinstance(data, type(frame)):
                 if part_offset < len(data._partitions):
@@ -4589,9 +4589,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     return [fill_value] * part_len
 
             if isinstance(data, pandas.Series):
-                if trivial[0] is None:
-                    trivial[0] = is_trivial_index(frame.index)
-                if trivial[0] and is_trivial_index(data.index):
+                nonlocal is_trivial_idx
+                if is_trivial_idx is None:
+                    is_trivial_idx = is_trivial_index(frame.index)
+                if is_trivial_idx and is_trivial_index(data.index):
                     data = data[data_offset : data_offset + part_len]
                     diff = part_len - len(data)
                     if diff > 0:
