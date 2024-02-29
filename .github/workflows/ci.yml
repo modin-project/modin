@@ -584,7 +584,7 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/internals/test_repartition.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
-      - run: ${{ matrix.execution.shell-ex }} modin/extensions/test
+      - run: ${{ matrix.execution.shell-ex }} modin/pandas/api/extensions/test
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost

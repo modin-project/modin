@@ -12,7 +12,7 @@
 # governing permissions and limitations under the License.
 
 import modin.pandas as pd
-from modin.extensions import register_series_accessor
+from modin.pandas.api.extensions import register_series_accessor
 
 
 def test_series_extension_simple_method():
