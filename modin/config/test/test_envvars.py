@@ -16,7 +16,6 @@ import os
 import unittest.mock
 import warnings
 
-import jellyfish
 import pytest
 from packaging import version
 
