@@ -182,9 +182,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_dataframe(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.BaseFactory._from_ray)
-    def from_ray(cls, ray_obj):
-        return cls.get_factory()._from_ray(ray_obj)
+    @_inherit_docstrings(factories.BaseFactory._from_ray_dataset)
+    def from_ray_dataset(cls, ray_obj):
+        return cls.get_factory()._from_ray_dataset(ray_obj)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)

@@ -206,10 +206,10 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a Ray Dataset",
         params="ray_obj : ray.data.Dataset",
-        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray",
+        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray_dataset",
     )
-    def _from_ray(cls, ray_obj):
-        return cls.io_cls.from_ray(ray_obj)
+    def _from_ray_dataset(cls, ray_obj):
+        return cls.io_cls.from_ray_dataset(ray_obj)
 
     @classmethod
     @doc(

@@ -47,7 +47,7 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, from_ray, to_pandas
+from modin.pandas.io import from_arrow, from_ray_dataset, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -3254,7 +3254,7 @@ def test_to_ray_dataset():
     reason="Ray Dataset creation is only available for Ray engine",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_from_ray():
+def test_from_ray_dataset():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
@@ -3262,5 +3262,5 @@ def test_from_ray():
 
     ray_df = ray.data.from_pandas(pandas_df)
 
-    result_df = from_ray(ray_df)
+    result_df = from_ray_dataset(ray_df)
     df_equals(result_df, modin_df)

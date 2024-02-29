@@ -20,7 +20,7 @@ class RayIO(BaseIO):
     """Base class for doing I/O operations over Ray."""
 
     @classmethod
-    def from_ray(cls, ray_obj):
+    def from_ray_dataset(cls, ray_obj):
         """
         Create a Modin `query_compiler` from a Ray Dataset.
 

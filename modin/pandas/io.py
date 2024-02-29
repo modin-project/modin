@@ -1034,7 +1034,7 @@ def from_dataframe(df):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
-def from_ray(ray_obj):
+def from_ray_dataset(ray_obj):
     """
     Convert a Ray Dataset into Modin DataFrame.
 
@@ -1054,7 +1054,9 @@ def from_ray(ray_obj):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.from_ray_dataset(ray_obj)
+    )
 
 
 def from_dask(ray_obj):
@@ -1077,7 +1079,9 @@ def from_dask(ray_obj):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.from_ray_dataset(ray_obj)
+    )
 
 
 def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
