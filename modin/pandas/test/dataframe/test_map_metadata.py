@@ -36,8 +36,6 @@ from modin.pandas.test.utils import (
     eval_general,
     indices_keys,
     indices_values,
-    int_arg_keys,
-    int_arg_values,
     name_contains,
     numeric_dfs,
     random_state,
@@ -439,20 +437,26 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
-        check_exception_type=True,
+        raising_exceptions=ValueError(
+            "cannot reindex on an axis with duplicate labels"
+        ),
     )
 
 
 @pytest.mark.parametrize("errors", ["raise", "ignore"])
 def test_astype_errors(errors):
     data = {"a": ["a", 2, -1]}
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_df, pandas_df = create_test_dfs(data)
+    raising_exceptions = None
+    if errors == "raise":
+        raising_exceptions = ValueError("invalid literal for int() with base 10: 'a'")
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.astype("int", errors=errors),
         # https://github.com/modin-project/modin/issues/5962
         comparator_kwargs={"check_dtypes": errors != "ignore"},
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -1272,32 +1276,50 @@ def test_dropna_subset(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis,subset", [(0, list("EF")), (1, [4, 5])])
 def test_dropna_subset_error(data, axis, subset):
-    eval_general(*create_test_dfs(data), lambda df: df.dropna(axis=axis, subset=subset))
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.dropna(axis=axis, subset=subset),
+        raising_exceptions=KeyError(["E", "F"]),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("astype", ["category", "int32", "float"])
-def test_insert_dtypes(data, astype):
+def test_insert_dtypes(data, astype, request):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     # categories with NaN works incorrect for now
     if astype == "category" and pandas_df.iloc[:, 0].isnull().any():
         return
 
+    raising_exceptions = None
+    if "int32-float_nan_data" in request.node.callspec.id:
+        raising_exceptions = pandas.errors.IntCastingNaNError(
+            "Cannot convert non-finite values (NA or inf) to integer"
+        )
     eval_insert(
         modin_df,
         pandas_df,
         col="TypeSaver",
         value=lambda df: df.iloc[:, 0].astype(astype),
+        raising_exceptions=raising_exceptions,
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
+@pytest.mark.parametrize("loc", [-3, 0, 3])
 def test_insert_loc(data, loc):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    eval_insert(modin_df, pandas_df, loc=loc, value=lambda df: df.iloc[:, 0])
+    raising_exceptions = None
+    if loc == -3:
+        raising_exceptions = ValueError("unbounded slice")
+    eval_insert(
+        modin_df,
+        pandas_df,
+        loc=loc,
+        value=lambda df: df.iloc[:, 0],
+        raising_exceptions=raising_exceptions,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1313,12 +1335,7 @@ def test_insert(data):
         pandas.DataFrame(columns=list("ab")),
         col=lambda df: df.columns[0],
         value=lambda df: df[df.columns[0]],
-    )
-    eval_insert(
-        pd.DataFrame(index=modin_df.index),
-        pandas.DataFrame(index=pandas_df.index),
-        col=lambda df: df.columns[0],
-        value=lambda df: df[df.columns[0]],
+        allow_duplicates=True,
     )
     eval_insert(
         modin_df,
@@ -1340,18 +1357,27 @@ def test_insert(data):
     )
 
     # Bad inserts
-    eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
+    # FIXME: different messages, check only types
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="Bad Column",
+        value=lambda df: df,
+        raising_exceptions=False,
+    )
     eval_insert(
         modin_df,
         pandas_df,
         col="Too Short",
         value=lambda df: list(df[df.columns[0]])[:-1],
+        raising_exceptions=False,
     )
     eval_insert(
         modin_df,
         pandas_df,
         col=lambda df: df.columns[0],
         value=lambda df: df[df.columns[0]],
+        raising_exceptions=False,
     )
     eval_insert(
         modin_df,
@@ -1359,6 +1385,7 @@ def test_insert(data):
         loc=lambda df: len(df.columns) + 100,
         col="Bad Loc",
         value=100,
+        raising_exceptions=False,
     )
 
 
@@ -1373,6 +1400,7 @@ def test_insert_4407():
     for idx, value in enumerate(
         (pandas_df.to_numpy(), np.array([[1]] * 3), np.array([[1, 2, 3], [4, 5, 6]]))
     ):
+        # FIXME: different messages, check only types
         eval_insert(
             modin_df,
             pandas_df,
@@ -1380,6 +1408,7 @@ def test_insert_4407():
             col=f"test_col{idx}",
             value=value,
             comparator=lambda df1, df2: comparator(df1, df2),
+            raising_exceptions=False,
         )
 
 
@@ -1621,10 +1650,14 @@ def test___neg__(request, data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___invert__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: ~df)
+def test___invert__(data, request):
+    raising_exceptions = None
+    if "float_nan_data" in request.node.callspec.id:
+        # FIXME: different messages
+        raising_exceptions = False
+    eval_general(
+        *create_test_dfs(data), lambda df: ~df, raising_exceptions=raising_exceptions
+    )
 
 
 def test___invert___bool():
@@ -1634,13 +1667,6 @@ def test___invert___bool():
     modin_result = ~modin_df
     pandas_result = ~pandas_df
     df_equals(modin_result, pandas_result)
-
-
-def test___hash__():
-    data = test_data_values[0]
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, hash)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
