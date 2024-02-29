@@ -152,7 +152,7 @@ def test_dataframe_api_equality():
 
     ignore_in_pandas = ["timetuple"]
     # modin - namespace for using experimental functionality
-    ignore_in_modin = ["modin", "to_pandas", "to_ray"]
+    ignore_in_modin = ["modin", "to_pandas", "to_ray_dataset"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(
         missing_from_modin - set(ignore_in_pandas)
@@ -164,7 +164,7 @@ def test_dataframe_api_equality():
     ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist", "modin", "to_pandas", "to_ray"]
+    allowed_different = ["to_hdf", "hist", "modin", "to_pandas", "to_ray_dataset"]
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 

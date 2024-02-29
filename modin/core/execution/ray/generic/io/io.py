@@ -40,11 +40,11 @@ class RayIO(BaseIO):
         otherwise NotImplementedError will be raised.
         """
         raise NotImplementedError(
-            f"Modin dataset cann't be created from `ray.data.Dataset` using {cls}."
+            f"Modin dataset can't be created from `ray.data.Dataset` using {cls}."
         )
 
     @classmethod
-    def to_ray(cls, modin_obj):
+    def to_ray_dataset(cls, modin_obj):
         """
         Convert a Modin DataFrame to a Ray Dataset.
 
@@ -64,5 +64,5 @@ class RayIO(BaseIO):
         otherwise NotImplementedError will be raised.
         """
         raise NotImplementedError(
-            f"`ray.data.Dataset` cann't be created from Modin DataFrame using {cls}."
+            f"`ray.data.Dataset` can't be created from Modin DataFrame using {cls}."
         )

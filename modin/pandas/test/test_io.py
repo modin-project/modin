@@ -3231,7 +3231,7 @@ def test_to_period():
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_to_ray():
+def test_to_ray_dataset():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
@@ -3239,14 +3239,14 @@ def test_to_ray():
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
     if Engine.get() == "Ray":
-        ray_df = modin_df.to_ray()
-        df_equals(ray_df.to_pandas(), pandas_df)
+        ray_dataset = modin_df.to_ray_dataset()
+        df_equals(ray_dataset.to_pandas(), pandas_df)
     else:
         with pytest.raises(
             RuntimeError,
-            match="Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.",
+            match="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
         ):
-            _ = modin_df.to_ray()
+            _ = modin_df.to_ray_dataset()
 
 
 @pytest.mark.skipif(

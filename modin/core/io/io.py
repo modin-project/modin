@@ -133,11 +133,11 @@ class BaseIO:
 
         Notes
         -----
-        Ray Dataset may only be converted to a Modin Dataframe if Modin uses a Ray engine.
+        Ray Dataset can only be converted to a Modin Dataframe if Modin uses a Ray engine.
         If another engine is used, the runtime exception will be raised.
         """
         raise RuntimeError(
-            "Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine."
+            "Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine."
         )
 
     @classmethod
@@ -720,7 +720,7 @@ class BaseIO:
         return obj.to_parquet(path, **kwargs)
 
     @classmethod
-    def to_ray(cls, modin_obj):
+    def to_ray_dataset(cls, modin_obj):
         """
         Convert a Modin DataFrame to a Ray Dataset.
 
@@ -736,9 +736,9 @@ class BaseIO:
 
         Notes
         -----
-        Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+        Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
         If another engine is used, the runtime exception will be raised.
         """
         raise RuntimeError(
-            "Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine."
+            "Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine."
         )

@@ -357,6 +357,6 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_parquet(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.BaseFactory._to_ray)
-    def to_ray(cls, modin_obj):
-        return cls.get_factory()._to_ray(modin_obj)
+    @_inherit_docstrings(factories.BaseFactory._to_ray_dataset)
+    def to_ray_dataset(cls, modin_obj):
+        return cls.get_factory()._to_ray_dataset(modin_obj)

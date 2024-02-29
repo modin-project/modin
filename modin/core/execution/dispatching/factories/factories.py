@@ -466,7 +466,7 @@ class BaseFactory(object):
         return cls.io_cls.to_parquet(*args, **kwargs)
 
     @classmethod
-    def _to_ray(cls, modin_obj):
+    def _to_ray_dataset(cls, modin_obj):
         """
         Write query compiler content to a Ray Dataset.
 
@@ -482,9 +482,9 @@ class BaseFactory(object):
 
         Notes
         -----
-        Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+        Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
         """
-        return cls.io_cls.to_ray(modin_obj)
+        return cls.io_cls.to_ray_dataset(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod

@@ -282,7 +282,7 @@ class PandasOnRayIO(RayIO):
         return from_partitions(pd_objs, axis=0)._query_compiler
 
     @classmethod
-    def to_ray(cls, modin_obj):
+    def to_ray_dataset(cls, modin_obj):
         """
         Convert a Modin DataFrame to a Ray Dataset.
 

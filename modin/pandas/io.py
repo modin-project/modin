@@ -1050,7 +1050,30 @@ def from_ray(ray_obj):
 
     Notes
     -----
-    Ray Dataset may only be converted to Modin Dataframe if Modin uses a Ray engine.
+    Ray Dataset can only be converted to Modin Dataframe if Modin uses a Ray engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
+
+
+def from_dask(ray_obj):
+    """
+    Convert a Ray Dataset into Modin DataFrame.
+
+    Parameters
+    ----------
+    ray_obj : ray.data.Dataset
+        The Ray Dataset to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Ray Dataset can only be converted to Modin Dataframe if Modin uses a Ray engine.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
@@ -1098,7 +1121,7 @@ def to_numpy(
     return array
 
 
-def to_ray(modin_obj):
+def to_ray_dataset(modin_obj):
     """
     Convert a Modin DataFrame to a Ray Dataset.
 
@@ -1114,11 +1137,11 @@ def to_ray(modin_obj):
 
     Notes
     -----
-    Modin Dataframe may only be converted to a Ray Dataset if Modin uses a Ray engine.
+    Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return FactoryDispatcher.to_ray(modin_obj)
+    return FactoryDispatcher.to_ray_dataset(modin_obj)
 
 
 __all__ = [
