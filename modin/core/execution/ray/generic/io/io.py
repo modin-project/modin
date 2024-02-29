@@ -36,7 +36,7 @@ class RayIO(BaseIO):
 
         Notes
         -----
-        This function must be implemented in every subclass 
+        This function must be implemented in every subclass
         otherwise NotImplementedError will be raised.
         """
         raise NotImplementedError(
@@ -60,7 +60,7 @@ class RayIO(BaseIO):
 
         Notes
         -----
-        This function must be implemented in every subclass 
+        This function must be implemented in every subclass
         otherwise NotImplementedError will be raised.
         """
         raise NotImplementedError(
