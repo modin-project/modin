@@ -85,18 +85,10 @@ def test_custom_help(make_custom_envvar):
 def test_doc_module():
     import pandas as default_pd
 
+    import modin.pandas as pd
     from modin.config import DocumentationPluginModuleName
 
     DocumentationPluginModuleName.put("modin.config.test.docs_module")
-
-    import modin.pandas as pd
-
-    importlib.invalidate_caches()
-    importlib.reload(pd.dataframe)
-    importlib.reload(pd.series)
-    importlib.reload(pd.base)
-    importlib.reload(pd.io)
-    importlib.reload(pd)
 
     # Test for override
     assert (
