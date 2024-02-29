@@ -11,10 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import importlib
 import os
 import unittest.mock
 import warnings
 
+import jellyfish
 import pytest
 from packaging import version
 
@@ -79,6 +81,37 @@ def test_custom_set(make_custom_envvar, set_custom_envvar):
 def test_custom_help(make_custom_envvar):
     assert "MODIN_CUSTOM" in make_custom_envvar.get_help()
     assert "custom var" in make_custom_envvar.get_help()
+
+
+def test_doc_module():
+    from modin.config import DocumentationPluginModuleName
+    import pandas as default_pd
+
+    DocumentationPluginModuleName.put("modin.config.test.docs_module")
+
+    import modin.pandas as pd
+
+    importlib.invalidate_caches()
+    importlib.reload(pd.dataframe)
+    importlib.reload(pd.series)
+    importlib.reload(pd.base)
+    importlib.reload(pd.io)
+    importlib.reload(pd)
+
+    # Test for override
+    assert pd.DataFrame.apply.__doc__ == "This is a test of the documentation module for DataFrame."
+    # Test for pandas doc when method is not defined on the plugin module
+    assert default_pd.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
+    assert default_pd.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
+    # Test for override
+    assert pd.Series.isna.__doc__ == "This is a test of the documentation module for Series."
+    # Test for pandas doc when method is not defined on the plugin module
+    assert default_pd.Series.isnull.__doc__ in pd.Series.isnull.__doc__
+    assert default_pd.Series.apply.__doc__ in pd.Series.apply.__doc__
+    # Test for override
+    assert pd.read_csv.__doc__ == "Test override for functions on the module."
+    # Test for pandas doc when function is not defined on module.
+    assert default_pd.read_table.__doc__ in pd.read_table.__doc__
 
 
 def test_hdk_envvar():

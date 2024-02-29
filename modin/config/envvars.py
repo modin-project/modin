@@ -831,6 +831,18 @@ class LazyExecution(EnvironmentVariable, type=str):
     default = "Auto"
 
 
+class DocumentationPluginModuleName(EnvironmentVariable, type=str):
+    """
+    The module to use that will be used for docstrings.
+
+    The value set here must be a valid, importable module. It should have
+    a `DataFrame`, `Series`, and/or several APIs directly (e.g. `read_csv`).
+    """
+
+    varname = "MODIN_DOC_MODULE"
+    default = "pandas"
+
+
 class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     """Number of threads per Dask worker."""
 
