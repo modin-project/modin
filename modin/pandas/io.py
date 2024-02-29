@@ -1059,31 +1059,6 @@ def from_ray_dataset(ray_obj):
     )
 
 
-def from_dask(ray_obj):
-    """
-    Convert a Ray Dataset into Modin DataFrame.
-
-    Parameters
-    ----------
-    ray_obj : ray.data.Dataset
-        The Ray Dataset to convert from.
-
-    Returns
-    -------
-    DataFrame
-        A new Modin DataFrame object.
-
-    Notes
-    -----
-    Ray Dataset can only be converted to Modin Dataframe if Modin uses a Ray engine.
-    """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    return ModinObjects.DataFrame(
-        query_compiler=FactoryDispatcher.from_ray_dataset(ray_obj)
-    )
-
-
 def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
