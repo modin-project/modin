@@ -916,7 +916,6 @@ def eval_general(
                         # unwrap ray exceptions from remote worker
                         if isinstance(modin_exception, RayTaskError):
                             modin_exception = modin_exception.args[0]
-                    # breakpoint()
                     assert (
                         type(modin_exception) is type(raising_exceptions)
                         and modin_exception.args == raising_exceptions.args
