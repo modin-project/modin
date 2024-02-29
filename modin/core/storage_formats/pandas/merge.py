@@ -87,6 +87,9 @@ class MergeImpl:
                 new_columns=new_columns,
                 new_dtypes=new_dtypes,
             )
+            # pandas resets the index of the result unless we were merging on an index level,
+            # the current implementation only supports merging on column names, so dropping
+            # the index unconditionally
         ).reset_index(drop=True)
 
     @classmethod

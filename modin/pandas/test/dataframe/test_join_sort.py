@@ -223,7 +223,7 @@ def test_join_6602():
 
 @pytest.mark.skipif(
     RangePartitioning.get() and StorageFormat.get() == "Hdk",
-    reason="Doesn't work on HDK",
+    reason="Doesn't make sense for HDK",
 )
 @pytest.mark.parametrize(
     "test_data, test_data2",

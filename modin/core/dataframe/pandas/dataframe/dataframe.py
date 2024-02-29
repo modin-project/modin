@@ -3866,8 +3866,8 @@ class PandasDataframe(ClassLogger):
         Apply `func` against two dataframes using range-partitioning implementation.
 
         The method first builds range-partitioning for both dataframes using the data from
-        `self[key]`, after that, the it applies the `func` row-wise to the `self` frame and
-        broadcasts row-parts of `right` to the `self`.
+        `self[key]`, after that, it applies `func` row-wise to `self` frame and
+        broadcasts row-parts of `right` to `self`.
 
         Parameters
         ----------
