@@ -49,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, StorageFormat, DocumentationPluginModuleName
+from modin.config import DocumentationPluginModuleName, Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -438,7 +438,9 @@ def _inherit_docstrings(
                     # Try to get the attribute from the docs class first, then
                     # from the default parent (pandas), and if it's not in either,
                     # set `parent_obj` to `None`.
-                    parent_obj = getattr(parent, attr, getattr(default_parent, attr, None))
+                    parent_obj = getattr(
+                        parent, attr, getattr(default_parent, attr, None)
+                    )
                     if (
                         parent_obj in excluded
                         or not _documentable_obj(parent_obj)

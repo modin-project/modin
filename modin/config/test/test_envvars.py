@@ -84,8 +84,9 @@ def test_custom_help(make_custom_envvar):
 
 
 def test_doc_module():
-    from modin.config import DocumentationPluginModuleName
     import pandas as default_pd
+
+    from modin.config import DocumentationPluginModuleName
 
     DocumentationPluginModuleName.put("modin.config.test.docs_module")
 
@@ -99,12 +100,18 @@ def test_doc_module():
     importlib.reload(pd)
 
     # Test for override
-    assert pd.DataFrame.apply.__doc__ == "This is a test of the documentation module for DataFrame."
+    assert (
+        pd.DataFrame.apply.__doc__
+        == "This is a test of the documentation module for DataFrame."
+    )
     # Test for pandas doc when method is not defined on the plugin module
     assert default_pd.DataFrame.isna.__doc__ in pd.DataFrame.isna.__doc__
     assert default_pd.DataFrame.isnull.__doc__ in pd.DataFrame.isnull.__doc__
     # Test for override
-    assert pd.Series.isna.__doc__ == "This is a test of the documentation module for Series."
+    assert (
+        pd.Series.isna.__doc__
+        == "This is a test of the documentation module for Series."
+    )
     # Test for pandas doc when method is not defined on the plugin module
     assert default_pd.Series.isnull.__doc__ in pd.Series.isnull.__doc__
     assert default_pd.Series.apply.__doc__ in pd.Series.apply.__doc__
