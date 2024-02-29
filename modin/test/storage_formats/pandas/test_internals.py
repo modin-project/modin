@@ -1319,6 +1319,28 @@ class TestModinIndexIds:
         assert new_cache._lengths_id == old_cache._lengths_id
         assert new_cache._lengths_cache == old_cache._lengths_cache
 
+    def test_binops_without_repartitioning(self):
+        """Test that binary operations for identical indices works without materializing the axis."""
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df)
+
+        col1 = df["col1"]
+        assert_has_no_cache(col1)
+        assert_has_no_cache(df)
+
+        col2 = df["col2"]
+        assert_has_no_cache(col2)
+        assert_has_no_cache(df)
+
+        # perform a binary op and insert the result back then check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_df:
+            df["result"] = col1 + col2
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col1)
+            assert_has_no_cache(col2)
+        get_index_df.assert_not_called()
+
 
 def test_skip_set_columns():
     """
