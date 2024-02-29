@@ -880,7 +880,7 @@ class PandasDataframe(ClassLogger):
         axis : int, default: None
             The axis to apply to. If it's None applies to both axes.
         """
-        self._filter_empties()
+        self._filter_empties(compute_metadata=False)
         if axis is None or axis == 0:
             cum_row_lengths = np.cumsum([0] + self.row_lengths)
         if axis is None or axis == 1:
@@ -931,7 +931,11 @@ class PandasDataframe(ClassLogger):
                                 slice(cum_row_lengths[i], cum_row_lengths[i + 1])
                             ],
                             length=self.row_lengths[i],
-                            width=self.column_widths[j],
+                            width=(
+                                self.column_widths[j]
+                                if self._column_widths_cache is not None
+                                else None
+                            ),
                         )
                         for j in range(len(self._partitions[i]))
                     ]
@@ -952,7 +956,11 @@ class PandasDataframe(ClassLogger):
                             cols=self.columns[
                                 slice(cum_col_widths[j], cum_col_widths[j + 1])
                             ],
-                            length=self.row_lengths[i],
+                            length=(
+                                self.row_lengths[i]
+                                if self._row_lengths_cache is not None
+                                else None
+                            ),
                             width=self.column_widths[j],
                         )
                         for j in range(len(self._partitions[i]))
