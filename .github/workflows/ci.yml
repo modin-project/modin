@@ -584,6 +584,7 @@ jobs:
       - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/internals/test_repartition.py
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
+      - run: ${{ matrix.execution.shell-ex }} modin/extensions/test
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
@@ -650,7 +651,6 @@ jobs:
           mkdir -p "${CONDA_PKGS_DIR}_do_not_cache" && \
           find "${CONDA_PKGS_DIR}" -mindepth 1 -maxdepth 1 -type d -exec mv {} "${CONDA_PKGS_DIR}_do_not_cache" \;
         if: matrix.os == 'windows'
-      - run: ${{ matrix.execution.shell-ex }} modin/extensions/test
       - uses: ./.github/actions/upload-coverage
 
   test-experimental:
