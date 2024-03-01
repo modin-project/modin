@@ -1590,28 +1590,20 @@ def test_transpose(data):
         ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
     ],
 )
-@pytest.mark.parametrize(
-    "raise_errors", bool_arg_values, ids=arg_keys("raise_errors", bool_arg_keys)
-)
-def test_update(data, other_data, raise_errors):
+@pytest.mark.parametrize("errors", ["raise", "ignore"])
+def test_update(data, other_data, errors):
     modin_df, pandas_df = create_test_dfs(data)
     other_modin_df, other_pandas_df = create_test_dfs(other_data)
-
-    if raise_errors:
-        kwargs = {"errors": "raise"}
-    else:
-        kwargs = {}
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: (
-            df.update(other_modin_df)
+            df.update(other_modin_df, errors=errors)
             if isinstance(df, pd.DataFrame)
-            else df.update(other_pandas_df)
+            else df.update(other_pandas_df, errors=errors)
         ),
         __inplace__=True,
-        **kwargs,
     )
 
 
