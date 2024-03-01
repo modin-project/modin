@@ -22,7 +22,7 @@ from modin.config.envvars import (
     CIAWSSecretAccessKey,
     CpuCount,
     DaskThreadsPerWorker,
-    DocumentationPluginModuleName,
+    DocModule,
     DoUseCalcite,
     Engine,
     EnvironmentVariable,
@@ -109,5 +109,5 @@ __all__ = [
     "LogMemoryInterval",
     "LogFileSize",
     # Plugin settings
-    "DocumentationPluginModuleName",
+    "DocModule",
 ]

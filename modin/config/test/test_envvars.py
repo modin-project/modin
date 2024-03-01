@@ -85,9 +85,9 @@ def test_doc_module():
     import pandas
 
     import modin.pandas as pd
-    from modin.config import DocumentationPluginModuleName
+    from modin.config import DocModule
 
-    DocumentationPluginModuleName.put("modin.config.test.docs_module")
+    DocModule.put("modin.config.test.docs_module")
 
     # Test for override
     assert (
