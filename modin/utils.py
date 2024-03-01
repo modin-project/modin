@@ -49,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import DocumentationPluginModuleName, Engine, StorageFormat
+from modin.config import DocModule, Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -400,9 +400,7 @@ def _inherit_docstrings(
     which means that ancestor class attribute docstrings could also change.
     """
     # Import the docs module and get the class (e.g. `DataFrame`).
-    imported_doc_module = importlib.import_module(
-        DocumentationPluginModuleName.get().lower()
-    )
+    imported_doc_module = importlib.import_module(DocModule.get())
     # Set the default parent so we can use it in case some docs are missing from
     # parent module.
     default_parent = parent
