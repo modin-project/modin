@@ -50,6 +50,9 @@ from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 if TYPE_CHECKING:
     from .dataframe import DataFrame
 
+# Dictionary of extensions assigned to this class
+_SERIES_EXTENSIONS_ = {}
+
 
 @_inherit_docstrings(
     pandas.Series, excluded=[pandas.Series.__init__], apilink="pandas.Series"
@@ -317,7 +320,7 @@ class Series(BasePandasDataset):
         try to get `key` from `Series` fields.
         """
         try:
-            return object.__getattribute__(self, key)
+            return _SERIES_EXTENSIONS_.get(key, object.__getattribute__(self, key))
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]

@@ -64,6 +64,9 @@ from .utils import (
     cast_function_modin2pandas,
 )
 
+# Dictionary of extensions assigned to this class
+_DATAFRAME_EXTENSIONS_ = {}
+
 
 @_inherit_docstrings(
     pandas.DataFrame, excluded=[pandas.DataFrame.__init__], apilink="pandas.DataFrame"
@@ -2504,7 +2507,7 @@ class DataFrame(BasePandasDataset):
         try to get `key` from ``DataFrame`` fields.
         """
         try:
-            return object.__getattribute__(self, key)
+            return _DATAFRAME_EXTENSIONS_.get(key, object.__getattribute__(self, key))
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]

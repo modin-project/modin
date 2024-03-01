@@ -27,6 +27,9 @@ if (
         + f" Modin ({__pandas_version__}.X). This may cause undesired side effects!"
     )
 
+# The extensions assigned to this module
+_PD_EXTENSIONS_ = {}
+
 # to not pollute namespace
 del version
 
@@ -225,7 +228,30 @@ from .io import (
 from .plotting import Plotting as plotting
 from .series import Series
 
+
+def __getattr__(name: str):
+    """
+    Overrides getattr on the module to enable extensions.
+
+    Parameters
+    ----------
+    name : str
+        The name of the attribute being retrieved.
+
+    Returns
+    -------
+    Attribute
+        Returns the extension attribute, if it exists, otherwise returns the attribute
+        imported in this file.
+    """
+    try:
+        return _PD_EXTENSIONS_.get(name, globals()[name])
+    except KeyError:
+        raise AttributeError(f"module 'modin.pandas' has no attribute '{name}'")
+
+
 __all__ = [  # noqa: F405
+    "_PD_EXTENSIONS_",
     "DataFrame",
     "Series",
     "read_csv",
