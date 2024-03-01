@@ -1387,44 +1387,41 @@ class TestParquet:
                 "Skipping empty filters error case to avoid race condition - see #6460"
             )
 
-        with ensure_clean(".parquet") as unique_filename:
-            unique_filename = path_type(unique_filename)
-            make_parquet_file(
-                filename=unique_filename,
-                row_group_size=row_group_size,
-                range_index_start=range_index_start,
-                range_index_step=range_index_step,
-                range_index_name=range_index_name,
-            )
+        unique_filename = make_parquet_file(
+            row_group_size=row_group_size,
+            range_index_start=range_index_start,
+            range_index_step=range_index_step,
+            range_index_name=range_index_name,
+        )
+        unique_filename = path_type(unique_filename)
 
-            eval_io(
-                fn_name="read_parquet",
-                # read_parquet kwargs
-                engine=engine,
-                path=unique_filename,
-                columns=columns,
-                filters=filters,
-            )
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=unique_filename,
+            columns=columns,
+            filters=filters,
+        )
 
     @pytest.mark.parametrize(
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
     def test_read_parquet_dtype_backend(self, engine, make_parquet_file, dtype_backend):
-        with ensure_clean(".parquet") as unique_filename:
-            make_parquet_file(filename=unique_filename, row_group_size=100)
+        unique_filename = make_parquet_file(row_group_size=100)
 
-            def comparator(df1, df2):
-                df_equals(df1, df2)
-                df_equals(df1.dtypes, df2.dtypes)
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
 
-            eval_io(
-                fn_name="read_parquet",
-                # read_parquet kwargs
-                engine=engine,
-                path=unique_filename,
-                dtype_backend=dtype_backend,
-                comparator=comparator,
-            )
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=unique_filename,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     # Tests issue #6778
     def test_read_parquet_no_extension(self, engine, make_parquet_file):
@@ -1496,14 +1493,12 @@ class TestParquet:
     def test_read_parquet_list_of_files_5698(self, engine, make_parquet_file):
         if engine == "fastparquet" and os.name == "nt":
             pytest.xfail(reason="https://github.com/pandas-dev/pandas/issues/51720")
-        with ensure_clean(".parquet") as f1, ensure_clean(
-            ".parquet"
-        ) as f2, ensure_clean(".parquet") as f3:
-            for f in [f1, f2, f3]:
-                make_parquet_file(filename=f)
-            eval_io(fn_name="read_parquet", path=[f1, f2, f3], engine=engine)
+        filenames = [None] * 3
+        for i in range(3):
+            filenames[i] = make_parquet_file()
+        eval_io(fn_name="read_parquet", path=filenames, engine=engine)
 
-    def test_read_parquet_indexing_by_column(self, tmp_path, engine, make_parquet_file):
+    def test_read_parquet_indexing_by_column(self, engine, make_parquet_file):
         # Test indexing into a column of Modin with various parquet file row lengths.
         # Specifically, tests for https://github.com/modin-project/modin/issues/3527
         # which fails when min_partition_size < nrows < min_partition_size * (num_partitions - 1)
@@ -1511,8 +1506,7 @@ class TestParquet:
         nrows = (
             MinPartitionSize.get() + 1
         )  # Use the minimal guaranteed failing value for nrows.
-        unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
-        make_parquet_file(filename=unique_filename, nrows=nrows)
+        unique_filename = make_parquet_file(nrows=nrows)
 
         parquet_df = pd.read_parquet(unique_filename, engine=engine)
         for col in parquet_df.columns:
@@ -1731,7 +1725,6 @@ class TestParquet:
     )
     def test_read_parquet_partitioned_directory(
         self,
-        tmp_path,
         make_parquet_file,
         columns,
         filters,
@@ -1739,9 +1732,7 @@ class TestParquet:
         range_index_step,
         engine,
     ):
-        unique_filename = get_unique_filename(extension=None, data_dir=tmp_path)
-        make_parquet_file(
-            filename=unique_filename,
+        unique_filename = make_parquet_file(
             partitioned_columns=["col1"],
             range_index_start=range_index_start,
             range_index_step=range_index_step,
@@ -2063,11 +2054,10 @@ class TestParquet:
 # TODO(https://github.com/modin-project/modin/issues/3655): Get rid of this
 # commment once we turn all default to pandas messages into errors.
 def test_read_parquet_relative_to_user_home(make_parquet_file):
-    with ensure_clean(".parquet") as unique_filename:
-        make_parquet_file(filename=unique_filename)
-        _check_relative_io(
-            "read_parquet", unique_filename, "path", storage_default=("Hdk",)
-        )
+    unique_filename = make_parquet_file()
+    _check_relative_io(
+        "read_parquet", unique_filename, "path", storage_default=("Hdk",)
+    )
 
 
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -2756,20 +2746,19 @@ class TestFwf:
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
     def test_read_fwf_dtype_backend(self, make_fwf_file, dtype_backend):
-        with ensure_clean(".fwf") as unique_filename:
-            make_fwf_file(filename=unique_filename)
+        unique_filename = make_fwf_file()
 
-            def comparator(df1, df2):
-                df_equals(df1, df2)
-                df_equals(df1.dtypes, df2.dtypes)
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                dtype_backend=dtype_backend,
-                comparator=comparator,
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = make_fwf_file()
