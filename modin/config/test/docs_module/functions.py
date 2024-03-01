@@ -11,8 +11,6 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from .classes import DataFrame, Series
-from .functions import read_csv
-
-
-__all__ = ["DataFrame", "Series", "read_csv"]
+def read_csv():
+    """Test override for functions on the module."""
+    return

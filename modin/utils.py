@@ -408,7 +408,7 @@ def _inherit_docstrings(
     default_parent = parent
     # Try to get the parent object from the doc module, and if it isn't there,
     # get it from parent instead.
-    parent = getattr(imported_doc_module, parent.__name__, parent)
+    parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
     if parent != default_parent:
         # Reset API link in case the docs are overridden.
         apilink = None
