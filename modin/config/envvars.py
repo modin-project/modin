@@ -832,7 +832,7 @@ class LazyExecution(EnvironmentVariable, type=str):
     default = "Auto"
 
 
-class DocumentationPluginModuleName(EnvironmentVariable, type=str):
+class DocModule(EnvironmentVariable, type=ExactStr):
     """
     The module to use that will be used for docstrings.
 
@@ -844,7 +844,7 @@ class DocumentationPluginModuleName(EnvironmentVariable, type=str):
     default = "pandas"
 
     @classmethod
-    def put(cls, value: Any) -> None:
+    def put(cls, value: str) -> None:
         super().put(value)
         # Reload everything to apply the documentation. This is required since the
         # docs might already have been created and the implementation will assume
