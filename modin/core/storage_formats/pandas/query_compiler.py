@@ -41,9 +41,9 @@ from pandas.core.dtypes.common import (
 from pandas.core.groupby.base import transformation_kernels
 from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
-from pandas.errors import DataError, MergeError
+from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioningGroupby
+from modin.config import CpuCount, RangePartitioning, RangePartitioningGroupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -57,7 +57,6 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     GroupByDefault,
     SeriesGroupByDefault,
 )
-from modin.core.dataframe.base.dataframe.utils import join_columns
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
     ModinDtypes,
@@ -77,6 +76,7 @@ from modin.utils import (
 
 from .aggregations import CorrCovBuilder
 from .groupby import GroupbyReduceImpl
+from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
 
 
@@ -513,170 +513,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self.__constructor__(new_modin_frame)
 
     def merge(self, right, **kwargs):
-        how = kwargs.get("how", "inner")
-        on = kwargs.get("on", None)
-        left_on = kwargs.get("left_on", None)
-        right_on = kwargs.get("right_on", None)
-        left_index = kwargs.get("left_index", False)
-        right_index = kwargs.get("right_index", False)
-        sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.combine()
-
-        if how in ["left", "inner"] and left_index is False and right_index is False:
-            kwargs["sort"] = False
-
-            def should_keep_index(left, right):
-                keep_index = False
-                if left_on is not None and right_on is not None:
-                    keep_index = any(
-                        o in left.index.names
-                        and o in right_on
-                        and o in right.index.names
-                        for o in left_on
-                    )
-                elif on is not None:
-                    keep_index = any(
-                        o in left.index.names and o in right.index.names for o in on
-                    )
-                return keep_index
-
-            def map_func(
-                left, right, *axis_lengths, kwargs=kwargs, **service_kwargs
-            ):  # pragma: no cover
-                df = pandas.merge(left, right, **kwargs)
-
-                if kwargs["how"] == "left":
-                    partition_idx = service_kwargs["partition_idx"]
-                    if len(axis_lengths):
-                        if not should_keep_index(left, right):
-                            # Doesn't work for "inner" case, since the partition sizes of the
-                            # left dataframe may change
-                            start = sum(axis_lengths[:partition_idx])
-                            stop = sum(axis_lengths[: partition_idx + 1])
-
-                            df.index = pandas.RangeIndex(start, stop)
-
-                return df
-
-            # Want to ensure that these are python lists
-            if left_on is not None and right_on is not None:
-                left_on = list(left_on) if is_list_like(left_on) else [left_on]
-                right_on = list(right_on) if is_list_like(right_on) else [right_on]
-            elif on is not None:
-                on = list(on) if is_list_like(on) else [on]
-
-            new_columns = None
-            new_dtypes = None
-            if self._modin_frame.has_materialized_columns:
-                if left_on is None and right_on is None:
-                    if on is None:
-                        on = [c for c in self.columns if c in right.columns]
-                    _left_on, _right_on = on, on
-                else:
-                    if left_on is None or right_on is None:
-                        raise MergeError(
-                            "Must either pass only 'on' or 'left_on' and 'right_on', not combination of them."
-                        )
-                    _left_on, _right_on = left_on, right_on
-
-                try:
-                    new_columns, left_renamer, right_renamer = join_columns(
-                        self.columns,
-                        right.columns,
-                        _left_on,
-                        _right_on,
-                        kwargs.get("suffixes", ("_x", "_y")),
-                    )
-                except NotImplementedError:
-                    # This happens when one of the keys to join is an index level. Pandas behaviour
-                    # is really complicated in this case, so we're not computing resulted columns for now.
-                    pass
-                else:
-                    # renamers may contain columns from 'index', so trying to merge index and column dtypes here
-                    right_index_dtypes = (
-                        right.index.dtypes
-                        if isinstance(right.index, pandas.MultiIndex)
-                        else pandas.Series(
-                            [right.index.dtype], index=[right.index.name]
-                        )
-                    )
-                    right_dtypes = pandas.concat([right.dtypes, right_index_dtypes])[
-                        right_renamer.keys()
-                    ].rename(right_renamer)
-
-                    left_index_dtypes = (
-                        self._modin_frame._index_cache.maybe_get_dtypes()
-                    )
-                    left_dtypes = (
-                        ModinDtypes.concat(
-                            [self._modin_frame._dtypes, left_index_dtypes]
-                        )
-                        .lazy_get(left_renamer.keys())
-                        .set_index(list(left_renamer.values()))
-                    )
-                    new_dtypes = ModinDtypes.concat([left_dtypes, right_dtypes])
-
-            new_self = self.__constructor__(
-                self._modin_frame.broadcast_apply_full_axis(
-                    axis=1,
-                    func=map_func,
-                    enumerate_partitions=how == "left",
-                    other=right_to_broadcast,
-                    # We're going to explicitly change the shape across the 1-axis,
-                    # so we want for partitioning to adapt as well
-                    keep_partitioning=False,
-                    num_splits=merge_partitioning(
-                        self._modin_frame, right._modin_frame, axis=1
-                    ),
-                    new_columns=new_columns,
-                    sync_labels=False,
-                    dtypes=new_dtypes,
-                    pass_axis_lengths_to_partitions=how == "left",
+        if RangePartitioning.get():
+            try:
+                return MergeImpl.range_partitioning_merge(self, right, kwargs)
+            except NotImplementedError as e:
+                message = (
+                    f"Can't use range-partitioning merge implementation because of: {e}"
+                    + "\nFalling back to a row-axis implementation."
                 )
-            )
-
-            # Here we want to understand whether we're joining on a column or on an index level.
-            # It's cool if indexes are already materialized so we can easily check that, if not
-            # it's fine too, we can also decide that by columns, which tend to be already
-            # materialized quite often compared to the indexes.
-            keep_index = False
-            if self._modin_frame.has_materialized_index:
-                keep_index = should_keep_index(self, right)
-            else:
-                # Have to trigger columns materialization. Hope they're already available at this point.
-                if left_on is not None and right_on is not None:
-                    keep_index = any(
-                        o not in right.columns
-                        and o in left_on
-                        and o not in self.columns
-                        for o in right_on
-                    )
-                elif on is not None:
-                    keep_index = any(
-                        o not in right.columns and o not in self.columns for o in on
-                    )
-
-            if sort:
-                if left_on is not None and right_on is not None:
-                    new_self = (
-                        new_self.sort_index(axis=0, level=left_on + right_on)
-                        if keep_index
-                        else new_self.sort_rows_by_column_values(left_on + right_on)
-                    )
-                elif on is not None:
-                    new_self = (
-                        new_self.sort_index(axis=0, level=on)
-                        if keep_index
-                        else new_self.sort_rows_by_column_values(on)
-                    )
-
-            return (
-                new_self.reset_index(drop=True)
-                if not keep_index and (kwargs["how"] != "left" or sort)
-                else new_self
-            )
-        else:
-            return self.default_to_pandas(pandas.DataFrame.merge, right, **kwargs)
+                get_logger().info(message)
+        return MergeImpl.row_axis_merge(self, right, kwargs)
 
     def join(self, right, **kwargs):
         on = kwargs.get("on", None)

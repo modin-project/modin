@@ -46,6 +46,7 @@ jobs:
           python -m pytest modin/pandas/test/dataframe/test_indexing.py
           python -m pytest modin/pandas/test/dataframe/test_iter.py
           python -m pytest modin/pandas/test/dataframe/test_join_sort.py
+          MODIN_RANGE_PARTITIONING=1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py -k "merge"
           python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
           python -m pytest modin/pandas/test/dataframe/test_reduce.py
           python -m pytest modin/pandas/test/dataframe/test_udf.py
