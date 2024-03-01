@@ -1102,12 +1102,12 @@ def to_numpy(
 
 def to_ray_dataset(modin_obj):
     """
-    Convert a Modin DataFrame to a Ray Dataset.
+    Convert a Modin DataFrame/Series to a Ray Dataset.
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame
-        The Modin DataFrame to convert.
+    modin_obj : modin.DataFrame, modin.Series
+        The DataFrame/Series to convert.
 
     Returns
     -------
@@ -1116,7 +1116,7 @@ def to_ray_dataset(modin_obj):
 
     Notes
     -----
-    Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
+    Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 

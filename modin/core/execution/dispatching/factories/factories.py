@@ -472,8 +472,8 @@ class BaseFactory(object):
 
         Parameters
         ----------
-        modin_obj : modin.pandas.DataFrame
-            The Modin DataFrame to write.
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
 
         Returns
         -------
@@ -482,7 +482,7 @@ class BaseFactory(object):
 
         Notes
         -----
-        Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
         """
         return cls.io_cls.to_ray_dataset(modin_obj)
 

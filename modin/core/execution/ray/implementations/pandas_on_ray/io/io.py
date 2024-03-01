@@ -17,6 +17,7 @@ import io
 
 import pandas
 from pandas.io.common import get_handle, stringify_path
+from ray.data import from_pandas_refs
 
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
@@ -282,20 +283,18 @@ class PandasOnRayIO(RayIO):
     @classmethod
     def to_ray_dataset(cls, modin_obj):
         """
-        Convert a Modin DataFrame to a Ray Dataset.
+        Convert a Modin DataFrame/Series to a Ray Dataset.
 
         Parameters
         ----------
-        modin_obj : modin.DataFrame
-            The Modin DataFrame to convert.
+        modin_obj : modin.DataFrame, modin.Series
+            The Modin DataFrame/Series to convert.
 
         Returns
         -------
         ray.data.Dataset
             Converted object with type depending on input.
         """
-        from ray.data import from_pandas_refs
-
         from modin.distributed.dataframe.pandas.partitions import unwrap_partitions
 
         parts = unwrap_partitions(modin_obj, axis=0)

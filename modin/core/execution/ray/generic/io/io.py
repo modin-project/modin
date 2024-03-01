@@ -46,12 +46,12 @@ class RayIO(BaseIO):
     @classmethod
     def to_ray_dataset(cls, modin_obj):
         """
-        Convert a Modin DataFrame to a Ray Dataset.
+        Convert a Modin DataFrame/Series to a Ray Dataset.
 
         Parameters
         ----------
-        modin_obj : modin.DataFrame
-            The Modin DataFrame to convert.
+        modin_obj : modin.DataFrame, modin.Series
+            The Modin DataFrame/Series to convert.
 
         Returns
         -------
@@ -64,5 +64,5 @@ class RayIO(BaseIO):
         otherwise NotImplementedError will be raised.
         """
         raise NotImplementedError(
-            f"`ray.data.Dataset` can't be created from Modin DataFrame using {cls}."
+            f"`ray.data.Dataset` can't be created from Modin DataFrame/Series using {cls}."
         )

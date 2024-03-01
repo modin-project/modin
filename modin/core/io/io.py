@@ -722,12 +722,12 @@ class BaseIO:
     @classmethod
     def to_ray_dataset(cls, modin_obj):
         """
-        Convert a Modin DataFrame to a Ray Dataset.
+        Convert a Modin DataFrame/Series to a Ray Dataset.
 
         Parameters
         ----------
-        modin_obj : modin.DataFrame
-            The Modin DataFrame to convert.
+        modin_obj : modin.DataFrame, modin.Series
+            The Modin DataFrame/Series to convert.
 
         Returns
         -------
@@ -736,7 +736,7 @@ class BaseIO:
 
         Notes
         -----
-        Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
         If another engine is used, the runtime exception will be raised.
         """
         raise RuntimeError(
