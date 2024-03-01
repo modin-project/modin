@@ -1420,7 +1420,7 @@ def _make_csv_file(data_dir):
                     value=[char if (x + 2) == 0 else x for x in range(row_size)],
                 )
 
-            if thousands_separator:
+            if thousands_separator is not None:
                 for col_id in ["col1", "col3"]:
                     df[col_id] = df[col_id].apply(
                         lambda x: f"{x:,d}".replace(",", thousands_separator)
