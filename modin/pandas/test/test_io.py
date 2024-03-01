@@ -1249,6 +1249,8 @@ class TestCsv:
             skiprows=skiprows,
             header=header,
             dtype="str",  # to avoid issues with heterogeneous data
+            # FIXME: specify exceptions explicit
+            raising_exceptions=False,
         )
 
     def test_to_csv_with_index(self, tmp_path):
@@ -1402,6 +1404,7 @@ class TestParquet:
         range_index_start=0,
         range_index_step=1,
         range_index_name=None,
+        raising_exceptions=None,
     ):
         if engine == "pyarrow" and filters == [] and os.name == "nt":
             # pyarrow, and therefore pandas using pyarrow, errors in this case.
@@ -1429,6 +1432,7 @@ class TestParquet:
                 path=unique_filename,
                 columns=columns,
                 filters=filters,
+                raising_exceptions=raising_exceptions,
             )
 
     @pytest.mark.parametrize(
@@ -1442,6 +1446,12 @@ class TestParquet:
                 df_equals(df1, df2)
                 df_equals(df1.dtypes, df2.dtypes)
 
+            raising_exceptions = None
+            if engine == "fastparquet":
+                raising_exceptions = ValueError(
+                    "The 'dtype_backend' argument is not supported for the fastparquet engine"
+                )
+
             eval_io(
                 fn_name="read_parquet",
                 # read_parquet kwargs
@@ -1449,6 +1459,7 @@ class TestParquet:
                 path=unique_filename,
                 dtype_backend=dtype_backend,
                 comparator=comparator,
+                raising_exceptions=raising_exceptions,
             )
 
     # Tests issue #6778
@@ -1470,6 +1481,9 @@ class TestParquet:
         [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
     )
     def test_read_parquet_filters(self, engine, make_parquet_file, filters):
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         self._test_read_parquet(
             engine=engine,
             make_parquet_file=make_parquet_file,
@@ -1477,6 +1491,7 @@ class TestParquet:
             filters=filters,
             row_group_size=100,
             path_type=str,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
@@ -1773,6 +1788,9 @@ class TestParquet:
             range_index_name="my_index",
         )
 
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
@@ -1780,6 +1798,7 @@ class TestParquet:
             path=unique_filename,
             columns=columns,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize(
@@ -1891,6 +1910,9 @@ class TestParquet:
         )
         unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
         pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         # read the same parquet using modin.pandas
         eval_io(
             "read_parquet",
@@ -1898,6 +1920,7 @@ class TestParquet:
             path=unique_filename,
             engine=engine,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_parquet_hdfs(self, engine):
@@ -1961,12 +1984,16 @@ class TestParquet:
         t = csv.read_csv(csv_fname)
         parquet.write_table(t, parquet_fname)
 
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         eval_io(
             "read_parquet",
             # read_parquet kwargs
             path=parquet_fname,
             engine=engine,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_empty_parquet_file(self, tmp_path, engine):
@@ -2131,12 +2158,16 @@ class TestJson:
     )
     def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/modin-bugs/test_data.json"
+        raising_exceptions = None
+        if storage_options_extra.get("anon", None) is False:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_json",
             path_or_buf=s3_path,
             lines=True,
             orient="records",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_json_categories(self):
@@ -2781,20 +2812,19 @@ class TestFwf:
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
     def test_read_fwf_dtype_backend(self, make_fwf_file, dtype_backend):
-        with ensure_clean(".fwf") as unique_filename:
-            make_fwf_file(filename=unique_filename)
+        unique_filename = make_fwf_file()
 
-            def comparator(df1, df2):
-                df_equals(df1, df2)
-                df_equals(df1.dtypes, df2.dtypes)
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                dtype_backend=dtype_backend,
-                comparator=comparator,
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = make_fwf_file()
