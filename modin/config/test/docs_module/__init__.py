@@ -14,5 +14,4 @@
 from .classes import DataFrame, Series
 from .functions import read_csv
 
-
 __all__ = ["DataFrame", "Series", "read_csv"]
