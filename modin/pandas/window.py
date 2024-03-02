@@ -59,28 +59,28 @@ class Window(ClassLogger):
             query_compiler=self._query_compiler.window_mean(
                 self.axis, self.window_kwargs, *args, **kwargs
             )
-        )
+        )     
 
     def sum(self, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_sum(
                 self.axis, self.window_kwargs, *args, **kwargs
             )
-        )
+        )    
 
     def var(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_var(
                 self.axis, self.window_kwargs, ddof, *args, **kwargs
             )
-        )
+        )    
 
     def std(self, ddof=1, *args, **kwargs):
         return self._dataframe.__constructor__(
             query_compiler=self._query_compiler.window_std(
                 self.axis, self.window_kwargs, ddof, *args, **kwargs
             )
-        )
+        )    
 
 
 @_inherit_docstrings(
@@ -160,7 +160,7 @@ class Rolling(ClassLogger):
         qc_result = self._call_qc_method(method_name, *args, **kwargs)
         return self._dataframe.__constructor__(query_compiler=qc_result)
 
-    def count(self):
+    def count(self, *args, **kwargs):
         return self._aggregate("count")
 
     def sem(self, *args, **kwargs):
@@ -170,7 +170,7 @@ class Rolling(ClassLogger):
         return self._aggregate("sum", *args, **kwargs)
 
     def mean(self, *args, **kwargs):
-        return self._aggregate("mean", *args, **kwargs)
+        return self._aggregate("mean", *args, **kwargs)  
 
     def median(self, **kwargs):
         return self._aggregate("median", **kwargs)
@@ -185,12 +185,11 @@ class Rolling(ClassLogger):
         return self._aggregate("min", *args, **kwargs)
 
     def max(self, *args, **kwargs):
-        return self._aggregate("max", *args, **kwargs)
+        return self._aggregate("max", *args, **kwargs)   
 
     def corr(self, other=None, pairwise=None, *args, **kwargs):
         from .dataframe import DataFrame
         from .series import Series
-
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         elif isinstance(other, Series):
@@ -201,7 +200,6 @@ class Rolling(ClassLogger):
     def cov(self, other=None, pairwise=None, ddof: Optional[int] = 1, **kwargs):
         from .dataframe import DataFrame
         from .series import Series
-
         if isinstance(other, DataFrame):
             other = other._query_compiler.to_pandas()
         elif isinstance(other, Series):
