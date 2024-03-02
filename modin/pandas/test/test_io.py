@@ -31,7 +31,6 @@ import pyarrow.dataset
 import pytest
 import sqlalchemy as sa
 from packaging import version
-from pandas._testing import ensure_clean
 from pandas.errors import ParserWarning
 from scipy import sparse
 
@@ -472,16 +471,16 @@ class TestCsv:
             nrows=nrows,
         )
 
-    def test_read_csv_skipinitialspace(self):
-        with ensure_clean(".csv") as unique_filename:
-            str_initial_spaces = (
-                "col1,col2,col3,col4\n"
-                + "five,  six,  seven,  eight\n"
-                + "    five,    six,    seven,    eight\n"
-                + "five, six,  seven,   eight\n"
-            )
+    def test_read_csv_skipinitialspace(self, tmp_path):
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        str_initial_spaces = (
+            "col1,col2,col3,col4\n"
+            + "five,  six,  seven,  eight\n"
+            + "    five,    six,    seven,    eight\n"
+            + "five, six,  seven,   eight\n"
+        )
 
-            eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
+        eval_io_from_str(str_initial_spaces, unique_filename, skipinitialspace=True)
 
     # NA and Missing Data Handling tests
     @pytest.mark.parametrize("na_values", ["custom_nan", "73"])
@@ -552,17 +551,17 @@ class TestCsv:
     @pytest.mark.parametrize("date", ["2023-01-01 00:00:01.000000000", "2023"])
     @pytest.mark.parametrize("dtype", [None, "str", {"id": "int64"}])
     @pytest.mark.parametrize("parse_dates", [None, [], ["date"], [1]])
-    def test_read_csv_dtype_parse_dates(self, date, dtype, parse_dates):
-        with ensure_clean(".csv") as filename:
-            with open(filename, "w") as file:
-                file.write(f"id,date\n1,{date}")
-            eval_io(
-                fn_name="read_csv",
-                # read_csv kwargs
-                filepath_or_buffer=filename,
-                dtype=dtype,
-                parse_dates=parse_dates,
-            )
+    def test_read_csv_dtype_parse_dates(self, date, dtype, parse_dates, tmp_path):
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        with open(unique_filename, "w") as file:
+            file.write(f"id,date\n1,{date}")
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            dtype=dtype,
+            parse_dates=parse_dates,
+        )
 
     # Iteration tests
     @pytest.mark.parametrize("iterator", [True, False])
@@ -865,13 +864,12 @@ class TestCsv:
 
     # Issue related, specific or corner cases
     @pytest.mark.parametrize("nrows", [2, None])
-    def test_read_csv_bad_quotes(self, nrows):
+    def test_read_csv_bad_quotes(self, nrows, tmp_path):
         csv_bad_quotes = (
             '1, 2, 3, 4\none, two, three, four\nfive, "six", seven, "eight\n'
         )
-
-        with ensure_clean(".csv") as unique_filename:
-            eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        eval_io_from_str(csv_bad_quotes, unique_filename, nrows=nrows)
 
     def test_read_csv_categories(self):
         eval_io(
@@ -1247,20 +1245,13 @@ class TestCsv:
         eval_to_csv_file(tmp_path, modin_df, pandas_df, "csv")
 
     @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
-    def test_read_csv_issue_5150(self, set_async_read_mode):
-        with ensure_clean(".csv") as unique_filename:
-            pandas_df = pandas.DataFrame(np.random.randint(0, 100, size=(2**6, 2**6)))
-            pandas_df.to_csv(unique_filename, index=False)
-            expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
-            modin_df = pd.read_csv(unique_filename, index_col=False)
-            actual_pandas_df = modin_df._to_pandas()
-            if AsyncReadMode.get():
-                # If read operations are asynchronous, then the dataframes
-                # check should be inside `ensure_clean` context
-                # because the file may be deleted before actual reading starts
-                df_equals(expected_pandas_df, actual_pandas_df)
-        if not AsyncReadMode.get():
-            df_equals(expected_pandas_df, actual_pandas_df)
+    def test_read_csv_issue_5150(self, set_async_read_mode, tmp_path):
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        pandas_df = pandas.DataFrame(np.random.randint(0, 100, size=(2**6, 2**6)))
+        pandas_df.to_csv(unique_filename, index=False)
+        expected_pandas_df = pandas.read_csv(unique_filename, index_col=False)
+        modin_actual_df = pd.read_csv(unique_filename, index_col=False)
+        df_equals(expected_pandas_df, modin_actual_df)
 
     @pytest.mark.parametrize("usecols", [None, [0, 1, 2, 3, 4]])
     def test_read_csv_1930(self, usecols):
@@ -1424,18 +1415,18 @@ class TestParquet:
         )
 
     # Tests issue #6778
-    def test_read_parquet_no_extension(self, engine, make_parquet_file):
-        with ensure_clean(".parquet") as unique_filename:
-            # Remove the .parquet extension
-            no_ext_fname = unique_filename[: unique_filename.index(".parquet")]
+    def test_read_parquet_no_extension(self, engine, make_parquet_file, tmp_path):
+        unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        # Remove the .parquet extension
+        no_ext_fname = unique_filename[: unique_filename.index(".parquet")]
 
-            make_parquet_file(filename=no_ext_fname)
-            eval_io(
-                fn_name="read_parquet",
-                # read_parquet kwargs
-                engine=engine,
-                path=no_ext_fname,
-            )
+        make_parquet_file(filename=no_ext_fname)
+        eval_io(
+            fn_name="read_parquet",
+            # read_parquet kwargs
+            engine=engine,
+            path=no_ext_fname,
+        )
 
     @pytest.mark.parametrize(
         "filters",
@@ -1762,7 +1753,7 @@ class TestParquet:
             ],
         ],
     )
-    def test_read_parquet_pandas_index(self, engine, filters):
+    def test_read_parquet_pandas_index(self, engine, filters, tmp_path):
         if (
             version.parse(pa.__version__) >= version.parse("12.0.0")
             and version.parse(pd.__version__) < version.parse("2.0.0")
@@ -1815,26 +1806,28 @@ class TestParquet:
                 ):
                     continue
 
-                with ensure_clean(".parquet") as unique_filename:
-                    pandas_df.set_index(col).to_parquet(unique_filename)
-                    # read the same parquet using modin.pandas
-                    eval_io(
-                        "read_parquet",
-                        # read_parquet kwargs
-                        path=unique_filename,
-                        engine=engine,
-                        filters=filters,
-                    )
+                unique_filename = get_unique_filename(
+                    extension="parquet", data_dir=tmp_path
+                )
+                pandas_df.set_index(col).to_parquet(unique_filename)
+                # read the same parquet using modin.pandas
+                eval_io(
+                    "read_parquet",
+                    # read_parquet kwargs
+                    path=unique_filename,
+                    engine=engine,
+                    filters=filters,
+                )
 
-        with ensure_clean(".parquet") as unique_filename:
-            pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
-            eval_io(
-                "read_parquet",
-                # read_parquet kwargs
-                path=unique_filename,
-                engine=engine,
-                filters=filters,
-            )
+        unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
+        pandas_df.set_index(["idx", "A"]).to_parquet(unique_filename)
+        eval_io(
+            "read_parquet",
+            # read_parquet kwargs
+            path=unique_filename,
+            engine=engine,
+            filters=filters,
+        )
 
     @pytest.mark.parametrize(
         "filters",
@@ -2444,24 +2437,24 @@ class TestHdf:
         df_equals(modin_df, pandas_df)
         assert isinstance(modin_store, pd.HDFStore)
 
-        with ensure_clean(".hdf5") as hdf_file:
-            with pd.HDFStore(hdf_file, mode="w") as store:
-                store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
-                store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
+        unique_filename = get_unique_filename(extension="hdf5", data_dir=tmp_path)
+        with pd.HDFStore(unique_filename, mode="w") as store:
+            store.append("data/df1", pd.DataFrame(np.random.randn(5, 5)))
+            store.append("data/df2", pd.DataFrame(np.random.randn(4, 4)))
 
-            modin_df = pd.read_hdf(hdf_file, key="data/df1", mode="r")
-            pandas_df = pandas.read_hdf(hdf_file, key="data/df1", mode="r")
+        modin_df = pd.read_hdf(unique_filename, key="data/df1", mode="r")
+        pandas_df = pandas.read_hdf(unique_filename, key="data/df1", mode="r")
         df_equals(modin_df, pandas_df)
 
-    def test_HDFStore_in_read_hdf(self):
-        with ensure_clean(".hdf") as filename:
-            dfin = pd.DataFrame(np.random.rand(8, 8))
-            dfin.to_hdf(filename, "/key")
+    def test_HDFStore_in_read_hdf(self, tmp_path):
+        unique_filename = get_unique_filename(extension="hdf", data_dir=tmp_path)
+        dfin = pd.DataFrame(np.random.rand(8, 8))
+        dfin.to_hdf(unique_filename, "/key")
 
-            with pd.HDFStore(filename) as h:
-                modin_df = pd.read_hdf(h, "/key")
-            with pandas.HDFStore(filename) as h:
-                pandas_df = pandas.read_hdf(h, "/key")
+        with pd.HDFStore(unique_filename) as h:
+            modin_df = pd.read_hdf(h, "/key")
+        with pandas.HDFStore(unique_filename) as h:
+            pandas_df = pandas.read_hdf(h, "/key")
         df_equals(modin_df, pandas_df)
 
 

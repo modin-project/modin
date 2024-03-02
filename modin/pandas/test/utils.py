@@ -1014,22 +1014,14 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
     unique_filename: str
         csv file name.
     """
-    try:
-        with open(unique_filename, "w") as f:
-            f.write(csv_str)
+    with open(unique_filename, "w") as f:
+        f.write(csv_str)
 
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            **kwargs,
-        )
-
-    finally:
-        if os.path.exists(unique_filename):
-            try:
-                os.remove(unique_filename)
-            except PermissionError:
-                pass
+    eval_io(
+        filepath_or_buffer=unique_filename,
+        fn_name="read_csv",
+        **kwargs,
+    )
 
 
 def create_test_dfs(*args, **kwargs):
