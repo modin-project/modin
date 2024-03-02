@@ -26,8 +26,9 @@ Notes
 """
 
 import enum
-import numpy as np
 from typing import Tuple
+
+import numpy as np
 
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolBuffer,

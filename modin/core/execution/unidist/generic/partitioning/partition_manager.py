@@ -40,13 +40,19 @@ class GenericUnidistDataframePartitionManager(PandasDataframePartitionManager):
         -------
         NumPy array
         """
-        parts = UnidistWrapper.materialize(
-            [
-                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).list_of_blocks[0]
-                for row in partitions
-                for obj in row
-            ]
-        )
+        if partitions.shape[1] == 1:
+            parts = cls.get_objects_from_partitions(partitions.flatten())
+            parts = [part.to_numpy(**kwargs) for part in parts]
+        else:
+            parts = UnidistWrapper.materialize(
+                [
+                    obj.apply(
+                        lambda df, **kwargs: df.to_numpy(**kwargs)
+                    ).list_of_blocks[0]
+                    for row in partitions
+                    for obj in row
+                ]
+            )
         rows, cols = partitions.shape
         parts = [parts[i * cols : (i + 1) * cols] for i in range(rows)]
         return np.block(parts)

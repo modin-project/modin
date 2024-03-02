@@ -11,35 +11,34 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
+import pytest
 from pandas._testing import assert_series_equal
 
 import modin.pandas as pd
-
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.test.utils import (
-    df_equals,
     arg_keys,
-    test_data,
-    test_data_values,
-    test_data_keys,
+    assert_dtypes_equal,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    df_equals_with_non_stable_indices,
+    eval_general,
     int_arg_keys,
     int_arg_values,
-    eval_general,
-    create_test_dfs,
+    test_data,
     test_data_diff_dtype,
-    df_equals_with_non_stable_indices,
+    test_data_keys,
     test_data_large_categorical_dataframe,
-    default_to_pandas_ignore_string,
-    assert_dtypes_equal,
+    test_data_values,
 )
-from modin.config import NPartitions, StorageFormat
 
 NPartitions.put(4)
 
@@ -305,6 +304,14 @@ def test_sum(data, axis, skipna, is_transposed):
     modin_result = modin_df.sum()
     pandas_result = pandas_df.sum()
     df_equals(modin_result, pandas_result)
+
+
+@pytest.mark.skipif(Engine.get() == "Native", reason="Fails on HDK")
+@pytest.mark.parametrize("dtype", ["int64", "Int64"])
+def test_dtype_consistency(dtype):
+    # test for issue #6781
+    res_dtype = pd.DataFrame([1, 2, 3, 4], dtype=dtype).sum().dtype
+    assert res_dtype == pandas.api.types.pandas_dtype(dtype)
 
 
 @pytest.mark.parametrize("fn", ["prod, sum"])

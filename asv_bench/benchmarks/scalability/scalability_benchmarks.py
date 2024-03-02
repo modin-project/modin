@@ -14,21 +14,29 @@
 """These benchmarks are supposed to be run only for modin, since they do not make sense for pandas."""
 
 import modin.pandas as pd
-from modin.pandas.utils import from_pandas
 
 try:
-    from modin.utils import to_pandas, to_numpy
+    from modin.pandas.io import from_pandas
 except ImportError:
-    # This provides compatibility with older versions of the Modin, allowing us to test old commits.
-    from modin.pandas.utils import to_pandas
+    from modin.pandas.utils import from_pandas
+
+try:
+    from modin.pandas.io import to_numpy, to_pandas
+except ImportError:
+    try:
+        from modin.utils import to_numpy, to_pandas
+    except ImportError:
+        # This provides compatibility with older versions of the Modin, allowing us to test old commits.
+        from modin.pandas.utils import to_pandas
+
 import pandas
 
 from ..utils import (
+    RAND_HIGH,
+    RAND_LOW,
+    execute,
     gen_data,
     generate_dataframe,
-    RAND_LOW,
-    RAND_HIGH,
-    execute,
     get_benchmark_shapes,
 )
 

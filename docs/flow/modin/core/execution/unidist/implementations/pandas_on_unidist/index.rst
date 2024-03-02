@@ -6,7 +6,8 @@ PandasOnUnidist Execution
 Queries that perform data transformation, data ingress or data egress using the `pandas on Unidist` execution
 pass through the Modin components detailed below.
 
-To enable `pandas on Unidist` execution, please refer to the usage section in :doc:`pandas on Unidist </development/using_pandas_on_unidist>`.
+To enable `pandas on MPI through unidist` execution,
+please refer to the usage section in :doc:`pandas on MPI through unidist </development/using_pandas_on_mpi>`.
 
 Data Transformation
 '''''''''''''''''''

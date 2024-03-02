@@ -16,6 +16,7 @@ import pytest
 from pandas.core.dtypes.common import is_list_like
 
 import modin.numpy as np
+
 from .utils import assert_scalar_or_array_equal
 
 

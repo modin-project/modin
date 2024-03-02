@@ -26,7 +26,8 @@ Notes
 """
 
 import collections
-from typing import Any, Dict, Optional, Iterable, Sequence
+from typing import Any, Dict, Iterable, Optional, Sequence
+
 import numpy as np
 
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
@@ -34,6 +35,7 @@ from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
 )
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.utils import _inherit_docstrings
+
 from .column import PandasProtocolColumn
 
 

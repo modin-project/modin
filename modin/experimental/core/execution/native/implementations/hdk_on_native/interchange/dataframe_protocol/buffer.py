@@ -13,14 +13,15 @@
 
 """The module houses HdkOnNative implementation of the Buffer class of DataFrame exchange protocol."""
 
-import pyarrow as pa
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
-from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
-    DlpackDeviceType,
-)
+import pyarrow as pa
+
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolBuffer,
+)
+from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
+    DlpackDeviceType,
 )
 from modin.utils import _inherit_docstrings
 

@@ -13,7 +13,7 @@
 
 import sys
 import time
-from os.path import abspath, join, dirname
+from os.path import abspath, dirname, join
 
 MODIN_DIR = abspath(join(dirname(__file__), *[".." for _ in range(3)]))
 if MODIN_DIR not in sys.path:

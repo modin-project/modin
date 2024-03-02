@@ -14,8 +14,8 @@
 """Module contains decorators for documentation of the query compiler methods."""
 
 from functools import partial
-from modin.utils import append_to_docstring, format_string, align_indents
 
+from modin.utils import align_indents, append_to_docstring, format_string
 
 _one_column_warning = """
 .. warning::

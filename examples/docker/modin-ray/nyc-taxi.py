@@ -13,6 +13,7 @@
 
 import sys
 import time
+
 import modin.pandas as pd
 
 
@@ -88,14 +89,14 @@ def q2(df):
 
 def q3(df):
     transformed = pd.DataFrame(
-            {
-                "pickup_datetime": df["pickup_datetime"].dt.year,
-                "passenger_count": df["passenger_count"],
-            }
-        )
+        {
+            "pickup_datetime": df["pickup_datetime"].dt.year,
+            "passenger_count": df["passenger_count"],
+        }
+    )
     return transformed.groupby(
-            ["pickup_datetime", "passenger_count"], as_index=False
-        ).size()
+        ["pickup_datetime", "passenger_count"], as_index=False
+    ).size()
 
 
 def q4(df):

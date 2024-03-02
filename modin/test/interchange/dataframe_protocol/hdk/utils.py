@@ -13,9 +13,10 @@
 
 """Utility function for testing HdkOnNative implementation for DataFrame exchange protocol."""
 
-import pandas
-import numpy as np
 from typing import Dict
+
+import numpy as np
+import pandas
 
 from modin.core.dataframe.pandas.interchange.dataframe_protocol.from_dataframe import (
     from_dataframe_to_pandas,
@@ -201,7 +202,12 @@ def get_data_of_all_types(
     )
     if has_nulls:
         string_data["string_null"] = np.array(
-            ["English: test string", None, "Chinese: 测试字符串", "Russian: тестовая строка"]
+            [
+                "English: test string",
+                None,
+                "Chinese: 测试字符串",
+                "Russian: тестовая строка",
+            ]
             * 10
         )
 

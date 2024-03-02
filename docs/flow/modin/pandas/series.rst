@@ -26,7 +26,7 @@ Usage Guide
 
 The most efficient way to create Modin ``Series`` is to import data from external
 storage using the highly efficient Modin IO methods (for example using ``pd.read_csv``,
-see details for Modin IO methods in the :doc:`separate section </flow/modin/core/io/index>`),
+see details for Modin IO methods in the :doc:`IO </flow/modin/core/io/index>` page),
 but even if the data does not originate from a file, any pandas supported data type or
 ``pandas.Series`` can be used. Internally, the ``Series`` data is divided into
 partitions, which number along an axis usually corresponds to the number of the user's hardware CPUs. If needed,

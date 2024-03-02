@@ -13,27 +13,24 @@
 
 """Modin benchmarks utils."""
 
-from .compatibility import (
-    ASV_USE_IMPL,
-    ASV_USE_STORAGE_FORMAT,
-)
-from .data_shapes import RAND_LOW, RAND_HIGH, GROUPBY_NGROUPS, get_benchmark_shapes
 from .common import (
     IMPL,
     execute,
-    get_shape_id,
     gen_data,
     gen_nan_data,
     generate_dataframe,
+    get_shape_id,
     prepare_io_data,
     prepare_io_data_parquet,
-    random_string,
-    random_columns,
     random_booleans,
+    random_columns,
+    random_string,
+    setup,
     translator_groupby_ngroups,
     trigger_import,
-    setup,
 )
+from .compatibility import ASV_USE_IMPL, ASV_USE_STORAGE_FORMAT
+from .data_shapes import GROUPBY_NGROUPS, RAND_HIGH, RAND_LOW, get_benchmark_shapes
 
 __all__ = [
     "ASV_USE_IMPL",

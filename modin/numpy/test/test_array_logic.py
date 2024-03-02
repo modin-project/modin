@@ -11,12 +11,12 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import numpy
+import pytest
 
 import modin.numpy as np
-from .utils import assert_scalar_or_array_equal
 
+from .utils import assert_scalar_or_array_equal
 
 small_arr_c_2d = numpy.array(
     [

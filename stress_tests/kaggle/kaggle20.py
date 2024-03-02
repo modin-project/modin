@@ -1,11 +1,13 @@
 import matplotlib
 
 matplotlib.use("PS")
-import numpy as np  # linear algebra
-import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
-import seaborn as sns  # data visualization library
-import matplotlib.pyplot as plt
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np  # linear algebra
+import seaborn as sns  # data visualization library
+
+import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 
 data = pd.read_csv("data.csv")
 data.head()  # head method show only first 5 rows
@@ -100,10 +102,10 @@ x_1 = x.drop(drop_list1, axis=1)  # do not modify x, we will use it later
 x_1.head()
 f, ax = plt.subplots(figsize=(14, 14))
 sns.heatmap(x_1.corr(), annot=True, linewidths=0.5, fmt=".1f", ax=ax)
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix  # f1_score
 from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split
 
 x_train, x_test, y_train, y_test = train_test_split(
     x_1, y, test_size=0.3, random_state=42
@@ -114,8 +116,7 @@ ac = accuracy_score(y_test, clf_rf.predict(x_test))
 print("Accuracy is: ", ac)
 cm = confusion_matrix(y_test, clf_rf.predict(x_test))
 sns.heatmap(cm, annot=True, fmt="d")
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
+from sklearn.feature_selection import SelectKBest, chi2
 
 select_feature = SelectKBest(chi2, k=5).fit(x_train, y_train)
 print("Score list:", select_feature.scores_)

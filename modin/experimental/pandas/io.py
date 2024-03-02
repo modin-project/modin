@@ -13,19 +13,21 @@
 
 """Implement experimental I/O public API."""
 
+from __future__ import annotations
+
 import inspect
 import pathlib
 import pickle
-from typing import Union, IO, AnyStr, Callable, Optional, Iterator
+from typing import IO, AnyStr, Callable, Iterator, Literal, Optional, Union
 
 import pandas
 import pandas._libs.lib as lib
-from pandas._typing import CompressionOptions, StorageOptions
+from pandas._typing import CompressionOptions, DtypeArg, DtypeBackend, StorageOptions
 
-from . import DataFrame
-from modin.config import IsExperimental
 from modin.core.storage_formats import BaseQueryCompiler
 from modin.utils import expanduser_path_arg
+
+from . import DataFrame
 
 
 def read_sql(
@@ -112,9 +114,7 @@ def read_sql(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
-    result = FactoryDispatcher.read_sql(**kwargs)
+    result = FactoryDispatcher.read_sql_distributed(**kwargs)
     if isinstance(result, BaseQueryCompiler):
         return DataFrame(query_compiler=result)
     return (DataFrame(query_compiler=qc) for qc in result)
@@ -160,8 +160,6 @@ def read_custom_text(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
     return DataFrame(query_compiler=FactoryDispatcher.read_custom_text(**kwargs))
 
 
@@ -203,11 +201,11 @@ def _make_parser_func(sep: str, funcname: str) -> Callable:
         na_values=None,
         keep_default_na=True,
         na_filter=True,
-        verbose=False,
+        verbose=lib.no_default,
         skip_blank_lines=True,
         parse_dates=None,
         infer_datetime_format=lib.no_default,
-        keep_date_col=False,
+        keep_date_col=lib.no_default,
         date_parser=lib.no_default,
         date_format=None,
         dayfirst=False,
@@ -227,7 +225,7 @@ def _make_parser_func(sep: str, funcname: str) -> Callable:
         dialect=None,
         on_bad_lines="error",
         doublequote=True,
-        delim_whitespace=False,
+        delim_whitespace=lib.no_default,
         low_memory=True,
         memory_map=False,
         float_precision=None,
@@ -305,7 +303,7 @@ read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def read_pickle_distributed(
+def read_pickle_glob(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
@@ -315,7 +313,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `to_pickle_distributed` function.
+    obtained, for example, by `DataFrame.modin.to_pickle_glob` function.
 
     Parameters
     ----------
@@ -346,19 +344,17 @@ def read_pickle_distributed(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    assert IsExperimental.get(), "This only works in experimental mode"
-
-    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
+    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_glob(**kwargs))
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def to_pickle_distributed(
+def to_pickle_glob(
     self,
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
     protocol: int = pickle.HIGHEST_PROTOCOL,
     storage_options: StorageOptions = None,
-):
+) -> None:
     """
     Pickle (serialize) object to file.
 
@@ -367,7 +363,7 @@ def to_pickle_distributed(
 
     Parameters
     ----------
-    filepath_or_buffer : str, path object or file-like object
+    filepath_or_buffer : str
         File path where the pickled object will be stored.
     compression : {{'infer', 'gzip', 'bz2', 'zip', 'xz', None}}, default: 'infer'
         A string representing the compression to use in the output file. By
@@ -396,10 +392,325 @@ def to_pickle_distributed(
 
     if isinstance(self, DataFrame):
         obj = self._query_compiler
-    FactoryDispatcher.to_pickle_distributed(
+    FactoryDispatcher.to_pickle_glob(
         obj,
         filepath_or_buffer=filepath_or_buffer,
         compression=compression,
         protocol=protocol,
+        storage_options=storage_options,
+    )
+
+
+@expanduser_path_arg("path")
+def read_parquet_glob(
+    path,
+    engine: str = "auto",
+    columns: list[str] | None = None,
+    storage_options: StorageOptions = None,
+    use_nullable_dtypes: bool = lib.no_default,
+    dtype_backend=lib.no_default,
+    filesystem=None,
+    filters=None,
+    **kwargs,
+) -> DataFrame:  # noqa: PR01
+    """
+    Load a parquet object from the file path, returning a DataFrame.
+
+    This experimental feature provides parallel reading from multiple parquet files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_parquet_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.read_parquet`.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_parquet_glob(
+            path=path,
+            engine=engine,
+            columns=columns,
+            storage_options=storage_options,
+            use_nullable_dtypes=use_nullable_dtypes,
+            dtype_backend=dtype_backend,
+            filesystem=filesystem,
+            filters=filters,
+            **kwargs,
+        )
+    )
+
+
+@expanduser_path_arg("path")
+def to_parquet_glob(
+    self,
+    path,
+    engine="auto",
+    compression="snappy",
+    index=None,
+    partition_cols=None,
+    storage_options: StorageOptions = None,
+    **kwargs,
+) -> None:  # noqa: PR01
+    """
+    Write a DataFrame to the binary parquet format.
+
+    This experimental feature provides parallel writing into multiple parquet files which are
+    defined by glob pattern, otherwise (without glob pattern) default pandas implementation is used.
+
+    Notes
+    -----
+    * Only string type supported for `path` argument.
+    * The rest of the arguments are the same as for `pandas.to_parquet`.
+    """
+    obj = self
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_parquet_glob(
+        obj,
+        path=path,
+        engine=engine,
+        compression=compression,
+        index=index,
+        partition_cols=partition_cols,
+        storage_options=storage_options,
+        **kwargs,
+    )
+
+
+@expanduser_path_arg("path_or_buf")
+def read_json_glob(
+    path_or_buf,
+    *,
+    orient: str | None = None,
+    typ: Literal["frame", "series"] = "frame",
+    dtype: DtypeArg | None = None,
+    convert_axes=None,
+    convert_dates: bool | list[str] = True,
+    keep_default_dates: bool = True,
+    precise_float: bool = False,
+    date_unit: str | None = None,
+    encoding: str | None = None,
+    encoding_errors: str | None = "strict",
+    lines: bool = False,
+    chunksize: int | None = None,
+    compression: CompressionOptions = "infer",
+    nrows: int | None = None,
+    storage_options: StorageOptions = None,
+    dtype_backend: Union[DtypeBackend, lib.NoDefault] = lib.no_default,
+    engine="ujson",
+) -> DataFrame:  # noqa: PR01
+    """
+    Convert a JSON string to pandas object.
+
+    This experimental feature provides parallel reading from multiple json files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_json_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buf` argument.
+    * The rest of the arguments are the same as for `pandas.read_json`.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if nrows is not None:
+        raise NotImplementedError(
+            "`read_json_glob` only support nrows is None, otherwise use `to_json`."
+        )
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_json_glob(
+            path_or_buf=path_or_buf,
+            orient=orient,
+            typ=typ,
+            dtype=dtype,
+            convert_axes=convert_axes,
+            convert_dates=convert_dates,
+            keep_default_dates=keep_default_dates,
+            precise_float=precise_float,
+            date_unit=date_unit,
+            encoding=encoding,
+            encoding_errors=encoding_errors,
+            lines=lines,
+            chunksize=chunksize,
+            compression=compression,
+            nrows=nrows,
+            storage_options=storage_options,
+            dtype_backend=dtype_backend,
+            engine=engine,
+        )
+    )
+
+
+@expanduser_path_arg("path_or_buf")
+def to_json_glob(
+    self,
+    path_or_buf=None,
+    orient=None,
+    date_format=None,
+    double_precision=10,
+    force_ascii=True,
+    date_unit="ms",
+    default_handler=None,
+    lines=False,
+    compression="infer",
+    index=None,
+    indent=None,
+    storage_options: StorageOptions = None,
+    mode="w",
+) -> None:  # noqa: PR01
+    """
+    Convert the object to a JSON string.
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buf` argument.
+    * The rest of the arguments are the same as for `pandas.to_json`.
+    """
+    obj = self
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_json_glob(
+        obj,
+        path_or_buf=path_or_buf,
+        orient=orient,
+        date_format=date_format,
+        double_precision=double_precision,
+        force_ascii=force_ascii,
+        date_unit=date_unit,
+        default_handler=default_handler,
+        lines=lines,
+        compression=compression,
+        index=index,
+        indent=indent,
+        storage_options=storage_options,
+        mode=mode,
+    )
+
+
+@expanduser_path_arg("path_or_buffer")
+def read_xml_glob(
+    path_or_buffer,
+    *,
+    xpath="./*",
+    namespaces=None,
+    elems_only=False,
+    attrs_only=False,
+    names=None,
+    dtype=None,
+    converters=None,
+    parse_dates=None,
+    encoding="utf-8",
+    parser="lxml",
+    stylesheet=None,
+    iterparse=None,
+    compression="infer",
+    storage_options: StorageOptions = None,
+    dtype_backend=lib.no_default,
+) -> DataFrame:  # noqa: PR01
+    """
+    Read XML document into a DataFrame object.
+
+    This experimental feature provides parallel reading from multiple XML files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_xml_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buffer` argument.
+    * The rest of the arguments are the same as for `pandas.read_xml`.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_xml_glob(
+            path_or_buffer=path_or_buffer,
+            xpath=xpath,
+            namespaces=namespaces,
+            elems_only=elems_only,
+            attrs_only=attrs_only,
+            names=names,
+            dtype=dtype,
+            converters=converters,
+            parse_dates=parse_dates,
+            encoding=encoding,
+            parser=parser,
+            stylesheet=stylesheet,
+            iterparse=iterparse,
+            compression=compression,
+            storage_options=storage_options,
+            dtype_backend=dtype_backend,
+        )
+    )
+
+
+@expanduser_path_arg("path_or_buffer")
+def to_xml_glob(
+    self,
+    path_or_buffer=None,
+    index=True,
+    root_name="data",
+    row_name="row",
+    na_rep=None,
+    attr_cols=None,
+    elem_cols=None,
+    namespaces=None,
+    prefix=None,
+    encoding="utf-8",
+    xml_declaration=True,
+    pretty_print=True,
+    parser="lxml",
+    stylesheet=None,
+    compression="infer",
+    storage_options=None,
+) -> None:  # noqa: PR01
+    """
+    Render a DataFrame to an XML document.
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buffer` argument.
+    * The rest of the arguments are the same as for `pandas.to_xml`.
+    """
+    obj = self
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_xml_glob(
+        obj,
+        path_or_buffer=path_or_buffer,
+        index=index,
+        root_name=root_name,
+        row_name=row_name,
+        na_rep=na_rep,
+        attr_cols=attr_cols,
+        elem_cols=elem_cols,
+        namespaces=namespaces,
+        prefix=prefix,
+        encoding=encoding,
+        xml_declaration=xml_declaration,
+        pretty_print=pretty_print,
+        parser=parser,
+        stylesheet=stylesheet,
+        compression=compression,
         storage_options=storage_options,
     )

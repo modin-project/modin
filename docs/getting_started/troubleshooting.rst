@@ -215,6 +215,7 @@ once Python interpreter is started in them so that to avoid a race condition in 
   import modin.pandas as pd
   import modin.config as cfg
 
+  # Look at the Ray documentation with respect to the Ray configuration suited to you most.
   ray.init(runtime_env={'env_vars': {'__MODIN_AUTOIMPORT_PANDAS__': '1'}})
 
   pandas_df = pandas.DataFrame(
@@ -357,7 +358,9 @@ or
   cfg.Engine.put("dask")
 
   if __name__ == "__main__":
-    client = Client() # Explicit Dask Client creation.
+    # Explicit Dask Client creation.
+    # Look at the Dask Distributed documentation with respect to the Client configuration suited to you most.
+    client = Client()
     df = pd.DataFrame([0, 1, 2, 3])
     print(df)
 

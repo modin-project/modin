@@ -1,18 +1,17 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
+import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression, Perceptron, SGDClassifier
 from sklearn.naive_bayes import GaussianNB
-from sklearn.linear_model import Perceptron
-from sklearn.linear_model import SGDClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC, LinearSVC
 from sklearn.tree import DecisionTreeClassifier
+
+import modin.pandas as pd
 
 train_df = pd.read_csv("train.csv")
 test_df = pd.read_csv("test.csv")

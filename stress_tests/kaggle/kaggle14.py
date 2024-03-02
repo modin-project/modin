@@ -1,9 +1,10 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import modin.pandas as pd
 
 plt.style.use("fivethirtyeight")
 import warnings
@@ -222,15 +223,15 @@ fig.set_size_inches(18, 15)
 plt.xticks(fontsize=14)
 plt.yticks(fontsize=14)
 plt.show()
-from sklearn.linear_model import LogisticRegression  # logistic regression
+from sklearn import metrics  # accuracy measure
 from sklearn import svm  # support vector Machine
 from sklearn.ensemble import RandomForestClassifier  # Random Forest
-from sklearn.neighbors import KNeighborsClassifier  # KNN
-from sklearn.naive_bayes import GaussianNB  # Naive bayes
-from sklearn.tree import DecisionTreeClassifier  # Decision Tree
-from sklearn.model_selection import train_test_split  # training and testing data split
-from sklearn import metrics  # accuracy measure
+from sklearn.linear_model import LogisticRegression  # logistic regression
 from sklearn.metrics import confusion_matrix  # for confusion matrix
+from sklearn.model_selection import train_test_split  # training and testing data split
+from sklearn.naive_bayes import GaussianNB  # Naive bayes
+from sklearn.neighbors import KNeighborsClassifier  # KNN
+from sklearn.tree import DecisionTreeClassifier  # Decision Tree
 
 train, test = train_test_split(
     data, test_size=0.3, random_state=0, stratify=data["Survived"]
@@ -296,8 +297,8 @@ print(
     "The accuracy of the Random Forests is", metrics.accuracy_score(prediction7, test_Y)
 )
 from sklearn.model_selection import KFold  # for K-fold cross validation
-from sklearn.model_selection import cross_val_score  # score evaluation
 from sklearn.model_selection import cross_val_predict  # prediction
+from sklearn.model_selection import cross_val_score  # score evaluation
 
 kfold = KFold(n_splits=10, random_state=22)  # k=10, split the data into 10 equal parts
 xyz = []

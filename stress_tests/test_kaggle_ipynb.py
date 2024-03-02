@@ -1,19 +1,20 @@
+import logging
 import os
 import subprocess
 
-import logging
 import numpy as np
 import pytest
+
+import modin.pandas as pd
 
 # import ray
 # ray.init(address="localhost:6379")
 
-import modin.pandas as pd
 
 logger = logging.getLogger(__name__)
 
 # Size for synthetic datasets
-DF_SIZE = 1 * 2 ** 10 * 2 ** 10  # * 2**10 # 1 GiB dataframes
+DF_SIZE = 1 * 2**10 * 2**10  # * 2**10 # 1 GiB dataframes
 # This file path
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 KAGGLE_DIR_PATH = "{}/kaggle".format(DIR_PATH)

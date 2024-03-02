@@ -12,10 +12,11 @@
 # governing permissions and limitations under the License.
 
 import sys
+import timeit
+from random import choice, randint, uniform
+
 import pandas
 import pytz
-import timeit
-from random import randint, uniform, choice
 
 from ..dataframe.utils import ColNameCodec
 

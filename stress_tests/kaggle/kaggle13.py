@@ -2,12 +2,13 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
 import warnings  # current version of seaborn generates a bunch of warnings that we'll ignore
 
+import modin.pandas as pd
+
 warnings.filterwarnings("ignore")
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 sns.set(style="white", color_codes=True)
 iris = pd.read_csv("Iris.csv")  # the iris dataset is now a Pandas DataFrame

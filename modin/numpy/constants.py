@@ -13,14 +13,14 @@
 
 # flake8: noqa
 from numpy import (
-    Inf,
-    Infinity,
     NAN,
     NINF,
     NZERO,
-    NaN,
     PINF,
     PZERO,
+    Inf,
+    Infinity,
+    NaN,
     e,
     euler_gamma,
     inf,

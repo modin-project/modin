@@ -18,7 +18,6 @@ import pytest
 import modin.pandas as pd
 from modin.config import Engine
 
-
 engine = Engine.get()
 
 # We have to explicitly mock subclass implementations of wait_partitions.

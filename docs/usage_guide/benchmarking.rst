@@ -8,8 +8,8 @@ To benchmark a single Modin function, often turning on the
 :code:`BenchmarkMode` will suffice.
 
 There is no simple way to benchmark more complex Modin workflows, though
-benchmark mode or calling ``repr`` on Modin objects may be useful. The
-:doc:`Modin logs </usage_guide/advanced_usage/modin_logging>` may help you
+benchmark mode or calling ``modin.utils.execute`` on Modin objects may be useful.
+The :doc:`Modin logs </usage_guide/advanced_usage/modin_logging>` may help you
 identify bottlenecks in your code, and they may also help profile the execution
 of each Modin function.
 
@@ -35,19 +35,20 @@ Consider the following ipython script:
     import time
     import ray
 
+    # Look at the Ray documentation with respect to the Ray configuration suited to you most.
     ray.init()
     df = pd.DataFrame(list(range(MinPartitionSize.get() * 2)))
-    %time result = df.applymap(lambda x: time.sleep(0.1) or x)
+    %time result = df.map(lambda x: time.sleep(0.1) or x)
     %time print(result)
 
 
-Modin takes just 2.68 milliseconds for the ``applymap``, and 3.78 seconds to print
+Modin takes just 2.68 milliseconds for the ``map``, and 3.78 seconds to print
 the result. However, if we run this script in pandas by replacing
-:code:`import modin.pandas as pd` with :code:`import pandas as pd`, the ``applymap``
+:code:`import modin.pandas as pd` with :code:`import pandas as pd`, the ``map``
 takes 6.63 seconds, and printing the result takes just 5.53 milliseconds.
 
-Both pandas and Modin start executing the ``applymap`` as soon as the interpreter
-evalutes it. While pandas blocks until the ``applymap`` has finished, Modin just kicks
+Both pandas and Modin start executing the ``map`` as soon as the interpreter
+evalutes it. While pandas blocks until the ``map`` has finished, Modin just kicks
 off asynchronous functions in remote ray processes. Printing the function result
 is fairly fast in pandas and Modin, but before Modin can print the data, it has to
 wait until all the remote functions complete.
@@ -61,7 +62,7 @@ to complete. You can turn on benchmark mode on at any point as follows:
     from modin.config import BenchmarkMode
     BenchmarkMode.put(True)
 
-Rerunning the script above with benchmark mode on, the Modin ``applymap`` takes
+Rerunning the script above with benchmark mode on, the Modin ``map`` takes
 3.59 seconds, and the ``print`` takes 183 milliseconds. These timings better
 reflect where Modin is spending its execution time.
 
@@ -87,18 +88,18 @@ following script with benchmark mode on:
 
     start = time.time()
     df = pd.DataFrame(list(range(MinPartitionSize.get())), columns=['A'])
-    result1 = df.applymap(lambda x: time.sleep(0.2) or x + 1)
-    result2 = df.applymap(lambda x: time.sleep(0.2) or x + 2)
+    result1 = df.map(lambda x: time.sleep(0.2) or x + 1)
+    result2 = df.map(lambda x: time.sleep(0.2) or x + 2)
     result1.to_parquet(BytesIO())
     result2.to_parquet(BytesIO())
     end = time.time()
-    print(f'applymap and write to parquet took {end - start} seconds.')
+    print(f'map and write to parquet took {end - start} seconds.')
 
 .. code-block::python
 
-The script does two slow ``applymap`` on a dataframe and then writes each result
+The script does two slow ``map`` on a dataframe and then writes each result
 to a buffer. The whole script takes 13 seconds with benchmark mode on, but
-just 7 seconds with benchmark mode off. Because Modin can run the ``applymap``
+just 7 seconds with benchmark mode off. Because Modin can run the ``map``
 asynchronously, it can start writing the first result to its buffer while
 it's still computing the second result. With benchmark mode on, Modin has to
 execute every function synchronously instead.
@@ -125,9 +126,8 @@ at each Modin :doc:`layer </development/architecture>`. Log mode is more
 useful when used in conjuction with benchmark mode.
 
 Sometimes, if you don't have a natural end-point to your workflow, you can
-just call ``repr`` on the workflow's final Modin objects. That will typically
-block on any asynchronous computation. However, beware that ``repr`` can also
-be misleading, e.g. here:
+just call ``modin.utils.execute`` on the workflow's final Modin objects.
+That will typically block on any asynchronous computation:
 
 .. code-block:: python
 
@@ -137,6 +137,7 @@ be misleading, e.g. here:
 
     import modin.pandas as pd
     from modin.config import MinPartitionSize, NPartitions
+    import modin.utils
 
     MinPartitionSize.put(32)
     NPartitions.put(16)
@@ -146,20 +147,17 @@ be misleading, e.g. here:
         time.sleep(10)
       return x + 1
 
+    # Look at the Ray documentation with respect to the Ray configuration suited to you most.
     ray.init()
     df1 = pd.DataFrame(list(range(10_000)), columns=['A'])
-    result = df1.applymap(slow_add_one)
-    %time repr(result)
-    # time.sleep(10)
+    result = df1.map(slow_add_one)
+    # %time modin.utils.execute(result)
     %time result.to_parquet(BytesIO())
 .. code-block::python
 
-The ``repr`` takes only 802 milliseconds, but writing the result to a buffer
-takes 9.84 seconds. However, if you uncomment the :code:`time.sleep` before the
-:code:`to_parquet` call, the :code:`to_parquet` takes just 23.8 milliseconds!
-The problem is that the ``repr`` blocks only on getting the first few and the
-last few rows, but the slow execution is for row 5001, which Modin is
-computing asynchronously in the background even after ``repr`` finishes.
+Writing the result to a buffer takes 9.84 seconds. However, if you uncomment
+the :code:`%time modin.utils.execute(result)` before the :code:`to_parquet`
+call, the :code:`to_parquet` takes just 23.8 milliseconds!
 
 .. note::
     If you see any Modin documentation touting Modin's speed without using

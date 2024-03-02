@@ -13,15 +13,16 @@
 
 import sys
 import time
+
+import sklearnex
+from sklearn import config_context
+
 import modin.pandas as pd
 
-from sklearn import config_context
-import sklearnex
-
 sklearnex.patch_sklearn()
-from sklearn.model_selection import train_test_split
-import sklearn.linear_model as lm
 import numpy as np
+import sklearn.linear_model as lm
+from sklearn.model_selection import train_test_split
 
 
 def read(filename):

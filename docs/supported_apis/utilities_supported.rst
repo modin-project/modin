@@ -98,8 +98,6 @@ contributing a distributed version of any of these objects, feel free to open a
 * DateOffset
 * ExcelWriter
 * SparseArray
-* SparseSeries
-* SparseDataFrame
 
 .. _open an issue: https://github.com/modin-project/modin/issues
 .. _pull request: https://github.com/modin-project/modin/pulls

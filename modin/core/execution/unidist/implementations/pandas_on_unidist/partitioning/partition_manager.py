@@ -13,16 +13,17 @@
 
 """Module houses class that implements ``GenericUnidistDataframePartitionManager`` using Unidist."""
 
+from modin.core.execution.modin_aqp import progress_bar_wrapper
+from modin.core.execution.unidist.common import UnidistWrapper
 from modin.core.execution.unidist.generic.partitioning import (
     GenericUnidistDataframePartitionManager,
 )
-from modin.core.execution.unidist.common import UnidistWrapper
+
+from .partition import PandasOnUnidistDataframePartition
 from .virtual_partition import (
     PandasOnUnidistDataframeColumnPartition,
     PandasOnUnidistDataframeRowPartition,
 )
-from .partition import PandasOnUnidistDataframePartition
-from modin.core.execution.modin_aqp import progress_bar_wrapper
 
 
 class PandasOnUnidistDataframePartitionManager(GenericUnidistDataframePartitionManager):

@@ -4,7 +4,7 @@ Currently we provide tutorial notebooks for the following execution backends:
 
 - [PandasOnRay](https://modin.readthedocs.io/en/latest/development/using_pandas_on_ray.html)
 - [PandasOnDask](https://modin.readthedocs.io/en/latest/development/using_pandas_on_dask.html)
-- [PandasOnUnidist](https://modin.readthedocs.io/en/latest/development/using_pandas_on_unidist.html)
+- [PandasOnMPI through unidist](https://modin.readthedocs.io/en/latest/development/using_pandas_on_mpi.html)
 - [HdkOnNative](https://modin.readthedocs.io/en/latest/development/using_hdk.html)
 
 ## Creating a development environment

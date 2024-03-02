@@ -11,14 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-from unittest.mock import patch, mock_open, Mock
+from unittest.mock import Mock, mock_open, patch
+
 import numpy as np
+import pytest
+from benchmarks.utils import data_shapes, execute, get_benchmark_shapes
 
-from benchmarks.utils import data_shapes, get_benchmark_shapes, execute
-
-from modin.config import AsvDataSizeConfig
 import modin.pandas as pd
+from modin.config import AsvDataSizeConfig
 
 
 @pytest.mark.parametrize(

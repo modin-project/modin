@@ -11,25 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from contextlib import nullcontext
-import glob
+import contextlib
 import json
+from pathlib import Path
 
 import numpy as np
 import pandas
-from pandas._testing import ensure_clean
 import pytest
+from pandas._testing import ensure_clean
 
 import modin.experimental.pandas as pd
-from modin.config import Engine, AsyncReadMode
+from modin.config import AsyncReadMode, Engine
 from modin.pandas.test.utils import (
     df_equals,
-    teardown_test_files,
-    test_data,
     eval_general,
+    parse_dates_values_by_id,
+    test_data,
+    time_parsing_csv_path,
 )
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.pandas.test.utils import parse_dates_values_by_id, time_parsing_csv_path
 from modin.utils import try_cast_to_pandas
 
 
@@ -40,7 +40,7 @@ from modin.utils import try_cast_to_pandas
 def test_from_sql_distributed(tmp_path, make_sql_connection):
     filename = "test_from_sql_distributed.db"
     table = "test_from_sql_distributed"
-    conn = make_sql_connection(tmp_path / filename, table)
+    conn = make_sql_connection(str(tmp_path / filename), table)
     query = "select * from {0}".format(table)
 
     pandas_df = pandas.read_sql(query, conn)
@@ -72,7 +72,7 @@ def test_from_sql_distributed(tmp_path, make_sql_connection):
 def test_from_sql_defaults(tmp_path, make_sql_connection):
     filename = "test_from_sql_distributed.db"
     table = "test_from_sql_distributed"
-    conn = make_sql_connection(tmp_path / filename, table)
+    conn = make_sql_connection(str(tmp_path / filename), table)
     query = "select * from {0}".format(table)
 
     pandas_df = pandas.read_sql(query, conn)
@@ -126,20 +126,20 @@ class TestCsvGlob:
         df_equals(modin_df, pandas_df)
 
     def test_read_csv_without_glob(self):
-        with pytest.warns(UserWarning, match=r"Shell-style wildcard"):
-            with pytest.raises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
+            with warns_that_defaulting_to_pandas():
                 pd.read_csv_glob(
                     "s3://dask-data/nyc-taxi/2015/yellow_tripdata_2015-",
                     storage_options={"anon": True},
                 )
 
-    def test_read_csv_glob_4373(self):
-        columns, filename = ["col0"], "1x1.csv"
+    def test_read_csv_glob_4373(self, tmp_path):
+        columns, filename = ["col0"], str(tmp_path / "1x1.csv")
         df = pd.DataFrame([[1]], columns=columns)
         with (
             warns_that_defaulting_to_pandas()
             if Engine.get() == "Dask"
-            else nullcontext()
+            else contextlib.nullcontext()
         ):
             df.to_csv(filename)
 
@@ -178,11 +178,10 @@ class TestCsvGlob:
 @pytest.mark.parametrize(
     "path",
     [
-        "s3://modin-datasets/testing/multiple_csv/test_data*.csv",
-        "gs://modin-testing/testing/multiple_csv/test_data*.csv",
+        "s3://modin-test/modin-bugs/multiple_csv/test_data*.csv",
     ],
 )
-def test_read_multiple_csv_cloud_store(path):
+def test_read_multiple_csv_cloud_store(path, s3_resource, s3_storage_options):
     def _pandas_read_csv_glob(path, storage_options):
         pandas_dfs = [
             pandas.read_csv(
@@ -195,14 +194,13 @@ def test_read_multiple_csv_cloud_store(path):
     eval_general(
         pd,
         pandas,
-        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
-        if hasattr(module, "read_csv_glob")
-        else _pandas_read_csv_glob(path, **kwargs),
-        storage_options={"anon": True},
+        lambda module, **kwargs: (
+            pd.read_csv_glob(path, **kwargs).reset_index(drop=True)
+            if hasattr(module, "read_csv_glob")
+            else _pandas_read_csv_glob(path, **kwargs)
+        ),
+        storage_options=s3_storage_options,
     )
-
-
-test_default_to_pickle_filename = "test_default_to_pickle.pkl"
 
 
 @pytest.mark.skipif(
@@ -210,17 +208,19 @@ test_default_to_pickle_filename = "test_default_to_pickle.pkl"
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize(
-    "storage_options",
-    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}, None],
+    "storage_options_extra",
+    [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
 )
-def test_read_multiple_csv_s3_storage_opts(storage_options):
-    path = "s3://modin-datasets/testing/multiple_csv/"
+def test_read_multiple_csv_s3_storage_opts(
+    s3_resource, s3_storage_options, storage_options_extra
+):
+    s3_path = "s3://modin-test/modin-bugs/multiple_csv/"
 
     def _pandas_read_csv_glob(path, storage_options):
         pandas_df = pandas.concat(
             [
                 pandas.read_csv(
-                    f"{path}test_data{i}.csv",
+                    f"{s3_path}test_data{i}.csv",
                     storage_options=storage_options,
                 )
                 for i in range(2)
@@ -231,10 +231,12 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     eval_general(
         pd,
         pandas,
-        lambda module, **kwargs: pd.read_csv_glob(path, **kwargs)
-        if hasattr(module, "read_csv_glob")
-        else _pandas_read_csv_glob(path, **kwargs),
-        storage_options=storage_options,
+        lambda module, **kwargs: (
+            pd.read_csv_glob(s3_path, **kwargs)
+            if hasattr(module, "read_csv_glob")
+            else _pandas_read_csv_glob(s3_path, **kwargs)
+        ),
+        storage_options=s3_storage_options | storage_options_extra,
     )
 
 
@@ -242,11 +244,16 @@ def test_read_multiple_csv_s3_storage_opts(storage_options):
     Engine.get() not in ("Ray", "Unidist", "Dask"),
     reason=f"{Engine.get()} does not have experimental API",
 )
+@pytest.mark.parametrize("pathlike", [False, True])
 @pytest.mark.parametrize("compression", [None, "gzip"])
 @pytest.mark.parametrize(
-    "filename", [test_default_to_pickle_filename, "test_to_pickle*.pkl"]
+    "filename", ["test_default_to_pickle.pkl", "test_to_pickle*.pkl"]
 )
-def test_distributed_pickling(filename, compression):
+@pytest.mark.parametrize("read_func", ["read_pickle_glob", "read_pickle_distributed"])
+@pytest.mark.parametrize("to_func", ["to_pickle_glob", "to_pickle_distributed"])
+def test_distributed_pickling(
+    tmp_path, filename, compression, pathlike, read_func, to_func
+):
     data = test_data["int_data"]
     df = pd.DataFrame(data)
 
@@ -254,17 +261,93 @@ def test_distributed_pickling(filename, compression):
     if compression:
         filename = f"{filename}.gz"
 
+    filename = Path(filename) if pathlike else filename
+
     with (
         warns_that_defaulting_to_pandas()
-        if filename_param == test_default_to_pickle_filename
-        else nullcontext()
+        if filename_param == "test_default_to_pickle.pkl"
+        else contextlib.nullcontext()
     ):
-        df.to_pickle_distributed(filename, compression=compression)
-        pickled_df = pd.read_pickle_distributed(filename, compression=compression)
+        getattr(df.modin, to_func)(str(tmp_path / filename), compression=compression)
+        pickled_df = getattr(pd, read_func)(
+            str(tmp_path / filename), compression=compression
+        )
     df_equals(pickled_df, df)
 
-    pickle_files = glob.glob(filename)
-    teardown_test_files(pickle_files)
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_parquet_glob.parquet", "test_parquet_glob*.parquet"],
+)
+def test_parquet_glob(tmp_path, filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_parquet_glob.parquet"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_parquet_glob(str(tmp_path / filename))
+        read_df = pd.read_parquet_glob(str(tmp_path / filename))
+    df_equals(read_df, df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_json_glob.json", "test_json_glob*.json"],
+)
+def test_json_glob(tmp_path, filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_json_glob.json"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_json_glob(str(tmp_path / filename))
+        read_df = pd.read_json_glob(str(tmp_path / filename))
+    df_equals(read_df, df)
+
+
+@pytest.mark.skipif(
+    Engine.get() not in ("Ray", "Unidist", "Dask"),
+    reason=f"{Engine.get()} does not have experimental API",
+)
+@pytest.mark.parametrize(
+    "filename",
+    ["test_xml_glob.xml", "test_xml_glob*.xml"],
+)
+def test_xml_glob(tmp_path, filename):
+    data = test_data["int_data"]
+    df = pd.DataFrame(data)
+
+    filename_param = filename
+
+    with (
+        warns_that_defaulting_to_pandas()
+        if filename_param == "test_xml_glob.xml"
+        else contextlib.nullcontext()
+    ):
+        df.modin.to_xml_glob(str(tmp_path / filename), index=False)
+        read_df = pd.read_xml_glob(str(tmp_path / filename))
+
+    # Index get messed up when concatting so we reset it.
+    read_df = read_df.reset_index(drop=True)
+    df_equals(read_df, df)
 
 
 @pytest.mark.skipif(

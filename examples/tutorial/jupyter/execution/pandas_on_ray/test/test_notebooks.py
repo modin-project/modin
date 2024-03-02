@@ -21,11 +21,11 @@ MODIN_DIR = os.path.abspath(
 )
 sys.path.insert(0, MODIN_DIR)
 from examples.tutorial.jupyter.execution.test.utils import (  # noqa: E402
-    _replace_str,
     _execute_notebook,
     _find_code_cell_idx,
-    test_dataset_path,
+    _replace_str,
     download_taxi_dataset,
+    test_dataset_path,
 )
 
 local_notebooks_dir = "examples/tutorial/jupyter/execution/pandas_on_ray/local"

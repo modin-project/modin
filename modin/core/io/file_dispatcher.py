@@ -22,12 +22,11 @@ import os
 
 import fsspec
 import numpy as np
-from pandas.io.common import is_url, is_fsspec_url
+from pandas.io.common import is_fsspec_url, is_url
 
-from modin.logging import ClassLogger
 from modin.config import AsyncReadMode
+from modin.logging import ClassLogger
 from modin.utils import ModinAssumptionError
-
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
 
@@ -259,9 +258,9 @@ class FileDispatcher(ClassLogger):
 
         try:
             from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
                 ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
             )
 
             credential_error_type = (

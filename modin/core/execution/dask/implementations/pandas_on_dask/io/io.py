@@ -13,8 +13,7 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
-from modin.core.io import BaseIO
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.dask.common import DaskWrapper
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
     PandasOnDaskDataframe,
 )
@@ -22,24 +21,39 @@ from modin.core.execution.dask.implementations.pandas_on_dask.partitioning impor
     PandasOnDaskDataframePartition,
 )
 from modin.core.io import (
+    BaseIO,
     CSVDispatcher,
+    ExcelDispatcher,
+    FeatherDispatcher,
     FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
-    FeatherDispatcher,
     SQLDispatcher,
-    ExcelDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasExcelParser,
+    PandasFeatherParser,
     PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
-    PandasFeatherParser,
     PandasSQLParser,
-    PandasExcelParser,
 )
-from modin.core.execution.dask.common import DaskWrapper
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalCustomTextDispatcher,
+    ExperimentalGlobDispatcher,
+    ExperimentalSQLDispatcher,
+)
+from modin.experimental.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasJsonParser,
+    ExperimentalPandasParquetParser,
+    ExperimentalPandasPickleParser,
+    ExperimentalPandasXmlParser,
+)
 
 
 class PandasOnDaskIO(BaseIO):
@@ -73,6 +87,43 @@ class PandasOnDaskIO(BaseIO):
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
     to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    # experimental methods that don't exist in pandas
+    read_csv_glob = __make_read(
+        ExperimentalPandasCSVGlobParser, ExperimentalCSVGlobDispatcher
+    )
+    read_parquet_glob = __make_read(
+        ExperimentalPandasParquetParser, ExperimentalGlobDispatcher
+    )
+    to_parquet_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_parquet},
+    )
+    read_json_glob = __make_read(
+        ExperimentalPandasJsonParser, ExperimentalGlobDispatcher
+    )
+    to_json_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_json},
+    )
+    read_xml_glob = __make_read(ExperimentalPandasXmlParser, ExperimentalGlobDispatcher)
+    to_xml_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_xml},
+    )
+    read_pickle_glob = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalGlobDispatcher
+    )
+    to_pickle_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": BaseIO.to_pickle},
+    )
+    read_custom_text = __make_read(
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
+    )
+    read_sql_distributed = __make_read(
+        ExperimentalSQLDispatcher, build_args={**build_args, "base_read": read_sql}
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace

@@ -11,28 +11,28 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-
-import numpy as np
-import pandas
-import matplotlib
-import modin.pandas as pd
 import io
 import warnings
 
+import matplotlib
+import numpy as np
+import pandas
+import pytest
+
+import modin.pandas as pd
+from modin.config import NPartitions
 from modin.pandas.test.utils import (
-    random_state,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    test_data,
+    RAND_LOW,
     create_test_dfs,
+    df_equals,
     eval_general,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
 from modin.pandas.utils import SET_DATAFRAME_ATTRIBUTE_WARNING
-from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)

@@ -1,0 +1,11 @@
+name: jupyter_modin_on_unidist
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - fsspec>=2022.11.0
+  - jupyterlab
+  - ipywidgets
+  - modin-mpi
+  - pip:
+      - modin[spreadsheet]

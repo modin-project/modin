@@ -31,7 +31,12 @@ class cuDFQueryCompiler(PandasQueryCompiler):
         # Switch the index and columns and transpose the data within the blocks.
         return self.__constructor__(self._modin_frame.transpose())
 
-    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+    def write_items(
+        self, row_numeric_index, col_numeric_index, item, need_columns_reindex=True
+    ):
+        # We have to keep this import away from the module level to avoid circular import
+        from modin.pandas.utils import broadcast_item, is_scalar
+
         def iloc_mut(partition, row_internal_indices, col_internal_indices, item):
             partition = partition.copy()
             unique_items = np.unique(item)
@@ -54,6 +59,17 @@ class cuDFQueryCompiler(PandasQueryCompiler):
                     partition.iloc[i, j] = it
             return partition
 
+        if not is_scalar(item):
+            broadcasted_item, _ = broadcast_item(
+                self,
+                row_numeric_index,
+                col_numeric_index,
+                item,
+                need_columns_reindex=need_columns_reindex,
+            )
+        else:
+            broadcasted_item = item
+
         new_modin_frame = self._modin_frame.apply_select_indices(
             axis=None,
             func=iloc_mut,
@@ -62,6 +78,6 @@ class cuDFQueryCompiler(PandasQueryCompiler):
             new_index=self.index,
             new_columns=self.columns,
             keep_remaining=True,
-            item_to_distribute=broadcasted_items,
+            item_to_distribute=broadcasted_item,
         )
         return self.__constructor__(new_modin_frame)

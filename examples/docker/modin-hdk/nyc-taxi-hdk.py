@@ -12,10 +12,12 @@
 # governing permissions and limitations under the License.
 
 import sys
+
 from utils import measure
+
 import modin.pandas as pd
-from modin.pandas.test.utils import df_equals
 from modin.experimental.sql import query
+from modin.pandas.test.utils import df_equals
 
 
 def read(filename):

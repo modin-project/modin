@@ -14,13 +14,9 @@
 import pandas
 import pytest
 
-from modin.pandas.test.utils import (
-    test_data_values,
-    create_test_dfs,
-    df_equals,
-)
-from modin.config import NPartitions
 import modin.pandas as pd
+from modin.config import NPartitions
+from modin.pandas.test.utils import create_test_dfs, df_equals, test_data_values
 
 NPartitions.put(4)
 

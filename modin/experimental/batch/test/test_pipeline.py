@@ -11,16 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import numpy as np
 import pandas
+import pytest
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions
+from modin.core.execution.ray.common import RayWrapper
 from modin.distributed.dataframe.pandas.partitions import from_partitions
 from modin.experimental.batch.pipeline import PandasQueryPipeline
 from modin.pandas.test.utils import df_equals
-from modin.core.execution.ray.common import RayWrapper
 
 
 @pytest.mark.skipif(
@@ -458,8 +458,8 @@ class TestPipelineRayEngine:
 
     def test_pipeline_complex(self):
         """Create a complex pipeline with both `fan_out`, `repartition_after` and postprocessing and ensure that it runs end to end correctly."""
-        from os.path import exists
         from os import remove
+        from os.path import exists
         from time import sleep
 
         df = pd.DataFrame([[0, 1, 2]])

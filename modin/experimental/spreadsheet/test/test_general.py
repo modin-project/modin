@@ -11,12 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import numpy as np
 import pandas
 import pytest
-import modin.pandas as pd
-import modin.experimental.spreadsheet as mss
-import numpy as np
 from modin_spreadsheet import SpreadsheetWidget
+
+import modin.experimental.spreadsheet as mss
+import modin.pandas as pd
 
 
 def get_test_data():

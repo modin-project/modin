@@ -7,11 +7,9 @@ Experimental storage formats
 and provides a limited set of functionality:
 
 * :doc:`hdk <hdk/index>`
-* :doc:`pyarrow <pyarrow/index>`
 
 
 .. toctree::
     :hidden:
 
     hdk/index
-    pyarrow/index

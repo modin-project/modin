@@ -13,9 +13,10 @@
 
 """Dataframe exchange protocol tests that are common for every implementation."""
 
-import pytest
-import math
 import ctypes
+import math
+
+import pytest
 
 import modin.pandas as pd
 

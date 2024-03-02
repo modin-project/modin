@@ -13,9 +13,9 @@
 
 """Tests for common utility functions of the DataFrame exchange protocol."""
 
-import pytest
-import pandas
 import numpy as np
+import pandas
+import pytest
 
 from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     pandas_dtype_to_arrow_c,

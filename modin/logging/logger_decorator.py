@@ -17,12 +17,13 @@ Module contains the functions designed for the enable/disable of logging.
 ``enable_logging`` is used for decorating individual Modin functions or classes.
 """
 
-from typing import Any, Optional, Callable, Dict, Union, Type, Tuple
-from types import FunctionType, MethodType
 from functools import wraps
 from logging import Logger
+from types import FunctionType, MethodType
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 from modin.config import LogMode
+
 from .config import get_logger
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"

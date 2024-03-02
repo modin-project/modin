@@ -1,10 +1,11 @@
 import matplotlib
 
 matplotlib.use("PS")
-import numpy as np  # linear algebra
-import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt  # Matlab-style plotting
+import numpy as np  # linear algebra
 import seaborn as sns
+
+import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 
 color = sns.color_palette()
 sns.set_style("darkgrid")
@@ -201,16 +202,17 @@ all_data = pd.get_dummies(all_data)
 print(all_data.shape)
 train = all_data[:ntrain]
 test = all_data[ntrain:]
-from sklearn.linear_model import ElasticNet, Lasso  # BayesianRidge, LassoLarsIC
+import lightgbm as lgb
+import xgboost as xgb
+from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin, clone
 from sklearn.ensemble import GradientBoostingRegressor  # RandomForestRegressor
 from sklearn.kernel_ridge import KernelRidge
+from sklearn.linear_model import ElasticNet  # BayesianRidge, LassoLarsIC
+from sklearn.linear_model import Lasso
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import KFold, cross_val_score  # train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
-from sklearn.base import BaseEstimator, TransformerMixin, RegressorMixin, clone
-from sklearn.model_selection import KFold, cross_val_score  # train_test_split
-from sklearn.metrics import mean_squared_error
-import xgboost as xgb
-import lightgbm as lgb
 
 n_folds = 5
 

@@ -66,8 +66,6 @@ jobs:
             asv_bench/benchmarks/__init__.py asv_bench/benchmarks/io/__init__.py \
             asv_bench/benchmarks/scalability/__init__.py \
             modin/core/io \
-            modin/experimental/core/execution/ray/implementations/pandas_on_ray \
-            modin/experimental/core/execution/ray/implementations/pyarrow_on_ray \
             modin/pandas/series.py \
             modin/core/execution/python \
             modin/pandas/dataframe.py \
@@ -91,7 +89,6 @@ jobs:
           python scripts/doc_checker.py modin/experimental/pandas/io.py \
             modin/experimental/pandas/__init__.py
       - run: python scripts/doc_checker.py modin/core/storage_formats/base
-      - run: python scripts/doc_checker.py modin/experimental/core/storage_formats/pyarrow
       - run: python scripts/doc_checker.py modin/core/storage_formats/pandas
       - run: |
           python scripts/doc_checker.py \
@@ -108,3 +105,15 @@ jobs:
       - run: python scripts/doc_checker.py modin/experimental/core/execution/native/implementations/hdk_on_native/interchange/dataframe_protocol
       - run: python scripts/doc_checker.py modin/experimental/batch/pipeline.py
       - run: python scripts/doc_checker.py modin/logging
+
+  lint-black-isort:
+    name: lint (black and isort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/python-only
+      - run: pip install black>=24.1.0 isort>=5.12
+      # NOTE: keep the black command here in sync with the pre-commit hook in
+      # /contributing/pre-commit
+      - run: black --check --diff modin/ asv_bench/benchmarks scripts/doc_checker.py
+      - run: isort . --check-only

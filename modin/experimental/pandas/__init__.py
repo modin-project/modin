@@ -32,24 +32,22 @@ Examples
 >>> df = pd.read_csv_glob("data*.csv")
 """
 
-from modin.config import IsExperimental
-
-IsExperimental.put(True)
-
 from modin.pandas import *  # noqa F401, F403
+from modin.utils import func_from_deprecated_location
+
 from .io import (  # noqa F401
-    read_sql,
     read_csv_glob,
     read_custom_text,
-    read_pickle_distributed,
-    to_pickle_distributed,
+    read_json_glob,
+    read_parquet_glob,
+    read_pickle_glob,
+    read_sql,
+    read_xml_glob,
 )
-import warnings
 
-setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
-
-warnings.warn(
-    "Thank you for using the Modin Experimental pandas API."
-    + "\nPlease note that some of these APIs deviate from pandas in order to "
-    + "provide improved performance."
+read_pickle_distributed = func_from_deprecated_location(
+    "read_pickle_glob",
+    "modin.experimental.pandas.io",
+    "`modin.experimental.pandas.read_pickle_distributed` is deprecated and will be removed in a future version. "
+    + "Please use `modin.experimental.pandas.to_pickle_glob` instead.",
 )

@@ -13,17 +13,17 @@
 
 """Utility functions for the DataFrame exchange protocol implementation for ``HdkOnNative`` execution."""
 
-import pyarrow as pa
-import numpy as np
 import functools
+
+import numpy as np
+import pyarrow as pa
 
 from modin.core.dataframe.base.interchange.dataframe_protocol.utils import (
     ArrowCTypes,
+    DTypeKind,
     pandas_dtype_to_arrow_c,
     raise_copy_alert,
-    DTypeKind,
 )
-
 
 arrow_types_map = {
     DTypeKind.BOOL: {8: pa.bool_()},

@@ -11,14 +11,16 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-from urllib.request import urlopen
-from urllib.error import HTTPError
-from concurrent.futures import ThreadPoolExecutor
-import pkgutil
 import importlib
+import pkgutil
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import HTTPError
+from urllib.request import urlopen
+
 import pytest
 
 import modin.pandas
+from modin.utils import PANDAS_API_URL_TEMPLATE
 
 
 @pytest.fixture
@@ -35,6 +37,19 @@ def doc_urls(get_generated_doc_urls):
 
 def test_all_urls_exist(doc_urls):
     broken = []
+    # TODO: remove the hack after pandas fixes it
+    methods_with_broken_urls = (
+        "pandas.DataFrame.flags",
+        "pandas.Series.info",
+        "pandas.DataFrame.isetitem",
+        "pandas.Series.swapaxes",
+        "pandas.DataFrame.to_numpy",
+        "pandas.Series.axes",
+        "pandas.Series.divmod",
+        "pandas.Series.rdivmod",
+    )
+    for broken_method in methods_with_broken_urls:
+        doc_urls.remove(PANDAS_API_URL_TEMPLATE.format(broken_method))
 
     def _test_url(url):
         try:

@@ -1,10 +1,11 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
 import numpy as np
-from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer  # CountVectorizer
+from sklearn.linear_model import LogisticRegression
+
+import modin.pandas as pd
 
 train = pd.read_csv("train.csv")
 test = pd.read_csv("test.csv")

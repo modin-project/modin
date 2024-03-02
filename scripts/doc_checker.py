@@ -19,21 +19,21 @@ python scripts/doc_checker.py asv_bench/benchmarks/utils.py modin/pandas
 """
 
 import argparse
-import pathlib
-import subprocess
-import os
-import re
 import ast
-from typing import List
-import sys
-import inspect
-import shutil
-import logging
 import functools
-from numpydoc.validate import Docstring
-from numpydoc.docscrape import NumpyDocString
-
+import inspect
+import logging
+import os
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
 import types
+from typing import List
+
+from numpydoc.docscrape import NumpyDocString
+from numpydoc.validate import Docstring
 
 # fake cuDF-related modules if they're missing
 for mod_name in ("cudf", "cupy"):
@@ -497,10 +497,12 @@ def pydocstyle_validate(
 
 def monkeypatching():
     """Monkeypatch not installed modules and decorators which change __doc__ attribute."""
-    import ray
-    import pandas.util
-    import modin.utils
     from unittest.mock import Mock
+
+    import pandas.util
+    import ray
+
+    import modin.utils
 
     def monkeypatch(*args, **kwargs):
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
@@ -512,7 +514,6 @@ def monkeypatching():
     pandas.util.cache_readonly = property
 
     # We are mocking packages we don't need for docs checking in order to avoid import errors
-    sys.modules["pyarrow.gandiva"] = Mock()
     sys.modules["sqlalchemy"] = Mock()
 
     modin.utils.instancer = functools.wraps(modin.utils.instancer)(lambda cls: cls)
@@ -537,7 +538,7 @@ def monkeypatching():
     xgboost_mock = Mock()
 
     class Booster:
-        ...
+        pass
 
     xgboost_mock.Booster = Booster
     sys.modules["xgboost"] = xgboost_mock

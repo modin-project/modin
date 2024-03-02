@@ -13,9 +13,9 @@
 
 """Module holds Ray actor-class that stores ``cudf.DataFrame``s."""
 
-import ray
 import cudf
 import pandas
+import ray
 
 from modin.core.execution.ray.common import RayWrapper
 

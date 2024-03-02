@@ -20,8 +20,8 @@ HDK storage format.
 
 import abc
 
-from .db_worker import DbTable
 from .dataframe.utils import ColNameCodec
+from .db_worker import DbTable
 from .expr import BaseExpr
 
 

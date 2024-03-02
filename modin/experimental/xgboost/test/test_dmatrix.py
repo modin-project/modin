@@ -12,17 +12,16 @@
 # governing permissions and limitations under the License.
 
 import numpy as np
-import pytest
 import pandas
-from sklearn.metrics import accuracy_score
-from sklearn.datasets import load_breast_cancer
+import pytest
 import xgboost as xgb
+from sklearn.datasets import load_breast_cancer
+from sklearn.metrics import accuracy_score
 
+import modin.experimental.xgboost as mxgb
 import modin.pandas as pd
 from modin.config import Engine
-import modin.experimental.xgboost as mxgb
 from modin.utils import try_cast_to_pandas
-
 
 if Engine.get() != "Ray":
     pytest.skip(

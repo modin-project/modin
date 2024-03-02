@@ -11,12 +11,13 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import os
 import glob
-import uuid
+import os
 import shutil
-from fuzzydata.core.generator import generate_workflow
+import uuid
+
 from fuzzydata.clients.modin import ModinWorkflow
+from fuzzydata.core.generator import generate_workflow
 
 from modin.config import Engine
 

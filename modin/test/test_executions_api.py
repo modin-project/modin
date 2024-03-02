@@ -13,15 +13,10 @@
 
 import pytest
 
-from modin.core.storage_formats import (
-    BaseQueryCompiler,
-    PandasQueryCompiler,
-)
-from modin.experimental.core.storage_formats.pyarrow import PyarrowQueryCompiler
-
+from modin.core.storage_formats import BaseQueryCompiler, PandasQueryCompiler
 
 BASE_EXECUTION = BaseQueryCompiler
-EXECUTIONS = [PandasQueryCompiler, PyarrowQueryCompiler]
+EXECUTIONS = [PandasQueryCompiler]
 
 
 def test_base_abstract_methods():
@@ -29,6 +24,7 @@ def test_base_abstract_methods():
         "__init__",
         "free",
         "finalize",
+        "execute",
         "to_pandas",
         "from_pandas",
         "from_arrow",

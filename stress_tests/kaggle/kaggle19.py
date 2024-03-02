@@ -3,11 +3,12 @@
 import matplotlib
 
 matplotlib.use("PS")
+import warnings
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
-import warnings
 
 warnings.filterwarnings("ignore")
 train = pd.read_csv("train.csv")

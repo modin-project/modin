@@ -1,11 +1,12 @@
 import matplotlib
 
 matplotlib.use("PS")
-import modin.pandas as pd
-import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.stats import skew
+
+import modin.pandas as pd
 
 train = pd.read_csv("train.csv")
 test = pd.read_csv("test.csv")
@@ -34,7 +35,8 @@ all_data = all_data.fillna(all_data.mean())
 X_train = all_data[: train.shape[0]]
 X_test = all_data[train.shape[0] :]
 y = train.SalePrice
-from sklearn.linear_model import Ridge, LassoCV  # RidgeCV, ElasticNet, LassoLarsCV
+from sklearn.linear_model import LassoCV  # RidgeCV, ElasticNet, LassoLarsCV
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import cross_val_score
 
 
@@ -92,8 +94,8 @@ solution.to_csv("ridge_sol.csv", index=False)
 from keras.layers import Dense
 from keras.models import Sequential
 from keras.regularizers import l1
-from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 X_train = StandardScaler().fit_transform(X_train)
 X_tr, X_val, y_tr, y_val = train_test_split(X_train, y, random_state=3)

@@ -18,11 +18,11 @@ import modin.pandas as pd
 from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.utils import (
     ColNameCodec,
 )
-from modin.pandas.utils import from_arrow
-from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
 from modin.experimental.core.execution.native.implementations.hdk_on_native.hdk_worker import (
     HdkWorker,
 )
+from modin.experimental.core.storage_formats.hdk import DFAlgQueryCompiler
+from modin.pandas.utils import from_arrow
 
 
 def hdk_query(query: str, **kwargs) -> pd.DataFrame:

@@ -14,6 +14,7 @@
 """Module holds classes for work with Rabit all-reduce context."""
 
 import logging
+
 import xgboost as xgb
 
 LOGGER = logging.getLogger("[modin.xgboost]")

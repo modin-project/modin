@@ -13,10 +13,10 @@
 
 
 import pytest
-from modin.config import Engine
 
 import modin.experimental.xgboost as xgb
 import modin.pandas as pd
+from modin.config import Engine
 
 
 @pytest.mark.skipif(

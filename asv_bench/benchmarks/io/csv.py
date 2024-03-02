@@ -14,16 +14,16 @@
 import numpy as np
 
 from ..utils import (
-    generate_dataframe,
-    RAND_LOW,
-    RAND_HIGH,
     ASV_USE_IMPL,
     ASV_USE_STORAGE_FORMAT,
     IMPL,
+    RAND_HIGH,
+    RAND_LOW,
     execute,
+    generate_dataframe,
+    get_benchmark_shapes,
     get_shape_id,
     prepare_io_data,
-    get_benchmark_shapes,
 )
 
 

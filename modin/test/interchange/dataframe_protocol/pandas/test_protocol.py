@@ -16,8 +16,8 @@
 import pandas
 
 import modin.pandas as pd
-from modin.pandas.utils import from_dataframe
 from modin.pandas.test.utils import df_equals, test_data
+from modin.pandas.utils import from_dataframe
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 

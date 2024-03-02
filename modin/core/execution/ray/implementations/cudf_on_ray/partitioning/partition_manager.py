@@ -16,17 +16,18 @@
 import numpy as np
 import ray
 
+from modin.config import GpuCount
+from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.generic.partitioning import (
+    GenericRayDataframePartitionManager,
+)
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+
 from .axis_partition import (
     cuDFOnRayDataframeColumnPartition,
     cuDFOnRayDataframeRowPartition,
 )
 from .partition import cuDFOnRayDataframePartition
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
-from modin.config import GpuCount
-from modin.core.execution.ray.generic.partitioning import (
-    GenericRayDataframePartitionManager,
-)
-from modin.core.execution.ray.common import RayWrapper
 
 # Global view of GPU Actors
 GPU_MANAGERS = []

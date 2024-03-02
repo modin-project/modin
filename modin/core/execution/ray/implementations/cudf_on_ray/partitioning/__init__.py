@@ -14,8 +14,8 @@
 """Base Modin Dataframe classes related to its partitioning and optimized for cuDF on Ray execution."""
 
 from .gpu_manager import GPUManager
-from .partition_manager import cuDFOnRayDataframePartitionManager, GPU_MANAGERS
 from .partition import cuDFOnRayDataframePartition
+from .partition_manager import GPU_MANAGERS, cuDFOnRayDataframePartitionManager
 
 __all__ = [
     "GPUManager",

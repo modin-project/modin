@@ -11,90 +11,19 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from . import linalg
 from .arr import array
-
-from .array_creation import (
-    zeros_like,
-    ones_like,
-    tri,
-)
-
-from .array_shaping import (
-    ravel,
-    shape,
-    transpose,
-    hstack,
-    split,
-    append,
-)
-
-from .logic import (
-    all,
-    any,
-    isfinite,
-    isinf,
-    isnan,
-    isnat,
-    isneginf,
-    isposinf,
-    iscomplex,
-    isreal,
-    isscalar,
-    logical_not,
-    logical_and,
-    logical_or,
-    logical_xor,
-    greater,
-    greater_equal,
-    less,
-    less_equal,
-    equal,
-    not_equal,
-)
-
-from .math import (
-    absolute,
-    abs,
-    add,
-    divide,
-    dot,
-    float_power,
-    floor_divide,
-    power,
-    prod,
-    multiply,
-    remainder,
-    mod,
-    subtract,
-    sum,
-    true_divide,
-    mean,
-    maximum,
-    amax,
-    max,
-    minimum,
-    amin,
-    min,
-    sqrt,
-    exp,
-    argmax,
-    argmin,
-    var,
-)
-
-from .trigonometry import (
-    tanh,
-)
-
+from .array_creation import ones_like, tri, zeros_like
+from .array_shaping import append, hstack, ravel, shape, split, transpose
 from .constants import (
-    Inf,
-    Infinity,
     NAN,
     NINF,
     NZERO,
-    NaN,
     PINF,
     PZERO,
+    Inf,
+    Infinity,
+    NaN,
     e,
     euler_gamma,
     inf,
@@ -103,8 +32,59 @@ from .constants import (
     newaxis,
     pi,
 )
-
-from . import linalg
+from .logic import (
+    all,
+    any,
+    equal,
+    greater,
+    greater_equal,
+    iscomplex,
+    isfinite,
+    isinf,
+    isnan,
+    isnat,
+    isneginf,
+    isposinf,
+    isreal,
+    isscalar,
+    less,
+    less_equal,
+    logical_and,
+    logical_not,
+    logical_or,
+    logical_xor,
+    not_equal,
+)
+from .math import (
+    abs,
+    absolute,
+    add,
+    amax,
+    amin,
+    argmax,
+    argmin,
+    divide,
+    dot,
+    exp,
+    float_power,
+    floor_divide,
+    max,
+    maximum,
+    mean,
+    min,
+    minimum,
+    mod,
+    multiply,
+    power,
+    prod,
+    remainder,
+    sqrt,
+    subtract,
+    sum,
+    true_divide,
+    var,
+)
+from .trigonometry import tanh
 
 
 def where(condition, x=None, y=None):

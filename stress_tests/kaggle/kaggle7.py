@@ -1,10 +1,12 @@
 import matplotlib
 
 matplotlib.use("PS")
-import numpy as np
-import modin.pandas as pd
-from sklearn.preprocessing import LabelEncoder
 import warnings
+
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+
+import modin.pandas as pd
 
 warnings.filterwarnings("ignore")
 import matplotlib.pyplot as plt
@@ -203,7 +205,7 @@ app_test_domain["CREDIT_TERM"] = (
 app_test_domain["DAYS_EMPLOYED_PERCENT"] = (
     app_test_domain["DAYS_EMPLOYED"] / app_test_domain["DAYS_BIRTH"]
 )
-from sklearn.preprocessing import MinMaxScaler, Imputer
+from sklearn.preprocessing import Imputer, MinMaxScaler
 
 if "TARGET" in app_train.columns:
     train = app_train.drop(columns=["TARGET"])
@@ -304,10 +306,11 @@ def plot_feature_importances(df):
 
 feature_importances_sorted = plot_feature_importances(feature_importances)
 feature_importances_domain_sorted = plot_feature_importances(feature_importances_domain)
-from sklearn.model_selection import KFold
-from sklearn.metrics import roc_auc_score
-import lightgbm as lgb
 import gc
+
+import lightgbm as lgb
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import KFold
 
 
 def model(features, test_features, encoding="ohe", n_folds=5):

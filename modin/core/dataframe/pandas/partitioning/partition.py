@@ -13,18 +13,18 @@
 
 """The module defines base interface for a partition of a Modin DataFrame."""
 
-from abc import ABC
-from copy import copy
 import logging
 import uuid
+from abc import ABC
+from copy import copy
 
 import pandas
 from pandas.api.types import is_scalar
 from pandas.util import cache_readonly
 
-from modin.pandas.indexing import compute_sliced_len
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 
 class PandasDataframePartition(ABC):  # pragma: no cover
@@ -209,7 +209,7 @@ class PandasDataframePartition(ABC):  # pragma: no cover
         If the underlying object is a pandas DataFrame, this will return
         a 2D NumPy array.
         """
-        return self.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).get()
+        return self.apply(lambda df: df.to_numpy(**kwargs)).get()
 
     @staticmethod
     def _iloc(df, row_labels, col_labels):  # noqa: RT01, PR01

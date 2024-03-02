@@ -16,9 +16,9 @@
 from .partition import PandasOnUnidistDataframePartition
 from .partition_manager import PandasOnUnidistDataframePartitionManager
 from .virtual_partition import (
-    PandasOnUnidistDataframeVirtualPartition,
     PandasOnUnidistDataframeColumnPartition,
     PandasOnUnidistDataframeRowPartition,
+    PandasOnUnidistDataframeVirtualPartition,
 )
 
 __all__ = [

@@ -11,13 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
-import modin.pandas as pd
-from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
-from modin.config import StorageFormat
-
 import io
+
+import pandas
 import pytest
+
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.pandas.test.utils import default_to_pandas_ignore_string, df_equals
 
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 

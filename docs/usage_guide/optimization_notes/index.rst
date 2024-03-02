@@ -196,7 +196,7 @@ Use Modin's Dataframe Algebra API to implement custom parallel functions
 Modin provides a set of low-level parallel-implemented operators which can be used to build most of the
 aggregation functions. These operators are present in the :doc:`algebra module </flow/modin/core/dataframe/algebra>`.
 Modin DataFrame allows users to use their own aggregations built with this module. Visit the
-:doc:`appropriate section </flow/modin/core/dataframe/algebra>` of the documentation for the steps to do it.
+:doc:`DataFrame's algebra </flow/modin/core/dataframe/algebra>` page of the documentation for the steps to do it.
 
 Avoid mixing pandas and Modin DataFrames
 """"""""""""""""""""""""""""""""""""""""

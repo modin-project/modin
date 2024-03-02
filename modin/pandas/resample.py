@@ -18,12 +18,12 @@ from typing import Optional
 import numpy as np
 import pandas
 import pandas.core.resample
-from pandas.core.dtypes.common import is_list_like
 from pandas._libs import lib
+from pandas.core.dtypes.common import is_list_like
 
 from modin.logging import ClassLogger
-from modin.utils import _inherit_docstrings
 from modin.pandas.utils import cast_function_modin2pandas
+from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
@@ -71,13 +71,14 @@ class Resampler(ClassLogger):
             Groups as specified by resampling arguments.
         """
         df = self._dataframe if self.axis == 0 else self._dataframe.T
+        convention = self.resample_kwargs["convention"]
         groups = df.groupby(
             pandas.Grouper(
                 key=self.resample_kwargs["on"],
                 freq=self.resample_kwargs["rule"],
                 closed=self.resample_kwargs["closed"],
                 label=self.resample_kwargs["label"],
-                convention=self.resample_kwargs["convention"],
+                convention=convention if convention is not lib.no_default else "start",
                 level=self.resample_kwargs["level"],
                 origin=self.resample_kwargs["origin"],
                 offset=self.resample_kwargs["offset"],

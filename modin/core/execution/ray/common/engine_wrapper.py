@@ -18,8 +18,13 @@ To be used as a piece of building a Ray-based engine.
 """
 
 import asyncio
+import os
+from types import FunctionType
 
 import ray
+from ray.util.client.common import ClientObjectRef
+
+from modin.error_message import ErrorMessage
 
 
 @ray.remote
@@ -47,6 +52,8 @@ def _deploy_ray_func(func, *args, **kwargs):  # pragma: no cover
 class RayWrapper:
     """Mixin that provides means of running functions remotely and getting local results."""
 
+    _func_cache = {}
+
     @classmethod
     def deploy(cls, func, f_args=None, f_kwargs=None, num_returns=1):
         """
@@ -73,6 +80,24 @@ class RayWrapper:
         return _deploy_ray_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
+
+    @classmethod
+    def is_future(cls, item):
+        """
+        Check if the item is a Future.
+
+        Parameters
+        ----------
+        item : ray.ObjectID or object
+            Future or object to check.
+
+        Returns
+        -------
+        boolean
+            If the value is a future.
+        """
+        ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+        return isinstance(item, ObjectIDType)
 
     @classmethod
     def materialize(cls, obj_id):
@@ -108,6 +133,19 @@ class RayWrapper:
         ray.ObjectID
             Ray object identifier to get the value by.
         """
+        if isinstance(data, FunctionType):
+            qname = data.__qualname__
+            if "<locals>" not in qname and "<lambda>" not in qname:
+                ref = cls._func_cache.get(data, None)
+                if ref is None:
+                    if len(cls._func_cache) < 1024:
+                        ref = ray.put(data)
+                        cls._func_cache[data] = ref
+                    else:
+                        msg = "To many functions in the RayWrapper cache!"
+                        assert "MODIN_GITHUB_CI" not in os.environ, msg
+                        ErrorMessage.warn(msg)
+                return ref
         return ray.put(data, **kwargs)
 
     @classmethod

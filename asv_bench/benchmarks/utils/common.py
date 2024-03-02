@@ -20,19 +20,21 @@ the performance results, hence some utility functions are duplicated here.
 """
 
 import logging
-import modin.pandas
-import pandas
-import numpy as np
 import uuid
 from typing import Optional, Union
 
+import numpy as np
+import pandas
+
+import modin.pandas
+
 from .compatibility import (
-    ASV_USE_IMPL,
     ASV_DATASET_SIZE,
     ASV_USE_ENGINE,
+    ASV_USE_IMPL,
     ASV_USE_STORAGE_FORMAT,
 )
-from .data_shapes import RAND_LOW, RAND_HIGH
+from .data_shapes import RAND_HIGH, RAND_LOW
 
 POSSIBLE_IMPL = {
     "modin": modin.pandas,

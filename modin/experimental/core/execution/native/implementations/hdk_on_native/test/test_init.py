@@ -15,6 +15,7 @@
 class TestInit:
     def test_num_threads(self):
         import os
+
         import modin.pandas as pd
 
         assert "OMP_NUM_THREADS" not in os.environ
