@@ -60,7 +60,6 @@ from .utils import (
     eval_io_from_str,
     generate_dataframe,
     get_unique_filename,
-    io_ops_bad_exc,
     json_long_bytes,
     json_long_string,
     json_short_bytes,
@@ -383,9 +382,14 @@ class TestCsv:
                 ).columns
             }
 
+        raising_exceptions = None
+        if engine == "c" and skipfooter != 0:
+            raising_exceptions = ValueError(
+                "the 'c' engine does not support skipfooter"
+            )
         eval_io(
             fn_name="read_csv",
-            raising_exceptions=None,
+            raising_exceptions=raising_exceptions,
             check_kwargs_callable=not callable(converters),
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
@@ -473,9 +477,12 @@ class TestCsv:
         if xfail_case:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
 
+        raising_exceptions = None
+        if skipfooter != 0 and nrows is not None:
+            raising_exceptions = ValueError("'skipfooter' not supported with 'nrows'")
         eval_io(
             fn_name="read_csv",
-            raising_exceptions=None,
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             true_values=true_values,
@@ -1019,8 +1026,14 @@ class TestCsv:
     @pytest.mark.parametrize("nrows", [21, 5, None])
     @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
     def test_read_csv_newlines_in_quotes(self, nrows, skiprows):
+        raising_exceptions = None
+        if skiprows == 500:
+            raising_exceptions = pandas.errors.EmptyDataError(
+                "No columns to parse from file"
+            )
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
@@ -1031,8 +1044,14 @@ class TestCsv:
     @pytest.mark.parametrize("skiprows", [None, 0, [], [1, 2], np.arange(0, 2)])
     def test_read_csv_skiprows_with_usecols(self, skiprows):
         usecols = {"float_data": "float64"}
+        raising_exceptions = None
+        if isinstance(skiprows, np.ndarray):
+            raising_exceptions = ValueError(
+                "Usecols do not match columns, columns expected but not found: ['float_data']"
+            )
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/issue_4543.csv",
             skiprows=skiprows,
@@ -1074,11 +1093,9 @@ class TestCsv:
         )
 
     def test_read_csv_wrong_path(self):
-        raising_exceptions = [e for e in io_ops_bad_exc if e != FileNotFoundError]
-
         eval_io(
             fn_name="read_csv",
-            raising_exceptions=raising_exceptions,
+            raising_exceptions=FileNotFoundError(2, "No such file or directory"),
             # read_csv kwargs
             filepath_or_buffer="/some/wrong/path.csv",
         )
@@ -2159,7 +2176,7 @@ class TestJson:
     def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/modin-bugs/test_data.json"
         raising_exceptions = None
-        if storage_options_extra.get("anon", None) is False:
+        if "anon" in storage_options_extra:
             raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_json",
@@ -2956,11 +2973,14 @@ class TestFwf:
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_fwf_s3(self, s3_resource, s3_storage_options, storage_options_extra):
-        s3_path = "s3://modin-test/modin-bugs/test_data.fwf"
+        raising_exceptions = None
+        if "anon" in storage_options_extra:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_fwf",
-            filepath_or_buffer=s3_path,
+            filepath_or_buffer="s3://modin-test/modin-bugs/test_data.fwf",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
 
@@ -3057,11 +3077,14 @@ class TestFeather:
     def test_read_feather_s3(
         self, s3_resource, s3_storage_options, storage_options_extra
     ):
-        s3_path = "s3://modin-test/modin-bugs/test_data.feather"
+        raising_exceptions = None
+        if "anon" in storage_options_extra:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_feather",
-            path=s3_path,
+            path="s3://modin-test/modin-bugs/test_data.feather",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_feather_path_object(self, make_feather_file):
@@ -3150,6 +3173,12 @@ class TestXml:
    <degrees>360</degrees>
    <sides/>
  </row>
+ <row>
+   <shape>triangle</shape>
+   <degrees>180</degrees>
+   <sides>3.0</sides>
+ </row>
+</data>
 """
         eval_io("read_xml", path_or_buffer=data)
 
