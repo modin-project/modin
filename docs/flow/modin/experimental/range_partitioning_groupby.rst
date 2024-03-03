@@ -72,3 +72,9 @@ implementation with the respective warning if it meets an unsupported case:
         ...  # Range-partitioning groupby is only supported when grouping on a column(s) of the same frame.
         ...  # https://github.com/modin-project/modin/issues/5926
         ...  # Falling back to a TreeReduce implementation.
+
+Range-partitioning Merge
+""""""""""""""""""""""""
+
+It is recommended to use this implementation if the right dataframe in merge is as big as
+the left dataframe. In this case, range-partitioning implementation works faster and consumes less RAM.

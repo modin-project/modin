@@ -770,6 +770,18 @@ ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
+class RangePartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's range-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING"
+    default = False
+
+
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
     """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
 
