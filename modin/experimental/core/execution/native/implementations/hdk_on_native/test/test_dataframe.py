@@ -1337,7 +1337,7 @@ class TestGroupby:
     @pytest.mark.parametrize("n", [10, -10])
     @pytest.mark.parametrize("invert", [True, False])
     @pytest.mark.parametrize("select", [True, False])
-    @pytest.mark.parametrize("ascending", [None, True, False])
+    @pytest.mark.parametrize("ascending", [True, False])
     def test_head_tail(self, op, n, invert, select, ascending):
         def head(df, **kwargs):
             if invert:

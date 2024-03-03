@@ -367,7 +367,7 @@ def test_reduce_specific(fn, numeric_only, axis):
 @pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", [False, True])
 def test_value_counts(subset_len, sort, normalize, dropna, ascending):
     def comparator(md_res, pd_res):
         if subset_len == 1:

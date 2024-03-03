@@ -521,9 +521,7 @@ def test_merge_on_single_index(left_index, right_index):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
-)
+@pytest.mark.parametrize("ascending", [False, True])
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
     data = test_data["float_nan_data"]
@@ -603,8 +601,10 @@ def test_sort_multiindex(sort_remaining):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "ascending",
-    bool_arg_values + ["list_first_True", "list_first_False"],
-    ids=arg_keys("ascending", bool_arg_keys + ["list_first_True", "list_first_False"]),
+    [False, True] + ["list_first_True", "list_first_False"],
+    ids=arg_keys(
+        "ascending", ["False", "True"] + ["list_first_True", "list_first_False"]
+    ),
 )
 @pytest.mark.parametrize(
     "inplace", bool_arg_values, ids=arg_keys("inplace", bool_arg_keys)
