@@ -195,10 +195,14 @@ def test_comparison(data, op, other, request):
     raising_exceptions = None
     if "int_data" in request.node.callspec.id and other == "a":
         raising_exceptions = TypeError("Invalid comparison between dtype=int64 and str")
+        if StorageFormat.get() == "Hdk":
+            raising_exceptions = TypeError("Invalid comparison between int64 and <U0")
     elif "float_nan_data" in request.node.callspec.id and other == "a":
         raising_exceptions = TypeError(
             "Invalid comparison between dtype=float64 and str"
         )
+        if StorageFormat.get() == "Hdk":
+            raising_exceptions = TypeError("Invalid comparison between float64 and <U0")
 
     eval_general(
         *create_test_dfs(data),
