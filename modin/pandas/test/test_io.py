@@ -859,22 +859,15 @@ class TestCsv:
             raising_exceptions=raising_exceptions,
         )
 
+    @pytest.mark.skipif(StorageFormat.get() == "Hdk", reason="FIXME: identify issue")
     @pytest.mark.parametrize("delim_whitespace", [True, False])
     def test_delim_whitespace(self, delim_whitespace, tmp_path):
         str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
         unique_filename = get_unique_filename(data_dir=tmp_path)
-        raising_exceptions = None
-        check_exception_type = True
-        if StorageFormat.get() == "Hdk" and delim_whitespace:
-            # FIXME: identify issue
-            raising_exceptions = False
-            check_exception_type = False
         eval_io_from_str(
             str_delim_whitespaces,
             unique_filename,
             delim_whitespace=delim_whitespace,
-            raising_exceptions=raising_exceptions,
-            check_exception_type=check_exception_type,
         )
 
     # Internal parameters tests

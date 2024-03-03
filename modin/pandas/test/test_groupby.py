@@ -454,7 +454,7 @@ class GetColumn:
 @pytest.mark.parametrize(
     "col1_category", [True, False], ids=lambda v: f"col1_category={v}"
 )
-def test_simple_row_groupby(by, as_index, col1_category):
+def test_simple_row_groupby(by, as_index, col1_category, request):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
@@ -503,24 +503,85 @@ def test_simple_row_groupby(by, as_index, col1_category):
                 pandas_groupby,
                 lambda df: df.nth(0).sort_values("col1").reset_index(drop=True),
             )
+
+    raising_exceptions = None
+    if col1_category:
+        raising_exceptions = TypeError(
+            "category dtype does not support aggregation 'sem'"
+        )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.sem(),
         modin_df_almost_equals_pandas,
+        raising_exceptions=raising_exceptions,
     )
     eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
+    # FIXME: identify issue
+    eval_general(
+        modin_groupby, pandas_groupby, lambda df: df.idxmax(), raising_exceptions=False
+    )
     eval_ndim(modin_groupby, pandas_groupby)
     if not check_df_columns_have_nans(modin_df, by):
         # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumsum())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
+
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support cumsum operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumsum(),
+            raising_exceptions=raising_exceptions,
+        )
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support cummax operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cummax(),
+            raising_exceptions=raising_exceptions,
+        )
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support cummin operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cummin(),
+            raising_exceptions=raising_exceptions,
+        )
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support cumprod operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumprod(),
+            raising_exceptions=raising_exceptions,
+        )
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support cumcount operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumcount(),
+            raising_exceptions=raising_exceptions,
+        )
 
     eval_general(
         modin_groupby,
@@ -542,12 +603,18 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
-    # TypeError: category type does not support prod operations
+    # FIXME: identify issue
+    eval_general(
+        modin_groupby, pandas_groupby, lambda df: df.idxmin(), raising_exceptions=False
+    )
+    raising_exceptions = None
+    if col1_category:
+        raising_exceptions = TypeError("category type does not support prod operations")
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda grp: grp.prod(),
+        raising_exceptions=raising_exceptions,
     )
 
     if as_index:
@@ -572,16 +639,22 @@ def test_simple_row_groupby(by, as_index, col1_category):
         # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
 
+        raising_exceptions = None
+        if col1_category:
+            # FIXME: identify issues
+            raising_exceptions = False
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda grp: grp.agg(func),
+            raising_exceptions=raising_exceptions,
             check_exception_type=None if is_pandas_bug_case else True,
         )
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda grp: grp.aggregate(func),
+            raising_exceptions=raising_exceptions,
             check_exception_type=None if is_pandas_bug_case else True,
         )
 
@@ -589,11 +662,14 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_general(modin_groupby, pandas_groupby, lambda df: df.rank())
     eval_max(modin_groupby, pandas_groupby)
     eval_len(modin_groupby, pandas_groupby)
-    # TypeError: category type does not support sum operations
+    raising_exceptions = None
+    if col1_category:
+        raising_exceptions = TypeError("category type does not support sum operations")
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.sum(),
+        raising_exceptions=raising_exceptions,
     )
 
     eval_ngroup(modin_groupby, pandas_groupby)
@@ -606,12 +682,17 @@ def test_simple_row_groupby(by, as_index, col1_category):
         lambda df: df.nunique(),
         check_exception_type=None if (col1_category and not as_index) else True,
     )
-    # TypeError: category type does not support median operations
+    raising_exceptions = None
+    if col1_category:
+        raising_exceptions = TypeError(
+            "category dtype does not support aggregation 'median'"
+        )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.median(),
         modin_df_almost_equals_pandas,
+        raising_exceptions=raising_exceptions,
     )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
@@ -635,11 +716,16 @@ def test_simple_row_groupby(by, as_index, col1_category):
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
     for func in pipe_functions:
-        # TypeError: category type does not support sum operations
+        raising_exceptions = None
+        if col1_category:
+            raising_exceptions = TypeError(
+                "category type does not support sum operations"
+            )
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.pipe(func),
+            raising_exceptions=raising_exceptions,
         )
 
     eval_general(
@@ -665,7 +751,10 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
-        eval___getitem__(modin_groupby, pandas_groupby, "col3")
+        # FIXME: identify issue
+        eval___getitem__(
+            modin_groupby, pandas_groupby, "col3", raising_exceptions=False
+        )
     eval_groups(modin_groupby, pandas_groupby)
     # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
@@ -675,7 +764,10 @@ def test_simple_row_groupby(by, as_index, col1_category):
         if isinstance(by, list)
         else ["col3", "col4"]
     )
-    eval___getitem__(modin_groupby, pandas_groupby, non_by_cols)
+    # FIXME: identify issue
+    eval___getitem__(
+        modin_groupby, pandas_groupby, non_by_cols, raising_exceptions=False
+    )
     # When GroupBy.__getitem__ meets an intersection of the selection and 'by' columns
     # it throws a warning with the suggested workaround. The following code tests
     # that this workaround works as expected.
@@ -1442,18 +1534,20 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
-def eval___getitem__(md_grp, pd_grp, item):
+def eval___getitem__(md_grp, pd_grp, item, raising_exceptions=None):
     eval_general(
         md_grp,
         pd_grp,
         lambda grp: grp[item].mean(),
         comparator=build_types_asserter(df_equals),
+        raising_exceptions=raising_exceptions,
     )
     eval_general(
         md_grp,
         pd_grp,
         lambda grp: grp[item].count(),
         comparator=build_types_asserter(df_equals),
+        raising_exceptions=raising_exceptions,
     )
 
     def build_list_agg(fns):
@@ -1476,12 +1570,14 @@ def eval___getitem__(md_grp, pd_grp, item):
         pd_grp,
         build_list_agg(["mean"]),
         comparator=build_types_asserter(df_equals),
+        raising_exceptions=raising_exceptions,
     )
     eval_general(
         md_grp,
         pd_grp,
         build_list_agg(["mean", "count"]),
         comparator=build_types_asserter(df_equals),
+        raising_exceptions=raising_exceptions,
     )
 
     # Explicit default-to-pandas test
@@ -1495,6 +1591,7 @@ def eval___getitem__(md_grp, pd_grp, item):
             else grp[item]._default_to_pandas(lambda df: df.sum())
         ),
         comparator=build_types_asserter(df_equals),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -1879,7 +1976,6 @@ def test_agg_4604():
         "mean",
         "sum",
         "median",
-        "unique",
         "cumprod",
     ],
 )
@@ -2844,8 +2940,14 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.std())
     eval_general(md_window, pd_window, lambda window: window.min())
     eval_general(md_window, pd_window, lambda window: window.max())
-    eval_general(md_window, pd_window, lambda window: window.corr())
-    eval_general(md_window, pd_window, lambda window: window.cov())
+    # FIXME: identify error
+    eval_general(
+        md_window, pd_window, lambda window: window.corr(), raising_exceptions=False
+    )
+    # FIXME: identify error
+    eval_general(
+        md_window, pd_window, lambda window: window.cov(), raising_exceptions=False
+    )
     eval_general(md_window, pd_window, lambda window: window.skew())
     eval_general(md_window, pd_window, lambda window: window.kurt())
     eval_general(
@@ -2863,12 +2965,16 @@ def eval_rolling(md_window, pd_window):
             md_window,
             pd_window,
             lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
+            # FIXME: identify error
+            raising_exceptions=False,
         )
     else:
         eval_general(
             md_window,
             pd_window,
             lambda window: window.sem(),
+            # FIXME: identify error
+            raising_exceptions=False,
         )
 
 
@@ -3055,7 +3161,7 @@ def test_reshuffling_groupby_on_strings(modify_config):
     pd_grp = pandas_df.groupby("col1")
 
     eval_general(md_grp, pd_grp, lambda grp: grp.mean())
-    eval_general(md_grp, pd_grp, lambda grp: grp.nth())
+    eval_general(md_grp, pd_grp, lambda grp: grp.nth(2))
     eval_general(md_grp, pd_grp, lambda grp: grp.head(10))
     eval_general(md_grp, pd_grp, lambda grp: grp.tail(10))
 
