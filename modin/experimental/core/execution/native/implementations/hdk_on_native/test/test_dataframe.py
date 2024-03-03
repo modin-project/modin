@@ -26,7 +26,6 @@ from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
-    io_ops_bad_exc,
     random_state,
     test_data,
 )
@@ -307,21 +306,15 @@ class TestCSV:
                 "In these cases Modin raises `ArrowEngineException` while pandas "
                 + "doesn't raise any exceptions that causes tests fails"
             )
-        # In these cases Modin raises `ArrowEngineException` while pandas
-        # raises `ValueError`, so skipping exception type checking
-        skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
-
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            check_exception_type=not skip_exc_type_check,
-            raising_exceptions=None if skip_exc_type_check else io_ops_bad_exc,
+            # FIXME: identify the issue
+            raising_exceptions=False,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
             names=names,
-            # FIXME: identify the issue
-            raising_exceptions=False,
         )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])

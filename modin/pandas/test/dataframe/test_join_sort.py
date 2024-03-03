@@ -368,6 +368,7 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+        raising_exceptions=ValueError("Cannot merge a Series without a name"),
     )
 
     # merge a Series with a name
