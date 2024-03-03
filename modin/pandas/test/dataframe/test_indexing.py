@@ -2513,23 +2513,23 @@ def test_setitem_2d_update(does_value_have_different_columns):
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, -2)
     )  # (start=None, stop=-2)
-    raising_exception = None
+    raising_exceptions = None
     if get_current_execution() == "BaseOnPython":
         # FIXME: identify issue
-        raising_exception = False
+        raising_exceptions = False
     eval_general(
         modin_dfs,
         pandas_dfs,
         test,
         iloc=[0, 1, 5, 6, 9, 10, -2, -1],
-        raising_exception=raising_exception,
+        raising_exceptions=raising_exceptions,
     )
     eval_general(
         modin_dfs,
         pandas_dfs,
         test,
         iloc=[5, 4, 0, 10, 1, -1],
-        raising_exception=raising_exception,
+        raising_exceptions=raising_exceptions,
     )
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, None, 2)
