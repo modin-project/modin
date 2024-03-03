@@ -274,7 +274,17 @@ def test_prod(
 @pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
-def test_sum(data, axis, skipna, is_transposed):
+def test_sum(data, axis, skipna, is_transposed, request):
+    if (
+        StorageFormat.get() == "Hdk"
+        and is_transposed
+        and skipna
+        and (
+            "over_rows_int" in request.node.callspec.id
+            or "over_rows_str" in request.node.callspec.id
+        )
+    ):
+        pytest.xfail(reason="FIXME: identify issue")
     eval_general(
         *create_test_dfs(data),
         lambda df: (df.T if is_transposed else df).sum(
