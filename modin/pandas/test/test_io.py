@@ -864,14 +864,17 @@ class TestCsv:
         str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
         unique_filename = get_unique_filename(data_dir=tmp_path)
         raising_exceptions = None
+        check_exception_type = True
         if StorageFormat.get() == "Hdk" and delim_whitespace:
             # FIXME: identify issue
             raising_exceptions = False
+            check_exception_type = False
         eval_io_from_str(
             str_delim_whitespaces,
             unique_filename,
             delim_whitespace=delim_whitespace,
             raising_exceptions=raising_exceptions,
+            check_exception_type=check_exception_type,
         )
 
     # Internal parameters tests
@@ -3193,6 +3196,9 @@ class TestPickle:
         df_equals(modin_df, recreated_modin_df)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk", reason="Missing optional dependency 'lxml'."
+)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
     def test_read_xml(self):
