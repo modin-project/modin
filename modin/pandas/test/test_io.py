@@ -943,15 +943,30 @@ class TestCsv:
     )
     @pytest.mark.exclude_in_sanity
     def test_read_csv_parse_dates(
-        self, names, header, index_col, parse_dates, encoding, encoding_errors
+        self,
+        names,
+        header,
+        index_col,
+        parse_dates,
+        encoding,
+        encoding_errors,
+        request,
     ):
         if names is not None and header == "infer":
             pytest.xfail(
                 "read_csv with Ray engine works incorrectly with date data and names parameter provided - issue #2509"
             )
 
+        raising_exceptions = None
+        if "nonexistent_int_column" in request.node.callspec.id:
+            raising_exceptions = IndexError("list index out of range")
+        elif "nonexistent_string_column" in request.node.callspec.id:
+            raising_exceptions = ValueError(
+                "Missing column provided to 'parse_dates': 'z'"
+            )
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer=time_parsing_csv_path,
             names=names,
