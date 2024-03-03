@@ -350,6 +350,8 @@ def test_reduce_specific(fn, numeric_only, axis):
                 raising_exceptions = TypeError(
                     f"'{operator}' not supported between instances of 'str' and 'float'"
                 )
+                if StorageFormat.get() == "Hdk":
+                    raising_exceptions = TypeError("Unsupported dtype: object")
             else:
                 # FIXME: different messages, check only types
                 raising_exceptions = False
