@@ -57,14 +57,18 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-def eval_setitem(md_df, pd_df, value, col=None, loc=None):
+def eval_setitem(md_df, pd_df, value, col=None, loc=None, raising_exceptions=None):
     if loc is not None:
         col = pd_df.columns[loc]
 
     value_getter = value if callable(value) else (lambda *args, **kwargs: value)
 
     eval_general(
-        md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
+        md_df,
+        pd_df,
+        lambda df: df.__setitem__(col, value_getter(df)),
+        __inplace__=True,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -892,10 +896,20 @@ def test_iloc_empty():
     df_equals(pandas_df, modin_df)
 
 
-def test_iloc_loc_key_length():
+def test_iloc_loc_key_length_except():
     modin_ser, pandas_ser = pd.Series(0), pandas.Series(0)
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.iloc[0, 0])
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.loc[0, 0])
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.iloc[0, 0],
+        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+    )
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.loc[0, 0],
+        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+    )
 
 
 def test_loc_series():
@@ -2375,15 +2389,27 @@ def test_setitem_unhashable_key():
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
         eval_setitem(modin_df, pandas_df, value, key)
 
-        # pandas Series case
+        # pandas Series case; ValueError('Columns must be same length as key')
         value = df_value["value_col1"]
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key[:1])
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            value,
+            key[:1],
+            raising_exceptions=ValueError("Columns must be same length as key"),
+        )
 
         # pandas Index case
         value = df_value.index
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key[:1])
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            value,
+            key[:1],
+            raising_exceptions=ValueError("Columns must be same length as key"),
+        )
 
         # scalar case
         value = 3
@@ -2391,7 +2417,13 @@ def test_setitem_unhashable_key():
         eval_setitem(modin_df, pandas_df, value, key)
 
         # test failed case: ValueError('Columns must be same length as key')
-        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            df_value[["value_col1"]],
+            key,
+            raising_exceptions=ValueError("Columns must be same length as key"),
+        )
 
 
 def test_setitem_2d_insertion():
@@ -2442,6 +2474,7 @@ def test_setitem_2d_insertion():
         pandas_df,
         build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
         col=["new_value7", "new_value8"],
+        raising_exceptions=ValueError("Columns must be same length as key"),
     )
 
 
