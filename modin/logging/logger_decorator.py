@@ -18,13 +18,12 @@ Module contains the functions designed for the enable/disable of logging.
 """
 
 from functools import wraps
-from logging import Logger
 from types import FunctionType, MethodType
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 from modin.config import LogMode
 
-from .config import get_logger
+from .config import LogLevel, get_logger
 
 _MODIN_LOGGER_NOWRAP = "__modin_logging_nowrap__"
 
@@ -50,7 +49,7 @@ def disable_logging(func: Callable) -> Callable:
 def enable_logging(
     modin_layer: Union[str, Callable, Type] = "PANDAS-API",
     name: Optional[str] = None,
-    log_level: str = "info",
+    log_level: LogLevel = LogLevel.INFO,
 ) -> Callable:
     """
     Log Decorator used on specific Modin functions or classes.
@@ -63,8 +62,8 @@ def enable_logging(
     name : str, optional
         The name of the object the decorator is being applied to.
         Composed from the decorated object name if not specified.
-    log_level : str, default: "info"
-        The log level (INFO, DEBUG, WARNING, etc.).
+    log_level : LogLevel, default: LogLevel.INFO
+        The log level (LogLevel.INFO, LogLevel.DEBUG, LogLevel.WARNING, etc.).
 
     Returns
     -------
@@ -76,9 +75,6 @@ def enable_logging(
         # @enable_logging
         # def func()
         return enable_logging()(modin_layer)
-
-    log_level = log_level.lower()
-    assert hasattr(Logger, log_level.lower()), f"Invalid log level: {log_level}"
 
     def decorator(obj: Any) -> Any:
         """Decorate function or class to add logs to Modin API function(s)."""
@@ -129,8 +125,7 @@ def enable_logging(
                 return obj(*args, **kwargs)
 
             logger = get_logger()
-            logger_level = getattr(logger, log_level)
-            logger_level(start_line)
+            logger.log(log_level, start_line)
             try:
                 result = obj(*args, **kwargs)
             except BaseException as e:
@@ -146,7 +141,7 @@ def enable_logging(
                     e._modin_logged = True  # type: ignore[attr-defined]
                 raise
             finally:
-                logger_level(stop_line)
+                logger.log(log_level, stop_line)
             return result
 
         # make sure we won't decorate multiple times
