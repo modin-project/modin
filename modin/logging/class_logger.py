@@ -19,6 +19,7 @@ Module contains ``ClassLogger`` class.
 
 from typing import Dict, Optional
 
+from .config import LogLevel
 from .logger_decorator import enable_logging
 
 
@@ -38,7 +39,7 @@ class ClassLogger:
         cls,
         modin_layer: Optional[str] = None,
         class_name: Optional[str] = None,
-        log_level: str = "info",
+        log_level: LogLevel = LogLevel.INFO,
         **kwargs: Dict,
     ) -> None:
         """
@@ -51,8 +52,8 @@ class ClassLogger:
         class_name : str, optional
             The name of the class the decorator is being applied to.
             Composed from the decorated class name if not specified.
-        log_level : str, default: "info"
-            The log level (INFO, DEBUG, WARNING, etc.).
+        log_level : LogLevel, default: LogLevel.INFO
+            The log level (LogLevel.INFO, LogLevel.DEBUG, LogLevel.WARNING, etc.).
         **kwargs : dict
         """
         modin_layer = modin_layer or cls._modin_logging_layer
