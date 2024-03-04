@@ -326,6 +326,10 @@ def _deploy_ray_func(
     if isinstance(result, pandas.DataFrame):
         return result, len(result), len(result.columns), ip
     elif all(isinstance(r, pandas.DataFrame) for r in result):
-        return [i for r in result for i in [r, len(r), len(r.columns), ip]]
+        for r in result:
+            for item in [r, len(r), len(r.columns), ip]:
+                yield item
     else:
-        return [i for r in result for i in [r, None, None, ip]]
+        for r in result:
+            for item in [r, None, None, ip]:
+                yield item
