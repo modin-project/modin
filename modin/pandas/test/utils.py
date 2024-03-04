@@ -863,6 +863,10 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
+class TestError(Exception):
+    pass
+
+
 def eval_general(
     modin_df,
     pandas_df,
@@ -888,7 +892,7 @@ def eval_general(
         except Exception as pd_e:
             if check_exception_type is None:
                 return None
-            with pytest.raises(Exception) as md_e:
+            try:
                 if inplace:
                     _ = fn(modin_df, **md_kwargs)
                     try_cast_to_pandas(modin_df)  # force materialization
@@ -896,16 +900,21 @@ def eval_general(
                     try_cast_to_pandas(
                         fn(modin_df, **md_kwargs)
                     )  # force materialization
-            if check_exception_type:
-                assert isinstance(
-                    md_e.value, type(pd_e)
-                ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
-                    type(md_e.value), type(pd_e)
+            except Exception as md_e:
+                if check_exception_type:
+                    assert isinstance(
+                        md_e, type(pd_e)
+                    ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
+                        type(md_e), type(pd_e)
+                    )
+                    if raising_exceptions:
+                        assert not isinstance(
+                            md_e, tuple(raising_exceptions)
+                        ), f"not acceptable exception type: {md_e}"
+            else:
+                raise TestError(
+                    f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
                 )
-                if raising_exceptions:
-                    assert not isinstance(
-                        md_e.value, tuple(raising_exceptions)
-                    ), f"not acceptable exception type: {md_e.value}"
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
