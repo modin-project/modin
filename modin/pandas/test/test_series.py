@@ -868,10 +868,10 @@ def test_apply_external_lib():
 @pytest.mark.parametrize("func", ["count", "all", "kurt", "array", "searchsorted"])
 def test_apply_text_func(data, func, axis):
     func_kwargs = {}
-    if func in ("all", "kurt"):
+    if func not in ("count", "searchsorted"):
         func_kwargs["axis"] = axis
     elif not axis:
-        # FIXME: In these cases, Modin does not throw exceptions like pandas does
+        # FIXME: https://github.com/modin-project/modin/issues/7000
         return
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
@@ -884,7 +884,7 @@ def test_apply_text_func(data, func, axis):
 
     if func == "searchsorted":
         # required parameter
-        func_kwargs["value"] = pandas_series[1:3:16]
+        func_kwargs["value"] = pandas_series[1]
 
     eval_general(modin_series, pandas_series, lambda df: df.apply(func, **func_kwargs))
 
