@@ -3231,11 +3231,11 @@ def test_to_period():
 
 
 @pytest.mark.xfail(
-    Engine.get() == "Ray",
+    Engine.get() == "Ray" and version.parse(ray.__version__) <= version.parse("2.9.3"),
     reason="Ray-2.9.3 has a problem using pandas 2.2.0. It will be resolved in the next release of Ray.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_to_ray_dataset():
+def test_df_to_ray_dataset():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
@@ -3254,7 +3254,7 @@ def test_to_ray_dataset():
 
 
 @pytest.mark.xfail(
-    Engine.get() == "Ray",
+    Engine.get() == "Ray" and version.parse(ray.__version__) <= version.parse("2.9.3"),
     reason="Ray-2.9.3 has a problem using pandas 2.2.0. It will be resolved in the next release of Ray.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
@@ -3279,7 +3279,7 @@ def test_series_to_ray_dataset():
 
 
 @pytest.mark.xfail(
-    Engine.get() == "Ray",
+    Engine.get() == "Ray" and version.parse(ray.__version__) <= version.parse("2.9.3"),
     reason="Ray-2.9.3 has a problem using pandas 2.2.0. It will be resolved in the next release of Ray.",
 )
 @pytest.mark.skipif(
@@ -3294,6 +3294,5 @@ def test_from_ray_dataset():
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
     ray_df = ray.data.from_pandas(pandas_df)
-
     result_df = from_ray_dataset(ray_df)
     df_equals(result_df, modin_df)
