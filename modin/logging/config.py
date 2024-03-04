@@ -38,7 +38,7 @@ __LOGGER_CONFIGURED__: bool = False
 
 
 class LogLevel(IntEnum):  # noqa: PR01
-    """Enumerator to Specify the valid values of LogLevel accepted by Logger.setLevel()."""
+    """Enumerator to specify the valid values of LogLevel accepted by Logger.setLevel()."""
 
     DEBUG = 10
     INFO = 20
