@@ -259,15 +259,12 @@ def make_parquet_dir(tmp_path):
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestCsv:
     # delimiter tests
-    @pytest.mark.parametrize("sep", [None, "_", ",", ".", "\n"])
-    @pytest.mark.parametrize("delimiter", ["_", ",", ".", "\n"])
+    @pytest.mark.parametrize("sep", ["_", ",", "."])
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
-    def test_read_csv_delimiters(
-        self, make_csv_file, sep, delimiter, decimal, thousands
-    ):
+    def test_read_csv_delimiters(self, make_csv_file, sep, decimal, thousands):
         unique_filename = make_csv_file(
-            delimiter=delimiter,
+            delimiter=sep,
             thousands_separator=thousands,
             decimal_separator=decimal,
         )
@@ -275,10 +272,21 @@ class TestCsv:
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=unique_filename,
-            delimiter=delimiter,
             sep=sep,
             decimal=decimal,
             thousands=thousands,
+        )
+
+    @pytest.mark.parametrize("sep", [None, "_"])
+    @pytest.mark.parametrize("delimiter", [".", "_"])
+    def test_read_csv_delimiters_except(self, make_csv_file, sep, delimiter):
+        unique_filename = make_csv_file(delimiter=delimiter)
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            delimiter=delimiter,
+            sep=sep,
         )
 
     @pytest.mark.parametrize(
@@ -303,7 +311,7 @@ class TestCsv:
     @pytest.mark.parametrize("header", ["infer", None, 0])
     @pytest.mark.parametrize("index_col", [None, "col1"])
     @pytest.mark.parametrize(
-        "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]]
+        "names", [lib.no_default, ["col1"], ["c1", "c2", "c3", "c4", "c5", "c6"]]
     )
     @pytest.mark.parametrize(
         "usecols", [None, ["col1"], ["col1", "col2", "col6"], [0, 1, 5]]
@@ -794,74 +802,62 @@ class TestCsv:
             on_bad_lines=on_bad_lines,
         )
 
-    # Internal parameters tests
-    @pytest.mark.parametrize("use_str_data", [True, False])
-    @pytest.mark.parametrize("engine", [None, "python", "c"])
-    @pytest.mark.parametrize("delimiter", [",", " "])
+    @pytest.mark.parametrize("float_precision", [None, "high", "legacy", "round_trip"])
+    def test_python_engine_float_precision_except(self, float_precision):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            engine="python",
+            float_precision=float_precision,
+        )
+
+    @pytest.mark.parametrize("low_memory", [False, True])
+    def test_python_engine_low_memory_except(self, low_memory):
+        eval_io(
+            fn_name="read_csv",
+            # read_csv kwargs
+            filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
+            engine="python",
+            low_memory=low_memory,
+        )
+
+    @pytest.mark.xfail(StorageFormat.get() == "Hdk", reason="FIXME: identify issue")
     @pytest.mark.parametrize("delim_whitespace", [True, False])
+    def test_delim_whitespace(self, delim_whitespace, tmp_path):
+        str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
+        unique_filename = get_unique_filename(data_dir=tmp_path)
+        eval_io_from_str(
+            str_delim_whitespaces,
+            unique_filename,
+            delim_whitespace=delim_whitespace,
+        )
+
+    # Internal parameters tests
+    @pytest.mark.parametrize("engine", ["c"])
+    @pytest.mark.parametrize("delimiter", [",", " "])
     @pytest.mark.parametrize("low_memory", [True, False])
     @pytest.mark.parametrize("memory_map", [True, False])
     @pytest.mark.parametrize("float_precision", [None, "high", "round_trip"])
     def test_read_csv_internal(
         self,
         make_csv_file,
-        use_str_data,
         engine,
         delimiter,
-        delim_whitespace,
         low_memory,
         memory_map,
         float_precision,
-        tmp_path,
     ):
-        # In this case raised TypeError: cannot use a string pattern on a bytes-like object,
-        # so TypeError should be excluded from raising_exceptions list in order to check, that
-        # the same exceptions are raised by Pandas and Modin
-        case_with_TypeError_exc = (
-            engine == "python"
-            and delimiter == ","
-            and delim_whitespace
-            and low_memory
-            and memory_map
-            and float_precision is None
+        unique_filename = make_csv_file(delimiter=delimiter)
+        eval_io(
+            filepath_or_buffer=unique_filename,
+            fn_name="read_csv",
+            engine=engine,
+            delimiter=delimiter,
+            low_memory=low_memory,
+            memory_map=memory_map,
+            float_precision=float_precision,
         )
-
-        raising_exceptions = io_ops_bad_exc  # default value
-        if case_with_TypeError_exc:
-            raising_exceptions = list(io_ops_bad_exc)
-            raising_exceptions.remove(TypeError)
-
-        kwargs = {
-            "engine": engine,
-            "delimiter": delimiter,
-            "delim_whitespace": delim_whitespace,
-            "low_memory": low_memory,
-            "memory_map": memory_map,
-            "float_precision": float_precision,
-        }
-
-        if use_str_data:
-            str_delim_whitespaces = (
-                "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
-            )
-            unique_filename = get_unique_filename(data_dir=tmp_path)
-            eval_io_from_str(
-                str_delim_whitespaces,
-                unique_filename,
-                raising_exceptions=raising_exceptions,
-                **kwargs,
-            )
-        else:
-            unique_filename = make_csv_file(
-                delimiter=delimiter,
-            )
-
-            eval_io(
-                filepath_or_buffer=unique_filename,
-                fn_name="read_csv",
-                raising_exceptions=raising_exceptions,
-                **kwargs,
-            )
 
     # Issue related, specific or corner cases
     @pytest.mark.parametrize("nrows", [2, None])
@@ -2650,6 +2646,9 @@ class TestSql:
         assert df_modin_sql.sort_index().equals(df_pandas_sql.sort_index())
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk", reason="Missing optional dependency 'lxml'."
+)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestHtml:
     def test_read_html(self, make_html_file):
@@ -2756,20 +2755,19 @@ class TestFwf:
         "dtype_backend", [lib.no_default, "numpy_nullable", "pyarrow"]
     )
     def test_read_fwf_dtype_backend(self, make_fwf_file, dtype_backend):
-        with ensure_clean(".fwf") as unique_filename:
-            make_fwf_file(filename=unique_filename)
+        unique_filename = make_fwf_file()
 
-            def comparator(df1, df2):
-                df_equals(df1, df2)
-                df_equals(df1.dtypes, df2.dtypes)
+        def comparator(df1, df2):
+            df_equals(df1, df2)
+            df_equals(df1.dtypes, df2.dtypes)
 
-            eval_io(
-                fn_name="read_fwf",
-                # read_csv kwargs
-                filepath_or_buffer=unique_filename,
-                dtype_backend=dtype_backend,
-                comparator=comparator,
-            )
+        eval_io(
+            fn_name="read_fwf",
+            # read_csv kwargs
+            filepath_or_buffer=unique_filename,
+            dtype_backend=dtype_backend,
+            comparator=comparator,
+        )
 
     def test_fwf_file_chunksize(self, make_fwf_file):
         unique_filename = make_fwf_file()
@@ -3079,6 +3077,9 @@ class TestPickle:
         df_equals(modin_df, recreated_modin_df)
 
 
+@pytest.mark.skipif(
+    StorageFormat.get() == "Hdk", reason="Missing optional dependency 'lxml'."
+)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestXml:
     def test_read_xml(self):
@@ -3095,6 +3096,12 @@ class TestXml:
    <degrees>360</degrees>
    <sides/>
  </row>
+ <row>
+   <shape>triangle</shape>
+   <degrees>180</degrees>
+   <sides>3.0</sides>
+ </row>
+</data>
 """
         eval_io("read_xml", path_or_buffer=data)
 
