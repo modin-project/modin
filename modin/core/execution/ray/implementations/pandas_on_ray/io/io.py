@@ -40,6 +40,10 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.distributed.dataframe.pandas.partitions import (
+    from_partitions,
+    unwrap_partitions,
+)
 from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
@@ -275,8 +279,6 @@ class PandasOnRayIO(RayIO):
         BaseQueryCompiler
             QueryCompiler containing data from the Ray Dataset.
         """
-        from modin.distributed.dataframe.pandas.partitions import from_partitions
-
         pd_objs = ray_obj.to_pandas_refs()
         return from_partitions(pd_objs, axis=0)._query_compiler
 
@@ -295,7 +297,5 @@ class PandasOnRayIO(RayIO):
         ray.data.Dataset
             Converted object with type depending on input.
         """
-        from modin.distributed.dataframe.pandas.partitions import unwrap_partitions
-
         parts = unwrap_partitions(modin_obj, axis=0)
         return from_pandas_refs(parts)
