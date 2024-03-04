@@ -32,7 +32,7 @@ import ray
 from ray._private.services import get_node_ip_address
 from ray.util.client.common import ClientObjectRef
 
-from modin.core.execution.ray.common import RayWrapper
+from modin.core.execution.ray.common import ObjectRefMapper, RayWrapper
 from modin.logging import get_logger
 
 ObjectRefType = Union[ray.ObjectRef, ClientObjectRef, None]
@@ -491,9 +491,7 @@ class MetaList:
         Any
         """
         obj = self._obj
-        if not isinstance(obj, list):
-            self._obj = obj = RayWrapper.materialize(obj)
-        return obj[index]
+        return obj[index] if isinstance(obj, list) else MetaListMapper(self, index)
 
     def __setitem__(self, index, value):
         """
@@ -508,6 +506,47 @@ class MetaList:
         if not isinstance(obj, list):
             self._obj = obj = RayWrapper.materialize(obj)
         obj[index] = value
+
+
+class MetaListMapper(ObjectRefMapper):
+    """
+    Used by MetaList.__getitem__() for lazy materialization.
+
+    Parameters
+    ----------
+    meta : MetaList
+    idx : int
+    """
+
+    def __init__(self, meta: MetaList, idx: int):
+        self.meta = meta
+        self.idx = idx
+
+    def get(self):
+        """
+        Get item at self.idx or object ref if not materialized.
+
+        Returns
+        -------
+        object
+        """
+        obj = self.meta._obj
+        return obj[self.idx] if isinstance(obj, list) else obj
+
+    def map(self, materialized):
+        """
+        Save the materialized list in self.meta and get the item at self.idx.
+
+        Parameters
+        ----------
+        materialized : list
+
+        Returns
+        -------
+        object
+        """
+        self.meta._obj = materialized
+        return materialized[self.idx]
 
 
 class _Tag(Enum):  # noqa: PR01

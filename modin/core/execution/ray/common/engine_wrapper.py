@@ -20,6 +20,7 @@ To be used as a piece of building a Ray-based engine.
 import asyncio
 import os
 from types import FunctionType
+from typing import Sequence
 
 import ray
 from ray.util.client.common import ClientObjectRef
@@ -96,8 +97,7 @@ class RayWrapper:
         boolean
             If the value is a future.
         """
-        ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-        return isinstance(item, ObjectIDType)
+        return isinstance(item, ObjectRefTypes)
 
     @classmethod
     def materialize(cls, obj_id):
@@ -114,7 +114,56 @@ class RayWrapper:
         object
             Whatever was identified by `obj_id`.
         """
-        return ray.get(obj_id)
+        if isinstance(obj_id, ObjectRefMapper):
+            obj = obj_id.get()
+            return (
+                obj_id.map(ray.get(obj)) if isinstance(obj, RayObjectRefTypes) else obj
+            )
+
+        if not isinstance(obj_id, Sequence):
+            return ray.get(obj_id) if isinstance(obj_id, RayObjectRefTypes) else obj_id
+
+        if all(isinstance(obj, RayObjectRefTypes) for obj in obj_id):
+            return ray.get(obj_id)
+
+        ids = {}
+        result = []
+        for obj in obj_id:
+            if isinstance(obj, ObjectRefTypes):
+                if isinstance(obj, ObjectRefMapper):
+                    oid = obj.get()
+                    if isinstance(oid, RayObjectRefTypes):
+                        mapper = obj
+                        obj = oid
+                    else:
+                        result.append(oid)
+                        continue
+                else:
+                    mapper = None
+            else:
+                result.append(obj)
+                continue
+
+            idx = ids.get(obj, None)
+            if idx is None:
+                ids[obj] = idx = len(ids)
+            if mapper is None:
+                result.append(obj)
+            else:
+                mapper._materialized_idx = idx
+                result.append(mapper)
+
+        if len(ids) == 0:
+            return result
+
+        materialized = ray.get(list(ids.keys()))
+        for i in range(len(result)):
+            if isinstance((obj := result[i]), ObjectRefTypes):
+                if isinstance(obj, ObjectRefMapper):
+                    result[i] = obj.map(materialized[obj._materialized_idx])
+                else:
+                    result[i] = materialized[ids[obj]]
+        return result
 
     @classmethod
     def put(cls, data, **kwargs):
@@ -161,12 +210,18 @@ class RayWrapper:
         obj_ids : list, scalar
         num_returns : int, optional
         """
-        if not isinstance(obj_ids, list):
-            obj_ids = [obj_ids]
-        unique_ids = list(set(obj_ids))
-        if num_returns is None:
-            num_returns = len(unique_ids)
-        ray.wait(unique_ids, num_returns=num_returns)
+        if not isinstance(obj_ids, Sequence):
+            obj_ids = list(obj_ids)
+
+        ids = set()
+        for obj in obj_ids:
+            if isinstance(obj, ObjectRefMapper):
+                obj = obj.get()
+            if isinstance(obj, RayObjectRefTypes):
+                ids.add(obj)
+
+        if num_ids := len(ids):
+            ray.wait(list(ids), num_returns=num_returns or num_ids)
 
 
 @ray.remote
@@ -218,3 +273,35 @@ class SignalActor:  # pragma: no cover
         bool
         """
         return self.events[event_idx].is_set()
+
+
+class ObjectRefMapper:
+    """Map the materialized object to a different value."""
+
+    def get(self):
+        """
+        Get an object reference or the cached, previously mapped value.
+
+        Returns
+        -------
+        ray.ObjectRef or object
+        """
+        raise NotImplementedError()
+
+    def map(self, materialized):
+        """
+        Map the materialized object.
+
+        Parameters
+        ----------
+        materialized : object
+
+        Returns
+        -------
+        object
+        """
+        raise NotImplementedError()
+
+
+RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
+ObjectRefTypes = (*RayObjectRefTypes, ObjectRefMapper)
