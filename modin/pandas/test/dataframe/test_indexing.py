@@ -21,7 +21,7 @@ from pandas._testing import ensure_clean
 from pandas.testing import assert_index_equal
 
 import modin.pandas as pd
-from modin.config import Engine, MinPartitionSize, NPartitions, StorageFormat
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
 from modin.pandas.indexing import is_range_like
 from modin.pandas.test.utils import (
     NROWS,
@@ -723,13 +723,8 @@ def test_loc_iloc_2064(locator_name):
             "index 1 is out of bounds for axis 0 with size 0"
         )
     else:
-        if Engine.get() == "Python":
-            # FIXME: different messages
-            raising_exceptions = False
-        else:
-            raising_exceptions = KeyError(
-                "None of [Index([1], dtype='int32')] are in the [index]"
-            )
+        # FIXME: different messages
+        raising_exceptions = False
     eval_general(
         modin_df,
         pandas_df,
