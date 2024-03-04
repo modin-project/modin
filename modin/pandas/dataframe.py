@@ -1094,11 +1094,23 @@ class DataFrame(BasePandasDataset):
         return super(DataFrame, self).isin(values)
 
     def isna(self):
-        """Detect missing values."""
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
         return super(DataFrame, self).isna()
 
     def isnull(self):
-        """Detect missing values."""
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
         return super(DataFrame, self).isnull()
 
     def iterrows(self):  # noqa: D200

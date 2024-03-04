@@ -845,6 +845,14 @@ class DocModule(EnvironmentVariable, type=ExactStr):
 
     @classmethod
     def put(cls, value: str) -> None:
+        """
+        Assign a value to the DocModule config.
+
+        Parameters
+        ----------
+        value : str
+            Config value to set.
+        """
         super().put(value)
         # Reload everything to apply the documentation. This is required since the
         # docs might already have been created and the implementation will assume
@@ -857,7 +865,6 @@ class DocModule(EnvironmentVariable, type=ExactStr):
         importlib.reload(pd.dataframe)
         importlib.reload(pd.general)
         importlib.reload(pd.groupby)
-        importlib.reload(pd.indexing)
         importlib.reload(pd.io)
         importlib.reload(pd.iterator)
         importlib.reload(pd.series)
