@@ -3260,6 +3260,16 @@ def test_sum(data, skipna, numeric_only, min_count):
     )
 
 
+@pytest.mark.parametrize("operation", ["sum", "shift"])
+def test_sum_axis_1_except(operation):
+    # ValueError('No axis named 1 for object type Series')
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df, *args, **kwargs: getattr(df, operation)(*args, **kwargs),
+        axis=1,
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis1", [0, 1, "columns", "index"])
 @pytest.mark.parametrize("axis2", [0, 1, "columns", "index"])
@@ -3429,7 +3439,7 @@ def test_tolist(data):
 )
 def test_transform(data, func, request):
     if "list_udfs" in request.node.callspec.id:
-        pytest.xfail(reason="FIXME: Modin failed")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/6998")
     eval_general(
         *create_test_series(data),
         lambda df: df.transform(func),
