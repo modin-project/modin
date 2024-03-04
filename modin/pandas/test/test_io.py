@@ -262,7 +262,7 @@ class TestCsv:
     @pytest.mark.parametrize("sep", ["_", ",", "."])
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
-    def test_read_csv_delimiters(self, make_csv_file, sep, decimal, thousands):
+    def test_read_csv_seps(self, make_csv_file, sep, decimal, thousands):
         unique_filename = make_csv_file(
             delimiter=sep,
             thousands_separator=thousands,
@@ -279,7 +279,7 @@ class TestCsv:
 
     @pytest.mark.parametrize("sep", [None, "_"])
     @pytest.mark.parametrize("delimiter", [".", "_"])
-    def test_read_csv_delimiters_except(self, make_csv_file, sep, delimiter):
+    def test_read_csv_seps_except(self, make_csv_file, sep, delimiter):
         unique_filename = make_csv_file(delimiter=delimiter)
         eval_io(
             fn_name="read_csv",
