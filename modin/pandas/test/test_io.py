@@ -822,9 +822,10 @@ class TestCsv:
             low_memory=low_memory,
         )
 
-    @pytest.mark.xfail(StorageFormat.get() == "Hdk", reason="FIXME: identify issue")
     @pytest.mark.parametrize("delim_whitespace", [True, False])
     def test_delim_whitespace(self, delim_whitespace, tmp_path):
+        if StorageFormat.get() == "Hdk" and delim_whitespace:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/6999")
         str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
         unique_filename = get_unique_filename(data_dir=tmp_path)
         eval_io_from_str(
