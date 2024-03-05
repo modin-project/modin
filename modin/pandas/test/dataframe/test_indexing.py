@@ -1753,7 +1753,7 @@ def test_reset_index_with_named_index(
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
         modin_df.index = modin_df.index
-        modin_df._to_pandas()
+        modin_df.modin.to_pandas()
 
         modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
@@ -1761,7 +1761,7 @@ def test_reset_index_with_named_index(
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
         modin_df.index = modin_df.index
-        modin_df._to_pandas()
+        modin_df.modin.to_pandas()
 
         modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df.reset_index(drop=True, inplace=True)
