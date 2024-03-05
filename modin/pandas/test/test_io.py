@@ -3234,27 +3234,27 @@ def test_to_period():
     Engine.get() == "Ray" and version.parse(ray.__version__) <= version.parse("2.9.3"),
     reason="Ray-2.9.3 has a problem using pandas 2.2.0. It will be resolved in the next release of Ray.",
 )
+@pytest.mark.skipif(
+    condition=Engine.get() != "Ray",
+    reason="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
+)
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_df_to_ray_dataset():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
-
-    if Engine.get() == "Ray":
-        ray_dataset = modin_df.to_ray_dataset()
-        df_equals(ray_dataset.to_pandas(), pandas_df)
-    else:
-        with pytest.raises(
-            RuntimeError,
-            match="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
-        ):
-            _ = modin_df.to_ray_dataset()
+    ray_dataset = modin_df.to_ray_dataset()
+    df_equals(ray_dataset.to_pandas(), pandas_df)
 
 
 @pytest.mark.xfail(
     Engine.get() == "Ray" and version.parse(ray.__version__) <= version.parse("2.9.3"),
     reason="Ray-2.9.3 has a problem using pandas 2.2.0. It will be resolved in the next release of Ray.",
+)
+@pytest.mark.skipif(
+    condition=Engine.get() != "Ray",
+    reason="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_series_to_ray_dataset():
@@ -3266,15 +3266,8 @@ def test_series_to_ray_dataset():
     pandas_df = pandas.DataFrame(TEST_DATA, index=index)
     pandas_s = pandas_df.iloc[0]
     modin_s = pd.Series(pandas_s)
-    if Engine.get() == "Ray":
-        ray_dataset = modin_s.to_ray_dataset()
-        df_equals(ray_dataset.to_pandas().squeeze(), pandas_s)
-    else:
-        with pytest.raises(
-            RuntimeError,
-            match="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
-        ):
-            _ = modin_s.to_ray_dataset()
+    ray_dataset = modin_s.to_ray_dataset()
+    df_equals(ray_dataset.to_pandas().squeeze(), pandas_s)
 
 
 @pytest.mark.xfail(
@@ -3283,7 +3276,7 @@ def test_series_to_ray_dataset():
 )
 @pytest.mark.skipif(
     condition=Engine.get() != "Ray",
-    reason="Ray Dataset creation is only available for Ray engine",
+    reason="Ray Dataset can only be converted to a Modin Dataframe if Modin uses a Ray engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_ray_dataset():
@@ -3291,7 +3284,6 @@ def test_from_ray_dataset():
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
-
     ray_df = ray.data.from_pandas(pandas_df)
     result_df = from_ray_dataset(ray_df)
     df_equals(result_df, modin_df)
