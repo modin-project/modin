@@ -602,6 +602,7 @@ def test_pivot(data, index, columns, values, request):
     if (
         "one_column_values-one_column-default-float_nan_data"
         in request.node.callspec.id
+        or (get_current_execution() == "BaseOnPython" and index is lib.no_default)
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
     eval_general(
