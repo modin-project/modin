@@ -204,6 +204,16 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a Ray Dataset",
+        params="ray_obj : ray.data.Dataset",
+        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray_dataset",
+    )
+    def _from_ray_dataset(cls, ray_obj):
+        return cls.io_cls.from_ray_dataset(ray_obj)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
@@ -454,6 +464,27 @@ class BaseFactory(object):
             Arguments to pass to the writer method.
         """
         return cls.io_cls.to_parquet(*args, **kwargs)
+
+    @classmethod
+    def _to_ray_dataset(cls, modin_obj):
+        """
+        Write query compiler content to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        ray.data.Dataset
+            A Ray Dataset object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return cls.io_cls.to_ray_dataset(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod

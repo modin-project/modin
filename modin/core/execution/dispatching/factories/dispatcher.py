@@ -182,6 +182,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_dataframe(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_ray_dataset)
+    def from_ray_dataset(cls, ray_obj):
+        return cls.get_factory()._from_ray_dataset(ray_obj)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.get_factory()._read_parquet(**kwargs)
@@ -350,3 +355,8 @@ class FactoryDispatcher(object):
     @_inherit_docstrings(factories.BaseFactory._to_parquet)
     def to_parquet(cls, *args, **kwargs):
         return cls.get_factory()._to_parquet(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_ray_dataset)
+    def to_ray_dataset(cls, modin_obj):
+        return cls.get_factory()._to_ray_dataset(modin_obj)
