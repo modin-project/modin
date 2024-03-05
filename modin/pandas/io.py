@@ -1106,7 +1106,7 @@ def to_ray_dataset(modin_obj):
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin.Series
+    modin_obj : modin.pandas.DataFrame, modin.pandas.Series
         The DataFrame/Series to convert.
 
     Returns

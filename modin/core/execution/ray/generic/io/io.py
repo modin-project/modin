@@ -50,7 +50,7 @@ class RayIO(BaseIO):
 
         Parameters
         ----------
-        modin_obj : modin.DataFrame, modin.Series
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
             The Modin DataFrame/Series to convert.
 
         Returns

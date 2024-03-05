@@ -3239,7 +3239,6 @@ def test_df_to_ray_dataset():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
-
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
     if Engine.get() == "Ray":
