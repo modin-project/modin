@@ -403,6 +403,14 @@ class GetColumn:
         return df[self.name]
 
 
+def test_aggregate_alias():
+    # It's optimization. If failed, groupby().aggregate should be tested explicitly
+    from modin.pandas.groupby import DataFrameGroupBy, SeriesGroupBy
+
+    assert DataFrameGroupBy.aggregate == DataFrameGroupBy.agg
+    assert SeriesGroupBy.aggregate == SeriesGroupBy.agg
+
+
 @pytest.mark.parametrize(
     "by",
     [
