@@ -80,7 +80,6 @@ def test_agg_apply(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
-        check_exception_type=True,
     )
 
 
@@ -95,7 +94,6 @@ def test_agg_apply_axis_names(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
-        check_exception_type=True,
     )
 
 
@@ -521,6 +519,4 @@ def test_query_with_element_access_issue_4580(engine):
     ids=agg_func_keys + agg_func_except_keys,
 )
 def test_transform(data, func):
-    eval_general(
-        *create_test_dfs(data), lambda df: df.transform(func), check_exception_type=True
-    )
+    eval_general(*create_test_dfs(data), lambda df: df.transform(func))

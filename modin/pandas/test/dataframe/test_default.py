@@ -598,7 +598,6 @@ def test_pivot(data, index, columns, values):
         index=index,
         columns=columns,
         values=values,
-        check_exception_type=None,
     )
 
 
@@ -660,7 +659,6 @@ def test_pivot_table_data(data, index, columns, values, aggfunc):
         columns=columns,
         values=values,
         aggfunc=aggfunc,
-        check_exception_type=None,
     )
 
 

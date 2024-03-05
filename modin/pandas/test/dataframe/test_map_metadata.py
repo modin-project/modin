@@ -439,7 +439,6 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
-        check_exception_type=True,
     )
 
 
