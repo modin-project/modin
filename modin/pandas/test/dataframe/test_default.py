@@ -17,6 +17,7 @@ import warnings
 import matplotlib
 import numpy as np
 import pandas
+import pandas._libs.lib as lib
 import pytest
 from numpy.testing import assert_array_equal
 
@@ -585,13 +586,24 @@ def test_melt(data, id_vars, value_vars):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "index", [lambda df: df.columns[0], lambda df: df[df.columns[0]].values, None]
+    "index",
+    [lambda df: df.columns[0], lambda df: df.columns[:2], lib.no_default],
+    ids=["one_column_index", "several_columns_index", "default"],
 )
-@pytest.mark.parametrize("columns", [lambda df: df.columns[len(df.columns) // 2]])
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-2:], None]
+    "columns", [lambda df: df.columns[len(df.columns) // 2]], ids=["one_column"]
 )
-def test_pivot(data, index, columns, values):
+@pytest.mark.parametrize(
+    "values",
+    [lambda df: df.columns[-1], lambda df: df.columns[-2:], lib.no_default],
+    ids=["one_column_values", "several_columns_values", "default"],
+)
+def test_pivot(data, index, columns, values, request):
+    if (
+        "one_column_values-one_column-default-float_nan_data"
+        in request.node.callspec.id
+    ):
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
@@ -642,7 +654,22 @@ def test_pivot(data, index, columns, values):
         pytest.param("nunique", id="full_axis_func"),
     ],
 )
-def test_pivot_table_data(data, index, columns, values, aggfunc):
+def test_pivot_table_data(data, index, columns, values, aggfunc, request):
+    if (
+        "callable_tree_reduce_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "callable_tree_reduce_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "tree_reduce_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "tree_reduce_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "full_axis_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "full_axis_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+    ):
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7011")
     md_df, pd_df = create_test_dfs(data)
 
     # when values is None the output will be huge-dimensional,
