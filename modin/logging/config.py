@@ -23,6 +23,7 @@ import platform
 import threading
 import time
 import uuid
+from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Optional
@@ -34,6 +35,16 @@ import modin
 from modin.config import LogFileSize, LogMemoryInterval, LogMode
 
 __LOGGER_CONFIGURED__: bool = False
+
+
+class LogLevel(IntEnum):  # noqa: PR01
+    """Enumerator to specify the valid values of LogLevel accepted by Logger.setLevel()."""
+
+    DEBUG = 10
+    INFO = 20
+    WARNING = 30
+    ERROR = 40
+    CRITICAL = 50
 
 
 class ModinFormatter(logging.Formatter):  # noqa: PR01
@@ -97,7 +108,7 @@ def bytes_int_to_str(num_bytes: int, suffix: str = "B") -> str:
 
 
 def _create_logger(
-    namespace: str, job_id: str, log_name: str, log_level: int
+    namespace: str, job_id: str, log_name: str, log_level: LogLevel
 ) -> logging.Logger:
     """
     Create and configure logger as Modin expects it to be.
@@ -110,8 +121,7 @@ def _create_logger(
         Part of path to where logs are stored.
     log_name : str
         Name of the log file to create.
-    log_level : int
-        Log level as accepted by `Logger.setLevel()`.
+    log_level : LogLevel
 
     Returns
     -------
@@ -159,7 +169,7 @@ def configure_logging() -> None:
         "modin.logger.default",
         job_id,
         "trace",
-        logging.INFO if LogMode.get() == "enable_api_only" else logging.DEBUG,
+        LogLevel.INFO if LogMode.get() == "enable_api_only" else LogLevel.DEBUG,
     )
 
     logger.info(f"OS Version: {platform.platform()}")
@@ -174,7 +184,7 @@ def configure_logging() -> None:
     if LogMode.get() != "enable_api_only":
         mem_sleep = LogMemoryInterval.get()
         mem_logger = _create_logger(
-            "modin_memory.logger", job_id, "memory", logging.DEBUG
+            "modin_memory.logger", job_id, "memory", LogLevel.DEBUG
         )
 
         svmem = psutil.virtual_memory()
@@ -186,7 +196,7 @@ def configure_logging() -> None:
         )
         mem.start()
 
-    _create_logger("modin.logger.errors", job_id, "error", logging.INFO)
+    _create_logger("modin.logger.errors", job_id, "error", LogLevel.INFO)
 
     __LOGGER_CONFIGURED__ = True
 

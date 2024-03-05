@@ -257,10 +257,11 @@ def make_parquet_dir(tmp_path):
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 class TestCsv:
+    # delimiter tests
     @pytest.mark.parametrize("sep", ["_", ",", "."])
     @pytest.mark.parametrize("decimal", [".", "_"])
     @pytest.mark.parametrize("thousands", [None, ",", "_", " "])
-    def test_read_csv_delimiters(self, make_csv_file, sep, decimal, thousands):
+    def test_read_csv_seps(self, make_csv_file, sep, decimal, thousands):
         unique_filename = make_csv_file(
             delimiter=sep,
             thousands_separator=thousands,
@@ -277,7 +278,7 @@ class TestCsv:
 
     @pytest.mark.parametrize("sep", [None, "_"])
     @pytest.mark.parametrize("delimiter", [".", "_"])
-    def test_read_csv_delimiters_except(self, make_csv_file, sep, delimiter):
+    def test_read_csv_seps_except(self, make_csv_file, sep, delimiter):
         unique_filename = make_csv_file(delimiter=delimiter)
         eval_io(
             fn_name="read_csv",
@@ -859,9 +860,10 @@ class TestCsv:
             raising_exceptions=raising_exceptions,
         )
 
-    @pytest.mark.skipif(StorageFormat.get() == "Hdk", reason="FIXME: identify issue")
     @pytest.mark.parametrize("delim_whitespace", [True, False])
     def test_delim_whitespace(self, delim_whitespace, tmp_path):
+        if StorageFormat.get() == "Hdk" and delim_whitespace:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/6999")
         str_delim_whitespaces = "col1 col2  col3   col4\n5 6   7  8\n9  10    11 12\n"
         unique_filename = get_unique_filename(data_dir=tmp_path)
         eval_io_from_str(

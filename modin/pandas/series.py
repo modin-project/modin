@@ -1153,16 +1153,12 @@ class Series(BasePandasDataset):
         """
         Return the row label of the maximum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the minimum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def info(

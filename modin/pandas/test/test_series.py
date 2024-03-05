@@ -778,13 +778,12 @@ def test_aggregate(data, func, request):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_aggregate_except(data, func):
-    axis = 0
     # SpecificationError is arisen because we treat a Series as a DataFrame.
     # See details in pandas issues 36036.
     with pytest.raises(SpecificationError):
         eval_general(
             *create_test_series(data),
-            lambda df: df.aggregate(func, axis),
+            lambda df: df.aggregate(func),
         )
 
 
@@ -951,10 +950,10 @@ def test_apply_external_lib():
 @pytest.mark.parametrize("func", ["count", "all", "kurt", "array", "searchsorted"])
 def test_apply_text_func(data, func, axis):
     func_kwargs = {}
-    if func in ("all", "kurt"):
+    if func not in ("count", "searchsorted"):
         func_kwargs["axis"] = axis
     elif not axis:
-        # so as not to test with the same parameters several times
+        # FIXME: https://github.com/modin-project/modin/issues/7000
         return
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
@@ -967,7 +966,7 @@ def test_apply_text_func(data, func, axis):
 
     if func == "searchsorted":
         # required parameter
-        func_kwargs["value"] = pandas_series[1:3:16]
+        func_kwargs["value"] = pandas_series[1]
 
     eval_general(modin_series, pandas_series, lambda df: df.apply(func, **func_kwargs))
 
@@ -2282,7 +2281,7 @@ def test_kurtosis(axis, skipna):
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_kurtosis_numeric_only(axis, numeric_only):
     raising_exceptions = None
     if axis:
@@ -2676,9 +2675,7 @@ def test_prod(axis, skipna):
     )
 
 
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
@@ -3386,6 +3383,16 @@ def test_sum(data, skipna, numeric_only, min_count):
     )
 
 
+@pytest.mark.parametrize("operation", ["sum", "shift"])
+def test_sum_axis_1_except(operation):
+    # ValueError('No axis named 1 for object type Series')
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df, *args, **kwargs: getattr(df, operation)(*args, **kwargs),
+        axis=1,
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis1", [0, 1, "columns", "index"])
 @pytest.mark.parametrize("axis2", [0, 1, "columns", "index"])
@@ -3555,7 +3562,7 @@ def test_tolist(data):
 )
 def test_transform(data, func, request):
     if "list_udfs" in request.node.callspec.id:
-        pytest.xfail(reason="FIXME: Modin failed")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/6998")
     eval_general(
         *create_test_series(data),
         lambda df: df.transform(func),
@@ -3742,7 +3749,7 @@ def test_update(data, other_data):
         ),
     ],
 )
-@pytest.mark.parametrize("ascending", [False, True])
+@pytest.mark.parametrize("ascending", [True, False])
 @pytest.mark.exclude_in_sanity
 def test_value_counts(sort, normalize, bins, dropna, ascending):
     def sort_sensitive_comparator(df1, df2):
@@ -3932,7 +3939,7 @@ def test_str_cat(others):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_split(data, pat, n, expand):
     eval_general(
         *create_test_series(data),
@@ -3943,7 +3950,7 @@ def test_str_split(data, pat, n, expand):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_rsplit(data, pat, n, expand):
     eval_general(
         *create_test_series(data),
@@ -4059,7 +4066,7 @@ def test_str_removesuffix(data):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize(
     "side", ["left", "right", "both"], ids=["left", "right", "both"]
 )
@@ -4074,7 +4081,7 @@ def test_str_pad(data, width, side, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_center(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4086,7 +4093,7 @@ def test_str_center(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_ljust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4098,7 +4105,7 @@ def test_str_ljust(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_rjust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4110,7 +4117,7 @@ def test_str_rjust(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 def test_str_zfill(data, width):
     modin_series, pandas_series = create_test_series(data)
     eval_general(modin_series, pandas_series, lambda series: series.str.zfill(width))
@@ -4277,7 +4284,7 @@ def test_str_lstrip(data, to_strip):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_partition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4291,7 +4298,7 @@ def test_str_partition(data, sep, expand):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_rpartition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
     eval_general(

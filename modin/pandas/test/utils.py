@@ -763,7 +763,8 @@ def df_equals(df1, df2, check_dtypes=True):
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
     else:
-        if df1 != df2:
+        res = df1 != df2
+        if res.any() if isinstance(res, np.ndarray) else res:
             np.testing.assert_almost_equal(df1, df2)
 
 
