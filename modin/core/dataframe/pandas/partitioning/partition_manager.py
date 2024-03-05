@@ -659,7 +659,11 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of partitions
         """
-        preprocessed_map_func = cls.preprocess_func(map_func)
+        preprocessed_map_func = (
+            map_func
+            if cls._execution_wrapper.is_future(map_func)
+            else cls.preprocess_func(map_func)
+        )
         return np.array(
             [
                 [

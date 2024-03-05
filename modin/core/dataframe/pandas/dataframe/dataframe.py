@@ -21,8 +21,6 @@ import datetime
 import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
-import numpy as np
-import pandas
 from pandas._libs.lib import no_default
 from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
@@ -30,7 +28,7 @@ from pandas.core.indexes.api import Index, RangeIndex
 
 from modin.config import Engine, IsRayCluster, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
     add_missing_categories_to_groupby,
@@ -54,6 +52,9 @@ if TYPE_CHECKING:
         ProtocolDataframe,
     )
     from pandas._typing import npt
+
+import numpy as np
+import pandas
 
 from modin.logging import ClassLogger
 from modin.pandas.indexing import is_range_like
@@ -4668,3 +4669,166 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         ErrorMessage.default_to_pandas(message="`from_dataframe`")
         pandas_df = from_dataframe_to_pandas(df)
         return cls.from_pandas(pandas_df)
+
+    def case_when(self, caselist):
+        """
+        Replace values where the conditions are True.
+
+        Parameters
+        ----------
+        caselist : list of tuples
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        cls = type(self)
+        wrapper_put = self._partition_mgr_cls._execution_wrapper.put
+        if (remote_fn := getattr(cls, "_CASE_WHEN_FN", None)) is None:
+
+            def case_when(df, caselist):  # pragma: no cover
+                caselist = [
+                    tuple(
+                        d.iloc[:, 0] if isinstance(d, pandas.DataFrame) else d
+                        for d in c
+                    )
+                    for c in caselist
+                ]
+                series = df.iloc[:, 0]
+                return pandas.DataFrame({series.name: series.case_when(caselist)})
+
+            cls._CASE_WHEN_FN = remote_fn = wrapper_put(case_when)
+
+        parts_len = len(self._partitions)
+        parts = None
+        lengths = None
+        is_trivial_idx = None
+
+        def copartition(df, fill_value):
+            nonlocal is_trivial_idx
+            copartition = False
+            if is_trivial_idx is None:
+                is_trivial_idx = is_trivial_index(self.index)
+            if (
+                is_trivial_idx != is_trivial_index(df.index)
+                or (not is_trivial_idx and any(self.index != df.index))
+                or (parts_len < len(df._partitions))
+            ):
+                copartition = True
+            else:
+                nonlocal parts, lengths
+                if parts is None:
+                    parts = [p[0] for p in self._partitions]
+                    lengths = self._get_lengths(parts, Axis.ROW_WISE)
+
+                df_parts = [p[0] for p in df._partitions]
+                df_part_lengths = df._get_lengths(df_parts, Axis.ROW_WISE)
+                if any(lengths[i] != df_part_lengths[i] for i in range(len(df_parts))):
+                    copartition = True
+            if copartition:
+                _, list_of_right_parts, joined_index, row_lengths = self._copartition(
+                    Axis.ROW_WISE.value,
+                    df,
+                    how="left",
+                    sort=False,
+                    fill_value=fill_value,
+                )
+                df = self.__constructor__(
+                    list_of_right_parts[0],
+                    joined_index,
+                    df.columns,
+                    row_lengths,
+                    df.column_widths,
+                )
+            return df
+
+        # For Dask the callebles are wrapped for each partition in the map_data() function.
+        # If the same callable is wrapped only once for all partitions, CancelledError is raised.
+        wrap_callable = Engine.get() != "Dask"
+        use_map = wrap_callable
+        new_caselist = []
+        for condition, replacement in caselist:
+            if callable(condition):
+                if wrap_callable:
+                    condition = wrapper_put(condition)
+            else:
+                use_map = False
+                if isinstance(condition, cls):
+                    condition = copartition(condition, True)
+            if callable(replacement):
+                if wrap_callable:
+                    replacement = wrapper_put(replacement)
+            elif use_map and is_list_like(replacement):
+                use_map = False
+                if isinstance(replacement, cls):
+                    replacement = copartition(replacement, None)
+            new_caselist.append((condition, replacement))
+
+        # If all the conditions are callable and the replacements are either
+        # callable or scalar, use map().
+        if use_map:
+            return self.map(func=remote_fn, func_args=[new_caselist], lazy=True)
+
+        def map_data(
+            part_offset,
+            part_len,
+            data,
+            data_offset,
+            fill_value,
+        ):
+            if isinstance(data, cls):
+                if part_offset < len(data._partitions):
+                    return data._partitions[part_offset][0]._data
+                else:
+                    return [fill_value] * part_len
+
+            if isinstance(data, pandas.Series):
+                nonlocal is_trivial_idx
+                if is_trivial_idx is None:
+                    is_trivial_idx = is_trivial_index(self.index)
+                if is_trivial_idx and is_trivial_index(data.index):
+                    data = data[data_offset : data_offset + part_len]
+                    diff = part_len - len(data)
+                    if diff > 0:
+                        data = pandas.concat((data, pandas.Series([fill_value] * diff)))
+                    return data
+                return data.reindex(
+                    self.index[data_offset : data_offset + part_len],
+                    fill_value=fill_value,
+                )
+
+            if not wrap_callable and callable(data):
+                return wrapper_put(data)
+
+            return (
+                data[data_offset : data_offset + part_len]
+                if is_list_like(data)
+                else data
+            )
+
+        if parts is None:
+            parts = [p[0] for p in self._partitions]
+            lengths = self._get_lengths(parts, Axis.ROW_WISE)
+        new_parts = []
+        data_offset = 0
+        for i in range(0, parts_len):
+            part = parts[i]
+            part_len = lengths[i]
+            cases = [
+                tuple(
+                    map_data(i, part_len, d[0], data_offset, d[1])
+                    for d in zip(c, (True, None))
+                )
+                for c in new_caselist
+            ]
+            new_parts.append(
+                part.add_to_apply_calls(
+                    remote_fn,
+                    cases,
+                    length=part_len,
+                    width=1,
+                )
+            )
+            data_offset += part_len
+        new_parts = np.array([[p] for p in new_parts])
+        return self.__constructor__(new_parts, columns=self.columns, index=self.index)

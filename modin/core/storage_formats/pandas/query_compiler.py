@@ -44,8 +44,6 @@ from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
 from modin.config import CpuCount, RangePartitioning, RangePartitioningGroupby
-import modin.pandas as pd
-from modin.config import CpuCount, Engine, RangePartitioningGroupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -58,11 +56,6 @@ from modin.core.dataframe.algebra.default2pandas.groupby import (
     GroupBy,
     GroupByDefault,
     SeriesGroupByDefault,
-)
-from modin.core.dataframe.base.dataframe.utils import (
-    Axis,
-    is_trivial_index,
-    join_columns,
 )
 from modin.core.dataframe.pandas.metadata import (
     DtypesDescriptor,
@@ -4509,149 +4502,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def case_when(self, caselist):
-        if Engine.get() in ("Unidist", "Dask"):
-            # https://github.com/modin-project/modin/issues/6973
-            return super().case_when(caselist)
-
-        frame = self._modin_frame
-        # If all the conditions are callable and the replacements are either
-        # callable or scalar, use map().
-        if all(
-            callable(c[0]) and (callable(c[1]) or not is_list_like(c[1]))
-            for c in caselist
-        ):
-            frame = frame.map(func=_case_when, func_args=[caselist], lazy=True)
-            return self.__constructor__(frame)
-
-        parts = [p[0] for p in frame._partitions]
-        parts_len = len(parts)
-        lengths = frame._get_lengths(parts, Axis.ROW_WISE)
-        new_caselist = []
-        is_trivial_idx = None
-        for c in caselist:
-            c = list(c)
-            for i in range(2):
-                data = c[i]
-                if not isinstance(data, pd.Series):
-                    continue
-
-                # Copartition two Modin frames, if required
-                copartition = False
-                data = data._query_compiler._modin_frame
-                if is_trivial_idx is None:
-                    is_trivial_idx = is_trivial_index(frame.index)
-                if (
-                    is_trivial_idx != is_trivial_index(data.index)
-                    or (not is_trivial_idx and any(frame.index != data.index))
-                    or (parts_len < len(data._partitions))
-                ):
-                    copartition = True
-                else:
-                    data_parts = [p[0] for p in data._partitions]
-                    data_part_lengths = data._get_lengths(data_parts, Axis.ROW_WISE)
-                    if any(
-                        lengths[i] != data_part_lengths[i]
-                        for i in range(len(data_parts))
-                    ):
-                        copartition = True
-                if copartition:
-                    _, list_of_right_parts, joined_index, row_lengths = (
-                        frame._copartition(
-                            Axis.ROW_WISE.value,
-                            data,
-                            how="left",
-                            sort=False,
-                            fill_value=True if i == 0 else None,
-                        )
-                    )
-                    data = frame.__constructor__(
-                        list_of_right_parts[0],
-                        joined_index,
-                        data.columns,
-                        row_lengths,
-                        data.column_widths,
-                    )
-                c[i] = data
-            new_caselist.append(tuple(c))
-
-        def map_data(
-            part_offset,
-            part_len,
-            data,
-            data_offset,
-            fill_value,
-            frame=frame,
-        ):
-            if isinstance(data, type(frame)):
-                if part_offset < len(data._partitions):
-                    return data._partitions[part_offset][0]._data
-                else:
-                    return [fill_value] * part_len
-
-            if isinstance(data, pandas.Series):
-                nonlocal is_trivial_idx
-                if is_trivial_idx is None:
-                    is_trivial_idx = is_trivial_index(frame.index)
-                if is_trivial_idx and is_trivial_index(data.index):
-                    data = data[data_offset : data_offset + part_len]
-                    diff = part_len - len(data)
-                    if diff > 0:
-                        data = pandas.concat((data, pandas.Series([fill_value] * diff)))
-                    return data
-                return data.reindex(
-                    frame.index[data_offset : data_offset + part_len],
-                    fill_value=fill_value,
-                )
-
-            if callable(data) or not is_list_like(data):
-                return data
-
-            return data[data_offset : data_offset + part_len]
-
-        new_parts = []
-        data_offset = 0
-        for i in range(0, parts_len):
-            part = parts[i]
-            part_len = lengths[i]
-            cases = [
-                tuple(
-                    map_data(i, part_len, d[0], data_offset, d[1])
-                    for d in zip(c, (True, None))
-                )
-                for c in new_caselist
+        if impl := getattr(self._modin_frame, "case_when", None):
+            qc_type = type(self)
+            caselist = [
+                tuple(d._modin_frame if isinstance(d, qc_type) else d for d in c)
+                for c in caselist
             ]
-            new_parts.append(
-                part.add_to_apply_calls(
-                    _case_when,
-                    cases,
-                    length=part_len,
-                    width=1,
-                )
-            )
-            data_offset += part_len
-        new_parts = np.array([[p] for p in new_parts])
-        frame = frame.__constructor__(
-            new_parts, columns=frame.columns, index=frame.index
-        )
-        return self.__constructor__(frame)
-
-
-def _case_when(df, caselist):  # pragma: no cover
-    """
-    Series.case_when() wrapper.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-    caselist : list
-
-    Returns
-    -------
-    pandas.DataFrame
-    """
-    caselist = [
-        tuple(d.iloc[:, 0] if isinstance(d, pandas.DataFrame) else d for d in c)
-        for c in caselist
-    ]
-    series = df.iloc[:, 0]
-    return pandas.DataFrame({series.name: series.case_when(caselist)})
+            return self.__constructor__(impl(caselist))
+        return super().case_when(caselist)
