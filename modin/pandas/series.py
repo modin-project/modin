@@ -1182,6 +1182,26 @@ class Series(BasePandasDataset):
         """
         return super(Series, self).isin(values, shape_hint="column")
 
+    def isna(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isnull()
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
