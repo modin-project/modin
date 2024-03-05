@@ -863,7 +863,7 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
-class TestError(Exception):
+class NoModinException(Exception):
     pass
 
 
@@ -912,7 +912,7 @@ def eval_general(
                             md_e, tuple(raising_exceptions)
                         ), f"not acceptable exception type: {md_e}"
             else:
-                raise TestError(
+                raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
                 )
         else:
