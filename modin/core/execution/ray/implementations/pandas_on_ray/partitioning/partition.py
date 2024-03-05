@@ -23,11 +23,11 @@ if TYPE_CHECKING:
 
 from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.core.execution.ray.common import ObjectRefMapper, RayWrapper
+from modin.core.execution.ray.common import MaterializationHook, RayWrapper
 from modin.core.execution.ray.common.deferred_execution import (
     DeferredExecution,
     MetaList,
-    MetaListMapper,
+    MetaListHook,
 )
 from modin.core.execution.ray.common.utils import ObjectIDType
 from modin.logging import get_logger
@@ -204,7 +204,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._length_cache = len_cache
             else:
-                new_obj._length_cache = SlicedLenMapper(len_cache, row_labels)
+                new_obj._length_cache = SlicerHook(len_cache, row_labels)
         if isinstance(col_labels, slice) and isinstance(
             (width_cache := self._width_cache), ObjectIDType
         ):
@@ -212,7 +212,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._width_cache = width_cache
             else:
-                new_obj._width_cache = SlicedLenMapper(width_cache, col_labels)
+                new_obj._width_cache = SlicerHook(width_cache, col_labels)
         self._is_debug(log) and log.debug(f"EXIT::Partition.mask::{self._identity}")
         return new_obj
 
@@ -418,21 +418,23 @@ def _configure_lazy_exec(cls: LazyExecution):
 LazyExecution.subscribe(_configure_lazy_exec)
 
 
-class SlicedLenMapper(ObjectRefMapper):
+class SlicerHook(MaterializationHook):
     """
     Used by mask() for the slilced length computation.
 
     Parameters
     ----------
     ref : ObjectIDType
+        Non-materialized length to be sliced.
     slc : slice
+        The slice to be applied.
     """
 
     def __init__(self, ref: ObjectIDType, slc: slice):
         self.ref = ref
         self.slc = slc
 
-    def get(self):
+    def pre_materialize(self):
         """
         Get the sliced length or object ref if not materialized.
 
@@ -440,8 +442,8 @@ class SlicedLenMapper(ObjectRefMapper):
         -------
         int or ObjectIDType
         """
-        if isinstance(self.ref, MetaListMapper):
-            len_or_ref = self.ref.get()
+        if isinstance(self.ref, MetaListHook):
+            len_or_ref = self.ref.pre_materialize()
             return (
                 compute_sliced_len(self.slc, len_or_ref)
                 if isinstance(len_or_ref, int)
@@ -449,7 +451,7 @@ class SlicedLenMapper(ObjectRefMapper):
             )
         return self.ref
 
-    def map(self, materialized):
+    def post_materialize(self, materialized):
         """
         Get the sliced length.
 
@@ -461,6 +463,6 @@ class SlicedLenMapper(ObjectRefMapper):
         -------
         int
         """
-        if isinstance(self.ref, MetaListMapper):
-            materialized = self.ref.map(materialized)
+        if isinstance(self.ref, MetaListHook):
+            materialized = self.ref.post_materialize(materialized)
         return compute_sliced_len(self.slc, materialized)

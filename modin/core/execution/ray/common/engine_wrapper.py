@@ -114,10 +114,12 @@ class RayWrapper:
         object
             Whatever was identified by `obj_id`.
         """
-        if isinstance(obj_id, ObjectRefMapper):
-            obj = obj_id.get()
+        if isinstance(obj_id, MaterializationHook):
+            obj = obj_id.pre_materialize()
             return (
-                obj_id.map(ray.get(obj)) if isinstance(obj, RayObjectRefTypes) else obj
+                obj_id.post_materialize(ray.get(obj))
+                if isinstance(obj, RayObjectRefTypes)
+                else obj
             )
 
         if not isinstance(obj_id, Sequence):
@@ -130,16 +132,16 @@ class RayWrapper:
         result = []
         for obj in obj_id:
             if isinstance(obj, ObjectRefTypes):
-                if isinstance(obj, ObjectRefMapper):
-                    oid = obj.get()
+                if isinstance(obj, MaterializationHook):
+                    oid = obj.pre_materialize()
                     if isinstance(oid, RayObjectRefTypes):
-                        mapper = obj
+                        hook = obj
                         obj = oid
                     else:
                         result.append(oid)
                         continue
                 else:
-                    mapper = None
+                    hook = None
             else:
                 result.append(obj)
                 continue
@@ -147,11 +149,11 @@ class RayWrapper:
             idx = ids.get(obj, None)
             if idx is None:
                 ids[obj] = idx = len(ids)
-            if mapper is None:
+            if hook is None:
                 result.append(obj)
             else:
-                mapper._materialized_idx = idx
-                result.append(mapper)
+                hook._materialized_idx = idx
+                result.append(hook)
 
         if len(ids) == 0:
             return result
@@ -159,8 +161,10 @@ class RayWrapper:
         materialized = ray.get(list(ids.keys()))
         for i in range(len(result)):
             if isinstance((obj := result[i]), ObjectRefTypes):
-                if isinstance(obj, ObjectRefMapper):
-                    result[i] = obj.map(materialized[obj._materialized_idx])
+                if isinstance(obj, MaterializationHook):
+                    result[i] = obj.post_materialize(
+                        materialized[obj._materialized_idx]
+                    )
                 else:
                     result[i] = materialized[ids[obj]]
         return result
@@ -215,8 +219,8 @@ class RayWrapper:
 
         ids = set()
         for obj in obj_ids:
-            if isinstance(obj, ObjectRefMapper):
-                obj = obj.get()
+            if isinstance(obj, MaterializationHook):
+                obj = obj.pre_materialize()
             if isinstance(obj, RayObjectRefTypes):
                 ids.add(obj)
 
@@ -275,12 +279,12 @@ class SignalActor:  # pragma: no cover
         return self.events[event_idx].is_set()
 
 
-class ObjectRefMapper:
-    """Map the materialized object to a different value."""
+class MaterializationHook:
+    """The Hook is called during the materialization and allows performing pre/post computations."""
 
-    def get(self):
+    def pre_materialize(self):
         """
-        Get an object reference or the cached, previously mapped value.
+        Get an object reference to be materialized or a pre-computed value.
 
         Returns
         -------
@@ -288,20 +292,22 @@ class ObjectRefMapper:
         """
         raise NotImplementedError()
 
-    def map(self, materialized):
+    def post_materialize(self, materialized):
         """
-        Map the materialized object.
+        Perform computations on the materialized object.
 
         Parameters
         ----------
         materialized : object
+            The materialized object to be post-computed.
 
         Returns
         -------
         object
+            The post-computed object.
         """
         raise NotImplementedError()
 
 
 RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
-ObjectRefTypes = (*RayObjectRefTypes, ObjectRefMapper)
+ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)
