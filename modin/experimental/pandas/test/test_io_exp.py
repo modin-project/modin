@@ -18,13 +18,13 @@ from pathlib import Path
 import numpy as np
 import pandas
 import pytest
-from pandas._testing import ensure_clean
 
 import modin.experimental.pandas as pd
-from modin.config import AsyncReadMode, Engine
+from modin.config import Engine
 from modin.pandas.test.utils import (
     df_equals,
     eval_general,
+    get_unique_filename,
     parse_dates_values_by_id,
     test_data,
     time_parsing_csv_path,
@@ -355,7 +355,7 @@ def test_xml_glob(tmp_path, filename):
     reason=f"{Engine.get()} does not have experimental read_custom_text API",
 )
 @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
-def test_read_custom_json_text(set_async_read_mode):
+def test_read_custom_json_text(set_async_read_mode, tmp_path):
     def _generate_json(file_name, nrows, ncols):
         data = np.random.rand(nrows, ncols)
         df = pandas.DataFrame(data, columns=[f"col{x}" for x in range(ncols)])
@@ -374,25 +374,19 @@ def test_read_custom_json_text(set_async_read_mode):
                 result[key].append(obj[key])
         return pandas.DataFrame(result).rename(columns={"col0": "testID"})
 
-    with ensure_clean() as filename:
-        _generate_json(filename, 64, 8)
+    unique_filename = get_unique_filename(data_dir=tmp_path)
+    _generate_json(unique_filename, 64, 8)
 
-        df1 = pd.read_custom_text(
-            filename,
-            columns=["testID", "col1", "col3"],
-            custom_parser=_custom_parser,
-            is_quoting=False,
-        )
-        df2 = pd.read_json(filename, lines=True)[["col0", "col1", "col3"]].rename(
-            columns={"col0": "testID"}
-        )
-        if AsyncReadMode.get():
-            # If read operations are asynchronous, then the dataframes
-            # check should be inside `ensure_clean` context
-            # because the file may be deleted before actual reading starts
-            df_equals(df1, df2)
-    if not AsyncReadMode.get():
-        df_equals(df1, df2)
+    df1 = pd.read_custom_text(
+        unique_filename,
+        columns=["testID", "col1", "col3"],
+        custom_parser=_custom_parser,
+        is_quoting=False,
+    )
+    df2 = pd.read_json(unique_filename, lines=True)[["col0", "col1", "col3"]].rename(
+        columns={"col0": "testID"}
+    )
+    df_equals(df1, df2)
 
 
 @pytest.mark.skipif(
@@ -400,7 +394,7 @@ def test_read_custom_json_text(set_async_read_mode):
     reason=f"{Engine.get()} does not have experimental API",
 )
 @pytest.mark.parametrize("set_async_read_mode", [False, True], indirect=True)
-def test_read_evaluated_dict(set_async_read_mode):
+def test_read_evaluated_dict(set_async_read_mode, tmp_path):
     def _generate_evaluated_dict(file_name, nrows, ncols):
         result = {}
         keys = [f"col{x}" for x in range(ncols)]
@@ -430,23 +424,17 @@ def test_read_evaluated_dict(set_async_read_mode):
             break
         return columns
 
-    with ensure_clean() as filename:
-        _generate_evaluated_dict(filename, 64, 8)
+    unique_filename = get_unique_filename(data_dir=tmp_path)
+    _generate_evaluated_dict(unique_filename, 64, 8)
 
-        df1 = pd.read_custom_text(
-            filename,
-            columns=["col1", "col2"],
-            custom_parser=_custom_parser,
-        )
-        assert df1.shape == (64, 2)
+    df1 = pd.read_custom_text(
+        unique_filename,
+        columns=["col1", "col2"],
+        custom_parser=_custom_parser,
+    )
+    assert df1.shape == (64, 2)
 
-        df2 = pd.read_custom_text(
-            filename, columns=columns_callback, custom_parser=_custom_parser
-        )
-        if AsyncReadMode.get():
-            # If read operations are asynchronous, then the dataframes
-            # check should be inside `ensure_clean` context
-            # because the file may be deleted before actual reading starts
-            df_equals(df1, df2)
-    if not AsyncReadMode.get():
-        df_equals(df1, df2)
+    df2 = pd.read_custom_text(
+        unique_filename, columns=columns_callback, custom_parser=_custom_parser
+    )
+    df_equals(df1, df2)

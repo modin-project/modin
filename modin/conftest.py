@@ -16,7 +16,6 @@
 
 import os
 import platform
-import shutil
 import subprocess
 import sys
 import time
@@ -340,16 +339,15 @@ for file_type in ("json", "html", "excel", "feather", "stata", "hdf", "pickle", 
 
 
 @pytest.fixture
-def make_parquet_file():
+def make_parquet_file(tmp_path):
     """Pytest fixture factory that makes a parquet file/dir for testing.
 
     Yields:
         Function that generates a parquet file/dir
     """
-    filenames = []
 
     def _make_parquet_file(
-        filename,
+        filename=None,
         nrows=NROWS,
         ncols=2,
         force=True,
@@ -369,6 +367,8 @@ def make_parquet_file():
             partitioned_columns: Create a partitioned directory using pandas.
             row_group_size: Maximum size of each row group.
         """
+        if filename is None:
+            filename = get_unique_filename(extension=".parquet", data_dir=tmp_path)
         if force or not os.path.exists(filename):
             df = pandas.DataFrame(
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
@@ -395,18 +395,10 @@ def make_parquet_file():
                 )
             else:
                 df.to_parquet(filename, row_group_size=row_group_size)
-            filenames.append(filename)
+        return filename
 
     # Return function that generates parquet files
     yield _make_parquet_file
-
-    # Delete parquet file that was created
-    for path in filenames:
-        if os.path.exists(path):
-            if os.path.isdir(path):
-                shutil.rmtree(path)
-            else:
-                os.remove(path)
 
 
 @pytest.fixture
