@@ -314,9 +314,20 @@ class TestCSV:
             pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
 
         raising_exceptions = None
-        if "names1-parse_dates2-None" in request.node.callspec.id:
+        if "names1-parse_dates2" in request.node.callspec.id:
             raising_exceptions = ValueError(
                 "Missing column provided to 'parse_dates': 'col2'"
+            )
+        elif (
+            "names1-parse_dates5-None" in request.node.callspec.id
+            or "names1-parse_dates4-None" in request.node.callspec.id
+        ):
+            raising_exceptions = ValueError(
+                "Missing column provided to 'parse_dates': 'col2, col3'"
+            )
+        elif "None-parse_dates3" in request.node.callspec.id:
+            raising_exceptions = ValueError(
+                "Missing column provided to 'parse_dates': 'c2'"
             )
         eval_io(
             fn_name="read_csv",
@@ -517,7 +528,7 @@ class TestMultiIndex:
             ["i1", "i2", "a"],
         ],
     )
-    def test_reset_index(self, names):
+    def test_reset_index(self, names, request):
         index = pandas.MultiIndex.from_tuples(
             [(i, j, k) for i in range(2) for j in range(3) for k in range(4)],
             names=names,
@@ -527,7 +538,12 @@ class TestMultiIndex:
             df = lib.DataFrame(self.data, index=index) + 1
             return df.reset_index()
 
-        eval_general(pd, pandas, applier)
+        raising_exceptions = None
+        if "names3" in request.node.callspec.id:
+            raising_exceptions = ValueError("cannot insert i1, already exists")
+        elif "names4" in request.node.callspec.id:
+            raising_exceptions = ValueError("cannot insert a, already exists")
+        eval_general(pd, pandas, applier, raising_exceptions=raising_exceptions)
 
     @pytest.mark.parametrize("is_multiindex", [True, False])
     def test_reset_index_multicolumns(self, is_multiindex):
