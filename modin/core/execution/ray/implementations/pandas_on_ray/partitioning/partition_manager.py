@@ -40,6 +40,7 @@ class PandasOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
     _column_partitions_class = PandasOnRayDataframeColumnPartition
     _row_partition_class = PandasOnRayDataframeRowPartition
     _execution_wrapper = RayWrapper
+    materialize_futures = RayWrapper.materialize
 
     @classmethod
     def wait_partitions(cls, partitions):

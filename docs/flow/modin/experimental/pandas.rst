@@ -16,6 +16,8 @@ Experimental API Reference
 .. autofunction:: read_parquet_glob
 .. autofunction:: read_json_glob
 .. autofunction:: read_xml_glob
+.. automethod:: modin.pandas.DataFrame.modin::to_pandas
+.. automethod:: modin.pandas.DataFrame.modin::to_ray_dataset
 .. automethod:: modin.pandas.DataFrame.modin::to_pickle_glob
 .. automethod:: modin.pandas.DataFrame.modin::to_parquet_glob
 .. automethod:: modin.pandas.DataFrame.modin::to_json_glob

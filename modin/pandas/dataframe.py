@@ -50,7 +50,7 @@ from modin.config import PersistentPickle
 from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.pandas.io import from_non_pandas, from_pandas, to_pandas, to_ray_dataset
+from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
     MODIN_UNNAMED_SERIES_LABEL,
     _inherit_docstrings,
@@ -59,7 +59,7 @@ from modin.utils import (
     try_cast_to_pandas,
 )
 
-from .accessor import CachedAccessor, ExperimentalFunctions, SparseFrameAccessor
+from .accessor import CachedAccessor, SparseFrameAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
@@ -2262,21 +2262,6 @@ class DataFrame(BasePandasDataset):
             **kwargs,
         )
 
-    def to_ray_dataset(self):
-        """
-        Convert a Modin DataFrame to a Ray Dataset.
-
-        Returns
-        -------
-        ray.data.Dataset
-            Converted object with type depending on input.
-
-        Notes
-        -----
-        Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.
-        """
-        return to_ray_dataset(self)
-
     def to_period(
         self, freq=None, axis=0, copy=None
     ):  # pragma: no cover # noqa: PR01, RT01, D200
@@ -3068,13 +3053,13 @@ class DataFrame(BasePandasDataset):
         """
         Convert Modin ``DataFrame`` to pandas ``DataFrame``.
 
+        Recommended conversion method: `dataframe.modin.to_pandas()`.
+
         Returns
         -------
         pandas.DataFrame
         """
         return self._query_compiler.to_pandas()
-
-    to_pandas = _to_pandas
 
     def _validate_eval_query(self, expr, **kwargs):
         """
@@ -3257,6 +3242,3 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
-
-    # Namespace for experimental functions
-    modin: ExperimentalFunctions = CachedAccessor("modin", ExperimentalFunctions)

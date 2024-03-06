@@ -33,11 +33,13 @@ If you are familiar with a concrete execution engine, it is possible to initiali
 Modin will automatically attach to it. Refer to :doc:`Modin engines </usage_guide/advanced_usage/modin_engines>` page
 for more details.
 
-Experimental APIs
------------------
+Additional APIs
+---------------
 
-Modin also supports these experimental APIs on top of pandas that are under active development.
+Modin also supports these additional APIs on top of pandas to improve user experience.
 
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert Modin DataFrame/Series to Pandas DataFrame/Series.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_ray_dataset` -- convert Modin DataFrame/Series to Ray Dataset.
 - :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
 - :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
 - :py:func:`~modin.experimental.pandas.read_custom_text` -- read custom text data from file

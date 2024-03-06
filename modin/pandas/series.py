@@ -32,7 +32,7 @@ from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
-from modin.pandas.io import from_pandas, to_pandas, to_ray_dataset
+from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
 from .accessor import CachedAccessor, SparseAccessor
@@ -1978,21 +1978,6 @@ class Series(BasePandasDataset):
 
     tolist = to_list
 
-    def to_ray_dataset(self):
-        """
-        Convert a Modin Series to a Ray Dataset.
-
-        Returns
-        -------
-        ray.data.Dataset
-            Converted object with type depending on input.
-
-        Notes
-        -----
-        Modin Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
-        """
-        return to_ray_dataset(self)
-
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
     def to_period(self, freq=None, copy=None):  # noqa: PR01, RT01, D200
@@ -2259,6 +2244,8 @@ class Series(BasePandasDataset):
         """
         Convert Modin Series to pandas Series.
 
+        Recommended conversion method: `series.modin.to_pandas()`.
+
         Returns
         -------
         pandas.Series
@@ -2268,8 +2255,6 @@ class Series(BasePandasDataset):
         if self._query_compiler.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
             series.name = None
         return series
-
-    to_pandas = _to_pandas
 
     def _to_datetime(self, **kwargs):
         """

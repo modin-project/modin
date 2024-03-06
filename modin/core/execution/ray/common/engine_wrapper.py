@@ -20,6 +20,7 @@ To be used as a piece of building a Ray-based engine.
 import asyncio
 import os
 from types import FunctionType
+from typing import Sequence
 
 import ray
 from ray.util.client.common import ClientObjectRef
@@ -96,8 +97,7 @@ class RayWrapper:
         boolean
             If the value is a future.
         """
-        ObjectIDType = (ray.ObjectRef, ClientObjectRef)
-        return isinstance(item, ObjectIDType)
+        return isinstance(item, ObjectRefTypes)
 
     @classmethod
     def materialize(cls, obj_id):
@@ -114,7 +114,59 @@ class RayWrapper:
         object
             Whatever was identified by `obj_id`.
         """
-        return ray.get(obj_id)
+        if isinstance(obj_id, MaterializationHook):
+            obj = obj_id.pre_materialize()
+            return (
+                obj_id.post_materialize(ray.get(obj))
+                if isinstance(obj, RayObjectRefTypes)
+                else obj
+            )
+
+        if not isinstance(obj_id, Sequence):
+            return ray.get(obj_id) if isinstance(obj_id, RayObjectRefTypes) else obj_id
+
+        if all(isinstance(obj, RayObjectRefTypes) for obj in obj_id):
+            return ray.get(obj_id)
+
+        ids = {}
+        result = []
+        for obj in obj_id:
+            if not isinstance(obj, ObjectRefTypes):
+                result.append(obj)
+                continue
+            if isinstance(obj, MaterializationHook):
+                oid = obj.pre_materialize()
+                if isinstance(oid, RayObjectRefTypes):
+                    hook = obj
+                    obj = oid
+                else:
+                    result.append(oid)
+                    continue
+            else:
+                hook = None
+
+            idx = ids.get(obj, None)
+            if idx is None:
+                ids[obj] = idx = len(ids)
+            if hook is None:
+                result.append(obj)
+            else:
+                hook._materialized_idx = idx
+                result.append(hook)
+
+        if len(ids) == 0:
+            return result
+
+        materialized = ray.get(list(ids.keys()))
+        for i in range(len(result)):
+            if isinstance((obj := result[i]), ObjectRefTypes):
+                if isinstance(obj, MaterializationHook):
+                    result[i] = obj.post_materialize(
+                        materialized[obj._materialized_idx]
+                    )
+                else:
+                    result[i] = materialized[ids[obj]]
+        return result
 
     @classmethod
     def put(cls, data, **kwargs):
@@ -161,12 +213,18 @@ class RayWrapper:
         obj_ids : list, scalar
         num_returns : int, optional
         """
-        if not isinstance(obj_ids, list):
-            obj_ids = [obj_ids]
-        unique_ids = list(set(obj_ids))
-        if num_returns is None:
-            num_returns = len(unique_ids)
-        ray.wait(unique_ids, num_returns=num_returns)
+        if not isinstance(obj_ids, Sequence):
+            obj_ids = list(obj_ids)
+
+        ids = set()
+        for obj in obj_ids:
+            if isinstance(obj, MaterializationHook):
+                obj = obj.pre_materialize()
+            if isinstance(obj, RayObjectRefTypes):
+                ids.add(obj)
+
+        if num_ids := len(ids):
+            ray.wait(list(ids), num_returns=num_returns or num_ids)
 
 
 @ray.remote
@@ -218,3 +276,37 @@ class SignalActor:  # pragma: no cover
         bool
         """
         return self.events[event_idx].is_set()
+
+
+class MaterializationHook:
+    """The Hook is called during the materialization and allows performing pre/post computations."""
+
+    def pre_materialize(self):
+        """
+        Get an object reference to be materialized or a pre-computed value.
+
+        Returns
+        -------
+        ray.ObjectRef or object
+        """
+        raise NotImplementedError()
+
+    def post_materialize(self, materialized):
+        """
+        Perform computations on the materialized object.
+
+        Parameters
+        ----------
+        materialized : object
+            The materialized object to be post-computed.
+
+        Returns
+        -------
+        object
+            The post-computed object.
+        """
+        raise NotImplementedError()
+
+
+RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
+ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)

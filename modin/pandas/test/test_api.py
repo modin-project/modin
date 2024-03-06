@@ -151,8 +151,8 @@ def test_dataframe_api_equality():
     pandas_dir = [obj for obj in dir(pandas.DataFrame) if obj[0] != "_"]
 
     ignore_in_pandas = ["timetuple"]
-    # modin - namespace for using experimental functionality
-    ignore_in_modin = ["modin", "to_pandas", "to_ray_dataset"]
+    # modin - namespace for accessing additional Modin functions that are not available in Pandas
+    ignore_in_modin = ["modin"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(
         missing_from_modin - set(ignore_in_pandas)
@@ -164,7 +164,7 @@ def test_dataframe_api_equality():
     ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
-    allowed_different = ["modin", "to_pandas", "to_ray_dataset"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 
@@ -267,14 +267,15 @@ def test_series_api_equality():
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         missing_from_modin
     )
-    ignore_in_modin = ["to_pandas", "to_ray_dataset"]
+    # modin - namespace for accessing additional Modin functions that are not available in Pandas
+    ignore_in_modin = ["modin"]
     extra_in_modin = set(modin_dir) - set(ignore_in_modin) - set(pandas_dir)
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
 
     # These have to be checked manually
-    allowed_different = ["to_pandas", "to_ray_dataset"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.Series, pd.Series), modin_dir, allowed_different)
 
