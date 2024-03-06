@@ -296,6 +296,7 @@ class TestCSV:
         engine,
         parse_dates,
         names,
+        request,
     ):
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
@@ -306,17 +307,21 @@ class TestCSV:
                 "In these cases Modin raises `ArrowEngineException` while pandas "
                 + "doesn't raise any exceptions that causes tests fails"
             )
-
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
         skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
         if skip_exc_type_check:
             pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
+
+        raising_exceptions = None
+        if "names1-parse_dates2-None" in request.node.callspec.id:
+            raising_exceptions = ValueError(
+                "Missing column provided to 'parse_dates': 'col2'"
+            )
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            # FIXME: identify the issue
-            raising_exceptions=False,
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
@@ -522,13 +527,7 @@ class TestMultiIndex:
             df = lib.DataFrame(self.data, index=index) + 1
             return df.reset_index()
 
-        eval_general(
-            pd,
-            pandas,
-            applier,
-            # FIXME: identify the issue
-            raising_exceptions=False,
-        )
+        eval_general(pd, pandas, applier)
 
     @pytest.mark.parametrize("is_multiindex", [True, False])
     def test_reset_index_multicolumns(self, is_multiindex):

@@ -916,7 +916,12 @@ def eval_general(
                     assert (
                         type(md_e) is type(raising_exceptions)
                         and md_e.args == raising_exceptions.args
-                    ), f"not acceptable exception: [{repr(md_e)}]"
+                    ), f"not acceptable Modin's exception: [{repr(md_e)}]"
+                    assert (
+                        pd_e.args == raising_exceptions.args
+                    ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
+                elif raising_exceptions is not False:
+                    raise pd_e
             else:
                 raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"

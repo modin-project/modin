@@ -413,9 +413,8 @@ class BasePandasDataset(ClassLogger):
         for fn in func:
             if isinstance(fn, str):
                 if not (hasattr(self, fn) or hasattr(np, fn)):
-                    type_short_name = "DataFrame" if self._is_dataframe else "Series"
                     on_invalid(
-                        f"'{fn}' is not a valid function for '{type_short_name}' object",
+                        f"'{fn}' is not a valid function for '{type(self).__name__}' object",
                         AttributeError,
                     )
             elif not callable(fn):
