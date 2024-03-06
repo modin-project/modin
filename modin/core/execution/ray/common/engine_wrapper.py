@@ -131,20 +131,19 @@ class RayWrapper:
         ids = {}
         result = []
         for obj in obj_id:
-            if isinstance(obj, ObjectRefTypes):
-                if isinstance(obj, MaterializationHook):
-                    oid = obj.pre_materialize()
-                    if isinstance(oid, RayObjectRefTypes):
-                        hook = obj
-                        obj = oid
-                    else:
-                        result.append(oid)
-                        continue
-                else:
-                    hook = None
-            else:
+            if not isinstance(obj, ObjectRefTypes):
                 result.append(obj)
                 continue
+            if isinstance(obj, MaterializationHook):
+                oid = obj.pre_materialize()
+                if isinstance(oid, RayObjectRefTypes):
+                    hook = obj
+                    obj = oid
+                else:
+                    result.append(oid)
+                    continue
+            else:
+                hook = None
 
             idx = ids.get(obj, None)
             if idx is None:
