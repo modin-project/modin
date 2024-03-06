@@ -57,7 +57,9 @@ def compute_chunksize(axis_len, num_splits, min_block_size=None):
     return max(chunksize, min_block_size)
 
 
-def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None):
+def split_result_of_axis_func_pandas(
+    axis, num_splits, result, length_list=None, min_block_size=None
+):
     """
     Split pandas DataFrame evenly based on the provided number of splits.
 
@@ -73,6 +75,9 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     length_list : list of ints, optional
         List of slice lengths to split DataFrame into. This is used to
         return the DataFrame to its original partitioning schema.
+    min_block_size : int, optional
+        Minimum number of rows/columns in a single split.
+        If not specified, the value is assumed equal to ``MinPartitionSize``.
 
     Returns
     -------
@@ -83,7 +88,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
         return [result]
 
     if length_list is None:
-        length_list = get_length_list(result.shape[axis], num_splits)
+        length_list = get_length_list(result.shape[axis], num_splits, min_block_size)
     # Inserting the first "zero" to properly compute cumsum indexing slices
     length_list = np.insert(length_list, obj=0, values=[0])
 
@@ -109,7 +114,7 @@ def split_result_of_axis_func_pandas(axis, num_splits, result, length_list=None)
     ]
 
 
-def get_length_list(axis_len: int, num_splits: int) -> list:
+def get_length_list(axis_len: int, num_splits: int, min_block_size=None) -> list:
     """
     Compute partitions lengths along the axis with the specified number of splits.
 
@@ -119,13 +124,16 @@ def get_length_list(axis_len: int, num_splits: int) -> list:
         Element count in an axis.
     num_splits : int
         Number of splits along the axis.
+    min_block_size : int, optional
+        Minimum number of rows/columns in a single split.
+        If not specified, the value is assumed equal to ``MinPartitionSize``.
 
     Returns
     -------
     list of ints
         List of integer lengths of partitions.
     """
-    chunksize = compute_chunksize(axis_len, num_splits)
+    chunksize = compute_chunksize(axis_len, num_splits, min_block_size)
     return [
         (
             chunksize

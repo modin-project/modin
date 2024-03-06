@@ -27,7 +27,7 @@ from fsspec.spec import AbstractBufferedFile
 from packaging import version
 from pandas.io.common import stringify_path
 
-from modin.config import NPartitions
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
 from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
@@ -684,8 +684,55 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
+            desired_nparts = min(
+                sum(row_lengths) // MinPartitionSize.get(), NPartitions.get()
+            )
         else:
             row_lengths = None
+            desired_nparts = len(partition_ids)
+
+        if len(partition_ids) < desired_nparts:
+            from modin.core.storage_formats.pandas.utils import get_length_list
+
+            # assuming that the sizes of parquet's row groups are more or less equal,
+            # so trying to use the same number of splits for each partition
+            splits_per_partition = desired_nparts // len(partition_ids)
+            remainder = desired_nparts % len(partition_ids)
+
+            new_parts = []
+            new_row_lengths = []
+
+            for row_idx, (part_len, row_parts) in enumerate(
+                zip(row_lengths, remote_parts)
+            ):
+                num_splits = splits_per_partition
+                # 'remainder' indicates how many partitions have to be split into 'num_splits + 1' splits
+                # to have exactly 'desired_nparts' in the end
+                if row_idx < remainder:
+                    num_splits += 1
+
+                if num_splits == 1:
+                    new_parts.append(row_parts)
+                    new_row_lengths.append(part_len)
+                    continue
+
+                part_bounds = np.cumsum([0] + get_length_list(part_len, num_splits))
+                part_indexers = []
+                for i in range(len(part_bounds) - 1):
+                    part_indexers.append(range(part_bounds[i], part_bounds[i + 1]))
+
+                for indexer in part_indexers:
+                    new_parts.append([])  # appending new row-part
+                    new_row_lengths.append(len(indexer))
+                    for part in row_parts:
+                        # '.mask()' performs completely lazy (unless LazyExec.put('off')),
+                        # so this for-loop should be very cheap
+                        new_parts[-1].append(
+                            part.mask(row_labels=indexer, col_labels=slice(None))
+                        )
+
+            remote_parts = np.array(new_parts)
+            row_lengths = new_row_lengths
 
         if (
             dataset.pandas_metadata
