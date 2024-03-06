@@ -36,7 +36,7 @@ for more details.
 Additional APIs
 ---------------
 
-Modin also supports these additional APIs on top of pandas.
+Modin also supports these additional APIs on top of pandas to improve user experience.
 
 - :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert Modin DataFrame/Series to Pandas DataFrame/Series.
 - :py:meth:`~modin.pandas.DataFrame.modin.to_ray_dataset` -- convert Modin DataFrame/Series to Ray Dataset.

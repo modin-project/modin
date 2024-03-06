@@ -198,7 +198,7 @@ class CachedAccessor(ClassLogger):
         return accessor_obj
 
 
-class ModinFunctions:
+class ModinAPI:
     """
     Namespace class for accessing additional Modin functions that are not available in pandas.
 
@@ -213,7 +213,7 @@ class ModinFunctions:
 
     def to_pandas(self):
         """
-        Convert Modin DataFrame/Series objects to pandas DataFrame/Series object.
+        Convert a Modin DataFrame/Series object to a pandas DataFrame/Series object.
 
         Returns
         -------

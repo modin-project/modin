@@ -61,7 +61,7 @@ from pandas.util._validators import (
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
-from modin.pandas.accessor import CachedAccessor, ModinFunctions
+from modin.pandas.accessor import CachedAccessor, ModinAPI
 from modin.pandas.utils import is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
@@ -4254,4 +4254,4 @@ class BasePandasDataset(ClassLogger):
         return pandas_result
 
     # namespace for additional Modin functions that are not available in Pandas
-    modin: ModinFunctions = CachedAccessor("modin", ModinFunctions)
+    modin: ModinAPI = CachedAccessor("modin", ModinAPI)
