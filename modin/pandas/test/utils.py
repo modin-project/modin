@@ -874,25 +874,18 @@ def eval_general(
     operation,
     comparator=df_equals,
     __inplace__=False,
-    check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
     **kwargs,
 ):
-    if raising_exceptions:
-        assert (
-            check_exception_type
-        ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
-            if check_exception_type is None:
-                return None
             try:
                 if inplace:
                     _ = fn(modin_df, **md_kwargs)
@@ -902,16 +895,15 @@ def eval_general(
                         fn(modin_df, **md_kwargs)
                     )  # force materialization
             except Exception as md_e:
-                if check_exception_type:
-                    assert isinstance(
-                        md_e, type(pd_e)
-                    ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
-                        type(md_e), type(pd_e)
-                    )
-                    if raising_exceptions:
-                        assert not isinstance(
-                            md_e, tuple(raising_exceptions)
-                        ), f"not acceptable exception type: {md_e}"
+                assert isinstance(
+                    md_e, type(pd_e)
+                ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
+                    type(md_e), type(pd_e)
+                )
+                if raising_exceptions:
+                    assert not isinstance(
+                        md_e, tuple(raising_exceptions)
+                    ), f"not acceptable exception type: {md_e}"
             else:
                 raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
@@ -949,7 +941,6 @@ def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
@@ -970,13 +961,9 @@ def eval_io(
         There could be some mismatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
-    check_exception_type: bool
-        Check or not exception types in the case of operation fail
-        (compare exceptions types raised by Pandas and Modin).
     raising_exceptions: Exception or list of Exceptions
         Exceptions that should be raised even if they are raised
-        both by Pandas and Modin (check evaluated only if
-        `check_exception_type` passed as `True`).
+        both by Pandas and Modin.
     modin_warning: obj
         Warning that should be raised by Modin.
     modin_warning_str_match: str
@@ -997,7 +984,6 @@ def eval_io(
             pandas,
             applyier,
             comparator=comparator,
-            check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
             md_extra_kwargs=md_extra_kwargs,

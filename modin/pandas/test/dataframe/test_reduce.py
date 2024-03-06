@@ -389,10 +389,6 @@ def test_value_counts(subset_len, sort, normalize, dropna, ascending):
             ascending=ascending,
         ),
         comparator=comparator,
-        # Modin's `sort_values` does not validate `ascending` type and so
-        # does not raise an exception when it isn't a bool, when pandas do so,
-        # visit modin-issue#3388 for more info.
-        check_exception_type=None if sort and ascending is None else True,
     )
 
 
