@@ -6709,10 +6709,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         qc_type = type(self)
         caselist = [
             tuple(
-                d.to_pandas().squeeze(axis=1) if isinstance(d, qc_type) else d
-                for d in c
+                data.to_pandas().squeeze(axis=1) if isinstance(data, qc_type) else data
+                for data in case_tuple
             )
-            for c in caselist
+            for case_tuple in caselist
         ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
