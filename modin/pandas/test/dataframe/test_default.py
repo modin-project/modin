@@ -650,7 +650,7 @@ def test_pivot(data, index, columns, values, request):
         pytest.param(
             lambda df: [
                 *df.columns[(len(df.columns) // 2) : (len(df.columns) // 2 + 4)],
-                df.columns[-2],
+                df.columns[-7],
             ],
             id="multiple_cols",
         ),
