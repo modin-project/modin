@@ -4733,8 +4733,11 @@ def test_case_when(base, caselist):
         df_equals(pd_result, df.case_when(caselist))
         if any(isinstance(d, pandas.Series) for c in caselist for d in c):
             caselist = [
-                tuple(pd.Series(d) if isinstance(d, pandas.Series) else d for d in c)
-                for c in caselist
+                tuple(
+                    pd.Series(data) if isinstance(data, pandas.Series) else data
+                    for data in case_tuple
+                )
+                for case_tuple in caselist
             ]
             df_equals(pd_result, df.case_when(caselist))
 

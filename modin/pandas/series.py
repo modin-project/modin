@@ -1024,8 +1024,11 @@ class Series(BasePandasDataset):
         """
         modin_type = type(self)
         caselist = [
-            tuple(d._query_compiler if isinstance(d, modin_type) else d for d in c)
-            for c in caselist
+            tuple(
+                data._query_compiler if isinstance(data, modin_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
         ]
         return self.__constructor__(
             query_compiler=self._query_compiler.case_when(caselist=caselist)

@@ -21,6 +21,8 @@ import datetime
 import re
 from typing import TYPE_CHECKING, Callable, Dict, Hashable, List, Optional, Union
 
+import numpy as np
+import pandas
 from pandas._libs.lib import no_default
 from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
@@ -52,9 +54,6 @@ if TYPE_CHECKING:
         ProtocolDataframe,
     )
     from pandas._typing import npt
-
-import numpy as np
-import pandas
 
 from modin.logging import ClassLogger
 from modin.pandas.indexing import is_range_like
@@ -4742,7 +4741,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 )
             return df
 
-        # For Dask the callebles are wrapped for each partition in the map_data() function.
+        # For Dask the callables are wrapped for each partition in the map_data() function.
         # If the same callable is wrapped only once for all partitions, CancelledError is raised.
         wrap_callable = Engine.get() != "Dask"
         use_map = wrap_callable
@@ -4797,6 +4796,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     fill_value=fill_value,
                 )
 
+            # As mentioned above, this is required for Dask
             if not wrap_callable and callable(data):
                 return wrapper_put(data)
 
@@ -4831,4 +4831,10 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             )
             data_offset += part_len
         new_parts = np.array([[p] for p in new_parts])
-        return self.__constructor__(new_parts, columns=self.columns, index=self.index)
+        return self.__constructor__(
+            new_parts,
+            columns=self.columns,
+            index=self.index,
+            row_lengths=lengths,
+            column_widths=[1],
+        )
