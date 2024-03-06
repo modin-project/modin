@@ -164,7 +164,7 @@ def test_dataframe_api_equality():
     ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist", "modin"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 
@@ -275,7 +275,7 @@ def test_series_api_equality():
     )
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist", "modin"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.Series, pd.Series), modin_dir, allowed_different)
 
