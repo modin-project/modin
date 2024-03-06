@@ -1073,7 +1073,7 @@ def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
     pandas.DataFrame or pandas.Series
         Converted object with type depending on input.
     """
-    return modin_obj.modin.to_pandas()
+    return modin_obj._to_pandas()
 
 
 def to_numpy(
