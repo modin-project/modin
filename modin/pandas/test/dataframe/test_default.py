@@ -609,18 +609,26 @@ def test_pivot(data, index, columns, values, request):
     if (
         "one_column_values-one_column-default-float_nan_data"
         in request.node.callspec.id
+        or "default-one_column-several_columns_index" in request.node.callspec.id
         or (
             current_execution in ("BaseOnPython", "HdkOnNative")
             and index is lib.no_default
         )
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
+
+    raising_exceptions = None
+    if index is not lib.no_default:
+        raising_exceptions = ValueError(
+            "Index contains duplicate entries, cannot reshape"
+        )
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
         index=index,
         columns=columns,
         values=values,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -632,7 +640,7 @@ def test_pivot(data, index, columns, values, request):
         pytest.param(
             lambda df: [*df.columns[0:2], *df.columns[-7:-4]], id="multiple_index_cols"
         ),
-        None,
+        pytest.param(None, id="default_index"),
     ],
 )
 @pytest.mark.parametrize(
@@ -646,7 +654,7 @@ def test_pivot(data, index, columns, values, request):
             ],
             id="multiple_cols",
         ),
-        None,
+        pytest.param(None, id="default_columns"),
     ],
 )
 @pytest.mark.parametrize(
@@ -654,7 +662,7 @@ def test_pivot(data, index, columns, values, request):
     [
         pytest.param(lambda df: df.columns[-1], id="single_value_col"),
         pytest.param(lambda df: df.columns[-4:-1], id="multiple_value_cols"),
-        None,
+        pytest.param(None, id="default_values"),
     ],
 )
 @pytest.mark.parametrize(
@@ -687,6 +695,15 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
     # so reducing dimension of testing data at that case
     if values is None:
         md_df, pd_df = md_df.iloc[:42, :42], pd_df.iloc[:42, :42]
+
+    raising_exceptions = None
+    if "default_columns-default_index" in request.node.callspec.id:
+        raising_exceptions = ValueError("No group keys passed!")
+    elif (
+        "callable_tree_reduce_func" in request.node.callspec.id
+        and "int_data" in request.node.callspec.id
+    ):
+        raising_exceptions = TypeError("'numpy.float64' object is not callable")
     eval_general(
         md_df,
         pd_df,
@@ -697,6 +714,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         columns=columns,
         values=values,
         aggfunc=aggfunc,
+        raising_exceptions=raising_exceptions,
     )
 
 

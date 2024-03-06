@@ -195,8 +195,6 @@ def test_comparison(data, op, other, request):
     raising_exceptions = None
     if "int_data" in request.node.callspec.id and other == "a":
         # raising_exceptions = TypeError("Invalid comparison between dtype=int32 and str")
-        # if StorageFormat.get() == "Hdk":
-        #     raising_exceptions = TypeError("Invalid comparison between int33")
         # FIXME: identify issue
         raising_exceptions = False
     elif "float_nan_data" in request.node.callspec.id and other == "a":
