@@ -26,6 +26,7 @@ import warnings
 from pathlib import Path
 from textwrap import dedent, indent
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Iterable,
@@ -51,6 +52,9 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 from modin._version import get_versions
 from modin.config import DocModule, Engine, StorageFormat
 
+if TYPE_CHECKING:
+    from modin.pandas.accessor import ModinAPI
+
 T = TypeVar("T")
 """Generic type parameter"""
 
@@ -62,8 +66,7 @@ Fn = TypeVar("Fn", bound=Callable)
 class SupportsPublicToPandas(Protocol):  # noqa: PR01
     """Structural type for objects with a ``to_pandas`` method (without a leading underscore)."""
 
-    def to_pandas(self) -> Any:  # noqa: GL08
-        pass
+    modin: "ModinAPI" = None
 
 
 @runtime_checkable
@@ -588,8 +591,8 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     object
         Converted object.
     """
-    if isinstance(obj, SupportsPublicToPandas) or hasattr(obj, "modin"):
-        result = obj.modin.to_pandas() if hasattr(obj, "modin") else obj.to_pandas()
+    if isinstance(obj, SupportsPublicToPandas):
+        result = obj.modin.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
 
