@@ -3043,6 +3043,8 @@ class DataFrame(BasePandasDataset):
         """
         Convert Modin ``DataFrame`` to pandas ``DataFrame``.
 
+        Recommended conversion method: `dataframe.modin.to_pandas()`.
+
         Returns
         -------
         pandas.DataFrame

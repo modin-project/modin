@@ -2240,6 +2240,8 @@ class Series(BasePandasDataset):
         """
         Convert Modin Series to pandas Series.
 
+        Recommended conversion method: `series.modin.to_pandas()`.
+
         Returns
         -------
         pandas.Series
