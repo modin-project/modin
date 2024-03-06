@@ -31,6 +31,7 @@ from pandas.core.dtypes.dtypes import SparseDtype
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.pandas.io import to_ray_dataset
 from modin.utils import _inherit_docstrings
 
 
@@ -197,9 +198,9 @@ class CachedAccessor(ClassLogger):
         return accessor_obj
 
 
-class ExperimentalFunctions:
+class ModinAPI:
     """
-    Namespace class for accessing experimental Modin functions.
+    Namespace class for accessing additional Modin functions that are not available in pandas.
 
     Parameters
     ----------
@@ -209,6 +210,31 @@ class ExperimentalFunctions:
 
     def __init__(self, data):
         self._data = data
+
+    def to_pandas(self):
+        """
+        Convert a Modin DataFrame/Series object to a pandas DataFrame/Series object.
+
+        Returns
+        -------
+        pandas.Series or pandas.DataFrame
+        """
+        return self._data._to_pandas()
+
+    def to_ray_dataset(self):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return to_ray_dataset(self._data)
 
     def to_pickle_glob(
         self,
