@@ -350,7 +350,6 @@ def test_mixed_dtypes_groupby(as_index):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_max(modin_groupby, pandas_groupby)
@@ -418,6 +417,14 @@ class GetColumn:
 
     def __call__(self, df):
         return df[self.name]
+
+
+def test_aggregate_alias():
+    # It's optimization. If failed, groupby().aggregate should be tested explicitly
+    from modin.pandas.groupby import DataFrameGroupBy, SeriesGroupBy
+
+    assert DataFrameGroupBy.aggregate == DataFrameGroupBy.agg
+    assert SeriesGroupBy.aggregate == SeriesGroupBy.agg
 
 
 @pytest.mark.parametrize(
@@ -652,27 +659,19 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     for func in agg_functions:
         # Pandas raises an exception when 'by' contains categorical key and `as_index=False`
         # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
-        # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
+        # Modin correctly processes the result
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
-
         raising_exceptions = None
         if col1_category:
             # FIXME: identify issues
             raising_exceptions = False
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda grp: grp.agg(func),
-            raising_exceptions=raising_exceptions,
-            check_exception_type=None if is_pandas_bug_case else True,
-        )
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda grp: grp.aggregate(func),
-            raising_exceptions=raising_exceptions,
-            check_exception_type=None if is_pandas_bug_case else True,
-        )
+        if not is_pandas_bug_case:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda grp: grp.agg(func),
+                raising_exceptions=raising_exceptions,
+            )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.rank())
@@ -691,18 +690,19 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     eval_ngroup(modin_groupby, pandas_groupby)
     # Pandas raising exception when 'by' contains categorical key and `as_index=False`
     # because of a bug: https://github.com/pandas-dev/pandas/issues/36698
-    # Modin correctly processes the result, so that's why `check_exception_type=None` in some cases
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.nunique(),
-        check_exception_type=None if (col1_category and not as_index) else True,
-    )
+    # Modin correctly processes the result
+    if not (col1_category and not as_index):
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.nunique(),
+        )
     raising_exceptions = None
     if col1_category:
         raising_exceptions = TypeError(
             "category dtype does not support aggregation 'median'"
         )
+    # TypeError: category type does not support median operations
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -727,7 +727,6 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
                 modin_groupby,
                 pandas_groupby,
                 lambda df: df.transform(func),
-                check_exception_type=None,
             )
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
@@ -757,7 +756,6 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
             modin_groupby,
             pandas_groupby,
             lambda df: df.size(),
-            check_exception_type=None,
         )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
     eval_quantile(modin_groupby, pandas_groupby)
@@ -879,7 +877,6 @@ def test_single_group_row_groupby():
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -1008,7 +1005,6 @@ def test_large_row_groupby(is_by_category):
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -1265,7 +1261,6 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_rank(modin_groupby, pandas_groupby)
@@ -1428,10 +1423,6 @@ def eval_std(modin_groupby, pandas_groupby, numeric_only=False):
         modin_groupby.std(numeric_only=numeric_only),
         pandas_groupby.std(numeric_only=numeric_only),
     )
-
-
-def eval_aggregate(modin_groupby, pandas_groupby, func):
-    df_equals(modin_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
 
 def eval_agg(modin_groupby, pandas_groupby, func):
@@ -2767,7 +2758,6 @@ def test_groupby_on_empty_data(modin_df_recipe):
     run_test(eval___getattr__, item="b")
     run_test(eval___getitem__, item="b")
     run_test(eval_agg, func=lambda df: df.mean())
-    run_test(eval_aggregate, func=lambda df: df.mean())
     run_test(eval_any)
     run_test(eval_apply, func=lambda df: df.mean())
     run_test(eval_count)

@@ -32,7 +32,7 @@ from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
-from modin.pandas.io import from_pandas, to_pandas
+from modin.pandas.io import from_pandas, to_pandas, to_ray_dataset
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
 from .accessor import CachedAccessor, SparseAccessor
@@ -1182,6 +1182,26 @@ class Series(BasePandasDataset):
         """
         return super(Series, self).isin(values, shape_hint="column")
 
+    def isna(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isnull()
+
     def item(self):  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
@@ -1955,6 +1975,21 @@ class Series(BasePandasDataset):
             return array(self, copy=copy)
 
     tolist = to_list
+
+    def to_ray_dataset(self):
+        """
+        Convert a Modin Series to a Ray Dataset.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return to_ray_dataset(self)
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py

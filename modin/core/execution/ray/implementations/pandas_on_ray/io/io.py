@@ -17,6 +17,7 @@ import io
 
 import pandas
 from pandas.io.common import get_handle, stringify_path
+from ray.data import from_pandas_refs
 
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
@@ -39,6 +40,10 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.distributed.dataframe.pandas.partitions import (
+    from_partitions,
+    unwrap_partitions,
+)
 from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
@@ -258,3 +263,39 @@ class PandasOnRayIO(RayIO):
         RayWrapper.materialize(
             [part.list_of_blocks[0] for row in result for part in row]
         )
+
+    @classmethod
+    def from_ray_dataset(cls, ray_obj):
+        """
+        Create a Modin `query_compiler` from a Ray Dataset.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Ray Dataset.
+        """
+        pd_objs = ray_obj.to_pandas_refs()
+        return from_partitions(pd_objs, axis=0)._query_compiler
+
+    @classmethod
+    def to_ray_dataset(cls, modin_obj):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+        """
+        parts = unwrap_partitions(modin_obj, axis=0)
+        return from_pandas_refs(parts)

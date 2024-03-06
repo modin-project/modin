@@ -45,5 +45,19 @@ where NumPy can be used and what libraries it powers.
 
     numpy_arr = to_numpy(modin_df)
 
+to_ray_dataset
+--------------
+
+You can refer to `Ray Data`_ page to get more details on
+where Ray Dataset can be used and what libraries it powers.
+
+.. code-block:: python
+
+    from modin.pandas.io import to_ray_dataset
+
+    ray_dataset = to_ray_dataset(modin_df)
+
 .. _pandas ecosystem: https://pandas.pydata.org/community/ecosystem.html
 .. _NumPy ecosystem: https://numpy.org
+.. _Ray Data: https://docs.ray.io/en/latest/data/data.html
+

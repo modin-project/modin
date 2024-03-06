@@ -49,7 +49,7 @@ from pandas.util._print_versions import (  # type: ignore[attr-defined]
 )
 
 from modin._version import get_versions
-from modin.config import Engine, StorageFormat
+from modin.config import DocModule, Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
@@ -399,6 +399,22 @@ def _inherit_docstrings(
     are not defined in target class (but are defined in the ancestor class),
     which means that ancestor class attribute docstrings could also change.
     """
+    # Import the docs module and get the class (e.g. `DataFrame`).
+    imported_doc_module = importlib.import_module(DocModule.get())
+    # Set the default parent so we can use it in case some docs are missing from
+    # parent module.
+    default_parent = parent
+    # Try to get the parent object from the doc module, and if it isn't there,
+    # get it from parent instead. We only do this if we are overriding pandas
+    # documentation. We don't touch other docs.
+    if DocModule.get() != DocModule.default and "pandas" in str(
+        getattr(parent, "__module__", "")
+    ):
+        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
+    if parent != default_parent:
+        # Reset API link in case the docs are overridden.
+        apilink = None
+        overwrite_existing = True
 
     def _documentable_obj(obj: object) -> bool:
         """Check if `obj` docstring could be patched."""
@@ -421,7 +437,12 @@ def _inherit_docstrings(
                     if attr in seen:
                         continue
                     seen.add(attr)
-                    parent_obj = getattr(parent, attr, None)
+                    # Try to get the attribute from the docs class first, then
+                    # from the default parent (pandas), and if it's not in either,
+                    # set `parent_obj` to `None`.
+                    parent_obj = getattr(
+                        parent, attr, getattr(default_parent, attr, None)
+                    )
                     if (
                         parent_obj in excluded
                         or not _documentable_obj(parent_obj)

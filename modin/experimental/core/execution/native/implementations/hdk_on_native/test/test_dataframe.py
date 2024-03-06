@@ -310,11 +310,11 @@ class TestCSV:
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
         skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
-
+        if skip_exc_type_check:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            check_exception_type=not skip_exc_type_check,
             # FIXME: identify the issue
             raising_exceptions=False,
             # read_csv kwargs
