@@ -722,11 +722,22 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     if not check_df_columns_have_nans(modin_df, by):
         # Pandas groupby.transform does not work correctly with NaN values in grouping columns. See Pandas bug 17093.
         transform_functions = [lambda df: df + 4, lambda df: -df - 10]
-        for func in transform_functions:
+        for idx, func in enumerate(transform_functions):
+            raising_exceptions = None
+            if col1_category:
+                if idx == 0:
+                    raising_exceptions = TypeError(
+                        "unsupported operand type(s) for +: 'Categorical' and 'int'"
+                    )
+                elif idx == 1:
+                    raising_exceptions = TypeError(
+                        "bad operand type for unary -: 'Categorical'"
+                    )
             eval_general(
                 modin_groupby,
                 pandas_groupby,
                 lambda df: df.transform(func),
+                raising_exceptions=raising_exceptions,
             )
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
