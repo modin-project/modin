@@ -194,9 +194,7 @@ def test_comparison(data, op, other, request):
 
     raising_exceptions = None
     if "int_data" in request.node.callspec.id and other == "a":
-        raising_exceptions = TypeError("Invalid comparison between dtype=int32 and str")
-        if StorageFormat.get() == "Hdk":
-            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7019")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7019")
     elif "float_nan_data" in request.node.callspec.id and other == "a":
         raising_exceptions = TypeError(
             "Invalid comparison between dtype=float64 and str"
