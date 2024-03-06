@@ -588,8 +588,8 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     object
         Converted object.
     """
-    if isinstance(obj, SupportsPublicToPandas):
-        result = obj.to_pandas()
+    if isinstance(obj, SupportsPublicToPandas) or hasattr(obj, "modin"):
+        result = obj.modin.to_pandas() if hasattr(obj, "modin") else obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
 

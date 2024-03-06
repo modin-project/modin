@@ -3677,7 +3677,7 @@ def test_value_counts_categorical():
             # Perform our own non-strict version of dtypes equality check
             assert_dtypes_equal(df1, df2)
             assert_series_equal(
-                df1._to_pandas(), df2, check_index=False, check_dtype=False
+                df1.modin.to_pandas(), df2, check_index=False, check_dtype=False
             )
 
     else:

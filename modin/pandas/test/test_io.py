@@ -3252,7 +3252,7 @@ def test_df_to_ray_dataset():
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
-    ray_dataset = modin_df.to_ray_dataset()
+    ray_dataset = modin_df.modin.to_ray_dataset()
     df_equals(ray_dataset.to_pandas(), pandas_df)
 
 
@@ -3274,7 +3274,7 @@ def test_series_to_ray_dataset():
     pandas_df = pandas.DataFrame(TEST_DATA, index=index)
     pandas_s = pandas_df.iloc[0]
     modin_s = pd.Series(pandas_s)
-    ray_dataset = modin_s.to_ray_dataset()
+    ray_dataset = modin_s.modin.to_ray_dataset()
     df_equals(ray_dataset.to_pandas().squeeze(), pandas_s)
 
 
