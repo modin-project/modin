@@ -16,7 +16,7 @@ from __future__ import annotations
 import pickle as pkl
 import re
 import warnings
-from typing import Any, Hashable, Optional, Sequence, Union
+from typing import Any, Hashable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -3236,13 +3236,41 @@ class BasePandasDataset(ClassLogger):
 
     @expanduser_path_arg("path_or_buf")
     def to_hdf(
-        self, path_or_buf, key, format="table", **kwargs
-    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        self,
+        path_or_buf,
+        key: str,
+        mode: Literal["a", "w", "r+"] = "a",
+        complevel: int | None = None,
+        complib: Literal["zlib", "lzo", "bzip2", "blosc"] | None = None,
+        append: bool = False,
+        format: Literal["fixed", "table"] | None = None,
+        index: bool = True,
+        min_itemsize: int | dict[str, int] | None = None,
+        nan_rep=None,
+        dropna: bool | None = None,
+        data_columns: Literal[True] | list[str] | None = None,
+        errors: str = "strict",
+        encoding: str = "UTF-8",
+    ) -> None:  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write the contained data to an HDF5 file using HDFStore.
         """
         return self._default_to_pandas(
-            "to_hdf", path_or_buf, key, format=format, **kwargs
+            "to_hdf",
+            path_or_buf,
+            key=key,
+            mode=mode,
+            complevel=complevel,
+            complib=complib,
+            append=append,
+            format=format,
+            index=index,
+            min_itemsize=min_itemsize,
+            nan_rep=nan_rep,
+            dropna=dropna,
+            data_columns=data_columns,
+            errors=errors,
+            encoding=encoding,
         )
 
     @expanduser_path_arg("path_or_buf")

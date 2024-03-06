@@ -27,7 +27,13 @@ from typing import IO, Hashable, Iterator, Optional, Sequence, Union
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import CompressionOptions, FilePath, StorageOptions, WriteBuffer
+from pandas._typing import (
+    CompressionOptions,
+    FilePath,
+    IndexLabel,
+    StorageOptions,
+    WriteBuffer,
+)
 from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
@@ -966,26 +972,28 @@ class DataFrame(BasePandasDataset):
         )
 
     def hist(
-        self,
-        column=None,
+        data,
+        column: IndexLabel | None = None,
         by=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
         ax=None,
-        sharex=False,
-        sharey=False,
-        figsize=None,
-        layout=None,
-        bins=10,
-        **kwds,
+        sharex: bool = False,
+        sharey: bool = False,
+        figsize: tuple[int, int] | None = None,
+        layout: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Make a histogram of the ``DataFrame``.
         """
-        return self._default_to_pandas(
+        return data._default_to_pandas(
             pandas.DataFrame.hist,
             column=column,
             by=by,
@@ -1000,7 +1008,9 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
     def info(
