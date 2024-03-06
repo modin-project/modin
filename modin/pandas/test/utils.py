@@ -911,12 +911,12 @@ def eval_general(
                         from ray.exceptions import RayTaskError
 
                         # unwrap ray exceptions from remote worker
-                        if isinstance(modin_exception, RayTaskError):
-                            modin_exception = modin_exception.args[0]
+                        if isinstance(md_e, RayTaskError):
+                            md_e = md_e.args[0]
                     assert (
-                        type(modin_exception) is type(raising_exceptions)
-                        and modin_exception.args == raising_exceptions.args
-                    ), f"not acceptable exception: [{repr(modin_exception)}]"
+                        type(md_e) is type(raising_exceptions)
+                        and md_e.args == raising_exceptions.args
+                    ), f"not acceptable exception: [{repr(md_e)}]"
             else:
                 raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
