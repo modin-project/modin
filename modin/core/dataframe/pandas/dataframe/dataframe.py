@@ -4688,10 +4688,10 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             def case_when(df, caselist):  # pragma: no cover
                 caselist = [
                     tuple(
-                        d.iloc[:, 0] if isinstance(d, pandas.DataFrame) else d
-                        for d in c
+                        data.iloc[:, 0] if isinstance(data, pandas.DataFrame) else data
+                        for data in case_tuple
                     )
-                    for c in caselist
+                    for case_tuple in caselist
                 ]
                 series = df.iloc[:, 0]
                 return pandas.DataFrame({series.name: series.case_when(caselist)})

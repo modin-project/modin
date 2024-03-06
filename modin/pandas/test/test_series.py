@@ -4731,7 +4731,11 @@ def test_case_when(base, caselist):
     MinPartitionSize.put(part_size)
     for df in (pd.Series(base), base_repart):
         df_equals(pd_result, df.case_when(caselist))
-        if any(isinstance(d, pandas.Series) for c in caselist for d in c):
+        if any(
+            isinstance(data, pandas.Series)
+            for case_tuple in caselist
+            for data in case_tuple
+        ):
             caselist = [
                 tuple(
                     pd.Series(data) if isinstance(data, pandas.Series) else data
