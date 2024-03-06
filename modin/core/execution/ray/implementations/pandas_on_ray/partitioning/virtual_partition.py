@@ -320,16 +320,17 @@ def _deploy_ray_func(
     f_args = positional_args[:f_len_args]
     deploy_args = positional_args[f_len_args:]
     result = deployer(axis, f_to_deploy, f_args, f_kwargs, *deploy_args, **kwargs)
+
     if not extract_metadata:
-        return result
+        for item in result:
+            yield item
+        return
+
     ip = get_node_ip_address()
-    if isinstance(result, pandas.DataFrame):
-        return result, len(result), len(result.columns), ip
-    elif all(isinstance(r, pandas.DataFrame) for r in result):
-        for r in result:
+    for r in result:
+        if isinstance(r, pandas.DataFrame):
             for item in [r, len(r), len(r.columns), ip]:
                 yield item
-    else:
-        for r in result:
+        else:
             for item in [r, None, None, ip]:
                 yield item
