@@ -284,7 +284,7 @@ def test_sum(data, axis, skipna, is_transposed, request):
             or "over_rows_str" in request.node.callspec.id
         )
     ):
-        pytest.xfail(reason="FIXME: identify issue")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7028")
     eval_general(
         *create_test_dfs(data),
         lambda df: (df.T if is_transposed else df).sum(
@@ -327,9 +327,9 @@ def test_sum_prod_specific(fn, min_count, numeric_only):
     elif not numeric_only and fn == "sum":
         raising_exceptions = TypeError('can only concatenate str (not "int") to str')
     if numeric_only and fn == "sum":
-        pytest.xfail(reason="FIXME: wrong dtypes")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7029")
     if min_count == 5 and not numeric_only:
-        pytest.xfail(reason="FIXME: Modin did not raise exception")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7029")
 
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
@@ -361,12 +361,13 @@ def test_reduce_specific(fn, numeric_only, axis):
                     f"'{operator}' not supported between instances of 'str' and 'float'"
                 )
                 if StorageFormat.get() == "Hdk":
+                    # FIXME: https://github.com/modin-project/modin/issues/7030
                     raising_exceptions = False
             else:
-                # FIXME: different messages, check only types
+                # FIXME: https://github.com/modin-project/modin/issues/7030
                 raising_exceptions = False
         elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
-            # FIXME: different messages, check only types
+            # FIXME: https://github.com/modin-project/modin/issues/7030
             raising_exceptions = False
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
