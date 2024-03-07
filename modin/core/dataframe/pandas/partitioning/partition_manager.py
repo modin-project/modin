@@ -158,6 +158,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
+        if cls._execution_wrapper.is_future(map_func):
+            return map_func  # Has already been preprocessed
+
         old_value = PersistentPickle.get()
         # When performing a function with Modin objects, it is more profitable to
         # do the conversion to pandas once on the main process than several times
@@ -657,11 +660,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         NumPy array
             An array of partitions
         """
-        preprocessed_map_func = (
-            map_func
-            if cls._execution_wrapper.is_future(map_func)
-            else cls.preprocess_func(map_func)
-        )
+        preprocessed_map_func = cls.preprocess_func(map_func)
         return np.array(
             [
                 [
