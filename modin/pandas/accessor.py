@@ -249,7 +249,7 @@ class ModinAPI:
         -----
         Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
         """
-        return to_dask_dataframe(self)
+        return to_dask_dataframe(self._data)
 
     def to_pickle_glob(
         self,
