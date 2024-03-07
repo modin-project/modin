@@ -723,8 +723,9 @@ def test_loc_iloc_2064(locator_name):
             "index 1 is out of bounds for axis 0 with size 0"
         )
     else:
-        # FIXME: different messages
-        raising_exceptions = False
+        raising_exceptions = KeyError(
+            "None of [Index([1], dtype='int32')] are in the [index]"
+        )
     eval_general(
         modin_df,
         pandas_df,
@@ -759,9 +760,7 @@ def test_loc_insert_row(left, right):
 
     raising_exceptions = None
     if right == 70:
-        # FIXME: the exception message is not the same for Modin and Pandas
-        # check only type
-        raising_exceptions = False
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7024")
     eval_general(
         modin_df, pandas_df, _test_loc_rows, raising_exceptions=raising_exceptions
     )
@@ -2508,23 +2507,17 @@ def test_setitem_2d_update(does_value_have_different_columns):
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, -2)
     )  # (start=None, stop=-2)
-    raising_exceptions = None
-    if get_current_execution() == "BaseOnPython":
-        # FIXME: identify issue
-        raising_exceptions = False
     eval_general(
         modin_dfs,
         pandas_dfs,
         test,
         iloc=[0, 1, 5, 6, 9, 10, -2, -1],
-        raising_exceptions=raising_exceptions,
     )
     eval_general(
         modin_dfs,
         pandas_dfs,
         test,
         iloc=[5, 4, 0, 10, 1, -1],
-        raising_exceptions=raising_exceptions,
     )
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, None, 2)
