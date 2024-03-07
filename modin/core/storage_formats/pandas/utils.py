@@ -86,30 +86,28 @@ def split_result_of_axis_func_pandas(
     """
     if num_splits == 1:
         yield result
-        return
+    else:
+        if length_list is None:
+            length_list = get_length_list(result.shape[axis], num_splits,min_block_size)
+        # Inserting the first "zero" to properly compute cumsum indexing slices
+        length_list = np.insert(length_list, obj=0, values=[0])
+        sums = np.cumsum(length_list)
+        axis = 0 if isinstance(result, pandas.Series) else axis
 
-    if length_list is None:
-        length_list = get_length_list(result.shape[axis], num_splits, min_block_size)
-    # Inserting the first "zero" to properly compute cumsum indexing slices
-    length_list = np.insert(length_list, obj=0, values=[0])
+        for i in range(len(sums) - 1):
+            # We do this to restore block partitioning
+            if axis == 0:
+                chunk = result.iloc[sums[i] : sums[i + 1]]
+            else:
+                chunk = result.iloc[:, sums[i] : sums[i + 1]]
 
-    sums = np.cumsum(length_list)
-    axis = 0 if isinstance(result, pandas.Series) else axis
-
-    for i in range(len(sums) - 1):
-        # We do this to restore block partitioning
-        if axis == 0:
-            chunk = result.iloc[sums[i] : sums[i + 1]]
-        else:
-            chunk = result.iloc[:, sums[i] : sums[i + 1]]
-
-        # Sliced MultiIndex still stores all encoded values of the original index, explicitly
-        # asking it to drop unused values in order to save memory.
-        if isinstance(chunk.axes[axis], pandas.MultiIndex):
-            chunk = chunk.set_axis(
-                chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False
-            )
-        yield chunk
+            # Sliced MultiIndex still stores all encoded values of the original index, explicitly
+            # asking it to drop unused values in order to save memory.
+            if isinstance(chunk.axes[axis], pandas.MultiIndex):
+                chunk = chunk.set_axis(
+                    chunk.axes[axis].remove_unused_levels(), axis=axis, copy=False
+                )
+            yield chunk
 
 
 def get_length_list(axis_len: int, num_splits: int, min_block_size=None) -> list:

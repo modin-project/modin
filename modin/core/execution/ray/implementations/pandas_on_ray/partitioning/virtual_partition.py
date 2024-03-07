@@ -324,13 +324,12 @@ def _deploy_ray_func(
     if not extract_metadata:
         for item in result:
             yield item
-        return
-
-    ip = get_node_ip_address()
-    for r in result:
-        if isinstance(r, pandas.DataFrame):
-            for item in [r, len(r), len(r.columns), ip]:
-                yield item
-        else:
-            for item in [r, None, None, ip]:
-                yield item
+    else:
+        ip = get_node_ip_address()
+        for r in result:
+            if isinstance(r, pandas.DataFrame):
+                for item in [r, len(r), len(r.columns), ip]:
+                    yield item
+            else:
+                for item in [r, None, None, ip]:
+                    yield item

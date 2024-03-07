@@ -113,9 +113,7 @@ def _split_result_for_readers(axis, num_splits, df):  # pragma: no cover
     list
         A list of pandas DataFrames.
     """
-    splits = split_result_of_axis_func_pandas(axis, num_splits, df)
-    if not isinstance(splits, list):
-        splits = [splits]
+    splits = list(split_result_of_axis_func_pandas(axis, num_splits, df))
     return splits
 
 
