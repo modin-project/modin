@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import sys
 
 import matplotlib
@@ -723,8 +724,9 @@ def test_loc_iloc_2064(locator_name):
             "index 1 is out of bounds for axis 0 with size 0"
         )
     else:
+        _type = "int32" if os.name == "nt" else "int64"
         raising_exceptions = KeyError(
-            "None of [Index([1], dtype='int32')] are in the [index]"
+            f"None of [Index([1], dtype='{_type}')] are in the [index]"
         )
     eval_general(
         modin_df,
