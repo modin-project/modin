@@ -1059,6 +1059,31 @@ def from_ray_dataset(ray_obj):
     )
 
 
+def from_dask_dataframe(dask_obj):
+    """
+    Convert a Dask DataFrame into Modin DataFrame.
+
+    Parameters
+    ----------
+    dask_obj : dask.dataframe.DataFrame
+        The Dask DataFrame to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Dask DataFrame can only be converted to Modin DataFrame if Modin uses a Dask engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(
+        query_compiler=FactoryDispatcher.from_dask_dataframe(dask_obj)
+    )
+
+
 def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
@@ -1121,6 +1146,29 @@ def to_ray_dataset(modin_obj):
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     return FactoryDispatcher.to_ray_dataset(modin_obj)
+
+
+def to_dask_dataframe(modin_obj):
+    """
+    Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
+
+    Parameters
+    ----------
+    modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+        The Modin DataFrame/Series to convert.
+
+    Returns
+    -------
+    dask.dataframe.DataFrame or dask.dataframe.Series
+        Converted object with type depending on input.
+
+    Notes
+    -----
+    Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return FactoryDispatcher.to_dask_dataframe(modin_obj)
 
 
 __all__ = [
