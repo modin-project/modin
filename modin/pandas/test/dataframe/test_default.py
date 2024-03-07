@@ -301,13 +301,11 @@ class TestCorr:
 
     @pytest.mark.parametrize("numeric_only", [True, False])
     def test_corr_non_numeric(self, numeric_only):
+        if not numeric_only:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7023")
         eval_general(
             *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
             lambda df: df.corr(numeric_only=numeric_only),
-            # Use False to compare only types:
-            # Modin exc: `ValueError("Unsupported types with 'numeric_only=False'")`
-            # Pandas exc: `ValueError("could not convert string to float: 'a'")`
-            raising_exceptions=False,
         )
 
     @pytest.mark.skipif(
@@ -382,13 +380,11 @@ def test_cov(min_periods, ddof):
 
 @pytest.mark.parametrize("numeric_only", [True, False])
 def test_cov_numeric_only(numeric_only):
+    if not numeric_only:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7023")
     eval_general(
         *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
         lambda df: df.cov(numeric_only=numeric_only),
-        # Use False to compare only types:
-        # Modin exc: `ValueError("Unsupported types with 'numeric_only=False'")`
-        # Pandas exc: `ValueError("could not convert string to float: 'a'")`
-        raising_exceptions=False,
     )
 
 
@@ -776,9 +772,6 @@ def test_pivot_table_margins(
     raising_exceptions = None
     if "dict_func" in request.node.callspec.id:
         raising_exceptions = KeyError("Column(s) ['col28', 'col38'] do not exist")
-    if get_current_execution() == "BaseOnPython":
-        # FIXME: identify issue
-        raising_exceptions = False
     eval_general(
         *create_test_dfs(data),
         operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),

@@ -542,10 +542,8 @@ def test_median_skew_std_var_sem_1953(method):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
-def test_mode(request, data, axis, numeric_only):
+@pytest.mark.parametrize([False, True])
+def test_mode(data, axis, numeric_only):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
