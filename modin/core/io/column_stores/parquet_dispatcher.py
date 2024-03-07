@@ -647,6 +647,84 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
+    def _normalize_partitioning(cls, remote_parts, row_lengths, column_widths):
+        from modin.core.storage_formats.pandas.utils import get_length_list
+
+        actual_row_nparts = remote_parts.shape[0]
+
+        if row_lengths is not None:
+            desired_row_nparts = min(
+                sum(row_lengths) // MinPartitionSize.get(), NPartitions.get()
+            )
+        else:
+            desired_row_nparts = actual_row_nparts
+
+        # only repartition along rows if the actual number of row splits 1.5 times bigger than desired
+        if 1.5 * actual_row_nparts < desired_row_nparts:
+            # assuming that the sizes of parquet's row groups are more or less equal,
+            # so trying to use the same number of splits for each partition
+            splits_per_partition = desired_row_nparts // actual_row_nparts
+            remainder = desired_row_nparts % actual_row_nparts
+
+            new_parts = []
+            new_row_lengths = []
+
+            for row_idx, (part_len, row_parts) in enumerate(
+                zip(row_lengths, remote_parts)
+            ):
+                num_splits = splits_per_partition
+                # 'remainder' indicates how many partitions have to be split into 'num_splits + 1' splits
+                # to have exactly 'desired_row_nparts' in the end
+                if row_idx < remainder:
+                    num_splits += 1
+
+                if num_splits == 1:
+                    new_parts.append(row_parts)
+                    new_row_lengths.append(part_len)
+                    continue
+
+                offset = len(new_parts)
+                new_parts.extend([[] for _ in range(num_splits)])
+                for part in row_parts:
+                    splited = cls.frame_cls._partition_mgr_cls._column_partitions_class(
+                        [part]
+                    ).apply(
+                        lambda df: df,
+                        num_splits=num_splits,
+                        maintain_partitioning=False,
+                    )
+                    for i in range(num_splits):
+                        new_parts[offset + i].append(splited[i])
+
+                new_row_lengths.extend(get_length_list(part_len, num_splits))
+
+            remote_parts = np.array(new_parts)
+            row_lengths = new_row_lengths
+        
+        desired_col_nparts = min(
+            sum(column_widths) // MinPartitionSize.get(), NPartitions.get()
+        )
+        # only repartition along cols if the actual number of col splits 1.5 times bigger than desired
+        if 1.5 * desired_col_nparts < remote_parts.shape[1]:
+            remote_parts = np.array(
+                [
+                    (
+                        cls.frame_cls._partition_mgr_cls._row_partition_class(
+                            row_parts
+                        ).apply(
+                            lambda df: df,
+                            num_splits=desired_col_nparts,
+                            maintain_partitioning=False,
+                        )
+                    )
+                    for row_parts in remote_parts
+                ]
+            )
+            column_widths = get_length_list(sum(column_widths), desired_col_nparts)
+        
+        return remote_parts, row_lengths, column_widths
+
+    @classmethod
     def build_query_compiler(cls, dataset, columns, index_columns, **kwargs):
         """
         Build query compiler from deployed tasks outputs.
@@ -684,66 +762,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         remote_parts = cls.build_partition(partition_ids, column_widths)
         if len(partition_ids) > 0:
             row_lengths = [part.length() for part in remote_parts.T[0]]
-            desired_nparts = min(
-                sum(row_lengths) // MinPartitionSize.get(), NPartitions.get()
-            )
         else:
             row_lengths = None
-            desired_nparts = len(partition_ids)
 
-        if len(partition_ids) < desired_nparts:
-            from modin.core.storage_formats.pandas.utils import get_length_list
-
-            def splitter(df, indexers):
-                for ind in indexer:
-                    yield df.iloc[ind]
-
-            # assuming that the sizes of parquet's row groups are more or less equal,
-            # so trying to use the same number of splits for each partition
-            splits_per_partition = desired_nparts // len(partition_ids)
-            remainder = desired_nparts % len(partition_ids)
-
-            new_parts = []
-            new_row_lengths = []
-
-            for row_idx, (part_len, row_parts) in enumerate(
-                zip(row_lengths, remote_parts)
-            ):
-                num_splits = splits_per_partition
-                # 'remainder' indicates how many partitions have to be split into 'num_splits + 1' splits
-                # to have exactly 'desired_nparts' in the end
-                if row_idx < remainder:
-                    num_splits += 1
-
-                if num_splits == 1:
-                    new_parts.append(row_parts)
-                    new_row_lengths.append(part_len)
-                    continue
-
-                part_bounds = np.cumsum([0] + get_length_list(part_len, num_splits))
-                part_indexers = []
-                for i in range(len(part_bounds) - 1):
-                    part_indexers.append(range(part_bounds[i], part_bounds[i + 1]))
-
-                new_parts.extend([[] for _ in range(len(part_indexers))])
-                for part in row_parts:
-                    new_splt = cls.frame_cls._partition_mgr_cls._column_partitions_class([part]).apply(lambda df: df, num_splits=len(part_indexers), maintain_partitioning=False)
-                    # breakpoint()
-                    for i in range(len(part_indexers)):
-                        new_parts[-i - 1].append(new_splt[-i - 1])
-
-                # for indexer in part_indexers:
-                #     new_parts.append([])  # appending new row-part
-                #     new_row_lengths.append(len(indexer))
-                #     for part in row_parts:
-                #         # '.mask()' performs completely lazy (unless LazyExec.put('off')),
-                #         # so this for-loop should be very cheap
-                #         new_parts[-1].append(
-                #             part.mask(row_labels=indexer, col_labels=slice(None))
-                #         )
-
-            remote_parts = np.array(new_parts)
-            row_lengths = None
+        remote_parts, row_lengths, column_widths = cls._normalize_partitioning(remote_parts, row_lengths, column_widths)
 
         if (
             dataset.pandas_metadata
@@ -760,7 +782,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             column_widths=column_widths,
             dtypes=None,
         )
-        # breakpoint()
         if sync_index:
             frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(frame)

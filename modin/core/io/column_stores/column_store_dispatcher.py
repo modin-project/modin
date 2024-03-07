@@ -178,6 +178,7 @@ class ColumnStoreDispatcher(FileDispatcher):
             min_block_size = min(
                 columns_length // num_remaining_parts, MinPartitionSize.get()
             )
+        # min_block_size = MinPartitionSize.get()
         column_splits = compute_chunksize(
             columns_length, NPartitions.get(), max(1, min_block_size)
         )
