@@ -4721,15 +4721,18 @@ def _case_when_caselists():
 )
 def test_case_when(base, caselist):
     pd_result = base.case_when(caselist)
+    modin_base = pd.Series(base)
+    # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
+    # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal
     nparts = NPartitions.get()
     part_size = MinPartitionSize.get()
     new_nparts = max(1, min(math.ceil(len(base) / part_size), part_size)) + 1
     NPartitions.put(new_nparts)
     MinPartitionSize.put(math.ceil(len(base) / new_nparts))
-    base_repart = pd.Series(base)
+    modin_base_repart = pd.Series(base)
     NPartitions.put(nparts)
     MinPartitionSize.put(part_size)
-    for df in (pd.Series(base), base_repart):
+    for df in (modin_base, modin_base_repart):
         df_equals(pd_result, df.case_when(caselist))
         if any(
             isinstance(data, pandas.Series)
