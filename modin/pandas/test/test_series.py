@@ -289,7 +289,7 @@ def test___and__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
+        # FIXME: https://github.com/modin-project/modin/issues/7037
         raising_exceptions = False
     inter_df_math_helper(
         modin_series,
@@ -412,7 +412,7 @@ def test___getitem__(data):
     df_equals(modin_series[modin_series > 500], pandas_series[pandas_series > 500])
     df_equals(modin_series[::2], pandas_series[::2])
     # Test getting an invalid string key
-    # FIXME: different messages
+    # FIXME: https://github.com/modin-project/modin/issues/7038
     eval_general(
         modin_series, pandas_series, lambda s: s["a"], raising_exceptions=False
     )
@@ -476,7 +476,7 @@ def test___invert__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
+        # Modin's exception message looks better, it's probably fine just leave it as is
         raising_exceptions = False
     eval_general(
         modin_series,
@@ -552,7 +552,7 @@ def test___or__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
+        # Modin's exception message looks better, it's probably fine just leave it as is
         raising_exceptions = False
     inter_df_math_helper(
         modin_series,
@@ -685,7 +685,7 @@ def test___xor__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
+        # Modin's exception message looks better, it's probably fine just leave it as is
         raising_exceptions = False
     inter_df_math_helper(
         modin_series,
@@ -766,7 +766,7 @@ def test_aggregate_alias():
 def test_aggregate(data, func, request):
     raising_exceptions = None
     if "should raise AssertionError" in request.node.callspec.id:
-        # FIXME: different messages
+        # FIXME: https://github.com/modin-project/modin/issues/7031
         raising_exceptions = False
     eval_general(
         *create_test_series(data),
@@ -901,7 +901,7 @@ def test_append(data):
 def test_apply(data, func, request):
     raising_exceptions = None
     if "should raise AssertionError" in request.node.callspec.id:
-        # FIXME: different messages, check only type
+        # FIXME: https://github.com/modin-project/modin/issues/7031
         raising_exceptions = False
     elif "df sum" in request.node.callspec.id:
         _type = "int" if "int_data" in request.node.callspec.id else "float"
@@ -1072,7 +1072,7 @@ def test_astype(data, request):
     eval_general(modin_series, pandas_series, lambda df: df.astype(str))
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # different messages, check only type
+        # FIXME: https://github.com/modin-project/modin/issues/7039
         raising_exceptions = False
     eval_general(
         modin_series,
@@ -1084,7 +1084,7 @@ def test_astype(data, request):
     eval_general(
         modin_series, pandas_series, lambda ser: ser.astype({series_name: str})
     )
-    # FIXME: different messages, check only type
+    # FIXME: https://github.com/modin-project/modin/issues/7039
     eval_general(
         modin_series,
         pandas_series,

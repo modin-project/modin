@@ -36,7 +36,6 @@ from modin.pandas.test.utils import (
     quantiles_values,
     random_state,
     test_data,
-    test_data_diff_dtype,
     test_data_keys,
     test_data_values,
     test_data_with_duplicates_keys,
@@ -511,21 +510,6 @@ def test_median_skew_transposed(axis, method):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df.T, method)(axis=axis),
-    )
-
-
-@pytest.mark.parametrize("numeric_only", [True, False])
-@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank", "sem"])
-def test_median_skew_std_var_rank_sem_specific(numeric_only, method):
-    raising_exceptions = None
-    if not numeric_only and method in ("median", "skew", "std", "var", "sem"):
-        # FIXME: different messages
-        raising_exceptions = False
-
-    eval_general(
-        *create_test_dfs(test_data_diff_dtype),
-        lambda df: getattr(df, method)(numeric_only=numeric_only),
-        raising_exceptions=raising_exceptions,
     )
 
 

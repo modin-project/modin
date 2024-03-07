@@ -342,7 +342,7 @@ class TestCsv:
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
-            # FIXME: use concrete message, split test cases if needed
+            # FIXME: https://github.com/modin-project/modin/issues/7035
             raising_exceptions=False,
         )
 
@@ -752,8 +752,7 @@ class TestCsv:
 
         raising_exceptions = None
         if dialect is None:
-            # FIXME: it is too difficult to accurately determine the parameters
-            # at which the test fails + depends on randomness
+            # FIXME: https://github.com/modin-project/modin/issues/7035
             raising_exceptions = False
 
         eval_io(
@@ -972,7 +971,7 @@ class TestCsv:
             and "names1-0-None-nonexistent_string_column-strict-None"
             in request.node.callspec.id
         ):
-            # FIXME: identify issue
+            # FIXME: https://github.com/modin-project/modin/issues/7035
             raising_exceptions = False
         eval_io(
             fn_name="read_csv",
@@ -1120,7 +1119,7 @@ class TestCsv:
     def test_read_csv_wrong_path(self):
         raising_exceptions = FileNotFoundError(2, "No such file or directory")
         if StorageFormat.get() == "Hdk":
-            # FIXME: identify issue
+            # FIXME: https://github.com/modin-project/modin/issues/7035
             raising_exceptions = False
         eval_io(
             fn_name="read_csv",
@@ -1295,7 +1294,7 @@ class TestCsv:
             skiprows=skiprows,
             header=header,
             dtype="str",  # to avoid issues with heterogeneous data
-            # FIXME: specify exceptions explicit
+            # FIXME: https://github.com/modin-project/modin/issues/7035
             raising_exceptions=False,
         )
 
@@ -2369,7 +2368,7 @@ class TestExcel:
             fn_name="read_excel",
             # read_excel kwargs
             io="modin/pandas/test/data/excel_sheetname_title.xlsx",
-            # FIXME: identify the issue
+            # FIXME: https://github.com/modin-project/modin/issues/7036
             raising_exceptions=False,
         )
 

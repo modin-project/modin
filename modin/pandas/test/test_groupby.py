@@ -167,7 +167,7 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     eval_general(
         modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
     )
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7032
     eval_general(
         modin_groupby,
         pandas_groupby,
@@ -263,13 +263,18 @@ def test_mixed_dtypes_groupby(as_index):
                 *sort_index_if_experimental_groupby(*dfs)
             ),
         )
+        raising_exceptions = None
+        if StorageFormat.get() != "Hdk":
+            # FIXME: https://github.com/modin-project/modin/issues/7032 (enable check for HDK)
+            raising_exceptions = ValueError(
+                "could not convert string to float: '\\x94'"
+            )
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
-            # FIXME: identify issue
-            raising_exceptions=False,
+            raising_exceptions=raising_exceptions,
         )
         eval_general(
             modin_groupby, pandas_groupby, lambda df: df.sample(random_state=1)
@@ -294,7 +299,7 @@ def test_mixed_dtypes_groupby(as_index):
             pandas_groupby,
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
-            # FIXME: identify issue,
+            # FIXME: https://github.com/modin-project/modin/issues/7032
             raising_exceptions=False,
         )
         eval_cummax(modin_groupby, pandas_groupby, numeric_only=True)
@@ -542,7 +547,7 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7033
     eval_general(
         modin_groupby, pandas_groupby, lambda df: df.idxmax(), raising_exceptions=False
     )
@@ -626,7 +631,7 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7033
     eval_general(
         modin_groupby, pandas_groupby, lambda df: df.idxmin(), raising_exceptions=False
     )
@@ -663,7 +668,7 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
         raising_exceptions = None
         if col1_category:
-            # FIXME: identify issues
+            # FIXME: https://github.com/modin-project/modin/issues/7033
             raising_exceptions = False
         if not is_pandas_bug_case:
             eval_general(
@@ -776,7 +781,7 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
-        # FIXME: identify issue
+        # FIXME: https://github.com/modin-project/modin/issues/7033
         eval___getitem__(
             modin_groupby, pandas_groupby, "col3", raising_exceptions=False
         )
@@ -789,7 +794,7 @@ def test_simple_row_groupby(by, as_index, col1_category, request):
         if isinstance(by, list)
         else ["col3", "col4"]
     )
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7033
     eval___getitem__(
         modin_groupby, pandas_groupby, non_by_cols, raising_exceptions=False
     )
@@ -2409,9 +2414,9 @@ def test_multi_column_groupby_different_partitions(
         # using a custom comparator that allows slight numeric deviations.
         comparator=try_modin_df_almost_equals_compare,
     )
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7034
     eval___getitem__(md_grp, pd_grp, md_df.columns[1], raising_exceptions=False)
-    # FIXME: identify issue
+    # FIXME: https://github.com/modin-project/modin/issues/7034
     eval___getitem__(
         md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]], raising_exceptions=False
     )
@@ -2861,7 +2866,7 @@ def test_groupby_with_grouper(by):
         modin_df,
         pandas_df,
         lambda df: df.groupby(by).mean(),
-        # FIXME: identify issue
+        # FIXME: https://github.com/modin-project/modin/issues/7033
         raising_exceptions=False,
     )
 

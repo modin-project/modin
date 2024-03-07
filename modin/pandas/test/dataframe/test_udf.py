@@ -82,7 +82,7 @@ def test_agg_apply(axis, func, op, request):
             "Function names must be unique if there is no new column names assigned"
         )
     elif "should raise AssertionError" in request.node.callspec.id:
-        # FIXME: different messages
+        # FIXME: https://github.com/modin-project/modin/issues/7031
         raising_exceptions = False
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
@@ -105,7 +105,7 @@ def test_agg_apply_axis_names(axis, func, op, request):
             "Function names must be unique if there is no new column names assigned"
         )
     elif "should raise AssertionError" in request.node.callspec.id:
-        # FIXME: different messages
+        # FIXME: https://github.com/modin-project/modin/issues/7031
         raising_exceptions = False
     eval_general(
         *create_test_dfs(test_data["int_data"]),
@@ -528,5 +528,5 @@ def test_query_with_element_access_issue_4580(engine):
 )
 def test_transform(data, func, request):
     if "list_udfs" in request.node.callspec.id:
-        pytest.xfail(reason="FIXME: Modin failed")
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/6998")
     eval_general(*create_test_dfs(data), lambda df: df.transform(func))

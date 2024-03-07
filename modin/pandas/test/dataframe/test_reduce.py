@@ -347,7 +347,7 @@ def test_sum_single_column(data):
 
 
 @pytest.mark.parametrize(
-    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
+    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var", "rank"]
 )
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("numeric_only", [False, True])
@@ -366,9 +366,12 @@ def test_reduce_specific(fn, numeric_only, axis):
             else:
                 # FIXME: https://github.com/modin-project/modin/issues/7030
                 raising_exceptions = False
-        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
+        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean", "rank"):
             # FIXME: https://github.com/modin-project/modin/issues/7030
             raising_exceptions = False
+
+    if numeric_only and axis is None and fn == "rank":
+        raising_exceptions = ValueError("No axis named None for object type DataFrame")
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
