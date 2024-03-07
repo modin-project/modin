@@ -263,18 +263,13 @@ def test_mixed_dtypes_groupby(as_index):
                 *sort_index_if_experimental_groupby(*dfs)
             ),
         )
-        raising_exceptions = None
-        if StorageFormat.get() != "Hdk":
-            # FIXME: https://github.com/modin-project/modin/issues/7032 (enable check for HDK)
-            raising_exceptions = ValueError(
-                "could not convert string to float: '\\x94'"
-            )
+        # FIXME: https://github.com/modin-project/modin/issues/7032
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
-            raising_exceptions=raising_exceptions,
+            raising_exceptions=False,
         )
         eval_general(
             modin_groupby, pandas_groupby, lambda df: df.sample(random_state=1)
