@@ -3575,6 +3575,19 @@ def test_unique(data):
     assert modin_result.shape == pandas_result.shape
 
 
+def test_unique_pyarrow_dtype():
+    # See #6227 for details
+    modin_series, pandas_series = create_test_series(
+        [1, 0, pd.NA], dtype="uint8[pyarrow]"
+    )
+    modin_result = modin_series.unique()
+    pandas_result = pandas_series.unique()
+
+    df_equals(modin_result, pandas_result)
+    # to be sure `unique` return `ArrowExtensionArray`
+    assert type(pandas_result) is type(modin_result)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unstack(data):
     modin_series, pandas_series = create_test_series(data)
