@@ -449,8 +449,7 @@ def test_astype_errors(errors):
     modin_df, pandas_df = create_test_dfs(data)
     raising_exceptions = None
     if errors == "raise":
-        # FIXME: different messages
-        raising_exceptions = False
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7025")
     eval_general(
         modin_df,
         pandas_df,
@@ -1295,8 +1294,7 @@ def test_insert_dtypes(data, astype, request):
 
     raising_exceptions = None
     if "int32-float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
-        raising_exceptions = False
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7026")
     eval_insert(
         modin_df,
         pandas_df,
@@ -1331,7 +1329,7 @@ def test_insert(data):
     )
     eval_insert(modin_df, pandas_df, col="Scalar", value=100)
     if StorageFormat.get() != "Hdk":
-        # FIXME: isentify issue
+        # FIXME: https://github.com/modin-project/modin/issues/7027
         eval_insert(
             pd.DataFrame(columns=list("ab")),
             pandas.DataFrame(columns=list("ab")),
@@ -1359,27 +1357,30 @@ def test_insert(data):
     )
 
     # Bad inserts
-    # FIXME: different messages, check only types
     eval_insert(
         modin_df,
         pandas_df,
         col="Bad Column",
         value=lambda df: df,
-        raising_exceptions=False,
+        raising_exceptions=ValueError(
+            "Expected a one-dimensional object, got a DataFrame with 69 columns instead."
+        ),
     )
     eval_insert(
         modin_df,
         pandas_df,
         col="Too Short",
         value=lambda df: list(df[df.columns[0]])[:-1],
-        raising_exceptions=False,
+        raising_exceptions=ValueError(
+            "Length of values (255) does not match length of index (256)"
+        ),
     )
     eval_insert(
         modin_df,
         pandas_df,
         col=lambda df: df.columns[0],
         value=lambda df: df[df.columns[0]],
-        raising_exceptions=False,
+        raising_exceptions=ValueError("cannot insert 2d list insert, already exists"),
     )
     eval_insert(
         modin_df,
@@ -1387,13 +1388,15 @@ def test_insert(data):
         loc=lambda df: len(df.columns) + 100,
         col="Bad Loc",
         value=100,
-        raising_exceptions=False,
+        raising_exceptions=IndexError(
+            "index 169 is out of bounds for axis 0 with size 69"
+        ),
     )
 
 
 def test_insert_4407():
     data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_df, pandas_df = create_test_dfs(data)
 
     def comparator(df1, df2):
         assert_series_equal(df1.dtypes, df2.dtypes, check_index=False)
@@ -1402,7 +1405,14 @@ def test_insert_4407():
     for idx, value in enumerate(
         (pandas_df.to_numpy(), np.array([[1]] * 3), np.array([[1, 2, 3], [4, 5, 6]]))
     ):
-        # FIXME: different messages, check only types
+        raising_exceptions = None
+        if idx == 0:
+            raising_exceptions = ValueError(
+                "Expected a 1D array, got an array with shape (3, 2)"
+            )
+        elif idx == 2:
+            # Modin's exception message looks better, it's probably fine just leave it as is
+            raising_exceptions = False
         eval_insert(
             modin_df,
             pandas_df,
@@ -1410,7 +1420,7 @@ def test_insert_4407():
             col=f"test_col{idx}",
             value=value,
             comparator=lambda df1, df2: comparator(df1, df2),
-            raising_exceptions=False,
+            raising_exceptions=raising_exceptions,
         )
 
 
@@ -1658,7 +1668,7 @@ def test___neg__(request, data):
 def test___invert__(data, request):
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: different messages
+        # Modin's exception message looks better, it's probably fine just leave it as is
         raising_exceptions = False
     eval_general(
         *create_test_dfs(data), lambda df: ~df, raising_exceptions=raising_exceptions
