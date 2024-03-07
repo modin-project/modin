@@ -429,7 +429,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     result = func(dataframe.copy(), *f_args, **f_kwargs)
                 else:
                     raise err
-
+        # breakpoint()
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
             # split lengths.

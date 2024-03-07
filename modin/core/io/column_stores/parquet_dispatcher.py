@@ -694,6 +694,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         if len(partition_ids) < desired_nparts:
             from modin.core.storage_formats.pandas.utils import get_length_list
 
+            def splitter(df, indexers):
+                for ind in indexer:
+                    yield df.iloc[ind]
+
             # assuming that the sizes of parquet's row groups are more or less equal,
             # so trying to use the same number of splits for each partition
             splits_per_partition = desired_nparts // len(partition_ids)
@@ -721,18 +725,25 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 for i in range(len(part_bounds) - 1):
                     part_indexers.append(range(part_bounds[i], part_bounds[i + 1]))
 
-                for indexer in part_indexers:
-                    new_parts.append([])  # appending new row-part
-                    new_row_lengths.append(len(indexer))
-                    for part in row_parts:
-                        # '.mask()' performs completely lazy (unless LazyExec.put('off')),
-                        # so this for-loop should be very cheap
-                        new_parts[-1].append(
-                            part.mask(row_labels=indexer, col_labels=slice(None))
-                        )
+                new_parts.extend([[] for _ in range(len(part_indexers))])
+                for part in row_parts:
+                    new_splt = cls.frame_cls._partition_mgr_cls._column_partitions_class([part]).apply(lambda df: df, num_splits=len(part_indexers), maintain_partitioning=False)
+                    # breakpoint()
+                    for i in range(len(part_indexers)):
+                        new_parts[-i - 1].append(new_splt[-i - 1])
+
+                # for indexer in part_indexers:
+                #     new_parts.append([])  # appending new row-part
+                #     new_row_lengths.append(len(indexer))
+                #     for part in row_parts:
+                #         # '.mask()' performs completely lazy (unless LazyExec.put('off')),
+                #         # so this for-loop should be very cheap
+                #         new_parts[-1].append(
+                #             part.mask(row_labels=indexer, col_labels=slice(None))
+                #         )
 
             remote_parts = np.array(new_parts)
-            row_lengths = new_row_lengths
+            row_lengths = None
 
         if (
             dataset.pandas_metadata
@@ -741,7 +752,6 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             and dataset.pandas_metadata["column_indexes"][0]["numpy_type"] == "int64"
         ):
             columns = pandas.Index(columns).astype("int64").to_list()
-
         frame = cls.frame_cls(
             remote_parts,
             index,
@@ -750,6 +760,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             column_widths=column_widths,
             dtypes=None,
         )
+        # breakpoint()
         if sync_index:
             frame.synchronize_labels(axis=0)
         return cls.query_compiler_cls(frame)
