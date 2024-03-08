@@ -799,6 +799,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             and dataset.pandas_metadata["column_indexes"][0]["numpy_type"] == "int64"
         ):
             columns = pandas.Index(columns).astype("int64").to_list()
+
         frame = cls.frame_cls(
             remote_parts,
             index,
