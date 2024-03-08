@@ -658,7 +658,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         ----------
         remote_parts : np.ndarray
         row_lengths : list of ints or None
-            Row lengths, if 'None' won't repartition across rows.
+            Row lengths, if 'None', won't repartition across rows.
         column_widths : list of ints
 
         Returns
@@ -712,7 +712,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 # adding empty row parts according to the number of splits
                 new_parts.extend([[] for _ in range(num_splits)])
                 for part in row_parts:
-                    splited = cls.frame_cls._partition_mgr_cls._column_partitions_class(
+                    split = cls.frame_cls._partition_mgr_cls._column_partitions_class(
                         [part]
                     ).apply(
                         lambda df: df,
@@ -720,7 +720,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                         maintain_partitioning=False,
                     )
                     for i in range(num_splits):
-                        new_parts[offset + i].append(splited[i])
+                        new_parts[offset + i].append(split[i])
 
                 new_row_lengths.extend(get_length_list(part_len, num_splits))
 
