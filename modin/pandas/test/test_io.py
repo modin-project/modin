@@ -2061,6 +2061,10 @@ class TestParquet:
         StorageFormat.get() != "Pandas",
         reason="Doesn't make sense for executions that do not use Modin's partitioning",
     )
+    @pytest.mark.skipif(
+        Engine.get() == "Python",
+        reason="Python engine uses default-to-pandas implementations and has another logic of partitioning",
+    )
     @pytest.mark.parametrize(
         "modify_config", [{NPartitions: 16, MinPartitionSize: 32}], indirect=True
     )

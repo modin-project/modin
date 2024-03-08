@@ -667,6 +667,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         row_lengths : list of ints or None
         column_widths : list of ints
         """
+        if len(remote_parts) == 0:
+            return remote_parts, row_lengths, column_widths
+
         from modin.core.storage_formats.pandas.utils import get_length_list
 
         # The code in this function is actually a duplication of what 'BaseQueryCompiler.repartition()' does,
