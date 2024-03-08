@@ -35,16 +35,16 @@ from pandas.core.dtypes.common import (
     is_string_dtype,
     is_timedelta64_dtype,
 )
-from pandas.testing import (
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
+from modin.pandas.io import to_pandas
+from modin.pandas.testing import (
     assert_extension_array_equal,
     assert_frame_equal,
     assert_index_equal,
     assert_series_equal,
 )
-
-import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
-from modin.pandas.io import to_pandas
 from modin.utils import try_cast_to_pandas
 
 random_state = np.random.RandomState(seed=42)

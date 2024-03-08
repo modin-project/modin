@@ -94,6 +94,7 @@ with warnings.catch_warnings():
         Float32Dtype,
         Float64Dtype,
         from_dummies,
+        testing,
     )
 
 import os

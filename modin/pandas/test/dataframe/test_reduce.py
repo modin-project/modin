@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._testing import assert_series_equal
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
@@ -39,6 +38,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     test_data_values,
 )
+from modin.pandas.testing import assert_series_equal
 
 NPartitions.put(4)
 

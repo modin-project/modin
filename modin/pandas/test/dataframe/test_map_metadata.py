@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas.testing import assert_index_equal, assert_series_equal
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
@@ -49,6 +48,7 @@ from modin.pandas.test.utils import (
     test_func_keys,
     test_func_values,
 )
+from modin.pandas.testing import assert_index_equal, assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 

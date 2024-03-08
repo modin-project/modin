@@ -18,7 +18,6 @@ import numpy as np
 import pandas
 import pytest
 from pandas._testing import ensure_clean
-from pandas.testing import assert_index_equal
 
 import modin.pandas as pd
 from modin.config import MinPartitionSize, NPartitions, StorageFormat
@@ -42,6 +41,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     test_data_values,
 )
+from modin.pandas.testing import assert_index_equal
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
