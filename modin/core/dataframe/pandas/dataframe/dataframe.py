@@ -4649,7 +4649,7 @@ class PandasDataframe(ClassLogger):
         -------
         PandasDataframe
         """
-        # For Dask the callables must wrapped for each partition, otherwise
+        # For Dask the callables must be wrapped for each partition, otherwise
         # the execution could fail with CancelledError.
         single_wrap = Engine.get() != "Dask"
         cls = type(self)
@@ -4662,12 +4662,16 @@ class PandasDataframe(ClassLogger):
             def case_when(df, name, caselist):  # pragma: no cover
                 caselist = [
                     tuple(
-                        data.squeeze(1) if isinstance(data, pandas.DataFrame) else data
+                        (
+                            data.squeeze(axis=1)
+                            if isinstance(data, pandas.DataFrame)
+                            else data
+                        )
                         for data in case_tuple
                     )
                     for case_tuple in caselist
                 ]
-                return pandas.DataFrame({name: df.squeeze(1).case_when(caselist)})
+                return pandas.DataFrame({name: df.squeeze(axis=1).case_when(caselist)})
 
             if single_wrap:
                 cls._CASE_WHEN_FN = remote_fn = wrapper_put(case_when)
