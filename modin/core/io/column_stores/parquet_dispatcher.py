@@ -648,18 +648,40 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
     @classmethod
     def _normalize_partitioning(cls, remote_parts, row_lengths, column_widths):
+        """
+        Normalize partitioning according to the default partitioning scheme in Modin.
+
+        The result of 'read_parquet()' is often under partitioned over rows and over partitioned
+        over columns, so this method expands the number of row splits and shrink the number of column splits.
+
+        Parameters
+        ----------
+        remote_parts : np.ndarray
+        row_lengths : list of ints or None
+            Row lengths, if 'None' won't repartition across rows.
+        column_widths : list of ints
+
+        Returns
+        -------
+        remote_parts : np.ndarray
+        row_lengths : list of ints or None
+        column_widths : list of ints
+        """
         from modin.core.storage_formats.pandas.utils import get_length_list
+
+        # The code in this function is actually a duplication of what 'BaseQueryCompiler.repartition()' does,
+        # however this implementation works much faster for some reason
 
         actual_row_nparts = remote_parts.shape[0]
 
         if row_lengths is not None:
-            desired_row_nparts = min(
-                sum(row_lengths) // MinPartitionSize.get(), NPartitions.get()
+            desired_row_nparts = max(
+                1, min(sum(row_lengths) // MinPartitionSize.get(), NPartitions.get())
             )
         else:
             desired_row_nparts = actual_row_nparts
 
-        # only repartition along rows if the actual number of row splits 1.5 times bigger than desired
+        # only repartition along rows if the actual number of row splits 1.5 times SMALLER than desired
         if 1.5 * actual_row_nparts < desired_row_nparts:
             # assuming that the sizes of parquet's row groups are more or less equal,
             # so trying to use the same number of splits for each partition
@@ -684,6 +706,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     continue
 
                 offset = len(new_parts)
+                # adding empty row parts according to the number of splits
                 new_parts.extend([[] for _ in range(num_splits)])
                 for part in row_parts:
                     splited = cls.frame_cls._partition_mgr_cls._column_partitions_class(
@@ -700,11 +723,11 @@ class ParquetDispatcher(ColumnStoreDispatcher):
 
             remote_parts = np.array(new_parts)
             row_lengths = new_row_lengths
-        
-        desired_col_nparts = min(
-            sum(column_widths) // MinPartitionSize.get(), NPartitions.get()
+
+        desired_col_nparts = max(
+            1, min(sum(column_widths) // MinPartitionSize.get(), NPartitions.get())
         )
-        # only repartition along cols if the actual number of col splits 1.5 times bigger than desired
+        # only repartition along cols if the actual number of col splits 1.5 times BIGGER than desired
         if 1.5 * desired_col_nparts < remote_parts.shape[1]:
             remote_parts = np.array(
                 [
@@ -721,7 +744,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                 ]
             )
             column_widths = get_length_list(sum(column_widths), desired_col_nparts)
-        
+
         return remote_parts, row_lengths, column_widths
 
     @classmethod
@@ -765,7 +788,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         else:
             row_lengths = None
 
-        remote_parts, row_lengths, column_widths = cls._normalize_partitioning(remote_parts, row_lengths, column_widths)
+        remote_parts, row_lengths, column_widths = cls._normalize_partitioning(
+            remote_parts, row_lengths, column_widths
+        )
 
         if (
             dataset.pandas_metadata
