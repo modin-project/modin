@@ -2048,7 +2048,7 @@ class Series(BasePandasDataset):
         """
         Return unique values of Series object.
         """
-        return self._query_compiler.unique().to_pandas().squeeze(axis=1).values
+        return self._query_compiler.unique()
 
     def update(self, other):  # noqa: PR01, D200
         """

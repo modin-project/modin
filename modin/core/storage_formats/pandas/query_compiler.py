@@ -1903,9 +1903,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
         new_modin_frame = self._modin_frame.apply_full_axis(
             0,
             lambda x: x.squeeze(axis=1).unique(),
-            new_columns=self.columns,
+            num_splits=1,
         )
-        return self.__constructor__(new_modin_frame)
+        return new_modin_frame._partitions[0][0].get()
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):
