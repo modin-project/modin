@@ -46,6 +46,7 @@ from modin.config import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
 )
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.pandas.io import from_arrow, from_ray_dataset, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -2051,6 +2052,73 @@ class TestParquet:
             path=s3_path,
             engine=engine,
             storage_options=s3_storage_options,
+        )
+
+    @pytest.mark.skipif(
+        StorageFormat.get() != "Pandas",
+        reason="Doesn't make sense for executions that do not use Modin's partitioning",
+    )
+    @pytest.mark.skipif(
+        Engine.get() == "Python",
+        reason="Python engine uses default-to-pandas implementations and has another logic of partitioning",
+    )
+    @pytest.mark.parametrize(
+        "modify_config", [{NPartitions: 16, MinPartitionSize: 32}], indirect=True
+    )
+    @pytest.mark.parametrize("parquet_num_row_groups", [1, 2, 7, 8, 11, 16, 23, 32])
+    @pytest.mark.parametrize("ncols", [2, 10, 34])
+    def test_read_parquet_proper_partitioning(
+        self, modify_config, ncols, parquet_num_row_groups, tmp_path, engine
+    ):
+        """
+        Test that no matter how the original parquet file is partitioned,
+        the resulted modin dataframe has proper partitioning.
+        """
+        nrows = 1024
+        test_df = pandas.DataFrame(
+            {
+                **{f"data_col{i}": np.arange(nrows) for i in range(ncols)},
+            }
+        )
+        path = tmp_path / "data"
+        path.mkdir()
+        parts = split_result_of_axis_func_pandas(
+            axis=0, num_splits=parquet_num_row_groups, result=test_df, min_block_size=1
+        )
+        for i, part in enumerate(parts):
+            part.to_parquet(
+                path / f"parquet_part{i}.parquet",
+                engine=engine,
+            )
+
+        md_df = pd.read_parquet(path)
+
+        expected_num_rows = max(
+            1, min(nrows // MinPartitionSize.get(), NPartitions.get())
+        )
+        expected_num_rows = (
+            expected_num_rows
+            if parquet_num_row_groups * 1.5 < expected_num_rows
+            else parquet_num_row_groups
+        )
+
+        expected_num_cols = max(
+            1, min(ncols // MinPartitionSize.get(), NPartitions.get())
+        )
+        expected_num_cols = (
+            # the repartition logic EXPANDS the number of row splits and SHRINKS the number
+            # of col splits, that's why we're applying '1.5' multiplier to different variables,
+            # (apply multiplier to 'expected_*' for cols and to 'actual_*' for rows)
+            expected_num_cols
+            if expected_num_cols * 1.5 < ncols
+            else ncols
+        )
+
+        assert md_df._query_compiler._modin_frame._partitions.shape[0] == min(
+            expected_num_rows, NPartitions.get()
+        )
+        assert md_df._query_compiler._modin_frame._partitions.shape[1] == min(
+            expected_num_cols, NPartitions.get()
         )
 
 
