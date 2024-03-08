@@ -4720,7 +4720,7 @@ def _case_when_caselists():
     _case_when_caselists(),
 )
 def test_case_when(base, caselist):
-    pd_result = base.case_when(caselist)
+    pandas_result = base.case_when(caselist)
     modin_base = pd.Series(base)
     # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
     # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal
@@ -4733,7 +4733,7 @@ def test_case_when(base, caselist):
     NPartitions.put(nparts)
     MinPartitionSize.put(part_size)
     for df in (modin_base, modin_base_repart):
-        df_equals(pd_result, df.case_when(caselist))
+        df_equals(pandas_result, df.case_when(caselist))
         if any(
             isinstance(data, pandas.Series)
             for case_tuple in caselist
@@ -4746,7 +4746,7 @@ def test_case_when(base, caselist):
                 )
                 for case_tuple in caselist
             ]
-            df_equals(pd_result, df.case_when(caselist))
+            df_equals(pandas_result, df.case_when(caselist))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
