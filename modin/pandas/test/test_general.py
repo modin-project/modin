@@ -12,37 +12,37 @@
 # governing permissions and limitations under the License.
 
 import contextlib
+
+import numpy as np
 import pandas
 import pytest
-import modin.pandas as pd
-import numpy as np
 from numpy.testing import assert_array_equal
-from modin.utils import get_current_execution, to_pandas
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import StorageFormat
 from pandas.testing import assert_frame_equal
 
-from .utils import (
-    create_test_dfs,
-    test_data_values,
-    test_data_keys,
-    df_equals,
-    sort_index_for_equal_values,
-    eval_general,
-    bool_arg_values,
-    bool_arg_keys,
-    default_to_pandas_ignore_string,
-)
+import modin.pandas as pd
+from modin.config import StorageFormat
+from modin.pandas.io import to_pandas
+from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
+from .utils import (
+    bool_arg_keys,
+    bool_arg_values,
+    create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    sort_index_for_equal_values,
+    test_data_keys,
+    test_data_values,
+)
 
 if StorageFormat.get() == "Hdk":
     pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-
-
-@contextlib.contextmanager
-def _nullcontext():
-    """Replacement for contextlib.nullcontext missing in older Python."""
-    yield
+else:
+    pytestmark = pytest.mark.filterwarnings(
+        "default:`DataFrame.insert` for empty DataFrame is not currently supported.*:UserWarning"
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -85,7 +85,11 @@ def test_merge():
 
     join_types = ["outer", "inner"]
     for how in join_types:
-        with warns_that_defaulting_to_pandas() if how == "outer" else _nullcontext():
+        with (
+            warns_that_defaulting_to_pandas()
+            if how == "outer"
+            else contextlib.nullcontext()
+        ):
             modin_result = pd.merge(modin_df, modin_df2, how=how)
         pandas_result = pandas.merge(pandas_df, pandas_df2, how=how)
         df_equals(modin_result, pandas_result)
@@ -114,7 +118,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col1", right_on="col1"
@@ -128,7 +132,7 @@ def test_merge():
         if how == "outer":
             warning_catcher = warns_that_defaulting_to_pandas()
         else:
-            warning_catcher = _nullcontext()
+            warning_catcher = contextlib.nullcontext()
         with warning_catcher:
             modin_result = pd.merge(
                 modin_df, modin_df2, how=how, left_on="col2", right_on="col2"
@@ -291,7 +295,7 @@ def test_merge_asof_bad_arguments():
     modin_left, modin_right = pd.DataFrame(left), pd.DataFrame(right)
 
     # Can't mix by with left_by/right_by
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", by="b", left_by="can't do with by"
         )
@@ -299,7 +303,7 @@ def test_merge_asof_bad_arguments():
         pd.merge_asof(
             modin_left, modin_right, on="a", by="b", left_by="can't do with by"
         )
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, by="b", on="a", right_by="can't do with by"
         )
@@ -309,11 +313,11 @@ def test_merge_asof_bad_arguments():
         )
 
     # Can't mix on with left_on/right_on
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right, on="a", left_on="can't do with by")
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, on="a", left_on="can't do with by")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(
             pandas_left, pandas_right, on="a", right_on="can't do with by"
         )
@@ -343,7 +347,7 @@ def test_merge_asof_bad_arguments():
         pandas.merge_asof(pandas_left, pandas_right, right_on="a")
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right, right_on="a")
-    with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
+    with pytest.raises(ValueError):
         pandas.merge_asof(pandas_left, pandas_right)
     with pytest.raises(ValueError), warns_that_defaulting_to_pandas():
         pd.merge_asof(modin_left, modin_right)
@@ -630,7 +634,6 @@ def test_unique():
     reason="https://github.com/modin-project/modin/issues/2896",
 )
 @pytest.mark.parametrize("normalize, bins, dropna", [(True, 3, False)])
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54857")
 def test_value_counts(normalize, bins, dropna):
     # We sort indices for Modin and pandas result because of issue #1650
     values = np.array([3, 1, 2, 3, 4, np.nan])
@@ -841,6 +844,36 @@ def test_to_pandas_indices(data):
         ), f"Levels of indices at axis {axis} are different!"
 
 
+def test_to_pandas_read_only_issue():
+    df = pd.DataFrame(
+        [
+            [np.nan, 2, np.nan, 0],
+            [3, 4, np.nan, 1],
+            [np.nan, np.nan, np.nan, np.nan],
+            [np.nan, 3, np.nan, 4],
+        ],
+        columns=list("ABCD"),
+    )
+    pdf = df._to_pandas()
+    # there shouldn't be `ValueError: putmask: output array is read-only`
+    pdf.fillna(0, inplace=True)
+
+
+def test_to_numpy_read_only_issue():
+    df = pd.DataFrame(
+        [
+            [np.nan, 2, np.nan, 0],
+            [3, 4, np.nan, 1],
+            [np.nan, np.nan, np.nan, np.nan],
+            [np.nan, 3, np.nan, 4],
+        ],
+        columns=list("ABCD"),
+    )
+    arr = df.to_numpy()
+    # there shouldn't be `ValueError: putmask: output array is read-only`
+    np.putmask(arr, np.isnan(arr), 0)
+
+
 def test_create_categorical_dataframe_with_duplicate_column_name():
     # This tests for https://github.com/modin-project/modin/issues/4312
     pd_df = pandas.DataFrame(
@@ -895,7 +928,11 @@ def test_default_to_pandas_warning_message(func, regex):
 
 def test_empty_dataframe():
     df = pd.DataFrame(columns=["a", "b"])
-    with warns_that_defaulting_to_pandas() if StorageFormat.get() != "Hdk" else _nullcontext():
+    with (
+        warns_that_defaulting_to_pandas()
+        if StorageFormat.get() != "Hdk"
+        else contextlib.nullcontext()
+    ):
         df[(df.a == 1) & (df.b == 2)]
 
 
@@ -934,3 +971,15 @@ def test_series_to_timedelta(data):
 def test_get(key):
     modin_df, pandas_df = create_test_dfs({"col0": [0, 1]})
     eval_general(modin_df, pandas_df, lambda df: df.get(key))
+
+
+def test_df_immutability():
+    """
+    Verify that modifications of the source data doesn't propagate to Modin's DataFrame objects.
+    """
+    src_data = pandas.DataFrame({"a": [1]})
+
+    md_df = pd.DataFrame(src_data)
+    src_data.iloc[0, 0] = 100
+
+    assert md_df._to_pandas().iloc[0, 0] == 1

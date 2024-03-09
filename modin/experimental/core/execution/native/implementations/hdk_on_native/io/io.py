@@ -17,30 +17,28 @@ Module houses ``HdkOnNativeIO`` class.
 ``HdkOnNativeIO`` is used for storing IO functions implementations with HDK storage format and Native engine.
 """
 
-from csv import Dialect
-from typing import Union, Sequence, Callable, Dict, Tuple
 import functools
 import inspect
 import os
-
-from modin.experimental.core.storage_formats.hdk.query_compiler import (
-    DFAlgQueryCompiler,
-)
-from modin.core.io import BaseIO
-from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.dataframe import (
-    HdkOnNativeDataframe,
-)
-from modin.error_message import ErrorMessage
-from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
-
-from pyarrow.csv import read_csv, ParseOptions, ConvertOptions, ReadOptions
-import pyarrow as pa
+from csv import Dialect
+from typing import Callable, Dict, Sequence, Tuple, Union
 
 import pandas
 import pandas._libs.lib as lib
+import pyarrow as pa
 from pandas.core.dtypes.common import is_list_like
-from pandas.io.common import is_url, get_handle
+from pandas.io.common import get_handle, is_url
+from pyarrow.csv import ConvertOptions, ParseOptions, ReadOptions, read_csv
 
+from modin.core.io import BaseIO
+from modin.core.io.text.text_file_dispatcher import TextFileDispatcher
+from modin.error_message import ErrorMessage
+from modin.experimental.core.execution.native.implementations.hdk_on_native.dataframe.dataframe import (
+    HdkOnNativeDataframe,
+)
+from modin.experimental.core.storage_formats.hdk.query_compiler import (
+    DFAlgQueryCompiler,
+)
 from modin.utils import _inherit_docstrings
 
 ReadCsvKwargsType = Dict[
@@ -144,7 +142,10 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     kwargs["filepath_or_buffer"], nrows=0, engine="c"
                 ).columns.tolist()
 
-            if dtype := kwargs["dtype"]:
+            dtype = kwargs["dtype"]
+            # For details: https://github.com/pandas-dev/pandas/issues/57024
+            entire_dataframe_dtype = dtype is not None and not isinstance(dtype, dict)
+            if dtype:
                 if isinstance(dtype, dict):
                     column_types = {c: cls._dtype_to_arrow(t) for c, t in dtype.items()}
                 else:
@@ -153,7 +154,9 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             else:
                 column_types = {}
 
-            if parse_dates := kwargs["parse_dates"]:
+            if parse_dates := (
+                None if entire_dataframe_dtype else kwargs["parse_dates"]
+            ):
                 # Either list of column names or list of column indices is supported.
                 if isinstance(parse_dates, list) and (
                     all(isinstance(col, str) for col in parse_dates)
@@ -187,7 +190,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
             usecols_md = cls._prepare_pyarrow_usecols(kwargs)
 
             po = ParseOptions(
-                delimiter="\\s+" if kwargs["delim_whitespace"] else delimiter,
+                delimiter="\\s+" if kwargs["delim_whitespace"] is True else delimiter,
                 quote_char=kwargs["quotechar"],
                 double_quote=kwargs["doublequote"],
                 escape_char=kwargs["escapechar"],
@@ -201,17 +204,23 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                 column_types=column_types,
                 null_values=None,
                 # we need to add default true/false_values like Pandas does
-                true_values=true_values + ["TRUE", "True", "true"]
-                if true_values is not None
-                else true_values,
-                false_values=false_values + ["False", "FALSE", "false"]
-                if false_values is not None
-                else false_values,
+                true_values=(
+                    true_values + ["TRUE", "True", "true"]
+                    if true_values is not None
+                    else true_values
+                ),
+                false_values=(
+                    false_values + ["False", "FALSE", "false"]
+                    if false_values is not None
+                    else false_values
+                ),
                 # timestamp fields should be handled as strings if parse_dates
                 # didn't passed explicitly as an array or a dict
-                timestamp_parsers=[""]
-                if parse_dates is None or isinstance(parse_dates, bool)
-                else None,
+                timestamp_parsers=(
+                    [""]
+                    if parse_dates is None or isinstance(parse_dates, bool)
+                    else None
+                ),
                 strings_can_be_null=None,
                 include_columns=usecols_md,
                 include_missing_columns=None,
@@ -292,7 +301,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         tname = dtype if isinstance(dtype, str) else dtype.name
         if tname == "category":
             return pa.dictionary(index_type=pa.int32(), value_type=pa.string())
-        elif tname == "string":
+        elif tname == "string" or tname == "object":
             return pa.string()
         else:
             return pa.from_numpy_dtype(tname)
@@ -422,7 +431,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     False,
                     f"read_csv with 'arrow' engine doesn't support {arg} parameter",
                 )
-        if delimiter is not None and read_csv_kwargs["delim_whitespace"]:
+        if delimiter is not None and read_csv_kwargs["delim_whitespace"] is True:
             raise ValueError(
                 "Specified a delimiter with both sep and delim_whitespace=True; you can only specify one."
             )
@@ -537,7 +546,7 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
         if delimiter is None:
             delimiter = sep
 
-        if delim_whitespace and (delimiter is not lib.no_default):
+        if delim_whitespace is True and (delimiter is not lib.no_default):
             raise ValueError(
                 "Specified a delimiter with both sep and "
                 + "delim_whitespace=True; you can only specify one."

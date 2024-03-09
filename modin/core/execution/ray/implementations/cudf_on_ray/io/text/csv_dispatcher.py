@@ -13,13 +13,14 @@
 
 """Module holds ``cuDFCSVDispatcher`` that is implemented using cuDF-entities."""
 
+from typing import Tuple
+
 import numpy as np
 
-from modin.core.io import CSVDispatcher
 from modin.core.execution.ray.implementations.cudf_on_ray.partitioning.partition_manager import (
     GPU_MANAGERS,
 )
-from typing import Tuple
+from modin.core.io import CSVDispatcher
 
 
 class cuDFCSVDispatcher(CSVDispatcher):

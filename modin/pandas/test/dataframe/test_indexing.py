@@ -11,38 +11,38 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import numpy as np
-import pandas
-from pandas.testing import assert_index_equal
-from pandas._testing import ensure_clean
-import matplotlib
-import modin.pandas as pd
 import sys
 
+import matplotlib
+import numpy as np
+import pandas
+import pytest
+from pandas._testing import ensure_clean
+from pandas.testing import assert_index_equal
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from modin.pandas.indexing import is_range_like
 from modin.pandas.test.utils import (
     NROWS,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
+    RAND_LOW,
     arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
     axis_keys,
     axis_values,
-    int_arg_keys,
-    int_arg_values,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
     eval_general,
     generate_multiindex,
-    extra_test_parameters,
-    default_to_pandas_ignore_string,
+    int_arg_keys,
+    int_arg_values,
+    name_contains,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.config import NPartitions, MinPartitionSize, StorageFormat
 from modin.utils import get_current_execution
-from modin.pandas.indexing import is_range_like
 
 NPartitions.put(4)
 
@@ -301,9 +301,11 @@ def test_indexing_duplicate_axis(data):
         lambda df: df.columns[0],
         lambda df: df.index,
         lambda df: [df.index, df.columns[0]],
-        lambda df: pandas.Series(list(range(len(df.index))))
-        if isinstance(df, pandas.DataFrame)
-        else pd.Series(list(range(len(df)))),
+        lambda df: (
+            pandas.Series(list(range(len(df.index))))
+            if isinstance(df, pandas.DataFrame)
+            else pd.Series(list(range(len(df))))
+        ),
     ],
     ids=[
         "non_existing_column",
@@ -512,6 +514,31 @@ def test_loc_4456(
 
     eval_loc(modin_df, pandas_df, pdf_value, key)
     eval_loc(modin_df, pandas_df, (mdf_value, pdf_value), key)
+
+
+def test_loc_6774():
+    modin_df, pandas_df = create_test_dfs(
+        {"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]}
+    )
+    pandas_df.loc[:, "c"] = [10, 20, 30, 40, 51]
+    modin_df.loc[:, "c"] = [10, 20, 30, 40, 51]
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[2:, "y"] = [30, 40, 51]
+    modin_df.loc[2:, "y"] = [30, 40, 51]
+    df_equals(modin_df, pandas_df)
+
+    pandas_df.loc[:, ["b", "c", "d"]] = (
+        pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
+        .transpose()
+        .values
+    )
+    modin_df.loc[:, ["b", "c", "d"]] = (
+        pd.DataFrame([[10, 20, 30, 40, 50], [10, 20, 30, 40], [10, 20, 30]])
+        .transpose()
+        .values
+    )
+    df_equals(modin_df, pandas_df)
 
 
 def test_loc_5829():
@@ -1447,7 +1474,7 @@ def test_reset_index_multiindex_groupby(data):
     [
         pytest.param(
             test_data["int_data"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         test_data["float_nan_data"],
     ],
@@ -1468,23 +1495,23 @@ def test_reset_index_multiindex_groupby(data):
         [1, 0],
         pytest.param(
             [2, 1, 2],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [0, 0, 0, 0],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_2", "level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [2, "level_name_0"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1497,12 +1524,8 @@ def test_reset_index_multiindex_groupby(data):
         0,
         1,
         2,
-        pytest.param(
-            3, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
-        pytest.param(
-            4, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
+        pytest.param(3, marks=pytest.mark.exclude_by_default),
+        pytest.param(4, marks=pytest.mark.exclude_by_default),
     ],
 )
 @pytest.mark.parametrize(
@@ -1510,13 +1533,13 @@ def test_reset_index_multiindex_groupby(data):
     [
         pytest.param(
             False,
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         True,
         "mixed_1st_None",
         pytest.param(
             "mixed_2nd_None",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1546,18 +1569,24 @@ def test_reset_index_with_multi_index_no_drop(
         [f"level_{i}" for i in range(index.nlevels)]
         if multiindex_levels_names_max_levels == 0
         else [
-            tuple(
-                [
-                    f"level_{i}_name_{j}"
-                    for j in range(
-                        0,
-                        max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0)
-                        + i,
-                    )
-                ]
+            (
+                tuple(
+                    [
+                        f"level_{i}_name_{j}"
+                        for j in range(
+                            0,
+                            max(
+                                multiindex_levels_names_max_levels + 1 - index.nlevels,
+                                0,
+                            )
+                            + i,
+                        )
+                    ]
+                )
+                if max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0) + i
+                > 0
+                else f"level_{i}"
             )
-            if max(multiindex_levels_names_max_levels + 1 - index.nlevels, 0) + i > 0
-            else f"level_{i}"
             for i in range(index.nlevels)
         ]
     )
@@ -1575,9 +1604,11 @@ def test_reset_index_with_multi_index_no_drop(
 
     if isinstance(level, list):
         level = [
-            index.names[int(x[len("level_name_") :])]
-            if isinstance(x, str) and x.startswith("level_name_")
-            else x
+            (
+                index.names[int(x[len("level_name_") :])]
+                if isinstance(x, str) and x.startswith("level_name_")
+                else x
+            )
             for x in level
         ]
 
@@ -1605,7 +1636,7 @@ def test_reset_index_with_multi_index_no_drop(
     [
         pytest.param(
             test_data["int_data"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         test_data["float_nan_data"],
     ],
@@ -1625,23 +1656,23 @@ def test_reset_index_with_multi_index_no_drop(
         [1, 0],
         pytest.param(
             [2, 1, 2],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [0, 0, 0, 0],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             ["level_name_2", "level_name_1"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             [2, "level_name_0"],
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1651,12 +1682,8 @@ def test_reset_index_with_multi_index_no_drop(
         0,
         1,
         2,
-        pytest.param(
-            3, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
-        pytest.param(
-            4, marks=pytest.mark.skipif(not extra_test_parameters, reason="extra")
-        ),
+        pytest.param(3, marks=pytest.mark.exclude_by_default),
+        pytest.param(4, marks=pytest.mark.exclude_by_default),
     ],
 )
 @pytest.mark.parametrize(
@@ -1664,13 +1691,13 @@ def test_reset_index_with_multi_index_no_drop(
     [
         pytest.param(
             False,
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         True,
         "mixed_1st_None",
         pytest.param(
             "mixed_2nd_None",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )
@@ -1726,7 +1753,7 @@ def test_reset_index_with_named_index(
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
         modin_df.index = modin_df.index
-        modin_df._to_pandas()
+        modin_df.modin.to_pandas()
 
         modin_df._query_compiler._modin_frame.set_index_cache(None)
     df_equals(modin_df.reset_index(drop=False), pandas_df.reset_index(drop=False))
@@ -1734,7 +1761,7 @@ def test_reset_index_with_named_index(
     if test_async_reset_index:
         # The change in index is not automatically handled by Modin. See #3941.
         modin_df.index = modin_df.index
-        modin_df._to_pandas()
+        modin_df.modin.to_pandas()
 
         modin_df._query_compiler._modin_frame.set_index_cache(None)
     modin_df.reset_index(drop=True, inplace=True)
@@ -2339,8 +2366,8 @@ def test_setitem_unhashable_key():
 def test_setitem_2d_insertion():
     def build_value_picker(modin_value, pandas_value):
         """Build a function that returns either Modin or pandas DataFrame depending on the passed frame."""
-        return (
-            lambda source_df, *args, **kwargs: modin_value
+        return lambda source_df, *args, **kwargs: (
+            modin_value
             if isinstance(source_df, (pd.DataFrame, pd.Series))
             else pandas_value
         )
@@ -2385,6 +2412,44 @@ def test_setitem_2d_insertion():
         build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
         col=["new_value7", "new_value8"],
     )
+
+
+@pytest.mark.parametrize("does_value_have_different_columns", [True, False])
+def test_setitem_2d_update(does_value_have_different_columns):
+    def test(dfs, iloc):
+        """Update columns on the given numeric indices."""
+        df1, df2 = dfs
+        cols1 = df1.columns[iloc].tolist()
+        cols2 = df2.columns[iloc].tolist()
+        df1[cols1] = df2[cols2]
+        return df1
+
+    modin_df, pandas_df = create_test_dfs(test_data["int_data"])
+    modin_df2, pandas_df2 = create_test_dfs(test_data["int_data"])
+    modin_df2 *= 10
+    pandas_df2 *= 10
+
+    if does_value_have_different_columns:
+        new_columns = [f"{col}_new" for col in modin_df.columns]
+        modin_df2.columns = new_columns
+        pandas_df2.columns = new_columns
+
+    modin_dfs = (modin_df, modin_df2)
+    pandas_dfs = (pandas_df, pandas_df2)
+
+    eval_general(modin_dfs, pandas_dfs, test, iloc=[0, 1, 2])
+    eval_general(modin_dfs, pandas_dfs, test, iloc=[0, -1])
+    eval_general(
+        modin_dfs, pandas_dfs, test, iloc=slice(1, None)
+    )  # (start=1, stop=None)
+    eval_general(
+        modin_dfs, pandas_dfs, test, iloc=slice(None, -2)
+    )  # (start=None, stop=-2)
+    eval_general(modin_dfs, pandas_dfs, test, iloc=[0, 1, 5, 6, 9, 10, -2, -1])
+    eval_general(modin_dfs, pandas_dfs, test, iloc=[5, 4, 0, 10, 1, -1])
+    eval_general(
+        modin_dfs, pandas_dfs, test, iloc=slice(None, None, 2)
+    )  # (start=None, stop=None, step=2)
 
 
 def test___setitem__single_item_in_series():
@@ -2518,9 +2583,9 @@ def test__getitem_bool_with_empty_partition():
     eval_general(
         modin_tmp_result,
         pandas_tmp_result,
-        lambda df: df[modin_series]
-        if isinstance(df, pd.DataFrame)
-        else df[pandas_series],
+        lambda df: (
+            df[modin_series] if isinstance(df, pd.DataFrame) else df[pandas_series]
+        ),
     )
 
 

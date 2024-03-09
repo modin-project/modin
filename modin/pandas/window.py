@@ -14,13 +14,14 @@
 """Implement Window and Rolling public API."""
 
 from typing import Optional
+
 import pandas.core.window.rolling
 from pandas.core.dtypes.common import is_list_like
 
-from modin.logging import ClassLogger
-from modin.utils import _inherit_docstrings
-from modin.pandas.utils import cast_function_modin2pandas
 from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger
+from modin.pandas.utils import cast_function_modin2pandas
+from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
@@ -269,7 +270,7 @@ class RollingGroupby(Rolling):
         super().__init__(self._groupby_obj._df, *args, **kwargs)
 
     def sem(self, *args, **kwargs):
-        ErrorMessage.missmatch_with_pandas(
+        ErrorMessage.mismatch_with_pandas(
             operation="RollingGroupby.sem() when 'as_index=False'",
             message=(
                 "The group columns won't be involved in the aggregation.\n"

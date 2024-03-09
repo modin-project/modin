@@ -11,10 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pandas
 import inspect
-import pytest
+
 import numpy as np
+import pandas
+import pytest
 
 import modin.pandas as pd
 
@@ -38,11 +39,8 @@ def test_top_level_api_equality():
         "arrays",
         "api",
         "tseries",
-        "errors",
         "to_msgpack",  # This one is experimental, and doesn't look finished
         "Panel",  # This is deprecated and throws a warning every time.
-        "SparseSeries",  # depreceted since pandas 1.0, not present in 1.4+
-        "SparseDataFrame",  # depreceted since pandas 1.0, not present in 1.4+
     ]
 
     ignore_modin = [
@@ -152,17 +150,21 @@ def test_dataframe_api_equality():
     modin_dir = [obj for obj in dir(pd.DataFrame) if obj[0] != "_"]
     pandas_dir = [obj for obj in dir(pandas.DataFrame) if obj[0] != "_"]
 
-    ignore = ["timetuple"]
+    ignore_in_pandas = ["timetuple"]
+    # modin - namespace for accessing additional Modin functions that are not available in Pandas
+    ignore_in_modin = ["modin"]
     missing_from_modin = set(pandas_dir) - set(modin_dir)
     assert not len(
-        missing_from_modin - set(ignore)
-    ), "Differences found in API: {}".format(len(missing_from_modin - set(ignore)))
+        missing_from_modin - set(ignore_in_pandas)
+    ), "Differences found in API: {}".format(
+        len(missing_from_modin - set(ignore_in_pandas))
+    )
     assert not len(
-        set(modin_dir) - set(pandas_dir)
+        set(modin_dir) - set(ignore_in_modin) - set(pandas_dir)
     ), "Differences found in API: {}".format(set(modin_dir) - set(pandas_dir))
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.DataFrame, pd.DataFrame), modin_dir, allowed_different)
 
@@ -236,9 +238,9 @@ def test_sparse_accessor_api_equality(obj):
 def test_groupby_api_equality(obj):
     modin_dir = [x for x in dir(getattr(pd.groupby, obj)) if x[0] != "_"]
     pandas_dir = [x for x in dir(getattr(pandas.core.groupby, obj)) if x[0] != "_"]
-    # These attributes are hidden in the DataFrameGroupBy/SeriesGroupBy instance,
-    # but available in the DataFrameGroupBy/SeriesGroupBy class in pandas.
-    ignore = ["keys", "level"]
+    # These attributes are not mentioned in the pandas documentation,
+    # but we might want to implement them someday.
+    ignore = ["keys", "level", "grouper"]
     missing_from_modin = set(pandas_dir) - set(modin_dir) - set(ignore)
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         len(missing_from_modin)
@@ -265,13 +267,15 @@ def test_series_api_equality():
     assert not len(missing_from_modin), "Differences found in API: {}".format(
         missing_from_modin
     )
-    extra_in_modin = set(modin_dir) - set(pandas_dir)
+    # modin - namespace for accessing additional Modin functions that are not available in Pandas
+    ignore_in_modin = ["modin"]
+    extra_in_modin = set(modin_dir) - set(ignore_in_modin) - set(pandas_dir)
     assert not len(extra_in_modin), "Differences found in API: {}".format(
         extra_in_modin
     )
 
     # These have to be checked manually
-    allowed_different = ["to_hdf", "hist"]
+    allowed_different = ["modin"]
 
     assert_parameters_eq((pandas.Series, pd.Series), modin_dir, allowed_different)
 

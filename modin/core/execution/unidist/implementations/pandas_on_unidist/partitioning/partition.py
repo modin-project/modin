@@ -13,13 +13,16 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import warnings
+
+import pandas
 import unidist
 
+from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.unidist.common import UnidistWrapper
 from modin.core.execution.unidist.common.utils import deserialize
-from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
 from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 compute_sliced_len = unidist.remote(compute_sliced_len)
 
@@ -279,9 +282,16 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             self._width_cache = UnidistWrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -292,8 +302,8 @@ class PandasOnUnidistDataframePartition(PandasDataframePartition):
             if len(self.call_queue):
                 self.drain_call_queue()
             else:
-                self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if unidist.is_object_ref(self._ip_cache):
+                self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and unidist.is_object_ref(self._ip_cache):
             self._ip_cache = UnidistWrapper.materialize(self._ip_cache)
         return self._ip_cache
 
@@ -351,12 +361,16 @@ def _apply_func(partition, func, *args, **kwargs):  # pragma: no cover
     destructuring it causes a performance penalty.
     """
     try:
-        result = func(partition, *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(partition, *args, **kwargs)
     # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
     # don't want the error to propagate to the user, and we want to avoid copying unless
     # we absolutely have to.
     except ValueError:
-        result = func(partition.copy(), *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = func(partition.copy(), *args, **kwargs)
     return (
         result,
         len(result) if hasattr(result, "__len__") else 0,
@@ -393,12 +407,16 @@ def _apply_list_of_funcs(call_queue, partition):  # pragma: no cover
         args = deserialize(f_args)
         kwargs = deserialize(f_kwargs)
         try:
-            partition = func(partition, *args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                partition = func(partition, *args, **kwargs)
         # Sometimes Arrow forces us to make a copy of an object before we operate on it. We
         # don't want the error to propagate to the user, and we want to avoid copying unless
         # we absolutely have to.
         except ValueError:
-            partition = func(partition.copy(), *args, **kwargs)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                partition = func(partition.copy(), *args, **kwargs)
 
     return (
         partition,

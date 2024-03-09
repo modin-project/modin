@@ -40,15 +40,19 @@ class GenericRayDataframePartitionManager(PandasDataframePartitionManager):
         -------
         NumPy array
         """
-        parts = RayWrapper.materialize(
-            [
-                obj.apply(lambda df, **kwargs: df.to_numpy(**kwargs)).list_of_blocks[0]
-                for row in partitions
-                for obj in row
-            ]
-        )
-        n = partitions.shape[1]
-        parts = [parts[i * n : (i + 1) * n] for i in list(range(partitions.shape[0]))]
-
-        arr = np.block(parts)
-        return arr
+        if partitions.shape[1] == 1:
+            parts = cls.get_objects_from_partitions(partitions.flatten())
+            parts = [part.to_numpy(**kwargs) for part in parts]
+        else:
+            parts = RayWrapper.materialize(
+                [
+                    obj.apply(
+                        lambda df, **kwargs: df.to_numpy(**kwargs)
+                    ).list_of_blocks[0]
+                    for row in partitions
+                    for obj in row
+                ]
+            )
+        rows, cols = partitions.shape
+        parts = [parts[i * cols : (i + 1) * cols] for i in range(rows)]
+        return np.block(parts)

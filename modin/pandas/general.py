@@ -14,23 +14,23 @@
 """Implement pandas general API."""
 
 import warnings
+from typing import Hashable, Iterable, Mapping, Optional, Union
 
-import pandas
 import numpy as np
-
-from typing import Hashable, Iterable, Mapping, Union, Optional
-from pandas.core.dtypes.common import is_list_like
-from pandas._libs.lib import no_default, NoDefault
+import pandas
+from pandas._libs.lib import NoDefault, no_default
 from pandas._typing import DtypeBackend
+from pandas.core.dtypes.common import is_list_like
 
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.error_message import ErrorMessage
+from modin.logging import enable_logging
+from modin.pandas.io import to_pandas
+from modin.utils import _inherit_docstrings
+
 from .base import BasePandasDataset
 from .dataframe import DataFrame
 from .series import Series
-from modin.utils import to_pandas
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.utils import _inherit_docstrings
-from modin.logging import enable_logging
 
 
 @_inherit_docstrings(pandas.isna, apilink="pandas.isna")
@@ -230,7 +230,7 @@ def pivot_table(
     margins=False,
     dropna=True,
     margins_name="All",
-    observed=False,
+    observed=no_default,
     sort=True,
 ):
     if not isinstance(data, DataFrame):
@@ -247,6 +247,7 @@ def pivot_table(
         margins=margins,
         dropna=dropna,
         margins_name=margins_name,
+        observed=observed,
         sort=sort,
     )
 
@@ -492,15 +493,12 @@ def concat(
         raise ValueError(
             "Only can inner (intersect) or outer (union) join the other axis"
         )
-    # We have the weird Series and axis check because, when concatenating a
-    # dataframe to a series on axis=0, pandas ignores the name of the series,
-    # and this check aims to mirror that (possibly buggy) functionality
     list_of_objs = [
-        obj._query_compiler
-        if isinstance(obj, DataFrame)
-        else DataFrame(obj.rename())._query_compiler
-        if isinstance(obj, (pandas.Series, Series)) and axis == 0
-        else DataFrame(obj)._query_compiler
+        (
+            obj._query_compiler
+            if isinstance(obj, DataFrame)
+            else DataFrame(obj)._query_compiler
+        )
         for obj in list_of_objs
     ]
     if keys is None and isinstance(objs, dict):
@@ -623,7 +621,7 @@ def get_dummies(
     """
     if sparse:
         raise NotImplementedError(
-            "SparseDataFrame is not implemented. "
+            "SparseArray is not implemented. "
             + "To contribute to Modin, please visit "
             + "github.com/modin-project/modin."
         )

@@ -13,8 +13,9 @@
 
 """Module houses class that implements ``PandasDataframe`` using unidist."""
 
-from ..partitioning.partition_manager import PandasOnUnidistDataframePartitionManager
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+
+from ..partitioning.partition_manager import PandasOnUnidistDataframePartitionManager
 
 
 class PandasOnUnidistDataframe(PandasDataframe):
@@ -40,3 +41,7 @@ class PandasOnUnidistDataframe(PandasDataframe):
     """
 
     _partition_mgr_cls = PandasOnUnidistDataframePartitionManager
+
+    def support_materialization_in_worker_process(self) -> bool:
+        # more details why this is not `True` in https://github.com/modin-project/modin/pull/6673
+        return False

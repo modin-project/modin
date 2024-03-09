@@ -13,83 +13,96 @@
 
 from __future__ import annotations
 
-import pytest
-import unittest.mock as mock
-import numpy as np
+import datetime
 import json
-import pandas
-from pandas._testing import assert_series_equal
-from pandas.errors import SpecificationError
-from pandas.core.indexing import IndexingError
-import pandas._libs.lib as lib
+import unittest.mock as mock
+
 import matplotlib
-import modin.pandas as pd
+import numpy as np
+import pandas
+import pandas._libs.lib as lib
+import pytest
 from numpy.testing import assert_array_equal
+from pandas._testing import assert_series_equal
+from pandas.core.indexing import IndexingError
+from pandas.errors import SpecificationError
 
-from modin.utils import get_current_execution, try_cast_to_pandas
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution, try_cast_to_pandas
 
-from modin.utils import to_pandas
 from .utils import (
-    random_state,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
-    arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    test_string_data_values,
-    test_string_data_keys,
-    test_string_list_data_values,
-    test_string_list_data_keys,
-    string_sep_values,
-    string_sep_keys,
-    string_na_rep_values,
-    string_na_rep_keys,
-    numeric_dfs,
-    no_numeric_dfs,
-    agg_func_keys,
-    agg_func_values,
-    agg_func_except_keys,
-    agg_func_except_values,
-    numeric_agg_funcs,
-    quantiles_keys,
-    quantiles_values,
-    axis_keys,
-    axis_values,
-    bool_arg_keys,
-    bool_arg_values,
-    int_arg_keys,
-    int_arg_values,
-    encoding_types,
-    categories_equals,
-    eval_general,
-    test_data_small_values,
-    test_data_small_keys,
-    test_data_categorical_values,
-    test_data_categorical_keys,
-    generate_multiindex,
-    test_data_diff_dtype,
-    df_equals_with_non_stable_indices,
-    test_data_large_categorical_series_keys,
-    test_data_large_categorical_series_values,
-    default_to_pandas_ignore_string,
+    RAND_LOW,
     CustomIntegerForAddition,
     NonCommutativeMultiplyInteger,
+    agg_func_except_keys,
+    agg_func_except_values,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
     assert_dtypes_equal,
+    bool_arg_keys,
+    bool_arg_values,
+    categories_equals,
+    create_test_dfs,
+    create_test_series,
+    default_to_pandas_ignore_string,
+    df_equals,
+    df_equals_with_non_stable_indices,
+    encoding_types,
+    eval_general,
+    generate_multiindex,
+    int_arg_keys,
+    int_arg_values,
+    name_contains,
+    no_numeric_dfs,
+    numeric_dfs,
+    quantiles_keys,
+    quantiles_values,
+    random_state,
+    string_na_rep_keys,
+    string_na_rep_values,
+    string_sep_keys,
+    string_sep_values,
+    test_data,
+    test_data_categorical_keys,
+    test_data_categorical_values,
+    test_data_diff_dtype,
+    test_data_keys,
+    test_data_large_categorical_series_keys,
+    test_data_large_categorical_series_values,
+    test_data_small_keys,
+    test_data_small_values,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
+    test_string_data_keys,
+    test_string_data_values,
+    test_string_list_data_keys,
+    test_string_list_data_values,
 )
-from modin.config import NPartitions, StorageFormat
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
 # TODO(https://github.com/modin-project/modin/issues/3655): catch all instances
 # of defaulting to pandas.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:.*bool is now deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:first is deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:last is deprecated and will be removed:FutureWarning"
+    ),
+]
 
 NPartitions.put(4)
 
@@ -198,28 +211,18 @@ def inter_df_math_helper_one_side(
     )
     modin_df_multi_level = modin_series.copy()
     modin_df_multi_level.index = new_idx
-
+    # When 'level' parameter is passed, modin's implementation must raise a default-to-pandas warning,
+    # here we first detect whether 'op' takes 'level' parameter at all and only then perform the warning check
+    # reasoning: https://github.com/modin-project/modin/issues/6893
     try:
-        # Defaults to pandas
-        with warns_that_defaulting_to_pandas():
-            # Operation against self for sanity check
-            getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
+        getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
     except TypeError:
-        # Some operations don't support multilevel `level` parameter
+        # Operation doesn't support 'level' parameter
         pass
-
-
-def create_test_series(vals, sort=False, **kwargs):
-    if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
     else:
-        modin_series = pd.Series(vals, **kwargs)
-        pandas_series = pandas.Series(vals, **kwargs)
-    if sort:
-        modin_series = modin_series.sort_values().reset_index(drop=True)
-        pandas_series = pandas_series.sort_values().reset_index(drop=True)
-    return modin_series, pandas_series
+        # Operation supports 'level' parameter, so it makes sense to check for a warning
+        with warns_that_defaulting_to_pandas():
+            getattr(modin_df_multi_level, op)(modin_df_multi_level, level=1)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -536,7 +539,7 @@ def test___repr__(name, dt_index, data):
     pandas_series.name = modin_series.name = name
     if dt_index:
         index = pandas.date_range(
-            "1/1/2000", periods=len(pandas_series.index), freq="T"
+            "1/1/2000", periods=len(pandas_series.index), freq="min"
         )
         pandas_series.index = modin_series.index = index
 
@@ -692,106 +695,30 @@ def test_add_custom_class():
     )
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_agg(data, func):
-    eval_general(
-        *create_test_series(data),
-        lambda df: df.agg(func),
-    )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
-def test_agg_except(data, func):
-    # SpecificationError is arisen because we treat a Series as a DataFrame.
-    # See details in pandas issue 36036.
-    with pytest.raises(SpecificationError):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.agg(func),
-        )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_agg_numeric(request, data, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        axis = 0
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.agg(func, axis),
-        )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
-def test_agg_numeric_except(request, data, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        axis = 0
-        # SpecificationError is arisen because we treat a Series as a DataFrame.
-        # See details in pandas issue 36036.
-        with pytest.raises(SpecificationError):
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
+def test_aggregate_alias():
+    # It's optimization. If failed, Series.agg should be tested explicitly
+    assert pd.Series.aggregate == pd.Series.agg
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func):
-    axis = 0
     eval_general(
         *create_test_series(data),
-        lambda df: df.aggregate(func, axis),
+        lambda df: df.aggregate(func),
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
 def test_aggregate_except(data, func):
-    axis = 0
     # SpecificationError is arisen because we treat a Series as a DataFrame.
     # See details in pandas issues 36036.
     with pytest.raises(SpecificationError):
         eval_general(
             *create_test_series(data),
-            lambda df: df.aggregate(func, axis),
+            lambda df: df.aggregate(func),
         )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_aggregate_numeric(request, data, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        axis = 0
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.agg(func, axis),
-        )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
-def test_aggregate_numeric_except(request, data, func):
-    if name_contains(request.node.name, numeric_agg_funcs) and name_contains(
-        request.node.name, numeric_dfs
-    ):
-        axis = 0
-        # SpecificationError is arisen because we treat a Series as a DataFrame.
-        # See details in pandas issues 36036.
-        with pytest.raises(SpecificationError):
-            eval_general(
-                *create_test_series(data),
-                lambda df: df.agg(func, axis),
-            )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -801,18 +728,10 @@ def test_aggregate_error_checking(data):
     assert pandas_series.aggregate("ndim") == 1
     assert modin_series.aggregate("ndim") == 1
 
-    def user_warning_checker(series, fn):
-        if isinstance(series, pd.Series):
-            with warns_that_defaulting_to_pandas():
-                return fn(series)
-        return fn(series)
-
     eval_general(
         modin_series,
         pandas_series,
-        lambda series: user_warning_checker(
-            series, fn=lambda series: series.aggregate("cumproduct")
-        ),
+        lambda series: series.aggregate("cumprod"),
     )
     eval_general(
         modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
@@ -827,17 +746,13 @@ def test_align(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_all(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.all(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_any(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.any(skipna=skipna))
 
@@ -948,36 +863,16 @@ def test_apply_external_lib():
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_apply_numeric(request, data, func):
-    if name_contains(request.node.name, numeric_dfs):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
-
-
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_except_values, ids=agg_func_except_keys)
-def test_apply_numeric_except(request, data, func):
-    if name_contains(request.node.name, numeric_dfs):
-        eval_general(
-            *create_test_series(data),
-            lambda df: df.apply(func),
-        )
-
-
 @pytest.mark.parametrize("axis", [None, 0, 1])
-@pytest.mark.parametrize("level", [None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["count", "all", "kurt", "array", "searchsorted"])
-def test_apply_text_func(level, data, func, axis):
+def test_apply_text_func(data, func, axis):
     func_kwargs = {}
-    if level:
-        func_kwargs.update({"level": level})
-    if axis:
-        func_kwargs.update({"axis": axis})
+    if func not in ("count", "searchsorted"):
+        func_kwargs["axis"] = axis
+    elif not axis:
+        # FIXME: https://github.com/modin-project/modin/issues/7000
+        return
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
     level_1 = np.random.choice([3, 4, 5], rows_number)
@@ -987,7 +882,11 @@ def test_apply_text_func(level, data, func, axis):
     modin_series.index = index
     pandas_series.index = index
 
-    eval_general(modin_series, pandas_series, lambda df: df.apply(func), **func_kwargs)
+    if func == "searchsorted":
+        # required parameter
+        func_kwargs["value"] = pandas_series[1]
+
+    eval_general(modin_series, pandas_series, lambda df: df.apply(func, **func_kwargs))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1013,7 +912,7 @@ def test_argsort(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     with warns_that_defaulting_to_pandas():
         # We are only testing that this defaults to pandas, so we will just check for
@@ -1096,6 +995,12 @@ def test_astype(data):
 
     # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
     # dict to astype() for a series with no name.
+
+
+@pytest.mark.parametrize("dtype", ["int32", "float32"])
+def test_astype_32_types(dtype):
+    # https://github.com/modin-project/modin/issues/6881
+    assert pd.Series([1, 2, 6]).astype(dtype).dtype == dtype
 
 
 @pytest.mark.parametrize(
@@ -1186,13 +1091,14 @@ def test_array(data):
     eval_general(modin_series, pandas_series, lambda df: df.array)
 
 
-@pytest.mark.xfail(reason="Using pandas Series.")
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_between(data):
-    modin_series = create_test_series(data)
+    modin_series, pandas_series = create_test_series(data)
 
-    with pytest.raises(NotImplementedError):
-        modin_series.between(None, None)
+    df_equals(
+        modin_series.between(1, 4),
+        pandas_series.between(1, 4),
+    )
 
 
 def test_between_time():
@@ -1237,8 +1143,11 @@ def test_bfill(data):
 def test_bool(data):
     modin_series, _ = create_test_series(data)
 
-    with pytest.raises(ValueError):
-        modin_series.bool()
+    with pytest.warns(
+        FutureWarning, match="bool is now deprecated and will be removed"
+    ):
+        with pytest.raises(ValueError):
+            modin_series.bool()
     with pytest.raises(ValueError):
         modin_series.__bool__()
 
@@ -1252,7 +1161,7 @@ def test_clip_scalar(request, data, bound_type):
 
     if name_contains(request.node.name, numeric_dfs):
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
 
         # test only upper scalar bound
         modin_result = modin_series.clip(None, upper)
@@ -1273,8 +1182,8 @@ def test_clip_sequence(request, data, bound_type):
     )
 
     if name_contains(request.node.name, numeric_dfs):
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, len(pandas_series))
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, len(pandas_series))
 
         if bound_type == "series":
             modin_lower = pd.Series(lower)
@@ -1398,9 +1307,7 @@ def test_cov(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_cummax(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
@@ -1413,9 +1320,7 @@ def test_cummax(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_cummin(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
@@ -1428,9 +1333,7 @@ def test_cummin(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_cumprod(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
@@ -1443,9 +1346,7 @@ def test_cumprod(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_cumsum(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     try:
@@ -1455,6 +1356,10 @@ def test_cumsum(data, skipna):
             modin_series.cumsum(skipna=skipna)
     else:
         df_equals(modin_series.cumsum(skipna=skipna), pandas_result)
+
+
+def test_cumsum_6771():
+    _ = to_pandas(pd.Series([1, 2, 3], dtype="Int64").cumsum())
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1540,7 +1445,7 @@ def test_diff(data, periods):
 
 
 def test_diff_with_dates():
-    data = pandas.date_range("2018-01-01", periods=15, freq="H").values
+    data = pandas.date_range("2018-01-01", periods=15, freq="h").values
     pandas_series = pandas.Series(data)
     modin_series = pd.Series(pandas_series)
 
@@ -1791,9 +1696,9 @@ def test_dt(timezone):
         modin_series.dt.strftime("%B %d, %Y, %r"),
         pandas_series.dt.strftime("%B %d, %Y, %r"),
     )
-    df_equals(modin_series.dt.round("H"), pandas_series.dt.round("H"))
-    df_equals(modin_series.dt.floor("H"), pandas_series.dt.floor("H"))
-    df_equals(modin_series.dt.ceil("H"), pandas_series.dt.ceil("H"))
+    df_equals(modin_series.dt.round("h"), pandas_series.dt.round("h"))
+    df_equals(modin_series.dt.floor("h"), pandas_series.dt.floor("h"))
+    df_equals(modin_series.dt.ceil("h"), pandas_series.dt.ceil("h"))
     df_equals(modin_series.dt.month_name(), pandas_series.dt.month_name())
     df_equals(modin_series.dt.day_name(), pandas_series.dt.day_name())
 
@@ -1822,7 +1727,9 @@ def test_dt(timezone):
     def dt_with_empty_partition(lib):
         # For context, see https://github.com/modin-project/modin/issues/5112
         df = (
-            pd.concat([pd.DataFrame([None]), pd.DataFrame([pd.TimeDelta(1)])], axis=1)
+            pd.concat(
+                [pd.DataFrame([None]), pd.DataFrame([pd.to_timedelta(1)])], axis=1
+            )
             .dropna(axis=1)
             .squeeze(1)
         )
@@ -1843,7 +1750,7 @@ def test_dt(timezone):
         data = pd.period_range("2016-12-31", periods=128, freq="D")
         modin_series = pd.Series(data)
         pandas_series = pandas.Series(data)
-        df_equals(modin_series.dt.asfreq("T"), pandas_series.dt.asfreq("T"))
+        df_equals(modin_series.dt.asfreq("min"), pandas_series.dt.asfreq("min"))
 
 
 @pytest.mark.parametrize(
@@ -1977,6 +1884,15 @@ def test_ffill(data):
     df_equals(modin_series_cp, pandas_series_cp)
 
 
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_ser, pandas_ser = create_test_series([1, None, 2, None])
+    eval_general(
+        modin_ser, pandas_ser, lambda ser: getattr(ser, method)(limit_area=limit_area)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("reindex", [None, 2, -2])
 @pytest.mark.parametrize("limit", [None, 1, 2, 0.5, -1, -2, 1.5])
@@ -2034,7 +1950,9 @@ def test_first():
     i = pd.date_range("2010-04-09", periods=400, freq="2D")
     modin_series = pd.Series(list(range(400)), index=i)
     pandas_series = pandas.Series(list(range(400)), index=i)
-    df_equals(modin_series.first("3D"), pandas_series.first("3D"))
+    with pytest.warns(FutureWarning, match="first is deprecated and will be removed"):
+        modin_result = modin_series.first("3D")
+    df_equals(modin_result, pandas_series.first("3D"))
     df_equals(modin_series.first("20D"), pandas_series.first("20D"))
 
 
@@ -2104,9 +2022,7 @@ def test_iat(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_idxmax(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     pandas_result = pandas_series.idxmax(skipna=skipna)
@@ -2119,9 +2035,7 @@ def test_idxmax(data, skipna):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_idxmin(data, skipna):
     modin_series, pandas_series = create_test_series(data)
     pandas_result = pandas_series.idxmin(skipna=skipna)
@@ -2255,7 +2169,7 @@ def test_kurtosis_alias():
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_kurtosis(axis, skipna):
     eval_general(
         *create_test_series(test_data["float_nan_data"]),
@@ -2264,7 +2178,7 @@ def test_kurtosis(axis, skipna):
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_kurtosis_numeric_only(axis, numeric_only):
     eval_general(
         *create_test_series(test_data_diff_dtype),
@@ -2277,7 +2191,9 @@ def test_last():
     pandas_index = pandas.date_range("2010-04-09", periods=400, freq="2D")
     modin_series = pd.Series(list(range(400)), index=modin_index)
     pandas_series = pandas.Series(list(range(400)), index=pandas_index)
-    df_equals(modin_series.last("3D"), pandas_series.last("3D"))
+    with pytest.warns(FutureWarning, match="last is deprecated and will be removed"):
+        modin_result = modin_series.last("3D")
+    df_equals(modin_result, pandas_series.last("3D"))
     df_equals(modin_series.last("20D"), pandas_series.last("20D"))
 
 
@@ -2335,6 +2251,14 @@ def test_loc(data):
     pandas_result = pandas_series.loc[
         (slice(None), 1),
     ]  # fmt: skip
+    df_equals(modin_result, pandas_result)
+
+
+def test_loc_with_boolean_series():
+    modin_series, pandas_series = create_test_series([1, 2, 3])
+    modin_mask, pandas_mask = create_test_series([True, False, False])
+    modin_result = modin_series.loc[modin_mask]
+    pandas_result = pandas_series.loc[pandas_mask]
     df_equals(modin_result, pandas_result)
 
 
@@ -2418,25 +2342,19 @@ def test_mask():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_max(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.max(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_mean(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.mean(skipna=skipna))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_median(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.median(skipna=skipna))
 
@@ -2466,9 +2384,7 @@ def test_memory_usage(data, index):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_min(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.min(skipna=skipna))
 
@@ -2640,9 +2556,7 @@ def test_product_alias():
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_prod(axis, skipna):
     eval_general(
         *create_test_series(test_data["float_nan_data"]),
@@ -2650,9 +2564,7 @@ def test_prod(axis, skipna):
     )
 
 
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
@@ -2863,20 +2775,18 @@ def test_repeat(data, repeats):
 @pytest.mark.parametrize(
     "repeats",
     [
-        [0],
+        0,
+        2,
         [2],
-        [3],
-        [4],
         np.arange(256),
         [0] * 64 + [2] * 64 + [3] * 32 + [4] * 32 + [5] * 64,
         [2] * 257,
-        [2] * 128,
     ],
+    ids=["0_case", "scalar", "one-elem-list", "array", "list", "wrong_list"],
 )
 def test_repeat_lists(data, repeats):
     eval_general(
-        pd.Series(data),
-        pandas.Series(data),
+        *create_test_series(data),
         lambda df: df.repeat(repeats),
     )
 
@@ -2904,8 +2814,8 @@ def test_replace():
 @pytest.mark.parametrize("level", [None, 1])
 @pytest.mark.exclude_in_sanity
 def test_resample(closed, label, level):
-    rule = "5T"
-    freq = "H"
+    rule = "5min"
+    freq = "h"
 
     index = pandas.date_range("1/1/2000", periods=12, freq=freq)
     pandas_series = pandas.Series(range(12), index=index)
@@ -2999,15 +2909,6 @@ def test_reset_index(data, drop, name, inplace):
         inplace=inplace,
         __inplace__=inplace,
     )
-
-
-@pytest.mark.xfail(reason="Using pandas Series.")
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_reshape(data):
-    modin_series = create_test_series(data)
-
-    with pytest.raises(NotImplementedError):
-        modin_series.reshape(None)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3148,9 +3049,7 @@ def test_searchsorted(
         assert case
 
 
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_sem_float_nan_only(skipna, ddof):
     eval_general(
@@ -3186,9 +3085,7 @@ def test_size(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 def test_skew(data, skipna):
     eval_general(*create_test_series(data), lambda df: df.skew(skipna=skipna))
 
@@ -3217,13 +3114,10 @@ def test_shift(data, index, periods, name):
         modin_series.shift(periods=periods, fill_value=777),
         pandas_series.shift(periods=periods, fill_value=777),
     )
-    eval_general(modin_series, pandas_series, lambda df: df.shift(axis=1))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
-)
+@pytest.mark.parametrize("ascending", [True, False])
 @pytest.mark.parametrize(
     "sort_remaining", bool_arg_values, ids=arg_keys("sort_remaining", bool_arg_keys)
 )
@@ -3254,7 +3148,7 @@ def test_sort_index(data, ascending, sort_remaining, na_position):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("ascending", [True, False], ids=["True", "False"])
+@pytest.mark.parametrize("ascending", [True, False])
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_values(data, ascending, na_position):
     modin_series, pandas_series = create_test_series(data)
@@ -3300,9 +3194,7 @@ def test_squeeze(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_std(request, data, skipna, ddof):
     modin_series, pandas_series = create_test_series(data)
@@ -3326,6 +3218,17 @@ def test_sub(data):
     inter_df_math_helper(modin_series, pandas_series, "sub")
 
 
+def test_6782():
+    datetime_scalar = datetime.datetime(1970, 1, 1, 0, 0)
+    with pytest.warns(UserWarning) as warns:
+        _ = pd.Series([datetime.datetime(2000, 1, 1)]) - datetime_scalar
+        for warn in warns.list:
+            assert (
+                "Adding/subtracting object-dtype array to DatetimeArray not vectorized"
+                not in str(warn)
+            )
+
+
 @pytest.mark.skipif(
     StorageFormat.get() == "Hdk",
     reason="https://github.com/intel-ai/hdk/issues/272",
@@ -3341,25 +3244,29 @@ def test_subtract(data):
     test_data_values + test_data_small_values,
     ids=test_data_keys + test_data_small_keys,
 )
-@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
 @pytest.mark.exclude_in_sanity
-def test_sum(data, axis, skipna, numeric_only, min_count):
+def test_sum(data, skipna, numeric_only, min_count):
     eval_general(
         *create_test_series(data),
         lambda df, *args, **kwargs: df.sum(*args, **kwargs),
-        axis=axis,
         skipna=skipna,
         numeric_only=numeric_only,
         min_count=min_count,
+    )
+
+
+@pytest.mark.parametrize("operation", ["sum", "shift"])
+def test_sum_axis_1_except(operation):
+    # ValueError('No axis named 1 for object type Series')
+    eval_general(
+        *create_test_series(test_data["int_data"]),
+        lambda df, *args, **kwargs: getattr(df, operation)(*args, **kwargs),
+        axis=1,
     )
 
 
@@ -3463,6 +3370,15 @@ def test_to_numpy(data):
     assert_array_equal(modin_series.to_numpy(), pandas_series.to_numpy())
 
 
+def test_to_numpy_dtype():
+    modin_series, pandas_series = create_test_series(test_data["float_nan_data"])
+    assert_array_equal(
+        modin_series.to_numpy(dtype="int64"),
+        pandas_series.to_numpy(dtype="int64"),
+        strict=True,
+    )
+
+
 @pytest.mark.parametrize(
     "data",
     test_data_values + test_data_large_categorical_series_values,
@@ -3518,8 +3434,12 @@ def test_tolist(data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
-def test_transform(data, func):
+@pytest.mark.parametrize(
+    "func", [lambda x: x + 1, [np.sqrt, np.exp]], ids=["lambda", "list_udfs"]
+)
+def test_transform(data, func, request):
+    if "list_udfs" in request.node.callspec.id:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/6998")
     eval_general(
         *create_test_series(data),
         lambda df: df.transform(func),
@@ -3705,7 +3625,7 @@ def test_update(data, other_data):
         ),
     ],
 )
-@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", [True, False])
 @pytest.mark.exclude_in_sanity
 def test_value_counts(sort, normalize, bins, dropna, ascending):
     def sort_sensitive_comparator(df1, df2):
@@ -3726,10 +3646,6 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
             ascending=ascending,
         ),
         comparator=sort_sensitive_comparator,
-        # Modin's `sort_values` does not validate `ascending` type and so
-        # does not raise an exception when it isn't a bool, when pandas do so,
-        # visit modin-issue#3388 for more info.
-        check_exception_type=None if sort and ascending is None else True,
     )
 
     # from issue #2365
@@ -3745,10 +3661,6 @@ def test_value_counts(sort, normalize, bins, dropna, ascending):
             ascending=ascending,
         ),
         comparator=sort_sensitive_comparator,
-        # Modin's `sort_values` does not validate `ascending` type and so
-        # does not raise an exception when it isn't a bool, when pandas do so,
-        # visit modin-issue#3388 for more info.
-        check_exception_type=None if sort and ascending is None else True,
     )
 
 
@@ -3765,7 +3677,7 @@ def test_value_counts_categorical():
             # Perform our own non-strict version of dtypes equality check
             assert_dtypes_equal(df1, df2)
             assert_series_equal(
-                df1._to_pandas(), df2, check_index=False, check_dtype=False
+                df1.modin.to_pandas(), df2, check_index=False, check_dtype=False
             )
 
     else:
@@ -3806,9 +3718,7 @@ def test_values_ea():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_var(data, skipna, ddof):
     modin_series, pandas_series = create_test_series(data)
@@ -3897,7 +3807,7 @@ def test_str_cat(others):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_split(data, pat, n, expand):
     eval_general(
         *create_test_series(data),
@@ -3908,7 +3818,7 @@ def test_str_split(data, pat, n, expand):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("pat", string_sep_values, ids=string_sep_keys)
 @pytest.mark.parametrize("n", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_rsplit(data, pat, n, expand):
     eval_general(
         *create_test_series(data),
@@ -4024,7 +3934,7 @@ def test_str_removesuffix(data):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize(
     "side", ["left", "right", "both"], ids=["left", "right", "both"]
 )
@@ -4039,7 +3949,7 @@ def test_str_pad(data, width, side, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_center(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4051,7 +3961,7 @@ def test_str_center(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_ljust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4063,7 +3973,7 @@ def test_str_ljust(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 @pytest.mark.parametrize("fillchar", string_sep_values, ids=string_sep_keys)
 def test_str_rjust(data, width, fillchar):
     modin_series, pandas_series = create_test_series(data)
@@ -4075,14 +3985,14 @@ def test_str_rjust(data, width, fillchar):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 def test_str_zfill(data, width):
     modin_series, pandas_series = create_test_series(data)
     eval_general(modin_series, pandas_series, lambda series: series.str.zfill(width))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("width", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("width", [-1, 0, 5])
 def test_str_wrap(data, width):
     modin_series, pandas_series = create_test_series(data)
     eval_general(modin_series, pandas_series, lambda series: series.str.wrap(width))
@@ -4091,7 +4001,7 @@ def test_str_wrap(data, width):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
 @pytest.mark.parametrize("stop", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("step", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize("step", [-2, 1, 3])
 def test_str_slice(data, start, stop, step):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4177,7 +4087,7 @@ def test_str_match(data, pat, case, na):
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 @pytest.mark.parametrize("pat", [r"([ab])", r"([ab])(\d)"])
 def test_str_extract(data, expand, pat):
     modin_series, pandas_series = create_test_series(data)
@@ -4234,7 +4144,7 @@ def test_str_lstrip(data, to_strip):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_partition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4248,7 +4158,7 @@ def test_str_partition(data, sep, expand):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sep", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("expand", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("expand", [False, True])
 def test_str_rpartition(data, sep, expand):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4306,8 +4216,11 @@ def test_str_rfind(data, sub, start, end):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize(
+    "start, end",
+    [(0, None), (1, -1), (1, 3)],
+    ids=["default", "non_default_working", "exception"],
+)
 def test_str_index(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4319,8 +4232,11 @@ def test_str_index(data, sub, start, end):
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("sub", string_sep_values, ids=string_sep_keys)
-@pytest.mark.parametrize("start", int_arg_values, ids=int_arg_keys)
-@pytest.mark.parametrize("end", int_arg_values, ids=int_arg_keys)
+@pytest.mark.parametrize(
+    "start, end",
+    [(0, None), (1, -1), (1, 3)],
+    ids=["default", "non_default_working", "exception"],
+)
 def test_str_rindex(data, sub, start, end):
     modin_series, pandas_series = create_test_series(data)
     eval_general(
@@ -4377,14 +4293,6 @@ def test_str_translate(data, pat):
         eval_general(
             modin_series, pandas_series, lambda series: series.str.translate(table)
         )
-
-    # Test delete chars
-    deletechars = "|"
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda series: series.str.translate(table, deletechars),
-    )
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4540,6 +4448,80 @@ def test_str_decode(encoding, errors, str_encode_decode_test_data):
         ),
         lambda s: s.str.decode(encoding, errors=errors),
     )
+
+
+def test_list_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            [1, 2, 3],
+            [3],
+        ],
+        dtype=pd.ArrowDtype(pa.list_(pa.int64())),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.list.flatten())
+    eval_general(modin_series, pandas_series, lambda series: series.list.len())
+    eval_general(modin_series, pandas_series, lambda series: series.list[0])
+
+
+def test_struct_general():
+    pa = pytest.importorskip("pyarrow")
+
+    # Copied from pandas examples
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": 1, "project": "pandas"},
+            {"version": 2, "project": "pandas"},
+            {"version": 1, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", pa.int64()), ("project", pa.string())])
+        ),
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.dtypes)
+    eval_general(
+        modin_series, pandas_series, lambda series: series.struct.field("project")
+    )
+    eval_general(modin_series, pandas_series, lambda series: series.struct.explode())
+
+    # nested struct types
+    version_type = pa.struct(
+        [
+            ("major", pa.int64()),
+            ("minor", pa.int64()),
+        ]
+    )
+    modin_series, pandas_series = create_test_series(
+        [
+            {"version": {"major": 1, "minor": 5}, "project": "pandas"},
+            {"version": {"major": 2, "minor": 1}, "project": "pandas"},
+            {"version": {"major": 1, "minor": 26}, "project": "numpy"},
+        ],
+        dtype=pd.ArrowDtype(
+            pa.struct([("version", version_type), ("project", pa.string())])
+        ),
+    )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda series: series.struct.field(["version", "minor"]),
+    )
+
+
+def test_case_when():
+    # Copied from pandas
+    c_md, c_pd = create_test_series([6, 7, 8, 9], name="c")
+    a_md, a_pd = create_test_series([0, 0, 1, 2])
+    b_md, b_pd = create_test_series([0, 3, 4, 5])
+
+    results = [None, None]
+    for idx, (c, a, b) in enumerate(((c_md, a_md, b_md), (c_pd, a_pd, b_pd))):
+        results[idx] = c.case_when(
+            caselist=[(a.gt(0), a), (b.gt(0), b)]  # condition, replacement
+        )
+    df_equals(*results)
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
@@ -4783,3 +4765,29 @@ def test_binary_numpy_universal_function_issue_6483():
         *create_test_series(test_data["float_nan_data"]),
         lambda series: np.arctan2(series, np.sin(series)),
     )
+
+
+def test__reduce__():
+    # `Series.__reduce__` will be called implicitly when lambda expressions are
+    # pre-processed for the distributed engine.
+    series_data = ["Major League Baseball", "National Basketball Association"]
+    abbr_md, abbr_pd = create_test_series(series_data, index=["MLB", "NBA"])
+
+    dataframe_data = {
+        "name": ["Mariners", "Lakers"] * 500,
+        "league_abbreviation": ["MLB", "NBA"] * 500,
+    }
+    teams_md, teams_pd = create_test_dfs(dataframe_data)
+
+    result_md = (
+        teams_md.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_md.loc[abbr])
+        .rename("league")
+    )
+
+    result_pd = (
+        teams_pd.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_pd.loc[abbr])
+        .rename("league")
+    )
+    df_equals(result_md, result_pd)

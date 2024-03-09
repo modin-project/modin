@@ -29,17 +29,19 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+import itertools
+
 import numpy as np
 import pandas
-import itertools
-from pandas.api.types import is_list_like, is_bool
-from pandas.core.dtypes.common import is_integer, is_bool_dtype, is_integer_dtype
+from pandas.api.types import is_bool, is_list_like
+from pandas.core.dtypes.common import is_bool_dtype, is_integer, is_integer_dtype
 from pandas.core.indexing import IndexingError
+
 from modin.error_message import ErrorMessage
+from modin.pandas.indexing import compute_sliced_len, is_range_like, is_slice, is_tuple
+from modin.pandas.utils import is_scalar
 
 from .arr import array
-from modin.pandas.utils import is_scalar
-from modin.pandas.indexing import compute_sliced_len, is_tuple, is_slice, is_range_like
 
 
 def broadcast_item(
@@ -449,9 +451,11 @@ class ArrayIndexer(object):
             )
 
         row_lookup_len, col_lookup_len = [
-            len(lookup)
-            if not isinstance(lookup, slice)
-            else compute_sliced_len(lookup, len(get_axis(i)))
+            (
+                len(lookup)
+                if not isinstance(lookup, slice)
+                else compute_sliced_len(lookup, len(get_axis(i)))
+            )
             for i, lookup in enumerate([row_lookup, col_lookup])
         ]
 
@@ -471,22 +475,6 @@ class ArrayIndexer(object):
         else:
             axis = None
         return axis
-
-    def _write_items(self, row_lookup, col_lookup, item):
-        """
-        Perform remote write and replace blocks.
-
-        Parameters
-        ----------
-        row_lookup : slice or scalar
-            The global row index to write item to.
-        col_lookup : slice or scalar
-            The global col index to write item to.
-        item : numpy.ndarray
-            The new item value that needs to be assigned to `self`.
-        """
-        new_qc = self.arr._query_compiler.write_items(row_lookup, col_lookup, item)
-        self.arr._update_inplace(new_qc)
 
     def _setitem_positional(self, row_lookup, col_lookup, item, axis=None):
         """
@@ -512,16 +500,9 @@ class ArrayIndexer(object):
             row_lookup = range(len(self.arr._query_compiler.index))[row_lookup]
         if isinstance(col_lookup, slice):
             col_lookup = range(len(self.arr._query_compiler.columns))[col_lookup]
-        if axis is None:
-            if not is_scalar(item):
-                item = broadcast_item(self.arr, row_lookup, col_lookup, item)
-            self.arr._query_compiler = self.arr._query_compiler.write_items(
-                row_lookup, col_lookup, item
-            )
-        else:
-            if not is_scalar(item):
-                item = broadcast_item(self.arr, row_lookup, col_lookup, item)
-            self._write_items(row_lookup, col_lookup, item)
+
+        new_qc = self.arr._query_compiler.write_items(row_lookup, col_lookup, item)
+        self.arr._update_inplace(new_qc)
 
     def __setitem__(self, key, item):
         """

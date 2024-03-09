@@ -11,9 +11,10 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import logging
 import collections
+import logging
+
+import pytest
 
 import modin.logging
 from modin.config import LogMode
@@ -26,8 +27,8 @@ class _FakeLogger:
         self.messages = collections.defaultdict(list)
         self.namespace = namespace
 
-    def info(self, message, *args, **kw):
-        self.messages["info"].append(message.format(*args, **kw))
+    def log(self, log_level, message, *args, **kw):
+        self.messages[log_level].append(message.format(*args, **kw))
 
     def exception(self, message, *args, **kw):
         self.messages["exception"].append(message.format(*args, **kw))
@@ -80,8 +81,8 @@ def test_function_decorator(monkeypatch, get_log_messages):
         with pytest.raises(ValueError):
             func(do_raise=True)
 
-    assert "func" in get_log_messages()["info"][0]
-    assert "START" in get_log_messages()["info"][0]
+    assert "func" in get_log_messages()[logging.INFO][0]
+    assert "START" in get_log_messages()[logging.INFO][0]
     assert get_log_messages("modin.logger.errors")["exception"] == [
         "STOP::PANDAS-API::func"
     ]
@@ -136,7 +137,7 @@ def test_class_decorator(monkeypatch, get_log_messages):
         Bar().method1()
         Bar().method4()
 
-    assert get_log_messages()["info"] == [
+    assert get_log_messages()[logging.INFO] == [
         "START::CUSTOM::Foo.method1",
         "STOP::CUSTOM::Foo.method1",
         "START::CUSTOM::Foo.method2",
@@ -163,7 +164,7 @@ def test_class_inheritance(monkeypatch, get_log_messages):
         Bar().method1()
         Bar().method2()
 
-    assert get_log_messages()["info"] == [
+    assert get_log_messages()[logging.INFO] == [
         "START::CUSTOM::Foo.method1",
         "STOP::CUSTOM::Foo.method1",
         "START::CUSTOM::Foo.method1",

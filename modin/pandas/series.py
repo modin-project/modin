@@ -14,38 +14,44 @@
 """Module houses `Series` class, that is distributed version of `pandas.Series`."""
 
 from __future__ import annotations
+
+import os
+import warnings
+from typing import IO, TYPE_CHECKING, Hashable, Optional, Union
+
 import numpy as np
 import pandas
-from pandas.io.formats.info import SeriesInfo
+from pandas._libs import lib
+from pandas._typing import Axis, IndexKeyFunc, Sequence
 from pandas.api.types import is_integer
 from pandas.core.common import apply_if_callable, is_bool_indexer
-from pandas.util._validators import validate_bool_kwarg
-from pandas.core.dtypes.common import (
-    is_dict_like,
-    is_list_like,
-)
+from pandas.core.dtypes.common import is_dict_like, is_list_like
 from pandas.core.series import _coerce_method
-from pandas._libs import lib
-from pandas._typing import IndexKeyFunc, Axis
-from typing import Union, Optional, Hashable, TYPE_CHECKING, IO
-import warnings
+from pandas.io.formats.info import SeriesInfo
+from pandas.util._validators import validate_bool_kwarg
 
-from modin.logging import disable_logging
-from modin.utils import (
-    _inherit_docstrings,
-    to_pandas,
-    MODIN_UNNAMED_SERIES_LABEL,
-)
 from modin.config import PersistentPickle
-from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
-from .iterator import PartitionIterator
-from .utils import from_pandas, is_scalar, _doc_binary_op, cast_function_modin2pandas
-from .accessor import CachedAccessor, SparseAccessor
-from .series_utils import CategoryMethods, StringMethods, DatetimeProperties
+from modin.logging import disable_logging
+from modin.pandas.io import from_pandas, to_pandas
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
 
+from .accessor import CachedAccessor, SparseAccessor
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .iterator import PartitionIterator
+from .series_utils import (
+    CategoryMethods,
+    DatetimeProperties,
+    ListAccessor,
+    StringMethods,
+    StructAccessor,
+)
+from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
     from .dataframe import DataFrame
+
+# Dictionary of extensions assigned to this class
+_SERIES_EXTENSIONS_ = {}
 
 
 @_inherit_docstrings(
@@ -91,7 +97,7 @@ class Series(BasePandasDataset):
         dtype=None,
         name=None,
         copy=None,
-        fastpath=False,
+        fastpath=lib.no_default,
         query_compiler=None,
     ):
         from modin.numpy import array
@@ -314,7 +320,7 @@ class Series(BasePandasDataset):
         try to get `key` from `Series` fields.
         """
         try:
-            return object.__getattribute__(self, key)
+            return _SERIES_EXTENSIONS_.get(key, object.__getattribute__(self, key))
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]
@@ -499,9 +505,9 @@ class Series(BasePandasDataset):
 
         data = self.to_numpy()
         if isinstance(self.dtype, pd.CategoricalDtype):
-            from modin.config import ExperimentalNumPyAPI
+            from modin.config import ModinNumpy
 
-            if ExperimentalNumPyAPI.get():
+            if ModinNumpy.get():
                 data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
@@ -645,7 +651,7 @@ class Series(BasePandasDataset):
                 # The return_type is only a DataFrame when we have a function
                 # return a Series object. This is a very particular case that
                 # has to be handled by the underlying pandas.Series apply
-                # function and not our default applymap call.
+                # function and not our default map call.
                 if return_type == "DataFrame":
                     result = self._query_compiler.apply_on_series(f)
                 else:
@@ -703,13 +709,19 @@ class Series(BasePandasDataset):
             result = -1
         return result
 
-    def argsort(self, axis=0, kind="quicksort", order=None):  # noqa: PR01, RT01, D200
+    def argsort(
+        self, axis=0, kind="quicksort", order=None, stable=None
+    ):  # noqa: PR01, RT01, D200
         """
         Return the integer indices that would sort the Series values.
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.argsort(
-                axis=axis, kind=kind, order=order
+                # 'stable' parameter has no effect in Pandas and is only accepted
+                # for compatibility with NumPy, so we're not passing it forward on purpose
+                axis=axis,
+                kind=kind,
+                order=order,
             )
         )
 
@@ -723,9 +735,9 @@ class Series(BasePandasDataset):
         """
         Return boolean Series equivalent to left <= series <= right.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.between(left, right, inclusive)
-        )
+        # 'pandas.Series.between()' only uses public Series' API,
+        # so passing a Modin Series there is safe
+        return pandas.Series.between(self, left, right, inclusive)
 
     def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
         """
@@ -1006,6 +1018,14 @@ class Series(BasePandasDataset):
             use_na_sentinel=use_na_sentinel,
         )
 
+    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the conditions are True.
+        """
+        return self.__constructor__(
+            query_compiler=self._query_compiler.case_when(caselist=caselist)
+        )
+
     def fillna(
         self,
         value=None,
@@ -1103,14 +1123,16 @@ class Series(BasePandasDataset):
         self,
         by=None,
         ax=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
-        figsize=None,
-        bins=10,
-        **kwds,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
+        figsize: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Draw histogram of the input series using matplotlib.
@@ -1126,23 +1148,21 @@ class Series(BasePandasDataset):
             yrot=yrot,
             figsize=figsize,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the maximum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the minimum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def info(
@@ -1165,6 +1185,26 @@ class Series(BasePandasDataset):
         Whether elements in `Series` are contained in `values`.
         """
         return super(Series, self).isin(values, shape_hint="column")
+
+    def isna(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isnull()
 
     def item(self):  # noqa: RT01, D200
         """
@@ -1223,10 +1263,10 @@ class Series(BasePandasDataset):
                 return mapper.get(s, np.nan)
 
         return self.__constructor__(
-            query_compiler=self._query_compiler.applymap(
-                lambda s: arg(s)
-                if pandas.isnull(s) is not True or na_action is None
-                else s
+            query_compiler=self._query_compiler.map(
+                lambda s: (
+                    arg(s) if pandas.isnull(s) is not True or na_action is None else s
+                )
             )
         )
 
@@ -1605,7 +1645,9 @@ class Series(BasePandasDataset):
             obj.name = name
             from .dataframe import DataFrame
 
-            return DataFrame(obj).reset_index(
+            # Here `query_compiler` is passed instead of `obj` to avoid unnecessary `copy()`
+            # inside `DataFrame` constructor
+            return DataFrame(query_compiler=obj._query_compiler).reset_index(
                 level=level,
                 drop=drop,
                 inplace=inplace,
@@ -1801,6 +1843,8 @@ class Series(BasePandasDataset):
     sparse = CachedAccessor("sparse", SparseAccessor)
     str = CachedAccessor("str", StringMethods)
     dt = CachedAccessor("dt", DatetimeProperties)
+    list = CachedAccessor("list", ListAccessor)
+    struct = CachedAccessor("struct", StructAccessor)
 
     def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
         """
@@ -1915,9 +1959,9 @@ class Series(BasePandasDataset):
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
-        from modin.config import ExperimentalNumPyAPI
+        from modin.config import ModinNumpy
 
-        if not ExperimentalNumPyAPI.get():
+        if not ModinNumpy.get():
             return (
                 super(Series, self)
                 .to_numpy(
@@ -2199,6 +2243,8 @@ class Series(BasePandasDataset):
     def _to_pandas(self):
         """
         Convert Modin Series to pandas Series.
+
+        Recommended conversion method: `series.modin.to_pandas()`.
 
         Returns
         -------
@@ -2500,7 +2546,7 @@ class Series(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler, name):
+    def _inflate_light(cls, query_compiler, name, source_pid):
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -2512,16 +2558,29 @@ class Series(BasePandasDataset):
             Query compiler to use for object re-creation.
         name : str
             The name to give to the new object.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         Series
             New Series based on the `query_compiler`.
         """
+        if os.getpid() != source_pid:
+            res = query_compiler.to_pandas()
+            # at the query compiler layer, `to_pandas` always returns a DataFrame,
+            # even if it stores a Series, as a single-column DataFrame
+            if res.columns == [MODIN_UNNAMED_SERIES_LABEL]:
+                res = res.squeeze(axis=1)
+                res.name = None
+            return res
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler, name=name)
 
     @classmethod
-    def _inflate_full(cls, pandas_series):
+    def _inflate_full(cls, pandas_series, source_pid):
         """
         Re-creates the object from previously-serialized disk-storable representation.
 
@@ -2529,18 +2588,29 @@ class Series(BasePandasDataset):
         ----------
         pandas_series : pandas.Series
             Data to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         Series
             New Series based on the `pandas_series`.
         """
+        if os.getpid() != source_pid:
+            return pandas_series
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=pandas_series)
 
     def __reduce__(self):
         self._query_compiler.finalize()
-        if PersistentPickle.get():
-            return self._inflate_full, (self._to_pandas(),)
-        return self._inflate_light, (self._query_compiler, self.name)
+        pid = os.getpid()
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
+            return self._inflate_full, (self._to_pandas(), pid)
+        return self._inflate_light, (self._query_compiler, self.name, pid)
 
     # Persistance support methods - END

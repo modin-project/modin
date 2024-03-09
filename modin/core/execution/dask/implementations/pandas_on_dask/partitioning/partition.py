@@ -13,13 +13,14 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
+import pandas
 from distributed import Future
 from distributed.utils import get_ip
 
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
-from modin.pandas.indexing import compute_sliced_len
-from modin.logging import get_logger
 from modin.core.execution.dask.common import DaskWrapper
+from modin.logging import get_logger
+from modin.pandas.indexing import compute_sliced_len
 
 
 class PandasOnDaskDataframePartition(PandasDataframePartition):
@@ -92,7 +93,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            futures = self.execution_wrapper.deploy(
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
                 num_returns=2,
@@ -102,7 +103,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # We handle `len(call_queue) == 1` in a different way because
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
-            futures = DaskWrapper.deploy(
+            futures = self.execution_wrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
@@ -126,7 +127,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             self._is_debug(log) and log.debug(
                 f"SUBMIT::_apply_list_of_funcs::{self._identity}"
             )
-            futures = DaskWrapper.deploy(
+            futures = self.execution_wrapper.deploy(
                 func=apply_list_of_funcs,
                 f_args=(call_queue, self._data),
                 num_returns=2,
@@ -137,7 +138,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             # this improves performance a bit.
             func, f_args, f_kwargs = call_queue[0]
             self._is_debug(log) and log.debug(f"SUBMIT::_apply_func::{self._identity}")
-            futures = DaskWrapper.deploy(
+            futures = self.execution_wrapper.deploy(
                 func=apply_func,
                 f_args=(self._data, func, *f_args),
                 f_kwargs=f_kwargs,
@@ -154,7 +155,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
     def wait(self):
         """Wait completing computations on the object wrapped by the partition."""
         self.drain_call_queue()
-        DaskWrapper.wait(self._data)
+        self.execution_wrapper.wait(self._data)
 
     def mask(self, row_labels, col_labels):
         """
@@ -180,7 +181,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._length_cache = self._length_cache
             else:
-                new_obj._length_cache = DaskWrapper.deploy(
+                new_obj._length_cache = self.execution_wrapper.deploy(
                     func=compute_sliced_len, f_args=(row_labels, self._length_cache)
                 )
         if isinstance(col_labels, slice) and isinstance(self._width_cache, Future):
@@ -188,7 +189,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
                 # fast path - full axis take
                 new_obj._width_cache = self._width_cache
             else:
-                new_obj._width_cache = DaskWrapper.deploy(
+                new_obj._width_cache = self.execution_wrapper.deploy(
                     func=compute_sliced_len, f_args=(col_labels, self._width_cache)
                 )
         self._is_debug(log) and log.debug(f"EXIT::Partition.mask::{self._identity}")
@@ -226,7 +227,11 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         PandasOnDaskDataframePartition
             A new ``PandasOnDaskDataframePartition`` object.
         """
-        return cls(DaskWrapper.put(obj, hash=False), len(obj.index), len(obj.columns))
+        return cls(
+            cls.execution_wrapper.put(obj, hash=False),
+            len(obj.index),
+            len(obj.columns),
+        )
 
     @classmethod
     def preprocess_func(cls, func):
@@ -243,7 +248,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         callable
             An object that can be accepted by ``apply``.
         """
-        return DaskWrapper.put(func, hash=False, broadcast=True)
+        return cls.execution_wrapper.put(func, hash=False, broadcast=True)
 
     def length(self, materialize=True):
         """
@@ -264,7 +269,7 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if self._length_cache is None:
             self._length_cache = self.apply(len)._data
         if isinstance(self._length_cache, Future) and materialize:
-            self._length_cache = DaskWrapper.materialize(self._length_cache)
+            self._length_cache = self.execution_wrapper.materialize(self._length_cache)
         return self._length_cache
 
     def width(self, materialize=True):
@@ -286,12 +291,19 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
         if self._width_cache is None:
             self._width_cache = self.apply(lambda df: len(df.columns))._data
         if isinstance(self._width_cache, Future) and materialize:
-            self._width_cache = DaskWrapper.materialize(self._width_cache)
+            self._width_cache = self.execution_wrapper.materialize(self._width_cache)
         return self._width_cache
 
-    def ip(self):
+    def ip(self, materialize=True):
         """
         Get the node IP address of the object wrapped by this partition.
+
+        Parameters
+        ----------
+        materialize : bool, default: True
+            Whether to forcibly materialize the result into an integer. If ``False``
+            was specified, may return a future of the result if it hasn't been
+            materialized yet.
 
         Returns
         -------
@@ -299,9 +311,9 @@ class PandasOnDaskDataframePartition(PandasDataframePartition):
             IP address of the node that holds the data.
         """
         if self._ip_cache is None:
-            self._ip_cache = self.apply(lambda df: df)._ip_cache
-        if isinstance(self._ip_cache, Future):
-            self._ip_cache = DaskWrapper.materialize(self._ip_cache)
+            self._ip_cache = self.apply(lambda df: pandas.DataFrame([]))._ip_cache
+        if materialize and isinstance(self._ip_cache, Future):
+            self._ip_cache = self.execution_wrapper.materialize(self._ip_cache)
         return self._ip_cache
 
 

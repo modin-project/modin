@@ -11,45 +11,41 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import re
-from pathlib import Path
-from typing import Union
-import pytest
-import numpy as np
-import math
-import pandas
+import csv
+import functools
 import itertools
-from pandas.testing import (
-    assert_series_equal,
-    assert_frame_equal,
-    assert_index_equal,
-    assert_extension_array_equal,
-)
+import math
+import os
+import re
+from io import BytesIO
+from pathlib import Path
+from string import ascii_letters
+from typing import Union
+
+import numpy as np
+import pandas
+import psutil
+import pytest
 from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_datetime64_any_dtype,
     is_list_like,
     is_numeric_dtype,
     is_object_dtype,
     is_string_dtype,
-    is_bool_dtype,
-    is_datetime64_any_dtype,
     is_timedelta64_dtype,
-    is_period_dtype,
+)
+from pandas.testing import (
+    assert_extension_array_equal,
+    assert_frame_equal,
+    assert_index_equal,
+    assert_series_equal,
 )
 
-from modin.config import MinPartitionSize, NPartitions
 import modin.pandas as pd
-from modin.utils import to_pandas, try_cast_to_pandas
-from modin.config import TestDatasetSize, TrackFileLeaks
-from io import BytesIO
-import os
-from string import ascii_letters
-import csv
-import psutil
-import functools
-
-# Flag activated on command line with "--extra-test-parameters" option.
-# Used in some tests to perform additional parameter combinations.
-extra_test_parameters = False
+from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
+from modin.pandas.io import to_pandas
+from modin.utils import try_cast_to_pandas
 
 random_state = np.random.RandomState(seed=42)
 
@@ -80,9 +76,11 @@ test_data = {
     },
     "float_nan_data": {
         "col{}".format(int((i - NCOLS / 2) % NCOLS + 1)): [
-            x
-            if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
-            else np.NaN
+            (
+                x
+                if (j % 4 == 0 and i > NCOLS // 2) or (j != i and i <= NCOLS // 2)
+                else np.NaN
+            )
             for j, x in enumerate(
                 random_state.uniform(RAND_LOW, RAND_HIGH, size=(NROWS))
             )
@@ -170,7 +168,7 @@ test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)
 
 test_data_resample = {
     "data": {"A": range(12), "B": range(12)},
-    "index": pandas.date_range("31/12/2000", periods=12, freq="H"),
+    "index": pandas.date_range("31/12/2000", periods=12, freq="h"),
 }
 
 test_data_with_duplicates = {
@@ -309,6 +307,9 @@ query_func = {
     "col3 > col4": "col3 > col4",
     "col1 == col2": "col1 == col2",
     "(col2 > col1) and (col1 < col3)": "(col2 > col1) and (col1 < col3)",
+    # this is how to query for values of an unnamed index per
+    # https://pandas.pydata.org/docs/user_guide/indexing.html#multiindex-query-syntax
+    "ilevel_0 % 2 == 1": "ilevel_0 % 2 == 1",
 }
 query_func_keys = list(query_func.keys())
 query_func_values = list(query_func.values())
@@ -650,7 +651,7 @@ def assert_dtypes_equal(df1, df2):
         lambda obj: isinstance(obj, pandas.CategoricalDtype),
         is_datetime64_any_dtype,
         is_timedelta64_dtype,
-        is_period_dtype,
+        lambda obj: isinstance(obj, pandas.PeriodDtype),
     )
 
     for col in dtypes1.keys():
@@ -756,7 +757,8 @@ def df_equals(df1, df2, check_dtypes=True):
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
     else:
-        if df1 != df2:
+        res = df1 != df2
+        if res.any() if isinstance(res, np.ndarray) else res:
             np.testing.assert_almost_equal(df1, df2)
 
 
@@ -862,43 +864,50 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
+class NoModinException(Exception):
+    pass
+
+
 def eval_general(
     modin_df,
     pandas_df,
     operation,
     comparator=df_equals,
     __inplace__=False,
-    check_exception_type=True,
     raising_exceptions=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
     **kwargs,
 ):
-    if raising_exceptions:
-        assert (
-            check_exception_type
-        ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
-            if check_exception_type is None:
-                return None
-            with pytest.raises(Exception) as md_e:
-                try_cast_to_pandas(fn(modin_df, **md_kwargs))  # force materialization
-            if check_exception_type:
+            try:
+                if inplace:
+                    _ = fn(modin_df, **md_kwargs)
+                    try_cast_to_pandas(modin_df)  # force materialization
+                else:
+                    try_cast_to_pandas(
+                        fn(modin_df, **md_kwargs)
+                    )  # force materialization
+            except Exception as md_e:
                 assert isinstance(
-                    md_e.value, type(pd_e)
+                    md_e, type(pd_e)
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
-                    type(md_e.value), type(pd_e)
+                    type(md_e), type(pd_e)
                 )
                 if raising_exceptions:
                     assert not isinstance(
-                        md_e.value, tuple(raising_exceptions)
-                    ), f"not acceptable exception type: {md_e.value}"
+                        md_e, tuple(raising_exceptions)
+                    ), f"not acceptable exception type: {md_e}"
+            else:
+                raise NoModinException(
+                    f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
+                )
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
@@ -932,7 +941,6 @@ def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
@@ -950,16 +958,12 @@ def eval_io(
     comparator: obj
         Function to perform comparison.
     cast_to_str: bool
-        There could be some missmatches in dtypes, so we're
+        There could be some mismatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
-    check_exception_type: bool
-        Check or not exception types in the case of operation fail
-        (compare exceptions types raised by Pandas and Modin).
     raising_exceptions: Exception or list of Exceptions
         Exceptions that should be raised even if they are raised
-        both by Pandas and Modin (check evaluated only if
-        `check_exception_type` passed as `True`).
+        both by Pandas and Modin.
     modin_warning: obj
         Warning that should be raised by Modin.
     modin_warning_str_match: str
@@ -980,7 +984,6 @@ def eval_io(
             pandas,
             applyier,
             comparator=comparator,
-            check_exception_type=check_exception_type,
             raising_exceptions=raising_exceptions,
             check_kwargs_callable=check_kwargs_callable,
             md_extra_kwargs=md_extra_kwargs,
@@ -1030,6 +1033,19 @@ def create_test_dfs(*args, **kwargs):
     return map(
         post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)]
     )
+
+
+def create_test_series(vals, sort=False, **kwargs):
+    if isinstance(vals, dict):
+        modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
+        pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
+    else:
+        modin_series = pd.Series(vals, **kwargs)
+        pandas_series = pandas.Series(vals, **kwargs)
+    if sort:
+        modin_series = modin_series.sort_values().reset_index(drop=True)
+        pandas_series = pandas_series.sort_values().reset_index(drop=True)
+    return modin_series, pandas_series
 
 
 def generate_dfs():
@@ -1180,9 +1196,11 @@ def get_unique_filename(
                     char_counter += 1
         parameters_values = "_".join(
             [
-                str(value)
-                if not isinstance(value, (list, tuple))
-                else "_".join([str(x) for x in value])
+                (
+                    str(value)
+                    if not isinstance(value, (list, tuple))
+                    else "_".join([str(x) for x in value])
+                )
                 for value in kwargs_name.values()
             ]
         )
@@ -1341,9 +1359,9 @@ def generate_dataframe(row_size=NROWS, additional_col_values=None, idx_name=None
     return pandas.DataFrame(data, index=index)
 
 
-def _make_csv_file(filenames):
+def _make_csv_file(data_dir):
     def _csv_file_maker(
-        filename,
+        filename=None,
         row_size=NROWS,
         force=True,
         delimiter=",",
@@ -1363,8 +1381,10 @@ def _make_csv_file(filenames):
         escapechar=None,
         lineterminator=None,
     ):
+        if filename is None:
+            filename = get_unique_filename(data_dir=data_dir)
         if os.path.exists(filename) and not force:
-            pass
+            return None
         else:
             df = generate_dataframe(row_size, additional_col_values)
             if remove_randomness:
@@ -1434,24 +1454,9 @@ def _make_csv_file(filenames):
                     encoding=encoding,
                     **csv_reader_writer_params,
                 )
-            filenames.append(filename)
-            return df
+            return filename
 
     return _csv_file_maker
-
-
-def teardown_test_file(test_path):
-    if os.path.exists(test_path):
-        # PermissionError can occure because of issue #2533
-        try:
-            os.remove(test_path)
-        except PermissionError:
-            pass
-
-
-def teardown_test_files(test_paths: list):
-    for path in test_paths:
-        teardown_test_file(path)
 
 
 def sort_index_for_equal_values(df, ascending=True):
@@ -1491,11 +1496,10 @@ def rotate_decimal_digits_or_symbols(value):
         return tens + ones * 10
 
 
-def make_default_file(file_type: str):
+def make_default_file(file_type: str, data_dir: str):
     """Helper function for pytest fixtures."""
-    filenames = []
 
-    def _create_file(filenames, filename, force, nrows, ncols, func: str, func_kw=None):
+    def _create_file(filename, force, nrows, ncols, func: str, func_kw=None):
         """
         Helper function that creates a dataframe before writing it to a file.
 
@@ -1512,7 +1516,6 @@ def make_default_file(file_type: str):
                 {f"col{x + 1}": np.arange(nrows) for x in range(ncols)}
             )
             getattr(df, func)(filename, **func_kw if func_kw else {})
-            filenames.append(filename)
 
     file_type_to_extension = {
         "excel": "xlsx",
@@ -1521,19 +1524,18 @@ def make_default_file(file_type: str):
     }
     extension = file_type_to_extension.get(file_type, file_type)
 
-    def _make_default_file(filename=None, nrows=NROWS, ncols=2, force=True, **kwargs):
-        if filename is None:
-            filename = get_unique_filename(extension=extension)
+    def _make_default_file(nrows=NROWS, ncols=2, force=True, **kwargs):
+        filename = get_unique_filename(extension=extension, data_dir=data_dir)
 
         if file_type == "json":
             lines = kwargs.get("lines")
             func_kw = {"lines": lines, "orient": "records"} if lines else {}
-            _create_file(filenames, filename, force, nrows, ncols, "to_json", func_kw)
+            _create_file(filename, force, nrows, ncols, "to_json", func_kw)
         elif file_type in ("html", "excel", "feather", "stata", "pickle"):
-            _create_file(filenames, filename, force, nrows, ncols, f"to_{file_type}")
+            _create_file(filename, force, nrows, ncols, f"to_{file_type}")
         elif file_type == "hdf":
             func_kw = {"key": "df", "format": kwargs.get("format")}
-            _create_file(filenames, filename, force, nrows, ncols, "to_hdf", func_kw)
+            _create_file(filename, force, nrows, ncols, "to_hdf", func_kw)
         elif file_type == "fwf":
             if force or not os.path.exists(filename):
                 fwf_data = kwargs.get("fwf_data")
@@ -1542,12 +1544,11 @@ def make_default_file(file_type: str):
                         fwf_data = fwf_file.read()
                 with open(filename, "w") as f:
                     f.write(fwf_data)
-                filenames.append(filename)
         else:
             raise ValueError(f"Unsupported file type: {file_type}")
         return filename
 
-    return _make_default_file, filenames
+    return _make_default_file
 
 
 def value_equals(obj1, obj2):

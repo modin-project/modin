@@ -16,29 +16,49 @@
 import io
 
 import pandas
-from pandas.io.common import get_handle
+from pandas.io.common import get_handle, stringify_path
+from ray.data import from_pandas_refs
 
-from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
     CSVDispatcher,
+    ExcelDispatcher,
+    FeatherDispatcher,
     FWFDispatcher,
     JSONDispatcher,
     ParquetDispatcher,
-    FeatherDispatcher,
     SQLDispatcher,
-    ExcelDispatcher,
 )
 from modin.core.storage_formats.pandas.parsers import (
     PandasCSVParser,
+    PandasExcelParser,
+    PandasFeatherParser,
     PandasFWFParser,
     PandasJSONParser,
     PandasParquetParser,
-    PandasFeatherParser,
     PandasSQLParser,
-    PandasExcelParser,
 )
-from modin.core.execution.ray.common import RayWrapper, SignalActor
+from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.distributed.dataframe.pandas.partitions import (
+    from_partitions,
+    unwrap_partitions,
+)
+from modin.experimental.core.io import (
+    ExperimentalCSVGlobDispatcher,
+    ExperimentalCustomTextDispatcher,
+    ExperimentalGlobDispatcher,
+    ExperimentalSQLDispatcher,
+)
+from modin.experimental.core.storage_formats.pandas.parsers import (
+    ExperimentalCustomTextParser,
+    ExperimentalPandasCSVGlobParser,
+    ExperimentalPandasJsonParser,
+    ExperimentalPandasParquetParser,
+    ExperimentalPandasPickleParser,
+    ExperimentalPandasXmlParser,
+)
+
 from ..dataframe import PandasOnRayDataframe
 from ..partitioning import PandasOnRayDataframePartition
 
@@ -74,6 +94,43 @@ class PandasOnRayIO(RayIO):
     read_sql = __make_read(PandasSQLParser, SQLDispatcher)
     to_sql = __make_write(SQLDispatcher)
     read_excel = __make_read(PandasExcelParser, ExcelDispatcher)
+
+    # experimental methods that don't exist in pandas
+    read_csv_glob = __make_read(
+        ExperimentalPandasCSVGlobParser, ExperimentalCSVGlobDispatcher
+    )
+    read_parquet_glob = __make_read(
+        ExperimentalPandasParquetParser, ExperimentalGlobDispatcher
+    )
+    to_parquet_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_parquet},
+    )
+    read_json_glob = __make_read(
+        ExperimentalPandasJsonParser, ExperimentalGlobDispatcher
+    )
+    to_json_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_json},
+    )
+    read_xml_glob = __make_read(ExperimentalPandasXmlParser, ExperimentalGlobDispatcher)
+    to_xml_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_xml},
+    )
+    read_pickle_glob = __make_read(
+        ExperimentalPandasPickleParser, ExperimentalGlobDispatcher
+    )
+    to_pickle_glob = __make_write(
+        ExperimentalGlobDispatcher,
+        build_args={**build_args, "base_write": RayIO.to_pickle},
+    )
+    read_custom_text = __make_read(
+        ExperimentalCustomTextParser, ExperimentalCustomTextDispatcher
+    )
+    read_sql_distributed = __make_read(
+        ExperimentalSQLDispatcher, build_args={**build_args, "base_read": read_sql}
+    )
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace
@@ -127,6 +184,7 @@ class PandasOnRayIO(RayIO):
         **kwargs : dict
             Parameters for ``pandas.to_csv(**kwargs)``.
         """
+        kwargs["path_or_buf"] = stringify_path(kwargs["path_or_buf"])
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
@@ -205,3 +263,39 @@ class PandasOnRayIO(RayIO):
         RayWrapper.materialize(
             [part.list_of_blocks[0] for row in result for part in row]
         )
+
+    @classmethod
+    def from_ray_dataset(cls, ray_obj):
+        """
+        Create a Modin `query_compiler` from a Ray Dataset.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Ray Dataset.
+        """
+        pd_objs = ray_obj.to_pandas_refs()
+        return from_partitions(pd_objs, axis=0)._query_compiler
+
+    @classmethod
+    def to_ray_dataset(cls, modin_obj):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+        """
+        parts = unwrap_partitions(modin_obj, axis=0)
+        return from_pandas_refs(parts)

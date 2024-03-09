@@ -1,0 +1,61 @@
+name: modin_on_unidist
+channels:
+  - conda-forge
+dependencies:
+  - pip
+
+  # required dependencies
+  - pandas>=2.2,<2.3
+  - numpy>=1.22.4
+  - unidist-mpi>=0.2.1
+  - msmpi
+  - fsspec>=2022.11.0
+  - packaging>=21.0
+  - psutil>=5.8.0
+
+  # optional dependencies
+  - pyarrow>=7.0.0
+  - xarray>=2022.12.0
+  - jinja2>=3.1.2
+  - scipy>=1.10.0
+  - s3fs>=2022.11.0
+  - lxml>=4.9.2
+  - openpyxl>=3.1.0
+  - xlrd>=2.0.1
+  - matplotlib>=3.6.3
+  - sqlalchemy>=2.0.0
+  - pandas-gbq>=0.19.0
+  - pytables>=3.8.0
+  # pymssql==2.2.8 broken: https://github.com/modin-project/modin/issues/6429
+  - pymssql>=2.1.5,!=2.2.8
+  - psycopg2>=2.9.6
+  - fastparquet>=2022.12.0
+  - tqdm>=4.60.0
+  # pandas isn't compatible with numexpr=2.8.5: https://github.com/modin-project/modin/issues/6469
+  - numexpr<2.8.5
+
+  # dependencies for making release
+  - pygithub>=v1.58.0
+  - pygit2>=1.9.2
+
+  # test dependencies
+  - coverage>=7.1.0
+  - moto>=4.1.0
+  - pytest>=7.3.2
+  - pytest-cov>=4.0.0
+  - pytest-xdist>=3.2.0
+
+  # code linters
+  - black>=24.1.0
+  - flake8>=6.0.0
+  - flake8-no-implicit-concat>=0.3.4
+  - flake8-print>=5.0.0
+  - mypy>=1.0.0
+  - pandas-stubs>=2.0.0
+
+  - pip:
+      # Fixes breaking ipywidgets changes, but didn't release yet.
+      - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
+      - connectorx>=0.2.6a4
+      # The `numpydoc` version should match the version installed in the `lint-pydocstyle` job of the CI.
+      - numpydoc==1.1.0

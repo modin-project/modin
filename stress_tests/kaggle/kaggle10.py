@@ -1,11 +1,13 @@
 import matplotlib
 
 matplotlib.use("PS")
-import numpy as np  # linear algebra
-import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
-import matplotlib.pyplot as plt
-import seaborn as sns
 import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np  # linear algebra
+import seaborn as sns
+
+import modin.pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 
 warnings.filterwarnings("ignore")
 data = pd.read_csv("column_2C_weka.csv")
@@ -119,8 +121,8 @@ lasso.fit(x_train, y_train)
 ridge_predict = lasso.predict(x_test)
 print("Lasso score: ", lasso.score(x_test, y_test))
 print("Lasso coefficients: ", lasso.coef_)
-from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix
 
 x, y = data.loc[:, data.columns != "class"], data.loc[:, "class"]
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=1)
@@ -132,9 +134,8 @@ print("Confusion matrix: \n", cm)
 print("Classification report: \n", classification_report(y_test, y_pred))
 sns.heatmap(cm, annot=True, fmt="d")
 plt.show()
-from sklearn.metrics import roc_curve
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve
 
 data["class_binary"] = [1 if i == "Abnormal" else 0 for i in data.loc[:, "class"]]
 x, y = (
@@ -176,9 +177,9 @@ df = pd.get_dummies(data)
 df.head(10)
 df.drop("class_Normal", axis=1, inplace=True)
 df.head(10)
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 
 steps = [("scalar", StandardScaler()), ("SVM", SVC())]
 pipeline = Pipeline(steps)
@@ -218,8 +219,8 @@ plt.ylabel("Inertia")
 plt.show()
 data = pd.read_csv("column_2C_weka.csv")
 data3 = data.drop("class", axis=1)
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 scalar = StandardScaler()
 kmeans = KMeans(n_clusters=2)
@@ -229,7 +230,7 @@ labels = pipe.predict(data3)
 df = pd.DataFrame({"labels": labels, "class": data["class"]})
 ct = pd.crosstab(df["labels"], df["class"])
 print(ct)
-from scipy.cluster.hierarchy import linkage, dendrogram
+from scipy.cluster.hierarchy import dendrogram, linkage
 
 merg = linkage(data3.iloc[200:220, :], method="single")
 dendrogram(merg, leaf_rotation=90, leaf_font_size=6)

@@ -12,57 +12,60 @@
 # governing permissions and limitations under the License.
 """Implement DataFrame/Series public API as pandas does."""
 from __future__ import annotations
+
+import pickle as pkl
+import re
+import warnings
+from typing import Any, Hashable, Literal, Optional, Sequence, Union
+
 import numpy as np
 import pandas
-from pandas.compat import numpy as numpy_compat
-from pandas.core.common import count_not_none, pipe
-from pandas.core.methods.describe import _refine_percentiles
-from pandas.core.dtypes.common import (
-    is_list_like,
-    is_dict_like,
-    is_bool_dtype,
-    is_integer_dtype,
-    is_numeric_dtype,
-    is_dtype_equal,
-    is_object_dtype,
-    is_integer,
-)
-from pandas.core.indexes.api import ensure_index
-import pandas.core.window.rolling
-import pandas.core.resample
 import pandas.core.generic
-from pandas.util._validators import (
-    validate_percentile,
-    validate_bool_kwarg,
-    validate_ascending,
-)
+import pandas.core.resample
+import pandas.core.window.rolling
 from pandas._libs import lib
 from pandas._libs.tslibs import to_offset
 from pandas._typing import (
-    IndexKeyFunc,
-    StorageOptions,
-    CompressionOptions,
     Axis,
+    CompressionOptions,
+    DtypeBackend,
+    IndexKeyFunc,
     IndexLabel,
     Level,
+    RandomState,
+    StorageOptions,
     TimedeltaConvertibleTypes,
     TimestampConvertibleTypes,
-    RandomState,
-    DtypeBackend,
     npt,
 )
-import pickle as pkl
-import re
-from typing import Optional, Union, Sequence, Hashable, Any
-import warnings
+from pandas.compat import numpy as numpy_compat
+from pandas.core.common import count_not_none, pipe
+from pandas.core.dtypes.common import (
+    is_bool_dtype,
+    is_dict_like,
+    is_dtype_equal,
+    is_integer,
+    is_integer_dtype,
+    is_list_like,
+    is_numeric_dtype,
+    is_object_dtype,
+)
+from pandas.core.indexes.api import ensure_index
+from pandas.core.methods.describe import _refine_percentiles
+from pandas.util._validators import (
+    validate_ascending,
+    validate_bool_kwarg,
+    validate_percentile,
+)
 
-
-from .utils import is_full_grab_slice, _doc_binary_op
-from modin.utils import try_cast_to_pandas, _inherit_docstrings, expanduser_path_arg
-from modin.error_message import ErrorMessage
 from modin import pandas as pd
+from modin.error_message import ErrorMessage
+from modin.logging import ClassLogger, disable_logging
+from modin.pandas.accessor import CachedAccessor, ModinAPI
 from modin.pandas.utils import is_scalar
-from modin.logging import disable_logging, ClassLogger
+from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
+
+from .utils import _doc_binary_op, is_full_grab_slice
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -338,7 +341,7 @@ class BasePandasDataset(ClassLogger):
         elif is_dict_like(other):
             other_dtypes = [
                 type(other[label])
-                for label in self._query_compiler.get_axis(axis)
+                for label in self._get_axis(axis)
                 # The binary operation is applied for intersection of axis labels
                 # and dictionary keys. So filtering out extra keys.
                 if label in other
@@ -357,9 +360,7 @@ class BasePandasDataset(ClassLogger):
                 # dictionary.
                 self_dtypes = [
                     dtype
-                    for label, dtype in zip(
-                        self._query_compiler.get_axis(axis), self._get_dtypes()
-                    )
+                    for label, dtype in zip(self._get_axis(axis), self._get_dtypes())
                     if label in other
                 ]
 
@@ -403,7 +404,7 @@ class BasePandasDataset(ClassLogger):
             [self._validate_function(fn, on_invalid) for fn in func.values()]
             return
             # We also could validate this, but it may be quite expensive for lazy-frames
-            # if not all(idx in self.axes[axis] for idx in func.keys()):
+            # if not all(idx in self._get_axis(axis) for idx in func.keys()):
             #     error_raiser("Invalid dict keys", KeyError)
 
         if not is_list_like(func):
@@ -471,7 +472,7 @@ class BasePandasDataset(ClassLogger):
         new_query_compiler = getattr(self._query_compiler, op)(other, **kwargs)
         return self._create_or_update_from_compiler(new_query_compiler)
 
-    def _default_to_pandas(self, op, *args, **kwargs):
+    def _default_to_pandas(self, op, *args, reason: str = None, **kwargs):
         """
         Convert dataset to pandas type and call a pandas function on it.
 
@@ -481,6 +482,7 @@ class BasePandasDataset(ClassLogger):
             Name of pandas function.
         *args : list
             Additional positional arguments to be passed to `op`.
+        reason : str, optional
         **kwargs : dict
             Additional keywords arguments to be passed to `op`.
 
@@ -495,38 +497,33 @@ class BasePandasDataset(ClassLogger):
                 type(self).__name__,
                 op if isinstance(op, str) else op.__name__,
                 empty_self_str,
-            )
+            ),
+            reason=reason,
         )
 
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
         pandas_obj = self._to_pandas()
-        if callable(op):
-            result = op(pandas_obj, *args, **kwargs)
-        elif isinstance(op, str):
-            # The inner `getattr` is ensuring that we are treating this object (whether
-            # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
-            # will get the operation (`op`) from the pandas version of the class and run
-            # it on the object after we have converted it to pandas.
-            attr = getattr(self._pandas_class, op)
-            if isinstance(attr, property):
-                result = getattr(pandas_obj, op)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            if callable(op):
+                result = op(pandas_obj, *args, **kwargs)
+            elif isinstance(op, str):
+                # The inner `getattr` is ensuring that we are treating this object (whether
+                # it is a DataFrame, Series, etc.) as a pandas object. The outer `getattr`
+                # will get the operation (`op`) from the pandas version of the class and run
+                # it on the object after we have converted it to pandas.
+                attr = getattr(self._pandas_class, op)
+                if isinstance(attr, property):
+                    result = getattr(pandas_obj, op)
+                else:
+                    result = attr(pandas_obj, *args, **kwargs)
             else:
-                result = attr(pandas_obj, *args, **kwargs)
-        else:
-            ErrorMessage.catch_bugs_and_request_email(
-                failure_condition=True,
-                extra_log="{} is an unsupported operation".format(op),
-            )
-        # SparseDataFrames cannot be serialized by arrow and cause problems for Modin.
-        # For now we will use pandas.
-        if isinstance(result, type(self)) and not isinstance(
-            result, (pandas.SparseDataFrame, pandas.SparseSeries)
-        ):
-            return self._create_or_update_from_compiler(
-                result, inplace=kwargs.get("inplace", False)
-            )
-        elif isinstance(result, pandas.DataFrame):
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=True,
+                    extra_log="{} is an unsupported operation".format(op),
+                )
+        if isinstance(result, pandas.DataFrame):
             from .dataframe import DataFrame
 
             return DataFrame(result)
@@ -621,6 +618,22 @@ class BasePandasDataset(ClassLogger):
         return self._query_compiler.index
 
     index = property(_get_index, _set_index)
+
+    def _get_axis(self, axis):
+        """
+        Return index labels of the specified axis.
+
+        Parameters
+        ----------
+        axis : {0, 1}
+            Axis to return labels on.
+            0 is for index, when 1 is for columns.
+
+        Returns
+        -------
+        pandas.Index
+        """
+        return self.index if axis == 0 else self.columns
 
     def add(
         self, other, axis="columns", level=None, fill_value=None
@@ -1088,22 +1101,65 @@ class BasePandasDataset(ClassLogger):
         return downcast
 
     def bfill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='bfill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "bfill",
+                reason="'limit_area' parameter isn't supported",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "bfill")
-        return self.fillna(
-            method="bfill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="bfill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    backfill = bfill
+    def backfill(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.bfill`.
+        """
+        warnings.warn(
+            "DataFrame.backfill/Series.backfill is deprecated. Use DataFrame.bfill/Series.bfill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.bfill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def bool(self):  # noqa: RT01, D200
         """
         Return the bool of a single element `BasePandasDataset`.
         """
+        warnings.warn(
+            f"{type(self).__name__}.bool is now deprecated and will be removed "
+            + "in future version of pandas",
+            FutureWarning,
+        )
         shape = self.shape
         if shape != (1,) and shape != (1, 1):
             raise ValueError(
@@ -1554,17 +1610,55 @@ class BasePandasDataset(ClassLogger):
         )
 
     def ffill(
-        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+        self,
+        *,
+        axis=None,
+        inplace=False,
+        limit=None,
+        limit_area=None,
+        downcast=lib.no_default,
     ):  # noqa: PR01, RT01, D200
         """
         Synonym for `DataFrame.fillna` with ``method='ffill'``.
         """
+        if limit_area is not None:
+            return self._default_to_pandas(
+                "ffill",
+                reason="'limit_area' parameter isn't supported",
+                axis=axis,
+                inplace=inplace,
+                limit=limit,
+                limit_area=limit_area,
+                downcast=downcast,
+            )
         downcast = self._deprecate_downcast(downcast, "ffill")
-        return self.fillna(
-            method="ffill", axis=axis, limit=limit, downcast=downcast, inplace=inplace
-        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore", ".*fillna with 'method' is deprecated", category=FutureWarning
+            )
+            return self.fillna(
+                method="ffill",
+                axis=axis,
+                limit=limit,
+                downcast=downcast,
+                inplace=inplace,
+            )
 
-    pad = ffill
+    def pad(
+        self, *, axis=None, inplace=False, limit=None, downcast=lib.no_default
+    ):  # noqa: PR01, RT01, D200
+        """
+        Synonym for `DataFrame.ffill`.
+        """
+        warnings.warn(
+            "DataFrame.pad/Series.pad is deprecated. Use DataFrame.ffill/Series.ffill instead",
+            FutureWarning,
+        )
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            return self.ffill(
+                axis=axis, inplace=inplace, limit=limit, downcast=downcast
+            )
 
     def fillna(
         self,
@@ -1621,6 +1715,13 @@ class BasePandasDataset(ClassLogger):
         Series, DataFrame or None
             Object with missing values filled or None if ``inplace=True``.
         """
+        if method is not None:
+            warnings.warn(
+                f"{type(self).__name__}.fillna with 'method' is deprecated and "
+                + "will raise in a future version. Use obj.ffill() or obj.bfill() "
+                + "instead.",
+                FutureWarning,
+            )
         downcast = self._deprecate_downcast(downcast, "fillna")
         inplace = validate_bool_kwarg(inplace, "inplace")
         axis = self._get_axis_number(axis)
@@ -1702,6 +1803,11 @@ class BasePandasDataset(ClassLogger):
         """
         Select initial periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "first is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
         return self._create_or_update_from_compiler(
             self._query_compiler.first(offset=to_offset(offset))
         )
@@ -1858,6 +1964,12 @@ class BasePandasDataset(ClassLogger):
         """
         Select final periods of time series data based on a date offset.
         """
+        warnings.warn(
+            "last is deprecated and will be removed in a future version. "
+            + "Please create a mask and filter using `.loc` instead",
+            FutureWarning,
+        )
+
         return self._create_or_update_from_compiler(
             self._query_compiler.last(offset=to_offset(offset))
         )
@@ -2117,13 +2229,13 @@ class BasePandasDataset(ClassLogger):
         """
         Percentage change between the current and a prior element.
         """
-        if fill_method is not lib.no_default or limit is not lib.no_default:
+        if fill_method not in (lib.no_default, None) or limit is not lib.no_default:
             warnings.warn(
-                "The 'fill_method' and 'limit' keywords in "
-                + f"{type(self).__name__}.pct_change are deprecated and will be "
-                + "removed in a future version. Call "
-                + f"{'bfill' if fill_method in ('backfill', 'bfill') else 'ffill'} "
-                + "before calling pct_change instead.",
+                "The 'fill_method' keyword being not None and the 'limit' keyword in "
+                + f"{type(self).__name__}.pct_change are deprecated and will be removed "
+                + "in a future version. Either fill in any non-leading NA values prior "
+                + "to calling pct_change or specify 'fill_method=None' to not fill NA "
+                + "values.",
                 FutureWarning,
             )
         if fill_method is lib.no_default:
@@ -2395,7 +2507,7 @@ class BasePandasDataset(ClassLogger):
         Rearrange index levels using input order.
         """
         axis = self._get_axis_number(axis)
-        new_labels = self.axes[axis].reorder_levels(order)
+        new_labels = self._get_axis(axis).reorder_levels(order)
         return self.set_axis(new_labels, axis=axis)
 
     def resample(
@@ -2404,8 +2516,8 @@ class BasePandasDataset(ClassLogger):
         axis: Axis = lib.no_default,
         closed: Optional[str] = None,
         label: Optional[str] = None,
-        convention: str = "start",
-        kind: Optional[str] = None,
+        convention: str = lib.no_default,
+        kind: Optional[str] = lib.no_default,
         on: Level = None,
         level: Level = None,
         origin: Union[str, TimestampConvertibleTypes] = "start_day",
@@ -2656,7 +2768,7 @@ class BasePandasDataset(ClassLogger):
             # Index of the weights Series should correspond to the index of the
             # Dataframe in order to sample
             if isinstance(weights, BasePandasDataset):
-                weights = weights.reindex(self.axes[axis])
+                weights = weights.reindex(self._get_axis(axis))
             # If weights arg is a string, the weights used for sampling will
             # the be values in the column corresponding to that string
             if isinstance(weights, str):
@@ -3127,13 +3239,41 @@ class BasePandasDataset(ClassLogger):
 
     @expanduser_path_arg("path_or_buf")
     def to_hdf(
-        self, path_or_buf, key, format="table", **kwargs
-    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        self,
+        path_or_buf,
+        key: str,
+        mode: Literal["a", "w", "r+"] = "a",
+        complevel: int | None = None,
+        complib: Literal["zlib", "lzo", "bzip2", "blosc"] | None = None,
+        append: bool = False,
+        format: Literal["fixed", "table"] | None = None,
+        index: bool = True,
+        min_itemsize: int | dict[str, int] | None = None,
+        nan_rep=None,
+        dropna: bool | None = None,
+        data_columns: Literal[True] | list[str] | None = None,
+        errors: str = "strict",
+        encoding: str = "UTF-8",
+    ) -> None:  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write the contained data to an HDF5 file using HDFStore.
         """
         return self._default_to_pandas(
-            "to_hdf", path_or_buf, key, format=format, **kwargs
+            "to_hdf",
+            path_or_buf,
+            key=key,
+            mode=mode,
+            complevel=complevel,
+            complib=complib,
+            append=append,
+            format=format,
+            index=index,
+            min_itemsize=min_itemsize,
+            nan_rep=nan_rep,
+            dropna=dropna,
+            data_columns=data_columns,
+            errors=errors,
+            encoding=encoding,
         )
 
     @expanduser_path_arg("path_or_buf")
@@ -3156,8 +3296,12 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the object to a JSON string.
         """
-        return self._default_to_pandas(
-            "to_json",
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_json(
+            self._query_compiler,
             path_or_buf,
             orient=orient,
             date_format=date_format,
@@ -3286,9 +3430,9 @@ class BasePandasDataset(ClassLogger):
         """
         Convert the `BasePandasDataset` to a NumPy array or a Modin wrapper for NumPy array.
         """
-        from modin.config import ExperimentalNumPyAPI
+        from modin.config import ModinNumpy
 
-        if ExperimentalNumPyAPI.get():
+        if ModinNumpy.get():
             from ..numpy.arr import array
 
             return array(self, copy=copy)
@@ -3438,15 +3582,15 @@ class BasePandasDataset(ClassLogger):
         """
         axis = self._get_axis_number(axis)
         if (
-            not self.axes[axis].is_monotonic_increasing
-            and not self.axes[axis].is_monotonic_decreasing
+            not self._get_axis(axis).is_monotonic_increasing
+            and not self._get_axis(axis).is_monotonic_decreasing
         ):
             raise ValueError("truncate requires a sorted index")
 
         if before is not None and after is not None and before > after:
             raise ValueError(f"Truncate: {after} must be after {before}")
 
-        s = slice(*self.axes[axis].slice_locs(before, after))
+        s = slice(*self._get_axis(axis).slice_locs(before, after))
         slice_obj = s if axis == 0 else (slice(None), s)
         return self.iloc[slice_obj]
 
@@ -3559,7 +3703,15 @@ class BasePandasDataset(ClassLogger):
     ):
         if subset is None:
             subset = self._query_compiler.columns
-        counted_values = self.groupby(by=subset, dropna=dropna, observed=True).size()
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message=".*groupby keys will be sorted anyway.*",
+                category=UserWarning,
+            )
+            counted_values = self.groupby(
+                by=subset, dropna=dropna, observed=True, sort=False
+            ).size()
         if sort:
             counted_values.sort_values(ascending=ascending, inplace=True)
         if normalize:
@@ -4128,3 +4280,6 @@ class BasePandasDataset(ClassLogger):
 
             return Series(pandas_result)
         return pandas_result
+
+    # namespace for additional Modin functions that are not available in Pandas
+    modin: ModinAPI = CachedAccessor("modin", ModinAPI)

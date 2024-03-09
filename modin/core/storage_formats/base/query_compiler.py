@@ -18,32 +18,36 @@ Module contains class ``BaseQueryCompiler``.
 """
 
 import abc
+import warnings
+from typing import Hashable, List, Optional
 
+import numpy as np
+import pandas
+import pandas.core.resample
+from pandas._typing import DtypeBackend, IndexLabel, Suffixes
+from pandas.core.dtypes.common import is_number, is_scalar
+
+from modin.config import StorageFormat
 from modin.core.dataframe.algebra.default2pandas import (
-    DataFrameDefault,
-    SeriesDefault,
-    DateTimeDefault,
-    StrDefault,
     BinaryDefault,
+    CatDefault,
+    DataFrameDefault,
+    DateTimeDefault,
+    ExpandingDefault,
+    GroupByDefault,
+    ListDefault,
     ResampleDefault,
     RollingDefault,
-    ExpandingDefault,
-    CatDefault,
-    GroupByDefault,
+    SeriesDefault,
     SeriesGroupByDefault,
+    StrDefault,
+    StructDefault,
 )
 from modin.error_message import ErrorMessage
-from . import doc_utils
 from modin.logging import ClassLogger
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
-from modin.config import StorageFormat
 
-from pandas.core.dtypes.common import is_scalar, is_number
-import pandas.core.resample
-import pandas
-from pandas._typing import IndexLabel, Suffixes, DtypeBackend
-import numpy as np
-from typing import List, Hashable, Optional
+from . import doc_utils
 
 
 def _get_axis(axis):
@@ -163,8 +167,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         args = try_cast_to_pandas(args)
         kwargs = try_cast_to_pandas(kwargs)
 
-        result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            result = pandas_op(try_cast_to_pandas(self), *args, **kwargs)
         if isinstance(result, (tuple, list)):
+            if "Series.tolist" in pandas_op.__name__:
+                # fast path: no need to iterate over the result from `tolist` function
+                return result
             return [self.__wrap_in_qc(obj) for obj in result]
         return self.__wrap_in_qc(result)
 
@@ -312,6 +321,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     def finalize(self):
         """Finalize constructing the dataframe calling all deferred functions which were used to build it."""
         pass
+
+    @abc.abstractmethod
+    def execute(self):
+        """Wait for all computations to complete without materializing data."""
+        pass
+
+    def support_materialization_in_worker_process(self) -> bool:
+        """
+        Whether it's possible to call function `to_pandas` during the pickling process, at the moment of recreating the object.
+
+        Returns
+        -------
+        bool
+        """
+        return self._modin_frame.support_materialization_in_worker_process()
 
     # END Data Management Methods
 
@@ -1230,11 +1254,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         if self._shape_hint == "column":
             return self
 
+        result = self
         if len(self.columns) != 1 or (
             len(self.index) == 1 and self.index[0] == MODIN_UNNAMED_SERIES_LABEL
         ):
-            return self.transpose()
-        return self
+            result = self.transpose()
+        result._shape_hint = "column"
+        return result
 
     def is_series_like(self):
         """
@@ -1459,7 +1485,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         """
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
-    def applymap(self, func, *args, **kwargs):
+    def map(self, func, *args, **kwargs):
         """
         Apply passed function elementwise.
 
@@ -1475,7 +1501,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transformed QueryCompiler.
         """
-        return DataFrameDefault.register(pandas.DataFrame.applymap)(
+        return DataFrameDefault.register(pandas.DataFrame.map)(
             self, func, *args, **kwargs
         )
 
@@ -2269,6 +2295,25 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             return DataFrameDefault.register(pandas.DataFrame.nsmallest)(
                 self, n=n, columns=columns, keep=keep
             )
+
+    @doc_utils.add_refer_to("DataFrame.query")
+    def rowwise_query(self, expr, **kwargs):
+        """
+        Query columns of the QueryCompiler with a boolean expression row-wise.
+
+        Parameters
+        ----------
+        expr : str
+        **kwargs : dict
+
+        Returns
+        -------
+        BaseQueryCompiler
+            New QueryCompiler containing the rows where the boolean expression is satisfied.
+        """
+        raise NotImplementedError(
+            "Row-wise queries execution is not implemented for the selected backend."
+        )
 
     @doc_utils.add_refer_to("DataFrame.eval")
     def eval(self, expr, **kwargs):
@@ -4144,10 +4189,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         common ``Indexer`` object or range and ``np.ndarray`` only.
         """
         from modin.pandas.indexing import (
+            boolean_mask_to_numeric,
             is_boolean_array,
             is_list_like,
             is_range_like,
-            boolean_mask_to_numeric,
         )
 
         lookups = []
@@ -4326,7 +4371,9 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
         return DataFrameDefault.register(setitem)(self, axis=axis, key=key, value=value)
 
-    def write_items(self, row_numeric_index, col_numeric_index, broadcasted_items):
+    def write_items(
+        self, row_numeric_index, col_numeric_index, item, need_columns_reindex=True
+    ):
         """
         Update QueryCompiler elements at the specified positions by passed values.
 
@@ -4338,15 +4385,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Row positions to write value.
         col_numeric_index : list of ints
             Column positions to write value.
-        broadcasted_items : 2D-array
-            Values to write. Have to be same size as defined by `row_numeric_index`
-            and `col_numeric_index`.
+        item : Any
+            Values to write. If not a scalar will be broadcasted according to
+            `row_numeric_index` and `col_numeric_index`.
+        need_columns_reindex : bool, default: True
+            In the case of assigning columns to a dataframe (broadcasting is
+            part of the flow), reindexing is not needed.
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler with updated values.
         """
+        # We have to keep this import away from the module level to avoid circular import
+        from modin.pandas.utils import broadcast_item, is_scalar
+
         if not isinstance(row_numeric_index, slice):
             row_numeric_index = list(row_numeric_index)
         if not isinstance(col_numeric_index, slice):
@@ -4358,8 +4411,19 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             df.iloc[row_numeric_index, col_numeric_index] = broadcasted_items
             return df
 
+        if not is_scalar(item):
+            broadcasted_item, _ = broadcast_item(
+                self,
+                row_numeric_index,
+                col_numeric_index,
+                item,
+                need_columns_reindex=need_columns_reindex,
+            )
+        else:
+            broadcasted_item = item
+
         return DataFrameDefault.register(write_items)(
-            self, broadcasted_items=broadcasted_items
+            self, broadcasted_items=broadcasted_item
         )
 
     # END Abstract methods for QueryCompiler
@@ -4473,6 +4537,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Axis to set names along.
         """
         self.get_axis(axis).names = names
+
+    def get_dtypes_set(self):
+        """
+        Get a set of dtypes that are in this query compiler.
+
+        Returns
+        -------
+        set
+        """
+        return set(self.dtypes.values)
 
     # DateTime methods
     def between_time(self, **kwargs):  # noqa: PR01
@@ -6229,9 +6303,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         other_for_default = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         return ExpandingDefault.register(
             pandas.core.window.expanding.Expanding.corr,
@@ -6275,9 +6351,11 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         other_for_default = (
             other
             if other is None
-            else other.to_pandas().squeeze(axis=1)
-            if squeeze_other
-            else other.to_pandas()
+            else (
+                other.to_pandas().squeeze(axis=1)
+                if squeeze_other
+                else other.to_pandas()
+            )
         )
         return ExpandingDefault.register(
             pandas.core.window.expanding.Expanding.cov,
@@ -6487,6 +6565,88 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # End of Categories methods
 
+    # List accessor's methods
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.flatten")
+    def list_flatten(self):
+        """
+        Flatten list values.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.flatten)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.len")
+    def list_len(self):
+        """
+        Return the length of each list in the Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.len)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.list.__getitem__")
+    def list__getitem__(self, key):  # noqa: PR01
+        """
+        Index or slice lists in the Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return ListDefault.register(pandas.Series.list.__getitem__)(self, key=key)
+
+    # End of List accessor's methods
+
+    # Struct accessor's methods
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.dtypes")
+    def struct_dtypes(self):
+        """
+        Return the dtype object of each child field of the struct.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.dtypes)(self)
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.field")
+    def struct_field(self, name_or_index):  # noqa: PR01
+        """
+        Extract a child field of a struct as a Series.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.field)(
+            self, name_or_index=name_or_index
+        )
+
+    @doc_utils.add_one_column_warning
+    @doc_utils.add_refer_to("Series.struct.explode")
+    def struct_explode(self):
+        """
+        Extract all child fields of a struct as a DataFrame.
+
+        Returns
+        -------
+        BaseQueryCompiler
+        """
+        return StructDefault.register(pandas.Series.struct.explode)(self)
+
+    # End of Struct accessor's methods
+
     # DataFrame methods
 
     def invert(self):
@@ -6540,6 +6700,13 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             keep_equal=keep_equal,
             result_names=result_names,
         )
+
+    @doc_utils.add_refer_to("Series.case_when")
+    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+        """
+        Replace values where the conditions are True.
+        """
+        return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
     def repartition(self, axis=None):
         """

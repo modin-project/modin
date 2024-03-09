@@ -13,47 +13,49 @@
 
 """Collection of general utility functions, mostly for internal use."""
 
-import importlib
-import inspect
-import os
-from pathlib import Path
-import types
-from typing import Any, Callable, List, Mapping, Optional, Union, TypeVar
-import re
-import sys
-import json
 import codecs
 import functools
-
-from typing import Protocol, runtime_checkable
-
+import importlib
+import inspect
+import json
+import os
+import re
+import sys
+import types
+import warnings
+from pathlib import Path
 from textwrap import dedent, indent
-from packaging import version
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Protocol,
+    TypeVar,
+    Union,
+    runtime_checkable,
+)
 
-import pandas
 import numpy as np
-
-from pandas.util._decorators import Appender  # type: ignore
-from pandas.util._print_versions import _get_sys_info, _get_dependency_info  # type: ignore[attr-defined]
+import pandas
+from packaging import version
 from pandas._typing import JSONSerializable
+from pandas.util._decorators import Appender  # type: ignore
+from pandas.util._print_versions import (  # type: ignore[attr-defined]
+    _get_dependency_info,
+    _get_sys_info,
+)
 
-from modin.config import Engine, StorageFormat, IsExperimental, ExperimentalNumPyAPI
 from modin._version import get_versions
+from modin.config import DocModule, Engine, StorageFormat
 
 T = TypeVar("T")
 """Generic type parameter"""
 
 Fn = TypeVar("Fn", bound=Callable)
 """Function type parameter (used in decorators that don't change a function's signature)"""
-
-
-@runtime_checkable
-class SupportsPrivateToPandas(Protocol):  # noqa: PR01
-    """Structural type for objects with a ``_to_pandas`` method (note the leading underscore)."""
-
-    def _to_pandas(self) -> Any:  # noqa: GL08
-        # TODO add proper return type
-        pass
 
 
 @runtime_checkable
@@ -86,12 +88,10 @@ MIN_UNIDIST_VERSION = version.parse("0.2.1")
 
 PANDAS_API_URL_TEMPLATE = f"https://pandas.pydata.org/pandas-docs/version/{pandas.__version__}/reference/api/{{}}.html"
 
+# The '__reduced__' name is used internally by the query compiler as a column name to
+# represent pandas Series objects that are not explicitly assigned a name, so as to
+# distinguish between an N-element series and 1xN dataframe.
 MODIN_UNNAMED_SERIES_LABEL = "__reduced__"
-"""
-The '__reduced__' name is used internally by the query compiler as a column name to
-represent pandas Series objects that are not explicitly assigned a name, so as to
-distinguish between an N-element series and 1xN dataframe.
-"""
 
 
 def _make_api_url(token: str) -> str:
@@ -399,6 +399,22 @@ def _inherit_docstrings(
     are not defined in target class (but are defined in the ancestor class),
     which means that ancestor class attribute docstrings could also change.
     """
+    # Import the docs module and get the class (e.g. `DataFrame`).
+    imported_doc_module = importlib.import_module(DocModule.get())
+    # Set the default parent so we can use it in case some docs are missing from
+    # parent module.
+    default_parent = parent
+    # Try to get the parent object from the doc module, and if it isn't there,
+    # get it from parent instead. We only do this if we are overriding pandas
+    # documentation. We don't touch other docs.
+    if DocModule.get() != DocModule.default and "pandas" in str(
+        getattr(parent, "__module__", "")
+    ):
+        parent = getattr(imported_doc_module, getattr(parent, "__name__", ""), parent)
+    if parent != default_parent:
+        # Reset API link in case the docs are overridden.
+        apilink = None
+        overwrite_existing = True
 
     def _documentable_obj(obj: object) -> bool:
         """Check if `obj` docstring could be patched."""
@@ -421,7 +437,12 @@ def _inherit_docstrings(
                     if attr in seen:
                         continue
                     seen.add(attr)
-                    parent_obj = getattr(parent, attr, None)
+                    # Try to get the attribute from the docs class first, then
+                    # from the default parent (pandas), and if it's not in either,
+                    # set `parent_obj` to `None`.
+                    parent_obj = getattr(
+                        parent, attr, getattr(default_parent, attr, None)
+                    )
                     if (
                         parent_obj in excluded
                         or not _documentable_obj(parent_obj)
@@ -480,46 +501,48 @@ def expanduser_path_arg(argname: str) -> Callable[[Fn], Fn]:
     return decorator
 
 
-# TODO add proper type annotation
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def func_from_deprecated_location(
+    func_name: str, module: str, deprecation_message: str
+) -> Callable:
     """
-    Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
+    Create a function that decorates a function ``module.func_name`` with a ``FutureWarning``.
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin.Series
-        The Modin DataFrame/Series to convert.
+    func_name : str
+        Function name to decorate.
+    module : str
+        Module where the function is located.
+    deprecation_message : str
+        Message to print in a future warning.
 
     Returns
     -------
-    pandas.DataFrame or pandas.Series
-        Converted object with type depending on input.
+    callable
     """
-    return modin_obj._to_pandas()
+
+    def deprecated_func(*args: tuple[Any], **kwargs: dict[Any, Any]) -> Any:
+        """Call deprecated function."""
+        func = getattr(importlib.import_module(module), func_name)
+        # using 'FutureWarning' as 'DeprecationWarnings' are filtered out by default
+        warnings.warn(deprecation_message, FutureWarning)
+        return func(*args, **kwargs)
+
+    return deprecated_func
 
 
-def to_numpy(
-    modin_obj: Union[SupportsPrivateToNumPy, SupportsPublicToNumPy]
-) -> np.ndarray:
-    """
-    Convert a Modin object to a NumPy array.
-
-    Parameters
-    ----------
-    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
-        The Modin distributed object to convert.
-
-    Returns
-    -------
-    numpy.array
-        Converted object with type depending on input.
-    """
-    if isinstance(modin_obj, SupportsPrivateToNumPy):
-        return modin_obj._to_numpy()
-    array = modin_obj.to_numpy()
-    if ExperimentalNumPyAPI.get():
-        array = array._to_numpy()
-    return array
+to_numpy = func_from_deprecated_location(
+    "to_numpy",
+    "modin.pandas.io",
+    "Importing ``to_numpy`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+to_pandas = func_from_deprecated_location(
+    "to_pandas",
+    "modin.pandas.io",
+    "Importing ``to_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
 
 
 def hashable(obj: bool) -> bool:
@@ -565,16 +588,12 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
     object
         Converted object.
     """
-    if isinstance(obj, SupportsPrivateToPandas):
-        result = obj._to_pandas()
+    if isinstance(obj, SupportsPublicToPandas) or hasattr(obj, "modin"):
+        result = obj.modin.to_pandas() if hasattr(obj, "modin") else obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
-        return result
-    if isinstance(obj, SupportsPublicToPandas):
-        result = obj.to_pandas()
-        if squeeze:
-            result = result.squeeze(axis=1)
-        # Query compiler case, it doesn't have logic about convertion to Series
+
+        # QueryCompiler/low-level ModinFrame case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
             and result.name == MODIN_UNNAMED_SERIES_LABEL
@@ -595,6 +614,27 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
                 else getattr(pandas.Series, fn_name, obj)
             )
     return obj
+
+
+def execute(*objs: Iterable[Any], trigger_hdk_import: bool = False) -> None:
+    """
+    Trigger the lazy computations for each obj in `objs`, if any, and wait for them to complete.
+
+    Parameters
+    ----------
+    *objs : Iterable[Any]
+        A collection of objects to trigger lazy computations.
+    trigger_hdk_import : bool, default: False
+        Trigger import execution. Makes sense only for HDK storage format.
+        Safe to use with other storage formats.
+    """
+    for obj in objs:
+        if not hasattr(obj, "_query_compiler"):
+            continue
+        query_compiler = obj._query_compiler
+        query_compiler.execute()
+        if trigger_hdk_import and hasattr(query_compiler, "force_import"):
+            query_compiler.force_import()
 
 
 def wrap_into_list(*args: Any, skipna: bool = True) -> List[Any]:
@@ -664,7 +704,7 @@ def get_current_execution() -> str:
     str
         Returns <StorageFormat>On<Engine>-like string.
     """
-    return f"{'Experimental' if IsExperimental.get() else ''}{StorageFormat.get()}On{Engine.get()}"
+    return f"{StorageFormat.get()}On{Engine.get()}"
 
 
 def instancer(_class: Callable[[], T]) -> T:
@@ -754,8 +794,6 @@ def _get_modin_deps_info() -> Mapping[str, Optional[JSONSerializable]]:
     return result
 
 
-# Disable flake8 checks for print() in this file
-# flake8: noqa: T001
 def show_versions(as_json: Union[str, bool] = False) -> None:
     """
     Provide useful information, important for bug reports.
@@ -802,17 +840,43 @@ def show_versions(as_json: Union[str, bool] = False) -> None:
         sys_info["LOCALE"] = f"{language_code}.{encoding}"
 
         maxlen = max(max(len(x) for x in d) for d in (deps, modin_deps))
-        print("\nINSTALLED VERSIONS")
-        print("------------------")
+        print("\nINSTALLED VERSIONS\n------------------")  # noqa: T201
         for k, v in sys_info.items():
-            print(f"{k:<{maxlen}}: {v}")
+            print(f"{k:<{maxlen}}: {v}")  # noqa: T201
         for name, d in (("Modin", modin_deps), ("pandas", deps)):
-            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")
+            print(f"\n{name} dependencies\n{'-' * (len(name) + 13)}")  # noqa: T201
             for k, v in d.items():
-                print(f"{k:<{maxlen}}: {v}")
+                print(f"{k:<{maxlen}}: {v}")  # noqa: T201
 
 
 class ModinAssumptionError(Exception):
     """An exception that allows us defaults to pandas if any assumption fails."""
 
     pass
+
+
+class classproperty:
+    """
+    Decorator that allows creating read-only class properties.
+
+    Parameters
+    ----------
+    func : method
+
+    Examples
+    --------
+    >>> class A:
+    ...     field = 10
+    ...     @classproperty
+    ...     def field_x2(cls):
+    ...             return cls.field * 2
+    ...
+    >>> print(A.field_x2)
+    20
+    """
+
+    def __init__(self, func: Any):
+        self.fget = func
+
+    def __get__(self, instance: Any, owner: Any) -> Any:  # noqa: GL08
+        return self.fget(owner)

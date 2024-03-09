@@ -11,54 +11,54 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import modin.pandas as pd
-from modin.pandas.test.utils import (
-    create_test_dfs,
-    test_data_values,
-    df_equals,
-)
-from modin.config import NPartitions, Engine, MinPartitionSize, ExperimentalGroupbyImpl
-from modin.distributed.dataframe.pandas import from_partitions
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
-from modin.utils import try_cast_to_pandas
-from modin.core.dataframe.pandas.dataframe.utils import (
-    ShuffleSortFunctions,
-    ColumnInfo,
-)
+import functools
+import sys
+import unittest.mock as mock
 
 import numpy as np
 import pandas
 import pytest
-import unittest.mock as mock
-import functools
-import sys
 
+import modin.pandas as pd
+from modin.config import Engine, MinPartitionSize, NPartitions, RangePartitioningGroupby
+from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
+from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
+from modin.core.dataframe.pandas.metadata import (
+    DtypesDescriptor,
+    LazyProxyCategoricalDtype,
+    ModinDtypes,
+)
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.distributed.dataframe.pandas import from_partitions
+from modin.pandas.test.utils import (
+    create_test_dfs,
+    df_equals,
+    eval_general,
+    test_data_values,
+)
+from modin.utils import try_cast_to_pandas
 
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
-    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
-        PandasOnRayDataframePartition,
-    )
+    from modin.core.execution.ray.common import RayWrapper
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
+        PandasOnRayDataframePartition,
         PandasOnRayDataframeRowPartition,
     )
-    from modin.core.execution.ray.common import RayWrapper
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = RayWrapper.put
 elif Engine.get() == "Dask":
+    from modin.core.execution.dask.common import DaskWrapper
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
+        PandasOnDaskDataframePartition,
         PandasOnDaskDataframeRowPartition,
     )
-    from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
-        PandasOnDaskDataframePartition,
-    )
-    from modin.core.execution.dask.common import DaskWrapper
 
     # initialize modin dataframe to initialize dask
     pd.DataFrame()
@@ -70,12 +70,12 @@ elif Engine.get() == "Dask":
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
 elif Engine.get() == "Python":
+    from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
-        PandasOnPythonDataframeRowPartition,
         PandasOnPythonDataframePartition,
+        PandasOnPythonDataframeRowPartition,
     )
-    from modin.core.execution.python.common import PythonWrapper
 
     def put(x):
         return PythonWrapper.put(x, hash=False)
@@ -124,20 +124,30 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     return md_df
 
 
-def validate_partitions_cache(df):
-    """Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes."""
-    row_lengths = df._row_lengths_cache
-    column_widths = df._column_widths_cache
+def validate_partitions_cache(df, axis=None):
+    """
+    Assert that the ``PandasDataframe`` shape caches correspond to the actual partition's shapes.
 
-    assert row_lengths is not None
-    assert column_widths is not None
-    assert df._partitions.shape[0] == len(row_lengths)
-    assert df._partitions.shape[1] == len(column_widths)
+    Parameters
+    ----------
+    df : PandasDataframe
+    axis : int, optional
+        An axis to verify the cache for. If not specified, verify cache for both of the axes.
+    """
+    axis = [0, 1] if axis is None else [axis]
+
+    axis_lengths = [df._row_lengths_cache, df._column_widths_cache]
+
+    for ax in axis:
+        assert axis_lengths[ax] is not None
+        assert df._partitions.shape[ax] == len(axis_lengths[ax])
 
     for i in range(df._partitions.shape[0]):
         for j in range(df._partitions.shape[1]):
-            assert df._partitions[i, j].length() == row_lengths[i]
-            assert df._partitions[i, j].width() == column_widths[j]
+            if 0 in axis:
+                assert df._partitions[i, j].length() == axis_lengths[0][i]
+            if 1 in axis:
+                assert df._partitions[i, j].width() == axis_lengths[1][j]
 
 
 def assert_has_no_cache(df, axis=0):
@@ -767,7 +777,7 @@ def test_groupby_with_empty_partition():
     )
     md_res = md_df.query("a > 1", engine="python")
     grp_obj = md_res.groupby("a")
-    # check index error due to partitioning missmatching
+    # check index error due to partitioning mismatching
     grp_obj.count()
 
     md_df = construct_modin_df_by_scheme(
@@ -1012,7 +1022,7 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
 
     if has_dtypes_metadata:
         # Verify that there were initially materialized metadata
-        assert modin_frame.has_dtypes_cache
+        assert modin_frame.has_materialized_dtypes
     else:
         modin_frame.set_dtypes_cache(None)
 
@@ -1021,18 +1031,18 @@ def test_merge_preserves_metadata(has_cols_metadata, has_dtypes_metadata):
     if has_cols_metadata:
         assert res.has_materialized_columns
         if has_dtypes_metadata:
-            assert res.has_dtypes_cache
+            assert res.has_materialized_dtypes
         else:
             # Verify that no materialization was triggered
-            assert not res.has_dtypes_cache
-            assert not modin_frame.has_dtypes_cache
+            assert not res.has_materialized_dtypes
+            assert not modin_frame.has_materialized_dtypes
     else:
         # Verify that no materialization was triggered
         assert not res.has_materialized_columns
-        assert not res.has_dtypes_cache
+        assert not res.has_materialized_dtypes
         assert not modin_frame.has_materialized_columns
         if not has_dtypes_metadata:
-            assert not modin_frame.has_dtypes_cache
+            assert not modin_frame.has_materialized_dtypes
 
 
 def test_binary_op_preserve_dtypes():
@@ -1113,8 +1123,19 @@ def test_setitem_bool_preserve_dtypes():
     assert df._query_compiler._modin_frame.has_materialized_dtypes
 
 
+def test_setitem_unhashable_preserve_dtypes():
+    df = pd.DataFrame([[1, 2, 3, 4], [5, 6, 7, 8]])
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+    df2 = pd.DataFrame([[9, 9], [5, 5]])
+    assert df2._query_compiler._modin_frame.has_materialized_dtypes
+
+    df[[1, 2]] = df2
+    assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+
 @pytest.mark.parametrize(
-    "modify_config", [{ExperimentalGroupbyImpl: True}], indirect=True
+    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
 )
 def test_groupby_size_shuffling(modify_config):
     # verifies that 'groupby.size()' works with reshuffling implementation
@@ -1261,6 +1282,65 @@ class TestModinIndexIds:
         assert df2.index.equals(pandas.Index(["a", "b"]))
         assert df2.columns.equals(pandas.Index([0, 1, 2]))
 
+    def test_filter_empties_resets_lengths(self):
+        """Verify that filtering out empty partitions affects ``ModinIndex._lengths_id`` field."""
+        # case1: partitioning is modified by '._filter_empties()', meaning that '._lengths_id' should be changed
+        md_df = construct_modin_df_by_scheme(
+            pandas.DataFrame({"a": [1, 1, 2, 2]}),
+            {"row_lengths": [2, 2], "column_widths": [1]},
+        )
+        mf = md_df.query("a < 2")._query_compiler._modin_frame
+        mf.index  # trigger index materialization
+
+        old_cache = mf._index_cache
+        assert mf._partitions.shape == (2, 1)
+
+        mf._filter_empties()
+        new_cache = mf._index_cache
+
+        assert new_cache._index_id == old_cache._index_id
+        assert new_cache._lengths_id != old_cache._lengths_id
+        assert new_cache._lengths_cache != old_cache._lengths_cache
+
+        # case2: partitioning is NOT modified by '._filter_empties()', meaning that '._lengths_id' should stay the same
+        md_df = construct_modin_df_by_scheme(
+            pandas.DataFrame({"a": [1, 1, 2, 2]}),
+            {"row_lengths": [2, 2], "column_widths": [1]},
+        )
+        mf = md_df._query_compiler._modin_frame
+
+        old_cache = mf._index_cache
+        assert mf._partitions.shape == (2, 1)
+
+        mf._filter_empties()
+        new_cache = mf._index_cache
+
+        assert new_cache._index_id == old_cache._index_id
+        assert new_cache._lengths_id == old_cache._lengths_id
+        assert new_cache._lengths_cache == old_cache._lengths_cache
+
+    def test_binops_without_repartitioning(self):
+        """Test that binary operations for identical indices works without materializing the axis."""
+        df = pd.DataFrame({f"col{i}": np.arange(256) for i in range(64)})
+        remove_axis_cache(df)
+
+        col1 = df["col1"]
+        assert_has_no_cache(col1)
+        assert_has_no_cache(df)
+
+        col2 = df["col2"]
+        assert_has_no_cache(col2)
+        assert_has_no_cache(df)
+
+        # perform a binary op and insert the result back then check that no index computation were triggered
+        with self._patch_get_index(df) as get_index_df:
+            df["result"] = col1 + col2
+            # check that no cache computation was triggered
+            assert_has_no_cache(df)
+            assert_has_no_cache(col1)
+            assert_has_no_cache(col2)
+        get_index_df.assert_not_called()
+
 
 def test_skip_set_columns():
     """
@@ -1310,3 +1390,1103 @@ def test_skip_set_columns():
     # of equality comparison, in this case the new columns should be set unconditionally,
     # meaning that the '_deferred_column' has to be True
     assert df._query_compiler._modin_frame._deferred_column
+
+
+def test_query_dispatching():
+    """
+    Test whether the logic of determining whether the passed query
+    can be performed row-wise works correctly in ``PandasQueryCompiler.rowwise_query()``.
+
+    The tested method raises a ``NotImpementedError`` if the query cannot be performed row-wise
+    and raises nothing if it can.
+    """
+    qc = pd.DataFrame(
+        {"a": [1], "b": [2], "c": [3], "d": [4], "e": [5]}
+    )._query_compiler
+
+    local_var = 10  # noqa: F841 (unused variable)
+
+    # these queries should be performed row-wise (so no exception)
+    qc.rowwise_query("a < 1")
+    qc.rowwise_query("a < b")
+    qc.rowwise_query("a < (b + @local_var) * c > 10")
+
+    # these queries cannot be performed row-wise (so they must raise an exception)
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b[0]")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.min()")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < (b + @local_var + (b - e.min())) * c > 10")
+    with pytest.raises(NotImplementedError):
+        qc.rowwise_query("a < b.size")
+
+
+def test_sort_values_cache():
+    """
+    Test that the column widths cache after ``.sort_values()`` is valid:
+    https://github.com/modin-project/modin/issues/6607
+    """
+    # 1 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # row-wise implementation and so the column widths WILL NOT be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [100], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that row-wise implementation was indeed used (col widths were not changed)
+    assert mf_res._column_widths_cache == [32, 32]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
+
+    # 2 row partition and 2 column partitions, in this case '.sort_values()' will use
+    # range-partitioning implementation and so the column widths WILL be changed
+    modin_df = construct_modin_df_by_scheme(
+        pandas.DataFrame({f"col{i}": range(100) for i in range(64)}),
+        partitioning_scheme={"row_lengths": [50, 50], "column_widths": [32, 32]},
+    )
+    mf_initial = modin_df._query_compiler._modin_frame
+
+    mf_res = modin_df.sort_values("col0")._query_compiler._modin_frame
+    # check that range-partitioning implementation was indeed used (col widths were changed)
+    assert mf_res._column_widths_cache == [64]
+    # check that the cache and actual col widths match
+    validate_partitions_cache(mf_res, axis=1)
+    # check that the initial frame's cache wasn't changed
+    assert mf_initial._column_widths_cache == [32, 32]
+    validate_partitions_cache(mf_initial, axis=1)
+
+
+def test_apply_full_axis_preserve_widths():
+    md_df = construct_modin_df_by_scheme(
+        pandas.DataFrame(
+            {"a": [1, 2, 3, 4], "b": [3, 4, 5, 6], "c": [6, 7, 8, 9], "d": [0, 1, 2, 3]}
+        ),
+        {"row_lengths": [2, 2], "column_widths": [2, 2]},
+    )._query_compiler._modin_frame
+
+    assert md_df._row_lengths_cache == [2, 2]
+    assert md_df._column_widths_cache == [2, 2]
+
+    def func(df):
+        if df.iloc[0, 0] == 1:
+            return pandas.DataFrame(
+                {"a": [1, 2, 3], "b": [3, 4, 5], "c": [6, 7, 8], "d": [0, 1, 2]}
+            )
+        else:
+            return pandas.DataFrame({"a": [4], "b": [6], "c": [9], "d": [3]})
+
+    res = md_df.apply_full_axis(
+        func=func,
+        axis=1,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c", "d"],
+        keep_partitioning=True,
+    )
+    col_widths_cache = res._column_widths_cache
+    actual_column_widths = [part.width() for part in res._partitions[0]]
+
+    assert col_widths_cache == actual_column_widths
+    assert res._row_lengths_cache is None
+
+
+def test_apply_full_axis_preserve_lengths():
+    md_df = construct_modin_df_by_scheme(
+        pandas.DataFrame(
+            {"a": [1, 2, 3, 4], "b": [3, 4, 5, 6], "c": [6, 7, 8, 9], "d": [0, 1, 2, 3]}
+        ),
+        {"row_lengths": [2, 2], "column_widths": [2, 2]},
+    )._query_compiler._modin_frame
+
+    assert md_df._row_lengths_cache == [2, 2]
+    assert md_df._column_widths_cache == [2, 2]
+
+    def func(df):
+        if df.iloc[0, 0] == 1:
+            return pandas.DataFrame({"a": [3, 2, 3, 4], "b": [3, 4, 5, 6]})
+        else:
+            return pandas.DataFrame({"c": [9, 5, 6, 7]})
+
+    res = md_df.apply_full_axis(
+        func=func,
+        axis=0,
+        new_index=[0, 1, 2, 3],
+        new_columns=["a", "b", "c"],
+        keep_partitioning=True,
+    )
+
+    row_lengths_cache = res._row_lengths_cache
+    actual_row_lengths = [part.length() for part in res._partitions[:, 0]]
+
+    assert row_lengths_cache == actual_row_lengths
+    assert res._column_widths_cache is None
+
+
+class DummyFuture:
+    """
+    A dummy object emulating future's behaviour, this class is used in ``test_call_queue_serialization``.
+
+    It stores a random numeric value representing its data and `was_materialized` state.
+    Initially this object is considered to be serialized, the state can be changed by calling
+    the ``.materialize()`` method.
+    """
+
+    def __init__(self):
+        self._value = np.random.randint(0, 1_000_000)
+        self._was_materialized = False
+
+    def materialize(self):
+        self._was_materialized = True
+        return self
+
+    def __eq__(self, other):
+        if isinstance(other, type(self)) and self._value == other._value:
+            return True
+        return False
+
+
+class TestModinDtypes:
+    """Test ``ModinDtypes`` and ``DtypesDescriptor`` classes."""
+
+    schema = pandas.Series(
+        {
+            "a": np.dtype("int64"),
+            "b": np.dtype(float),
+            "c": np.dtype(bool),
+            "d": np.dtype(bool),
+            "e": np.dtype("object"),
+        }
+    )
+
+    def get_columns_order(self, cols):
+        """Return a value to be passed as ``DtypesDescriptor(columns_order=...)`` parameter."""
+        return {i: col for i, col in enumerate(cols)}
+
+    class DummyDf:
+        def __init__(self, schema):
+            self._schema = pandas.Series(schema)
+            # record calls to verify that we haven't materialized more than needed
+            self.history = []
+
+        def _compute_dtypes(self, subset=None):
+            self.history.append(("_compute_dtypes", subset))
+            return self._schema if subset is None else self._schema[subset]
+
+        @property
+        def columns(self):
+            self.history.append(("columns",))
+            return self._schema.index
+
+        @property
+        def has_materialized_columns(self):
+            # False, to make descriptor avoid materialization at all cost
+            return False
+
+    def test_get_dtypes_set_modin_dtypes(self):
+        """Test that ``ModinDtypes.get_dtypes_set()`` correctly propagates this request to the underlying value."""
+        res = ModinDtypes(lambda: self.schema).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+        res = ModinDtypes(self.schema).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+        res = ModinDtypes(
+            DtypesDescriptor(
+                self.schema[["a", "b", "e"]], remaining_dtype=np.dtype(bool)
+            )
+        ).get_dtypes_set()
+        exp = set(self.schema.values)
+        assert res == exp
+
+    def test_get_dtypes_set_desc(self):
+        """
+        Test that ``DtypesDescriptor.get_dtypes_set()`` returns valid values and doesn't
+        trigger unnecessary computations.
+        """
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]], know_all_names=False, parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # since 'know_all_names=False', we first have to retrieve columns
+        # in order to determine missing dtypes and then call '._compute_dtypes()'
+        # only on a subset
+        assert len(df.history) == 2 and df.history == [
+            ("columns",),
+            ("_compute_dtypes", ["c", "d", "e"]),
+        ]
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["c", "d", "e"],
+            parent_df=df,
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # here we already know names for cols with unknown dtypes, so only
+        # calling '._compute_dtypes()' on a subset
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            ["c", "d", "e"],
+        )
+
+        df = self.DummyDf(self.schema[["a", "b", "c", "d"]])
+        desc = DtypesDescriptor(
+            self.schema[["a", "b"]], remaining_dtype=np.dtype(bool), parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema[["a", "b", "c", "d"]].values
+        assert res == set(exp)
+        # we don't need to access 'parent_df' in order to get dtypes set, as we
+        # can infer it from 'known_dtypes' and 'remaining_dtype'
+        assert len(df.history) == 0
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(know_all_names=False, parent_df=df)
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # compute dtypes for all columns
+        assert len(df.history) == 1 and df.history[0] == ("_compute_dtypes", None)
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            cols_with_unknown_dtypes=self.schema.index.tolist(), parent_df=df
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # compute dtypes for all columns
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            self.schema.index.tolist(),
+        )
+
+        df = self.DummyDf(self.schema)
+        desc = DtypesDescriptor(
+            cols_with_unknown_dtypes=["a", "b", "e"],
+            remaining_dtype=np.dtype(bool),
+            parent_df=df,
+        )
+        res = desc.get_dtypes_set()
+        exp = self.schema.values
+        assert res == set(exp)
+        # here we already know names for cols with unknown dtypes, so only
+        # calling '._compute_dtypes()' on a subset
+        assert len(df.history) == 1 and df.history[0] == (
+            "_compute_dtypes",
+            ["a", "b", "e"],
+        )
+
+    def test_lazy_get_modin_dtypes(self):
+        """Test that ``ModinDtypes.lazy_get()`` correctly propagates this request to the underlying value."""
+        res = ModinDtypes(self.schema).lazy_get(["b", "c", "a"])
+        exp = self.schema[["b", "c", "a"]]
+        assert res._value.equals(exp)
+
+        res = ModinDtypes(lambda: self.schema).lazy_get(["b", "c", "a"])
+        exp = self.schema[["b", "c", "a"]]
+        assert callable(res._value)
+        assert res._value().equals(exp)
+
+        res = ModinDtypes(
+            DtypesDescriptor(
+                self.schema[["a", "b"]], cols_with_unknown_dtypes=["c", "d", "e"]
+            )
+        ).lazy_get(["b", "c", "a"])
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["c"],
+            columns_order={0: "b", 1: "c", 2: "a"},
+        )
+        assert res._value.equals(exp)
+
+    def test_lazy_get_desc(self):
+        """
+        Test that ``DtypesDescriptor.lazy_get()`` work properly.
+
+        In this test we never specify `parent_df` for a descriptor, verifying that
+        ``.lazy_get()`` never triggers any computations.
+        """
+        desc = DtypesDescriptor(self.schema[["a", "b"]])
+        subset = ["a", "c", "e"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            self.schema[subset[:1]],
+            cols_with_unknown_dtypes=subset[1:],
+            columns_order=self.get_columns_order(subset),
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor(self.schema[["a", "b"]], remaining_dtype=np.dtype(bool))
+        subset = ["a", "c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            # dtypes for 'c' and 'b' were infered from 'remaining_dtype' parameter
+            self.schema[subset],
+            columns_order=self.get_columns_order(subset),
+            _schema_is_known=True,
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor()
+        subset = ["a", "c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            cols_with_unknown_dtypes=subset,
+            columns_order=self.get_columns_order(subset),
+        )
+        assert res.equals(exp)
+
+        desc = DtypesDescriptor(remaining_dtype=np.dtype(bool))
+        subset = ["c", "d"]
+        res = desc.lazy_get(subset)
+        exp = DtypesDescriptor(
+            # dtypes for 'c' and 'd' were infered from 'remaining_dtype' parameter
+            self.schema[subset],
+            columns_order=self.get_columns_order(subset),
+            _schema_is_known=True,
+        )
+        assert res.equals(exp)
+
+    def test_concat_axis_0(self):
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(self.schema[["c", "d"]]),
+            ]
+        )
+        # simply concat known schemas
+        exp = DtypesDescriptor(self.schema[["a", "b", "c", "d"]])
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # none of the descriptors had missing column names, so we can preserve 'remaining_dtype'
+        exp = DtypesDescriptor(self.schema[["a", "b"]], remaining_dtype=np.dtype(bool))
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]], know_all_names=False),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # can't preserve 'remaining_dtype' since first descriptor has unknown column names
+        exp = DtypesDescriptor(self.schema[["a", "b"]], know_all_names=False)
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(self.schema[["a", "b"]]),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"], know_all_names=False
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # can't preserve 'remaining_dtype' since second descriptor has unknown column names
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            know_all_names=False,
+        )
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(
+                    self.schema[["a", "b"]],
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"],
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # none of the descriptors had missing column names, so we can preserve 'remaining_dtype'
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            remaining_dtype=np.dtype(bool),
+        )
+        assert res.equals(exp)
+
+        res = DtypesDescriptor.concat(
+            [
+                DtypesDescriptor(
+                    self.schema[["a", "b"]], remaining_dtype=np.dtype(bool)
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["d", "e"], remaining_dtype=np.dtype(float)
+                ),
+                DtypesDescriptor(remaining_dtype=np.dtype(bool)),
+            ]
+        )
+        # remaining dtypes don't match, so we drop them and set 'know_all_names=False'
+        exp = DtypesDescriptor(
+            self.schema[["a", "b"]],
+            cols_with_unknown_dtypes=["d", "e"],
+            know_all_names=False,
+        )
+        assert res.equals(exp)
+
+    @pytest.mark.parametrize(
+        "initial_dtypes, result_cols_with_known_dtypes, result_cols_with_unknown_dtypes",
+        [
+            [
+                # initial dtypes (cols_with_known_dtypes, cols_with_unknown_dtypes, remaining_dtype):
+                # dtypes for all columns are known
+                [
+                    (["a", "b", "c", "d"], [], None),
+                    (["a", "b", "e", "d"], [], None),
+                    (["a", "b"], [], None),
+                ],
+                # result_cols_with_known_dtypes:
+                # all dtypes were known in the beginning, expecting the same
+                # for the result
+                ["a", "b", "c", "d", "e"],
+                # result_cols_with_unknown_dtypes
+                [],
+            ],
+            [
+                # initial dtypes (cols_with_known_dtypes, cols_with_unknown_dtypes, remaining_dtype)
+                [
+                    (["a", "b"], ["c", "d"], None),
+                    (["a", "b", "d"], ["e"], None),
+                    (["a", "b"], [], None),
+                ],
+                # result_cols_with_known_dtypes:
+                # across all dataframes, dtypes were only known for 'a' and 'b' columns
+                ["a", "b"],
+                # result_cols_with_unknown_dtypes
+                ["c", "d", "e"],
+            ],
+            [
+                # initial dtypes (cols_with_known_dtypes, cols_with_unknown_dtypes, remaining_dtype):
+                # the 'e' column in the second frame is missing here, emulating 'know_all_names=False' case
+                [
+                    (["a", "b"], ["c", "d"], None),
+                    (["a", "b", "d"], [], None),
+                    (["a", "b"], [], None),
+                ],
+                # result_cols_with_known_dtypes
+                ["a", "b"],
+                # result_cols_with_unknown_dtypes:
+                # the missing 'e' column will be deducted from the resulted frame after '.concat()'
+                ["c", "d", "e"],
+            ],
+            [
+                # initial dtypes (cols_with_known_dtypes, cols_with_unknown_dtypes, remaining_dtype)
+                # the 'c' column in the first frame is described using 'remaining_dtype'
+                [
+                    (["a", "b", "d"], [], np.dtype(bool)),
+                    (["a", "b", "e", "d"], [], None),
+                    (["a", "b"], [], None),
+                ],
+                # result_cols_with_known_dtypes:
+                # remaining dtypes are not supported by 'concat(axis=0)', so dtype for the 'c'
+                # column is missing here
+                ["a", "b", "e", "d"],
+                # result_cols_with_unknown_dtypes:
+                ["c"],
+            ],
+        ],
+    )
+    def test_concat_axis_1(
+        self,
+        initial_dtypes,
+        result_cols_with_known_dtypes,
+        result_cols_with_unknown_dtypes,
+    ):
+        """
+        Test that ``DtypesDescriptor.concat(axis=1)`` works as expected.
+
+        Parameters
+        ----------
+        initial_dtypes : list of tuples: (cols_with_known_dtypes, cols_with_unknown_dtypes, remaining_dtype)
+            Describe how to build ``DtypesDescriptor`` for each of the three dataframes.
+        result_cols_with_known_dtypes : list of labels
+            Column names for which dtypes has to be determined after ``.concat()``.
+        result_cols_with_unknown_dtypes : list of labels
+            Column names for which dtypes has to be unknown after ``.concat()``.
+        """
+        md_df1, pd_df1 = create_test_dfs(
+            {
+                "a": [1, 2, 3],
+                "b": [3.5, 4.5, 5.5],
+                "c": [True, False, True],
+                "d": ["a", "b", "c"],
+            }
+        )
+        md_df2, pd_df2 = create_test_dfs(
+            {
+                "a": [1.5, 2.5, 3.5],
+                "b": [3.5, 4.5, 5.5],
+                "e": [True, False, True],
+                "d": ["a", "b", "c"],
+            }
+        )
+        md_df3, pd_df3 = create_test_dfs({"a": [1, 2, 3], "b": [3.5, 4.5, 5.5]})
+
+        for md_df, (known_cols, unknown_cols, remaining_dtype) in zip(
+            [md_df1, md_df2, md_df3], initial_dtypes
+        ):
+            known_dtypes = {col: md_df.dtypes[col] for col in known_cols}
+            know_all_names = (
+                len(known_cols) + len(unknown_cols) == len(md_df.columns)
+                or remaining_dtype is not None
+            )
+            # setting columns cache to 'None', in order to prevent completing 'dtypes' with the materialized columns
+            md_df._query_compiler._modin_frame.set_columns_cache(None)
+            md_df._query_compiler._modin_frame.set_dtypes_cache(
+                ModinDtypes(
+                    DtypesDescriptor(
+                        known_dtypes,
+                        unknown_cols,
+                        remaining_dtype,
+                        know_all_names=know_all_names,
+                    )
+                )
+            )
+        md_dtypes = pd.concat(
+            [md_df1, md_df2, md_df3]
+        )._query_compiler._modin_frame._dtypes
+        pd_dtypes = pandas.concat([pd_df1, pd_df2, pd_df3]).dtypes
+        if len(result_cols_with_known_dtypes) == len(pd_dtypes):
+            md_dtypes = (
+                md_dtypes if isinstance(md_dtypes, pandas.Series) else md_dtypes._value
+            )
+            assert isinstance(md_dtypes, pandas.Series)
+            assert md_dtypes.equals(pd_dtypes)
+        else:
+            assert set(md_dtypes._value._known_dtypes.keys()) == set(
+                result_cols_with_known_dtypes
+            )
+            # reindexing to ensure proper order
+            md_known_dtypes = pandas.Series(md_dtypes._value._known_dtypes).reindex(
+                result_cols_with_known_dtypes
+            )
+            assert md_known_dtypes.equals(pd_dtypes[result_cols_with_known_dtypes])
+            assert set(md_dtypes._value._cols_with_unknown_dtypes) == set(
+                result_cols_with_unknown_dtypes
+            )
+
+    def test_ModinDtypes_duplicated_concat(self):
+        # test that 'ModinDtypes' is able to perform dtypes concatenation on duplicated labels
+        # if all of them are Serieses
+        res = ModinDtypes.concat([pandas.Series([np.dtype("int64")], index=["a"])] * 2)
+        assert isinstance(res._value, pandas.Series)
+        assert res._value.equals(
+            pandas.Series([np.dtype("int64"), np.dtype("int64")], index=["a", "a"])
+        )
+
+        # test that 'ModinDtypes.concat' with duplicated labels raises when not all dtypes are materialized
+        with pytest.raises(NotImplementedError):
+            res = ModinDtypes.concat(
+                [
+                    pandas.Series([np.dtype("int64")], index=["a"]),
+                    DtypesDescriptor(cols_with_unknown_dtypes=["a"]),
+                ]
+            )
+
+    def test_update_parent(self):
+        """
+        Test that updating parents in ``DtypesDescriptor`` also propagates to stored lazy categoricals.
+        """
+        # 'df1' will have a materialized 'pandas.Series' as dtypes cache
+        df1 = pd.DataFrame({"a": [1, 1, 2], "b": [3, 4, 5]}).astype({"a": "category"})
+        assert isinstance(df1.dtypes["a"], LazyProxyCategoricalDtype)
+
+        # 'df2' will have a 'DtypesDescriptor' with unknown dtypes for a column 'c'
+        df2 = pd.DataFrame({"c": [2, 3, 4]})
+        df2._query_compiler._modin_frame.set_dtypes_cache(None)
+        dtypes_cache = df2._query_compiler._modin_frame._dtypes
+        assert isinstance(
+            dtypes_cache._value, DtypesDescriptor
+        ) and dtypes_cache._value._cols_with_unknown_dtypes == ["c"]
+
+        # concatenating 'df1' and 'df2' to get a 'DtypesDescriptor' storing lazy categories
+        # in its 'known_dtypes' field
+        res = pd.concat([df1, df2], axis=1)
+        old_parent = df1._query_compiler._modin_frame
+        new_parent = res._query_compiler._modin_frame
+        dtypes_cache = new_parent._dtypes._value
+
+        # verifying that the reference for lazy categories to a new parent was updated
+        assert dtypes_cache._parent_df is new_parent
+        assert dtypes_cache._known_dtypes["a"]._parent is new_parent
+        assert old_parent._dtypes["a"]._parent is old_parent
+
+    @pytest.mark.parametrize(
+        "initial_dtypes, result_dtypes",
+        [
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype("int64"), "b": np.dtype(float), "c": np.dtype(float)}
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {
+                        "a": np.dtype("int64"),
+                        "b": np.dtype(float),
+                        "c": np.dtype(float),
+                    },
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                ),
+                DtypesDescriptor(
+                    {
+                        "col1": np.dtype("int64"),
+                        "col2": np.dtype(float),
+                        "col3": np.dtype(float),
+                    },
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype("int64"), "b": np.dtype(float)},
+                    cols_with_unknown_dtypes=["c"],
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                ),
+                DtypesDescriptor(
+                    {"col1": np.dtype("int64"), "col2": np.dtype(float)},
+                    cols_with_unknown_dtypes=["col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype("int64")},
+                    cols_with_unknown_dtypes=["c"],
+                    know_all_names=False,
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                DtypesDescriptor(
+                    {"a": np.dtype("int64")}, remaining_dtype=np.dtype(float)
+                ),
+                DtypesDescriptor(
+                    cols_with_unknown_dtypes=["col1", "col2", "col3"],
+                    columns_order={0: "col1", 1: "col2", 2: "col3"},
+                ),
+            ],
+            [
+                lambda: pandas.Series(
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
+                    index=["a", "b", "c"],
+                ),
+                lambda: pandas.Series(
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
+                    index=["col1", "col2", "col3"],
+                ),
+            ],
+            [
+                pandas.Series(
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
+                    index=["a", "b", "c"],
+                ),
+                pandas.Series(
+                    [np.dtype("int64"), np.dtype(float), np.dtype(float)],
+                    index=["col1", "col2", "col3"],
+                ),
+            ],
+        ],
+    )
+    def test_set_index_dataframe(self, initial_dtypes, result_dtypes):
+        """Test that changing labels for a dataframe also updates labels of dtypes."""
+        df = pd.DataFrame(
+            {"a": [1, 2, 3], "b": [3.0, 4.0, 5.0], "c": [3.2, 4.5, 5.4]}
+        )._query_compiler._modin_frame
+        df.set_columns_cache(None)
+        if isinstance(initial_dtypes, DtypesDescriptor):
+            initial_dtypes = ModinDtypes(initial_dtypes)
+
+        df.set_dtypes_cache(initial_dtypes)
+        df.columns = ["col1", "col2", "col3"]
+
+        if result_dtypes is not None:
+            if callable(result_dtypes):
+                assert callable(df._dtypes._value)
+                assert df._dtypes._value().equals(result_dtypes())
+            else:
+                assert df._dtypes._value.equals(result_dtypes)
+        assert df.dtypes.index.equals(pandas.Index(["col1", "col2", "col3"]))
+
+    def test_set_index_with_dupl_labels(self):
+        """Verify that setting duplicated columns doesn't propagate any errors to a user."""
+        df = pd.DataFrame({"a": [1, 2, 3, 4], "b": [3.5, 4.4, 5.5, 6.6]})
+        # making sure that dtypes are represented by an unmaterialized dtypes-descriptor
+        df._query_compiler._modin_frame.set_dtypes_cache(None)
+
+        df.columns = ["a", "a"]
+        assert df.dtypes.equals(
+            pandas.Series([np.dtype(int), np.dtype("float64")], index=["a", "a"])
+        )
+
+    def test_reset_index_mi_columns(self):
+        # reproducer from: https://github.com/modin-project/modin/issues/6904
+        md_df, pd_df = create_test_dfs({"a": [1, 1, 2, 2], "b": [3, 3, 4, 4]})
+        eval_general(
+            md_df,
+            pd_df,
+            lambda df: df.groupby("a").agg({"b": ["min", "std"]}).reset_index().dtypes,
+        )
+
+    def test_concat_mi(self):
+        """
+        Verify that concatenating dfs with non-MultiIndex and MultiIndex columns results into valid indices for lazy dtypes.
+        """
+        md_df1, pd_df1 = create_test_dfs({"a": [1, 1, 2, 2], "b": [3, 3, 4, 4]})
+        md_df2, pd_df2 = create_test_dfs(
+            {("l1", "v1"): [1, 1, 2, 2], ("l1", "v2"): [3, 3, 4, 4]}
+        )
+
+        # Drop actual dtypes in order to use partially-known dtypes
+        md_df1._query_compiler._modin_frame.set_dtypes_cache(None)
+        md_df2._query_compiler._modin_frame.set_dtypes_cache(None)
+
+        md_res = pd.concat([md_df1, md_df2], axis=1)
+        pd_res = pandas.concat([pd_df1, pd_df2], axis=1)
+        df_equals(md_res.dtypes, pd_res.dtypes)
+
+
+class TestZeroComputationDtypes:
+    """
+    Test cases that shouldn't trigger dtypes computation during their execution.
+    """
+
+    @pytest.mark.parametrize("self_dtype", ["materialized", "partial", "unknown"])
+    @pytest.mark.parametrize(
+        "value, value_dtype",
+        [
+            [3.5, np.dtype(float)],
+            [[3.5, 2.4], np.dtype(float)],
+            [np.array([3.5, 2.4]), np.dtype(float)],
+            [pd.Series([3.5, 2.4]), np.dtype(float)],
+        ],
+    )
+    def test_preserve_dtypes_setitem(self, self_dtype, value, value_dtype):
+        """
+        Test that ``df[single_existing_column] = value`` preserves dtypes cache.
+        """
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            df = pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [3, 4]})
+            if self_dtype == "materialized":
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+            elif self_dtype == "partial":
+                df._query_compiler._modin_frame.set_dtypes_cache(
+                    ModinDtypes(
+                        DtypesDescriptor(
+                            {"a": np.dtype("int64")},
+                            cols_with_unknown_dtypes=["b", "c"],
+                        )
+                    )
+                )
+            elif self_dtype == "unknown":
+                df._query_compiler._modin_frame.set_dtypes_cache(None)
+            else:
+                raise NotImplementedError(self_dtype)
+
+            df["b"] = value
+
+            if self_dtype == "materialized":
+                result_dtype = pandas.Series(
+                    [np.dtype("int64"), value_dtype, np.dtype("int64")],
+                    index=["a", "b", "c"],
+                )
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df.dtypes.equals(result_dtype)
+            elif self_dtype == "partial":
+                result_dtype = DtypesDescriptor(
+                    {"a": np.dtype("int64"), "b": value_dtype},
+                    cols_with_unknown_dtypes=["c"],
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            elif self_dtype == "unknown":
+                result_dtype = DtypesDescriptor(
+                    {"b": value_dtype},
+                    cols_with_unknown_dtypes=["a", "b"],
+                    columns_order={0: "a", 1: "b", 2: "c"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            else:
+                raise NotImplementedError(self_dtype)
+
+        patch.assert_not_called()
+
+    @pytest.mark.parametrize("self_dtype", ["materialized", "partial", "unknown"])
+    @pytest.mark.parametrize(
+        "value, value_dtype",
+        [
+            [3.5, np.dtype(float)],
+            [[3.5, 2.4], np.dtype(float)],
+            [np.array([3.5, 2.4]), np.dtype(float)],
+            [pd.Series([3.5, 2.4]), np.dtype(float)],
+        ],
+    )
+    def test_preserve_dtypes_insert(self, self_dtype, value, value_dtype):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
+            if self_dtype == "materialized":
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+            elif self_dtype == "partial":
+                df._query_compiler._modin_frame.set_dtypes_cache(
+                    ModinDtypes(
+                        DtypesDescriptor(
+                            {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
+                        )
+                    )
+                )
+            elif self_dtype == "unknown":
+                df._query_compiler._modin_frame.set_dtypes_cache(None)
+            else:
+                raise NotImplementedError(self_dtype)
+
+            df.insert(loc=0, column="c", value=value)
+
+            if self_dtype == "materialized":
+                result_dtype = pandas.Series(
+                    [value_dtype, np.dtype("int64"), np.dtype("int64")],
+                    index=["c", "a", "b"],
+                )
+                assert df._query_compiler._modin_frame.has_materialized_dtypes
+                assert df.dtypes.equals(result_dtype)
+            elif self_dtype == "partial":
+                result_dtype = DtypesDescriptor(
+                    {"a": np.dtype("int64"), "c": value_dtype},
+                    cols_with_unknown_dtypes=["b"],
+                    columns_order={0: "c", 1: "a", 2: "b"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            elif self_dtype == "unknown":
+                result_dtype = DtypesDescriptor(
+                    {"c": value_dtype},
+                    cols_with_unknown_dtypes=["a", "b"],
+                    columns_order={0: "c", 1: "a", 2: "b"},
+                )
+                df._query_compiler._modin_frame._dtypes._value.equals(result_dtype)
+            else:
+                raise NotImplementedError(self_dtype)
+
+        patch.assert_not_called()
+
+    def test_get_dummies_case(self):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            df = pd.DataFrame(
+                {"items": [1, 2, 3, 4], "b": [3, 3, 4, 4], "c": [1, 0, 0, 1]}
+            )
+            res = pd.get_dummies(df, columns=["b", "c"])
+            cols = [col for col in res.columns if col != "items"]
+            res[cols] = res[cols] / res[cols].mean()
+
+            assert res._query_compiler._modin_frame.has_materialized_dtypes
+
+        patch.assert_not_called()
+
+    @pytest.mark.parametrize("has_materialized_index", [True, False])
+    @pytest.mark.parametrize("drop", [True, False])
+    def test_preserve_dtypes_reset_index(self, drop, has_materialized_index):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            # case 1: 'df' has complete dtype by default
+            df = pd.DataFrame({"a": [1, 2, 3]})
+            if has_materialized_index:
+                assert df._query_compiler._modin_frame.has_materialized_index
+            else:
+                df._query_compiler._modin_frame.set_index_cache(None)
+                assert not df._query_compiler._modin_frame.has_materialized_index
+            assert df._query_compiler._modin_frame.has_materialized_dtypes
+
+            res = df.reset_index(drop=drop)
+            if drop:
+                # we droped the index, so columns and dtypes shouldn't change
+                assert res._query_compiler._modin_frame.has_materialized_dtypes
+                assert res.dtypes.equals(df.dtypes)
+            else:
+                if has_materialized_index:
+                    # we should have inserted index dtype into the descriptor,
+                    # and since both of them are materialized, the result should be
+                    # materialized too
+                    assert res._query_compiler._modin_frame.has_materialized_dtypes
+                    assert res.dtypes.equals(
+                        pandas.Series(
+                            [np.dtype("int64"), np.dtype("int64")], index=["index", "a"]
+                        )
+                    )
+                else:
+                    # we now know that there are cols with unknown name and dtype in our dataframe,
+                    # so the resulting dtypes should contain information only about original column
+                    expected_dtypes = DtypesDescriptor(
+                        {"a": np.dtype("int64")},
+                        know_all_names=False,
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
+
+            # case 2: 'df' has partial dtype by default
+            df = pd.DataFrame({"a": [1, 2, 3], "b": [3, 4, 5]})
+            df._query_compiler._modin_frame.set_dtypes_cache(
+                ModinDtypes(
+                    DtypesDescriptor(
+                        {"a": np.dtype("int64")}, cols_with_unknown_dtypes=["b"]
+                    )
+                )
+            )
+            if has_materialized_index:
+                assert df._query_compiler._modin_frame.has_materialized_index
+            else:
+                df._query_compiler._modin_frame.set_index_cache(None)
+                assert not df._query_compiler._modin_frame.has_materialized_index
+
+            res = df.reset_index(drop=drop)
+            if drop:
+                # we droped the index, so columns and dtypes shouldn't change
+                assert res._query_compiler._modin_frame._dtypes._value.equals(
+                    df._query_compiler._modin_frame._dtypes._value
+                )
+            else:
+                if has_materialized_index:
+                    # we should have inserted index dtype into the descriptor,
+                    # the resulted dtype should have information about 'index' and 'a' columns,
+                    # and miss dtype info for 'b' column
+                    expected_dtypes = DtypesDescriptor(
+                        {"index": np.dtype("int64"), "a": np.dtype("int64")},
+                        cols_with_unknown_dtypes=["b"],
+                        columns_order={0: "index", 1: "a", 2: "b"},
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
+                else:
+                    # we miss info about the 'index' column since it wasn't materialized at
+                    # the time of 'reset_index()' and we're still missing dtype info for 'b' column
+                    expected_dtypes = DtypesDescriptor(
+                        {"a": np.dtype("int64")},
+                        cols_with_unknown_dtypes=["b"],
+                        know_all_names=False,
+                    )
+                    assert res._query_compiler._modin_frame._dtypes._value.equals(
+                        expected_dtypes
+                    )
+
+        patch.assert_not_called()
+
+    def test_groupby_index_dtype(self):
+        with mock.patch.object(PandasDataframe, "_compute_dtypes") as patch:
+            # case 1: MapReduce impl, Series as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").size().reset_index(name="new_name")
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
+
+            # case 2: ExperimentalImpl impl, Series as an output of groupby
+            RangePartitioningGroupby.put(True)
+            try:
+                df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+                res = df.groupby("a").size().reset_index(name="new_name")
+                res_dtypes = res._query_compiler._modin_frame._dtypes._value
+                assert "a" in res_dtypes._known_dtypes
+                assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
+            finally:
+                RangePartitioningGroupby.put(False)
+
+            # case 3: MapReduce impl, DataFrame as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").sum().reset_index()
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
+
+            # case 4: ExperimentalImpl impl, DataFrame as an output of groupby
+            RangePartitioningGroupby.put(True)
+            try:
+                df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+                res = df.groupby("a").sum().reset_index()
+                res_dtypes = res._query_compiler._modin_frame._dtypes._value
+                assert "a" in res_dtypes._known_dtypes
+                assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
+            finally:
+                RangePartitioningGroupby.put(False)
+
+            # case 5: FullAxis impl, DataFrame as an output of groupby
+            df = pd.DataFrame({"a": [1, 2, 2], "b": [3, 4, 5]})
+            res = df.groupby("a").quantile().reset_index()
+            res_dtypes = res._query_compiler._modin_frame._dtypes._value
+            assert "a" in res_dtypes._known_dtypes
+            assert res_dtypes._known_dtypes["a"] == np.dtype("int64")
+
+        patch.assert_not_called()
+
+
+@pytest.mark.skipif(Engine.get() != "Ray", reason="Ray specific")
+@pytest.mark.parametrize("mode", [None, "Auto", "On", "Off"])
+def test_ray_lazy_exec_mode(mode):
+    import ray
+
+    from modin.config import LazyExecution
+    from modin.core.execution.ray.common.deferred_execution import DeferredExecution
+    from modin.core.execution.ray.common.utils import ObjectIDType
+    from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
+        PandasOnRayDataframePartition,
+    )
+
+    orig_mode = LazyExecution.get()
+    try:
+        if mode is None:
+            mode = LazyExecution.get()
+        else:
+            LazyExecution.put(mode)
+            assert mode == LazyExecution.get()
+
+        df = pandas.DataFrame({"A": [1, 2, 3]})
+        part = PandasOnRayDataframePartition(ray.put(df))
+
+        def func(df):
+            return len(df)
+
+        ray_func = ray.put(func)
+
+        if mode == "Auto":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "On":
+            assert isinstance(part.apply(ray_func)._data_ref, DeferredExecution)
+            assert isinstance(
+                part.add_to_apply_calls(ray_func)._data_ref, DeferredExecution
+            )
+        elif mode == "Off":
+            assert isinstance(part.apply(ray_func)._data_ref, ObjectIDType)
+            assert isinstance(part.add_to_apply_calls(ray_func)._data_ref, ObjectIDType)
+        else:
+            pytest.fail(f"Invalid value: {mode}")
+    finally:
+        LazyExecution.put(orig_mode)

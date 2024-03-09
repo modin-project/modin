@@ -12,8 +12,8 @@
 # governing permissions and limitations under the License.
 
 import sys
-from ipykernel import kernelspec
 
+from ipykernel import kernelspec
 
 default_make_ipkernel_cmd = kernelspec.make_ipkernel_cmd
 

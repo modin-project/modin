@@ -11,42 +11,41 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
-import numpy as np
-import pandas
-import matplotlib
-from numpy.testing import assert_array_equal
 import io
 import warnings
 
-import modin.pandas as pd
-from modin.utils import (
-    to_pandas,
-    get_current_execution,
-)
+import matplotlib
+import numpy as np
+import pandas
+import pandas._libs.lib as lib
+import pytest
+from numpy.testing import assert_array_equal
 
+import modin.pandas as pd
+from modin.config import Engine, NPartitions, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
-    df_equals,
-    name_contains,
-    test_data_values,
-    test_data_keys,
-    numeric_dfs,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    eval_general,
     create_test_dfs,
+    default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
     generate_multiindex,
-    test_data_resample,
+    modin_df_almost_equals_pandas,
+    name_contains,
+    numeric_dfs,
     test_data,
     test_data_diff_dtype,
-    modin_df_almost_equals_pandas,
+    test_data_keys,
     test_data_large_categorical_dataframe,
-    default_to_pandas_ignore_string,
+    test_data_resample,
+    test_data_values,
 )
-from modin.config import NPartitions, StorageFormat, Engine
 from modin.test.test_utils import warns_that_defaulting_to_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -56,7 +55,19 @@ matplotlib.use("Agg")
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
-pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+pytestmark = [
+    pytest.mark.filterwarnings(default_to_pandas_ignore_string),
+    # IGNORE FUTUREWARNINGS MARKS TO CLEANUP OUTPUT
+    pytest.mark.filterwarnings(
+        "ignore:.*bool is now deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:first is deprecated and will be removed:FutureWarning"
+    ),
+    pytest.mark.filterwarnings(
+        "ignore:last is deprecated and will be removed:FutureWarning"
+    ),
+]
 
 
 @pytest.mark.parametrize(
@@ -122,7 +133,7 @@ def test_partition_to_numpy(data):
 
 
 def test_asfreq():
-    index = pd.date_range("1/1/2000", periods=4, freq="T")
+    index = pd.date_range("1/1/2000", periods=4, freq="min")
     series = pd.Series([0.0, None, 2.0, 3.0], index=index)
     df = pd.DataFrame({"s": series})
     with warns_that_defaulting_to_pandas():
@@ -187,13 +198,25 @@ def test_bfill(data):
     df_equals(modin_df.bfill(), pandas_df.bfill())
 
 
+@pytest.mark.parametrize("limit_area", [None, "inside", "outside"])
+@pytest.mark.parametrize("method", ["ffill", "bfill"])
+def test_ffill_bfill_limit_area(method, limit_area):
+    modin_df, pandas_df = create_test_dfs([1, None, 2, None])
+    eval_general(
+        modin_df, pandas_df, lambda df: getattr(df, method)(limit_area=limit_area)
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_bool(data):
     modin_df = pd.DataFrame(data)
 
-    with pytest.raises(ValueError):
-        modin_df.bool()
-        modin_df.__bool__()
+    with pytest.warns(
+        FutureWarning, match="bool is now deprecated and will be removed"
+    ):
+        with pytest.raises(ValueError):
+            modin_df.bool()
+            modin_df.__bool__()
 
     single_bool_pandas_df = pandas.DataFrame([True])
     single_bool_modin_df = pd.DataFrame([True])
@@ -449,7 +472,9 @@ def test_first():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=i
     )
-    df_equals(modin_df.first("3D"), pandas_df.first("3D"))
+    with pytest.warns(FutureWarning, match="first is deprecated and will be removed"):
+        modin_result = modin_df.first("3D")
+    df_equals(modin_result, pandas_df.first("3D"))
     df_equals(modin_df.first("20D"), pandas_df.first("20D"))
 
 
@@ -525,7 +550,9 @@ def test_last():
     pandas_df = pandas.DataFrame(
         {"A": list(range(400)), "B": list(range(400))}, index=pandas_index
     )
-    df_equals(modin_df.last("3D"), pandas_df.last("3D"))
+    with pytest.warns(FutureWarning, match="last is deprecated and will be removed"):
+        modin_result = modin_df.last("3D")
+    df_equals(modin_result, pandas_df.last("3D"))
     df_equals(modin_df.last("20D"), pandas_df.last("20D"))
 
 
@@ -559,20 +586,35 @@ def test_melt(data, id_vars, value_vars):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "index", [lambda df: df.columns[0], lambda df: df[df.columns[0]].values, None]
+    "index",
+    [lambda df: df.columns[0], lambda df: df.columns[:2], lib.no_default],
+    ids=["one_column_index", "several_columns_index", "default"],
 )
-@pytest.mark.parametrize("columns", [lambda df: df.columns[len(df.columns) // 2]])
 @pytest.mark.parametrize(
-    "values", [lambda df: df.columns[-1], lambda df: df.columns[-2:], None]
+    "columns", [lambda df: df.columns[len(df.columns) // 2]], ids=["one_column"]
 )
-def test_pivot(data, index, columns, values):
+@pytest.mark.parametrize(
+    "values",
+    [lambda df: df.columns[-1], lambda df: df.columns[-2:], lib.no_default],
+    ids=["one_column_values", "several_columns_values", "default"],
+)
+def test_pivot(data, index, columns, values, request):
+    current_execution = get_current_execution()
+    if (
+        "one_column_values-one_column-default-float_nan_data"
+        in request.node.callspec.id
+        or (
+            current_execution in ("BaseOnPython", "HdkOnNative")
+            and index is lib.no_default
+        )
+    ):
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
         index=index,
         columns=columns,
         values=values,
-        check_exception_type=None,
     )
 
 
@@ -617,7 +659,22 @@ def test_pivot(data, index, columns, values):
         pytest.param("nunique", id="full_axis_func"),
     ],
 )
-def test_pivot_table_data(data, index, columns, values, aggfunc):
+def test_pivot_table_data(data, index, columns, values, aggfunc, request):
+    if (
+        "callable_tree_reduce_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "callable_tree_reduce_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "tree_reduce_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "tree_reduce_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "full_axis_func-single_value_col-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+        or "full_axis_func-multiple_value_cols-multiple_cols-multiple_index_cols"
+        in request.node.callspec.id
+    ):
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7011")
     md_df, pd_df = create_test_dfs(data)
 
     # when values is None the output will be huge-dimensional,
@@ -634,7 +691,6 @@ def test_pivot_table_data(data, index, columns, values, aggfunc):
         columns=columns,
         values=values,
         aggfunc=aggfunc,
-        check_exception_type=None,
     )
 
 
@@ -772,7 +828,7 @@ def test_replace():
     df_equals(modin_df, pandas_df)
 
 
-@pytest.mark.parametrize("rule", ["5T", pandas.offsets.Hour()])
+@pytest.mark.parametrize("rule", ["5min", pandas.offsets.Hour()])
 @pytest.mark.parametrize("axis", [0])
 def test_resampler(rule, axis):
     data, index = (
@@ -791,7 +847,7 @@ def test_resampler(rule, axis):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method",
@@ -816,7 +872,7 @@ def test_resampler_functions(rule, axis, method):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("axis", ["index", "columns"])
 @pytest.mark.parametrize(
     "method_arg",
@@ -844,7 +900,7 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     )
 
 
-@pytest.mark.parametrize("rule", ["5T"])
+@pytest.mark.parametrize("rule", ["5min"])
 @pytest.mark.parametrize("closed", ["left", "right"])
 @pytest.mark.parametrize("label", ["right", "left"])
 @pytest.mark.parametrize(
@@ -872,7 +928,7 @@ def test_resample_specific(rule, closed, label, on, level):
 
     if on is None and level is not None:
         index = pandas.MultiIndex.from_product(
-            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="H")]
+            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="h")]
         )
         pandas_df.index = index
         modin_df.index = index
@@ -880,8 +936,8 @@ def test_resample_specific(rule, closed, label, on, level):
         level = None
 
     if on is not None:
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
-        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="T")
+        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
+        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
 
     pandas_resampler = pandas_df.resample(
         rule,
@@ -931,14 +987,14 @@ def test_resample_specific(rule, closed, label, on, level):
     ],
 )
 def test_resample_getitem(columns):
-    index = pandas.date_range("1/1/2013", periods=9, freq="T")
+    index = pandas.date_range("1/1/2013", periods=9, freq="min")
     data = {
         "price": range(9),
         "volume": range(10, 19),
     }
     eval_general(
         *create_test_dfs(data, index=index),
-        lambda df: df.resample("3T")[columns].mean(),
+        lambda df: df.resample("3min")[columns].mean(),
     )
 
 

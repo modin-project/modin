@@ -11,33 +11,25 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import numpy as np
 import pandas
+import pytest
+
 import modin.pandas as pd
+from modin.config import NPartitions
+from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
-    df_equals,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    eval_general,
     create_test_dfs,
+    create_test_series,
+    df_equals,
+    eval_general,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.config import NPartitions
 
 NPartitions.put(4)
-
-
-def create_test_series(vals):
-    if isinstance(vals, dict):
-        modin_series = pd.Series(vals[next(iter(vals.keys()))])
-        pandas_series = pandas.Series(vals[next(iter(vals.keys()))])
-    else:
-        modin_series = pd.Series(vals)
-        pandas_series = pandas.Series(vals)
-    return modin_series, pandas_series
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

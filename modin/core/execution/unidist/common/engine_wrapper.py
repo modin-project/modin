@@ -18,6 +18,7 @@ To be used as a piece of building a unidist-based engine.
 """
 
 import asyncio
+
 import unidist
 
 
@@ -72,6 +73,23 @@ class UnidistWrapper:
         return _deploy_unidist_func.options(num_returns=num_returns).remote(
             func, *args, **kwargs
         )
+
+    @classmethod
+    def is_future(cls, item):
+        """
+        Check if the item is a Future.
+
+        Parameters
+        ----------
+        item : unidist.ObjectRef or object
+            Future or object to check.
+
+        Returns
+        -------
+        boolean
+            If the value is a future.
+        """
+        return unidist.is_object_ref(item)
 
     @classmethod
     def materialize(cls, obj_id):

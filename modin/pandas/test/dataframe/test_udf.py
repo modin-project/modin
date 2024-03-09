@@ -11,37 +11,36 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
-from modin.config import MinPartitionSize
-import modin.pandas as pd
-
-from pandas.core.dtypes.common import is_list_like
+import pytest
 from pandas._libs.lib import no_default
+from pandas.core.dtypes.common import is_list_like
+
+import modin.pandas as pd
+from modin.config import MinPartitionSize, NPartitions
 from modin.pandas.test.utils import (
-    random_state,
-    df_equals,
-    test_data_values,
-    test_data_keys,
-    query_func_keys,
-    query_func_values,
-    agg_func_keys,
-    agg_func_values,
     agg_func_except_keys,
     agg_func_except_values,
-    eval_general,
-    create_test_dfs,
-    udf_func_values,
-    udf_func_keys,
-    test_data,
+    agg_func_keys,
+    agg_func_values,
+    arg_keys,
     bool_arg_keys,
     bool_arg_values,
-    arg_keys,
+    create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    query_func_keys,
+    query_func_values,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+    udf_func_keys,
+    udf_func_values,
 )
-from modin.config import NPartitions
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -81,7 +80,6 @@ def test_agg_apply(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
-        check_exception_type=True,
     )
 
 
@@ -96,7 +94,6 @@ def test_agg_apply_axis_names(axis, func, op):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
-        check_exception_type=True,
     )
 
 
@@ -447,6 +444,41 @@ def test_query(data, funcs, engine):
         df_equals(modin_result.dtypes, pandas_result.dtypes)
 
 
+def test_query_named_index():
+    eval_general(
+        *(df.set_index("col1") for df in create_test_dfs(test_data["int_data"])),
+        lambda df: df.query("col1 % 2 == 0 | col3 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
+def test_query_named_multiindex():
+    eval_general(
+        *(
+            df.set_index(["col1", "col3"])
+            for df in create_test_dfs(test_data["int_data"])
+        ),
+        lambda df: df.query("col1 % 2 == 1 | col3 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
+def test_query_multiindex_without_names():
+    def make_df(without_index):
+        new_df = without_index.set_index(["col1", "col3"])
+        new_df.index.names = [None, None]
+        return new_df
+
+    eval_general(
+        *(make_df(df) for df in create_test_dfs(test_data["int_data"])),
+        lambda df: df.query("ilevel_0 % 2 == 0 | ilevel_1 % 2 == 1 | col4 % 2 == 1"),
+        # work around https://github.com/modin-project/modin/issues/6016
+        raising_exceptions=(Exception,),
+    )
+
+
 def test_empty_query():
     modin_df = pd.DataFrame([1, 2, 3, 4, 5])
 
@@ -487,6 +519,4 @@ def test_query_with_element_access_issue_4580(engine):
     ids=agg_func_keys + agg_func_except_keys,
 )
 def test_transform(data, func):
-    eval_general(
-        *create_test_dfs(data), lambda df: df.transform(func), check_exception_type=True
-    )
+    eval_general(*create_test_dfs(data), lambda df: df.transform(func))

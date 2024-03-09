@@ -12,8 +12,7 @@
 # governing permissions and limitations under the License.
 
 import os
-from os.path import dirname, abspath
-
+from os.path import abspath, dirname
 
 # This is the python file root directory (modin/modin)
 rootdir = dirname(dirname(abspath(__file__)))
@@ -45,6 +44,8 @@ def test_line_endings():
         if any(i in subdir for i in [".git", ".idea", "__pycache__"]):
             continue
         for file in files:
+            if file.endswith(".parquet"):
+                continue
             filepath = os.path.join(subdir, file)
             with open(filepath, "rb+") as f:
                 file_contents = f.read()

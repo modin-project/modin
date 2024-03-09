@@ -1,8 +1,8 @@
 Examples and Resources
 ======================
 
-Here you can find additional resources to learn about Modin. To learn more about
-advanced usage for Modin, please refer to :doc:`this section </usage_guide/index>`.
+Here you can find additional resources to learn about Modin. To learn more about 
+advanced usage for Modin, please refer to :doc:`Usage Guide </usage_guide/index>` section..
 
 Usage Examples
 ''''''''''''''
@@ -40,7 +40,7 @@ Talks & Podcasts
 - `Modin: Scaling the Capabilities of the Data Scientist, not the Machine <https://www.youtube.com/watch?v=NglkafEmbhE>`_ (1 hour, RISE Camp 2020)
 - `Modin: Pandas Scalability with Devin Petersohn <https://softwareengineeringdaily.com/2020/07/23/modin-pandas-scalability-with-devin-petersohn/>`_ (1 hour, Software Engineering Daily Podcast 2020)
 - `Introduction to the DataFrame and Modin <https://www.youtube.com/watch?v=_0eVVLXrtfY>`_ (20 minute, RISECamp 2019)
-- `Scaling Interactive Pandas Workflows with Modin <hhttps://www.youtube.com/watch?v=-HjLd_3ahCw>`_ (40 minute, PyData NYC 2018)
+- `Scaling Interactive Pandas Workflows with Modin <https://www.youtube.com/watch?v=-HjLd_3ahCw>`_ (40 minute, PyData NYC 2018)
 
 Community contributions
 '''''''''''''''''''''''

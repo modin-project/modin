@@ -19,17 +19,16 @@ actual implementation in the execution, bound to that factory. Each execution is
 with a Factory class.
 """
 
-import warnings
-import typing
 import re
-
-from modin.config import Engine
-from modin.utils import _inherit_docstrings, get_current_execution
-from modin.core.io import BaseIO
-from pandas.util._decorators import doc
+import typing
+import warnings
 
 import pandas
+from pandas.util._decorators import doc
 
+from modin.config import IsExperimental
+from modin.core.io import BaseIO
+from modin.utils import get_current_execution
 
 _doc_abstract_factory_class = """
 Abstract {role} factory which allows to override the IO module easily.
@@ -94,10 +93,10 @@ _doc_io_method_kwargs_params = """**kwargs : kwargs
 
 types_dictionary = {"pandas": {"category": pandas.CategoricalDtype}}
 
-supported_execution = (
-    "ExperimentalPandasOnRay",
-    "ExperimentalPandasOnUnidist",
-    "ExperimentalPandasOnDask",
+supported_executions = (
+    "PandasOnRay",
+    "PandasOnUnidist",
+    "PandasOnDask",
 )
 
 
@@ -201,6 +200,16 @@ class BaseFactory(object):
     )
     def _from_dataframe(cls, *args, **kwargs):
         return cls.io_cls.from_dataframe(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Ray Dataset",
+        params="ray_obj : ray.data.Dataset",
+        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray_dataset",
+    )
+    def _from_ray_dataset(cls, ray_obj):
+        return cls.io_cls.from_ray_dataset(ray_obj)
 
     @classmethod
     @doc(
@@ -415,6 +424,34 @@ class BaseFactory(object):
         return cls.io_cls.to_csv(*args, **kwargs)
 
     @classmethod
+    def _to_json(cls, *args, **kwargs):
+        """
+        Write query compiler content to a JSON file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_json(*args, **kwargs)
+
+    @classmethod
+    def _to_xml(cls, *args, **kwargs):
+        """
+        Write query compiler content to a XML file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_xml(*args, **kwargs)
+
+    @classmethod
     def _to_parquet(cls, *args, **kwargs):
         """
         Write query compiler content to a parquet file.
@@ -428,15 +465,214 @@ class BaseFactory(object):
         """
         return cls.io_cls.to_parquet(*args, **kwargs)
 
-
-@doc(_doc_factory_class, execution_name="cuDFOnRay")
-class CudfOnRayFactory(BaseFactory):
     @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
-    def prepare(cls):
-        from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
+    def _to_ray_dataset(cls, modin_obj):
+        """
+        Write query compiler content to a Ray Dataset.
 
-        cls.io_cls = cuDFOnRayIO
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        ray.data.Dataset
+            A Ray Dataset object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return cls.io_cls.to_ray_dataset(modin_obj)
+
+    # experimental methods that don't exist in pandas
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="CSV files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_csv_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_csv_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_csv_glob(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Pickle files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_pickle_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_pickle_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_pickle_glob(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="SQL files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_sql_distributed(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            extra_parameters = (
+                "partition_column",
+                "lower_bound",
+                "upper_bound",
+                "max_sessions",
+            )
+            if any(
+                param in kwargs and kwargs[param] is not None
+                for param in extra_parameters
+            ):
+                warnings.warn(
+                    f"Distributed read_sql() was only implemented for {', '.join(supported_executions)} executions."
+                )
+            for param in extra_parameters:
+                del kwargs[param]
+            return cls.io_cls.read_sql(**kwargs)
+        return cls.io_cls.read_sql_distributed(**kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Custom text files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_custom_text(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_custom_text()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_custom_text(**kwargs)
+
+    @classmethod
+    def _to_pickle_glob(cls, *args, **kwargs):
+        """
+        Distributed pickle query compiler object.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to the writer method.
+        **kwargs : kwargs
+            Arguments to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_pickle_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_pickle_glob(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Parquet files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_parquet_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_parquet_glob(**kwargs)
+
+    @classmethod
+    def _to_parquet_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several parquet files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_parquet_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_parquet_glob(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="Json files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_json_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_json_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_json_glob(**kwargs)
+
+    @classmethod
+    def _to_json_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several json files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_json_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_json_glob(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="XML files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_xml_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_xml_glob(**kwargs)
+
+    @classmethod
+    def _to_xml_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several XML files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_xml_glob(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="PandasOnRay")
@@ -475,154 +711,6 @@ class PandasOnDaskFactory(BaseFactory):
         cls.io_cls = PandasOnDaskIO
 
 
-@doc(_doc_abstract_factory_class, role="experimental")
-class ExperimentalBaseFactory(BaseFactory):
-    @classmethod
-    @_inherit_docstrings(BaseFactory._read_sql)
-    def _read_sql(cls, **kwargs):
-        supported_engines = ("Ray", "Unidist", "Dask")
-        if Engine.get() not in supported_engines:
-            if "partition_column" in kwargs:
-                if kwargs["partition_column"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["partition_column"]
-            if "lower_bound" in kwargs:
-                if kwargs["lower_bound"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["lower_bound"]
-            if "upper_bound" in kwargs:
-                if kwargs["upper_bound"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["upper_bound"]
-            if "max_sessions" in kwargs:
-                if kwargs["max_sessions"] is not None:
-                    warnings.warn(
-                        f"Distributed read_sql() was only implemented for {', '.join(supported_engines)} engines."
-                    )
-                del kwargs["max_sessions"]
-        return cls.io_cls.read_sql(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="CSV files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_csv_glob(cls, **kwargs):
-        current_execution = get_current_execution()
-        if current_execution not in supported_execution:
-            raise NotImplementedError(
-                f"`_read_csv_glob()` is not implemented for {current_execution} execution."
-            )
-        return cls.io_cls.read_csv_glob(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Pickle files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_pickle_distributed(cls, **kwargs):
-        current_execution = get_current_execution()
-        if current_execution not in supported_execution:
-            raise NotImplementedError(
-                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
-            )
-        return cls.io_cls.read_pickle_distributed(**kwargs)
-
-    @classmethod
-    @doc(
-        _doc_io_method_raw_template,
-        source="Custom text files",
-        params=_doc_io_method_kwargs_params,
-    )
-    def _read_custom_text(cls, **kwargs):
-        current_execution = get_current_execution()
-        if current_execution not in supported_execution:
-            raise NotImplementedError(
-                f"`_read_custom_text()` is not implemented for {current_execution} execution."
-            )
-        return cls.io_cls.read_custom_text(**kwargs)
-
-    @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
-        """
-        Distributed pickle query compiler object.
-
-        Parameters
-        ----------
-        *args : args
-            Arguments to the writer method.
-        **kwargs : kwargs
-            Arguments to the writer method.
-        """
-        current_execution = get_current_execution()
-        if current_execution not in supported_execution:
-            raise NotImplementedError(
-                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
-            )
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
-
-
-@doc(_doc_factory_class, execution_name="experimental PandasOnRay")
-class ExperimentalPandasOnRayFactory(ExperimentalBaseFactory, PandasOnRayFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pandas_on_ray.io import (
-            ExperimentalPandasOnRayIO,
-        )
-
-        cls.io_cls = ExperimentalPandasOnRayIO
-
-
-@doc(_doc_factory_class, execution_name="experimental PandasOnDask")
-class ExperimentalPandasOnDaskFactory(ExperimentalBaseFactory, PandasOnDaskFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnDaskIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.dask.implementations.pandas_on_dask.io import (
-            ExperimentalPandasOnDaskIO,
-        )
-
-        cls.io_cls = ExperimentalPandasOnDaskIO
-
-
-@doc(_doc_factory_class, execution_name="experimental PandasOnPython")
-class ExperimentalPandasOnPythonFactory(ExperimentalBaseFactory, PandasOnPythonFactory):
-    pass
-
-
-@doc(_doc_factory_class, execution_name="experimental PyarrowOnRay")
-class ExperimentalPyarrowOnRayFactory(BaseFactory):  # pragma: no cover
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``PyarrowOnRayIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.ray.implementations.pyarrow_on_ray.io import (
-            PyarrowOnRayIO,
-        )
-
-        cls.io_cls = PyarrowOnRayIO
-
-
-@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
-class ExperimentalHdkOnNativeFactory(BaseFactory):
-    @classmethod
-    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
-    def prepare(cls):
-        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
-            HdkOnNativeIO,
-        )
-
-        cls.io_cls = HdkOnNativeIO
-
-
 @doc(_doc_factory_class, execution_name="PandasOnUnidist")
 class PandasOnUnidistFactory(BaseFactory):
     @classmethod
@@ -635,17 +723,34 @@ class PandasOnUnidistFactory(BaseFactory):
         cls.io_cls = PandasOnUnidistIO
 
 
-@doc(_doc_factory_class, execution_name="experimental PandasOnUnidist")
-class ExperimentalPandasOnUnidistFactory(
-    ExperimentalBaseFactory, PandasOnUnidistFactory
-):
+# EXPERIMENTAL FACTORIES
+# Factories that operate only in experimental mode. They provide access to executions
+# that have little coverage of implemented functionality or are not stable enough.
+
+
+@doc(_doc_factory_class, execution_name="experimental HdkOnNative")
+class ExperimentalHdkOnNativeFactory(BaseFactory):
     @classmethod
-    @doc(
-        _doc_factory_prepare_method, io_module_name="``ExperimentalPandasOnUnidistIO``"
-    )
+    @doc(_doc_factory_prepare_method, io_module_name="experimental ``HdkOnNativeIO``")
     def prepare(cls):
-        from modin.experimental.core.execution.unidist.implementations.pandas_on_unidist.io import (
-            ExperimentalPandasOnUnidistIO,
+        from modin.experimental.core.execution.native.implementations.hdk_on_native.io import (
+            HdkOnNativeIO,
         )
 
-        cls.io_cls = ExperimentalPandasOnUnidistIO
+        if not IsExperimental.get():
+            raise ValueError("'HdkOnNative' only works in experimental mode.")
+
+        cls.io_cls = HdkOnNativeIO
+
+
+@doc(_doc_factory_class, execution_name="cuDFOnRay")
+class ExperimentalCudfOnRayFactory(BaseFactory):
+    @classmethod
+    @doc(_doc_factory_prepare_method, io_module_name="``cuDFOnRayIO``")
+    def prepare(cls):
+        from modin.core.execution.ray.implementations.cudf_on_ray.io import cuDFOnRayIO
+
+        if not IsExperimental.get():
+            raise ValueError("'CudfOnRay' only works in experimental mode.")
+
+        cls.io_cls = cuDFOnRayIO

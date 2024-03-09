@@ -13,17 +13,25 @@
 
 """Module houses Modin configs originated from environment variables."""
 
+import importlib
 import os
-import sys
-from textwrap import dedent
-import warnings
-from packaging import version
 import secrets
+import sys
+import warnings
+from textwrap import dedent
+from typing import Any, Optional
 
+from packaging import version
 from pandas.util._decorators import doc  # type: ignore[attr-defined]
 
-from .pubsub import Parameter, _TYPE_PARAMS, ExactStr, ValueSource
-from typing import Any, Optional
+from modin.config.pubsub import (
+    _TYPE_PARAMS,
+    _UNSET,
+    DeprecationDescriptor,
+    ExactStr,
+    Parameter,
+    ValueSource,
+)
 
 
 class EnvironmentVariable(Parameter, type=str, abstract=True):
@@ -67,6 +75,96 @@ class EnvironmentVariable(Parameter, type=str, abstract=True):
         return help
 
 
+class EnvWithSibilings(
+    EnvironmentVariable,
+    # 'type' is a mandatory parameter for '__init_subclasses__', so we have to pass something here,
+    # this doesn't force child classes to have 'str' type though, they actually can be any type
+    type=str,
+):
+    """Ensure values synchronization between sibling parameters."""
+
+    _update_sibling = True
+
+    @classmethod
+    def _sibling(cls) -> type["EnvWithSibilings"]:
+        """Return a sibling parameter."""
+        raise NotImplementedError()
+
+    @classmethod
+    def get(cls) -> Any:
+        """
+        Get parameter's value and ensure that it's equal to the sibling's value.
+
+        Returns
+        -------
+        Any
+        """
+        sibling = cls._sibling()
+
+        if sibling._value is _UNSET and cls._value is _UNSET:
+            super().get()
+            with warnings.catch_warnings():
+                # filter warnings that can potentially come from the potentially deprecated sibling
+                warnings.filterwarnings("ignore", category=FutureWarning)
+                super(EnvWithSibilings, sibling).get()
+
+            if (
+                cls._value_source
+                == sibling._value_source
+                == ValueSource.GOT_FROM_CFG_SOURCE
+            ):
+                raise ValueError(
+                    f"Configuration is ambiguous. You cannot set '{cls.varname}' and '{sibling.varname}' at the same time."
+                )
+
+            # further we assume that there are only two valid sources for the variables: 'GOT_FROM_CFG' and 'DEFAULT',
+            # as otherwise we wouldn't ended-up in this branch at all, because all other ways of setting a value
+            # changes the '._value' attribute from '_UNSET' to something meaningful
+            from modin.error_message import ErrorMessage
+
+            if cls._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=sibling._value_source != ValueSource.DEFAULT
+                )
+                sibling._value = cls._value
+                sibling._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+            elif sibling._value_source == ValueSource.GOT_FROM_CFG_SOURCE:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                )
+                cls._value = sibling._value
+                cls._value_source = ValueSource.GOT_FROM_CFG_SOURCE
+            else:
+                ErrorMessage.catch_bugs_and_request_email(
+                    failure_condition=cls._value_source != ValueSource.DEFAULT
+                    or sibling._value_source != ValueSource.DEFAULT
+                )
+                # propagating 'cls' default value to the sibling
+                sibling._value = cls._value
+        return super().get()
+
+    @classmethod
+    def put(cls, value: Any) -> None:
+        """
+        Set a new value to this parameter as well as to its sibling.
+
+        Parameters
+        ----------
+        value : Any
+        """
+        super().put(value)
+        # avoid getting into an infinite recursion
+        if cls._update_sibling:
+            cls._update_sibling = False
+            try:
+                with warnings.catch_warnings():
+                    # filter potential future warnings of the sibling
+                    warnings.filterwarnings("ignore", category=FutureWarning)
+                    cls._sibling().put(value)
+            finally:
+                cls._update_sibling = True
+
+
 class IsDebug(EnvironmentVariable, type=bool):
     """Force Modin engine to be "Python" unless specified by $MODIN_ENGINE."""
 
@@ -94,11 +192,7 @@ class Engine(EnvironmentVariable, type=str):
         -------
         str
         """
-        from modin.utils import (
-            MIN_RAY_VERSION,
-            MIN_DASK_VERSION,
-            MIN_UNIDIST_VERSION,
-        )
+        from modin.utils import MIN_DASK_VERSION, MIN_RAY_VERSION, MIN_UNIDIST_VERSION
 
         # If there's a custom engine, we don't need to check for any engine
         # dependencies. Return the default "Python" engine.
@@ -173,7 +267,7 @@ class StorageFormat(EnvironmentVariable, type=str):
 
     varname = "MODIN_STORAGE_FORMAT"
     default = "Pandas"
-    choices = ("Pandas", "Hdk", "Pyarrow", "Cudf")
+    choices = ("Pandas", "Hdk", "Cudf")
 
 
 class IsExperimental(EnvironmentVariable, type=bool):
@@ -277,38 +371,14 @@ class NPartitions(EnvironmentVariable, type=int):
             return CpuCount.get()
 
 
-class SocksProxy(EnvironmentVariable, type=ExactStr):
-    """SOCKS proxy address if it is needed for SSH to work."""
-
-    varname = "MODIN_SOCKS_PROXY"
-
-
-class DoLogRpyc(EnvironmentVariable, type=bool):
-    """Whether to gather RPyC logs (applicable for remote context)."""
-
-    varname = "MODIN_LOG_RPYC"
-
-
-class DoTraceRpyc(EnvironmentVariable, type=bool):
-    """Whether to trace RPyC calls (applicable for remote context)."""
-
-    varname = "MODIN_TRACE_RPYC"
-
-
 class HdkFragmentSize(EnvironmentVariable, type=int):
     """How big a fragment in HDK should be when creating a table (in rows)."""
 
     varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
-class OmnisciFragmentSize(EnvironmentVariable, type=int):
-    """How big a fragment in OmniSci should be when creating a table (in rows)."""
-
-    varname = "MODIN_OMNISCI_FRAGMENT_SIZE"
-
-
 class DoUseCalcite(EnvironmentVariable, type=bool):
-    """Whether to use Calcite for OmniSci queries execution."""
+    """Whether to use Calcite for HDK queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
@@ -319,13 +389,6 @@ class TestDatasetSize(EnvironmentVariable, type=str):
 
     varname = "MODIN_TEST_DATASET_SIZE"
     choices = ("Small", "Normal", "Big")
-
-
-class TestRayClient(EnvironmentVariable, type=bool):
-    """Set to true to start and connect Ray client before a testing session starts."""
-
-    varname = "MODIN_TEST_RAY_CLIENT"
-    default = False
 
 
 class TrackFileLeaks(EnvironmentVariable, type=bool):
@@ -530,24 +593,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
         dict
             Decoded and verified config value.
         """
-        if cls == OmnisciLaunchParameters or (
-            OmnisciLaunchParameters.varname in os.environ
-            and HdkLaunchParameters.varname not in os.environ
-        ):
-            return OmnisciLaunchParameters._get()
-        else:
-            return HdkLaunchParameters._get()
-
-    @classmethod
-    def _get(cls) -> dict:
-        """
-        Get the resulted command-line options.
-
-        Returns
-        -------
-        dict
-            Decoded and verified config value.
-        """
         custom_parameters = super().get()
         result = cls._get_default().copy()
         result.update(
@@ -587,17 +632,6 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):
                 # if pyhdk is not available, do not show any additional options
                 pass
         return default
-
-
-class OmnisciLaunchParameters(HdkLaunchParameters, type=dict):
-    """
-    Additional command line options for the OmniSci engine.
-
-    Please visit OmniSci documentation for the description of available parameters:
-    https://docs.omnisci.com/installation-and-configuration/config-parameters#configuration-parameters-for-omniscidb
-    """
-
-    varname = "MODIN_OMNISCI_LAUNCH_PARAMETERS"
 
 
 class MinPartitionSize(EnvironmentVariable, type=int):
@@ -660,16 +694,44 @@ class GithubCI(EnvironmentVariable, type=bool):
     default = False
 
 
-class ExperimentalNumPyAPI(EnvironmentVariable, type=bool):
-    """Set to true to use Modin's experimental NumPy API."""
+class ModinNumpy(EnvWithSibilings, type=bool):
+    """Set to true to use Modin's implementation of NumPy API."""
+
+    varname = "MODIN_NUMPY"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ExperimentalNumPyAPI
+
+
+class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
+    """
+    Set to true to use Modin's implementation of NumPy API.
+
+    This parameter is deprecated. Use ``ModinNumpy`` instead.
+    """
 
     varname = "MODIN_EXPERIMENTAL_NUMPY_API"
     default = False
 
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ModinNumpy
 
-class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
+
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
+    ExperimentalNumPyAPI, ModinNumpy
+)
+
+
+class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
-    Set to true to use Modin's experimental group by implementation.
+    Set to true to use Modin's range-partitioning group by implementation.
 
     Experimental groupby is implemented using a range-partitioning technique,
     note that it may not always work better than the original Modin's TreeReduce
@@ -677,7 +739,47 @@ class ExperimentalGroupbyImpl(EnvironmentVariable, type=bool):
     of Modin's documentation: TODO: add a link to the section once it's written.
     """
 
+    varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return ExperimentalGroupbyImpl
+
+
+class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
+    """
+    Set to true to use Modin's range-partitioning group by implementation.
+
+    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
+    """
+
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return RangePartitioningGroupby
+
+
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
+    ExperimentalGroupbyImpl, RangePartitioningGroupby
+)
+
+
+class RangePartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's range-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING"
     default = False
 
 
@@ -699,8 +801,20 @@ class AsyncReadMode(EnvironmentVariable, type=bool):
     """
     It does not wait for the end of reading information from the source.
 
-    Can break situations when reading occurs in a context, when exiting
-    from which the source is deleted.
+    It basically means, that the reading function only launches tasks for the dataframe
+    to be read/created, but not ensures that the construction is finalized by the time
+    the reading function returns a dataframe.
+
+    This option was brought to improve performance of reading/construction
+    of Modin DataFrames, however it may also:
+
+    1. Increase the peak memory consumption. Since the garbage collection of the
+    temporary objects created during the reading is now also lazy and will only
+    be performed when the reading/construction is actually finished.
+
+    2. Can break situations when the source is manually deleted after the reading
+    function returns a result, for example, when reading inside of a context-block
+    that deletes the file on ``__exit__()``.
     """
 
     varname = "MODIN_ASYNC_READ_MODE"
@@ -713,6 +827,70 @@ class ReadSqlEngine(EnvironmentVariable, type=str):
     varname = "MODIN_READ_SQL_ENGINE"
     default = "Pandas"
     choices = ("Pandas", "Connectorx")
+
+
+class LazyExecution(EnvironmentVariable, type=str):
+    """
+    Lazy execution mode.
+
+    Supported values:
+        `Auto` - the execution mode is chosen by the engine for each operation (default value).
+        `On`   - the lazy execution is performed wherever it's possible.
+        `Off`  - the lazy execution is disabled.
+    """
+
+    varname = "MODIN_LAZY_EXECUTION"
+    choices = ("Auto", "On", "Off")
+    default = "Auto"
+
+
+class DocModule(EnvironmentVariable, type=ExactStr):
+    """
+    The module to use that will be used for docstrings.
+
+    The value set here must be a valid, importable module. It should have
+    a `DataFrame`, `Series`, and/or several APIs directly (e.g. `read_csv`).
+    """
+
+    varname = "MODIN_DOC_MODULE"
+    default = "pandas"
+
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Assign a value to the DocModule config.
+
+        Parameters
+        ----------
+        value : str
+            Config value to set.
+        """
+        super().put(value)
+        # Reload everything to apply the documentation. This is required since the
+        # docs might already have been created and the implementation will assume
+        # that the new docs are applied when the config is set. This set of operations
+        # does this.
+        import modin.pandas as pd
+
+        importlib.reload(pd.accessor)
+        importlib.reload(pd.base)
+        importlib.reload(pd.dataframe)
+        importlib.reload(pd.general)
+        importlib.reload(pd.groupby)
+        importlib.reload(pd.io)
+        importlib.reload(pd.iterator)
+        importlib.reload(pd.series)
+        importlib.reload(pd.series_utils)
+        importlib.reload(pd.utils)
+        importlib.reload(pd.window)
+        importlib.reload(pd)
+
+
+class DaskThreadsPerWorker(EnvironmentVariable, type=int):
+    """Number of threads per Dask worker."""
+
+    varname = "MODIN_DASK_THREADS_PER_WORKER"
+    default = 1
 
 
 def _check_vars() -> None:
@@ -731,11 +909,26 @@ def _check_vars() -> None:
     }
     found_names = {name for name in os.environ if name.startswith("MODIN_")}
     unknown = found_names - valid_names
+    deprecated: dict[str, DeprecationDescriptor] = {
+        obj.varname: obj._deprecation_descriptor
+        for obj in globals().values()
+        if isinstance(obj, type)
+        and issubclass(obj, EnvironmentVariable)
+        and not obj.is_abstract
+        and obj.varname is not None
+        and obj._deprecation_descriptor is not None
+    }
+    found_deprecated = found_names & deprecated.keys()
     if unknown:
         warnings.warn(
             f"Found unknown environment variable{'s' if len(unknown) > 1 else ''},"
             + f" please check {'their' if len(unknown) > 1 else 'its'} spelling: "
             + ", ".join(sorted(unknown))
+        )
+    for depr_var in found_deprecated:
+        warnings.warn(
+            deprecated[depr_var].deprecation_message(use_envvar_names=True),
+            FutureWarning,
         )
 
 

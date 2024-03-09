@@ -13,13 +13,13 @@
 
 """Contains implementations for GroupbyReduce functions."""
 
-import pandas
 import numpy as np
+import pandas
 
-from modin.utils import hashable
+from modin.config import RangePartitioningGroupby
 from modin.core.dataframe.algebra import GroupByReduce
-from modin.config import ExperimentalGroupbyImpl
 from modin.error_message import ErrorMessage
+from modin.utils import hashable
 
 
 class GroupbyReduceImpl:
@@ -93,18 +93,18 @@ class GroupbyReduceImpl:
         )
 
         def method(query_compiler, *args, **kwargs):
-            if ExperimentalGroupbyImpl.get():
+            if RangePartitioningGroupby.get():
                 try:
                     if finalizer_fn is not None:
                         raise NotImplementedError(
-                            "Reshuffling groupby is not implemented yet when a finalizing function is specified."
+                            "Range-partitioning groupby is not implemented yet when a finalizing function is specified."
                         )
                     return query_compiler._groupby_shuffle(
                         *args, agg_func=agg_name, **kwargs
                     )
                 except NotImplementedError as e:
                     ErrorMessage.warn(
-                        f"Can't use experimental reshuffling groupby implementation because of: {e}"
+                        f"Can't use range-partitioning groupby implementation because of: {e}"
                         + "\nFalling back to a TreeReduce implementation."
                     )
             return map_reduce_method(query_compiler, *args, **kwargs)

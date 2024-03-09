@@ -11,31 +11,24 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import datetime
 
+import numpy as np
 import pandas
-from pandas.core.dtypes.common import (
-    is_object_dtype,
-    is_datetime64_any_dtype,
-)
+import pytest
+from pandas.core.dtypes.common import is_datetime64_any_dtype, is_object_dtype
 
 import modin.pandas as pd
+from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import eval_io as general_eval_io
+from modin.pandas.test.utils import io_ops_bad_exc
 from modin.utils import try_cast_to_pandas
-import datetime
-import numpy as np
-
-from modin.pandas.test.utils import (
-    df_equals,
-    io_ops_bad_exc,
-    eval_io as general_eval_io,
-)
 
 
 def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    check_exception_type=True,
     raising_exceptions=io_ops_bad_exc,
     check_kwargs_callable=True,
     modin_warning=None,
@@ -81,7 +74,6 @@ def eval_io(
         fn_name,
         comparator=hdk_comparator,
         cast_to_str=cast_to_str,
-        check_exception_type=check_exception_type,
         raising_exceptions=raising_exceptions,
         check_kwargs_callable=check_kwargs_callable,
         modin_warning=modin_warning,
@@ -150,9 +142,7 @@ def align_datetime_dtypes(*dfs):
         if datetime_cols:
             pandas_df = pandas_df.astype(datetime_cols)
         if time_cols:
-            pandas_df[time_cols_list] = pandas_df[time_cols_list].applymap(
-                convert_to_time
-            )
+            pandas_df[time_cols_list] = pandas_df[time_cols_list].map(convert_to_time)
         casted_dfs.append(pandas_df)
 
     return casted_dfs

@@ -12,54 +12,52 @@
 # governing permissions and limitations under the License.
 
 import os
-import pandas
-import numpy as np
-import pyarrow
-import pytest
 import re
 
+import numpy as np
+import pandas
+import pyarrow
+import pytest
 from pandas._testing import ensure_clean
+from pandas.core.dtypes.common import is_list_like
+from pyhdk import __version__ as hdk_version
 
 from modin.config import StorageFormat
 from modin.pandas.test.utils import (
-    io_ops_bad_exc,
+    create_test_dfs,
     default_to_pandas_ignore_string,
     random_state,
     test_data,
 )
 from modin.test.interchange.dataframe_protocol.hdk.utils import split_df_into_chunks
-from .utils import eval_io, ForceHdkImport, set_execution_mode, run_and_compare
-from pandas.core.dtypes.common import is_list_like
 
-from pyhdk import __version__ as hdk_version
+from .utils import ForceHdkImport, eval_io, run_and_compare, set_execution_mode
 
 StorageFormat.put("hdk")
 
 import modin.pandas as pd
-from modin.pandas.test.utils import (
-    df_equals,
-    bool_arg_values,
-    to_pandas,
-    test_data_values,
-    test_data_keys,
-    generate_multiindex,
-    eval_general,
-    df_equals_with_non_stable_indices,
-    time_parsing_csv_path,
-)
-from modin.utils import try_cast_to_pandas
-from modin.pandas.utils import from_arrow
-
-from modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager import (
-    HdkOnNativeDataframePartitionManager,
+from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
+    CalciteSerializer,
 )
 from modin.experimental.core.execution.native.implementations.hdk_on_native.df_algebra import (
     FrameNode,
 )
-from modin.experimental.core.execution.native.implementations.hdk_on_native.calcite_serializer import (
-    CalciteSerializer,
+from modin.experimental.core.execution.native.implementations.hdk_on_native.partitioning.partition_manager import (
+    HdkOnNativeDataframePartitionManager,
 )
-
+from modin.pandas.io import from_arrow
+from modin.pandas.test.utils import (
+    bool_arg_values,
+    df_equals,
+    df_equals_with_non_stable_indices,
+    eval_general,
+    generate_multiindex,
+    test_data_keys,
+    test_data_values,
+    time_parsing_csv_path,
+    to_pandas,
+)
+from modin.utils import try_cast_to_pandas
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -311,12 +309,11 @@ class TestCSV:
         # In these cases Modin raises `ArrowEngineException` while pandas
         # raises `ValueError`, so skipping exception type checking
         skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
-
+        if skip_exc_type_check:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            check_exception_type=not skip_exc_type_check,
-            raising_exceptions=None if skip_exc_type_check else io_ops_bad_exc,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
@@ -392,6 +389,19 @@ class TestCSV:
                 return lib.read_csv(fname)
 
         run_and_compare(test, data={})
+
+    def test_read_csv_dtype_object(self):
+        with pytest.warns(UserWarning) as warns:
+            with ensure_clean(".csv") as file:
+                with open(file, "w") as f:
+                    f.write("test\ntest")
+
+                def test(**kwargs):
+                    return pd.read_csv(file, dtype={"test": "object"})
+
+                run_and_compare(test, data={})
+            for warn in warns.list:
+                assert not re.match(r".*defaulting to pandas.*", str(warn))
 
 
 class TestMasks:
@@ -687,6 +697,52 @@ class TestConcat:
 
         run_and_compare(applier, data=self.data, force_lazy=False)
 
+    @pytest.mark.parametrize(
+        "data", [None, {"A": range(10)}, pandas.DataFrame({"A": range(10)})]
+    )
+    @pytest.mark.parametrize(
+        "index",
+        [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)],
+    )
+    @pytest.mark.parametrize("value", [list(range(10)), pandas.Series(range(10))])
+    @pytest.mark.parametrize("part_type", [None, "arrow", "hdk"])
+    @pytest.mark.parametrize("insert_scalar", [True, False])
+    def test_insert_list(self, data, index, value, part_type, insert_scalar):
+        def create():
+            mdf, pdf = create_test_dfs(data, index=index)
+            if part_type == "arrow":  # Make sure the partition contains an arrow table
+                mdf._query_compiler._modin_frame._partitions[0][0].get(True)
+            elif part_type == "hdk":
+                mdf._query_compiler._modin_frame.force_import()
+            return mdf, pdf
+
+        def insert(loc, name, value):
+            nonlocal mdf, pdf
+            mdf.insert(loc, name, value)
+            pdf.insert(loc, name, value)
+            if insert_scalar:
+                mdf[f"S{loc}"] = 1
+                pdf[f"S{loc}"] = 1
+
+        niter = 3
+
+        mdf, pdf = create()
+        for i in range(niter):
+            insert(len(pdf.columns), f"B{i}", value)
+        df_equals(mdf, pdf)
+
+        mdf, pdf = create()
+        for i in range(niter):
+            insert(0, f"C{i}", value)
+        df_equals(mdf, pdf)
+
+        mdf, pdf = create()
+        for i in range(niter):
+            insert(len(pdf.columns), f"B{i}", value)
+            insert(0, f"C{i}", value)
+            insert(len(pdf.columns) // 2, f"D{i}", value)
+        df_equals(mdf, pdf)
+
     def test_concat_many(self):
         def concat(df1, df2, lib, **kwargs):
             df3 = df1.copy()
@@ -959,6 +1015,12 @@ class TestGroupby:
             return df.groupby(by, as_index=as_index).agg({col: agg for col in by})
 
         run_and_compare(dict_agg_all_cols, data=self.data)
+
+    def test_groupby_agg_list(self):
+        def agg(df, **kwargs):
+            return df.groupby("a")[["b", "c"]].agg(["sum", "size", "mean", "median"])
+
+        run_and_compare(agg, data=self.data)
 
     # modin-issue#3461
     def test_groupby_pure_by(self):
@@ -1281,6 +1343,27 @@ class TestGroupby:
         # When invert is false, the rowid column is materialized.
         run_and_compare(head, data=test_data["int_data"], force_lazy=invert)
 
+    @pytest.mark.parametrize("agg", ["nlargest", "nsmallest"])
+    @pytest.mark.parametrize("n", [1, 5, 10])
+    def test_topk(self, agg, n):
+        def topk(df, **kwargs):
+            return getattr(df.groupby("id6")["v3"], agg)(n).reset_index()[["id6", "v3"]]
+
+        run_and_compare(topk, data=self.h2o_data)
+
+    @pytest.mark.parametrize("time", [False, True])
+    @pytest.mark.parametrize("q", [0.1, 0.5, 1.0])
+    @pytest.mark.parametrize(
+        "interpolation", ["linear", "lower", "higher", "midpoint", "nearest"]
+    )
+    def test_quantile(self, time, q, interpolation):
+        def quantile(df, **kwargs):
+            if time:
+                df["v1"] = df["v1"].astype("datetime64[ns]")
+            return df.groupby("id4")[["v1", "v2", "v3"]].quantile(q, interpolation)
+
+        run_and_compare(quantile, data=self.h2o_data)
+
 
 class TestAgg:
     data = {
@@ -1354,6 +1437,10 @@ class TestAgg:
                         "is_sparse is deprecated" in message
                         # TODO: make sure we can ignore this warning
                         or "Frame contain columns with unsupported data-types"
+                        in message
+                        # Looks like the warning comes from pyarrow, more details:
+                        # https://github.com/pandas-dev/pandas/pull/52419
+                        or "Passing a BlockManager to DataFrame is deprecated"
                         in message
                     ):
                         continue
@@ -1991,7 +2078,7 @@ class TestDateTime:
             [
                 "2018-10-26 12:00",
                 "2018-10-26 13:00:15",
-                "2020-10-26 04:00:15",
+                "2020-10-26 04:00:15.000000002",
                 "2020-10-26",
             ],
             format="mixed",
@@ -2021,6 +2108,54 @@ class TestDateTime:
             return df["d"].dt.hour
 
         run_and_compare(dt_hour, data=self.datetime_data)
+
+    def test_dt_minute(self):
+        def dt_minute(df, **kwargs):
+            return df["d"].dt.minute
+
+        run_and_compare(dt_minute, data=self.datetime_data)
+
+    def test_dt_second(self):
+        def dt_second(df, **kwargs):
+            return df["d"].dt.second
+
+        run_and_compare(dt_second, data=self.datetime_data)
+
+    def test_dt_microsecond(self):
+        def dt_microsecond(df, **kwargs):
+            return df["d"].dt.microsecond
+
+        run_and_compare(dt_microsecond, data=self.datetime_data)
+
+    def test_dt_nanosecond(self):
+        def dt_nanosecond(df, **kwargs):
+            return df["d"].dt.nanosecond
+
+        run_and_compare(dt_nanosecond, data=self.datetime_data)
+
+    def test_dt_quarter(self):
+        def dt_quarter(df, **kwargs):
+            return df["c"].dt.quarter
+
+        run_and_compare(dt_quarter, data=self.datetime_data)
+
+    def test_dt_dayofweek(self):
+        def dt_dayofweek(df, **kwargs):
+            return df["c"].dt.dayofweek
+
+        run_and_compare(dt_dayofweek, data=self.datetime_data)
+
+    def test_dt_weekday(self):
+        def dt_weekday(df, **kwargs):
+            return df["c"].dt.weekday
+
+        run_and_compare(dt_weekday, data=self.datetime_data)
+
+    def test_dt_dayofyear(self):
+        def dt_dayofyear(df, **kwargs):
+            return df["c"].dt.dayofyear
+
+        run_and_compare(dt_dayofyear, data=self.datetime_data)
 
     @pytest.mark.parametrize("cast", [True, False])
     @pytest.mark.parametrize("unit", CalciteSerializer._TIMESTAMP_PRECISION.keys())
@@ -2410,16 +2545,42 @@ class TestUnsupportedColumns:
     )
     def test_unsupported_columns(self, data, is_good):
         pandas_df = pandas.DataFrame({"col": data})
-        obj, bad_cols = HdkOnNativeDataframePartitionManager._get_unsupported_cols(
-            pandas_df
-        )
+        bad_cols = HdkOnNativeDataframePartitionManager._get_unsupported_cols(pandas_df)
         if is_good:
-            assert obj and not bad_cols
+            assert not bad_cols
         else:
-            assert not obj and bad_cols == ["col"]
+            assert bad_cols == ["col"]
 
 
 class TestConstructor:
+    @pytest.mark.parametrize(
+        "data",
+        [
+            None,
+            {"A": range(10)},
+            pandas.Series(range(10)),
+            pandas.DataFrame({"A": range(10)}),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "index",
+        [None, pandas.RangeIndex(10), pandas.RangeIndex(start=10, stop=0, step=-1)],
+    )
+    @pytest.mark.parametrize("columns", [None, ["A"], ["A", "B", "C"]])
+    @pytest.mark.parametrize("dtype", [None, float])
+    def test_raw_data(self, data, index, columns, dtype):
+        if (
+            isinstance(data, pandas.Series)
+            and data.name is None
+            and columns is not None
+            and len(columns) > 1
+        ):
+            data = data.copy()
+            # Pandas constructor fails if an unnamed Series is passed along with columns argument
+            data.name = "D"
+        mdf, pdf = create_test_dfs(data, index=index, columns=columns, dtype=dtype)
+        df_equals(mdf, pdf)
+
     @pytest.mark.parametrize(
         "index",
         [
@@ -2733,8 +2894,8 @@ class TestFromArrow:
         at = mdf._query_compiler._modin_frame._partitions[0][0].get()
         assert len(at.column(0).chunks) == nchunks
 
-        mdt = mdf.dtypes[0]
-        pdt = pdf.dtypes[0]
+        mdt = mdf.dtypes.iloc[0]
+        pdt = pdf.dtypes.iloc[0]
         assert mdt == "category"
         assert isinstance(mdt, pandas.CategoricalDtype)
         assert str(mdt) == str(pdt)

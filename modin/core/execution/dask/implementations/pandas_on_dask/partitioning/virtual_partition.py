@@ -13,17 +13,17 @@
 
 """Module houses classes responsible for storing a virtual partition and applying a function to it."""
 
+import pandas
 from distributed import Future
 from distributed.utils import get_ip
-
-import pandas
 
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
-from .partition import PandasOnDaskDataframePartition
 from modin.core.execution.dask.common import DaskWrapper
 from modin.utils import _inherit_docstrings
+
+from .partition import PandasOnDaskDataframePartition
 
 
 class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
@@ -67,7 +67,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         result = [None] * len(self.list_of_block_partitions)
         for idx, partition in enumerate(self.list_of_block_partitions):
             partition.drain_call_queue()
-            result[idx] = partition._ip_cache
+            result[idx] = partition.ip(materialize=False)
         return result
 
     @classmethod
@@ -94,9 +94,11 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 *partitions,
             ),
             f_kwargs={"extract_metadata": extract_metadata},
-            num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
-            if extract_metadata
-            else num_splits,
+            num_returns=(
+                num_splits * (1 + cls._PARTITIONS_METADATA_LEN)
+                if extract_metadata
+                else num_splits
+            ),
             pure=False,
         )
 

@@ -13,14 +13,13 @@
 
 import sys
 import time
-from collections import OrderedDict
 from functools import partial
-import modin.pandas as pd
 
 import numpy as np
+import sklearnex
 import xgboost as xgb
 
-import sklearnex
+import modin.pandas as pd
 
 sklearnex.patch_sklearn()
 from sklearn.model_selection import train_test_split
@@ -29,7 +28,7 @@ from sklearn.preprocessing import LabelEncoder
 
 ################ helper functions ###############################
 def create_dtypes():
-    dtypes = OrderedDict(
+    dtypes = dict(
         [
             ("object_id", "int32"),
             ("mjd", "float32"),
@@ -56,7 +55,7 @@ def create_dtypes():
         "target",
     ]
     meta_dtypes = ["int32"] + ["float32"] * 4 + ["int32"] + ["float32"] * 5 + ["int32"]
-    meta_dtypes = OrderedDict(
+    meta_dtypes = dict(
         [(columns_names[i], meta_dtypes[i]) for i in range(len(meta_dtypes))]
     )
     return dtypes, meta_dtypes

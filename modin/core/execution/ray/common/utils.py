@@ -15,29 +15,31 @@
 
 import os
 import sys
-import psutil
-from packaging import version
-from typing import Optional
 import warnings
+from typing import Optional
 
+import psutil
 import ray
+from packaging import version
 
 from modin.config import (
-    StorageFormat,
-    IsRayCluster,
-    RayRedisAddress,
-    RayRedisPassword,
+    CIAWSAccessKeyID,
+    CIAWSSecretAccessKey,
     CpuCount,
+    GithubCI,
     GpuCount,
+    IsRayCluster,
     Memory,
     NPartitions,
+    RayRedisAddress,
+    RayRedisPassword,
+    StorageFormat,
     ValueSource,
-    GithubCI,
-    CIAWSSecretAccessKey,
-    CIAWSAccessKeyID,
 )
+from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
-from .engine_wrapper import RayWrapper
+
+from .engine_wrapper import ObjectRefTypes, RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
@@ -47,11 +49,7 @@ _MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 
 _RAY_IGNORE_UNHANDLED_ERRORS_VAR = "RAY_IGNORE_UNHANDLED_ERRORS"
 
-ObjectIDType = ray.ObjectRef
-if version.parse(ray.__version__) >= version.parse("1.2.0"):
-    from ray.util.client.common import ClientObjectRef
-
-    ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+ObjectIDType = ObjectRefTypes
 
 
 def initialize_ray(
@@ -81,7 +79,10 @@ def initialize_ray(
     # the `pandas` module has been fully imported inside of each process before
     # any execution begins:
     # https://github.com/modin-project/modin/pull/4603
-    env_vars = {"__MODIN_AUTOIMPORT_PANDAS__": "1"}
+    env_vars = {
+        "__MODIN_AUTOIMPORT_PANDAS__": "1",
+        "PYTHONWARNINGS": "ignore::FutureWarning",
+    }
     if GithubCI.get():
         # need these to write parquet to the moto service mocking s3.
         env_vars.update(
@@ -116,15 +117,6 @@ def initialize_ray(
                 **extra_init_kw,
             )
         else:
-            # This string is intentionally formatted this way. We want it indented in
-            # the warning message.
-            ErrorMessage.not_initialized(
-                "Ray",
-                f"""
-    import ray
-    ray.init({', '.join([f'{k}={v}' for k,v in extra_init_kw.items()])})
-""",
-            )
             object_store_memory = _get_object_store_memory()
             ray_init_kwargs = {
                 "num_cpus": CpuCount.get(),
@@ -142,14 +134,13 @@ def initialize_ray(
             # time and doesn't enforce us with any overhead that Ray's native `runtime_env`
             # is usually causing. You can visit this gh-issue for more info:
             # https://github.com/modin-project/modin/issues/5157#issuecomment-1500225150
-            for key, value in env_vars.items():
-                os.environ[key] = value
-            ray.init(**ray_init_kwargs)
+            with set_env(**env_vars):
+                ray.init(**ray_init_kwargs)
 
         if StorageFormat.get() == "Cudf":
             from modin.core.execution.ray.implementations.cudf_on_ray.partitioning import (
-                GPUManager,
                 GPU_MANAGERS,
+                GPUManager,
             )
 
             # Check that GPU_MANAGERS is empty because _update_engine can be called multiple times
@@ -162,12 +153,7 @@ def initialize_ray(
     runtime_env_vars = ray.get_runtime_context().runtime_env.get("env_vars", {})
     for varname, varvalue in env_vars.items():
         if str(runtime_env_vars.get(varname, "")) != str(varvalue):
-            if is_cluster or (
-                # Here we relax our requirements for a non-cluster case allowing for the `env_vars`
-                # to be set at least as a process environment variable
-                not is_cluster
-                and os.environ.get(varname, "") != str(varvalue)
-            ):
+            if is_cluster:
                 ErrorMessage.single_warning(
                     "When using a pre-initialized Ray cluster, please ensure that the runtime env "
                     + f"sets environment variable {varname} to {varvalue}"

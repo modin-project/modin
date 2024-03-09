@@ -7,9 +7,10 @@ Post the comment like the following to the PR:
 ```
 """
 
-from github import Github
 import os
 import sys
+
+from github import Github
 
 # Check if this is a pull request or not based on the environment variable
 try:

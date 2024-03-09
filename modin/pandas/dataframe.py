@@ -14,7 +14,26 @@
 """Module houses ``DataFrame`` class, that is distributed version of ``pandas.DataFrame``."""
 
 from __future__ import annotations
+
+import datetime
+import functools
+import itertools
+import os
+import re
+import sys
+import warnings
+from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+
+import numpy as np
 import pandas
+from pandas._libs import lib
+from pandas._typing import (
+    CompressionOptions,
+    FilePath,
+    IndexLabel,
+    StorageOptions,
+    WriteBuffer,
+)
 from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
@@ -24,49 +43,35 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
 )
 from pandas.core.indexes.frozen import FrozenList
-from pandas.util._validators import validate_bool_kwarg
 from pandas.io.formats.info import DataFrameInfo
-from pandas._libs import lib
-from pandas._typing import (
-    CompressionOptions,
-    WriteBuffer,
-    FilePath,
-    StorageOptions,
-)
+from pandas.util._validators import validate_bool_kwarg
 
-import datetime
-import re
-import itertools
-import functools
-import numpy as np
-import sys
-from typing import IO, Optional, Union, Iterator, Hashable, Sequence
-import warnings
-
+from modin.config import PersistentPickle
+from modin.error_message import ErrorMessage
 from modin.logging import disable_logging
 from modin.pandas import Categorical
-from modin.error_message import ErrorMessage
+from modin.pandas.io import from_non_pandas, from_pandas, to_pandas
 from modin.utils import (
-    _inherit_docstrings,
-    to_pandas,
-    hashable,
     MODIN_UNNAMED_SERIES_LABEL,
-    try_cast_to_pandas,
+    _inherit_docstrings,
     expanduser_path_arg,
+    hashable,
+    try_cast_to_pandas,
 )
-from modin.config import PersistentPickle
-from .utils import (
-    from_pandas,
-    from_non_pandas,
-    broadcast_item,
-    cast_function_modin2pandas,
-    SET_DATAFRAME_ATTRIBUTE_WARNING,
-)
+
+from .accessor import CachedAccessor, SparseFrameAccessor
+from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
+from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
 from .series import Series
-from .base import BasePandasDataset, _ATTRS_NO_LOOKUP
-from .groupby import DataFrameGroupBy
-from .accessor import CachedAccessor, SparseFrameAccessor
+from .utils import (
+    SET_DATAFRAME_ATTRIBUTE_WARNING,
+    _doc_binary_op,
+    cast_function_modin2pandas,
+)
+
+# Dictionary of extensions assigned to this class
+_DATAFRAME_EXTENSIONS_ = {}
 
 
 @_inherit_docstrings(
@@ -380,9 +385,7 @@ class DataFrame(BasePandasDataset):
         if not callable(func):
             raise ValueError("'{0}' object is not callable".format(type(func)))
         return self.__constructor__(
-            query_compiler=self._query_compiler.applymap(
-                func, na_action=na_action, **kwargs
-            )
+            query_compiler=self._query_compiler.map(func, na_action=na_action, **kwargs)
         )
 
     def applymap(self, func, na_action: Optional[str] = None, **kwargs):
@@ -400,12 +403,14 @@ class DataFrame(BasePandasDataset):
         result_type=None,
         args=(),
         by_row="compat",
+        engine="python",
+        engine_kwargs=None,
         **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Apply a function along an axis of the ``DataFrame``.
         """
-        if by_row != "compat":
+        if by_row != "compat" or engine != "python" or engine_kwargs:
             # TODO: add test
             return self._default_to_pandas(
                 pandas.DataFrame.apply,
@@ -415,6 +420,8 @@ class DataFrame(BasePandasDataset):
                 result_type=result_type,
                 args=args,
                 by_row=by_row,
+                engine=engine,
+                engine_kwargs=engine_kwargs,
                 **kwargs,
             )
 
@@ -522,7 +529,7 @@ class DataFrame(BasePandasDataset):
                     (hashable(o) and (o in self))
                     or isinstance(o, Series)
                     or (isinstance(o, pandas.Grouper) and o.key in self)
-                    or (is_list_like(o) and len(o) == len(self.axes[axis]))
+                    or (is_list_like(o) and len(o) == len(self._get_axis(axis)))
                 )
                 for o in by
             ):
@@ -552,7 +559,7 @@ class DataFrame(BasePandasDataset):
 
                 drop = True
             else:
-                mismatch = len(by) != len(self.axes[axis])
+                mismatch = len(by) != len(self._get_axis(axis))
                 if mismatch and all(
                     hashable(obj)
                     and (
@@ -965,26 +972,28 @@ class DataFrame(BasePandasDataset):
         )
 
     def hist(
-        self,
-        column=None,
+        data,
+        column: IndexLabel | None = None,
         by=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
         ax=None,
-        sharex=False,
-        sharey=False,
-        figsize=None,
-        layout=None,
-        bins=10,
-        **kwds,
+        sharex: bool = False,
+        sharey: bool = False,
+        figsize: tuple[int, int] | None = None,
+        layout: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Make a histogram of the ``DataFrame``.
         """
-        return self._default_to_pandas(
+        return data._default_to_pandas(
             pandas.DataFrame.hist,
             column=column,
             by=by,
@@ -999,7 +1008,9 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
     def info(
@@ -1095,6 +1106,26 @@ class DataFrame(BasePandasDataset):
         """
         return super(DataFrame, self).isin(values)
 
+    def isna(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(DataFrame, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(DataFrame, self).isnull()
+
     def iterrows(self):  # noqa: D200
         """
         Iterate over ``DataFrame`` rows as (index, ``Series``) pairs.
@@ -1166,8 +1197,8 @@ class DataFrame(BasePandasDataset):
         if isinstance(other, Series):
             if other.name is None:
                 raise ValueError("Other Series must have a name")
-            other = self.__constructor__({other.name: other})
-        if on is not None:
+            other = self.__constructor__(other)
+        if on is not None or how == "cross":
             return self.__constructor__(
                 query_compiler=self._query_compiler.join(
                     other._query_compiler,
@@ -1452,7 +1483,7 @@ class DataFrame(BasePandasDataset):
         margins=False,
         dropna=True,
         margins_name="All",
-        observed=False,
+        observed=lib.no_default,
         sort=True,
     ):  # noqa: PR01, RT01, D200
         """
@@ -1603,18 +1634,80 @@ class DataFrame(BasePandasDataset):
     # methods and fields we need to use pandas.DataFrame.query
     _AXIS_ORDERS = ["index", "columns"]
     _get_index_resolvers = pandas.DataFrame._get_index_resolvers
-    _get_axis_resolvers = pandas.DataFrame._get_axis_resolvers
-    _get_cleaned_column_resolvers = pandas.DataFrame._get_cleaned_column_resolvers
+
+    def _get_axis_resolvers(self, axis: str) -> dict:
+        # forked from pandas because we only want to update the index if there's more
+        # than one level of the index.
+        # index or columns
+        axis_index = getattr(self, axis)
+        d = {}
+        prefix = axis[0]
+
+        for i, name in enumerate(axis_index.names):
+            if name is not None:
+                key = level = name
+            else:
+                # prefix with 'i' or 'c' depending on the input axis
+                # e.g., you must do ilevel_0 for the 0th level of an unnamed
+                # multiiindex
+                key = f"{prefix}level_{i}"
+                level = i
+
+            level_values = axis_index.get_level_values(level)
+            s = level_values.to_series()
+            if axis_index.nlevels > 1:
+                s.index = axis_index
+            d[key] = s
+
+        # put the index/columns itself in the dict
+        if axis_index.nlevels > 2:
+            dindex = axis_index
+        else:
+            dindex = axis_index.to_series()
+
+        d[axis] = dindex
+        return d
+
+    def _get_cleaned_column_resolvers(self) -> dict[Hashable, Series]:  # noqa: RT01
+        """
+        Return the special character free column resolvers of a dataframe.
+
+        Column names with special characters are 'cleaned up' so that they can
+        be referred to by backtick quoting.
+        Used in `DataFrame.eval`.
+
+        Notes
+        -----
+        Copied from pandas.
+        """
+        from pandas.core.computation.parsing import clean_column_name
+
+        return {
+            clean_column_name(k): v for k, v in self.items() if not isinstance(k, int)
+        }
 
     def query(self, expr, inplace=False, **kwargs):  # noqa: PR01, RT01, D200
         """
         Query the columns of a ``DataFrame`` with a boolean expression.
         """
         self._update_var_dicts_in_kwargs(expr, kwargs)
+        self._validate_eval_query(expr, **kwargs)
         inplace = validate_bool_kwarg(inplace, "inplace")
-        new_query_compiler = pandas.DataFrame.query(
-            self, expr, inplace=False, **kwargs
-        )._query_compiler
+        # HACK: this condition kind of breaks the idea of backend agnostic API as all queries
+        # _should_ work fine for all of the engines using `pandas.DataFrame.query(...)` approach.
+        # However, at this point we know that we can execute simple queries way more efficiently
+        # using the QC's API directly in case of pandas backend. Ideally, we have to make it work
+        # with the 'pandas.query' approach the same as good the direct QC call is. But investigating
+        # and fixing the root cause of the perf difference appears to be much more complicated
+        # than putting this hack here. Hopefully, we'll get rid of it soon:
+        # https://github.com/modin-project/modin/issues/6499
+        try:
+            new_query_compiler = self._query_compiler.rowwise_query(expr, **kwargs)
+        except NotImplementedError:
+            # a non row-wise query was passed, falling back to pandas implementation
+            new_query_compiler = pandas.DataFrame.query(
+                self, expr, inplace=False, **kwargs
+            )._query_compiler
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
     def rename(
@@ -1932,9 +2025,12 @@ class DataFrame(BasePandasDataset):
         if axis is None and (len(self.columns) == 1 or len(self.index) == 1):
             return Series(query_compiler=self._query_compiler).squeeze()
         if axis == 1 and len(self.columns) == 1:
+            self._query_compiler._shape_hint = "column"
             return Series(query_compiler=self._query_compiler)
         if axis == 0 and len(self.index) == 1:
-            return Series(query_compiler=self.T._query_compiler)
+            qc = self.T._query_compiler
+            qc._shape_hint = "column"
+            return Series(query_compiler=qc)
         else:
             return self.copy()
 
@@ -2240,26 +2336,28 @@ class DataFrame(BasePandasDataset):
         compression="infer",
         storage_options=None,
     ):
-        return self.__constructor__(
-            query_compiler=self._query_compiler.default_to_pandas(
-                pandas.DataFrame.to_xml,
-                path_or_buffer=path_or_buffer,
-                index=index,
-                root_name=root_name,
-                row_name=row_name,
-                na_rep=na_rep,
-                attr_cols=attr_cols,
-                elem_cols=elem_cols,
-                namespaces=namespaces,
-                prefix=prefix,
-                encoding=encoding,
-                xml_declaration=xml_declaration,
-                pretty_print=pretty_print,
-                parser=parser,
-                stylesheet=stylesheet,
-                compression=compression,
-                storage_options=storage_options,
-            )
+        from modin.core.execution.dispatching.factories.dispatcher import (
+            FactoryDispatcher,
+        )
+
+        return FactoryDispatcher.to_xml(
+            self._query_compiler,
+            path_or_buffer=path_or_buffer,
+            index=index,
+            root_name=root_name,
+            row_name=row_name,
+            na_rep=na_rep,
+            attr_cols=attr_cols,
+            elem_cols=elem_cols,
+            namespaces=namespaces,
+            prefix=prefix,
+            encoding=encoding,
+            xml_declaration=xml_declaration,
+            pretty_print=pretty_print,
+            parser=parser,
+            stylesheet=stylesheet,
+            compression=compression,
+            storage_options=storage_options,
         )
 
     def to_timestamp(
@@ -2439,7 +2537,7 @@ class DataFrame(BasePandasDataset):
         try to get `key` from ``DataFrame`` fields.
         """
         try:
-            return object.__getattribute__(self, key)
+            return _DATAFRAME_EXTENSIONS_.get(key, object.__getattribute__(self, key))
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.columns:
                 return self[key]
@@ -2530,16 +2628,45 @@ class DataFrame(BasePandasDataset):
                         value = np.array(value)
                     if len(key) != value.shape[-1]:
                         raise ValueError("Columns must be same length as key")
-                item = broadcast_item(
-                    self,
-                    slice(None),
-                    key,
-                    value,
-                    need_columns_reindex=False,
-                )
-                new_qc = self._query_compiler.write_items(
-                    slice(None), self.columns.get_indexer_for(key), item
-                )
+                if isinstance(value, type(self)):
+                    # importing here to avoid circular import
+                    from .general import concat
+
+                    if not value.columns.equals(pandas.Index(key)):
+                        # we only need to change the labels, so shallow copy here
+                        value = value.copy(deep=False)
+                        value.columns = key
+
+                    # here we iterate over every column in the 'self' frame, then check if it's in the 'key'
+                    # and so has to be taken from either from the 'value' or from the 'self'. After that,
+                    # we concatenate those mixed column chunks and get a dataframe with updated columns
+                    to_concat = []
+                    # columns to take for this chunk
+                    to_take = []
+                    # whether columns in this chunk are in the 'key' and has to be taken from the 'value'
+                    get_cols_from_value = False
+                    # an object to take columns from for this chunk
+                    src_obj = self
+                    for col in self.columns:
+                        if (col in key) != get_cols_from_value:
+                            if len(to_take):
+                                to_concat.append(src_obj[to_take])
+                            to_take = [col]
+                            get_cols_from_value = not get_cols_from_value
+                            src_obj = value if get_cols_from_value else self
+                        else:
+                            to_take.append(col)
+                    if len(to_take):
+                        to_concat.append(src_obj[to_take])
+
+                    new_qc = concat(to_concat, axis=1)._query_compiler
+                else:
+                    new_qc = self._query_compiler.write_items(
+                        slice(None),
+                        self.columns.get_indexer_for(key),
+                        value,
+                        need_columns_reindex=False,
+                    )
                 self._update_inplace(new_qc)
                 # self.loc[:, key] = value
                 return
@@ -2646,6 +2773,23 @@ class DataFrame(BasePandasDataset):
         if key not in self:
             raise KeyError(key)
         self._update_inplace(new_query_compiler=self._query_compiler.delitem(key))
+
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        returns="tuple of two DataFrames",
+    )
+    def __divmod__(self, right):
+        return self._default_to_pandas(pandas.DataFrame.__divmod__, right)
+
+    @_doc_binary_op(
+        operation="integer division and modulo",
+        bin_op="divmod",
+        right="left",
+        returns="tuple of two DataFrames",
+    )
+    def __rdivmod__(self, left):
+        return self._default_to_pandas(pandas.DataFrame.__rdivmod__, left)
 
     __add__ = add
     __iadd__ = add  # pragma: no cover
@@ -2806,8 +2950,9 @@ class DataFrame(BasePandasDataset):
         # Series.__getitem__ treating keys as positions is deprecated. In a future version,
         # integer keys will always be treated as labels (consistent with DataFrame behavior).
         # To access a value by position, use `ser.iloc[pos]`
-        dtype = self.dtypes.iloc[0]
-        for t in self.dtypes:
+        dtypes = self._query_compiler.get_dtypes_set()
+        dtype = next(iter(dtypes))
+        for t in dtypes:
             if numeric_only and not is_numeric_dtype(t):
                 raise TypeError("{0} is not a numeric data type".format(t))
             elif not numeric_only and t != dtype:
@@ -2907,6 +3052,8 @@ class DataFrame(BasePandasDataset):
     def _to_pandas(self):
         """
         Convert Modin ``DataFrame`` to pandas ``DataFrame``.
+
+        Recommended conversion method: `dataframe.modin.to_pandas()`.
 
         Returns
         -------
@@ -3035,7 +3182,7 @@ class DataFrame(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler):
+    def _inflate_light(cls, query_compiler, source_pid):
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -3045,16 +3192,23 @@ class DataFrame(BasePandasDataset):
         ----------
         query_compiler : BaseQueryCompiler
             Query compiler to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `query_compiler`.
         """
+        if os.getpid() != source_pid:
+            return query_compiler.to_pandas()
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(query_compiler=query_compiler)
 
     @classmethod
-    def _inflate_full(cls, pandas_df):
+    def _inflate_full(cls, pandas_df, source_pid):
         """
         Re-creates the object from previously-serialized disk-storable representation.
 
@@ -3062,18 +3216,29 @@ class DataFrame(BasePandasDataset):
         ----------
         pandas_df : pandas.DataFrame
             Data to use for object re-creation.
+        source_pid : int
+            Determines whether a Modin or pandas object needs to be created.
+            Modin objects are created only on the main process.
 
         Returns
         -------
         DataFrame
             New ``DataFrame`` based on the `pandas_df`.
         """
+        if os.getpid() != source_pid:
+            return pandas_df
+        # The current logic does not involve creating Modin objects
+        # and manipulation with them in worker processes
         return cls(data=from_pandas(pandas_df))
 
     def __reduce__(self):
         self._query_compiler.finalize()
-        if PersistentPickle.get():
-            return self._inflate_full, (self._to_pandas(),)
-        return self._inflate_light, (self._query_compiler,)
+        pid = os.getpid()
+        if (
+            PersistentPickle.get()
+            or not self._query_compiler.support_materialization_in_worker_process()
+        ):
+            return self._inflate_full, (self._to_pandas(), pid)
+        return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END

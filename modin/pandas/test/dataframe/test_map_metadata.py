@@ -11,46 +11,46 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import matplotlib
 import numpy as np
 import pandas
+import pytest
 from pandas.testing import assert_index_equal, assert_series_equal
-import matplotlib
-import modin.pandas as pd
-from modin.utils import get_current_execution
 
+import modin.pandas as pd
+from modin.config import NPartitions, StorageFormat
+from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
+from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.test.utils import (
-    random_state,
-    RAND_LOW,
     RAND_HIGH,
-    df_equals,
-    df_is_empty,
+    RAND_LOW,
     arg_keys,
-    name_contains,
-    test_data,
-    test_data_values,
-    test_data_keys,
-    test_data_with_duplicates_values,
-    test_data_with_duplicates_keys,
-    numeric_dfs,
-    test_func_keys,
-    test_func_values,
-    indices_keys,
-    indices_values,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    int_arg_keys,
-    int_arg_values,
-    eval_general,
     create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    df_is_empty,
+    eval_general,
+    indices_keys,
+    indices_values,
+    int_arg_keys,
+    int_arg_values,
+    name_contains,
+    numeric_dfs,
+    random_state,
+    test_data,
+    test_data_keys,
+    test_data_values,
+    test_data_with_duplicates_keys,
+    test_data_with_duplicates_values,
+    test_func_keys,
+    test_func_values,
 )
-from modin.config import NPartitions, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
-from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
+from modin.utils import get_current_execution
 
 NPartitions.put(4)
 
@@ -439,7 +439,6 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
-        check_exception_type=True,
     )
 
 
@@ -601,7 +600,8 @@ class TestCategoricalProxyDtype:
             return df.dtypes["a"], original_dtype, df
         elif StorageFormat.get() == "Hdk":
             import pyarrow as pa
-            from modin.pandas.utils import from_arrow
+
+            from modin.pandas.io import from_arrow
 
             at = pa.concat_tables(
                 [
@@ -816,7 +816,6 @@ def test_convert_dtypes_dtype_backend(dtype_backend):
     StorageFormat.get() == "Hdk",
     reason="HDK does not support columns with different types",
 )
-@pytest.mark.xfail(reason="https://github.com/pandas-dev/pandas/issues/54848")
 def test_convert_dtypes_multiple_row_partitions():
     # Column 0 should have string dtype
     modin_part1 = pd.DataFrame(["a"]).convert_dtypes()
@@ -845,7 +844,7 @@ def test_convert_dtypes_5653():
         assert modin_df._query_compiler._modin_frame._partitions.shape == (2, 1)
     modin_df = modin_df.convert_dtypes()
     assert len(modin_df.dtypes) == 1
-    assert modin_df.dtypes[0] == "string"
+    assert modin_df.dtypes.iloc[0] == "string"
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -863,7 +862,7 @@ def test_clip(request, data, axis, bound_type):
             else len(modin_df.columns)
         )
         # set bounds
-        lower, upper = np.sort(random_state.random_integers(RAND_LOW, RAND_HIGH, 2))
+        lower, upper = np.sort(random_state.randint(RAND_LOW, RAND_HIGH, 2))
 
         # test only upper scalar bound
         modin_result = modin_df.clip(None, upper, axis=axis)
@@ -875,8 +874,8 @@ def test_clip(request, data, axis, bound_type):
         pandas_result = pandas_df.clip(lower, upper, axis=axis)
         df_equals(modin_result, pandas_result)
 
-        lower = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
-        upper = random_state.random_integers(RAND_LOW, RAND_HIGH, ind_len)
+        lower = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
+        upper = random_state.randint(RAND_LOW, RAND_HIGH, ind_len)
 
         if bound_type == "series":
             modin_lower = pd.Series(lower)
@@ -1590,26 +1589,20 @@ def test_transpose(data):
         ({"A": [1, 2, 3], "B": [400, 500, 600]}, {"B": [4, np.nan, 6]}),
     ],
 )
-@pytest.mark.parametrize(
-    "raise_errors", bool_arg_values, ids=arg_keys("raise_errors", bool_arg_keys)
-)
-def test_update(data, other_data, raise_errors):
+@pytest.mark.parametrize("errors", ["raise", "ignore"])
+def test_update(data, other_data, errors):
     modin_df, pandas_df = create_test_dfs(data)
     other_modin_df, other_pandas_df = create_test_dfs(other_data)
-
-    if raise_errors:
-        kwargs = {"errors": "raise"}
-    else:
-        kwargs = {}
 
     eval_general(
         modin_df,
         pandas_df,
-        lambda df: df.update(other_modin_df)
-        if isinstance(df, pd.DataFrame)
-        else df.update(other_pandas_df),
+        lambda df: (
+            df.update(other_modin_df, errors=errors)
+            if isinstance(df, pd.DataFrame)
+            else df.update(other_pandas_df, errors=errors)
+        ),
         __inplace__=True,
-        **kwargs,
     )
 
 

@@ -61,17 +61,18 @@ For the purpose of demonstration, we will load in modin as ``pd`` and pandas as
   #############################################
   import time
   import ray
+  # Look at the Ray documentation with respect to the Ray configuration suited to you most.
   ray.init()
   #############################################
 
-In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv>`_ to run the example locally.
+In this toy example, we look at the NYC taxi dataset, which is around 200MB in size. You can download `this dataset <https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv>`_ to run the example locally.
 
 .. code-block:: python
 
   # This may take a few minutes to download
   import urllib.request
-  s3_path = "https://modin-datasets.s3.amazonaws.com/testing/yellow_tripdata_2015-01.csv"
-  urllib.request.urlretrieve(s3_path, "taxi.csv")  
+  dataset_url = "https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv"
+  urllib.request.urlretrieve(dataset_url, "taxi.csv")  
 
 Faster Data Loading with ``read_csv``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,7 +81,7 @@ Faster Data Loading with ``read_csv``
    
   start = time.time()
 
-  pandas_df = pandas.read_csv(s3_path, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
+  pandas_df = pandas.read_csv(dataset_url, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
 
   end = time.time()
   pandas_duration = end - start
@@ -93,7 +94,7 @@ for loading in the data in parallel.
 
   start = time.time()
 
-  modin_df = pd.read_csv(s3_path, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
+  modin_df = pd.read_csv(dataset_url, parse_dates=["tpep_pickup_datetime", "tpep_dropoff_datetime"], quoting=3)
 
   end = time.time()
   modin_duration = end - start

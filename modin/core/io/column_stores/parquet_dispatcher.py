@@ -13,25 +13,27 @@
 
 """Module houses `ParquetDispatcher` class, that is used for reading `.parquet` files."""
 
+import json
 import os
 import re
-import json
+from typing import TYPE_CHECKING
 
 import fsspec
-from fsspec.core import url_to_fs
-from fsspec.spec import AbstractBufferedFile
 import numpy as np
-from pandas.io.common import stringify_path
 import pandas
 import pandas._libs.lib as lib
+from fsspec.core import url_to_fs
+from fsspec.spec import AbstractBufferedFile
 from packaging import version
+from pandas.io.common import stringify_path
 
-from modin.core.storage_formats.pandas.utils import compute_chunksize
-from modin.config import NPartitions
-
-
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.io.column_stores.column_store_dispatcher import ColumnStoreDispatcher
+from modin.error_message import ErrorMessage
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
 
 
 class ColumnStoreDataset:
@@ -283,19 +285,33 @@ class FastParquetDataset(ColumnStoreDataset):
     def to_pandas_dataframe(self, columns):
         return self.dataset.to_pandas(columns=columns)
 
+    # Karthik Velayutham writes:
+    #
+    # fastparquet doesn't have a nice method like PyArrow, so we
+    # have to copy some of their logic here while we work on getting
+    # an easier method to get a list of valid files.
+    # See: https://github.com/dask/fastparquet/issues/795
     def _get_fastparquet_files(self):  # noqa: GL08
-        # fastparquet doesn't have a nice method like PyArrow, so we
-        # have to copy some of their logic here while we work on getting
-        # an easier method to get a list of valid files.
-        # See: https://github.com/dask/fastparquet/issues/795
         if "*" in self.path:
             files = self.fs.glob(self.path)
         else:
-            files = [
-                f
-                for f in self.fs.find(self.path)
-                if f.endswith(".parquet") or f.endswith(".parq")
-            ]
+            # (Resolving issue #6778)
+            #
+            # Users will pass in a directory to a delta table, which stores parquet
+            # files in various directories along with other, non-parquet files. We
+            # need to identify those parquet files and not the non-parquet files.
+            #
+            # However, we also need to support users passing in explicit files that
+            # don't necessarily have the `.parq` or `.parquet` extension -- if a user
+            # says that a file is parquet, then we should probably give it a shot.
+            if self.fs.isfile(self.path):
+                files = self.fs.find(self.path)
+            else:
+                files = [
+                    f
+                    for f in self.fs.find(self.path)
+                    if f.endswith(".parquet") or f.endswith(".parq")
+                ]
         return files
 
 
@@ -351,19 +367,102 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             raise ValueError("engine must be one of 'pyarrow', 'fastparquet'")
 
     @classmethod
-    def call_deploy(cls, dataset, col_partitions, storage_options, **kwargs):
+    def _determine_partitioning(
+        cls, dataset: ColumnStoreDataset
+    ) -> "list[list[ParquetFileToRead]]":
+        """
+        Determine which partition will read certain files/row groups of the dataset.
+
+        Parameters
+        ----------
+        dataset : ColumnStoreDataset
+
+        Returns
+        -------
+        list[list[ParquetFileToRead]]
+            Each element in the returned list describes a list of files that a partition has to read.
+        """
+        from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
+
+        parquet_files = dataset.files
+        row_groups_per_file = dataset.row_groups_per_file
+        num_row_groups = sum(row_groups_per_file)
+
+        if num_row_groups == 0:
+            return []
+
+        num_splits = min(NPartitions.get(), num_row_groups)
+        part_size = num_row_groups // num_splits
+        # If 'num_splits' does not divide 'num_row_groups' then we can't cover all of
+        # the row groups using the original 'part_size'. According to the 'reminder'
+        # there has to be that number of partitions that should read 'part_size + 1'
+        # number of row groups.
+        reminder = num_row_groups % num_splits
+        part_sizes = [part_size] * (num_splits - reminder) + [part_size + 1] * reminder
+
+        partition_files = []
+        file_idx = 0
+        row_group_idx = 0
+        row_groups_left_in_current_file = row_groups_per_file[file_idx]
+        # this is used for sanity check at the end, verifying that we indeed added all of the row groups
+        total_row_groups_added = 0
+        for size in part_sizes:
+            row_groups_taken = 0
+            part_files = []
+            while row_groups_taken != size:
+                if row_groups_left_in_current_file < 1:
+                    file_idx += 1
+                    row_group_idx = 0
+                    row_groups_left_in_current_file = row_groups_per_file[file_idx]
+
+                to_take = min(size - row_groups_taken, row_groups_left_in_current_file)
+                part_files.append(
+                    ParquetFileToRead(
+                        parquet_files[file_idx],
+                        row_group_start=row_group_idx,
+                        row_group_end=row_group_idx + to_take,
+                    )
+                )
+                row_groups_left_in_current_file -= to_take
+                row_groups_taken += to_take
+                row_group_idx += to_take
+
+            total_row_groups_added += row_groups_taken
+            partition_files.append(part_files)
+
+        sanity_check = (
+            len(partition_files) == num_splits
+            and total_row_groups_added == num_row_groups
+        )
+        ErrorMessage.catch_bugs_and_request_email(
+            failure_condition=not sanity_check,
+            extra_log="row groups added does not match total num of row groups across parquet files",
+        )
+        return partition_files
+
+    @classmethod
+    def call_deploy(
+        cls,
+        partition_files: "list[list[ParquetFileToRead]]",
+        col_partitions: "list[list[str]]",
+        storage_options: dict,
+        engine: str,
+        **kwargs,
+    ):
         """
         Deploy remote tasks to the workers with passed parameters.
 
         Parameters
         ----------
-        dataset : Dataset
-            Dataset object of Parquet file/files.
-        col_partitions : list
+        partition_files : list[list[ParquetFileToRead]]
+            List of arrays with files that should be read by each partition.
+        col_partitions : list[list[str]]
             List of arrays with columns names that should be read
             by each partition.
         storage_options : dict
             Parameters for specific storage engine.
+        engine : {"auto", "pyarrow", "fastparquet"}
+            Parquet library to use for reading.
         **kwargs : dict
             Parameters of deploying read_* function.
 
@@ -372,66 +471,10 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         List
             Array with references to the task deploy result for each partition.
         """
-        from modin.core.storage_formats.pandas.parsers import ParquetFileToRead
-
         # If we don't have any columns to read, we should just return an empty
         # set of references.
         if len(col_partitions) == 0:
             return []
-
-        row_groups_per_file = dataset.row_groups_per_file
-        num_row_groups = sum(row_groups_per_file)
-        parquet_files = dataset.files
-
-        # step determines how many row groups are going to be in a partition
-        step = compute_chunksize(
-            num_row_groups,
-            NPartitions.get(),
-            min_block_size=1,
-        )
-        current_partition_size = 0
-        file_index = 0
-        partition_files = []  # 2D array - each element contains list of chunks to read
-        row_groups_used_in_current_file = 0
-        total_row_groups_added = 0
-        # On each iteration, we add a chunk of one file. That will
-        # take us either to the end of a partition, or to the end
-        # of a file.
-        while total_row_groups_added < num_row_groups:
-            if current_partition_size == 0:
-                partition_files.append([])
-            partition_file = partition_files[-1]
-            file_path = parquet_files[file_index]
-            row_group_start = row_groups_used_in_current_file
-            row_groups_left_in_file = (
-                row_groups_per_file[file_index] - row_groups_used_in_current_file
-            )
-            row_groups_left_for_this_partition = step - current_partition_size
-            if row_groups_left_for_this_partition <= row_groups_left_in_file:
-                # File has at least what we need to finish partition
-                # So finish this partition and start a new one.
-                num_row_groups_to_add = row_groups_left_for_this_partition
-                current_partition_size = 0
-            else:
-                # File doesn't have enough to complete this partition. Add
-                # it into current partition and go to next file.
-                num_row_groups_to_add = row_groups_left_in_file
-                current_partition_size += num_row_groups_to_add
-            if num_row_groups_to_add == row_groups_left_in_file:
-                file_index += 1
-                row_groups_used_in_current_file = 0
-            else:
-                row_groups_used_in_current_file += num_row_groups_to_add
-            partition_file.append(
-                ParquetFileToRead(
-                    file_path, row_group_start, row_group_start + num_row_groups_to_add
-                )
-            )
-            total_row_groups_added += num_row_groups_to_add
-
-        assert (
-            total_row_groups_added == num_row_groups
-        ), "row groups added does not match total num of row groups across parquet files"
 
         all_partitions = []
         for files_to_read in partition_files:
@@ -442,7 +485,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                         f_kwargs={
                             "files_for_parser": files_to_read,
                             "columns": cols,
-                            "engine": dataset.engine,
+                            "engine": engine,
                             "storage_options": storage_options,
                             **kwargs,
                         },
@@ -604,6 +647,110 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         return complete_index, range_index or (len(index_columns) == 0)
 
     @classmethod
+    def _normalize_partitioning(cls, remote_parts, row_lengths, column_widths):
+        """
+        Normalize partitioning according to the default partitioning scheme in Modin.
+
+        The result of 'read_parquet()' is often under partitioned over rows and over partitioned
+        over columns, so this method expands the number of row splits and shrink the number of column splits.
+
+        Parameters
+        ----------
+        remote_parts : np.ndarray
+        row_lengths : list of ints or None
+            Row lengths, if 'None', won't repartition across rows.
+        column_widths : list of ints
+
+        Returns
+        -------
+        remote_parts : np.ndarray
+        row_lengths : list of ints or None
+        column_widths : list of ints
+        """
+        if len(remote_parts) == 0:
+            return remote_parts, row_lengths, column_widths
+
+        from modin.core.storage_formats.pandas.utils import get_length_list
+
+        # The code in this function is actually a duplication of what 'BaseQueryCompiler.repartition()' does,
+        # however this implementation works much faster for some reason
+
+        actual_row_nparts = remote_parts.shape[0]
+
+        if row_lengths is not None:
+            desired_row_nparts = max(
+                1, min(sum(row_lengths) // MinPartitionSize.get(), NPartitions.get())
+            )
+        else:
+            desired_row_nparts = actual_row_nparts
+
+        # only repartition along rows if the actual number of row splits 1.5 times SMALLER than desired
+        if 1.5 * actual_row_nparts < desired_row_nparts:
+            # assuming that the sizes of parquet's row groups are more or less equal,
+            # so trying to use the same number of splits for each partition
+            splits_per_partition = desired_row_nparts // actual_row_nparts
+            remainder = desired_row_nparts % actual_row_nparts
+
+            new_parts = []
+            new_row_lengths = []
+
+            for row_idx, (part_len, row_parts) in enumerate(
+                zip(row_lengths, remote_parts)
+            ):
+                num_splits = splits_per_partition
+                # 'remainder' indicates how many partitions have to be split into 'num_splits + 1' splits
+                # to have exactly 'desired_row_nparts' in the end
+                if row_idx < remainder:
+                    num_splits += 1
+
+                if num_splits == 1:
+                    new_parts.append(row_parts)
+                    new_row_lengths.append(part_len)
+                    continue
+
+                offset = len(new_parts)
+                # adding empty row parts according to the number of splits
+                new_parts.extend([[] for _ in range(num_splits)])
+                for part in row_parts:
+                    split = cls.frame_cls._partition_mgr_cls._column_partitions_class(
+                        [part]
+                    ).apply(
+                        lambda df: df,
+                        num_splits=num_splits,
+                        maintain_partitioning=False,
+                    )
+                    for i in range(num_splits):
+                        new_parts[offset + i].append(split[i])
+
+                new_row_lengths.extend(get_length_list(part_len, num_splits))
+
+            remote_parts = np.array(new_parts)
+            row_lengths = new_row_lengths
+
+        desired_col_nparts = max(
+            1, min(sum(column_widths) // MinPartitionSize.get(), NPartitions.get())
+        )
+        # only repartition along cols if the actual number of col splits 1.5 times BIGGER than desired
+        if 1.5 * desired_col_nparts < remote_parts.shape[1]:
+            remote_parts = np.array(
+                [
+                    (
+                        cls.frame_cls._partition_mgr_cls._row_partition_class(
+                            row_parts
+                        ).apply(
+                            lambda df: df,
+                            num_splits=desired_col_nparts,
+                            maintain_partitioning=False,
+                        )
+                    )
+                    for row_parts in remote_parts
+                ]
+            )
+            column_widths = get_length_list(sum(column_widths), desired_col_nparts)
+
+        return remote_parts, row_lengths, column_widths
+
+    @classmethod
     def build_query_compiler(cls, dataset, columns, index_columns, **kwargs):
         """
         Build query compiler from deployed tasks outputs.
@@ -627,9 +774,13 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         storage_options = kwargs.pop("storage_options", {}) or {}
         filters = kwargs.get("filters", None)
 
-        col_partitions, column_widths = cls.build_columns(columns)
+        partition_files = cls._determine_partitioning(dataset)
+        col_partitions, column_widths = cls.build_columns(
+            columns,
+            num_row_parts=len(partition_files),
+        )
         partition_ids = cls.call_deploy(
-            dataset, col_partitions, storage_options, **kwargs
+            partition_files, col_partitions, storage_options, dataset.engine, **kwargs
         )
         index, sync_index = cls.build_index(
             dataset, partition_ids, index_columns, filters
@@ -639,6 +790,19 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             row_lengths = [part.length() for part in remote_parts.T[0]]
         else:
             row_lengths = None
+
+        remote_parts, row_lengths, column_widths = cls._normalize_partitioning(
+            remote_parts, row_lengths, column_widths
+        )
+
+        if (
+            dataset.pandas_metadata
+            and "column_indexes" in dataset.pandas_metadata
+            and len(dataset.pandas_metadata["column_indexes"]) == 1
+            and dataset.pandas_metadata["column_indexes"][0]["numpy_type"] == "int64"
+        ):
+            columns = pandas.Index(columns).astype("int64").to_list()
+
         frame = cls.frame_cls(
             remote_parts,
             index,
@@ -771,6 +935,7 @@ class ParquetDispatcher(ColumnStoreDispatcher):
         **kwargs : dict
             Parameters for `pandas.to_parquet(**kwargs)`.
         """
+        kwargs["path"] = stringify_path(kwargs["path"])
         output_path = kwargs["path"]
         if not isinstance(output_path, str):
             return cls.base_io.to_parquet(qc, **kwargs)
@@ -792,9 +957,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
             """
             compression = kwargs["compression"]
             partition_idx = kw["partition_idx"]
-            kwargs[
-                "path"
-            ] = f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            kwargs["path"] = (
+                f"{output_path}/part-{partition_idx:04d}.{compression}.parquet"
+            )
             df.to_parquet(**kwargs)
             return pandas.DataFrame()
 

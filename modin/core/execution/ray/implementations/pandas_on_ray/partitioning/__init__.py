@@ -16,9 +16,9 @@
 from .partition import PandasOnRayDataframePartition
 from .partition_manager import PandasOnRayDataframePartitionManager
 from .virtual_partition import (
-    PandasOnRayDataframeVirtualPartition,
     PandasOnRayDataframeColumnPartition,
     PandasOnRayDataframeRowPartition,
+    PandasOnRayDataframeVirtualPartition,
 )
 
 __all__ = [

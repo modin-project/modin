@@ -17,18 +17,17 @@ Module houses `BaseIO` class.
 `BaseIO` is base class for IO classes, that stores IO functions.
 """
 
-from collections import OrderedDict
 from typing import Any
 
 import pandas
-from pandas.util._decorators import doc
 from pandas._libs.lib import no_default
+from pandas.util._decorators import doc
 
+from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
-from modin.utils import _inherit_docstrings
 from modin.pandas.io import ExcelFile
+from modin.utils import _inherit_docstrings
 
 _doc_default_io_method = """
 {summary} using pandas.
@@ -116,6 +115,30 @@ class BaseIO:
             QueryCompiler containing data from the DataFrame.
         """
         return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
+
+    @classmethod
+    def from_ray_dataset(cls, ray_obj):
+        """
+        Create a Modin `query_compiler` from a Ray Dataset.
+
+        Parameters
+        ----------
+        ray_obj : ray.data.Dataset
+            The Ray Dataset to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Ray Dataset.
+
+        Notes
+        -----
+        Ray Dataset can only be converted to a Modin Dataframe if Modin uses a Ray engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine."
+        )
 
     @classmethod
     @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
@@ -273,8 +296,8 @@ class BaseIO:
     @doc(
         _doc_default_io_method,
         summary="Read an Excel file into query compiler",
-        returns="""BaseQueryCompiler or dict/OrderedDict :
-    QueryCompiler or OrderedDict/dict with read data.""",
+        returns="""BaseQueryCompiler or dict :
+    QueryCompiler or dict with read data.""",
     )
     def read_excel(cls, **kwargs):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_excel`")
@@ -285,7 +308,7 @@ class BaseIO:
             # pd.ExcelFile in `read_excel` isn't supported
             kwargs["io"]._set_pandas_mode()
         intermediate = pandas.read_excel(**kwargs)
-        if isinstance(intermediate, (OrderedDict, dict)):
+        if isinstance(intermediate, dict):
             parsed = type(intermediate)()
             for key in intermediate.keys():
                 parsed[key] = cls.from_pandas(intermediate.get(key))
@@ -479,6 +502,8 @@ class BaseIO:
         widths=None,
         infer_nrows=100,
         dtype_backend=no_default,
+        iterator=False,
+        chunksize=None,
         **kwds,
     ):  # noqa: PR01
         ErrorMessage.default_to_pandas("`read_fwf`")
@@ -488,6 +513,8 @@ class BaseIO:
             widths=widths,
             infer_nrows=infer_nrows,
             dtype_backend=dtype_backend,
+            iterator=iterator,
+            chunksize=chunksize,
             **kwds,
         )
         if isinstance(pd_obj, pandas.DataFrame):
@@ -649,10 +676,38 @@ class BaseIO:
         return obj.to_csv(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_json, apilink="pandas.DataFrame.to_json")
+    def to_json(cls, obj, path, **kwargs):  # noqa: PR01
+        """
+        Convert the object to a JSON string.
+
+        For parameters description please refer to pandas API.
+        """
+        ErrorMessage.default_to_pandas("`to_json`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_json(path, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(pandas.DataFrame.to_xml, apilink="pandas.DataFrame.to_xml")
+    def to_xml(cls, obj, path_or_buffer, **kwargs):  # noqa: PR01
+        """
+        Convert the object to a XML string.
+
+        For parameters description please refer to pandas API.
+        """
+        ErrorMessage.default_to_pandas("`to_xml`")
+        if isinstance(obj, BaseQueryCompiler):
+            obj = obj.to_pandas()
+
+        return obj.to_xml(path_or_buffer, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(
         pandas.DataFrame.to_parquet, apilink="pandas.DataFrame.to_parquet"
     )
-    def to_parquet(cls, obj, **kwargs):  # noqa: PR01
+    def to_parquet(cls, obj, path, **kwargs):  # noqa: PR01
         """
         Write object to the binary parquet format using pandas.
 
@@ -662,4 +717,28 @@ class BaseIO:
         if isinstance(obj, BaseQueryCompiler):
             obj = obj.to_pandas()
 
-        return obj.to_parquet(**kwargs)
+        return obj.to_parquet(path, **kwargs)
+
+    @classmethod
+    def to_ray_dataset(cls, modin_obj):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to convert.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine."
+        )

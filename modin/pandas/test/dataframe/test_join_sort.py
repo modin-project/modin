@@ -11,33 +11,33 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
+import warnings
+
+import matplotlib
 import numpy as np
 import pandas
-import matplotlib
+import pytest
 
 import modin.pandas as pd
-from modin.utils import to_pandas
-
+from modin.config import Engine, NPartitions, RangePartitioning, StorageFormat
+from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
-    create_test_dfs,
-    random_state,
-    df_equals,
     arg_keys,
-    test_data_values,
-    test_data_keys,
     axis_keys,
     axis_values,
     bool_arg_keys,
     bool_arg_values,
-    test_data,
-    generate_multiindex,
-    eval_general,
-    rotate_decimal_digits_or_symbols,
-    extra_test_parameters,
+    create_test_dfs,
     default_to_pandas_ignore_string,
+    df_equals,
+    eval_general,
+    generate_multiindex,
+    random_state,
+    rotate_decimal_digits_or_symbols,
+    test_data,
+    test_data_keys,
+    test_data_values,
 )
-from modin.config import NPartitions, Engine, StorageFormat
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 NPartitions.put(4)
@@ -52,6 +52,13 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 # Initialize env for storage format detection in @pytest.mark.*
 pd.DataFrame()
+
+
+def df_equals_and_sort(df1, df2):
+    """Sort dataframe's rows and run ``df_equals()`` for them."""
+    df1 = df1.sort_values(by=df1.columns.tolist(), ignore_index=True)
+    df2 = df2.sort_values(by=df2.columns.tolist(), ignore_index=True)
+    df_equals(df1, df2)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -166,6 +173,19 @@ def test_join(test_data, test_data2):
         df_equals(modin_join, pandas_join)
 
 
+def test_join_cross_6786():
+    data = [[7, 8, 9], [10, 11, 12]]
+    modin_df, pandas_df = create_test_dfs(data, columns=["x", "y", "z"])
+
+    modin_join = modin_df.join(
+        modin_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    pandas_join = pandas_df.join(
+        pandas_df[["x"]].set_axis(["p", "q"], axis=0), how="cross", lsuffix="p"
+    )
+    df_equals(modin_join, pandas_join)
+
+
 def test_join_5203():
     data = np.ones([2, 4])
     kwargs = {"columns": ["a", "b", "c", "d"]}
@@ -181,6 +201,30 @@ def test_join_5203():
             dfs[0].join([dfs[1], dfs[2]], how="inner", on="a")
 
 
+def test_join_6602():
+    abbreviations = pd.Series(
+        ["Major League Baseball", "National Basketball Association"],
+        index=["MLB", "NBA"],
+    )
+    teams = pd.DataFrame(
+        {
+            "name": ["Mariners", "Lakers"] * 50,
+            "league_abbreviation": ["MLB", "NBA"] * 50,
+        }
+    )
+
+    with warnings.catch_warnings():
+        # check that join doesn't show UserWarning
+        warnings.filterwarnings(
+            "error", "Distributing <class 'dict'> object", category=UserWarning
+        )
+        teams.set_index("league_abbreviation").join(abbreviations.rename("league_name"))
+
+
+@pytest.mark.skipif(
+    RangePartitioning.get() and StorageFormat.get() == "Hdk",
+    reason="Doesn't make sense for HDK",
+)
 @pytest.mark.parametrize(
     "test_data, test_data2",
     [
@@ -203,6 +247,10 @@ def test_join_5203():
     ],
 )
 def test_merge(test_data, test_data2):
+    # RangePartitioning merge always produces sorted result, so we have to sort
+    # pandas' result as well in order them to match
+    comparator = df_equals_and_sort if RangePartitioning.get() else df_equals
+
     modin_df = pd.DataFrame(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
@@ -235,7 +283,7 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
-            df_equals(modin_result, pandas_result)
+            comparator(modin_result, pandas_result)
 
             modin_result = modin_df.merge(
                 modin_df2,
@@ -251,7 +299,7 @@ def test_merge(test_data, test_data2):
                 right_on="key",
                 sort=sorts[j],
             )
-            df_equals(modin_result, pandas_result)
+            comparator(modin_result, pandas_result)
 
     # Test for issue #1771
     modin_df = pd.DataFrame({"name": np.arange(40)})
@@ -260,7 +308,7 @@ def test_merge(test_data, test_data2):
     pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
     modin_result = modin_df.merge(modin_df2, on="name", how="inner")
     pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
-    df_equals(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -281,7 +329,7 @@ def test_merge(test_data, test_data2):
         # Defaults
         modin_result = modin_df.merge(modin_df2, how=how)
         pandas_result = pandas_df.merge(pandas_df2, how=how)
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_index
         modin_result = modin_df.merge(
@@ -290,7 +338,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_index=True
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_index and right_on
         modin_result = modin_df.merge(
@@ -299,7 +347,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_on="col1"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_on col1
         modin_result = modin_df.merge(
@@ -308,7 +356,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_on="col1"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_on and right_on col2
         modin_result = modin_df.merge(
@@ -317,7 +365,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col2", right_on="col2"
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -326,7 +374,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_index=True
         )
-        df_equals(modin_result, pandas_result)
+        comparator(modin_result, pandas_result)
 
     # Cannot merge a Series without a name
     ps = pandas.Series(frame_data2.get("col1"))
@@ -335,6 +383,7 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+        comparator=comparator,
     )
 
     # merge a Series with a name
@@ -344,10 +393,18 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
+        comparator=comparator,
     )
 
     with pytest.raises(TypeError):
         modin_df.merge("Non-valid type")
+
+
+def test_merge_empty():
+    data = np.random.uniform(0, 100, size=(2**6, 2**6))
+    pandas_df = pandas.DataFrame(data)
+    modin_df = pd.DataFrame(data)
+    eval_general(modin_df, pandas_df, lambda df: df.merge(df.iloc[:0]))
 
 
 def test_merge_with_mi_columns():
@@ -450,6 +507,36 @@ def test_merge_on_index(has_index_cache):
         )
 
 
+@pytest.mark.parametrize(
+    "left_index", [[], ["key"], ["key", "b"], ["key", "b", "c"], ["b"], ["b", "c"]]
+)
+@pytest.mark.parametrize(
+    "right_index", [[], ["key"], ["key", "e"], ["key", "e", "f"], ["e"], ["e", "f"]]
+)
+def test_merge_on_single_index(left_index, right_index):
+    """
+    Test ``.merge()`` method when merging on a single column, that is located in an index level of one of the frames.
+    """
+    modin_df1, pandas_df1 = create_test_dfs(
+        {"b": [3, 4, 4, 5], "key": [1, 1, 2, 2], "c": [2, 3, 2, 2], "d": [2, 1, 3, 1]}
+    )
+    if len(left_index):
+        modin_df1 = modin_df1.set_index(left_index)
+        pandas_df1 = pandas_df1.set_index(left_index)
+
+    modin_df2, pandas_df2 = create_test_dfs(
+        {"e": [3, 4, 4, 5], "f": [2, 3, 2, 2], "key": [1, 1, 2, 2], "h": [2, 1, 3, 1]}
+    )
+    if len(right_index):
+        modin_df2 = modin_df2.set_index(right_index)
+        pandas_df2 = pandas_df2.set_index(right_index)
+    eval_general(
+        (modin_df1, modin_df2),
+        (pandas_df1, pandas_df2),
+        lambda dfs: dfs[0].merge(dfs[1], on="key"),
+    )
+
+
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize(
     "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
@@ -521,11 +608,11 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "first",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         pytest.param(
             "first,last",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "first,last,middle",
     ],
@@ -544,12 +631,12 @@ def test_sort_multiindex(sort_remaining):
     [
         pytest.param(
             "mergesort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
         "quicksort",
         pytest.param(
             "heapsort",
-            marks=pytest.mark.skipif(not extra_test_parameters, reason="extra"),
+            marks=pytest.mark.exclude_by_default,
         ),
     ],
 )

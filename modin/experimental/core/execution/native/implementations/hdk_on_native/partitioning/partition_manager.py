@@ -13,23 +13,24 @@
 
 """Module provides a partition manager class for ``HdkOnNativeDataframe`` frame."""
 
-from modin.error_message import ErrorMessage
-from modin.pandas.utils import is_scalar
-import numpy as np
+import re
 
+import numpy as np
+import pandas
+import pyarrow
+
+from modin.config import DoUseCalcite
 from modin.core.dataframe.pandas.partitioning.partition_manager import (
     PandasDataframePartitionManager,
 )
-from ..dataframe.utils import ColNameCodec
-from ..partitioning.partition import HdkOnNativeDataframePartition
-from ..db_worker import DbTable, DbWorker
+from modin.error_message import ErrorMessage
+from modin.pandas.utils import is_scalar
+
 from ..calcite_builder import CalciteBuilder
 from ..calcite_serializer import CalciteSerializer
-from modin.config import DoUseCalcite
-
-import pyarrow
-import pandas
-import re
+from ..dataframe.utils import ColNameCodec, is_supported_arrow_type
+from ..db_worker import DbTable, DbWorker
+from ..partitioning.partition import HdkOnNativeDataframePartition
 
 
 class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
@@ -65,23 +66,12 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
             Tuple holding array of partitions, list of columns with unsupported
             data and optionally partitions' dimensions.
         """
-        at, unsupported_cols = cls._get_unsupported_cols(df)
-
-        if len(unsupported_cols) > 0:
-            # Putting pandas frame into partitions instead of arrow table, because we know
-            # that all of operations with this frame will be default to pandas and don't want
-            # unnecessaries conversion pandas->arrow->pandas
-            parts = [[cls._partition_class(df)]]
-            if not return_dims:
-                return np.array(parts), unsupported_cols
-            else:
-                row_lengths = [len(df)]
-                col_widths = [len(df.columns)]
-                return np.array(parts), row_lengths, col_widths, unsupported_cols
+        unsupported_cols = cls._get_unsupported_cols(df)
+        parts = np.array([[cls._partition_class(df)]])
+        if not return_dims:
+            return parts, unsupported_cols
         else:
-            # Since we already have arrow table, putting it into partitions instead
-            # of pandas frame, to skip that phase when we will be putting our frame to HDK
-            return cls.from_arrow(at, return_dims, unsupported_cols, encode_col_names)
+            return parts, [len(df)], [len(df.columns)], unsupported_cols
 
     @classmethod
     def from_arrow(
@@ -116,16 +106,14 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         else:
             encoded_at = at
 
-        parts = [[cls._partition_class(encoded_at)]]
+        parts = np.array([[cls._partition_class(encoded_at)]])
         if unsupported_cols is None:
-            _, unsupported_cols = cls._get_unsupported_cols(at)
+            unsupported_cols = cls._get_unsupported_cols(at)
 
         if not return_dims:
-            return np.array(parts), unsupported_cols
+            return parts, unsupported_cols
         else:
-            row_lengths = [at.num_rows]
-            col_widths = [at.num_columns]
-            return np.array(parts), row_lengths, col_widths, unsupported_cols
+            return parts, [at.num_rows], [at.num_columns], unsupported_cols
 
     @classmethod
     def _get_unsupported_cols(cls, obj):
@@ -139,9 +127,8 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
 
         Returns
         -------
-        tuple
-            Arrow representation of `obj` (for future using) and a list of
-            unsupported columns.
+        list
+            List of unsupported columns.
         """
         if isinstance(obj, (pandas.Series, pandas.DataFrame)):
             # picking first rows from cols with `dtype="object"` to check its actual type,
@@ -162,10 +149,10 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                 ]
 
             if len(unsupported_cols) > 0:
-                return None, unsupported_cols
+                return unsupported_cols
 
             try:
-                at = pyarrow.Table.from_pandas(obj, preserve_index=False)
+                schema = pyarrow.Schema.from_pandas(obj, preserve_index=False)
             except (
                 pyarrow.lib.ArrowTypeError,
                 pyarrow.lib.ArrowInvalid,
@@ -197,34 +184,14 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
                     unsupported_cols.extend(match)
 
                 if len(unsupported_cols) == 0:
-                    unsupported_cols = obj.columns
-                return None, unsupported_cols
-            else:
-                obj = at
+                    unsupported_cols = obj.columns.tolist()
+                return unsupported_cols
+        else:
+            schema = obj.schema
 
-        def is_supported_dtype(dtype):
-            """Check whether the passed pyarrow `dtype` is supported by HDK."""
-            if (
-                pyarrow.types.is_string(dtype)
-                or pyarrow.types.is_time(dtype)
-                or pyarrow.types.is_dictionary(dtype)
-                or pyarrow.types.is_null(dtype)
-            ):
-                return True
-            if isinstance(dtype, pyarrow.ExtensionType) or pyarrow.types.is_duration(
-                dtype
-            ):
-                return False
-            try:
-                pandas_dtype = dtype.to_pandas_dtype()
-                return pandas_dtype != np.dtype("O")
-            except NotImplementedError:
-                return False
-
-        return (
-            obj,
-            [field.name for field in obj.schema if not is_supported_dtype(field.type)],
-        )
+        return [
+            field.name for field in schema if not is_supported_arrow_type(field.type)
+        ]
 
     @classmethod
     def run_exec_plan(cls, plan):
@@ -282,11 +249,9 @@ class HdkOnNativeDataframePartitionManager(PandasDataframePartitionManager):
         -------
         DbTable
         """
-        table = frame._partitions[0][0].get()
-        if isinstance(table, pandas.DataFrame):
-            table = worker.import_pandas_dataframe(table)
-            frame._partitions[0][0] = cls._partition_class(table)
-        elif isinstance(table, pyarrow.Table):
+        part = frame._partitions[0][0]
+        table = part.get(part.raw)
+        if isinstance(table, pyarrow.Table):
             if table.num_columns == 0:
                 # Tables without columns are not supported.
                 # Creating an empty table with index columns only.

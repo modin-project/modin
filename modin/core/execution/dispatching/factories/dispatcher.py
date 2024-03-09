@@ -17,9 +17,9 @@ Contain IO dispatcher class.
 Dispatcher routes the work to execution-specific functions.
 """
 
-from modin.config import Engine, StorageFormat, IsExperimental
+from modin.config import Engine, IsExperimental, StorageFormat
 from modin.core.execution.dispatching.factories import factories
-from modin.utils import get_current_execution, _inherit_docstrings
+from modin.utils import _inherit_docstrings, get_current_execution
 
 
 class FactoryNotFoundError(AttributeError):
@@ -118,41 +118,33 @@ class FactoryDispatcher(object):
         return cls.__factory
 
     @classmethod
-    # FIXME: replace `_` parameter with `*args`
-    def _update_factory(cls, _):
+    def _update_factory(cls, *args):
         """
         Update and prepare factory with a new one specified via Modin config.
 
         Parameters
         ----------
-        _ : object
+        *args : iterable
             This parameters serves the compatibility purpose.
             Does not affect the result.
         """
         factory_name = get_current_execution() + "Factory"
+        experimental_factory_name = "Experimental" + factory_name
         try:
-            cls.__factory = getattr(factories, factory_name)
+            cls.__factory = getattr(factories, factory_name, None) or getattr(
+                factories, experimental_factory_name
+            )
         except AttributeError:
-            if factory_name == "ExperimentalOmnisciOnRayFactory":
-                msg = (
-                    "OmniSci storage format no longer needs Ray engine; "
-                    + "please specify MODIN_ENGINE='native'"
-                )
-                raise FactoryNotFoundError(msg)
             if not IsExperimental.get():
-                # allow missing factories in experimenal mode only
-                if hasattr(factories, "Experimental" + factory_name):
-                    msg = (
-                        "{0} is only accessible through the experimental API.\nRun "
-                        + "`import modin.experimental.pandas as pd` to use {0}."
-                    )
-                else:
-                    msg = (
-                        "Cannot find factory {}. "
-                        + "Potential reason might be incorrect environment variable value for "
-                        + f"{StorageFormat.varname} or {Engine.varname}"
-                    )
-                raise FactoryNotFoundError(msg.format(factory_name))
+                # allow missing factories in experimental mode only
+                msg = (
+                    "Cannot find neither factory {} nor experimental factory {}. "
+                    + "Potential reason might be incorrect environment variable value for "
+                    + f"{StorageFormat.varname} or {Engine.varname}"
+                )
+                raise FactoryNotFoundError(
+                    msg.format(factory_name, experimental_factory_name)
+                )
             cls.__factory = StubFactory.set_failing_name(factory_name)
         else:
             try:
@@ -190,6 +182,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_dataframe(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_ray_dataset)
+    def from_ray_dataset(cls, ray_obj):
+        return cls.get_factory()._from_ray_dataset(ray_obj)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.get_factory()._read_parquet(**kwargs)
@@ -200,16 +197,14 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_csv(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_csv_glob)
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_csv_glob)
     def read_csv_glob(cls, **kwargs):
         return cls.get_factory()._read_csv_glob(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(
-        factories.ExperimentalPandasOnRayFactory._read_pickle_distributed
-    )
-    def read_pickle_distributed(cls, **kwargs):
-        return cls.get_factory()._read_pickle_distributed(**kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_glob)
+    def read_pickle_glob(cls, **kwargs):
+        return cls.get_factory()._read_pickle_glob(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
@@ -267,6 +262,11 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_sql(**kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_sql_distributed)
+    def read_sql_distributed(cls, **kwargs):
+        return cls.get_factory()._read_sql_distributed(**kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_fwf)
     def read_fwf(cls, **kwargs):
         return cls.get_factory()._read_fwf(**kwargs)
@@ -297,14 +297,42 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_pickle(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(
-        factories.ExperimentalPandasOnRayFactory._to_pickle_distributed
-    )
-    def to_pickle_distributed(cls, *args, **kwargs):
-        return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_glob)
+    def to_pickle_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_pickle_glob(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.ExperimentalPandasOnRayFactory._read_custom_text)
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_parquet_glob)
+    def read_parquet_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_parquet_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_parquet_glob)
+    def to_parquet_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_parquet_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_json_glob)
+    def read_json_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_json_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_json_glob)
+    def to_json_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_json_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_xml_glob)
+    def read_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_xml_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_xml_glob)
+    def to_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_custom_text)
     def read_custom_text(cls, **kwargs):
         return cls.get_factory()._read_custom_text(**kwargs)
 
@@ -314,6 +342,21 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_csv(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_json)
+    def to_json(cls, *args, **kwargs):
+        return cls.get_factory()._to_json(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_xml)
+    def to_xml(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_parquet)
     def to_parquet(cls, *args, **kwargs):
         return cls.get_factory()._to_parquet(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_ray_dataset)
+    def to_ray_dataset(cls, modin_obj):
+        return cls.get_factory()._to_ray_dataset(modin_obj)

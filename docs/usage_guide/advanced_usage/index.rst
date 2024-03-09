@@ -12,6 +12,7 @@ Advanced Usage
    modin_xgboost
    modin_logging
    batch
+   modin_engines
 
 .. meta::
     :description lang=en:
@@ -20,18 +21,36 @@ Advanced Usage
 Modin aims to not only optimize pandas, but also provide a comprehensive,
 integrated toolkit for data scientists. We are actively developing data science tools
 such as DataFrame spreadsheet integration, DataFrame algebra, progress bars, SQL queries
-on DataFrames, and more. Join us on `Slack`_ and `Discourse`_ for the latest updates!
+on DataFrames, and more. Join us on `Slack`_ for the latest updates!
 
-Experimental APIs
------------------
+Modin engines
+-------------
 
-Modin also supports these experimental APIs on top of pandas that are under active development.
+Modin supports a series of execution engines such as Ray_, Dask_, `MPI through unidist`_, `HDK`_,
+each of which might be a more beneficial choice for a specific scenario. When doing the first operation
+with Modin it automatically initializes one of the engines to further perform distributed/parallel computation.
+If you are familiar with a concrete execution engine, it is possible to initialize the engine on your own and
+Modin will automatically attach to it. Refer to :doc:`Modin engines </usage_guide/advanced_usage/modin_engines>` page
+for more details.
 
+Additional APIs
+---------------
+
+Modin also supports these additional APIs on top of pandas to improve user experience.
+
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pandas` -- convert Modin DataFrame/Series to Pandas DataFrame/Series.
+- :py:meth:`~modin.pandas.DataFrame.modin.to_ray_dataset` -- convert Modin DataFrame/Series to Ray Dataset.
 - :py:func:`~modin.experimental.pandas.read_csv_glob` -- read multiple files in a directory
 - :py:func:`~modin.experimental.pandas.read_sql` -- add optional parameters for the database connection
 - :py:func:`~modin.experimental.pandas.read_custom_text` -- read custom text data from file
-- :py:func:`~modin.experimental.pandas.read_pickle_distributed`  -- read multiple files in a directory
-- :py:meth:`~modin.experimental.pandas.DataFrame.to_pickle_distributed` -- write to multiple files in a directory
+- :py:func:`~modin.experimental.pandas.read_pickle_glob`  -- read multiple pickle files in a directory
+- :py:func:`~modin.experimental.pandas.read_parquet_glob`  -- read multiple parquet files in a directory
+- :py:func:`~modin.experimental.pandas.read_json_glob`  -- read multiple json files in a directory
+- :py:func:`~modin.experimental.pandas.read_xml_glob`  -- read multiple xml files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_pickle_glob` -- write to multiple pickle files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_parquet_glob` -- write to multiple parquet files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_json_glob` -- write to multiple json files in a directory
+- :py:meth:`~modin.pandas.DataFrame.modin.to_xml_glob` -- write to multiple xml files in a directory
 
 DataFrame partitioning API
 --------------------------
@@ -109,8 +128,11 @@ downloaded as an artifact from the GitHub Actions tab for further inspection. Se
 .. _`Modin Spreadsheet API documentation`: spreadsheets_api.html
 .. _`Progress Bar documentation`: progress_bar.html
 .. _`Paper`: https://arxiv.org/pdf/2001.00888.pdf
-.. _`Discourse`: https://discuss.modin.org
 .. _`Slack`: https://modin.org/slack.html
 .. _`tqdm`: https://github.com/tqdm/tqdm
 .. _`distributed XGBoost`: https://medium.com/intel-analytics-software/distributed-xgboost-with-modin-on-ray-fc17edef7720
 .. _`fuzzydata`: https://github.com/suhailrehman/fuzzydata
+.. _Ray: https://github.com/ray-project/ray
+.. _Dask: https://github.com/dask/distributed
+.. _`MPI through unidist`: https://github.com/modin-project/unidist
+.. _HDK: https://github.com/intel-ai/hdk

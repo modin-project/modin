@@ -13,17 +13,17 @@
 
 """Module houses `ExperimentalCSVGlobDispatcher` class, that is used for reading multiple `.csv` files simultaneously."""
 
-from contextlib import ExitStack
 import csv
 import glob
 import os
-from typing import List, Tuple
 import warnings
-import fsspec
+from contextlib import ExitStack
+from typing import List, Tuple
 
+import fsspec
 import pandas
 import pandas._libs.lib as lib
-from pandas.io.common import is_url, is_fsspec_url, stringify_path
+from pandas.io.common import is_fsspec_url, is_url, stringify_path
 
 from modin.config import NPartitions
 from modin.core.io.file_dispatcher import OpenFile
@@ -68,7 +68,9 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
                     reason=cls._file_not_found_msg(filepath_or_buffer),
                     **kwargs,
                 )
-            filepath_or_buffer = cls.get_path(filepath_or_buffer)
+            filepath_or_buffer = cls.get_path(
+                filepath_or_buffer, kwargs.get("storage_options")
+            )
         elif not cls.pathlib_or_pypath(filepath_or_buffer):
             return cls.single_worker_read(
                 filepath_or_buffer,
@@ -284,9 +286,9 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
 
         try:
             from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
                 ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
             )
 
             credential_error_type = (
@@ -314,7 +316,7 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         return exists or len(fs.glob(file_path)) > 0
 
     @classmethod
-    def get_path(cls, file_path: str) -> list:
+    def get_path(cls, file_path: str, storage_options=None) -> list:
         """
         Return the path of the file(s).
 
@@ -322,6 +324,8 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
         ----------
         file_path : str
             String representing a path.
+        storage_options : dict, optional
+            Keyword from `read_*` functions.
 
         Returns
         -------
@@ -335,9 +339,9 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
 
         try:
             from botocore.exceptions import (
-                NoCredentialsError,
-                EndpointConnectionError,
                 ConnectTimeoutError,
+                EndpointConnectionError,
+                NoCredentialsError,
             )
 
             credential_error_type = (
@@ -363,11 +367,17 @@ class ExperimentalCSVGlobDispatcher(CSVDispatcher):
             fs_addresses = [fs_handle.unstrip_protocol(path) for path in file_paths]
             return fs_addresses
 
-        fs, _ = fsspec.core.url_to_fs(file_path)
+        if storage_options is not None:
+            new_storage_options = dict(storage_options)
+            new_storage_options.pop("anon", None)
+        else:
+            new_storage_options = {}
+
+        fs, _ = fsspec.core.url_to_fs(file_path, **new_storage_options)
         try:
             return get_file_path(fs)
         except credential_error_type:
-            fs, _ = fsspec.core.url_to_fs(file_path, anon=True)
+            fs, _ = fsspec.core.url_to_fs(file_path, anon=True, **new_storage_options)
         return get_file_path(fs)
 
     @classmethod

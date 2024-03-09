@@ -15,9 +15,9 @@ from ..utils import (
     ASV_USE_IMPL,
     IMPL,
     execute,
+    get_benchmark_shapes,
     get_shape_id,
     prepare_io_data_parquet,
-    get_benchmark_shapes,
 )
 
 

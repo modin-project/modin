@@ -13,19 +13,14 @@
 
 """Implement utils for pandas component."""
 
-from typing import Iterator, Tuple, Optional
+from typing import Iterator, Optional, Tuple
 
-from pandas.util._decorators import doc
-from pandas._typing import (
-    AggFuncType,
-    AggFuncTypeBase,
-    AggFuncTypeDict,
-    IndexLabel,
-)
-import pandas
 import numpy as np
+import pandas
+from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
+from pandas.util._decorators import doc
 
-from modin.utils import hashable
+from modin.utils import func_from_deprecated_location, hashable
 
 _doc_binary_operation = """
 Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
@@ -45,97 +40,30 @@ SET_DATAFRAME_ATTRIBUTE_WARNING = (
     + "https://pandas.pydata.org/pandas-docs/stable/indexing.html#attribute-access"
 )
 
-
-def from_non_pandas(df, index, columns, dtype):
-    """
-    Convert a non-pandas DataFrame into Modin DataFrame.
-
-    Parameters
-    ----------
-    df : object
-        Non-pandas DataFrame.
-    index : object
-        Index for non-pandas DataFrame.
-    columns : object
-        Columns for non-pandas DataFrame.
-    dtype : type
-        Data type to force.
-
-    Returns
-    -------
-    modin.pandas.DataFrame
-        Converted DataFrame.
-    """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-
-    new_qc = FactoryDispatcher.from_non_pandas(df, index, columns, dtype)
-    if new_qc is not None:
-        from .dataframe import DataFrame
-
-        return DataFrame(query_compiler=new_qc)
-    return new_qc
-
-
-def from_pandas(df):
-    """
-    Convert a pandas DataFrame to a Modin DataFrame.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The pandas DataFrame to convert.
-
-    Returns
-    -------
-    modin.pandas.DataFrame
-        A new Modin DataFrame object.
-    """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    from .dataframe import DataFrame
-
-    return DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
-
-
-def from_arrow(at):
-    """
-    Convert an Arrow Table to a Modin DataFrame.
-
-    Parameters
-    ----------
-    at : Arrow Table
-        The Arrow Table to convert from.
-
-    Returns
-    -------
-    DataFrame
-        A new Modin DataFrame object.
-    """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    from .dataframe import DataFrame
-
-    return DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
-
-
-def from_dataframe(df):
-    """
-    Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
-
-    See more about the protocol in https://data-apis.org/dataframe-protocol/latest/index.html.
-
-    Parameters
-    ----------
-    df : DataFrame
-        The DataFrame object supporting the dataframe exchange protocol.
-
-    Returns
-    -------
-    DataFrame
-        A new Modin DataFrame object.
-    """
-    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
-    from .dataframe import DataFrame
-
-    return DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
+from_pandas = func_from_deprecated_location(
+    "from_pandas",
+    "modin.pandas.io",
+    "Importing ``from_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+from_arrow = func_from_deprecated_location(
+    "from_arrow",
+    "modin.pandas.io",
+    "Importing ``from_arrow`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+from_dataframe = func_from_deprecated_location(
+    "from_dataframe",
+    "modin.pandas.io",
+    "Importing ``from_dataframe`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
+from_non_pandas = func_from_deprecated_location(
+    "from_non_pandas",
+    "modin.pandas.io",
+    "Importing ``from_non_pandas`` from ``modin.pandas.utils`` is deprecated and will be removed in a future version. "
+    + "This function was moved to ``modin.pandas.io``, please import it from there instead.",
+)
 
 
 def cast_function_modin2pandas(func):
@@ -182,6 +110,7 @@ def is_scalar(obj):
         True if given object is scalar and False otherwise.
     """
     from pandas.api.types import is_scalar as pandas_is_scalar
+
     from .base import BasePandasDataset
 
     return not isinstance(obj, BasePandasDataset) and pandas_is_scalar(obj)
@@ -302,7 +231,7 @@ def broadcast_item(
 
     Parameters
     ----------
-    obj : DataFrame or Series
+    obj : DataFrame or Series or query compiler
         The object containing the necessary information about the axes.
     row_lookup : slice or scalar
         The global row index to locate inside of `item`.
@@ -316,8 +245,9 @@ def broadcast_item(
 
     Returns
     -------
-    np.ndarray
-        `item` after it was broadcasted to `to_shape`.
+    (np.ndarray, Optional[Series])
+        * np.ndarray - `item` after it was broadcasted to `to_shape`.
+        * Series - item's dtypes.
 
     Raises
     ------
@@ -345,6 +275,7 @@ def broadcast_item(
     )
     to_shape = new_row_len, new_col_len
 
+    dtypes = None
     if isinstance(item, (pandas.Series, pandas.DataFrame, Series, DataFrame)):
         # convert indices in lookups to names, as pandas reindex expects them to be so
         axes_to_reindex = {}
@@ -358,12 +289,21 @@ def broadcast_item(
         # New value for columns/index make that reindex add NaN values
         if axes_to_reindex:
             item = item.reindex(**axes_to_reindex)
+
+        dtypes = item.dtypes
+        if not isinstance(dtypes, pandas.Series):
+            dtypes = pandas.Series([dtypes])
+
     try:
+        # Cast to numpy drop information about heterogeneous types (cast to common)
+        # TODO: we shouldn't do that, maybe there should be the if branch
         item = np.array(item)
+        if dtypes is None:
+            dtypes = pandas.Series([item.dtype] * len(col_lookup))
         if np.prod(to_shape) == np.prod(item.shape):
-            return item.reshape(to_shape)
+            return item.reshape(to_shape), dtypes
         else:
-            return np.broadcast_to(item, to_shape)
+            return np.broadcast_to(item, to_shape), dtypes
     except ValueError:
         from_shape = np.array(item).shape
         raise ValueError(

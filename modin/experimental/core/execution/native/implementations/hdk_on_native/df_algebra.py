@@ -14,23 +14,19 @@
 """Module provides classes for lazy DataFrame algebra operations."""
 
 import abc
-
-import typing
-from typing import TYPE_CHECKING, List, Dict, Union
-from collections import OrderedDict
-
-import pandas
-from pandas.core.dtypes.common import is_string_dtype
+from typing import TYPE_CHECKING, Dict, List, Union
 
 import numpy as np
+import pandas
 import pyarrow as pa
+from pandas.core.dtypes.common import is_string_dtype
 
-from modin.utils import _inherit_docstrings
 from modin.pandas.indexing import is_range_like
+from modin.utils import _inherit_docstrings
 
-from .expr import InputRefExpr, LiteralExpr, OpExpr
-from .dataframe.utils import ColNameCodec, EMPTY_ARROW_TABLE, get_common_arrow_type
+from .dataframe.utils import EMPTY_ARROW_TABLE, ColNameCodec, get_common_arrow_type
 from .db_worker import DbTable
+from .expr import InputRefExpr, LiteralExpr, OpExpr
 
 if TYPE_CHECKING:
     from .dataframe.dataframe import HdkOnNativeDataframe
@@ -434,7 +430,9 @@ class FrameNode(DFAlgNode):
         """
         frame = self.modin_frame
         if frame._partitions is not None:
-            return frame._partitions[0][0].get()
+            part = frame._partitions[0][0]
+            to_arrow = part.raw and not frame._has_unsupported_data
+            return part.get(to_arrow)
         if frame._has_unsupported_data:
             return pandas.DataFrame(
                 index=frame._index_cache, columns=frame._columns_cache
@@ -836,6 +834,48 @@ class JoinNode(DFAlgNode):
         self.exprs = exprs
         self.condition = condition
 
+    @property
+    def by_rowid(self):
+        """
+        Return True if this is a join by the rowid column.
+
+        Returns
+        -------
+        bool
+        """
+        return (
+            isinstance(self.condition, OpExpr)
+            and self.condition.op == "="
+            and all(
+                isinstance(o, InputRefExpr) and o.column == ColNameCodec.ROWID_COL_NAME
+                for o in self.condition.operands
+            )
+        )
+
+    @_inherit_docstrings(DFAlgNode.require_executed_base)
+    def require_executed_base(self) -> bool:
+        return self.by_rowid and any(
+            not isinstance(i._op, FrameNode) for i in self.input
+        )
+
+    @_inherit_docstrings(DFAlgNode.can_execute_arrow)
+    def can_execute_arrow(self) -> bool:
+        return self.by_rowid and all(
+            isinstance(e, InputRefExpr) for e in self.exprs.values()
+        )
+
+    @_inherit_docstrings(DFAlgNode.execute_arrow)
+    def execute_arrow(self, tables: List[pa.Table]) -> pa.Table:
+        t1 = tables[0]
+        t2 = tables[1]
+        cols1 = t1.column_names
+        cols = [
+            (t1 if (col := ColNameCodec.encode(e.column)) in cols1 else t2).column(col)
+            for e in self.exprs.values()
+        ]
+        names = [ColNameCodec.encode(c) for c in self.exprs]
+        return pa.table(cols, names)
+
     def copy(self):
         """
         Make a shallow copy of the node.
@@ -973,7 +1013,7 @@ class UnionNode(DFAlgNode):
         except pa.lib.ArrowInvalid:
             # Probably, some tables have different column types.
             # Trying to find a common type and cast the columns.
-            fields: typing.OrderedDict[str, pa.Field] = OrderedDict()
+            fields: Dict[str, pa.Field] = {}
             for table in tables:
                 for col_name in table.column_names:
                     field = table.field(col_name)
@@ -1180,7 +1220,7 @@ def translate_exprs_to_base(exprs, base):
         new_frames.discard(base)
         frames = new_frames
 
-    res = OrderedDict()
+    res = {}
     for col in exprs.keys():
         res[col] = new_exprs[col]
     return res
@@ -1207,7 +1247,7 @@ def replace_frame_in_exprs(exprs, old_frame, new_frame):
     mapper = InputMapper()
     mapper.add_mapper(old_frame, FrameMapper(new_frame))
 
-    res = OrderedDict()
+    res = {}
     for col in exprs.keys():
         res[col] = exprs[col].translate_input(mapper)
     return res

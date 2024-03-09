@@ -17,23 +17,24 @@ Module houses `TextFileDispatcher` class.
 `TextFileDispatcher` contains utils for text formats files, inherits util functions for
 files from `FileDispatcher` class and can be used as base class for dipatchers of SQL queries.
 """
-import warnings
-import os
-import io
 import codecs
-from typing import Union, Sequence, Optional, Tuple, Callable
+import io
+import os
+import warnings
 from csv import QUOTE_NONE
+from typing import Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas
 import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
+from pandas.io.common import stringify_path
 
+from modin.config import NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
+from modin.core.io.text.utils import CustomNewlineIterator
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.utils import _inherit_docstrings
-from modin.core.io.text.utils import CustomNewlineIterator
-from modin.config import NPartitions
 
 ColumnNamesTypes = Tuple[Union[pandas.Index, pandas.MultiIndex]]
 IndexColType = Union[int, str, bool, Sequence[int], Sequence[str], None]
@@ -581,11 +582,15 @@ class TextFileDispatcher(FileDispatcher):
             # if num_splits == 4, len(column_names) == 80 and column_chunksize == 32,
             # column_widths will be [32, 32, 16, 0]
             column_widths = [
-                column_chunksize
-                if len(column_names) > (column_chunksize * (i + 1))
-                else 0
-                if len(column_names) < (column_chunksize * i)
-                else len(column_names) - (column_chunksize * i)
+                (
+                    column_chunksize
+                    if len(column_names) > (column_chunksize * (i + 1))
+                    else (
+                        0
+                        if len(column_names) < (column_chunksize * i)
+                        else len(column_names) - (column_chunksize * i)
+                    )
+                )
                 for i in range(num_splits)
             ]
 
@@ -997,6 +1002,7 @@ class TextFileDispatcher(FileDispatcher):
         new_query_compiler : BaseQueryCompiler
             Query compiler with imported data for further processing.
         """
+        filepath_or_buffer = stringify_path(filepath_or_buffer)
         filepath_or_buffer_md = (
             cls.get_path(filepath_or_buffer)
             if isinstance(filepath_or_buffer, str)

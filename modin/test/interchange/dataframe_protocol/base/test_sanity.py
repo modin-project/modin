@@ -14,8 +14,8 @@
 """Basic sanity checks for the DataFrame exchange protocol."""
 
 import pytest
-import modin.pandas as pd
 
+import modin.pandas as pd
 from modin.pandas.test.utils import default_to_pandas_ignore_string
 
 
@@ -41,7 +41,7 @@ def test_basic_io(get_unique_base_execution):
     query_compiler_cls.from_dataframe = dummy_io_method
     query_compiler_cls.to_dataframe = dummy_io_method
 
-    from modin.pandas.utils import from_dataframe
+    from modin.pandas.io import from_dataframe
 
     with pytest.raises(TestPassed):
         from_dataframe(None)

@@ -11,14 +11,14 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-import pytest
 import pickle
+
 import numpy as np
+import pytest
 
 import modin.pandas as pd
 from modin.config import PersistentPickle
-
-from modin.pandas.test.utils import df_equals
+from modin.pandas.test.utils import create_test_dfs, df_equals
 
 
 @pytest.fixture
@@ -45,6 +45,33 @@ def persistent(request):
 def test_dataframe_pickle(modin_df, persistent):
     other = pickle.loads(pickle.dumps(modin_df))
     df_equals(modin_df, other)
+
+
+def test__reduce__():
+    # `DataFrame.__reduce__` will be called implicitly when lambda expressions are
+    # pre-processed for the distributed engine.
+    dataframe_data = ["Major League Baseball", "National Basketball Association"]
+    abbr_md, abbr_pd = create_test_dfs(dataframe_data, index=["MLB", "NBA"])
+    # breakpoint()
+
+    dataframe_data = {
+        "name": ["Mariners", "Lakers"] * 500,
+        "league_abbreviation": ["MLB", "NBA"] * 500,
+    }
+    teams_md, teams_pd = create_test_dfs(dataframe_data)
+
+    result_md = (
+        teams_md.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_md[0].loc[abbr])
+        .rename("league")
+    )
+
+    result_pd = (
+        teams_pd.set_index("name")
+        .league_abbreviation.apply(lambda abbr: abbr_pd[0].loc[abbr])
+        .rename("league")
+    )
+    df_equals(result_md, result_pd)
 
 
 def test_column_pickle(modin_column, modin_df, persistent):
