@@ -43,6 +43,7 @@ jobs:
         run: |
           python -m pytest modin/pandas/test/dataframe/test_binary.py
           python -m pytest modin/pandas/test/dataframe/test_default.py
+          MODIN_RANGE_PARTITIONING=1 python -m pytest modin/pandas/test/dataframe/test_default.py -k "pivot_table"
           python -m pytest modin/pandas/test/dataframe/test_indexing.py
           python -m pytest modin/pandas/test/dataframe/test_iter.py
           python -m pytest modin/pandas/test/dataframe/test_join_sort.py

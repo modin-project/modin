@@ -22,7 +22,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NPartitions, RangePartitioning, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     axis_keys,
@@ -701,12 +701,20 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         and "int_data" in request.node.callspec.id
     ):
         raising_exceptions = TypeError("'numpy.float64' object is not callable")
+
+    def pivot_fn(df, *args, **kwargs):
+        # https://github.com/modin-project/modin/issues/2144
+        axis_to_sort = int(index is not None)
+        res = df.pivot_table(*args, **kwargs).sort_index(axis=axis_to_sort)
+        if RangePartitioning.get() and axis_to_sort != 0:
+            # https://github.com/modin-project/modin/issues/6875
+            res = res.sort_index(axis=0)
+        return res
+
     eval_general(
         md_df,
         pd_df,
-        operation=lambda df, *args, **kwargs: df.pivot_table(
-            *args, **kwargs
-        ).sort_index(axis=int(index is not None)),
+        operation=pivot_fn,
         index=index,
         columns=columns,
         values=values,

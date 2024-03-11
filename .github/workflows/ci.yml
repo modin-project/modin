@@ -188,7 +188,6 @@ jobs:
       - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
       - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-      - run: MODIN_RANGE_PARTITIONING=1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py -k "merge"
       - run: python -m pytest modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
       - run: python -m pytest modin/pandas/test/test_series.py
@@ -604,6 +603,7 @@ jobs:
                   modin/pandas/test/dataframe/test_binary.py \
                   modin/pandas/test/dataframe/test_default.py \
                   modin/pandas/test/dataframe/test_iter.py
+          MODIN_RANGE_PARTITIONING=1 ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_default.py -k "pivot_table"
         if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
