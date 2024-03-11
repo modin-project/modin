@@ -118,8 +118,6 @@ def gen_int_data(
     """
     Generate int data with caching.
 
-    The generated data are saved in the dictionary.
-
     Parameters
     ----------
     nrows : int
@@ -142,7 +140,6 @@ def gen_int_data(
         "col{}".format(i): np.random.randint(rand_low, rand_high, size=(nrows))
         for i in range(ncols)
     }
-    data_cache[cache_key] = weakdict(data)
     return data
 
 
@@ -151,8 +148,6 @@ def gen_str_int_data(
 ) -> dict:
     """
     Generate int data and string data with caching.
-
-    The generated data are saved in the dictionary.
 
     Parameters
     ----------
@@ -177,17 +172,12 @@ def gen_str_int_data(
     # convert values in arbitary column to string type
     key = list(data.keys())[0]
     data[key] = [f"str_{x}" for x in data[key]]
-    data_cache[cache_key] = weakdict(data)
     return data
 
 
 def gen_true_false_int_data(nrows, ncols, rand_low, rand_high, cache_key: tuple):
     """
     Generate int data and string data "true" and "false" values with caching.
-
-    The generated data are saved in the dictionary and on a subsequent call,
-    if the keys match, saved data will be returned. Therefore, we need
-    to carefully monitor the changing of saved data and make its copy if needed.
 
     Parameters
     ----------
@@ -218,7 +208,6 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high, cache_key: tuple)
         for i in range(ncols - ncols // 2)
     }
     data.update(data_true_false)
-    data_cache[cache_key] = weakdict(data)
     return data
 
 
@@ -281,6 +270,7 @@ def gen_data(
     data_generator = type_to_generator[data_type]
 
     data = data_generator(nrows, ncols, rand_low, rand_high, cache_key)
+    data_cache[cache_key] = weakdict(data)
 
     return data
 
