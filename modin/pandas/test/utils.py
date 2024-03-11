@@ -900,10 +900,18 @@ def eval_general(
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e), type(pd_e)
                 )
-                if raising_exceptions:
+                if raising_exceptions and isinstance(raising_exceptions, (list, tuple)):
                     assert not isinstance(
                         md_e, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e}"
+                elif raising_exceptions and type(raising_exceptions) is type:
+                    assert (
+                        type(md_e) is type(raising_exceptions)
+                        and md_e.args == raising_exceptions.args
+                    ), f"not acceptable Modin's exception: [{repr(md_e)}]"
+                    assert (
+                        pd_e.args == raising_exceptions.args
+                    ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
             else:
                 raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
