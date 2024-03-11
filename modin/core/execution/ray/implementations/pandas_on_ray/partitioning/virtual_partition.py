@@ -189,6 +189,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             f_kwargs=f_kwargs,
             manual_partition=manual_partition,
             lengths=lengths,
+            return_generator=True,
         )
 
     @classmethod
@@ -244,6 +245,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             f_to_deploy=func,
             f_len_args=len(f_args),
             f_kwargs=f_kwargs,
+            return_generator=True,
         )
 
     def wait(self):
