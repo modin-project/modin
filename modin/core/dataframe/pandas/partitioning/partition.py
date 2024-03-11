@@ -23,11 +23,11 @@ from pandas.api.types import is_scalar
 from pandas.util import cache_readonly
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
-from modin.logging import get_logger
+from modin.logging import ClassLogger, get_logger
 from modin.pandas.indexing import compute_sliced_len
 
 
-class PandasDataframePartition(ABC):  # pragma: no cover
+class PandasDataframePartition(ABC, ClassLogger):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.
 
