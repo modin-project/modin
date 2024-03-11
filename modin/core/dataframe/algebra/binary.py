@@ -242,6 +242,7 @@ def try_compute_new_dtypes(
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
+            # can be `pandas.api.types.pandas_dtype("bool[pyarrow]")` depending on the data
             dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(
