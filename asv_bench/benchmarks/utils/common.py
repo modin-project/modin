@@ -112,9 +112,7 @@ def gen_nan_data(nrows: int, ncols: int) -> dict:
     return data
 
 
-def gen_int_data(
-    nrows: int, ncols: int, rand_low: int, rand_high: int, cache_key: tuple
-) -> dict:
+def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data with caching.
 
@@ -128,8 +126,6 @@ def gen_int_data(
         Low bound for random generator.
     rand_high : int
         High bound for random generator.
-    cache_key : tuple
-        Key to store generated data in cache.
 
     Returns
     -------
@@ -143,9 +139,7 @@ def gen_int_data(
     return data
 
 
-def gen_str_int_data(
-    nrows: int, ncols: int, rand_low: int, rand_high: int, cache_key: tuple
-) -> dict:
+def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
     Generate int data and string data with caching.
 
@@ -159,8 +153,6 @@ def gen_str_int_data(
         Low bound for random generator.
     rand_high : int
         High bound for random generator.
-    cache_key : tuple
-        Key to store generated data in cache.
 
     Returns
     -------
@@ -175,7 +167,7 @@ def gen_str_int_data(
     return data
 
 
-def gen_true_false_int_data(nrows, ncols, rand_low, rand_high, cache_key: tuple):
+def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     """
     Generate int data and string data "true" and "false" values with caching.
 
@@ -189,8 +181,6 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high, cache_key: tuple)
         Low bound for random generator.
     rand_high : int
         High bound for random generator.
-    cache_key : tuple
-        Key to store generated data in cache.
 
     Returns
     -------
@@ -269,7 +259,7 @@ def gen_data(
     assert data_type in type_to_generator
     data_generator = type_to_generator[data_type]
 
-    data = data_generator(nrows, ncols, rand_low, rand_high, cache_key)
+    data = data_generator(nrows, ncols, rand_low, rand_high)
     data_cache[cache_key] = weakdict(data)
 
     return data
