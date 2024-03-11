@@ -1387,6 +1387,94 @@ def test_constructor_arrow_extension_array():
     df_equals(md_ser.dtypes, pd_ser.dtypes)
 
 
+def test_pyarrow_constructor():
+    pa = pytest.importorskip("pyarrow")
+    data = list("abcd")
+    _ = pd.Series(data, dtype="string[pyarrow]")
+    _ = pd.Series(data, dtype=pd.ArrowDtype(pa.string()))
+
+    list_str_type = pa.list_(pa.string())
+    _ = pd.Series([["hello"], ["there"]], dtype=pd.ArrowDtype(list_str_type))
+
+    from datetime import time
+
+    _ = pd.Index([time(12, 30), None], dtype=pd.ArrowDtype(pa.time64("us")))
+
+    from decimal import Decimal
+
+    decimal_type = pd.ArrowDtype(pa.decimal128(3, scale=2))
+
+    data = [[Decimal("3.19"), None], [None, Decimal("-1.23")]]
+
+    _ = pd.DataFrame(data, dtype=decimal_type)
+
+
+def test_pyarrow_array_retrieve():
+    pa = pytest.importorskip("pyarrow")
+    modin_series, pandas_series = create_test_series(
+        [1, 2, None], dtype="uint8[pyarrow]"
+    )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: pa.array(ser),
+        raising_exceptions=(Exception,),
+    )
+
+
+def test_pyarrow_functions():
+    pytest.importorskip("pyarrow")
+    modin_series, pandas_series = create_test_series(
+        [-1.545, 0.211, None], dtype="float32[pyarrow]"
+    )
+    df_equals(modin_series.mean(), pandas_series.mean())
+
+    def comparator(df1, df2):
+        df_equals(df1, df2)
+        df_equals(df1.dtypes, df2.dtypes)
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser
+        + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+        comparator=comparator,
+        raising_exceptions=(Exception,),
+    )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser > (ser + 1),
+        comparator=comparator,
+        raising_exceptions=(Exception,),
+    )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.dropna(),
+        comparator=comparator,
+        raising_exceptions=(Exception,),
+    )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.isna(),
+        comparator=comparator,
+        raising_exceptions=(Exception,),
+    )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.fillna(0),
+        comparator=comparator,
+        raising_exceptions=(Exception,),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_series, pandas_series = create_test_series(data)
