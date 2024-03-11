@@ -16,7 +16,6 @@ from __future__ import annotations
 import datetime
 import itertools
 import json
-import math
 import unittest.mock as mock
 
 import matplotlib
@@ -29,7 +28,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -87,6 +86,11 @@ from .utils import (
     test_string_list_data_keys,
     test_string_list_data_values,
 )
+
+if StorageFormat.get() != "Hdk":
+    from ...test.storage_formats.pandas.test_internals import (
+        construct_modin_df_by_scheme,
+    )
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -4721,19 +4725,24 @@ def _case_when_caselists():
 )
 def test_case_when(base, caselist):
     pandas_result = base.case_when(caselist)
-    modin_base = pd.Series(base)
+    modin_bases = [pd.Series(base)]
+
     # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
     # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal
-    nparts = NPartitions.get()
-    part_size = MinPartitionSize.get()
-    new_nparts = max(1, min(math.ceil(len(base) / part_size), part_size)) + 1
-    NPartitions.put(new_nparts)
-    MinPartitionSize.put(math.ceil(len(base) / new_nparts))
-    modin_base_repart = pd.Series(base)
-    NPartitions.put(nparts)
-    MinPartitionSize.put(part_size)
-    for df in (modin_base, modin_base_repart):
-        df_equals(pandas_result, df.case_when(caselist))
+    if StorageFormat.get() != "Hdk":  # HDK always uses a single partition.
+        modin_base_repart = construct_modin_df_by_scheme(
+            base.to_frame(),
+            partitioning_scheme={"row_lengths": [14, 14, 12], "column_widths": [1]},
+        ).squeeze(axis=1)
+        assert (
+            modin_bases[0]._query_compiler._modin_frame._partitions.shape
+            != modin_base_repart._query_compiler._modin_frame._partitions.shape
+        )
+        modin_base_repart.name = base.name
+        modin_bases.append(modin_base_repart)
+
+    for modin_base in modin_bases:
+        df_equals(pandas_result, modin_base.case_when(caselist))
         if any(
             isinstance(data, pandas.Series)
             for case_tuple in caselist
@@ -4746,7 +4755,7 @@ def test_case_when(base, caselist):
                 )
                 for case_tuple in caselist
             ]
-            df_equals(pandas_result, df.case_when(caselist))
+            df_equals(pandas_result, modin_base.case_when(caselist))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

@@ -4502,7 +4502,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def case_when(self, caselist):
-        qc_type = type(self)
+        qc_type = BaseQueryCompiler
         caselist = [
             tuple(
                 data._modin_frame if isinstance(data, qc_type) else data
