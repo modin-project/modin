@@ -1365,10 +1365,10 @@ def test_setattr_axes():
         if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
             df.index = ["foo", "bar"]
             # Check that ensure_index was called
-            pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+            pd.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
 
         df.columns = [9, 10]
-        pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+        pd.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
