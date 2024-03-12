@@ -56,7 +56,7 @@ from modin.utils import try_cast_to_pandas
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2**2, 2**3),
+    "Small": (2**6, 2**6),
     "Normal": (2**6, 2**8),
     "Big": (2**7, 2**12),
 }
