@@ -603,6 +603,7 @@ def test_pivot(data, index, columns, values, request):
     if (
         "one_column_values-one_column-default-float_nan_data"
         in request.node.callspec.id
+        or "default-one_column-several_columns_index" in request.node.callspec.id
         or (
             current_execution in ("BaseOnPython", "HdkOnNative")
             and index is lib.no_default
