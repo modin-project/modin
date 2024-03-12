@@ -1344,7 +1344,15 @@ def test_insert(data):
     )
 
     # Bad inserts
-    eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="Bad Column",
+        value=lambda df: df,
+        raising_exceptions=ValueError(
+            "Expected a one-dimensional object, got a DataFrame with 69 columns instead."
+        ),
+    )
     eval_insert(
         modin_df,
         pandas_df,
