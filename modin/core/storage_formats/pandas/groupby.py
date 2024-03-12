@@ -250,22 +250,6 @@ GroupbyReduceImpl._groupby_reduce_impls = {
 class PivotTableImpl:
     """Provide MapReduce, Range-Partitioning and Full-Column implementations for 'pivot_table()'."""
 
-    # "qc": self,
-    # "unique_keys": unique_keys,
-    # "drop_column_level": drop_column_level,
-    # "pivot_kwargs": {
-    #     "index": index,
-    #     "values": values,
-    #     "columns": columns,
-    #     "aggfunc": aggfunc,
-    #     "fill_value": fill_value,
-    #     "margins": margins,
-    #     "dropna": dropna,
-    #     "margins_name": margins_name,
-    #     "observed": observed,
-    #     "sort": sort,
-    # }
-
     @classmethod
     def map_reduce_impl(
         cls, qc, unique_keys, drop_column_level, pivot_kwargs
