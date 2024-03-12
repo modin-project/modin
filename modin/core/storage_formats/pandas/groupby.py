@@ -15,7 +15,6 @@
 
 import numpy as np
 import pandas
-from pandas.core.dtypes.common import is_list_like
 
 from modin.config import RangePartitioningGroupby
 from modin.core.dataframe.algebra import GroupByReduce
@@ -251,35 +250,43 @@ GroupbyReduceImpl._groupby_reduce_impls = {
 class PivotTableImpl:
     """Provide MapReduce, Range-Partitioning and Full-Column implementations for 'pivot_table()'."""
 
+    # "qc": self,
+    # "unique_keys": unique_keys,
+    # "drop_column_level": drop_column_level,
+    # "pivot_kwargs": {
+    #     "index": index,
+    #     "values": values,
+    #     "columns": columns,
+    #     "aggfunc": aggfunc,
+    #     "fill_value": fill_value,
+    #     "margins": margins,
+    #     "dropna": dropna,
+    #     "margins_name": margins_name,
+    #     "observed": observed,
+    #     "sort": sort,
+    # }
+
     @classmethod
     def map_reduce_impl(
-        cls,
-        qc,
-        index,
-        values,
-        columns,
-        aggfunc,
-        fill_value,
-        margins,
-        dropna,
-        margins_name,
-        observed,
-        sort,
+        cls, qc, unique_keys, drop_column_level, pivot_kwargs
     ):  # noqa: PR01
         """Compute 'pivot_table()' using MapReduce implementation."""
-        if margins:
+        if pivot_kwargs["margins"]:
             raise NotImplementedError(
                 "MapReduce 'pivot_table' implementation doesn't support 'margins=True' parameter"
             )
+
+        index, columns, values = (
+            pivot_kwargs["index"],
+            pivot_kwargs["columns"],
+            pivot_kwargs["values"],
+        )
+        aggfunc = pivot_kwargs["aggfunc"]
 
         if not GroupbyReduceImpl.has_impl_for(aggfunc):
             raise NotImplementedError(
                 "MapReduce 'pivot_table' implementation only supports 'aggfuncs' that are implemented in 'GroupbyReduceImpl'"
             )
-
-        index, columns, values, drop_column_level, unique_keys = cls._preprocess_args(
-            index, columns, values
-        )
 
         if len(set(index).intersection(columns)) > 0:
             raise NotImplementedError(
@@ -294,13 +301,20 @@ class PivotTableImpl:
         result = GroupbyReduceImpl.build_qc_method(
             aggfunc,
             finalizer_fn=lambda df: cls._pivot_table_from_groupby(
-                df, dropna, drop_column_level, to_unstack, fill_value
+                df,
+                pivot_kwargs["dropna"],
+                drop_column_level,
+                to_unstack,
+                pivot_kwargs["fill_value"],
             ),
         )(
             to_group,
             by=keys_columns,
             axis=0,
-            groupby_kwargs={"observed": observed, "sort": sort},
+            groupby_kwargs={
+                "observed": pivot_kwargs["observed"],
+                "sort": pivot_kwargs["sort"],
+            },
             agg_args=(),
             agg_kwargs={},
             drop=True,
@@ -312,30 +326,22 @@ class PivotTableImpl:
 
     @classmethod
     def full_axis_impl(
-        cls,
-        qc,
-        index,
-        values,
-        columns,
-        aggfunc,
-        fill_value,
-        margins,
-        dropna,
-        margins_name,
-        observed,
-        sort,
+        cls, qc, unique_keys, drop_column_level, pivot_kwargs
     ):  # noqa: PR01
         """Compute 'pivot_table()' using full-column-axis implementation."""
-        index, columns, values, _, unique_keys = cls._preprocess_args(
-            index, columns, values
+        index, columns, values = (
+            pivot_kwargs["index"],
+            pivot_kwargs["columns"],
+            pivot_kwargs["values"],
         )
+
         to_group, keys_columns = cls._separate_data_from_grouper(
             qc, values, unique_keys
         )
 
-        len_values = len(values)
-        if len_values == 0:
-            len_values = len(qc.columns.drop(unique_keys))
+        len_values = (
+            len(qc.columns.drop(unique_keys)) if values is None else len(values)
+        )
 
         def applyier(df, other):  # pragma: no cover
             """
@@ -357,22 +363,13 @@ class PivotTableImpl:
             concated = pandas.concat([df, other], axis=1, copy=False)
             result = pandas.pivot_table(
                 concated,
-                index=index,
-                values=values if len(values) > 0 else None,
-                columns=columns,
-                aggfunc=aggfunc,
-                fill_value=fill_value,
-                margins=margins,
-                dropna=dropna,
-                margins_name=margins_name,
-                observed=observed,
-                sort=sort,
+                **pivot_kwargs,
             )
 
             # if only one value is specified, removing level that maps
             # columns from `values` to the actual values
             if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
-                result.columns = result.columns.droplevel(int(margins))
+                result.columns = result.columns.droplevel(int(pivot_kwargs["margins"]))
 
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
@@ -396,71 +393,65 @@ class PivotTableImpl:
 
     @classmethod
     def range_partition_impl(
-        cls,
-        qc,
-        index,
-        values,
-        columns,
-        aggfunc,
-        fill_value,
-        margins,
-        dropna,
-        margins_name,
-        observed,
-        sort,
+        cls, qc, unique_keys, drop_column_level, pivot_kwargs
     ):  # noqa: PR01
         """Compute 'pivot_table()' using Range-Partitioning implementation."""
-        if margins:
+        if pivot_kwargs["margins"]:
             raise NotImplementedError(
                 "Range-partitioning 'pivot_table' implementation doesn't support 'margins=True' parameter"
             )
 
-        index, columns, values, drop_column_level, unique_keys = cls._preprocess_args(
-            index, columns, values
+        index, columns, values = (
+            pivot_kwargs["index"],
+            pivot_kwargs["columns"],
+            pivot_kwargs["values"],
         )
-
-        if len(values) > 0:
-            to_take = list(np.unique(list(index) + list(columns) + list(values)))
-            qc = qc.getitem_column_array(to_take, ignore_order=True)
 
         if len(set(index).intersection(columns)) > 0:
             raise NotImplementedError(
                 "Range-partitioning 'pivot_table' implementation doesn't support intersections of 'index' and 'columns'"
             )
 
+        if values is not None:
+            to_take = list(np.unique(list(index) + list(columns) + list(values)))
+            qc = qc.getitem_column_array(to_take, ignore_order=True)
+
         to_unstack = columns if index else None
 
         groupby_result = qc._groupby_shuffle(
             by=list(unique_keys),
-            agg_func=aggfunc,
+            agg_func=pivot_kwargs["aggfunc"],
             axis=0,
-            groupby_kwargs={"observed": observed, "sort": sort},
+            groupby_kwargs={
+                "observed": pivot_kwargs["observed"],
+                "sort": pivot_kwargs["sort"],
+            },
             agg_args=(),
             agg_kwargs={},
             drop=True,
         )
 
-        result = qc.__constructor__(
-            groupby_result._modin_frame.apply_full_axis(
-                axis=0,
-                func=lambda df: cls._pivot_table_from_groupby(
-                    # FIXME: Range-partitioning impl has a problem with the resulting order in case of multiple grouping keys,
-                    # so passing 'sort=True' explicitly in this case
-                    # https://github.com/modin-project/modin/issues/6875
-                    df,
-                    dropna,
-                    drop_column_level,
-                    to_unstack,
-                    fill_value,
-                    sort=sort if len(unique_keys) > 1 else False,
-                ),
-            )
+        # the length of 'groupby_result' is typically really small here,
+        # so it's okay to call full-column function
+        result = groupby_result._modin_frame.apply_full_axis(
+            axis=0,
+            func=lambda df: cls._pivot_table_from_groupby(
+                df,
+                pivot_kwargs["dropna"],
+                drop_column_level,
+                to_unstack,
+                pivot_kwargs["fill_value"],
+                # FIXME: Range-partitioning impl has a problem with the resulting order in case of multiple grouping keys,
+                # so passing 'sort=True' explicitly in this case
+                # https://github.com/modin-project/modin/issues/6875
+                sort=pivot_kwargs["sort"] if len(unique_keys) > 1 else False,
+            ),
         )
 
         if to_unstack is None:
             result = result.transpose()
 
-        return result
+        return qc.__constructor__(result)
 
     @staticmethod
     def _pivot_table_from_groupby(
@@ -502,42 +493,6 @@ class PivotTableImpl:
         return df
 
     @staticmethod
-    def _preprocess_args(index, columns, values):
-        """
-        Normalize `.pivot_table()` args by converting them to a list.
-
-        Parameters
-        ----------
-        index : list, scalar or None
-        columns : list, scalar or None
-        values : list, scalar or None
-
-        Returns
-        -------
-        index : list
-        columns : list
-        values : list
-        drop_column_level : bool
-            Whether to drop the top-columns level after group by aggregation.
-        unique_keys : list of labels
-            Columns to group by.
-        """
-        from pandas.core.reshape.pivot import _convert_by
-
-        def __convert_by(by):
-            """Convert passed value to a list."""
-            if isinstance(by, pandas.Index):
-                return list(by)
-            return _convert_by(by)
-
-        drop_column_level = values is not None and not is_list_like(values)
-        index, columns, values = map(__convert_by, [index, columns, values])
-        # using 'pandas.unique' instead of 'numpy' as it guarantees to not change the original order
-        unique_keys = pandas.unique(index + columns)
-
-        return index, columns, values, drop_column_level, unique_keys
-
-    @staticmethod
     def _separate_data_from_grouper(qc, values, unique_keys):
         """
         Split `qc` for key columns to group by and values to aggregate.
@@ -545,8 +500,8 @@ class PivotTableImpl:
         Parameters
         ----------
         qc : PandasQueryCompiler
-        values : list of labels
-            List of columns to aggregate.
+        values : list of labels or None
+            List of columns to aggregate. ``None`` means all columns except 'unique_keys'.
         unique_keys : list of labels
             List of key columns to group by.
 
@@ -555,12 +510,10 @@ class PivotTableImpl:
         to_aggregate : PandasQueryCompiler
         keys_to_group : PandasQueryCompiler
         """
-        unique_values = np.unique(values)
-
-        if len(values):
-            to_aggregate = qc.getitem_column_array(unique_values, ignore_order=True)
-        else:
+        if values is None:
             to_aggregate = qc.drop(columns=unique_keys)
+        else:
+            to_aggregate = qc.getitem_column_array(np.unique(values), ignore_order=True)
 
         keys_to_group = qc.getitem_column_array(unique_keys, ignore_order=True)
 

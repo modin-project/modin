@@ -4205,18 +4205,41 @@ class PandasQueryCompiler(BaseQueryCompiler):
             message="Order of columns could be different from pandas",
         )
 
+        from pandas.core.reshape.pivot import _convert_by
+
+        def __convert_by(by):
+            """Convert passed value to a list."""
+            if isinstance(by, pandas.Index):
+                return list(by)
+            return _convert_by(by)
+
+        drop_column_level = values is not None and not is_list_like(values)
+        index, columns = map(__convert_by, [index, columns])
+
+        # if the value is 'None' it will be converted to an empty list (no columns to aggregate),
+        # which is invalid for 'values', as 'None' means aggregate ALL columns instead
+        if values is not None:
+            values = __convert_by(values)
+
+        # using 'pandas.unique' instead of 'numpy' as it guarantees to not change the original order
+        unique_keys = pandas.Series(index + columns).unique()
+
         kwargs = {
             "qc": self,
-            "index": index,
-            "values": values,
-            "columns": columns,
-            "aggfunc": aggfunc,
-            "fill_value": fill_value,
-            "margins": margins,
-            "dropna": dropna,
-            "margins_name": margins_name,
-            "observed": observed,
-            "sort": sort,
+            "unique_keys": unique_keys,
+            "drop_column_level": drop_column_level,
+            "pivot_kwargs": {
+                "index": index,
+                "values": values,
+                "columns": columns,
+                "aggfunc": aggfunc,
+                "fill_value": fill_value,
+                "margins": margins,
+                "dropna": dropna,
+                "margins_name": margins_name,
+                "observed": observed,
+                "sort": sort,
+            },
         }
 
         try:
