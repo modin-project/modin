@@ -623,6 +623,18 @@ class DataFrame(BasePandasDataset):
             broadcast=isinstance(other, Series),
         )
 
+    def abs(self):  # noqa: RT01, D200
+        """
+        Return a `DataFrame` with absolute numeric value of each element.
+        """
+        return super(DataFrame, self).abs()
+
+    def astype(self, dtype, copy=None, errors="raise"):
+        """
+        Whether elements in `DataFrame` are contained in `values`.
+        """
+        return super(DataFrame, self).astype(dtype, copy=copy, errors=errors)
+
     def assign(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Assign new columns to a ``DataFrame``.
@@ -1406,6 +1418,14 @@ class DataFrame(BasePandasDataset):
             "ne", other, axis=axis, level=level, broadcast=isinstance(other, Series)
         )
 
+    def notna(self):  # noqa: RT01, D200
+        """
+        Detect existing (non-missing) values.
+        """
+        return super(DataFrame, self).notna()
+
+    notnull = notna
+
     def nlargest(self, n, columns, keep="first"):  # noqa: PR01, RT01, D200
         """
         Return the first `n` rows ordered by `columns` in descending order.
@@ -1758,6 +1778,12 @@ class DataFrame(BasePandasDataset):
 
         if not inplace:
             return obj
+
+    def round(self, decimals=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Round a `DataFrame` to a variable number of decimal places.
+        """
+        return super(DataFrame, self).round(*args, decimals=decimals, **kwargs)
 
     def reindex(
         self,
@@ -2403,6 +2429,26 @@ class DataFrame(BasePandasDataset):
             errors=errors,
         )
         self._update_inplace(new_query_compiler=query_compiler)
+
+    def value_counts(
+        self,
+        subset: Sequence[Hashable] | None = None,
+        normalize: bool = False,
+        sort: bool = True,
+        ascending: bool = False,
+        dropna: bool = True,
+    ):  # noqa: PR01, RT01, D200
+        """
+        Return a DataFrame containing counts of unique values.
+        """
+        counted_values = super(DataFrame, self).value_counts(
+            subset=subset,
+            normalize=normalize,
+            sort=sort,
+            ascending=ascending,
+            dropna=dropna,
+        )
+        return counted_values
 
     def where(
         self,

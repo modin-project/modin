@@ -1779,51 +1779,82 @@ class PandasQueryCompiler(BaseQueryCompiler):
     series_view = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             df.squeeze(axis=1).view(*args, **kwargs)
-        )
+        ),
+        shape_hint="column",
     )
     to_numeric = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(
             pandas.to_numeric(df.squeeze(axis=1), *args, **kwargs)
-        )
+        ),
+        shape_hint="column",
     )
     to_timedelta = Map.register(
         lambda s, *args, **kwargs: pandas.to_timedelta(
             s.squeeze(axis=1), *args, **kwargs
         ).to_frame(),
         dtypes="timedelta64[ns]",
+        shape_hint="column",
     )
 
     # END Map partitions operations
 
     # String map partitions operations
 
-    str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
-    str_center = Map.register(_str_map("center"), dtypes="copy")
-    str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
-    str_count = Map.register(_str_map("count"), dtypes=int)
-    str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
-    str_find = Map.register(_str_map("find"), dtypes=np.int64)
-    str_findall = Map.register(_str_map("findall"), dtypes="copy")
-    str_get = Map.register(_str_map("get"), dtypes="copy")
-    str_index = Map.register(_str_map("index"), dtypes=np.int64)
-    str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool_)
-    str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool_)
-    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool_)
-    str_isdigit = Map.register(_str_map("isdigit"), dtypes=np.bool_)
-    str_islower = Map.register(_str_map("islower"), dtypes=np.bool_)
-    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes=np.bool_)
-    str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool_)
-    str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool_)
-    str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool_)
-    str_join = Map.register(_str_map("join"), dtypes="copy")
-    str_len = Map.register(_str_map("len"), dtypes=int)
-    str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
-    str_lower = Map.register(_str_map("lower"), dtypes="copy")
-    str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy")
-    str_match = Map.register(_str_map("match"), dtypes="copy")
-    str_normalize = Map.register(_str_map("normalize"), dtypes="copy")
-    str_pad = Map.register(_str_map("pad"), dtypes="copy")
-    _str_partition = Map.register(_str_map("partition"), dtypes="copy")
+    str_capitalize = Map.register(
+        _str_map("capitalize"), dtypes="copy", shape_hint="column"
+    )
+    str_center = Map.register(_str_map("center"), dtypes="copy", shape_hint="column")
+    str_contains = Map.register(
+        _str_map("contains"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_count = Map.register(_str_map("count"), dtypes=int, shape_hint="column")
+    str_endswith = Map.register(
+        _str_map("endswith"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_find = Map.register(_str_map("find"), dtypes=np.int64, shape_hint="column")
+    str_findall = Map.register(_str_map("findall"), dtypes="copy", shape_hint="column")
+    str_get = Map.register(_str_map("get"), dtypes="copy", shape_hint="column")
+    str_index = Map.register(_str_map("index"), dtypes=np.int64, shape_hint="column")
+    str_isalnum = Map.register(
+        _str_map("isalnum"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isalpha = Map.register(
+        _str_map("isalpha"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isdecimal = Map.register(
+        _str_map("isdecimal"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isdigit = Map.register(
+        _str_map("isdigit"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_islower = Map.register(
+        _str_map("islower"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isnumeric = Map.register(
+        _str_map("isnumeric"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isspace = Map.register(
+        _str_map("isspace"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_istitle = Map.register(
+        _str_map("istitle"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_isupper = Map.register(
+        _str_map("isupper"), dtypes=np.bool_, shape_hint="column"
+    )
+    str_join = Map.register(_str_map("join"), dtypes="copy", shape_hint="column")
+    str_len = Map.register(_str_map("len"), dtypes=int, shape_hint="column")
+    str_ljust = Map.register(_str_map("ljust"), dtypes="copy", shape_hint="column")
+    str_lower = Map.register(_str_map("lower"), dtypes="copy", shape_hint="column")
+    str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy", shape_hint="column")
+    str_match = Map.register(_str_map("match"), dtypes="copy", shape_hint="column")
+    str_normalize = Map.register(
+        _str_map("normalize"), dtypes="copy", shape_hint="column"
+    )
+    str_pad = Map.register(_str_map("pad"), dtypes="copy", shape_hint="column")
+    _str_partition = Map.register(
+        _str_map("partition"), dtypes="copy", shape_hint="column"
+    )
 
     def str_partition(self, sep=" ", expand=True):
         # For `expand`, need an operator that can create more columns than before
@@ -1831,8 +1862,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return super().str_partition(sep=sep, expand=expand)
         return self._str_partition(sep=sep, expand=False)
 
-    str_repeat = Map.register(_str_map("repeat"), dtypes="copy")
-    _str_extract = Map.register(_str_map("extract"), dtypes="copy")
+    str_repeat = Map.register(_str_map("repeat"), dtypes="copy", shape_hint="column")
+    _str_extract = Map.register(_str_map("extract"), dtypes="copy", shape_hint="column")
 
     def str_extract(self, pat, flags, expand):
         regex = re.compile(pat, flags=flags)
@@ -1970,12 +2001,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END Dt map partitions operations
 
-    def astype(self, col_dtypes, errors: str = "raise"):
+    def astype(self, col_dtypes, errors: str = "raise", shape_hint=None):
         # `errors` parameter needs to be part of the function signature because
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
+        return self.__constructor__(
+            self._modin_frame.astype(col_dtypes, errors=errors), shape_hint=shape_hint
+        )
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())

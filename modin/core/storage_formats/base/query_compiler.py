@@ -1474,15 +1474,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # Abstract map partitions operations
     # These operations are operations that apply a function to every partition.
-    def abs(self):
+    def abs(self, **kwargs):
         """
         Get absolute numeric value of each element.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
         BaseQueryCompiler
             QueryCompiler with absolute numeric value of each element.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.abs)(self)
 
     def map(self, func, *args, **kwargs):
@@ -1501,6 +1507,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             Transformed QueryCompiler.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.map)(
             self, func, *args, **kwargs
         )
@@ -1578,9 +1585,14 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
                 self, values, **kwargs
             )
 
-    def isna(self):
+    def isna(self, **kwargs):
         """
         Check for each element of self whether it's NaN.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -1588,6 +1600,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Boolean mask for self of whether an element at the corresponding
             position is NaN.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.isna)(self)
 
     # FIXME: this method is not supposed to take any parameters (Modin issue #3108).
@@ -1608,11 +1621,17 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         -----
         Be aware, that all QueryCompiler values have to be numeric.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.__neg__)(self, **kwargs)
 
-    def notna(self):
+    def notna(self, **kwargs):
         """
         Check for each element of `self` whether it's existing (non-missing) value.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -1639,6 +1658,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with rounded values.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.round)(self, **kwargs)
 
     # FIXME:
@@ -1666,6 +1686,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         BaseQueryCompiler
             QueryCompiler with all `to_replace` values replaced by `value`.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.replace)(self, **kwargs)
 
     @doc_utils.add_refer_to("Series.argsort")
@@ -1830,7 +1851,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
         )
 
     # Abstract map partitions across select indices
-    def astype(self, col_dtypes, errors: str = "raise"):  # noqa: PR02
+    def astype(self, col_dtypes, errors: str = "raise", **kwargs):  # noqa: PR02
         """
         Convert columns dtypes to given dtypes.
 
@@ -1842,6 +1863,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Control raising of exceptions on invalid data for provided dtype.
             - raise : allow exceptions to be raised
             - ignore : suppress exceptions. On error return original object.
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
@@ -6649,15 +6672,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     # DataFrame methods
 
-    def invert(self):
+    def invert(self, **kwargs):
         """
         Apply bitwise inversion for each element of the QueryCompiler.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            Serves the compatibility purpose. Does not affect the result.
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler containing bitwise inversion for each value.
         """
+        _ = kwargs.pop("shape_hint", None)
         return DataFrameDefault.register(pandas.DataFrame.__invert__)(self)
 
     @doc_utils.doc_reduce_agg(

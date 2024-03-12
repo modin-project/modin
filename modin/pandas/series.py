@@ -339,6 +339,27 @@ class Series(BasePandasDataset):
         """
         return self._to_pandas().__iter__()
 
+    def __invert__(self):
+        """
+        Apply bitwise inverse to each element of the `Series`.
+
+        Returns
+        -------
+        Series
+            New Series containing bitwise inverse to each value.
+        """
+        return super(Series, self).__invert__(shape_hint="column")
+
+    def __neg__(self):
+        """
+        Change the sign for every value of self.
+
+        Returns
+        -------
+        Series
+        """
+        return super(Series, self).__neg__(shape_hint="column")
+
     @_doc_binary_op(operation="modulo", bin_op="mod")
     def __mod__(self, right):
         return self.mod(right)
@@ -511,6 +532,12 @@ class Series(BasePandasDataset):
                 data = data._to_numpy()
             data = pd.Categorical(data, dtype=self.dtype)
         return data
+
+    def abs(self):  # noqa: RT01, D200
+        """
+        Return a `Series` with absolute numeric value of each element.
+        """
+        return super(Series, self).abs(shape_hint="column")
 
     def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
         """
@@ -1180,6 +1207,14 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
+    def astype(self, dtype, copy=None, errors="raise"):
+        """
+        Whether elements in `Series` are contained in `values`.
+        """
+        return super(Series, self).astype(
+            dtype, copy=copy, errors=errors, shape_hint="column"
+        )
+
     def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `Series` are contained in `values`.
@@ -1194,7 +1229,7 @@ class Series(BasePandasDataset):
         -------
         The result of detecting missing values.
         """
-        return super(Series, self).isna()
+        return super(Series, self).isna(shape_hint="column")
 
     def isnull(self):
         """
@@ -1266,7 +1301,8 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.map(
                 lambda s: (
                     arg(s) if pandas.isnull(s) is not True or na_action is None else s
-                )
+                ),
+                shape_hint="column",
             )
         )
 
@@ -1364,6 +1400,14 @@ class Series(BasePandasDataset):
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ne(new_other, level=level, axis=axis)
+
+    def notna(self):  # noqa: RT01, D200
+        """
+        Detect existing (non-missing) values.
+        """
+        return super(Series, self).notna(shape_hint="column")
+
+    notnull = notna
 
     def nlargest(self, n=5, keep="first"):  # noqa: PR01, RT01, D200
         """
@@ -1527,6 +1571,14 @@ class Series(BasePandasDataset):
             data = pandas.Categorical(data, dtype=self.dtype)
 
         return data
+
+    def round(self, decimals=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+        """
+        Round a `Series` to a variable number of decimal places.
+        """
+        return super(Series, self).round(
+            *args, decimals=decimals, shape_hint="column", **kwargs
+        )
 
     @_inherit_docstrings(pandas.Series.reindex, apilink="pandas.Series.reindex")
     def reindex(
@@ -1766,6 +1818,7 @@ class Series(BasePandasDataset):
             limit=limit,
             regex=regex,
             method=method,
+            shape_hint="column",
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
@@ -2085,6 +2138,7 @@ class Series(BasePandasDataset):
             sort=sort,
             ascending=ascending,
             dropna=dropna,
+            shape_hint="column",
         )
         return counted_values
 
