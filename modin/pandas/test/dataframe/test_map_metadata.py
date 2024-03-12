@@ -1372,7 +1372,7 @@ def test_insert(data):
         col="Too Short",
         value=lambda df: list(df[df.columns[0]])[:-1],
         raising_exceptions=ValueError(
-            "Length of values (255) does not match length of index (256)"
+            f"Length of values ({len(pandas_df)-1}) does not match length of index ({len(pandas_df)})"
         ),
     )
     eval_insert(
@@ -1389,7 +1389,7 @@ def test_insert(data):
         col="Bad Loc",
         value=100,
         raising_exceptions=IndexError(
-            "index 169 is out of bounds for axis 0 with size 69"
+            f"index {len(pandas_df.columns) + 100} is out of bounds for axis 0 with size {len(pandas_df.columns)}"
         ),
     )
 
