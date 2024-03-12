@@ -4219,22 +4219,21 @@ class PandasQueryCompiler(BaseQueryCompiler):
             "sort": sort,
         }
 
-        if RangePartitioning.get():
-            try:
-                return PivotTableImpl.range_partition_impl(**kwargs)
-            except NotImplementedError as e:
-                message = (
-                    f"Can't use range-partitioning 'pivot_table' implementation because of: {e}"
-                    + "\nFalling back to a MapReduce implementation."
-                )
-                get_logger().info(message)
-
         try:
             return PivotTableImpl.map_reduce_impl(**kwargs)
         except NotImplementedError as e:
             message = (
                 f"Can't use MapReduce 'pivot_table' implementation because of: {e}"
-                + "\nFalling back to a column-axis implementation."
+                + "\nFalling back to a range-partitioning implementation."
+            )
+            get_logger().info(message)
+
+        try:
+            return PivotTableImpl.range_partition_impl(**kwargs)
+        except NotImplementedError as e:
+            message = (
+                f"Can't use range-partitioning 'pivot_table' implementation because of: {e}"
+                + "\nFalling back to a full-axis implementation."
             )
             get_logger().info(message)
 

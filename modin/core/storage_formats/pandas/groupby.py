@@ -444,7 +444,15 @@ class PivotTableImpl:
             groupby_result._modin_frame.apply_full_axis(
                 axis=0,
                 func=lambda df: cls._pivot_table_from_groupby(
-                    df, dropna, drop_column_level, to_unstack, fill_value
+                    # FIXME: Range-partitioning impl has a problem with the resulting order in case of multiple grouping keys,
+                    # so passing 'sort=True' explicitly in this case
+                    # https://github.com/modin-project/modin/issues/6875
+                    df,
+                    dropna,
+                    drop_column_level,
+                    to_unstack,
+                    fill_value,
+                    sort=sort if len(unique_keys) > 1 else False,
                 ),
             )
         )
@@ -456,7 +464,7 @@ class PivotTableImpl:
 
     @staticmethod
     def _pivot_table_from_groupby(
-        df, dropna, drop_column_level, to_unstack, fill_value
+        df, dropna, drop_column_level, to_unstack, fill_value, sort=False
     ):
         """
         Convert group by aggregation result to a pivot table.
@@ -474,6 +482,8 @@ class PivotTableImpl:
             for ``.pivot_table()``.
         fill_value : bool
             Fill value for NaN values.
+        sort : bool, default: False
+            Whether to sort the result along index.
 
         Returns
         -------
@@ -487,6 +497,8 @@ class PivotTableImpl:
             df = df.dropna(axis=1, how="all")
         if fill_value is not None:
             df = df.fillna(fill_value, downcast="infer")
+        if sort:
+            df = df.sort_index(axis=0)
         return df
 
     @staticmethod
