@@ -904,7 +904,7 @@ def eval_general(
                     assert not isinstance(
                         md_e, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e}"
-                elif raising_exceptions and type(raising_exceptions) is type:
+                elif raising_exceptions and type(raising_exceptions) is not type:
                     assert (
                         type(md_e) is type(raising_exceptions)
                         and md_e.args == raising_exceptions.args
