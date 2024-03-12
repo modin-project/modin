@@ -870,10 +870,20 @@ def test_iloc_empty():
     df_equals(pandas_df, modin_df)
 
 
-def test_iloc_loc_key_length():
+def test_iloc_loc_key_length_except():
     modin_ser, pandas_ser = pd.Series(0), pandas.Series(0)
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.iloc[0, 0])
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.loc[0, 0])
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.iloc[0, 0],
+        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+    )
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.loc[0, 0],
+        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+    )
 
 
 def test_loc_series():
