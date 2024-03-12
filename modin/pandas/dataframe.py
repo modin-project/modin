@@ -1469,9 +1469,9 @@ class DataFrame(BasePandasDataset):
         # index or columns
         if values is None:
             values = list(self.columns)
-            if index:
+            if index is not None:
                 values = [v for v in values if v not in index]
-            if columns:
+            if columns is not None:
                 values = [v for v in values if v not in columns]
 
         return self.__constructor__(
