@@ -46,7 +46,6 @@ from modin.config import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
 )
-from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
 from modin.pandas.io import from_arrow, from_ray_dataset, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -61,7 +60,6 @@ from .utils import (
     eval_io_from_str,
     generate_dataframe,
     get_unique_filename,
-    io_ops_bad_exc,
     json_long_bytes,
     json_long_string,
     json_short_bytes,
@@ -288,6 +286,9 @@ class TestCsv:
             filepath_or_buffer=unique_filename,
             delimiter=delimiter,
             sep=sep,
+            raising_exceptions=ValueError(
+                "Specified a sep and a delimiter; you can only specify one."
+            ),
         )
 
     @pytest.mark.parametrize(
@@ -341,6 +342,8 @@ class TestCsv:
             names=names,
             usecols=usecols,
             skip_blank_lines=skip_blank_lines,
+            # FIXME: https://github.com/modin-project/modin/issues/7035
+            raising_exceptions=False,
         )
 
     @pytest.mark.parametrize("usecols", [lambda col_name: col_name in ["a", "b", "e"]])
@@ -380,9 +383,14 @@ class TestCsv:
                 ).columns
             }
 
+        raising_exceptions = None
+        if engine == "c" and skipfooter != 0:
+            raising_exceptions = ValueError(
+                "the 'c' engine does not support skipfooter"
+            )
         eval_io(
             fn_name="read_csv",
-            raising_exceptions=None,
+            raising_exceptions=raising_exceptions,
             check_kwargs_callable=not callable(converters),
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
@@ -470,9 +478,12 @@ class TestCsv:
         if xfail_case:
             pytest.xfail("modin and pandas dataframes differs - issue #2446")
 
+        raising_exceptions = None
+        if skipfooter != 0 and nrows is not None:
+            raising_exceptions = ValueError("'skipfooter' not supported with 'nrows'")
         eval_io(
             fn_name="read_csv",
-            raising_exceptions=None,
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_yes_no"],
             true_values=true_values,
@@ -526,6 +537,7 @@ class TestCsv:
     @pytest.mark.parametrize(
         "date_parser",
         [lib.no_default, lambda x: pandas.to_datetime(x, format="%Y-%m-%d")],
+        ids=["default", "format-Ymd"],
     )
     @pytest.mark.parametrize("dayfirst", [True, False])
     @pytest.mark.parametrize("cache_dates", [True, False])
@@ -537,12 +549,24 @@ class TestCsv:
         date_parser,
         dayfirst,
         cache_dates,
+        request,
     ):
-        raising_exceptions = io_ops_bad_exc  # default value
-        if isinstance(parse_dates, dict) and callable(date_parser):
-            # In this case raised TypeError: <lambda>() takes 1 positional argument but 2 were given
-            raising_exceptions = list(io_ops_bad_exc)
-            raising_exceptions.remove(TypeError)
+        raising_exceptions = None
+
+        if "format-Ymd" in request.node.callspec.id and (
+            "parse_dates3" in request.node.callspec.id
+            or "parse_dates4" in request.node.callspec.id
+        ):
+            msg = (
+                'time data "00:00:00" doesn\'t match format "%Y-%m-%d", at position 0. You might want to try:\n'
+                + "    - passing `format` if your strings have a consistent format;\n"
+                + "    - passing `format='ISO8601'` if your strings are all ISO8601 "
+                + "but not necessarily in exactly the same format;\n"
+                + "    - passing `format='mixed'`, and the format will be inferred "
+                + "for each element individually. You might want to use `dayfirst` "
+                + "alongside this."
+            )
+            raising_exceptions = ValueError(msg)
 
         eval_io(
             fn_name="read_csv",
@@ -641,6 +665,9 @@ class TestCsv:
     @pytest.mark.parametrize("engine", [None, "python", "c"])
     def test_read_csv_compression(self, make_csv_file, compression, encoding, engine):
         unique_filename = make_csv_file(encoding=encoding, compression=compression)
+        raising_exceptions = None
+        if encoding == "utf16" and compression in ("bz2", "xz"):
+            raising_exceptions = UnicodeError("UTF-16 stream does not start with BOM")
 
         eval_io(
             fn_name="read_csv",
@@ -649,6 +676,7 @@ class TestCsv:
             compression=compression,
             encoding=encoding,
             engine=engine,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize(
@@ -731,8 +759,12 @@ class TestCsv:
                 if any(line.find(f',"{escapechar}') != -1 for _, line in enumerate(f)):
                     pytest.xfail("Tests with this character sequence fail due to #5649")
 
+        raising_exceptions = None
+        if dialect is None:
+            # FIXME: https://github.com/modin-project/modin/issues/7035
+            raising_exceptions = False
+
         eval_io(
-            raising_exceptions=None,
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=unique_filename,
@@ -741,6 +773,7 @@ class TestCsv:
             lineterminator=lineterminator,
             escapechar=escapechar,
             dialect=dialect,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize(
@@ -805,22 +838,34 @@ class TestCsv:
 
     @pytest.mark.parametrize("float_precision", [None, "high", "legacy", "round_trip"])
     def test_python_engine_float_precision_except(self, float_precision):
+        raising_exceptions = None
+        if float_precision is not None:
+            raising_exceptions = ValueError(
+                "The 'float_precision' option is not supported with the 'python' engine"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             engine="python",
             float_precision=float_precision,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize("low_memory", [False, True])
     def test_python_engine_low_memory_except(self, low_memory):
+        raising_exceptions = None
+        if not low_memory:
+            raising_exceptions = ValueError(
+                "The 'low_memory' option is not supported with the 'python' engine"
+            )
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             engine="python",
             low_memory=low_memory,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize("delim_whitespace", [True, False])
@@ -909,15 +954,37 @@ class TestCsv:
     )
     @pytest.mark.exclude_in_sanity
     def test_read_csv_parse_dates(
-        self, names, header, index_col, parse_dates, encoding, encoding_errors
+        self,
+        names,
+        header,
+        index_col,
+        parse_dates,
+        encoding,
+        encoding_errors,
+        request,
     ):
         if names is not None and header == "infer":
             pytest.xfail(
                 "read_csv with Ray engine works incorrectly with date data and names parameter provided - issue #2509"
             )
 
+        raising_exceptions = None
+        if "nonexistent_int_column" in request.node.callspec.id:
+            raising_exceptions = IndexError("list index out of range")
+        elif "nonexistent_string_column" in request.node.callspec.id:
+            raising_exceptions = ValueError(
+                "Missing column provided to 'parse_dates': 'z'"
+            )
+        if (
+            StorageFormat.get() == "Hdk"
+            and "names1-0-None-nonexistent_string_column-strict-None"
+            in request.node.callspec.id
+        ):
+            # FIXME: https://github.com/modin-project/modin/issues/7035
+            raising_exceptions = False
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer=time_parsing_csv_path,
             names=names,
@@ -992,8 +1059,14 @@ class TestCsv:
     @pytest.mark.parametrize("nrows", [21, 5, None])
     @pytest.mark.parametrize("skiprows", [4, 1, 500, None])
     def test_read_csv_newlines_in_quotes(self, nrows, skiprows):
+        raising_exceptions = None
+        if skiprows == 500:
+            raising_exceptions = pandas.errors.EmptyDataError(
+                "No columns to parse from file"
+            )
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/newlines.csv",
             nrows=nrows,
@@ -1004,8 +1077,14 @@ class TestCsv:
     @pytest.mark.parametrize("skiprows", [None, 0, [], [1, 2], np.arange(0, 2)])
     def test_read_csv_skiprows_with_usecols(self, skiprows):
         usecols = {"float_data": "float64"}
+        raising_exceptions = None
+        if isinstance(skiprows, np.ndarray):
+            raising_exceptions = ValueError(
+                "Usecols do not match columns, columns expected but not found: ['float_data']"
+            )
         eval_io(
             fn_name="read_csv",
+            raising_exceptions=raising_exceptions,
             # read_csv kwargs
             filepath_or_buffer="modin/pandas/test/data/issue_4543.csv",
             skiprows=skiprows,
@@ -1047,8 +1126,10 @@ class TestCsv:
         )
 
     def test_read_csv_wrong_path(self):
-        raising_exceptions = [e for e in io_ops_bad_exc if e != FileNotFoundError]
-
+        raising_exceptions = FileNotFoundError(2, "No such file or directory")
+        if StorageFormat.get() == "Hdk":
+            # FIXME: https://github.com/modin-project/modin/issues/7035
+            raising_exceptions = False
         eval_io(
             fn_name="read_csv",
             raising_exceptions=raising_exceptions,
@@ -1222,6 +1303,8 @@ class TestCsv:
             skiprows=skiprows,
             header=header,
             dtype="str",  # to avoid issues with heterogeneous data
+            # FIXME: https://github.com/modin-project/modin/issues/7035
+            raising_exceptions=False,
         )
 
     def test_to_csv_with_index(self, tmp_path):
@@ -1375,6 +1458,7 @@ class TestParquet:
         range_index_start=0,
         range_index_step=1,
         range_index_name=None,
+        raising_exceptions=None,
     ):
         if engine == "pyarrow" and filters == [] and os.name == "nt":
             # pyarrow, and therefore pandas using pyarrow, errors in this case.
@@ -1402,6 +1486,7 @@ class TestParquet:
                 path=unique_filename,
                 columns=columns,
                 filters=filters,
+                raising_exceptions=raising_exceptions,
             )
 
     @pytest.mark.parametrize(
@@ -1415,6 +1500,12 @@ class TestParquet:
                 df_equals(df1, df2)
                 df_equals(df1.dtypes, df2.dtypes)
 
+            raising_exceptions = None
+            if engine == "fastparquet":
+                raising_exceptions = ValueError(
+                    "The 'dtype_backend' argument is not supported for the fastparquet engine"
+                )
+
             eval_io(
                 fn_name="read_parquet",
                 # read_parquet kwargs
@@ -1422,6 +1513,7 @@ class TestParquet:
                 path=unique_filename,
                 dtype_backend=dtype_backend,
                 comparator=comparator,
+                raising_exceptions=raising_exceptions,
             )
 
     # Tests issue #6778
@@ -1443,6 +1535,9 @@ class TestParquet:
         [None, [], [("col1", "==", 5)], [("col1", "<=", 215), ("col2", ">=", 35)]],
     )
     def test_read_parquet_filters(self, engine, make_parquet_file, filters):
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         self._test_read_parquet(
             engine=engine,
             make_parquet_file=make_parquet_file,
@@ -1450,6 +1545,7 @@ class TestParquet:
             filters=filters,
             row_group_size=100,
             path_type=str,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize("columns", [None, ["col1"]])
@@ -1746,6 +1842,9 @@ class TestParquet:
             range_index_name="my_index",
         )
 
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         eval_io(
             fn_name="read_parquet",
             # read_parquet kwargs
@@ -1753,6 +1852,7 @@ class TestParquet:
             path=unique_filename,
             columns=columns,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     @pytest.mark.parametrize(
@@ -1864,6 +1964,9 @@ class TestParquet:
         )
         unique_filename = get_unique_filename(extension="parquet", data_dir=tmp_path)
         pandas_df.set_index("idx").to_parquet(unique_filename, partition_cols=["A"])
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         # read the same parquet using modin.pandas
         eval_io(
             "read_parquet",
@@ -1871,6 +1974,7 @@ class TestParquet:
             path=unique_filename,
             engine=engine,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_parquet_hdfs(self, engine):
@@ -1934,12 +2038,16 @@ class TestParquet:
         t = csv.read_csv(csv_fname)
         parquet.write_table(t, parquet_fname)
 
+        raising_exceptions = None
+        if filters == [] and engine == "pyarrow":
+            raising_exceptions = ValueError("Malformed filters")
         eval_io(
             "read_parquet",
             # read_parquet kwargs
             path=parquet_fname,
             engine=engine,
             filters=filters,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_empty_parquet_file(self, tmp_path, engine):
@@ -2054,73 +2162,6 @@ class TestParquet:
             storage_options=s3_storage_options,
         )
 
-    @pytest.mark.skipif(
-        StorageFormat.get() != "Pandas",
-        reason="Doesn't make sense for executions that do not use Modin's partitioning",
-    )
-    @pytest.mark.skipif(
-        Engine.get() == "Python",
-        reason="Python engine uses default-to-pandas implementations and has another logic of partitioning",
-    )
-    @pytest.mark.parametrize(
-        "modify_config", [{NPartitions: 16, MinPartitionSize: 32}], indirect=True
-    )
-    @pytest.mark.parametrize("parquet_num_row_groups", [1, 2, 7, 8, 11, 16, 23, 32])
-    @pytest.mark.parametrize("ncols", [2, 10, 34])
-    def test_read_parquet_proper_partitioning(
-        self, modify_config, ncols, parquet_num_row_groups, tmp_path, engine
-    ):
-        """
-        Test that no matter how the original parquet file is partitioned,
-        the resulted modin dataframe has proper partitioning.
-        """
-        nrows = 1024
-        test_df = pandas.DataFrame(
-            {
-                **{f"data_col{i}": np.arange(nrows) for i in range(ncols)},
-            }
-        )
-        path = tmp_path / "data"
-        path.mkdir()
-        parts = split_result_of_axis_func_pandas(
-            axis=0, num_splits=parquet_num_row_groups, result=test_df, min_block_size=1
-        )
-        for i, part in enumerate(parts):
-            part.to_parquet(
-                path / f"parquet_part{i}.parquet",
-                engine=engine,
-            )
-
-        md_df = pd.read_parquet(path)
-
-        expected_num_rows = max(
-            1, min(nrows // MinPartitionSize.get(), NPartitions.get())
-        )
-        expected_num_rows = (
-            expected_num_rows
-            if parquet_num_row_groups * 1.5 < expected_num_rows
-            else parquet_num_row_groups
-        )
-
-        expected_num_cols = max(
-            1, min(ncols // MinPartitionSize.get(), NPartitions.get())
-        )
-        expected_num_cols = (
-            # the repartition logic EXPANDS the number of row splits and SHRINKS the number
-            # of col splits, that's why we're applying '1.5' multiplier to different variables,
-            # (apply multiplier to 'expected_*' for cols and to 'actual_*' for rows)
-            expected_num_cols
-            if expected_num_cols * 1.5 < ncols
-            else ncols
-        )
-
-        assert md_df._query_compiler._modin_frame._partitions.shape[0] == min(
-            expected_num_rows, NPartitions.get()
-        )
-        assert md_df._query_compiler._modin_frame._partitions.shape[1] == min(
-            expected_num_cols, NPartitions.get()
-        )
-
 
 # Leave this test apart from the test classes, which skip the default to pandas
 # warning check. We want to make sure we are NOT defaulting to pandas for a
@@ -2171,12 +2212,16 @@ class TestJson:
     )
     def test_read_json_s3(self, s3_resource, s3_storage_options, storage_options_extra):
         s3_path = "s3://modin-test/modin-bugs/test_data.json"
+        raising_exceptions = None
+        if "anon" in storage_options_extra:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_json",
             path_or_buf=s3_path,
             lines=True,
             orient="records",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_json_categories(self):
@@ -2332,6 +2377,8 @@ class TestExcel:
             fn_name="read_excel",
             # read_excel kwargs
             io="modin/pandas/test/data/excel_sheetname_title.xlsx",
+            # FIXME: https://github.com/modin-project/modin/issues/7036
+            raising_exceptions=False,
         )
 
     @check_file_leaks
@@ -2968,11 +3015,14 @@ class TestFwf:
         [{"anon": False}, {"anon": True}, {"key": "123", "secret": "123"}],
     )
     def test_read_fwf_s3(self, s3_resource, s3_storage_options, storage_options_extra):
-        s3_path = "s3://modin-test/modin-bugs/test_data.fwf"
+        raising_exceptions = None
+        if "anon" in storage_options_extra:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_fwf",
-            filepath_or_buffer=s3_path,
+            filepath_or_buffer="s3://modin-test/modin-bugs/test_data.fwf",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
 
@@ -3069,11 +3119,14 @@ class TestFeather:
     def test_read_feather_s3(
         self, s3_resource, s3_storage_options, storage_options_extra
     ):
-        s3_path = "s3://modin-test/modin-bugs/test_data.feather"
+        raising_exceptions = None
+        if "anon" in storage_options_extra:
+            raising_exceptions = PermissionError("Forbidden")
         eval_io(
             fn_name="read_feather",
-            path=s3_path,
+            path="s3://modin-test/modin-bugs/test_data.feather",
             storage_options=s3_storage_options | storage_options_extra,
+            raising_exceptions=raising_exceptions,
         )
 
     def test_read_feather_path_object(self, make_feather_file):
@@ -3276,9 +3329,6 @@ def test_to_dict_series(kwargs):
     eval_general(
         *[df.iloc[:, 0] for df in create_test_dfs(utils_test_data["int_data"])],
         lambda df: df.to_dict(**kwargs),
-        # TODO(https://github.com/modin-project/modin/issues/6016): fix eval_general
-        # and remove this raising_exceptions
-        raising_exceptions=(Exception,),
     )
 
 
