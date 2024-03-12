@@ -588,7 +588,7 @@ class BasePandasDataset(ClassLogger):
         """
         return type(self)
 
-    def abs(self, **kwargs):  # noqa: RT01, D200
+    def abs(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return a `BasePandasDataset` with absolute numeric value of each element.
         """
@@ -1941,7 +1941,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isna(self, **kwargs):  # noqa: RT01, D200
+    def isna(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Detect missing values.
         """
@@ -2205,7 +2205,7 @@ class BasePandasDataset(ClassLogger):
         """
         return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
-    def notna(self, **kwargs):  # noqa: RT01, D200
+    def notna(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Detect existing (non-missing) values.
         """
@@ -4012,7 +4012,7 @@ class BasePandasDataset(ClassLogger):
     def __gt__(self, right):
         return self.gt(right)
 
-    def __invert__(self, **kwargs):
+    def __invert__(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Apply bitwise inverse to each element of the `BasePandasDataset`.
 
@@ -4087,7 +4087,7 @@ class BasePandasDataset(ClassLogger):
     def __ne__(self, other):
         return self.ne(other)
 
-    def __neg__(self, **kwargs):
+    def __neg__(self, **kwargs):  # noqa: PR01, RT01, D200
         """
         Change the sign for every value of self.
 

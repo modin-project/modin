@@ -629,7 +629,7 @@ class DataFrame(BasePandasDataset):
         """
         return super(DataFrame, self).abs()
 
-    def astype(self, dtype, copy=None, errors="raise"):
+    def astype(self, dtype, copy=None, errors="raise"):  # noqa: PR01, RT01, D200
         """
         Whether elements in `DataFrame` are contained in `values`.
         """

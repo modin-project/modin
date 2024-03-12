@@ -1207,7 +1207,7 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def astype(self, dtype, copy=None, errors="raise"):
+    def astype(self, dtype, copy=None, errors="raise"):  # noqa: PR01, RT01, D200
         """
         Whether elements in `Series` are contained in `values`.
         """
