@@ -414,7 +414,7 @@ class BasePandasDataset(ClassLogger):
             if isinstance(fn, str):
                 if not (hasattr(self, fn) or hasattr(np, fn)):
                     on_invalid(
-                        f"{fn} is not valid function for {type(self)} object.",
+                        f"'{fn}' is not a valid function for '{type(self).__name__}' object",
                         AttributeError,
                     )
             elif not callable(fn):
