@@ -439,6 +439,9 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
+        raising_exceptions=ValueError(
+            "cannot reindex on an axis with duplicate labels"
+        ),
     )
 
 
