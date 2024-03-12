@@ -419,6 +419,10 @@ class PivotTableImpl:
             index, columns, values
         )
 
+        if len(values) > 0:
+            to_take = list(np.unique(list(index) + list(columns) + list(values)))
+            qc = qc.getitem_column_array(to_take, ignore_order=True)
+
         if len(set(index).intersection(columns)) > 0:
             raise NotImplementedError(
                 "Range-partitioning 'pivot_table' implementation doesn't support intersections of 'index' and 'columns'"
@@ -427,18 +431,22 @@ class PivotTableImpl:
         to_unstack = columns if index else None
 
         groupby_result = qc._groupby_shuffle(
-            by=unique_keys,
+            by=list(unique_keys),
             agg_func=aggfunc,
             axis=0,
             groupby_kwargs={"observed": observed, "sort": sort},
             agg_args=(),
             agg_kwargs={},
+            drop=True,
         )
-        result = groupby_result._modin_frame.apply_full_axis(
-            axis=0,
-            func=lambda df: cls._pivot_table_from_groupby(
-                df, dropna, drop_column_level, to_unstack, fill_value
-            ),
+
+        result = qc.__constructor__(
+            groupby_result._modin_frame.apply_full_axis(
+                axis=0,
+                func=lambda df: cls._pivot_table_from_groupby(
+                    df, dropna, drop_column_level, to_unstack, fill_value
+                ),
+            )
         )
 
         if to_unstack is None:
@@ -512,7 +520,8 @@ class PivotTableImpl:
 
         drop_column_level = values is not None and not is_list_like(values)
         index, columns, values = map(__convert_by, [index, columns, values])
-        unique_keys = np.unique(index + columns)
+        # using 'pandas.unique' instead of 'numpy' as it guarantees to not change the original order
+        unique_keys = pandas.unique(index + columns)
 
         return index, columns, values, drop_column_level, unique_keys
 
