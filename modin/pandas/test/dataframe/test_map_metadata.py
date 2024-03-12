@@ -1350,7 +1350,7 @@ def test_insert(data):
         col="Bad Column",
         value=lambda df: df,
         raising_exceptions=ValueError(
-            "Expected a one-dimensional object, got a DataFrame with 69 columns instead."
+            f"Expected a one-dimensional object, got a DataFrame with {len(pandas_df.columns)} columns instead."
         ),
     )
     eval_insert(
