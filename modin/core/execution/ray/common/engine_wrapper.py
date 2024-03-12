@@ -315,22 +315,23 @@ class MaterializationHook:
         -------
         tuple
         """
-        return _hook_deserializer, (RayWrapper.materialize(self),)
+        data = RayWrapper.materialize(self)
+        return int if isinstance(data, int) else self._get, (data,)
 
+    @staticmethod
+    def _get(obj):
+        """
+        Simply returns the object. Used for the serialization only.
 
-def _hook_deserializer(obj):
-    """
-    Simply returns the object. Used for the MaterializationHook serialization.
+        Parameters
+        ----------
+        obj : object
 
-    Parameters
-    ----------
-    obj : object
-
-    Returns
-    -------
-    object
-    """
-    return obj
+        Returns
+        -------
+        object
+        """
+        return obj
 
 
 RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
