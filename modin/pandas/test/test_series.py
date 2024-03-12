@@ -734,7 +734,12 @@ def test_aggregate_error_checking(data):
         lambda series: series.aggregate("cumprod"),
     )
     eval_general(
-        modin_series, pandas_series, lambda series: series.aggregate("NOT_EXISTS")
+        modin_series,
+        pandas_series,
+        lambda series: series.aggregate("NOT_EXISTS"),
+        raising_exceptions=AttributeError(
+            "'NOT_EXISTS' is not a valid function for 'Series' object"
+        ),
     )
 
 
