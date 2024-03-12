@@ -307,6 +307,31 @@ class MaterializationHook:
         """
         raise NotImplementedError()
 
+    def __reduce__(self):
+        """
+        Replace this hook with the materialized object on serialization.
+
+        Returns
+        -------
+        tuple
+        """
+        return _hook_deserializer, (RayWrapper.materialize(self),)
+
+
+def _hook_deserializer(obj):
+    """
+    Simply returns the object. Used for the MaterializationHook serialization.
+
+    Parameters
+    ----------
+    obj : object
+
+    Returns
+    -------
+    object
+    """
+    return obj
+
 
 RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
 ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)
