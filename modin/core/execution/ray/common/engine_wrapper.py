@@ -316,22 +316,9 @@ class MaterializationHook:
         tuple
         """
         data = RayWrapper.materialize(self)
-        return int if isinstance(data, int) else self._get, (data,)
-
-    @staticmethod
-    def _get(obj):
-        """
-        Simply returns the object. Used for the serialization only.
-
-        Parameters
-        ----------
-        obj : object
-
-        Returns
-        -------
-        object
-        """
-        return obj
+        if not isinstance(data, int):
+            raise NotImplementedError("Only integers are currently supported")
+        return int, (data,)
 
 
 RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
