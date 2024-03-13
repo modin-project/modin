@@ -2362,6 +2362,10 @@ class BasePandasDataset(ClassLogger):
         ascending: bool = True,
         pct: bool = False,
     ):
+        if axis is None:
+            raise ValueError(
+                f"No axis named None for object type {type(self).__name__}"
+            )
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(
