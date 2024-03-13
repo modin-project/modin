@@ -367,6 +367,6 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_ray_dataset(modin_obj)
 
     @classmethod
-    @_inherit_docstrings(factories.BaseFactory._to_dask_dataframe)
-    def to_dask_dataframe(cls, modin_obj):
-        return cls.get_factory()._to_dask_dataframe(modin_obj)
+    @_inherit_docstrings(factories.BaseFactory._to_dask)
+    def to_dask(cls, modin_obj):
+        return cls.get_factory()._to_dask(modin_obj)

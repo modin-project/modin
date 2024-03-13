@@ -497,7 +497,7 @@ class BaseFactory(object):
         return cls.io_cls.to_ray_dataset(modin_obj)
 
     @classmethod
-    def _to_dask_dataframe(cls, modin_obj):
+    def _to_dask(cls, modin_obj):
         """
         Write query compiler content to a Dask DataFrame/Series.
 
@@ -515,7 +515,7 @@ class BaseFactory(object):
         -----
         Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
         """
-        return cls.io_cls.to_dask_dataframe(modin_obj)
+        return cls.io_cls.to_dask(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod

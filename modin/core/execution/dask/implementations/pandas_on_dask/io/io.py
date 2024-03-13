@@ -157,7 +157,7 @@ class PandasOnDaskIO(BaseIO):
         return from_partitions(dask_fututures, axis=0)._query_compiler
 
     @classmethod
-    def to_dask_dataframe(cls, modin_obj):
+    def to_dask(cls, modin_obj):
         """
         Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
 

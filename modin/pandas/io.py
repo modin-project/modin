@@ -1148,7 +1148,7 @@ def to_ray_dataset(modin_obj):
     return FactoryDispatcher.to_ray_dataset(modin_obj)
 
 
-def to_dask_dataframe(modin_obj):
+def to_dask(modin_obj):
     """
     Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
 
@@ -1168,7 +1168,7 @@ def to_dask_dataframe(modin_obj):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return FactoryDispatcher.to_dask_dataframe(modin_obj)
+    return FactoryDispatcher.to_dask(modin_obj)
 
 
 __all__ = [

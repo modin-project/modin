@@ -90,11 +90,6 @@ try:
 except ImportError:
     EXCEPTIONS = ()
 
-try:
-    import dask.dataframe as dd
-except ImportError:
-    pass
-
 from modin.config import NPartitions
 
 NPartitions.put(4)
@@ -3306,14 +3301,14 @@ def test_from_ray_dataset():
     reason="Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_df_to_dask_dataframe():
+def test_df_to_dask():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
 
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
 
-    dask_df = modin_df.modin.to_dask_dataframe()
+    dask_df = modin_df.modin.to_dask()
     df_equals(dask_df.compute(), pandas_df)
 
 
@@ -3322,7 +3317,7 @@ def test_df_to_dask_dataframe():
     reason="Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_series_to_dask_dataframe():
+def test_series_to_dask():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
@@ -3331,7 +3326,7 @@ def test_series_to_dask_dataframe():
     pandas_s = pandas_df.iloc[0]
     modin_s = pd.Series(pandas_s)
 
-    dask_series = modin_s.modin.to_dask_dataframe()
+    dask_series = modin_s.modin.to_dask()
     pandas_s.equals(dask_series.compute())
 
 
@@ -3341,6 +3336,8 @@ def test_series_to_dask_dataframe():
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_dask_dataframe():
+    import dask.dataframe as dd
+
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )

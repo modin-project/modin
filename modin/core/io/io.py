@@ -768,7 +768,7 @@ class BaseIO:
         )
 
     @classmethod
-    def to_dask_dataframe(cls, modin_obj):
+    def to_dask(cls, modin_obj):
         """
         Convert a Modin DataFrame to a Dask Dataframe.
 
