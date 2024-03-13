@@ -477,7 +477,7 @@ def test_aggregate_alias():
 @pytest.mark.parametrize(
     "col1_category", [True, False], ids=lambda v: f"col1_category={v}"
 )
-def test_simple_row_groupby(by, as_index, col1_category, request):
+def test_simple_row_groupby(by, as_index, col1_category):
     pandas_df = pandas.DataFrame(
         {
             "col1": [0, 1, 2, 3],
