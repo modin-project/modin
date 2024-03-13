@@ -38,6 +38,7 @@ from pandas.core.dtypes.common import (
 
 import modin.pandas as pd
 from modin.config import (
+    Engine,
     MinPartitionSize,
     NPartitions,
     RangePartitioning,
@@ -57,7 +58,7 @@ from modin.utils import try_cast_to_pandas
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2**2, 2**3),
+    "Small": (2**6, 2**6),
     "Normal": (2**6, 2**8),
     "Big": (2**7, 2**12),
 }
@@ -933,6 +934,12 @@ def eval_general(
                         md_e, tuple(raising_exceptions)
                     ), f"not acceptable exception type: {md_e}"
                 elif raising_exceptions and type(raising_exceptions) is not type:
+                    if Engine.get() == "Ray":
+                        from ray.exceptions import RayTaskError
+
+                        # unwrap ray exceptions from remote worker
+                        if isinstance(md_e, RayTaskError):
+                            md_e = md_e.args[0]
                     assert (
                         type(md_e) is type(raising_exceptions)
                         and md_e.args == raising_exceptions.args

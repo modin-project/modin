@@ -1048,9 +1048,16 @@ class DataFrame(BasePandasDataset):
             or isinstance(value, (array, np.ndarray))
             and len(value.shape) > 1
         ):
-            if value.shape[1] != 1:
+            if isinstance(value, (array, np.ndarray)) and value.shape[1] != 1:
                 raise ValueError(
                     f"Expected a 1D array, got an array with shape {value.shape}"
+                )
+            elif (
+                isinstance(value, (DataFrame, pandas.DataFrame)) and value.shape[1] != 1
+            ):
+                raise ValueError(
+                    "Expected a one-dimensional object, got a DataFrame with "
+                    + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
@@ -1462,9 +1469,9 @@ class DataFrame(BasePandasDataset):
         # index or columns
         if values is None:
             values = list(self.columns)
-            if index:
+            if index is not None:
                 values = [v for v in values if v not in index]
-            if columns:
+            if columns is not None:
                 values = [v for v in values if v not in columns]
 
         return self.__constructor__(

@@ -171,7 +171,7 @@ def _update_engine(publisher: Parameter):
     _is_first_update[publisher.get()] = False
 
 
-from modin.pandas import errors
+from modin.pandas import arrays, errors
 from modin.utils import show_versions
 
 from .. import __version__
