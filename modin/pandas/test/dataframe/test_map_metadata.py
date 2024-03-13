@@ -1335,7 +1335,6 @@ def test_insert(data):
             pandas.DataFrame(columns=list("ab")),
             col=lambda df: df.columns[0],
             value=lambda df: df[df.columns[0]],
-            allow_duplicates=True,
         )
     eval_insert(
         modin_df,
@@ -1411,7 +1410,7 @@ def test_insert_4407():
                 "Expected a 1D array, got an array with shape (3, 2)"
             )
         elif idx == 2:
-            # Modin's exception message looks better, it's probably fine just leave it as is
+            # FIXME: https://github.com/modin-project/modin/issues/7080
             raising_exceptions = False
         eval_insert(
             modin_df,
@@ -1668,7 +1667,7 @@ def test___neg__(request, data):
 def test___invert__(data, request):
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # Modin's exception message looks better, it's probably fine just leave it as is
+        # FIXME: https://github.com/modin-project/modin/issues/7081
         raising_exceptions = False
     eval_general(
         *create_test_dfs(data), lambda df: ~df, raising_exceptions=raising_exceptions
