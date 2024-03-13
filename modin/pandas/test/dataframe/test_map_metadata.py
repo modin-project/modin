@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas.testing import assert_index_equal, assert_series_equal
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
@@ -47,6 +46,7 @@ from modin.pandas.test.utils import (
     test_func_keys,
     test_func_values,
 )
+from modin.pandas.testing import assert_index_equal, assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -1335,7 +1335,6 @@ def test_insert(data):
             pandas.DataFrame(columns=list("ab")),
             col=lambda df: df.columns[0],
             value=lambda df: df[df.columns[0]],
-            allow_duplicates=True,
         )
     eval_insert(
         modin_df,
@@ -1363,7 +1362,7 @@ def test_insert(data):
         col="Bad Column",
         value=lambda df: df,
         raising_exceptions=ValueError(
-            "Expected a one-dimensional object, got a DataFrame with 69 columns instead."
+            f"Expected a one-dimensional object, got a DataFrame with {len(pandas_df.columns)} columns instead."
         ),
     )
     eval_insert(
@@ -1372,7 +1371,7 @@ def test_insert(data):
         col="Too Short",
         value=lambda df: list(df[df.columns[0]])[:-1],
         raising_exceptions=ValueError(
-            "Length of values (255) does not match length of index (256)"
+            f"Length of values ({len(pandas_df)-1}) does not match length of index ({len(pandas_df)})"
         ),
     )
     eval_insert(
@@ -1389,7 +1388,7 @@ def test_insert(data):
         col="Bad Loc",
         value=100,
         raising_exceptions=IndexError(
-            "index 169 is out of bounds for axis 0 with size 69"
+            f"index {len(pandas_df.columns) + 100} is out of bounds for axis 0 with size {len(pandas_df.columns)}"
         ),
     )
 
@@ -1411,7 +1410,7 @@ def test_insert_4407():
                 "Expected a 1D array, got an array with shape (3, 2)"
             )
         elif idx == 2:
-            # Modin's exception message looks better, it's probably fine just leave it as is
+            # FIXME: https://github.com/modin-project/modin/issues/7080
             raising_exceptions = False
         eval_insert(
             modin_df,
@@ -1668,7 +1667,7 @@ def test___neg__(request, data):
 def test___invert__(data, request):
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # Modin's exception message looks better, it's probably fine just leave it as is
+        # FIXME: https://github.com/modin-project/modin/issues/7081
         raising_exceptions = False
     eval_general(
         *create_test_dfs(data), lambda df: ~df, raising_exceptions=raising_exceptions

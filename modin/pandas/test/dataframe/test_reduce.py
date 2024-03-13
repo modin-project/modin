@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._testing import assert_series_equal
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
@@ -39,6 +38,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     test_data_values,
 )
+from modin.pandas.testing import assert_series_equal
 
 NPartitions.put(4)
 
@@ -322,7 +322,7 @@ def test_dtype_consistency(dtype):
 def test_sum_prod_specific(fn, min_count, numeric_only):
     raising_exceptions = None
     if not numeric_only and fn == "prod":
-        # FIXME: different messages, check only types
+        # FIXME: https://github.com/modin-project/modin/issues/7029
         raising_exceptions = False
     elif not numeric_only and fn == "sum":
         raising_exceptions = TypeError('can only concatenate str (not "int") to str')
@@ -347,7 +347,7 @@ def test_sum_single_column(data):
 
 
 @pytest.mark.parametrize(
-    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var", "rank"]
+    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("numeric_only", [False, True])
@@ -366,12 +366,9 @@ def test_reduce_specific(fn, numeric_only, axis):
             else:
                 # FIXME: https://github.com/modin-project/modin/issues/7030
                 raising_exceptions = False
-        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean", "rank"):
+        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
             # FIXME: https://github.com/modin-project/modin/issues/7030
             raising_exceptions = False
-
-    if numeric_only and axis is None and fn == "rank":
-        raising_exceptions = ValueError("No axis named None for object type DataFrame")
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),

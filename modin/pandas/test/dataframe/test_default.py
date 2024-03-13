@@ -606,6 +606,7 @@ def test_pivot(data, index, columns, values, request):
         "one_column_values-one_column-default-float_nan_data"
         in request.node.callspec.id
         or "default-one_column-several_columns_index" in request.node.callspec.id
+        or "default-one_column-one_column_index" in request.node.callspec.id
         or (
             current_execution in ("BaseOnPython", "HdkOnNative")
             and index is lib.no_default
@@ -1427,10 +1428,10 @@ def test_setattr_axes():
         if StorageFormat.get() != "Hdk":  # Not yet supported - #1766
             df.index = ["foo", "bar"]
             # Check that ensure_index was called
-            pandas.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
+            pd.testing.assert_index_equal(df.index, pandas.Index(["foo", "bar"]))
 
         df.columns = [9, 10]
-        pandas.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
+        pd.testing.assert_index_equal(df.columns, pandas.Index([9, 10]))
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

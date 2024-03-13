@@ -23,13 +23,13 @@ import pandas
 import pandas._libs.lib as lib
 import pytest
 from numpy.testing import assert_array_equal
-from pandas._testing import assert_series_equal
 from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
+from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution, try_cast_to_pandas
 
@@ -476,7 +476,7 @@ def test___invert__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # Modin's exception message looks better, it's probably fine just leave it as is
+        # FIXME: https://github.com/modin-project/modin/issues/7081
         raising_exceptions = False
     eval_general(
         modin_series,
@@ -552,7 +552,7 @@ def test___or__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # Modin's exception message looks better, it's probably fine just leave it as is
+        # FIXME: https://github.com/modin-project/modin/issues/7081
         raising_exceptions = False
     inter_df_math_helper(
         modin_series,
@@ -685,7 +685,7 @@ def test___xor__(data, request):
     modin_series, pandas_series = create_test_series(data)
     raising_exceptions = None
     if "float_nan_data" in request.node.callspec.id:
-        # Modin's exception message looks better, it's probably fine just leave it as is
+        # FIXME: https://github.com/modin-project/modin/issues/7081
         raising_exceptions = False
     inter_df_math_helper(
         modin_series,
@@ -1363,6 +1363,20 @@ def test_constructor_columns_and_index():
     )
     with pytest.raises(NotImplementedError):
         pd.Series(modin_series, index=[1, 2, 99999])
+
+
+def test_constructor_arrow_extension_array():
+    # example from pandas docs
+    pa = pytest.importorskip("pyarrow")
+    array = pd.arrays.ArrowExtensionArray(
+        pa.array(
+            [{"1": "2"}, {"10": "20"}, None],
+            type=pa.map_(pa.string(), pa.string()),
+        )
+    )
+    md_ser, pd_ser = create_test_series(array)
+    df_equals(md_ser, pd_ser)
+    df_equals(md_ser.dtypes, pd_ser.dtypes)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

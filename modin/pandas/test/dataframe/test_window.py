@@ -708,11 +708,15 @@ def test_std_var(axis, skipna, method):
     )
 
 
-@pytest.mark.parametrize("axis", [0, 1])
+@pytest.mark.parametrize("axis", [0, 1, None])
 def test_rank(axis):
+    raising_exceptions = None
+    if axis is None:
+        raising_exceptions = ValueError("No axis named None for object type DataFrame")
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: df.rank(axis=axis),
+        raising_exceptions=raising_exceptions,
     )
 
 

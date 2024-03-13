@@ -28,7 +28,6 @@ def test_top_level_api_equality():
     ignore_pandas = [
         "annotations",
         "np",
-        "testing",
         "tests",
         "pandas",
         "core",
@@ -36,7 +35,6 @@ def test_top_level_api_equality():
         "util",
         "offsets",
         "datetime",
-        "arrays",
         "api",
         "tseries",
         "to_msgpack",  # This one is experimental, and doesn't look finished

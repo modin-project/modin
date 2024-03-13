@@ -2966,13 +2966,22 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.std())
     eval_general(md_window, pd_window, lambda window: window.min())
     eval_general(md_window, pd_window, lambda window: window.max())
-    # FIXME: identify error
+    raising_exceptions = None
+    if pd_window.on == "col4":
+        raising_exceptions = ValueError(
+            "Length mismatch: Expected axis has 450 elements, new values have 600 elements"
+        )
     eval_general(
-        md_window, pd_window, lambda window: window.corr(), raising_exceptions=False
+        md_window,
+        pd_window,
+        lambda window: window.corr(),
+        raising_exceptions=raising_exceptions,
     )
-    # FIXME: identify error
     eval_general(
-        md_window, pd_window, lambda window: window.cov(), raising_exceptions=False
+        md_window,
+        pd_window,
+        lambda window: window.cov(),
+        raising_exceptions=raising_exceptions,
     )
     eval_general(md_window, pd_window, lambda window: window.skew())
     eval_general(md_window, pd_window, lambda window: window.kurt())
@@ -2983,6 +2992,13 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.quantile(0.2))
     eval_general(md_window, pd_window, lambda window: window.rank())
 
+    raising_exceptions = None
+    if pd_window.on == "col4":
+        raising_exceptions = TypeError(
+            "Addition/subtraction of integers and integer-arrays with DatetimeArray is no longer supported."
+            + "  Instead of adding/subtracting `n`, use `n * obj.freq`"
+        )
+
     if not md_window._as_index:
         # There's a mismatch in group columns when 'as_index=False'
         # see: https://github.com/modin-project/modin/issues/6291
@@ -2991,16 +3007,14 @@ def eval_rolling(md_window, pd_window):
             md_window,
             pd_window,
             lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
-            # FIXME: identify error
-            raising_exceptions=False,
+            raising_exceptions=raising_exceptions,
         )
     else:
         eval_general(
             md_window,
             pd_window,
             lambda window: window.sem(),
-            # FIXME: identify error
-            raising_exceptions=False,
+            raising_exceptions=raising_exceptions,
         )
 
 

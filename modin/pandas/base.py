@@ -2363,7 +2363,6 @@ class BasePandasDataset(ClassLogger):
         pct: bool = False,
     ):
         if axis is None:
-            # TODO: this should be moved into `_get_axis_number`
             raise ValueError(
                 f"No axis named None for object type {type(self).__name__}"
             )
