@@ -114,7 +114,7 @@ def gen_nan_data(nrows: int, ncols: int) -> dict:
 
 def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
-    Generate int data with caching.
+    Generate int data.
 
     Parameters
     ----------
@@ -141,7 +141,7 @@ def gen_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
 
 def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> dict:
     """
-    Generate int data and string data with caching.
+    Generate int data and string data.
 
     Parameters
     ----------
@@ -160,7 +160,7 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
         Number of keys - `ncols`, each of them store np.ndarray of `nrows` length.
         One of the columns with string values.
     """
-    data = gen_data("int", nrows, ncols, rand_low, rand_high).copy()
+    data = gen_int_data(nrows, ncols, rand_low, rand_high).copy()
     # convert values in arbitary column to string type
     key = list(data.keys())[0]
     data[key] = [f"str_{x}" for x in data[key]]
@@ -169,7 +169,7 @@ def gen_str_int_data(nrows: int, ncols: int, rand_low: int, rand_high: int) -> d
 
 def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
     """
-    Generate int data and string data "true" and "false" values with caching.
+    Generate int data and string data "true" and "false" values.
 
     Parameters
     ----------
@@ -189,7 +189,7 @@ def gen_true_false_int_data(nrows, ncols, rand_low, rand_high):
         One half of the columns with integer values, another half - with "true" and
         "false" string values.
     """
-    data = gen_data("int", nrows // 2, ncols // 2, rand_low, rand_high)
+    data = gen_int_data(nrows // 2, ncols // 2, rand_low, rand_high)
 
     data_true_false = {
         "tf_col{}".format(i): np.random.choice(
