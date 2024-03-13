@@ -86,11 +86,6 @@ from .utils import (
     test_string_list_data_values,
 )
 
-
-def sort_and_compare(sr1, sr2):
-    df_equals(sr1.sort_values(), sr2.sort_values())
-
-
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
