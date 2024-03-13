@@ -127,6 +127,8 @@ jobs:
     strategy:
       matrix:
         execution: [BaseOnPython]
+    env:
+      MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.9
     steps:
       - uses: actions/checkout@v3

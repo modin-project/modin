@@ -369,6 +369,7 @@ def test_reduce_specific(fn, numeric_only, axis):
         elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
             # FIXME: https://github.com/modin-project/modin/issues/7030
             raising_exceptions = False
+
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
