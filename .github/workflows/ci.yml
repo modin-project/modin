@@ -188,7 +188,6 @@ jobs:
       - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
       - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
       - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-      - run: MODIN_RANGE_PARTITIONING=1 python -m pytest modin/pandas/test/dataframe/test_join_sort.py -k "merge"
       - run: python -m pytest modin/pandas/test/test_general.py
       - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
       - run: python -m pytest modin/pandas/test/test_series.py

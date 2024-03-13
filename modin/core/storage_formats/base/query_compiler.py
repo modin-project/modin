@@ -1772,13 +1772,16 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
     @doc_utils.add_refer_to("Series.drop_duplicates")
     def unique(self, keep="first", ignore_index=False, subset=None):
         """
-        Get unique values of `self`.
+        Get unique rows of `self`.
 
         Parameters
         ----------
         keep : {"first", "last", False}, default: "first"
+            Which duplicates to keep.
         ignore_index : bool, default: False
+            If ``True``, the resulting axis will be labeled ``0, 1, …, n - 1``.
         subset : list, optional
+            Only consider certain columns for identifying duplicates, if `None`, use all of the columns.
 
         Returns
         -------

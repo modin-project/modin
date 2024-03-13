@@ -1900,6 +1900,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END String map partitions operations
 
     def unique(self, keep="first", ignore_index=False, subset=None):
+        # kernels with 'pandas.Series.unique()' work faster
         can_use_unique_kernel = (
             subset is None and ignore_index and len(self.columns) == 1 and not keep
         )
@@ -1927,7 +1928,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 lambda x: x.squeeze(axis=1).unique(),
                 new_columns=self.columns,
             )
-        return self.__constructor__(new_modin_frame, shape_hint="column")
+        return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):

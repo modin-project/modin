@@ -19,7 +19,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import RangePartitioning, StorageFormat
+from modin.config import StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_frame_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -32,6 +32,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
+    sort_if_range_partitioning,
     sort_index_for_equal_values,
     test_data_keys,
     test_data_values,
@@ -565,12 +566,10 @@ def test_pivot_table():
         )
 
 
-def sort_arr(arr1, arr2):
-    assert_array_equal(np.sort(arr1), np.sort(arr2))
-
-
 def test_unique():
-    comparator = sort_arr if RangePartitioning.get() else assert_array_equal
+    comparator = lambda *args: sort_if_range_partitioning(  # noqa: E731
+        *args, comparator=assert_array_equal
+    )
 
     modin_result = pd.unique([2, 1, 3, 3])
     pandas_result = pandas.unique([2, 1, 3, 3])

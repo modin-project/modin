@@ -27,7 +27,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import NPartitions, RangePartitioning, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -63,6 +63,7 @@ from .utils import (
     quantiles_keys,
     quantiles_values,
     random_state,
+    sort_if_range_partitioning,
     string_na_rep_keys,
     string_na_rep_values,
     string_sep_keys,
@@ -1591,15 +1592,13 @@ def test_drop(data):
 )
 @pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
 def test_drop_duplicates(data, keep, inplace):
-    comparator = sort_and_compare if RangePartitioning.get() else df_equals
-
     modin_series, pandas_series = create_test_series(data)
     modin_res = modin_series.drop_duplicates(keep=keep, inplace=inplace)
     pandas_res = pandas_series.drop_duplicates(keep=keep, inplace=inplace)
     if inplace:
-        comparator(modin_series, pandas_series)
+        sort_if_range_partitioning(modin_series, pandas_series)
     else:
-        comparator(modin_res, pandas_res)
+        sort_if_range_partitioning(modin_res, pandas_res)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3545,13 +3544,11 @@ def test_tz_localize():
     )
 
 
-def sort_arr(arr1, arr2):
-    assert_array_equal(np.sort(arr1), np.sort(arr2))
-
-
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unique(data):
-    comparator = sort_arr if RangePartitioning.get() else assert_array_equal
+    comparator = lambda *args: sort_if_range_partitioning(  # noqa: E731
+        *args, comparator=assert_array_equal
+    )
 
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.unique()

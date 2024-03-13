@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, RangePartitioning, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.test.utils import (
@@ -40,6 +40,7 @@ from modin.pandas.test.utils import (
     name_contains,
     numeric_dfs,
     random_state,
+    sort_if_range_partitioning,
     test_data,
     test_data_keys,
     test_data_values,
@@ -61,13 +62,6 @@ matplotlib.use("Agg")
 # instances of defaulting to pandas, but some test modules, like this one,
 # have too many such instances.
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-
-
-def sort_and_compare(df1, df2):
-    df_equals(
-        df1.sort_values(df1.columns.tolist(), ignore_index=True),
-        df2.sort_values(df2.columns.tolist(), ignore_index=True),
-    )
 
 
 def eval_insert(modin_df, pandas_df, **kwargs):
@@ -1062,8 +1056,6 @@ def test_droplevel():
 @pytest.mark.parametrize("ignore_index", [True, False], ids=["True", "False"])
 @pytest.mark.exclude_in_sanity
 def test_drop_duplicates(data, keep, subset, ignore_index):
-    comparator = sort_and_compare if RangePartitioning.get() else df_equals
-
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
@@ -1077,7 +1069,7 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             )
     else:
-        comparator(
+        sort_if_range_partitioning(
             pandas_df.drop_duplicates(
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             ),
@@ -1099,12 +1091,10 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
         modin_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
-        comparator(modin_df, pandas_df)
+        sort_if_range_partitioning(modin_df, pandas_df)
 
 
 def test_drop_duplicates_with_missing_index_values():
-    comparator = sort_and_compare if RangePartitioning.get() else df_equals
-
     data = {
         "columns": ["value", "time", "id"],
         "index": [
@@ -1179,12 +1169,10 @@ def test_drop_duplicates_with_missing_index_values():
     modin_df = pd.DataFrame(data["data"], index=data["index"], columns=data["columns"])
     modin_result = modin_df.sort_values(["id", "time"]).drop_duplicates(["id"])
     pandas_result = pandas_df.sort_values(["id", "time"]).drop_duplicates(["id"])
-    comparator(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_after_sort():
-    comparator = sort_and_compare if RangePartitioning.get() else df_equals
-
     data = [
         {"value": 1, "time": 2},
         {"value": 1, "time": 1},
@@ -1196,18 +1184,19 @@ def test_drop_duplicates_after_sort():
 
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
-    comparator(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_with_repeated_index_values():
-    comparator = sort_and_compare if RangePartitioning.get() else df_equals
-
     # This tests for issue #4467: https://github.com/modin-project/modin/issues/4467
     data = [[0], [1], [0]]
     index = [0, 0, 0]
     modin_df, pandas_df = create_test_dfs(data, index=index)
     eval_general(
-        modin_df, pandas_df, lambda df: df.drop_duplicates(), comparator=comparator
+        modin_df,
+        pandas_df,
+        lambda df: df.drop_duplicates(),
+        comparator=sort_if_range_partitioning,
     )
 
 
