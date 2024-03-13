@@ -1271,6 +1271,20 @@ def test_constructor_columns_and_index():
         pd.Series(modin_series, index=[1, 2, 99999])
 
 
+def test_constructor_arrow_extension_array():
+    # example from pandas docs
+    pa = pytest.importorskip("pyarrow")
+    array = pd.arrays.ArrowExtensionArray(
+        pa.array(
+            [{"1": "2"}, {"10": "20"}, None],
+            type=pa.map_(pa.string(), pa.string()),
+        )
+    )
+    md_ser, pd_ser = create_test_series(array)
+    df_equals(md_ser, pd_ser)
+    df_equals(md_ser.dtypes, pd_ser.dtypes)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_series, pandas_series = create_test_series(data)
