@@ -1769,24 +1769,30 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, unit=unit, errors=errors
         )
 
-    # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
-    @doc_utils.add_one_column_warning
-    @doc_utils.add_refer_to("Series.unique")
-    def unique(self, **kwargs):
+    @doc_utils.add_refer_to("Series.drop_duplicates")
+    def unique(self, keep="first", ignore_index=False, subset=None):
         """
         Get unique values of `self`.
 
         Parameters
         ----------
-        **kwargs : dict
-            Serves compatibility purpose. Does not affect the result.
+        keep : {"first", "last", False}, default: "first"
+        ignore_index : bool, default: False
+        subset : list, optional
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler with unique values.
         """
-        return SeriesDefault.register(pandas.Series.unique)(self, **kwargs)
+        if subset is not None:
+            mask = self.getitem_column_array(subset, ignore_order=True)
+        else:
+            mask = self
+        without_duplicates = self.getitem_array(mask.duplicated(keep=keep).invert())
+        if ignore_index:
+            without_duplicates.index = pandas.RangeIndex(len(without_duplicates.index))
+        return without_duplicates
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.searchsorted")

@@ -1511,13 +1511,12 @@ class BasePandasDataset(ClassLogger):
                     subset = list(subset)
             else:
                 subset = [subset]
-            df = self[subset]
-        else:
-            df = self
-        duplicated = df.duplicated(keep=keep)
-        result = self[~duplicated]
-        if ignore_index:
-            result.index = pandas.RangeIndex(stop=len(result))
+            if len(diff := pandas.Index(subset).difference(self.columns)) > 0:
+                raise KeyError(diff)
+        result_qc = self._query_compiler.unique(
+            keep=keep, ignore_index=ignore_index, subset=subset
+        )
+        result = self.__constructor__(query_compiler=result_qc)
         if inplace:
             self._update_inplace(result._query_compiler)
         else:

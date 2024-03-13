@@ -27,7 +27,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import NPartitions, RangePartitioning, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -84,6 +84,11 @@ from .utils import (
     test_string_list_data_keys,
     test_string_list_data_values,
 )
+
+
+def sort_and_compare(sr1, sr2):
+    df_equals(sr1.sort_values(), sr2.sort_values())
+
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -1586,11 +1591,15 @@ def test_drop(data):
 )
 @pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
 def test_drop_duplicates(data, keep, inplace):
+    comparator = sort_and_compare if RangePartitioning.get() else df_equals
+
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.drop_duplicates(keep=keep, inplace=inplace),
-        pandas_series.drop_duplicates(keep=keep, inplace=inplace),
-    )
+    modin_res = modin_series.drop_duplicates(keep=keep, inplace=inplace)
+    pandas_res = pandas_series.drop_duplicates(keep=keep, inplace=inplace)
+    if inplace:
+        comparator(modin_series, pandas_series)
+    else:
+        comparator(modin_res, pandas_res)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3536,24 +3545,30 @@ def test_tz_localize():
     )
 
 
+def sort_arr(arr1, arr2):
+    assert_array_equal(np.sort(arr1), np.sort(arr2))
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unique(data):
+    comparator = sort_arr if RangePartitioning.get() else assert_array_equal
+
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.unique()
     pandas_result = pandas_series.unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
     pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01") for _ in range(3)]
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
@@ -3562,12 +3577,12 @@ def test_unique(data):
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
     pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
@@ -3576,7 +3591,7 @@ def test_unique(data):
     pandas_result = pandas.Series(
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
 

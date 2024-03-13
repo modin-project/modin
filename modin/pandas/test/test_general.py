@@ -19,7 +19,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import StorageFormat
+from modin.config import RangePartitioning, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_frame_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -565,15 +565,21 @@ def test_pivot_table():
         )
 
 
+def sort_arr(arr1, arr2):
+    assert_array_equal(np.sort(arr1), np.sort(arr2))
+
+
 def test_unique():
+    comparator = sort_arr if RangePartitioning.get() else assert_array_equal
+
     modin_result = pd.unique([2, 1, 3, 3])
     pandas_result = pandas.unique([2, 1, 3, 3])
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series([2] + [1] * 5))
     pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -582,7 +588,7 @@ def test_unique():
     pandas_result = pandas.unique(
         pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -601,7 +607,7 @@ def test_unique():
             ]
         )
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -620,12 +626,12 @@ def test_unique():
             ]
         )
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
     pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
 
