@@ -78,3 +78,9 @@ Range-partitioning Merge
 
 It is recommended to use this implementation if the right dataframe in merge is as big as
 the left dataframe. In this case, range-partitioning implementation works faster and consumes less RAM.
+
+'.unique()' and '.drop_duplicates()'
+""""""""""""""""""""""""""""""""""""
+
+Range-partitioning implementation of '.unique()'/'.drop_duplicates()' works best when the input data size is big (more than
+5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).
