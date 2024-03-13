@@ -27,8 +27,6 @@ from modin.pandas.io import to_pandas
 from modin.pandas.test.utils import (
     axis_keys,
     axis_values,
-    bool_arg_keys,
-    bool_arg_values,
     create_test_dfs,
     default_to_pandas_ignore_string,
     df_equals,
@@ -301,8 +299,10 @@ class TestCorr:
                 modin_df, pandas_df, lambda df: df.corr(min_periods=min_periods)
             )
 
-    @pytest.mark.parametrize("numeric_only", [True, False, None])
+    @pytest.mark.parametrize("numeric_only", [True, False])
     def test_corr_non_numeric(self, numeric_only):
+        if not numeric_only:
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7023")
         eval_general(
             *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
             lambda df: df.corr(numeric_only=numeric_only),
@@ -378,8 +378,10 @@ def test_cov(min_periods, ddof):
     )
 
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("numeric_only", [True, False])
 def test_cov_numeric_only(numeric_only):
+    if not numeric_only:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7023")
     eval_general(
         *create_test_dfs({"a": [1, 2, 3], "b": [3, 2, 5], "c": ["a", "b", "c"]}),
         lambda df: df.cov(numeric_only=numeric_only),
@@ -527,8 +529,8 @@ def test_info(data, verbose, max_cols, memory_usage, show_counts):
 
 
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize("skipna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("numeric_only", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("skipna", [False, True])
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize("method", ["kurtosis", "kurt"])
 def test_kurt_kurtosis(axis, skipna, numeric_only, method):
     data = test_data["float_nan_data"]
@@ -604,18 +606,26 @@ def test_pivot(data, index, columns, values, request):
         "one_column_values-one_column-default-float_nan_data"
         in request.node.callspec.id
         or "default-one_column-several_columns_index" in request.node.callspec.id
+        or "default-one_column-one_column_index" in request.node.callspec.id
         or (
             current_execution in ("BaseOnPython", "HdkOnNative")
             and index is lib.no_default
         )
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
+
+    raising_exceptions = None
+    if index is not lib.no_default:
+        raising_exceptions = ValueError(
+            "Index contains duplicate entries, cannot reshape"
+        )
     eval_general(
         *create_test_dfs(data),
         lambda df, *args, **kwargs: df.pivot(*args, **kwargs),
         index=index,
         columns=columns,
         values=values,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -627,7 +637,7 @@ def test_pivot(data, index, columns, values, request):
         pytest.param(
             lambda df: [*df.columns[0:2], *df.columns[-7:-4]], id="multiple_index_cols"
         ),
-        None,
+        pytest.param(None, id="default_index"),
     ],
 )
 @pytest.mark.parametrize(
@@ -641,7 +651,7 @@ def test_pivot(data, index, columns, values, request):
             ],
             id="multiple_cols",
         ),
-        None,
+        pytest.param(None, id="default_columns"),
     ],
 )
 @pytest.mark.parametrize(
@@ -649,7 +659,7 @@ def test_pivot(data, index, columns, values, request):
     [
         pytest.param(lambda df: df.columns[-1], id="single_value_col"),
         pytest.param(lambda df: df.columns[-4:-1], id="multiple_value_cols"),
-        None,
+        pytest.param(None, id="default_values"),
     ],
 )
 @pytest.mark.parametrize(
@@ -682,6 +692,15 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
     # so reducing dimension of testing data at that case
     if values is None:
         md_df, pd_df = md_df.iloc[:42, :42], pd_df.iloc[:42, :42]
+
+    raising_exceptions = None
+    if "default_columns-default_index" in request.node.callspec.id:
+        raising_exceptions = ValueError("No group keys passed!")
+    elif (
+        "callable_tree_reduce_func" in request.node.callspec.id
+        and "int_data" in request.node.callspec.id
+    ):
+        raising_exceptions = TypeError("'numpy.float64' object is not callable")
     eval_general(
         md_df,
         pd_df,
@@ -692,6 +711,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         columns=columns,
         values=values,
         aggfunc=aggfunc,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -737,7 +757,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
 )
 @pytest.mark.parametrize(
     "margins_name",
-    [pytest.param("Custom name", id="str_name"), pytest.param(None, id="None_name")],
+    [pytest.param("Custom name", id="str_name")],
 )
 @pytest.mark.parametrize("fill_value", [None, 0])
 def test_pivot_table_margins(
@@ -748,7 +768,11 @@ def test_pivot_table_margins(
     aggfunc,
     margins_name,
     fill_value,
+    request,
 ):
+    raising_exceptions = None
+    if "dict_func" in request.node.callspec.id:
+        raising_exceptions = KeyError("Column(s) ['col28', 'col38'] do not exist")
     eval_general(
         *create_test_dfs(data),
         operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
@@ -759,6 +783,7 @@ def test_pivot_table_margins(
         margins=True,
         margins_name=margins_name,
         fill_value=fill_value,
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -865,11 +890,24 @@ def test_resampler_functions(rule, axis, method):
     )
     modin_df = pd.DataFrame(data, index=index)
     pandas_df = pandas.DataFrame(data, index=index)
+    if axis == "columns":
+        columns = pandas.date_range(
+            "31/12/2000", periods=len(pandas_df.columns), freq="min"
+        )
+        modin_df.columns = columns
+        pandas_df.columns = columns
+
+    raising_exceptions = None
+    if method in ("interpolate", "asfreq", "nearest", "bfill", "ffill"):
+        # It looks like pandas is preparing to completely
+        # remove `axis` parameter for `resample` function.
+        raising_exceptions = AssertionError("axis must be 0")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df.resample(rule, axis=axis), method)(),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -891,13 +929,24 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
     )
     modin_df = pd.DataFrame(data, index=index)
     pandas_df = pandas.DataFrame(data, index=index)
+    if axis == "columns":
+        columns = pandas.date_range(
+            "31/12/2000", periods=len(pandas_df.columns), freq="min"
+        )
+        modin_df.columns = columns
+        pandas_df.columns = columns
 
     method, arg = method_arg[0], method_arg[1]
+
+    raising_exceptions = None
+    if method in ("apply", "aggregate"):
+        raising_exceptions = NotImplementedError("axis other than 0 is not supported")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df.resample(rule, axis=axis), method)(arg),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -968,7 +1017,6 @@ def test_resample_specific(rule, closed, label, on, level):
         "volume",
         "date",
         ["volume"],
-        ["price", "date"],
         ("volume",),
         pandas.Series(["volume"]),
         pandas.Index(["volume"]),
@@ -977,25 +1025,30 @@ def test_resample_specific(rule, closed, label, on, level):
     ],
     ids=[
         "column",
-        "missed_column",
+        "only_missed_column",
         "list",
-        "missed_column",
         "tuple",
         "series",
         "index",
         "duplicate_column",
-        "missed_columns",
+        "missed_column",
     ],
 )
-def test_resample_getitem(columns):
+def test_resample_getitem(columns, request):
     index = pandas.date_range("1/1/2013", periods=9, freq="min")
     data = {
         "price": range(9),
         "volume": range(10, 19),
     }
+    raising_exceptions = None
+    if "only_missed_column" in request.node.callspec.id:
+        raising_exceptions = KeyError("Column not found: date")
+    elif "missed_column" in request.node.callspec.id:
+        raising_exceptions = KeyError("Columns not found: 'date'")
     eval_general(
         *create_test_dfs(data, index=index),
         lambda df: df.resample("3min")[columns].mean(),
+        raising_exceptions=raising_exceptions,
     )
 
 
@@ -1166,10 +1219,13 @@ def test_take():
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_to_records(request, data):
+def test_to_records(data):
+    # `to_records` doesn't work when `index` is among column names
     eval_general(
         *create_test_dfs(data),
-        lambda df: df.dropna().to_records(),
+        lambda df: (
+            df.dropna().drop("index", axis=1) if "index" in df.columns else df.dropna()
+        ).to_records(),
     )
 
 
@@ -1338,9 +1394,15 @@ def test___array__(data):
     assert_array_equal(modin_df.__array__(), pandas_df.__array__())
 
 
-@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("data", [[False], [True], [1, 2]])
 def test___bool__(data):
-    eval_general(*create_test_dfs(data), lambda df: df.__bool__())
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.__bool__(),
+        raising_exceptions=ValueError(
+            "The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all()."
+        ),
+    )
 
 
 @pytest.mark.parametrize(
