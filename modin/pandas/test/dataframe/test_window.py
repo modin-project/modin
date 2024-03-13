@@ -728,6 +728,14 @@ def test_std_var_rank(axis, skipna, method):
     )
 
 
+def test_rank_except():
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.rank(axis=None),
+        raising_exceptions=ValueError("No axis named None for object type DataFrame"),
+    )
+
+
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 @pytest.mark.parametrize("method", ["std", "var"])

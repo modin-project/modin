@@ -337,20 +337,16 @@ def test_sum_single_column(data):
 
 
 @pytest.mark.parametrize(
-    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var", "rank"]
+    "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize(
     "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
 )
 def test_reduce_specific(fn, numeric_only, axis):
-    raising_exceptions = None
-    if numeric_only and axis is None and fn == "rank":
-        raising_exceptions = ValueError("No axis named None for object type DataFrame")
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
-        raising_exceptions=raising_exceptions,
     )
 
 
