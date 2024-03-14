@@ -485,11 +485,6 @@ encoding_types = [
     "utf_8_sig",
 ]
 
-# raising of this exceptions can be caused by unexpected behavior
-# of I/O operation test, but can passed by eval_io function since
-# the type of this exceptions are the same
-io_ops_bad_exc = [TypeError, FileNotFoundError]
-
 default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
 
 # Files compression to extension mapping
@@ -880,7 +875,7 @@ def eval_general(
     operation,
     comparator=df_equals,
     __inplace__=False,
-    raising_exceptions=None,
+    expected_exception=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
@@ -906,7 +901,7 @@ def eval_general(
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e), type(pd_e)
                 )
-                if raising_exceptions:
+                if expected_exception:
                     if Engine.get() == "Ray":
                         from ray.exceptions import RayTaskError
 
@@ -914,13 +909,21 @@ def eval_general(
                         if isinstance(md_e, RayTaskError):
                             md_e = md_e.args[0]
                     assert (
-                        type(md_e) is type(raising_exceptions)
-                        and md_e.args == raising_exceptions.args
+                        type(md_e) is type(expected_exception)
+                        and md_e.args == expected_exception.args
                     ), f"not acceptable Modin's exception: [{repr(md_e)}]"
                     assert (
-                        pd_e.args == raising_exceptions.args
+                        pd_e.args == expected_exception.args
                     ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
-                elif raising_exceptions is not False:
+                elif expected_exception is False:
+                    # The only way to disable exception message checking.
+                    pass
+                else:
+                    # It’s not enough that Modin and pandas have the same types of exceptions;
+                    # we need to explicitly specify the instance of an exception
+                    # (using `expected_exception`) in tests so that we can check exception messages.
+                    # This allows us to eliminate situations where exceptions are thrown
+                    # that we don't expect, which could hide different bugs.
                     raise pd_e
             else:
                 raise NoModinException(
@@ -959,7 +962,7 @@ def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    raising_exceptions=io_ops_bad_exc,
+    expected_exception=None,
     check_kwargs_callable=True,
     modin_warning=None,
     modin_warning_str_match=None,
@@ -979,8 +982,8 @@ def eval_io(
         There could be some mismatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
-    raising_exceptions: Exception or list of Exceptions
-        Exceptions that should be raised even if they are raised
+    expected_exception: Exception
+        Exception that should be raised even if it is raised
         both by Pandas and Modin.
     modin_warning: obj
         Warning that should be raised by Modin.
@@ -1002,7 +1005,7 @@ def eval_io(
             pandas,
             applyier,
             comparator=comparator,
-            raising_exceptions=raising_exceptions,
+            expected_exception=expected_exception,
             check_kwargs_callable=check_kwargs_callable,
             md_extra_kwargs=md_extra_kwargs,
             *args,

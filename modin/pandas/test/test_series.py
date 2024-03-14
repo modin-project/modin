@@ -121,15 +121,15 @@ def get_rop(op):
 
 
 def inter_df_math_helper(
-    modin_series, pandas_series, op, comparator_kwargs=None, raising_exceptions=None
+    modin_series, pandas_series, op, comparator_kwargs=None, expected_exception=None
 ):
     inter_df_math_helper_one_side(
-        modin_series, pandas_series, op, comparator_kwargs, raising_exceptions
+        modin_series, pandas_series, op, comparator_kwargs, expected_exception
     )
     rop = get_rop(op)
     if rop:
         inter_df_math_helper_one_side(
-            modin_series, pandas_series, rop, comparator_kwargs, raising_exceptions
+            modin_series, pandas_series, rop, comparator_kwargs, expected_exception
         )
 
 
@@ -138,7 +138,7 @@ def inter_df_math_helper_one_side(
     pandas_series,
     op,
     comparator_kwargs=None,
-    raising_exceptions=None,
+    expected_exception=None,
 ):
     if comparator_kwargs is None:
         comparator_kwargs = {}
@@ -191,7 +191,7 @@ def inter_df_math_helper_one_side(
         pandas_series,
         lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
         comparator_kwargs=comparator_kwargs,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
     list_test = random_state.randint(RAND_LOW, RAND_HIGH, size=(modin_series.shape[0]))
@@ -212,7 +212,7 @@ def inter_df_math_helper_one_side(
         series_test_pandas,
         lambda df: (pandas_attr if isinstance(df, pandas.Series) else modin_attr)(df),
         comparator_kwargs=comparator_kwargs,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
     # Level test
@@ -287,17 +287,17 @@ def test___add__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___and__(data, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7037
-        raising_exceptions = False
+        expected_exception = False
     inter_df_math_helper(
         modin_series,
         pandas_series,
         "__and__",
         # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -414,10 +414,10 @@ def test___getitem__(data):
     # Test getting an invalid string key
     # FIXME: https://github.com/modin-project/modin/issues/7038
     eval_general(
-        modin_series, pandas_series, lambda s: s["a"], raising_exceptions=False
+        modin_series, pandas_series, lambda s: s["a"], expected_exception=False
     )
     eval_general(
-        modin_series, pandas_series, lambda s: s[["a"]], raising_exceptions=False
+        modin_series, pandas_series, lambda s: s[["a"]], expected_exception=False
     )
 
     # Test empty series
@@ -449,40 +449,40 @@ def test___gt__(data):
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___int__(count_elements):
-    raising_exceptions = None
+    expected_exception = None
     if count_elements != 1:
-        raising_exceptions = TypeError("cannot convert the series to <class 'int'>")
+        expected_exception = TypeError("cannot convert the series to <class 'int'>")
     eval_general(
         *create_test_series([1.5] * count_elements),
         int,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
 @pytest.mark.parametrize("count_elements", [0, 1, 10])
 def test___float__(count_elements):
-    raising_exceptions = None
+    expected_exception = None
     if count_elements != 1:
-        raising_exceptions = TypeError("cannot convert the series to <class 'float'>")
+        expected_exception = TypeError("cannot convert the series to <class 'float'>")
     eval_general(
         *create_test_series([1] * count_elements),
         float,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___invert__(data, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7081
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         modin_series,
         pandas_series,
         lambda ser: ser.__invert__(),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -550,17 +550,17 @@ def test___neg__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___or__(data, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7081
-        raising_exceptions = False
+        expected_exception = False
     inter_df_math_helper(
         modin_series,
         pandas_series,
         "__or__",
         # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -683,17 +683,17 @@ def test___truediv__(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test___xor__(data, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7081
-        raising_exceptions = False
+        expected_exception = False
     inter_df_math_helper(
         modin_series,
         pandas_series,
         "__xor__",
         # https://github.com/modin-project/modin/issues/5966
         comparator_kwargs={"check_dtypes": False},
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -723,26 +723,26 @@ def test_add_does_not_change_original_series_name():
 @pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_prefix(data, axis):
-    raising_exceptions = None
+    expected_exception = None
     if axis:
-        raising_exceptions = ValueError("No axis named 1 for object type Series")
+        expected_exception = ValueError("No axis named 1 for object type Series")
     eval_general(
         *create_test_series(data),
         lambda df: df.add_prefix("PREFIX_ADD_", axis=axis),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
 @pytest.mark.parametrize("axis", [None, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_add_suffix(data, axis):
-    raising_exceptions = None
+    expected_exception = None
     if axis:
-        raising_exceptions = ValueError("No axis named 1 for object type Series")
+        expected_exception = ValueError("No axis named 1 for object type Series")
     eval_general(
         *create_test_series(data),
         lambda df: df.add_suffix("SUFFIX_ADD_", axis=axis),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -764,14 +764,14 @@ def test_aggregate_alias():
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_aggregate(data, func, request):
-    raising_exceptions = None
+    expected_exception = None
     if "should raise AssertionError" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7031
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         *create_test_series(data),
         lambda df: df.aggregate(func),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -803,7 +803,7 @@ def test_aggregate_error_checking(data):
         modin_series,
         pandas_series,
         lambda series: series.aggregate("NOT_EXISTS"),
-        raising_exceptions=AttributeError(
+        expected_exception=AttributeError(
             "'NOT_EXISTS' is not a valid function for 'Series' object"
         ),
     )
@@ -899,17 +899,17 @@ def test_append(data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", agg_func_values, ids=agg_func_keys)
 def test_apply(data, func, request):
-    raising_exceptions = None
+    expected_exception = None
     if "should raise AssertionError" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7031
-        raising_exceptions = False
+        expected_exception = False
     elif "df sum" in request.node.callspec.id:
         _type = "int" if "int_data" in request.node.callspec.id else "float"
-        raising_exceptions = AttributeError(f"'{_type}' object has no attribute 'sum'")
+        expected_exception = AttributeError(f"'{_type}' object has no attribute 'sum'")
     eval_general(
         *create_test_series(data),
         lambda df: df.apply(func),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -919,7 +919,7 @@ def test_apply_except(data, func):
     eval_general(
         *create_test_series(data),
         lambda df: df.apply(func),
-        raising_exceptions=pandas.errors.SpecificationError(
+        expected_exception=pandas.errors.SpecificationError(
             "Function names must be unique if there is no new column names assigned"
         ),
     )
@@ -1070,15 +1070,15 @@ def test_astype(data, request):
     modin_series.name = pandas_series.name = series_name
 
     eval_general(modin_series, pandas_series, lambda df: df.astype(str))
-    raising_exceptions = None
+    expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7039
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         modin_series,
         pandas_series,
         lambda ser: ser.astype(np.int64),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
     eval_general(modin_series, pandas_series, lambda ser: ser.astype(np.float64))
     eval_general(
@@ -1089,7 +1089,7 @@ def test_astype(data, request):
         modin_series,
         pandas_series,
         lambda ser: ser.astype({"wrong_name": str}),
-        raising_exceptions=False,
+        expected_exception=False,
     )
 
     # TODO(https://github.com/modin-project/modin/issues/4317): Test passing a
@@ -2284,26 +2284,26 @@ def test_kurtosis_alias():
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("skipna", [False, True])
 def test_kurtosis(axis, skipna):
-    raising_exceptions = None
+    expected_exception = None
     if axis:
-        raising_exceptions = ValueError("No axis named 1 for object type Series")
+        expected_exception = ValueError("No axis named 1 for object type Series")
     eval_general(
         *create_test_series(test_data["float_nan_data"]),
         lambda df: df.kurtosis(axis=axis, skipna=skipna),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
 @pytest.mark.parametrize("axis", ["rows", "columns"])
 @pytest.mark.parametrize("numeric_only", [False, True])
 def test_kurtosis_numeric_only(axis, numeric_only):
-    raising_exceptions = None
+    expected_exception = None
     if axis:
-        raising_exceptions = ValueError("No axis named columns for object type Series")
+        expected_exception = ValueError("No axis named columns for object type Series")
     eval_general(
         *create_test_series(test_data_diff_dtype),
         lambda df: df.kurtosis(axis=axis, numeric_only=numeric_only),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -2679,13 +2679,13 @@ def test_product_alias():
 @pytest.mark.parametrize("axis", [0, 1])
 @pytest.mark.parametrize("skipna", [False, True])
 def test_prod(axis, skipna):
-    raising_exceptions = None
+    expected_exception = None
     if axis:
-        raising_exceptions = ValueError("No axis named 1 for object type Series")
+        expected_exception = ValueError("No axis named 1 for object type Series")
     eval_general(
         *create_test_series(test_data["float_nan_data"]),
         lambda s: s.prod(axis=axis, skipna=skipna),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -2910,15 +2910,15 @@ def test_repeat(data, repeats):
     ids=["0_case", "scalar", "one-elem-list", "array", "list", "wrong_list"],
 )
 def test_repeat_lists(data, repeats, request):
-    raising_exceptions = None
+    expected_exception = None
     if "wrong_list" in request.node.callspec.id:
-        raising_exceptions = ValueError(
+        expected_exception = ValueError(
             "operands could not be broadcast together with shape (256,) (257,)"
         )
     eval_general(
         *create_test_series(data),
         lambda df: df.repeat(repeats),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -3032,9 +3032,9 @@ def test_resample(closed, label, level):
 @pytest.mark.parametrize("name", [lib.no_default, "Custom name"])
 @pytest.mark.parametrize("inplace", [True, False])
 def test_reset_index(data, drop, name, inplace):
-    raising_exceptions = None
+    expected_exception = None
     if inplace and not drop:
-        raising_exceptions = TypeError(
+        expected_exception = TypeError(
             "Cannot reset_index inplace on a Series to create a DataFrame"
         )
     eval_general(
@@ -3044,7 +3044,7 @@ def test_reset_index(data, drop, name, inplace):
         name=name,
         inplace=inplace,
         __inplace__=inplace,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -3403,7 +3403,7 @@ def test_sum_axis_1_except(operation):
         *create_test_series(test_data["int_data"]),
         lambda df, *args, **kwargs: getattr(df, operation)(*args, **kwargs),
         axis=1,
-        raising_exceptions=ValueError("No axis named 1 for object type Series"),
+        expected_exception=ValueError("No axis named 1 for object type Series"),
     )
 
 
@@ -3589,7 +3589,7 @@ def test_transform_except(data, func):
     eval_general(
         *create_test_series(data),
         lambda df: df.transform(func),
-        raising_exceptions=ValueError("Function did not transform"),
+        expected_exception=ValueError("Function did not transform"),
     )
 
 
@@ -4132,15 +4132,15 @@ def test_str_zfill(data, width):
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)
 @pytest.mark.parametrize("width", [-1, 0, 5])
 def test_str_wrap(data, width):
-    raising_exceptions = None
+    expected_exception = None
     if width != 5:
-        raising_exceptions = ValueError(f"invalid width {width} (must be > 0)")
+        expected_exception = ValueError(f"invalid width {width} (must be > 0)")
     modin_series, pandas_series = create_test_series(data)
     eval_general(
         modin_series,
         pandas_series,
         lambda series: series.str.wrap(width),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -4369,14 +4369,14 @@ def test_str_rfind(data, sub, start, end):
 )
 def test_str_index(data, sub, start, end, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "exception-comma sep" in request.node.callspec.id:
-        raising_exceptions = ValueError("substring not found")
+        expected_exception = ValueError("substring not found")
     eval_general(
         modin_series,
         pandas_series,
         lambda series: series.str.index(sub, start=start, end=end),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -4389,14 +4389,14 @@ def test_str_index(data, sub, start, end, request):
 )
 def test_str_rindex(data, sub, start, end, request):
     modin_series, pandas_series = create_test_series(data)
-    raising_exceptions = None
+    expected_exception = None
     if "exception-comma sep" in request.node.callspec.id:
-        raising_exceptions = ValueError("substring not found")
+        expected_exception = ValueError("substring not found")
     eval_general(
         modin_series,
         pandas_series,
         lambda series: series.str.rindex(sub, start=start, end=end),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -4581,14 +4581,14 @@ def str_encode_decode_test_data() -> list[str]:
 @pytest.mark.parametrize("encoding", encoding_types)
 @pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
 def test_str_encode(encoding, errors, str_encode_decode_test_data):
-    raising_exceptions = None
+    expected_exception = None
     if errors == "strict" and encoding == "ascii":
         # quite safe to check only types
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         *create_test_series(str_encode_decode_test_data),
         lambda s: s.str.encode(encoding, errors=errors),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -4598,10 +4598,10 @@ def test_str_encode(encoding, errors, str_encode_decode_test_data):
 )
 @pytest.mark.parametrize("errors", ["strict", "ignore", "replace"])
 def test_str_decode(encoding, errors, str_encode_decode_test_data):
-    raising_exceptions = None
+    expected_exception = None
     if errors == "strict":
         # it's quite safe here to check only types of exceptions
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         *create_test_series(
             [
@@ -4610,7 +4610,7 @@ def test_str_decode(encoding, errors, str_encode_decode_test_data):
             ]
         ),
         lambda s: s.str.decode(encoding, errors=errors),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -4747,7 +4747,7 @@ def test_cat_categories(data):
         modin_series,
         pandas_series,
         set_categories,
-        raising_exceptions=AttributeError("can't set attribute"),
+        expected_exception=AttributeError("can't set attribute"),
     )
 
 

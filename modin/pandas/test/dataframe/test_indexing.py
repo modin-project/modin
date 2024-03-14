@@ -58,7 +58,7 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-def eval_setitem(md_df, pd_df, value, col=None, loc=None, raising_exceptions=None):
+def eval_setitem(md_df, pd_df, value, col=None, loc=None, expected_exception=None):
     if loc is not None:
         col = pd_df.columns[loc]
 
@@ -69,7 +69,7 @@ def eval_setitem(md_df, pd_df, value, col=None, loc=None, raising_exceptions=Non
         pd_df,
         lambda df: df.__setitem__(col, value_getter(df)),
         __inplace__=True,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -333,15 +333,15 @@ def test_set_index(data, key_func, drop_kwargs, request):
         pytest.xfail(
             reason="KeyError: https://github.com/modin-project/modin/issues/5636"
         )
-    raising_exceptions = None
+    expected_exception = None
     if "non_existing_column" in request.node.callspec.id:
-        raising_exceptions = KeyError(
+        expected_exception = KeyError(
             "None of ['non_existing_column'] are in the columns"
         )
     eval_general(
         *create_test_dfs(data),
         lambda df: df.set_index(key_func(df), **drop_kwargs),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -720,12 +720,12 @@ def test_loc_empty():
 def test_loc_iloc_2064(locator_name):
     modin_df, pandas_df = create_test_dfs(columns=["col1", "col2"])
     if locator_name == "iloc":
-        raising_exceptions = IndexError(
+        expected_exception = IndexError(
             "index 1 is out of bounds for axis 0 with size 0"
         )
     else:
         _type = "int32" if os.name == "nt" else "int64"
-        raising_exceptions = KeyError(
+        expected_exception = KeyError(
             f"None of [Index([1], dtype='{_type}')] are in the [index]"
         )
     eval_general(
@@ -733,7 +733,7 @@ def test_loc_iloc_2064(locator_name):
         pandas_df,
         lambda df: getattr(df, locator_name).__setitem__([1], [11, 22]),
         __inplace__=True,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -760,11 +760,11 @@ def test_loc_insert_row(left, right):
         df.loc[left] = df.loc[right]
         return df
 
-    raising_exceptions = None
+    expected_exception = None
     if right == 70:
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7024")
     eval_general(
-        modin_df, pandas_df, _test_loc_rows, raising_exceptions=raising_exceptions
+        modin_df, pandas_df, _test_loc_rows, expected_exception=expected_exception
     )
 
 
@@ -902,13 +902,13 @@ def test_iloc_loc_key_length_except():
         modin_ser,
         pandas_ser,
         lambda ser: ser.iloc[0, 0],
-        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+        expected_exception=pandas.errors.IndexingError("Too many indexers"),
     )
     eval_general(
         modin_ser,
         pandas_ser,
         lambda ser: ser.loc[0, 0],
-        raising_exceptions=pandas.errors.IndexingError("Too many indexers"),
+        expected_exception=pandas.errors.IndexingError("Too many indexers"),
     )
 
 
@@ -2317,11 +2317,11 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
-    raising_exceptions = None
+    expected_exception = None
     if not convert_to_series:
         values_length = len(value)
         index_length = len(pandas_df.index)
-        raising_exceptions = ValueError(
+        expected_exception = ValueError(
             f"Length of values ({values_length}) does not match length of index ({index_length})"
         )
 
@@ -2333,7 +2333,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         comparator_kwargs={
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -2397,7 +2397,7 @@ def test_setitem_unhashable_key():
             pandas_df,
             value,
             key[:1],
-            raising_exceptions=ValueError("Columns must be same length as key"),
+            expected_exception=ValueError("Columns must be same length as key"),
         )
 
         # pandas Index case
@@ -2408,7 +2408,7 @@ def test_setitem_unhashable_key():
             pandas_df,
             value,
             key[:1],
-            raising_exceptions=ValueError("Columns must be same length as key"),
+            expected_exception=ValueError("Columns must be same length as key"),
         )
 
         # scalar case
@@ -2422,7 +2422,7 @@ def test_setitem_unhashable_key():
             pandas_df,
             df_value[["value_col1"]],
             key,
-            raising_exceptions=ValueError("Columns must be same length as key"),
+            expected_exception=ValueError("Columns must be same length as key"),
         )
 
 
@@ -2474,7 +2474,7 @@ def test_setitem_2d_insertion():
         pandas_df,
         build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
         col=["new_value7", "new_value8"],
-        raising_exceptions=ValueError("Columns must be same length as key"),
+        expected_exception=ValueError("Columns must be same length as key"),
     )
 
 

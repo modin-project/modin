@@ -320,12 +320,12 @@ def test_dtype_consistency(dtype):
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
 def test_sum_prod_specific(fn, min_count, numeric_only):
-    raising_exceptions = None
+    expected_exception = None
     if not numeric_only and fn == "prod":
         # FIXME: https://github.com/modin-project/modin/issues/7029
-        raising_exceptions = False
+        expected_exception = False
     elif not numeric_only and fn == "sum":
-        raising_exceptions = TypeError('can only concatenate str (not "int") to str')
+        expected_exception = TypeError('can only concatenate str (not "int") to str')
     if numeric_only and fn == "sum":
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7029")
     if min_count == 5 and not numeric_only:
@@ -334,7 +334,7 @@ def test_sum_prod_specific(fn, min_count, numeric_only):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(min_count=min_count, numeric_only=numeric_only),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -352,28 +352,28 @@ def test_sum_single_column(data):
 @pytest.mark.parametrize("axis", [0, 1, None])
 @pytest.mark.parametrize("numeric_only", [False, True])
 def test_reduce_specific(fn, numeric_only, axis):
-    raising_exceptions = None
+    expected_exception = None
     if not numeric_only:
         if fn in ("max", "min"):
             if axis == 0:
                 operator = ">=" if fn == "max" else "<="
-                raising_exceptions = TypeError(
+                expected_exception = TypeError(
                     f"'{operator}' not supported between instances of 'str' and 'float'"
                 )
                 if StorageFormat.get() == "Hdk":
                     # FIXME: https://github.com/modin-project/modin/issues/7030
-                    raising_exceptions = False
+                    expected_exception = False
             else:
                 # FIXME: https://github.com/modin-project/modin/issues/7030
-                raising_exceptions = False
+                expected_exception = False
         elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
             # FIXME: https://github.com/modin-project/modin/issues/7030
-            raising_exceptions = False
+            expected_exception = False
 
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 

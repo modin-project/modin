@@ -76,18 +76,18 @@ def test_agg_dict():
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply(axis, func, op, request):
-    raising_exceptions = None
+    expected_exception = None
     if "sum sum" in request.node.callspec.id:
-        raising_exceptions = pandas.errors.SpecificationError(
+        expected_exception = pandas.errors.SpecificationError(
             "Function names must be unique if there is no new column names assigned"
         )
     elif "should raise AssertionError" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7031
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -99,18 +99,18 @@ def test_agg_apply(axis, func, op, request):
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
 def test_agg_apply_axis_names(axis, func, op, request):
-    raising_exceptions = None
+    expected_exception = None
     if "sum sum" in request.node.callspec.id:
-        raising_exceptions = pandas.errors.SpecificationError(
+        expected_exception = pandas.errors.SpecificationError(
             "Function names must be unique if there is no new column names assigned"
         )
     elif "should raise AssertionError" in request.node.callspec.id:
         # FIXME: https://github.com/modin-project/modin/issues/7031
-        raising_exceptions = False
+        expected_exception = False
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -147,7 +147,7 @@ def test_apply_key_error(func):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: df.apply({"row": func}, axis=1),
-        raising_exceptions=KeyError("Column(s) ['row'] do not exist"),
+        expected_exception=KeyError("Column(s) ['row'] do not exist"),
     )
 
 
