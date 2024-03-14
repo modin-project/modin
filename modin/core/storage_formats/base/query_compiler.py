@@ -184,6 +184,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
 
     lazy_execution = False
     _shape_hint = None
+    _columnarize_if_needed = None
 
     # Metadata modification abstract methods
     def add_prefix(self, prefix, axis=1):
