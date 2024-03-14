@@ -4213,11 +4213,16 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return list(by)
             return _convert_by(by)
 
-        drop_column_level = values is not None and not is_list_like(values)
+        is_1d_values = values is not None and not is_list_like(values)
         index, columns = map(__convert_by, [index, columns])
 
         if len(index) + len(columns) == 0:
             raise ValueError("No group keys passed!")
+
+        if is_1d_values and len(index) > 0 and len(columns) > 0:
+            drop_column_level = 1 if isinstance(aggfunc, list) else 0
+        else:
+            drop_column_level = None
 
         # if the value is 'None' it will be converted to an empty list (no columns to aggregate),
         # which is invalid for 'values', as 'None' means aggregate ALL columns instead

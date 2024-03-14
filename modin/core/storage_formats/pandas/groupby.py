@@ -323,10 +323,6 @@ class PivotTableImpl:
             qc, values, unique_keys
         )
 
-        len_values = (
-            len(qc.columns.drop(unique_keys)) if values is None else len(values)
-        )
-
         def applyier(df, other):  # pragma: no cover
             """
             Build pivot table for a single partition.
@@ -352,14 +348,14 @@ class PivotTableImpl:
 
             # if only one value is specified, removing level that maps
             # columns from `values` to the actual values
-            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
-                result.columns = result.columns.droplevel(int(pivot_kwargs["margins"]))
+            if drop_column_level is not None:
+                result = result.droplevel(drop_column_level, axis=1)
 
             # in that case Pandas transposes the result of `pivot_table`,
             # transposing it back to be consistent with column axis values along
             # different partitions
             if len(index) == 0 and len(columns) > 0:
-                result = result.T
+                result = result.transpose()
 
             return result
 
@@ -450,8 +446,8 @@ class PivotTableImpl:
             Group by aggregation result.
         dropna : bool
             Whether to drop NaN columns.
-        drop_column_level : bool
-            Whether to drop the top-columns level.
+        drop_column_level : int or None
+            An extra columns level to drop.
         to_unstack : list of labels or None
             Group by keys to pass to ``.unstack()``. Reperent `columns` parameter
             for ``.pivot_table()``.
@@ -466,8 +462,8 @@ class PivotTableImpl:
         """
         if df.index.nlevels > 1 and to_unstack is not None:
             df = df.unstack(level=to_unstack)
-        if drop_column_level and df.columns.nlevels > 1:
-            df = df.droplevel(0, axis=1)
+        if drop_column_level is not None:
+            df = df.droplevel(drop_column_level, axis=1)
         if dropna:
             df = df.dropna(axis=1, how="all")
         if fill_value is not None:
