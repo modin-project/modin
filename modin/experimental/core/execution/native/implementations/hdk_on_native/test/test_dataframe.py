@@ -313,26 +313,26 @@ class TestCSV:
         if skip_exc_type_check:
             pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
 
-        raising_exceptions = None
+        expected_exception = None
         if "names1-parse_dates2" in request.node.callspec.id:
-            raising_exceptions = ValueError(
+            expected_exception = ValueError(
                 "Missing column provided to 'parse_dates': 'col2'"
             )
         elif (
             "names1-parse_dates5-None" in request.node.callspec.id
             or "names1-parse_dates4-None" in request.node.callspec.id
         ):
-            raising_exceptions = ValueError(
+            expected_exception = ValueError(
                 "Missing column provided to 'parse_dates': 'col2, col3'"
             )
         elif "None-parse_dates3" in request.node.callspec.id:
-            raising_exceptions = ValueError(
+            expected_exception = ValueError(
                 "Missing column provided to 'parse_dates': 'c2'"
             )
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
-            raising_exceptions=raising_exceptions,
+            expected_exception=expected_exception,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
@@ -538,12 +538,12 @@ class TestMultiIndex:
             df = lib.DataFrame(self.data, index=index) + 1
             return df.reset_index()
 
-        raising_exceptions = None
+        expected_exception = None
         if "names3" in request.node.callspec.id:
-            raising_exceptions = ValueError("cannot insert i1, already exists")
+            expected_exception = ValueError("cannot insert i1, already exists")
         elif "names4" in request.node.callspec.id:
-            raising_exceptions = ValueError("cannot insert a, already exists")
-        eval_general(pd, pandas, applier, raising_exceptions=raising_exceptions)
+            expected_exception = ValueError("cannot insert a, already exists")
+        eval_general(pd, pandas, applier, expected_exception=expected_exception)
 
     @pytest.mark.parametrize("is_multiindex", [True, False])
     def test_reset_index_multicolumns(self, is_multiindex):

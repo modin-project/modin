@@ -228,9 +228,9 @@ def test_read_multiple_csv_s3_storage_opts(
         ).reset_index(drop=True)
         return pandas_df
 
-    raising_exceptions = None
+    expected_exception = None
     if "anon" in storage_options_extra:
-        raising_exceptions = PermissionError("Forbidden")
+        expected_exception = PermissionError("Forbidden")
     eval_general(
         pd,
         pandas,
@@ -240,7 +240,7 @@ def test_read_multiple_csv_s3_storage_opts(
             else _pandas_read_csv_glob(s3_path, **kwargs)
         ),
         storage_options=s3_storage_options | storage_options_extra,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 

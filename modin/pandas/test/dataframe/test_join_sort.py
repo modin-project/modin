@@ -384,7 +384,7 @@ def test_merge(test_data, test_data2):
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
         comparator=comparator,
-        raising_exceptions=ValueError("Cannot merge a Series without a name"),
+        expected_exception=ValueError("Cannot merge a Series without a name"),
     )
 
     # merge a Series with a name
