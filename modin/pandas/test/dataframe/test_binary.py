@@ -335,9 +335,7 @@ def test_equals_with_nans():
 @pytest.mark.parametrize(
     "is_idx_aligned", [True, False], ids=["idx_aligned", "idx_not_aligned"]
 )
-def test_mismatched_row_partitions(
-    is_idx_aligned, op_type, is_more_other_partitions, request
-):
+def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partitions):
     data = [0, 1, 2, 3, 4, 5]
     modin_df1, pandas_df1 = create_test_dfs({"a": data, "b": data})
     modin_df, pandas_df = modin_df1.loc[:2], pandas_df1.loc[:2]
