@@ -1333,7 +1333,7 @@ def test_insert(data):
         eval_insert(
             pd.DataFrame(columns=list("ab")),
             pandas.DataFrame(columns=list("ab")),
-            col=lambda df: df.columns[0],
+            col="Series insert",
             value=lambda df: df[df.columns[0]],
         )
     eval_insert(

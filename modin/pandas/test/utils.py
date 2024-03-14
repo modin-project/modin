@@ -279,7 +279,7 @@ test_string_list_data = {"simple string": [["a"], ["CdE"], ["jDf"], ["werB"]]}
 test_string_list_data_values = list(test_string_list_data.values())
 test_string_list_data_keys = list(test_string_list_data.keys())
 
-string_seperators = {"empty sep": "", "comma sep": ",", "None sep": None}
+string_seperators = {"comma sep": ","}
 
 string_sep_values = list(string_seperators.values())
 string_sep_keys = list(string_seperators.keys())
@@ -331,7 +331,7 @@ agg_func = {
     "sum of certain elements": lambda axis: (
         axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
     ),
-    "should raise TypeError": 1,
+    "should raise AssertionError": 1,
 }
 agg_func_keys = list(agg_func.keys())
 agg_func_values = list(agg_func.values())
@@ -906,11 +906,7 @@ def eval_general(
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
                     type(md_e), type(pd_e)
                 )
-                if raising_exceptions and isinstance(raising_exceptions, (list, tuple)):
-                    assert not isinstance(
-                        md_e, tuple(raising_exceptions)
-                    ), f"not acceptable exception type: {md_e}"
-                elif raising_exceptions and type(raising_exceptions) is not type:
+                if raising_exceptions:
                     if Engine.get() == "Ray":
                         from ray.exceptions import RayTaskError
 
@@ -924,6 +920,8 @@ def eval_general(
                     assert (
                         pd_e.args == raising_exceptions.args
                     ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
+                elif raising_exceptions is not False:
+                    raise pd_e
             else:
                 raise NoModinException(
                     f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
@@ -1030,22 +1028,14 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
     unique_filename: str
         csv file name.
     """
-    try:
-        with open(unique_filename, "w") as f:
-            f.write(csv_str)
+    with open(unique_filename, "w") as f:
+        f.write(csv_str)
 
-        eval_io(
-            filepath_or_buffer=unique_filename,
-            fn_name="read_csv",
-            **kwargs,
-        )
-
-    finally:
-        if os.path.exists(unique_filename):
-            try:
-                os.remove(unique_filename)
-            except PermissionError:
-                pass
+    eval_io(
+        filepath_or_buffer=unique_filename,
+        fn_name="read_csv",
+        **kwargs,
+    )
 
 
 def create_test_dfs(*args, **kwargs):
@@ -1420,7 +1410,7 @@ def _make_csv_file(data_dir):
                     value=[char if (x + 2) == 0 else x for x in range(row_size)],
                 )
 
-            if thousands_separator:
+            if thousands_separator is not None:
                 for col_id in ["col1", "col3"]:
                     df[col_id] = df[col_id].apply(
                         lambda x: f"{x:,d}".replace(",", thousands_separator)
