@@ -701,6 +701,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         and "int_data" in request.node.callspec.id
     ):
         raising_exceptions = TypeError("'numpy.float64' object is not callable")
+
     eval_general(
         md_df,
         pd_df,
@@ -719,6 +720,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
 @pytest.mark.parametrize(
     "index",
     [
+        pytest.param([], id="no_index_cols"),
         pytest.param(lambda df: df.columns[0], id="single_index_column"),
         pytest.param(
             lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
@@ -784,6 +786,29 @@ def test_pivot_table_margins(
         margins_name=margins_name,
         fill_value=fill_value,
         raising_exceptions=raising_exceptions,
+    )
+
+
+@pytest.mark.parametrize(
+    "aggfunc",
+    [
+        pytest.param("sum", id="MapReduce_func"),
+        pytest.param("nunique", id="FullAxis_func"),
+    ],
+)
+@pytest.mark.parametrize("margins", [True, False])
+def test_pivot_table_fill_value(aggfunc, margins):
+    md_df, pd_df = create_test_dfs(test_data["int_data"])
+    eval_general(
+        md_df,
+        pd_df,
+        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        index=md_df.columns[0],
+        columns=md_df.columns[1],
+        values=md_df.columns[2],
+        aggfunc=aggfunc,
+        margins=margins,
+        fill_value=10,
     )
 
 

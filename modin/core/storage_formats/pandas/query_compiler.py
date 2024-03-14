@@ -75,7 +75,7 @@ from modin.utils import (
 )
 
 from .aggregations import CorrCovBuilder
-from .groupby import GroupbyReduceImpl
+from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
 
@@ -4187,62 +4187,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return unstacked
 
-    def _pivot_table_tree_reduce(
-        self, grouper, aggfunc, drop_column_level, fill_value, dropna, to_unstack=None
-    ):
-        """
-        Build a pivot table using TreeReduce implementation.
-
-        Parameters
-        ----------
-        grouper : PandasQueryCompiler
-            QueryCompiler holding columns to group on.
-        aggfunc : str
-            Aggregation to perform against the values of the pivot table. Note that ``GroupbyReduceImpl``
-            has to be able to build implementation for this aggregation.
-        drop_column_level : bool
-            Whether to drop the top level of the columns.
-        fill_value : object
-            Fill value for None values in the result.
-        dropna : bool
-            Whether to drop NaN columns.
-        to_unstack : list, optional
-            A list of column names to pass to the `.unstack()` when building the pivot table.
-            If `None` was passed perform regular transpose instead of unstacking.
-
-        Returns
-        -------
-        PandasQueryCompiler
-            A query compiler holding a pivot table.
-        """
-
-        def make_pivot_table(df):
-            if df.index.nlevels > 1 and to_unstack is not None:
-                df = df.unstack(level=to_unstack)
-            if drop_column_level and df.columns.nlevels > 1:
-                df = df.droplevel(0, axis=1)
-            if dropna:
-                df = df.dropna(axis=1, how="all")
-            if fill_value is not None:
-                df = df.fillna(fill_value, downcast="infer")
-            return df
-
-        result = GroupbyReduceImpl.build_qc_method(
-            aggfunc, finalizer_fn=make_pivot_table
-        )(
-            self,
-            by=grouper,
-            axis=0,
-            groupby_kwargs={},
-            agg_args=(),
-            agg_kwargs={},
-            drop=True,
-        )
-
-        if to_unstack is None:
-            result = result.transpose()
-        return result
-
     def pivot_table(
         self,
         index,
@@ -4269,94 +4213,62 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return list(by)
             return _convert_by(by)
 
-        drop_column_level = values is not None and not is_list_like(values)
-        index, columns, values = map(__convert_by, [index, columns, values])
+        is_1d_values = values is not None and not is_list_like(values)
+        index, columns = map(__convert_by, [index, columns])
 
-        unique_keys = np.unique(index + columns)
-        unique_values = np.unique(values)
+        if len(index) + len(columns) == 0:
+            raise ValueError("No group keys passed!")
 
-        if len(values):
-            to_group = self.getitem_column_array(unique_values, ignore_order=True)
+        if is_1d_values and len(index) > 0 and len(columns) > 0:
+            drop_column_level = 1 if isinstance(aggfunc, list) else 0
         else:
-            to_group = self.drop(columns=unique_keys)
+            drop_column_level = None
 
-        keys_columns = self.getitem_column_array(unique_keys, ignore_order=True)
+        # if the value is 'None' it will be converted to an empty list (no columns to aggregate),
+        # which is invalid for 'values', as 'None' means aggregate ALL columns instead
+        if values is not None:
+            values = __convert_by(values)
 
-        # Here we can use TreeReduce implementation that tends to be more efficient rather full-axis one
-        if (
-            not margins
-            and GroupbyReduceImpl.has_impl_for(aggfunc)
-            and len(set(index).intersection(columns)) == 0
-        ):
-            return to_group._pivot_table_tree_reduce(
-                keys_columns,
-                aggfunc,
-                drop_column_level=drop_column_level,
-                fill_value=fill_value,
-                dropna=dropna,
-                to_unstack=columns if index else None,
+        # using 'pandas.unique' instead of 'numpy' as it guarantees to not change the original order
+        unique_keys = pandas.Series(index + columns).unique()
+
+        kwargs = {
+            "qc": self,
+            "unique_keys": unique_keys,
+            "drop_column_level": drop_column_level,
+            "pivot_kwargs": {
+                "index": index,
+                "values": values,
+                "columns": columns,
+                "aggfunc": aggfunc,
+                "fill_value": fill_value,
+                "margins": margins,
+                "dropna": dropna,
+                "margins_name": margins_name,
+                "observed": observed,
+                "sort": sort,
+            },
+        }
+
+        try:
+            return PivotTableImpl.map_reduce_impl(**kwargs)
+        except NotImplementedError as e:
+            message = (
+                f"Can't use MapReduce 'pivot_table' implementation because of: {e}"
+                + "\nFalling back to a range-partitioning implementation."
             )
+            get_logger().info(message)
 
-        len_values = len(values)
-        if len_values == 0:
-            len_values = len(self.columns.drop(unique_keys))
-
-        def applyier(df, other):  # pragma: no cover
-            """
-            Build pivot table for a single partition.
-
-            Parameters
-            ----------
-            df : pandas.DataFrame
-                Partition of the self frame.
-            other : pandas.DataFrame
-                Broadcasted partition that contains `value` columns
-                of the self frame.
-
-            Returns
-            -------
-            pandas.DataFrame
-                Pivot table for this particular partition.
-            """
-            concated = pandas.concat([df, other], axis=1, copy=False)
-            result = pandas.pivot_table(
-                concated,
-                index=index,
-                values=values if len(values) > 0 else None,
-                columns=columns,
-                aggfunc=aggfunc,
-                fill_value=fill_value,
-                margins=margins,
-                dropna=dropna,
-                margins_name=margins_name,
-                observed=observed,
-                sort=sort,
+        try:
+            return PivotTableImpl.range_partition_impl(**kwargs)
+        except NotImplementedError as e:
+            message = (
+                f"Can't use range-partitioning 'pivot_table' implementation because of: {e}"
+                + "\nFalling back to a full-axis implementation."
             )
+            get_logger().info(message)
 
-            # if only one value is specified, removing level that maps
-            # columns from `values` to the actual values
-            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
-                result.columns = result.columns.droplevel(int(margins))
-
-            # in that case Pandas transposes the result of `pivot_table`,
-            # transposing it back to be consistent with column axis values along
-            # different partitions
-            if len(index) == 0 and len(columns) > 0:
-                result = result.T
-
-            return result
-
-        result = self.__constructor__(
-            to_group._modin_frame.broadcast_apply_full_axis(
-                axis=0, func=applyier, other=keys_columns._modin_frame
-            )
-        )
-
-        # transposing the result again, to be consistent with Pandas result
-        if len(index) == 0 and len(columns) > 0:
-            result = result.transpose()
-
-        return result
+        return PivotTableImpl.full_axis_impl(**kwargs)
 
     # Get_dummies
     def get_dummies(self, columns, **kwargs):
