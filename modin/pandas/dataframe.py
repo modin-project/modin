@@ -2850,6 +2850,17 @@ class DataFrame(BasePandasDataset):
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
 
+    def __dataframe_consortium_standard__(
+        self, *, api_version: str | None = None
+    ):  # noqa: PR01, RT01
+        """Provide entry point to the Consortium DataFrame Standard API."""
+        import modin.dataframe_api_standard as dataframe_api_standard
+
+        convert_to_standard_compliant_dataframe = (
+            dataframe_api_standard.convert_to_standard_compliant_dataframe
+        )
+        return convert_to_standard_compliant_dataframe(self, api_version=api_version)
+
     @property
     def attrs(self):  # noqa: RT01, D200
         """
