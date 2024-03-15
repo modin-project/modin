@@ -53,6 +53,7 @@ from modin.test.test_utils import warns_that_defaulting_to_pandas
 from .utils import (
     check_file_leaks,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     dummy_decorator,
@@ -3318,16 +3319,10 @@ def test_df_to_dask():
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_series_to_dask():
-    index = pandas.DatetimeIndex(
-        pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
-    )
-
-    pandas_df = pandas.DataFrame(TEST_DATA, index=index)
-    pandas_s = pandas_df.iloc[0]
-    modin_s = pd.Series(pandas_s)
+    modin_s, pandas_s = create_test_series(TEST_DATA["col1"])
 
     dask_series = modin_s.modin.to_dask()
-    pandas_s.equals(dask_series.compute())
+    df_equals(dask_series.compute(), pandas_s)
 
 
 @pytest.mark.skipif(
