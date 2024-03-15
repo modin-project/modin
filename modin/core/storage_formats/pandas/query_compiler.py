@@ -1976,7 +1976,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
+        return self.__constructor__(
+            self._modin_frame.astype(col_dtypes, errors=errors),
+            shape_hint=self._shape_hint,
+        )
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())

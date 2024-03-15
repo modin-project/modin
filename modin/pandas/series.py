@@ -149,7 +149,6 @@ class Series(BasePandasDataset):
                 )
             )._query_compiler
         self._query_compiler = query_compiler.columnarize()
-        self._query_compiler._shape_hint = "column"
         if name is not None:
             self.name = name
 
