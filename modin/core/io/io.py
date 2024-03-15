@@ -141,7 +141,7 @@ class BaseIO:
         )
 
     @classmethod
-    def from_dask_dataframe(cls, dask_obj):
+    def from_dask(cls, dask_obj):
         """
         Create a Modin `query_compiler` from a Dask Dataframe.
 

@@ -47,7 +47,7 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, from_dask_dataframe, from_ray_dataset, to_pandas
+from modin.pandas.io import from_arrow, from_dask, from_ray_dataset, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -3335,7 +3335,7 @@ def test_series_to_dask():
     reason="Dask Dataframe can only be converted to a Modin Dataframe if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_from_dask_dataframe():
+def test_from_dask():
     import dask.dataframe as dd
 
     index = pandas.DatetimeIndex(
@@ -3345,5 +3345,5 @@ def test_from_dask_dataframe():
 
     dask_df = dd.from_pandas(pandas_df, npartitions=NPartitions.get())
 
-    result_df = from_dask_dataframe(dask_df)
+    result_df = from_dask(dask_df)
     df_equals(result_df, modin_df)

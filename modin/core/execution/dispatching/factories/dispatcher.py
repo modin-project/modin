@@ -187,9 +187,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_ray_dataset(ray_obj)
 
     @classmethod
-    @_inherit_docstrings(factories.BaseFactory._from_dask_dataframe)
-    def from_dask_dataframe(cls, dask_obj):
-        return cls.get_factory()._from_dask_dataframe(dask_obj)
+    @_inherit_docstrings(factories.BaseFactory._from_dask)
+    def from_dask(cls, dask_obj):
+        return cls.get_factory()._from_dask(dask_obj)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)

@@ -1059,7 +1059,7 @@ def from_ray_dataset(ray_obj):
     )
 
 
-def from_dask_dataframe(dask_obj):
+def from_dask(dask_obj):
     """
     Convert a Dask DataFrame into Modin DataFrame.
 
@@ -1079,9 +1079,7 @@ def from_dask_dataframe(dask_obj):
     """
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return ModinObjects.DataFrame(
-        query_compiler=FactoryDispatcher.from_dask_dataframe(dask_obj)
-    )
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dask(dask_obj))
 
 
 def to_pandas(modin_obj: SupportsPublicToPandas) -> Any:

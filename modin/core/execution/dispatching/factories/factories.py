@@ -216,10 +216,10 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a Dask DataFrame",
         params="dask_obj : dask.dataframe.DataFrame",
-        method="modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO.from_dask_dataframe",
+        method="modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO.from_dask",
     )
-    def _from_dask_dataframe(cls, dask_obj):
-        return cls.io_cls.from_dask_dataframe(dask_obj)
+    def _from_dask(cls, dask_obj):
+        return cls.io_cls.from_dask(dask_obj)
 
     @classmethod
     @doc(

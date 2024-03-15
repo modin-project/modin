@@ -13,7 +13,6 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
-import dask.dataframe as dd
 from distributed.client import default_client
 
 from modin.core.execution.dask.common import DaskWrapper
@@ -138,7 +137,7 @@ class PandasOnDaskIO(BaseIO):
     del __make_write  # to not pollute class namespace
 
     @classmethod
-    def from_dask_dataframe(cls, dask_obj):
+    def from_dask(cls, dask_obj):
         """
         Create a Modin `query_compiler` from a Dask Dataframe.
 
@@ -171,6 +170,8 @@ class PandasOnDaskIO(BaseIO):
         dask.dataframe.DataFrame or dask.dataframe.Series
             Converted object with type depending on input.
         """
+        from dask.dataframe import from_delayed
+
         partitions = unwrap_partitions(modin_obj, axis=0)
 
         # partiotions must be converted to pandas Series
@@ -185,4 +186,4 @@ class PandasOnDaskIO(BaseIO):
 
             partitions = [client.submit(df_to_series, part) for part in partitions]
 
-        return dd.from_delayed(partitions)
+        return from_delayed(partitions)
