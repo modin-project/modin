@@ -1107,12 +1107,6 @@ class DataFrame(BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
-        """
-        Whether elements in `DataFrame` are contained in `values`.
-        """
-        return super(DataFrame, self).isin(values)
-
     def isna(self):
         """
         Detect missing values.

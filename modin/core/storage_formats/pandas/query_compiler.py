@@ -1702,7 +1702,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    def isin(self, values, ignore_indices=False, shape_hint=None):
+    def isin(self, values, ignore_indices=False):
+        shape_hint = self._shape_hint
         if isinstance(values, type(self)):
             # HACK: if we don't cast to pandas, then the execution engine will try to
             # propagate the distributed Series to workers and most likely would have
@@ -1975,7 +1976,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
+        return self.__constructor__(
+            self._modin_frame.astype(col_dtypes, errors=errors),
+            shape_hint=self._shape_hint,
+        )
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())

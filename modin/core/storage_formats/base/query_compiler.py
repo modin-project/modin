@@ -1567,11 +1567,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Boolean mask for self of whether an element at the corresponding
             position is contained in `values`.
         """
-        shape_hint = kwargs.pop("shape_hint", None)
         if isinstance(values, type(self)) and ignore_indices:
             # Pandas logic is that it ignores indexing if 'values' is a 1D object
             values = values.to_pandas().squeeze(axis=1)
-        if shape_hint == "column":
+        if self._shape_hint == "column":
             return SeriesDefault.register(pandas.Series.isin)(self, values, **kwargs)
         else:
             return DataFrameDefault.register(pandas.DataFrame.isin)(
