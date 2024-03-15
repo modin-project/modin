@@ -588,12 +588,12 @@ class BasePandasDataset(ClassLogger):
         """
         return type(self)
 
-    def abs(self, **kwargs):  # noqa: PR01, RT01, D200
+    def abs(self):  # noqa: RT01, D200
         """
         Return a `BasePandasDataset` with absolute numeric value of each element.
         """
         self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(query_compiler=self._query_compiler.abs(**kwargs))
+        return self.__constructor__(query_compiler=self._query_compiler.abs())
 
     def _set_index(self, new_index):
         """
@@ -995,9 +995,7 @@ class BasePandasDataset(ClassLogger):
             result = result.squeeze()
         return result
 
-    def astype(
-        self, dtype, copy=None, errors="raise", **kwargs
-    ):  # noqa: PR01, RT01, D200
+    def astype(self, dtype, copy=None, errors="raise"):  # noqa: PR01, RT01, D200
         """
         Cast a Modin object to a specified dtype `dtype`.
         """
@@ -1045,9 +1043,7 @@ class BasePandasDataset(ClassLogger):
                 copy = True
 
         if copy:
-            new_query_compiler = self._query_compiler.astype(
-                col_dtypes, errors=errors, **kwargs
-            )
+            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
             return self._create_or_update_from_compiler(new_query_compiler)
         return self
 
@@ -1927,7 +1923,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
+    def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
@@ -1937,15 +1933,15 @@ class BasePandasDataset(ClassLogger):
         values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, ignore_indices=ignore_indices, **kwargs
+                values=values, ignore_indices=ignore_indices
             )
         )
 
-    def isna(self, **kwargs):  # noqa: PR01, RT01, D200
+    def isna(self):  # noqa: RT01, D200
         """
         Detect missing values.
         """
-        return self.__constructor__(query_compiler=self._query_compiler.isna(**kwargs))
+        return self.__constructor__(query_compiler=self._query_compiler.isna())
 
     isnull = isna
 
@@ -2205,11 +2201,13 @@ class BasePandasDataset(ClassLogger):
         """
         return self._binary_op("ne", other, axis=axis, level=level, dtypes=np.bool_)
 
-    def notna(self, **kwargs):  # noqa: PR01, RT01, D200
+    def notna(self):  # noqa: RT01, D200
         """
         Detect existing (non-missing) values.
         """
-        return self.__constructor__(query_compiler=self._query_compiler.notna(**kwargs))
+        return self.__constructor__(query_compiler=self._query_compiler.notna())
+
+    notnull = notna
 
     def nunique(self, axis=0, dropna=True):  # noqa: PR01, RT01, D200
         """
@@ -3702,7 +3700,6 @@ class BasePandasDataset(ClassLogger):
         sort: bool = True,
         ascending: bool = False,
         dropna: bool = True,
-        **kwargs,
     ):
         if subset is None:
             subset = self._query_compiler.columns
@@ -3727,7 +3724,6 @@ class BasePandasDataset(ClassLogger):
         #     )
         # https://pandas.pydata.org/pandas-docs/version/2.0/whatsnew/v2.0.0.html#value-counts-sets-the-resulting-name-to-count
         counted_values.name = "proportion" if normalize else "count"
-        counted_values._query_compiler._shape_hint = kwargs.get("shape_hint", None)
         return counted_values
 
     def var(
@@ -4012,7 +4008,7 @@ class BasePandasDataset(ClassLogger):
     def __gt__(self, right):
         return self.gt(right)
 
-    def __invert__(self, **kwargs):  # noqa: PR01, RT01, D200
+    def __invert__(self):
         """
         Apply bitwise inverse to each element of the `BasePandasDataset`.
 
@@ -4031,9 +4027,7 @@ class BasePandasDataset(ClassLogger):
                     )
                 )
             )
-        return self.__constructor__(
-            query_compiler=self._query_compiler.invert(**kwargs)
-        )
+        return self.__constructor__(query_compiler=self._query_compiler.invert())
 
     @_doc_binary_op(
         operation="less than or equal comparison",
@@ -4087,7 +4081,7 @@ class BasePandasDataset(ClassLogger):
     def __ne__(self, other):
         return self.ne(other)
 
-    def __neg__(self, **kwargs):  # noqa: PR01, RT01, D200
+    def __neg__(self):
         """
         Change the sign for every value of self.
 
@@ -4096,9 +4090,7 @@ class BasePandasDataset(ClassLogger):
         BasePandasDataset
         """
         self._validate_dtypes(numeric_only=True)
-        return self.__constructor__(
-            query_compiler=self._query_compiler.negative(**kwargs)
-        )
+        return self.__constructor__(query_compiler=self._query_compiler.negative())
 
     def __nonzero__(self):
         """

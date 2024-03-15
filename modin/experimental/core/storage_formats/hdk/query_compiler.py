@@ -618,18 +618,14 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             shape_hint=self._shape_hint,
         )
 
-    def isna(self, shape_hint=None):
-        return self.__constructor__(
-            self._modin_frame.isna(invert=False), shape_hint=shape_hint
-        )
+    def isna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=False))
 
-    def notna(self, shape_hint=None):
-        return self.__constructor__(
-            self._modin_frame.isna(invert=True), shape_hint=shape_hint
-        )
+    def notna(self):
+        return self.__constructor__(self._modin_frame.isna(invert=True))
 
-    def invert(self, shape_hint=None):
-        return self.__constructor__(self._modin_frame.invert(), shape_hint=shape_hint)
+    def invert(self):
+        return self.__constructor__(self._modin_frame.invert())
 
     def dt_year(self):
         return self.__constructor__(
@@ -810,7 +806,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             self._modin_frame.reset_index(drop), shape_hint=shape_hint
         )
 
-    def astype(self, col_dtypes, errors: str = "raise", shape_hint=None):
+    def astype(self, col_dtypes, errors: str = "raise"):
         if errors != "raise":
             raise NotImplementedError(
                 "This lazy query compiler will always "
@@ -818,7 +814,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes),
-            shape_hint=shape_hint or self._shape_hint,
+            shape_hint=self._shape_hint,
         )
 
     def setitem(self, axis, key, value):
