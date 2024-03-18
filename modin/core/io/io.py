@@ -143,25 +143,25 @@ class BaseIO:
     @classmethod
     def from_dask(cls, dask_obj):
         """
-        Create a Modin `query_compiler` from a Dask Dataframe.
+        Create a Modin `query_compiler` from a Dask DataFrame.
 
         Parameters
         ----------
         dask_obj : dask.dataframe.DataFrame
-            The Dask Dataframe to convert from.
+            The Dask DataFrame to convert from.
 
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing data from the Dask Dataframe.
+            QueryCompiler containing data from the Dask DataFrame.
 
         Notes
         -----
-        Dask Dataframe can only be converted to a Modin Dataframe if Modin uses a Dask engine.
+        Dask DataFrame can only be converted to a Modin DataFrame if Modin uses a Dask engine.
         If another engine is used, the runtime exception will be raised.
         """
         raise RuntimeError(
-            "Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine."
+            "Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine."
         )
 
     @classmethod
@@ -770,7 +770,7 @@ class BaseIO:
     @classmethod
     def to_dask(cls, modin_obj):
         """
-        Convert a Modin DataFrame to a Dask Dataframe.
+        Convert a Modin DataFrame to a Dask DataFrame.
 
         Parameters
         ----------
@@ -788,5 +788,5 @@ class BaseIO:
         If another engine is used, the runtime exception will be raised.
         """
         raise RuntimeError(
-            "Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine."
+            "Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine."
         )

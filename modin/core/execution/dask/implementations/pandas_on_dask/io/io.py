@@ -139,21 +139,21 @@ class PandasOnDaskIO(BaseIO):
     @classmethod
     def from_dask(cls, dask_obj):
         """
-        Create a Modin `query_compiler` from a Dask Dataframe.
+        Create a Modin `query_compiler` from a Dask DataFrame.
 
         Parameters
         ----------
         dask_obj : dask.dataframe.DataFrame
-            The Dask Dataframe to convert from.
+            The Dask DataFrame to convert from.
 
         Returns
         -------
         BaseQueryCompiler
-            QueryCompiler containing data from the Dask Dataframe.
+            QueryCompiler containing data from the Dask DataFrame.
         """
         client = default_client()
         dask_fututures = client.compute(dask_obj.to_delayed())
-        modin_df = from_partitions(dask_fututures, axis=0, columns=[])._query_compiler
+        modin_df = from_partitions(dask_fututures, axis=0)._query_compiler
         return modin_df
 
     @classmethod

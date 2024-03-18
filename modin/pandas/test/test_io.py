@@ -3300,7 +3300,7 @@ def test_from_ray_dataset():
 
 @pytest.mark.skipif(
     condition=Engine.get() != "Dask",
-    reason="Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine.",
+    reason="Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_df_to_dask():
@@ -3316,7 +3316,7 @@ def test_df_to_dask():
 
 @pytest.mark.skipif(
     condition=Engine.get() != "Dask",
-    reason="Modin Dataframe can only be converted to a Dask Dataframe if Modin uses a Dask engine.",
+    reason="Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_series_to_dask():
@@ -3328,7 +3328,7 @@ def test_series_to_dask():
 
 @pytest.mark.skipif(
     condition=Engine.get() != "Dask",
-    reason="Dask Dataframe can only be converted to a Modin Dataframe if Modin uses a Dask engine.",
+    reason="Dask DataFrame can only be converted to a Modin DataFrame if Modin uses a Dask engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_dask():
