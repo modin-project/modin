@@ -980,10 +980,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 self, axis=axis, dropna=dropna
             )
 
+        # compute '.nunique()' for each row partitions
         new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
             key_columns=self.columns.tolist(),
             func=lambda df: df.nunique(dropna=dropna).to_frame(),
         )
+        # sum the results of each row part to get the final value
         new_modin_frame = new_modin_frame.reduce(axis=0, function=lambda df: df.sum())
         return self.__constructor__(new_modin_frame, shape_hint="column")
 
