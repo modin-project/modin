@@ -47,12 +47,13 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, from_ray_dataset, to_pandas
+from modin.pandas.io import from_arrow, from_dask, from_ray_dataset, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
     check_file_leaks,
     create_test_dfs,
+    create_test_series,
     default_to_pandas_ignore_string,
     df_equals,
     dummy_decorator,
@@ -3412,4 +3413,51 @@ def test_from_ray_dataset():
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
     ray_df = ray.data.from_pandas(pandas_df)
     result_df = from_ray_dataset(ray_df)
+    df_equals(result_df, modin_df)
+
+
+@pytest.mark.skipif(
+    condition=Engine.get() != "Dask",
+    reason="Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine.",
+)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_df_to_dask():
+    index = pandas.DatetimeIndex(
+        pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
+    )
+
+    modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
+
+    dask_df = modin_df.modin.to_dask()
+    df_equals(dask_df.compute(), pandas_df)
+
+
+@pytest.mark.skipif(
+    condition=Engine.get() != "Dask",
+    reason="Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine.",
+)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_series_to_dask():
+    modin_s, pandas_s = create_test_series(TEST_DATA["col1"])
+
+    dask_series = modin_s.modin.to_dask()
+    df_equals(dask_series.compute(), pandas_s)
+
+
+@pytest.mark.skipif(
+    condition=Engine.get() != "Dask",
+    reason="Dask DataFrame can only be converted to a Modin DataFrame if Modin uses a Dask engine.",
+)
+@pytest.mark.filterwarnings(default_to_pandas_ignore_string)
+def test_from_dask():
+    import dask.dataframe as dd
+
+    index = pandas.DatetimeIndex(
+        pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
+    )
+    modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
+
+    dask_df = dd.from_pandas(pandas_df, npartitions=NPartitions.get())
+
+    result_df = from_dask(dask_df)
     df_equals(result_df, modin_df)

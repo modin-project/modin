@@ -214,6 +214,16 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a Dask DataFrame",
+        params="dask_obj : dask.dataframe.DataFrame",
+        method="modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO.from_dask",
+    )
+    def _from_dask(cls, dask_obj):
+        return cls.io_cls.from_dask(dask_obj)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
@@ -485,6 +495,27 @@ class BaseFactory(object):
         Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
         """
         return cls.io_cls.to_ray_dataset(modin_obj)
+
+    @classmethod
+    def _to_dask(cls, modin_obj):
+        """
+        Write query compiler content to a Dask DataFrame/Series.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            A Dask DataFrame/Series object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+        """
+        return cls.io_cls.to_dask(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod
