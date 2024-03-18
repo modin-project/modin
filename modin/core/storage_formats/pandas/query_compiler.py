@@ -1899,10 +1899,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
-    def unique(self, keep="first", ignore_index=False, subset=None):
+    def unique(self, keep="first", ignore_index=True, subset=None):
         # kernels with 'pandas.Series.unique()' work faster
         can_use_unique_kernel = (
-            subset is None and ignore_index and len(self.columns) == 1 and not keep
+            subset is None and ignore_index and len(self.columns) == 1 and keep
         )
 
         if not can_use_unique_kernel and not RangePartitioning.get():
