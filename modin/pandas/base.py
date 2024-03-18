@@ -162,7 +162,7 @@ def _get_repr_axis_label_indexer(labels, num_for_repr):
 
 
 @_inherit_docstrings(pandas.DataFrame, apilink=["pandas.DataFrame", "pandas.Series"])
-class BasePandasDataset(ClassLogger, modin_layer="DATASET"):
+class BasePandasDataset(ClassLogger):
     """
     Implement most of the common code that exists in DataFrame/Series.
 
