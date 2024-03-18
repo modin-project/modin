@@ -61,7 +61,7 @@ from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalPandasXmlParser,
 )
 from modin.pandas.series import Series
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL, import_optional_dependency
 
 
 class PandasOnDaskIO(BaseIO):
@@ -171,6 +171,9 @@ class PandasOnDaskIO(BaseIO):
         dask.dataframe.DataFrame or dask.dataframe.Series
             Converted object with type depending on input.
         """
+        import_optional_dependency(
+            "dask-expr", "dask-expr is required to create a Dask DataFrame."
+        )
         from dask.dataframe import from_delayed
 
         partitions = unwrap_partitions(modin_obj, axis=0)
