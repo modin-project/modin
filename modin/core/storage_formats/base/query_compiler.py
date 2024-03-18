@@ -1794,7 +1794,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             mask = self
         without_duplicates = self.getitem_array(mask.duplicated(keep=keep).invert())
         if ignore_index:
-            without_duplicates.index = pandas.RangeIndex(len(without_duplicates.index))
+            without_duplicates = without_duplicates.reset_index(drop=True)
         return without_duplicates
 
     @doc_utils.add_one_column_warning
