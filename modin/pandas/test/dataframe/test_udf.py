@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._libs.lib import no_default
 from pandas.core.dtypes.common import is_list_like
 
 import modin.pandas as pd
@@ -60,13 +59,13 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_agg_dict():
     md_df, pd_df = create_test_dfs(test_data_values[0])
     agg_dict = {pd_df.columns[0]: "sum", pd_df.columns[-1]: ("sum", "count")}
-    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict), raising_exceptions=True)
+    eval_general(md_df, pd_df, lambda df: df.agg(agg_dict))
 
     agg_dict = {
         "new_col1": (pd_df.columns[0], "sum"),
         "new_col2": (pd_df.columns[-1], "count"),
     }
-    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict), raising_exceptions=True)
+    eval_general(md_df, pd_df, lambda df: df.agg(**agg_dict))
 
 
 @pytest.mark.parametrize("axis", [0, 1])
@@ -76,10 +75,19 @@ def test_agg_dict():
     ids=agg_func_keys + agg_func_except_keys,
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
-def test_agg_apply(axis, func, op):
+def test_agg_apply(axis, func, op, request):
+    expected_exception = None
+    if "sum sum" in request.node.callspec.id:
+        expected_exception = pandas.errors.SpecificationError(
+            "Function names must be unique if there is no new column names assigned"
+        )
+    elif "should raise AssertionError" in request.node.callspec.id:
+        # FIXME: https://github.com/modin-project/modin/issues/7031
+        expected_exception = False
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, op)(func, axis),
+        expected_exception=expected_exception,
     )
 
 
@@ -90,10 +98,19 @@ def test_agg_apply(axis, func, op):
     ids=agg_func_keys + agg_func_except_keys,
 )
 @pytest.mark.parametrize("op", ["agg", "apply"])
-def test_agg_apply_axis_names(axis, func, op):
+def test_agg_apply_axis_names(axis, func, op, request):
+    expected_exception = None
+    if "sum sum" in request.node.callspec.id:
+        expected_exception = pandas.errors.SpecificationError(
+            "Function names must be unique if there is no new column names assigned"
+        )
+    elif "should raise AssertionError" in request.node.callspec.id:
+        # FIXME: https://github.com/modin-project/modin/issues/7031
+        expected_exception = False
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: getattr(df, op)(func, axis),
+        expected_exception=expected_exception,
     )
 
 
@@ -130,23 +147,22 @@ def test_apply_key_error(func):
     eval_general(
         *create_test_dfs(test_data["int_data"]),
         lambda df: df.apply({"row": func}, axis=1),
+        expected_exception=KeyError("Column(s) ['row'] do not exist"),
     )
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize("level", [no_default, None, -1, 0, 1])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("func", ["kurt", "count", "sum", "mean", "all", "any"])
-def test_apply_text_func_with_level(level, data, func, axis):
-    func_kwargs = {"level": level, "axis": axis}
+def test_apply_text_func(data, func, axis):
+    func_kwargs = {"axis": axis}
     rows_number = len(next(iter(data.values())))  # length of the first data column
     level_0 = np.random.choice([0, 1, 2], rows_number)
     level_1 = np.random.choice([3, 4, 5], rows_number)
     index = pd.MultiIndex.from_arrays([level_0, level_1])
 
     eval_general(
-        pd.DataFrame(data, index=index),
-        pandas.DataFrame(data, index=index),
+        *create_test_dfs(data, index=index),
         lambda df, *args, **kwargs: df.apply(func, *args, **kwargs),
         **func_kwargs,
     )
@@ -448,8 +464,6 @@ def test_query_named_index():
     eval_general(
         *(df.set_index("col1") for df in create_test_dfs(test_data["int_data"])),
         lambda df: df.query("col1 % 2 == 0 | col3 % 2 == 1"),
-        # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=(Exception,),
     )
 
 
@@ -460,8 +474,6 @@ def test_query_named_multiindex():
             for df in create_test_dfs(test_data["int_data"])
         ),
         lambda df: df.query("col1 % 2 == 1 | col3 % 2 == 1"),
-        # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=(Exception,),
     )
 
 
@@ -474,8 +486,6 @@ def test_query_multiindex_without_names():
     eval_general(
         *(make_df(df) for df in create_test_dfs(test_data["int_data"])),
         lambda df: df.query("ilevel_0 % 2 == 0 | ilevel_1 % 2 == 1 | col4 % 2 == 1"),
-        # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=(Exception,),
     )
 
 
@@ -514,9 +524,9 @@ def test_query_with_element_access_issue_4580(engine):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
-    "func",
-    agg_func_values + agg_func_except_values,
-    ids=agg_func_keys + agg_func_except_keys,
+    "func", [lambda x: x + 1, [np.sqrt, np.exp]], ids=["lambda", "list_udfs"]
 )
-def test_transform(data, func):
+def test_transform(data, func, request):
+    if "list_udfs" in request.node.callspec.id:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/6998")
     eval_general(*create_test_dfs(data), lambda df: df.transform(func))

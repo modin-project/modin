@@ -1918,7 +1918,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
+    def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
@@ -1928,7 +1928,7 @@ class BasePandasDataset(ClassLogger):
         values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, ignore_indices=ignore_indices, **kwargs
+                values=values, ignore_indices=ignore_indices
             )
         )
 
@@ -2361,6 +2361,10 @@ class BasePandasDataset(ClassLogger):
         ascending: bool = True,
         pct: bool = False,
     ):
+        if axis is None:
+            raise ValueError(
+                f"No axis named None for object type {type(self).__name__}"
+            )
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(

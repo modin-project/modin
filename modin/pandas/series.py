@@ -1180,12 +1180,6 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
-        """
-        Whether elements in `Series` are contained in `values`.
-        """
-        return super(Series, self).isin(values, shape_hint="column")
-
     def isna(self):
         """
         Detect missing values.

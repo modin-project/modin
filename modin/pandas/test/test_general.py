@@ -951,10 +951,20 @@ def test_empty_series():
     [[1, 2], ["a"], 1, "a"],
     ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
 )
-def test_to_timedelta(arg):
+def test_to_timedelta(arg, request):
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4966
-    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+    expected_exception = None
+    if request.node.callspec.id == "list_of_invalid_strings":
+        expected_exception = ValueError("Could not convert 'a' to NumPy timedelta")
+    elif request.node.callspec.id == "invalid_scalar":
+        expected_exception = ValueError("unit abbreviation w/o a number")
+    eval_general(
+        pd,
+        pandas,
+        lambda lib: lib.to_timedelta(arg),
+        expected_exception=expected_exception,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

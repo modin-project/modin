@@ -614,9 +614,9 @@ def test_pivot(data, index, columns, values, request):
     ):
         pytest.xfail(reason="https://github.com/modin-project/modin/issues/7010")
 
-    raising_exceptions = None
+    expected_exception = None
     if index is not lib.no_default:
-        raising_exceptions = ValueError(
+        expected_exception = ValueError(
             "Index contains duplicate entries, cannot reshape"
         )
     eval_general(
@@ -625,7 +625,7 @@ def test_pivot(data, index, columns, values, request):
         index=index,
         columns=columns,
         values=values,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -693,14 +693,15 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
     if values is None:
         md_df, pd_df = md_df.iloc[:42, :42], pd_df.iloc[:42, :42]
 
-    raising_exceptions = None
+    expected_exception = None
     if "default_columns-default_index" in request.node.callspec.id:
-        raising_exceptions = ValueError("No group keys passed!")
+        expected_exception = ValueError("No group keys passed!")
     elif (
         "callable_tree_reduce_func" in request.node.callspec.id
         and "int_data" in request.node.callspec.id
     ):
-        raising_exceptions = TypeError("'numpy.float64' object is not callable")
+        expected_exception = TypeError("'numpy.float64' object is not callable")
+
     eval_general(
         md_df,
         pd_df,
@@ -711,7 +712,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
         columns=columns,
         values=values,
         aggfunc=aggfunc,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -719,6 +720,7 @@ def test_pivot_table_data(data, index, columns, values, aggfunc, request):
 @pytest.mark.parametrize(
     "index",
     [
+        pytest.param([], id="no_index_cols"),
         pytest.param(lambda df: df.columns[0], id="single_index_column"),
         pytest.param(
             lambda df: [df.columns[0], df.columns[len(df.columns) // 2 - 1]],
@@ -770,9 +772,9 @@ def test_pivot_table_margins(
     fill_value,
     request,
 ):
-    raising_exceptions = None
+    expected_exception = None
     if "dict_func" in request.node.callspec.id:
-        raising_exceptions = KeyError("Column(s) ['col28', 'col38'] do not exist")
+        expected_exception = KeyError("Column(s) ['col28', 'col38'] do not exist")
     eval_general(
         *create_test_dfs(data),
         operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
@@ -783,7 +785,30 @@ def test_pivot_table_margins(
         margins=True,
         margins_name=margins_name,
         fill_value=fill_value,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
+    )
+
+
+@pytest.mark.parametrize(
+    "aggfunc",
+    [
+        pytest.param("sum", id="MapReduce_func"),
+        pytest.param("nunique", id="FullAxis_func"),
+    ],
+)
+@pytest.mark.parametrize("margins", [True, False])
+def test_pivot_table_fill_value(aggfunc, margins):
+    md_df, pd_df = create_test_dfs(test_data["int_data"])
+    eval_general(
+        md_df,
+        pd_df,
+        operation=lambda df, *args, **kwargs: df.pivot_table(*args, **kwargs),
+        index=md_df.columns[0],
+        columns=md_df.columns[1],
+        values=md_df.columns[2],
+        aggfunc=aggfunc,
+        margins=margins,
+        fill_value=10,
     )
 
 
@@ -897,17 +922,17 @@ def test_resampler_functions(rule, axis, method):
         modin_df.columns = columns
         pandas_df.columns = columns
 
-    raising_exceptions = None
+    expected_exception = None
     if method in ("interpolate", "asfreq", "nearest", "bfill", "ffill"):
         # It looks like pandas is preparing to completely
         # remove `axis` parameter for `resample` function.
-        raising_exceptions = AssertionError("axis must be 0")
+        expected_exception = AssertionError("axis must be 0")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df.resample(rule, axis=axis), method)(),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -938,15 +963,15 @@ def test_resampler_functions_with_arg(rule, axis, method_arg):
 
     method, arg = method_arg[0], method_arg[1]
 
-    raising_exceptions = None
+    expected_exception = None
     if method in ("apply", "aggregate"):
-        raising_exceptions = NotImplementedError("axis other than 0 is not supported")
+        expected_exception = NotImplementedError("axis other than 0 is not supported")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df.resample(rule, axis=axis), method)(arg),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -1040,15 +1065,15 @@ def test_resample_getitem(columns, request):
         "price": range(9),
         "volume": range(10, 19),
     }
-    raising_exceptions = None
+    expected_exception = None
     if "only_missed_column" in request.node.callspec.id:
-        raising_exceptions = KeyError("Column not found: date")
+        expected_exception = KeyError("Column not found: date")
     elif "missed_column" in request.node.callspec.id:
-        raising_exceptions = KeyError("Columns not found: 'date'")
+        expected_exception = KeyError("Columns not found: 'date'")
     eval_general(
         *create_test_dfs(data, index=index),
         lambda df: df.resample("3min")[columns].mean(),
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
     )
 
 
@@ -1399,7 +1424,7 @@ def test___bool__(data):
     eval_general(
         *create_test_dfs(data),
         lambda df: df.__bool__(),
-        raising_exceptions=ValueError(
+        expected_exception=ValueError(
             "The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all()."
         ),
     )

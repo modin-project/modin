@@ -296,6 +296,7 @@ class TestCSV:
         engine,
         parse_dates,
         names,
+        request,
     ):
         parse_dates_unsupported = isinstance(parse_dates, dict) or (
             isinstance(parse_dates, list)
@@ -311,9 +312,27 @@ class TestCSV:
         skip_exc_type_check = parse_dates_unsupported and engine == "arrow"
         if skip_exc_type_check:
             pytest.xfail(reason="https://github.com/modin-project/modin/issues/7012")
+
+        expected_exception = None
+        if "names1-parse_dates2" in request.node.callspec.id:
+            expected_exception = ValueError(
+                "Missing column provided to 'parse_dates': 'col2'"
+            )
+        elif (
+            "names1-parse_dates5-None" in request.node.callspec.id
+            or "names1-parse_dates4-None" in request.node.callspec.id
+        ):
+            expected_exception = ValueError(
+                "Missing column provided to 'parse_dates': 'col2, col3'"
+            )
+        elif "None-parse_dates3" in request.node.callspec.id:
+            expected_exception = ValueError(
+                "Missing column provided to 'parse_dates': 'c2'"
+            )
         eval_io(
             fn_name="read_csv",
             md_extra_kwargs={"engine": engine},
+            expected_exception=expected_exception,
             # read_csv kwargs
             filepath_or_buffer=pytest.csvs_names["test_read_csv_regular"],
             parse_dates=parse_dates,
@@ -509,7 +528,7 @@ class TestMultiIndex:
             ["i1", "i2", "a"],
         ],
     )
-    def test_reset_index(self, names):
+    def test_reset_index(self, names, request):
         index = pandas.MultiIndex.from_tuples(
             [(i, j, k) for i in range(2) for j in range(3) for k in range(4)],
             names=names,
@@ -519,7 +538,12 @@ class TestMultiIndex:
             df = lib.DataFrame(self.data, index=index) + 1
             return df.reset_index()
 
-        eval_general(pd, pandas, applier)
+        expected_exception = None
+        if "names3" in request.node.callspec.id:
+            expected_exception = ValueError("cannot insert i1, already exists")
+        elif "names4" in request.node.callspec.id:
+            expected_exception = ValueError("cannot insert a, already exists")
+        eval_general(pd, pandas, applier, expected_exception=expected_exception)
 
     @pytest.mark.parametrize("is_multiindex", [True, False])
     def test_reset_index_multicolumns(self, is_multiindex):
@@ -1327,7 +1351,7 @@ class TestGroupby:
     @pytest.mark.parametrize("n", [10, -10])
     @pytest.mark.parametrize("invert", [True, False])
     @pytest.mark.parametrize("select", [True, False])
-    @pytest.mark.parametrize("ascending", [None, True, False])
+    @pytest.mark.parametrize("ascending", [True, False])
     def test_head_tail(self, op, n, invert, select, ascending):
         def head(df, **kwargs):
             if invert:

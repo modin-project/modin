@@ -41,7 +41,10 @@ from modin.utils import try_cast_to_pandas
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
+    import ray
+
     from modin.core.execution.ray.common import RayWrapper
+    from modin.core.execution.ray.common.deferred_execution import MetaList
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframePartition,
@@ -2490,3 +2493,17 @@ def test_ray_lazy_exec_mode(mode):
             pytest.fail(f"Invalid value: {mode}")
     finally:
         LazyExecution.put(orig_mode)
+
+
+@pytest.mark.skipif(Engine.get() != "Ray", reason="Ray specific")
+def test_materialization_hook_serialization():
+    @ray.remote(num_returns=1)
+    def f1():
+        return [1, 2, 3]
+
+    @ray.remote(num_returns=1)
+    def f2(i):
+        return i
+
+    hook = MetaList(f1.remote())[2]
+    assert ray.get(f2.remote(hook)) == 3

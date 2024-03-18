@@ -307,6 +307,19 @@ class MaterializationHook:
         """
         raise NotImplementedError()
 
+    def __reduce__(self):
+        """
+        Replace this hook with the materialized object on serialization.
+
+        Returns
+        -------
+        tuple
+        """
+        data = RayWrapper.materialize(self)
+        if not isinstance(data, int):
+            raise NotImplementedError("Only integers are currently supported")
+        return int, (data,)
+
 
 RayObjectRefTypes = (ray.ObjectRef, ClientObjectRef)
 ObjectRefTypes = (*RayObjectRefTypes, MaterializationHook)

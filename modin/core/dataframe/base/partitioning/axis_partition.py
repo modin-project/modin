@@ -16,8 +16,10 @@
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
+from modin.logging import ClassLogger
 
-class BaseDataframeAxisPartition(ABC):  # pragma: no cover
+
+class BaseDataframeAxisPartition(ABC, ClassLogger):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
 
