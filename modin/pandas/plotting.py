@@ -23,7 +23,7 @@ from .dataframe import DataFrame
 
 
 @instancer
-class Plotting(ClassLogger):
+class Plotting(ClassLogger, modin_layer="PLOTTING"):
     """Wrapper of pandas plotting module."""
 
     def __dir__(self):

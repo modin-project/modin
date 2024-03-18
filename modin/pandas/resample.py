@@ -27,7 +27,7 @@ from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
-class Resampler(ClassLogger):
+class Resampler(ClassLogger, modin_layer="RESAMPLER"):
     def __init__(
         self,
         dataframe,

@@ -150,7 +150,7 @@ def find_common_type_cat(types):
         return find_common_type(list(types))
 
 
-class PandasParser(ClassLogger):
+class PandasParser(ClassLogger, modin_layer="PARSER"):
     """Base class for parser classes with pandas storage format."""
 
     @staticmethod

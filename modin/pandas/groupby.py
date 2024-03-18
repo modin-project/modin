@@ -82,7 +82,7 @@ _DEFAULT_BEHAVIOUR = {
 
 
 @_inherit_docstrings(pandas.core.groupby.DataFrameGroupBy)
-class DataFrameGroupBy(ClassLogger):
+class DataFrameGroupBy(ClassLogger, modin_layer="GROUPBY"):
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
 

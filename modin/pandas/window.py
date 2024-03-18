@@ -25,7 +25,7 @@ from modin.utils import _inherit_docstrings
 
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
-class Window(ClassLogger):
+class Window(ClassLogger, modin_layer="WINDOW"):
     def __init__(
         self,
         dataframe,
@@ -87,7 +87,7 @@ class Window(ClassLogger):
     pandas.core.window.rolling.Rolling,
     excluded=[pandas.core.window.rolling.Rolling.__init__],
 )
-class Rolling(ClassLogger):
+class Rolling(ClassLogger, modin_layer="WINDOW"):
     def __init__(
         self,
         dataframe,
@@ -340,7 +340,7 @@ class RollingGroupby(Rolling):
     pandas.core.window.expanding.Expanding,
     excluded=[pandas.core.window.expanding.Expanding.__init__],
 )
-class Expanding(ClassLogger):
+class Expanding(ClassLogger, modin_layer="WINDOW"):
     def __init__(self, dataframe, min_periods=1, axis=0, method="single"):
         self._dataframe = dataframe
         self._query_compiler = dataframe._query_compiler

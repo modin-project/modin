@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 @_inherit_docstrings(pandas.core.arrays.arrow.ListAccessor)
-class ListAccessor(ClassLogger):
+class ListAccessor(ClassLogger, modin_layer="SERIES-UTILS"):
     def __init__(self, data=None):
         self._series = data
         self._query_compiler = data._query_compiler
@@ -57,7 +57,7 @@ class ListAccessor(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.arrays.arrow.StructAccessor)
-class StructAccessor(ClassLogger):
+class StructAccessor(ClassLogger, modin_layer="SERIES-UTILS"):
     def __init__(self, data=None):
         self._series = data
         self._query_compiler = data._query_compiler
@@ -87,7 +87,7 @@ class StructAccessor(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
-class CategoryMethods(ClassLogger):
+class CategoryMethods(ClassLogger, modin_layer="SERIES-UTILS"):
     def __init__(self, data):
         self._series = data
         self._query_compiler = data._query_compiler
@@ -177,7 +177,7 @@ class CategoryMethods(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.strings.accessor.StringMethods)
-class StringMethods(ClassLogger):
+class StringMethods(ClassLogger, modin_layer="SERIES-UTILS"):
     def __init__(self, data):
         # Check if dtypes is objects
 
@@ -558,7 +558,7 @@ class StringMethods(ClassLogger):
 
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
-class DatetimeProperties(ClassLogger):
+class DatetimeProperties(ClassLogger, modin_layer="SERIES-UTILS"):
     def __init__(self, data):
         self._series = data
         self._query_compiler = data._query_compiler
