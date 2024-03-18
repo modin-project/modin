@@ -148,7 +148,7 @@ class BaseIO:
         Parameters
         ----------
         dask_obj : dask.dataframe.DataFrame
-            The Dask Dataframet to convert from.
+            The Dask Dataframe to convert from.
 
         Returns
         -------

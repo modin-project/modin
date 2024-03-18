@@ -57,17 +57,17 @@ where Ray Dataset can be used and what libraries it powers.
 
     ray_dataset = to_ray_dataset(modin_df)
 
-to_dask_dataframe
------------------
+to_dask
+-------
 
 You can refer to `Dask DataFrame`_ page to get more details on
 where Dask DataFrame can be used and what libraries it powers.
 
 .. code-block:: python
 
-    from modin.pandas.io import to_dask_dataframe
+    from modin.pandas.io import to_dask
 
-    dask_df = to_dask_dataframe(modin_df)
+    dask_df = to_dask(modin_df)
 
 .. _pandas ecosystem: https://pandas.pydata.org/community/ecosystem.html
 .. _NumPy ecosystem: https://numpy.org

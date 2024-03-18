@@ -91,6 +91,7 @@ try:
 except ImportError:
     EXCEPTIONS = ()
 
+
 from modin.config import NPartitions
 
 NPartitions.put(4)

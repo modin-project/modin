@@ -144,7 +144,7 @@ class PandasOnDaskIO(BaseIO):
         Parameters
         ----------
         dask_obj : dask.dataframe.DataFrame
-            The Dask Dataframet to convert from.
+            The Dask Dataframe to convert from.
 
         Returns
         -------
@@ -153,7 +153,8 @@ class PandasOnDaskIO(BaseIO):
         """
         client = default_client()
         dask_fututures = client.compute(dask_obj.to_delayed())
-        return from_partitions(dask_fututures, axis=0)._query_compiler
+        modin_df = from_partitions(dask_fututures, axis=0, columns=[])._query_compiler
+        return modin_df
 
     @classmethod
     def to_dask(cls, modin_obj):
