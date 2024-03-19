@@ -972,7 +972,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         if len(unsupported_message) > 0:
             message = (
                 f"Can't use range-partitioning implementation for 'nunique' because:\n{unsupported_message}"
-                + "Falling back to a full-axis implementation."
+                + "Falling back to a full-axis reduce implementation."
             )
             get_logger().info(message)
             ErrorMessage.warn(message)
