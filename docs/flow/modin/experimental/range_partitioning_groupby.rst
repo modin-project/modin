@@ -84,3 +84,14 @@ the left dataframe. In this case, range-partitioning implementation works faster
 
 Range-partitioning implementation of '.unique()'/'.drop_duplicates()' works best when the input data size is big (more than
 5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).
+
+'.nunique()'
+""""""""""""""""""""""""""""""""""""
+
+.. note::
+
+    Range-partitioning approach is implemented only for 'pd.Series.nunique()' and 1-column dataframes.
+    For multi-column dataframes '.nunique()' can only use full-axis reduce implementation.
+
+Range-partitioning implementation of '.nunique()'' works best when the input data size is big (more than
+5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).

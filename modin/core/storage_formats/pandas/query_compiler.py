@@ -954,7 +954,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.default_to_pandas(pandas.DataFrame.median, axis=axis, **kwargs)
         return Reduce.register(pandas.DataFrame.median)(self, axis=axis, **kwargs)
 
-    nunique = Reduce.register(pandas.DataFrame.nunique)
+    def nunique(self, axis=0, dropna=True):
+        if not RangePartitioning.get():
+            return Reduce.register(pandas.DataFrame.nunique)(
+                self, axis=axis, dropna=dropna
+            )
+
+        unsupported_message = ""
+        if axis != 0:
+            unsupported_message += (
+                "Range-partitioning 'nunique()' is only supported for 'axis=0'.\n"
+            )
+
+        if len(self.columns) > 1:
+            unsupported_message += "Range-partitioning 'nunique()' is only supported for a signle-column dataframe.\n"
+
+        if len(unsupported_message) > 0:
+            message = (
+                f"Can't use range-partitioning implementation for 'nunique' because:\n{unsupported_message}"
+                + "Falling back to a full-axis reduce implementation."
+            )
+            get_logger().info(message)
+            ErrorMessage.warn(message)
+            return Reduce.register(pandas.DataFrame.nunique)(
+                self, axis=axis, dropna=dropna
+            )
+
+        # compute '.nunique()' for each row partitions
+        new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+            key_columns=self.columns.tolist(),
+            func=lambda df: df.nunique(dropna=dropna).to_frame(),
+        )
+        # sum the results of each row part to get the final value
+        new_modin_frame = new_modin_frame.reduce(axis=0, function=lambda df: df.sum())
+        return self.__constructor__(new_modin_frame, shape_hint="column")
 
     def skew(self, axis, **kwargs):
         if axis is None:

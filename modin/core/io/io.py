@@ -141,6 +141,30 @@ class BaseIO:
         )
 
     @classmethod
+    def from_dask(cls, dask_obj):
+        """
+        Create a Modin `query_compiler` from a Dask DataFrame.
+
+        Parameters
+        ----------
+        dask_obj : dask.dataframe.DataFrame
+            The Dask DataFrame to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Dask DataFrame.
+
+        Notes
+        -----
+        Dask DataFrame can only be converted to a Modin DataFrame if Modin uses a Dask engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine."
+        )
+
+    @classmethod
     @_inherit_docstrings(pandas.read_parquet, apilink="pandas.read_parquet")
     @doc(
         _doc_default_io_method,
@@ -741,4 +765,28 @@ class BaseIO:
         """
         raise RuntimeError(
             "Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine."
+        )
+
+    @classmethod
+    def to_dask(cls, modin_obj):
+        """
+        Convert a Modin DataFrame to a Dask DataFrame.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to convert.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+        If another engine is used, the runtime exception will be raised.
+        """
+        raise RuntimeError(
+            "Modin DataFrame can only be converted to a Dask DataFrame if Modin uses a Dask engine."
         )
