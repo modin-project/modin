@@ -46,7 +46,7 @@ where NumPy can be used and what libraries it powers.
     numpy_arr = to_numpy(modin_df)
 
 to_ray
---------------
+------
 
 You can refer to `Ray Data`_ page to get more details on
 where Ray Dataset can be used and what libraries it powers.
