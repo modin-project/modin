@@ -117,7 +117,7 @@ class BaseIO:
         return cls.query_compiler_cls.from_dataframe(df, cls.frame_cls)
 
     @classmethod
-    def from_ray_dataset(cls, ray_obj):
+    def from_ray(cls, ray_obj):
         """
         Create a Modin `query_compiler` from a Ray Dataset.
 
@@ -744,7 +744,7 @@ class BaseIO:
         return obj.to_parquet(path, **kwargs)
 
     @classmethod
-    def to_ray_dataset(cls, modin_obj):
+    def to_ray(cls, modin_obj):
         """
         Convert a Modin DataFrame/Series to a Ray Dataset.
 
