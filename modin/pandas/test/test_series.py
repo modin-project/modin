@@ -63,6 +63,7 @@ from .utils import (
     quantiles_keys,
     quantiles_values,
     random_state,
+    sort_if_range_partitioning,
     string_na_rep_keys,
     string_na_rep_values,
     string_sep_keys,
@@ -1695,10 +1696,12 @@ def test_drop(data):
 @pytest.mark.parametrize("inplace", [True, False], ids=["True", "False"])
 def test_drop_duplicates(data, keep, inplace):
     modin_series, pandas_series = create_test_series(data)
-    df_equals(
-        modin_series.drop_duplicates(keep=keep, inplace=inplace),
-        pandas_series.drop_duplicates(keep=keep, inplace=inplace),
-    )
+    modin_res = modin_series.drop_duplicates(keep=keep, inplace=inplace)
+    pandas_res = pandas_series.drop_duplicates(keep=keep, inplace=inplace)
+    if inplace:
+        sort_if_range_partitioning(modin_series, pandas_series)
+    else:
+        sort_if_range_partitioning(modin_res, pandas_res)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -3671,22 +3674,26 @@ def test_tz_localize():
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_unique(data):
+    comparator = lambda *args: sort_if_range_partitioning(  # noqa: E731
+        *args, comparator=assert_array_equal
+    )
+
     modin_series, pandas_series = create_test_series(data)
     modin_result = modin_series.unique()
     pandas_result = pandas_series.unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
     pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01") for _ in range(3)]
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
@@ -3695,12 +3702,12 @@ def test_unique(data):
     pandas_result = pandas.Series(
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
     pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.Series(
@@ -3709,7 +3716,7 @@ def test_unique(data):
     pandas_result = pandas.Series(
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
     ).unique()
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
 

@@ -41,6 +41,8 @@ from modin.config import (
     Engine,
     MinPartitionSize,
     NPartitions,
+    RangePartitioning,
+    RangePartitioningGroupby,
     TestDatasetSize,
     TrackFileLeaks,
 )
@@ -661,6 +663,27 @@ def assert_dtypes_equal(df1, df2):
                 # We met a dtype that both types satisfy, so we can stop iterating
                 # over comparators and compare next dtypes
                 break
+
+
+def sort_data(data):
+    """Sort the passed sequence."""
+    if isinstance(data, (pandas.DataFrame, pd.DataFrame)):
+        return data.sort_values(data.columns.to_list(), ignore_index=True)
+    elif isinstance(data, (pandas.Series, pd.Series)):
+        return data.sort_values()
+    else:
+        return np.sort(data)
+
+
+def sort_if_range_partitioning(df1, df2, comparator=None):
+    """Sort the passed objects if 'RangePartitioning' is enabled and compare the sorted results."""
+    if comparator is None:
+        comparator = df_equals
+
+    if RangePartitioning.get() or RangePartitioningGroupby.get():
+        df1, df2 = sort_data(df1), sort_data(df2)
+
+    comparator(df1, df2)
 
 
 def df_equals(df1, df2, check_dtypes=True):

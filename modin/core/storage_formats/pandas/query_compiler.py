@@ -1933,13 +1933,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
-    def unique(self):
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
-            lambda x: x.squeeze(axis=1).unique(),
-            new_columns=self.columns,
+    def unique(self, keep="first", ignore_index=True, subset=None):
+        # kernels with 'pandas.Series.unique()' work faster
+        can_use_unique_kernel = (
+            subset is None and ignore_index and len(self.columns) == 1 and keep
         )
-        return self.__constructor__(new_modin_frame)
+
+        if not can_use_unique_kernel and not RangePartitioning.get():
+            return super().unique(keep=keep, ignore_index=ignore_index, subset=subset)
+
+        if RangePartitioning.get():
+            new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+                key_columns=self.columns.tolist() if subset is None else subset,
+                func=(
+                    (lambda df: pandas.DataFrame(df.squeeze(axis=1).unique()))
+                    if can_use_unique_kernel
+                    else (
+                        lambda df: df.drop_duplicates(
+                            keep=keep, ignore_index=ignore_index, subset=subset
+                        )
+                    )
+                ),
+                preserve_columns=True,
+            )
+        else:
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                0,
+                lambda x: x.squeeze(axis=1).unique(),
+                new_columns=self.columns,
+            )
+        return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):

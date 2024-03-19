@@ -1768,24 +1768,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, unit=unit, errors=errors
         )
 
-    # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
-    @doc_utils.add_one_column_warning
-    @doc_utils.add_refer_to("Series.unique")
-    def unique(self, **kwargs):
+    # 'qc.unique()' uses most of the arguments from 'df.drop_duplicates()', so refering to this method
+    @doc_utils.add_refer_to("DataFrame.drop_duplicates")
+    def unique(self, keep="first", ignore_index=True, subset=None):
         """
-        Get unique values of `self`.
+        Get unique rows of `self`.
 
         Parameters
         ----------
-        **kwargs : dict
-            Serves compatibility purpose. Does not affect the result.
+        keep : {"first", "last", False}, default: "first"
+            Which duplicates to keep.
+        ignore_index : bool, default: True
+            If ``True``, the resulting axis will be labeled ``0, 1, …, n - 1``.
+        subset : list, optional
+            Only consider certain columns for identifying duplicates, if `None`, use all of the columns.
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler with unique values.
         """
-        return SeriesDefault.register(pandas.Series.unique)(self, **kwargs)
+        if subset is not None:
+            mask = self.getitem_column_array(subset, ignore_order=True)
+        else:
+            mask = self
+        without_duplicates = self.getitem_array(mask.duplicated(keep=keep).invert())
+        if ignore_index:
+            without_duplicates = without_duplicates.reset_index(drop=True)
+        return without_duplicates
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.searchsorted")

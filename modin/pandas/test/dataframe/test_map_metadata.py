@@ -38,6 +38,7 @@ from modin.pandas.test.utils import (
     name_contains,
     numeric_dfs,
     random_state,
+    sort_if_range_partitioning,
     test_data,
     test_data_keys,
     test_data_values,
@@ -1068,7 +1069,7 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             )
     else:
-        df_equals(
+        sort_if_range_partitioning(
             pandas_df.drop_duplicates(
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             ),
@@ -1078,7 +1079,7 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
         )
 
     try:
-        pandas_results = pandas_df.drop_duplicates(
+        pandas_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
     except Exception as err:
@@ -1087,10 +1088,10 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
                 keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
             )
     else:
-        modin_results = modin_df.drop_duplicates(
+        modin_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
-        df_equals(modin_results, pandas_results)
+        sort_if_range_partitioning(modin_df, pandas_df)
 
 
 def test_drop_duplicates_with_missing_index_values():
@@ -1168,7 +1169,7 @@ def test_drop_duplicates_with_missing_index_values():
     modin_df = pd.DataFrame(data["data"], index=data["index"], columns=data["columns"])
     modin_result = modin_df.sort_values(["id", "time"]).drop_duplicates(["id"])
     pandas_result = pandas_df.sort_values(["id", "time"]).drop_duplicates(["id"])
-    df_equals(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_after_sort():
@@ -1183,7 +1184,7 @@ def test_drop_duplicates_after_sort():
 
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
-    df_equals(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_with_repeated_index_values():
@@ -1191,7 +1192,12 @@ def test_drop_duplicates_with_repeated_index_values():
     data = [[0], [1], [0]]
     index = [0, 0, 0]
     modin_df, pandas_df = create_test_dfs(data, index=index)
-    eval_general(modin_df, pandas_df, lambda df: df.drop_duplicates())
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.drop_duplicates(),
+        comparator=sort_if_range_partitioning,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
