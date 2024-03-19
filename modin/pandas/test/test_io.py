@@ -47,7 +47,7 @@ from modin.config import (
     TestReadFromSqlServer,
 )
 from modin.db_conn import ModinDatabaseConnection, UnsupportedDatabaseException
-from modin.pandas.io import from_arrow, from_dask, from_ray_dataset, to_pandas
+from modin.pandas.io import from_arrow, from_dask, from_ray, to_pandas
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 
 from .utils import (
@@ -3366,12 +3366,12 @@ def test_to_period():
     reason="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_df_to_ray_dataset():
+def test_df_to_ray():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
-    ray_dataset = modin_df.modin.to_ray_dataset()
+    ray_dataset = modin_df.modin.to_ray()
     df_equals(ray_dataset.to_pandas(), pandas_df)
 
 
@@ -3384,7 +3384,7 @@ def test_df_to_ray_dataset():
     reason="Modin Dataframe can only be converted to a Ray Dataset if Modin uses a Ray engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_series_to_ray_dataset():
+def test_series_to_ray():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
@@ -3393,7 +3393,7 @@ def test_series_to_ray_dataset():
     pandas_df = pandas.DataFrame(TEST_DATA, index=index)
     pandas_s = pandas_df.iloc[0]
     modin_s = pd.Series(pandas_s)
-    ray_dataset = modin_s.modin.to_ray_dataset()
+    ray_dataset = modin_s.modin.to_ray()
     df_equals(ray_dataset.to_pandas().squeeze(), pandas_s)
 
 
@@ -3406,13 +3406,13 @@ def test_series_to_ray_dataset():
     reason="Ray Dataset can only be converted to a Modin Dataframe if Modin uses a Ray engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
-def test_from_ray_dataset():
+def test_from_ray():
     index = pandas.DatetimeIndex(
         pandas.date_range("2000", freq="h", periods=len(TEST_DATA["col1"]))
     )
     modin_df, pandas_df = create_test_dfs(TEST_DATA, index=index)
     ray_df = ray.data.from_pandas(pandas_df)
-    result_df = from_ray_dataset(ray_df)
+    result_df = from_ray(ray_df)
     df_equals(result_df, modin_df)
 
 
