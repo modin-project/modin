@@ -1768,7 +1768,8 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, unit=unit, errors=errors
         )
 
-    @doc_utils.add_refer_to("Series.drop_duplicates")
+    # 'qc.unique()' is uses most of the arguments from 'df.drop_duplicates()', so refering to this method
+    @doc_utils.add_refer_to("DataFrame.drop_duplicates")
     def unique(self, keep="first", ignore_index=True, subset=None):
         """
         Get unique rows of `self`.
