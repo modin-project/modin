@@ -87,6 +87,16 @@ def test_count(data, axis):
     )
 
 
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("dropna", [True, False])
+def test_nunique(data, axis, dropna):
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.nunique(axis=axis, dropna=dropna),
+    )
+
+
 @pytest.mark.parametrize("numeric_only", [False, True])
 def test_count_specific(numeric_only):
     eval_general(
