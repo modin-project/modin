@@ -61,7 +61,7 @@ from modin.pandas.utils import check_both_not_none, is_full_grab_slice
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
-class PandasDataframe(ClassLogger):
+class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 

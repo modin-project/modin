@@ -27,7 +27,9 @@ from modin.logging import ClassLogger, get_logger
 from modin.pandas.indexing import compute_sliced_len
 
 
-class PandasDataframePartition(ABC, ClassLogger):  # pragma: no cover
+class PandasDataframePartition(
+    ABC, ClassLogger, modin_layer="BLOCK-PARTITION"
+):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.
 
