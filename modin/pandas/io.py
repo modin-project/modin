@@ -825,7 +825,7 @@ def read_orc(
 
 
 @_inherit_docstrings(pandas.HDFStore)
-class HDFStore(ClassLogger, pandas.HDFStore, modin_layer="PANDAS-IO"):  # noqa: PR01, D200
+class HDFStore(ClassLogger, pandas.HDFStore):  # noqa: PR01, D200
     """
     Dict-like IO interface for storing pandas objects in PyTables.
     """
@@ -884,7 +884,7 @@ class HDFStore(ClassLogger, pandas.HDFStore, modin_layer="PANDAS-IO"):  # noqa: 
 
 
 @_inherit_docstrings(pandas.ExcelFile)
-class ExcelFile(ClassLogger, pandas.ExcelFile, modin_layer="PANDAS-IO"):  # noqa: PR01, D200
+class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
     """
     Class for parsing tabular excel sheets into DataFrame objects.
     """

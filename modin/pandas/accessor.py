@@ -35,7 +35,7 @@ from modin.pandas.io import to_ray_dataset
 from modin.utils import _inherit_docstrings
 
 
-class BaseSparseAccessor(ClassLogger, modin_layer="ACCESSOR"):
+class BaseSparseAccessor(ClassLogger):
     """
     Base class for various sparse DataFrame accessor classes.
 
@@ -185,7 +185,7 @@ class SparseAccessor(BaseSparseAccessor):
 
 
 @_inherit_docstrings(pandas.core.accessor.CachedAccessor)
-class CachedAccessor(ClassLogger, modin_layer="ACCESSOR"):
+class CachedAccessor(ClassLogger):
     def __init__(self, name: str, accessor) -> None:
         self._name = name
         self._accessor = accessor
