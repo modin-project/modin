@@ -20,7 +20,7 @@ from modin.logging import ClassLogger
 
 
 class BaseDataframeAxisPartition(
-    ABC, ClassLogger, modin_layer="AXIS-PARTITION"
+    ABC, ClassLogger, modin_layer="VIRTUAL-PARTITION"
 ):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.
