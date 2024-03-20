@@ -489,6 +489,9 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     @classmethod
     def enable_api_only(cls) -> None:
         """Enable API level logging."""
+        warnings.warn(
+            "enable_api_only value for LogMode would be deprecated in Modin 0.30.0 use enable instead. For more details https://github.com/modin-project/modin/issues/7102"
+        )
         cls.put("enable_api_only")
 
 
