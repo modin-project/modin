@@ -49,6 +49,7 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
+    ssh_proxy_command: nc -X 5 -x proxy-ir.intel.com:1080 %h %p
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
@@ -172,9 +173,11 @@ setup_commands:
     - wget https://modin-datasets.intel.com/testing/yellow_tripdata_2015-01.csv
     - printf "VendorID,tpep_pickup_datetime,tpep_dropoff_datetime,passenger_count,trip_distance,pickup_longitude,pickup_latitude,RateCodeID,store_and_fwd_flag,dropoff_longitude,dropoff_latitude,payment_type,fare_amount,extra,mta_tax,tip_amount,tolls_amount,improvement_surcharge,total_amount,congestion_surcharge,airport_fee\n" > big_yellow.csv
     - tail -n +2 yellow_tripdata_2015-01.csv{,}{,}{,}{,}{,}{,} >> big_yellow.csv
+    - echo 'export MODIN_RAY_CLUSTER=True' >> ~/.bashrc
     
 # Custom commands that will be run on the head node after common setup.
-head_setup_commands: []
+head_setup_commands: 
+    - echo 'export MODIN_REDIS_ADDRESS="localhost:6379"' >> ~/.bashrc
 
 # Custom commands that will be run on worker nodes after common setup.
 worker_setup_commands: []
@@ -182,9 +185,13 @@ worker_setup_commands: []
 # Command to start ray on the head node. You don't need to change this.
 head_start_ray_commands:
     - ray stop
-    - ray start --head --port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --dashboard-host=0.0.0.0
+    - echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024}" /proc/meminfo)' >> ~/.bashrc
+    - echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
+    - ulimit -n 65536; ray start --head --port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR --dashboard-host=0.0.0.0
 
 # Command to start ray on worker nodes. You don't need to change this.
 worker_start_ray_commands:
     - ray stop
-    - ray start --address=$RAY_HEAD_IP:6379 --object-manager-port=8076
+    - echo 'export MEMORY_STORE_SIZE=$(awk "/MemFree/ { printf \"%d \\n\", \$2*1024}" /proc/meminfo)' >> ~/.bashrc
+    - echo 'export TMPDIR="$(dirname $(mktemp tmp.XXXXXXXXXX -ut))"' >> ~/.bashrc
+    - ulimit -n 65536; ray start --address=$RAY_HEAD_IP:6379 --object-manager-port=8076  --object-store-memory=$MEMORY_STORE_SIZE --plasma-directory=$TMPDIR
