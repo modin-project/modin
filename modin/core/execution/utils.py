@@ -29,3 +29,39 @@ def set_env(**environ):
     finally:
         os.environ.clear()
         os.environ.update(old_environ)
+
+
+# Check if the function already exists to avoid circular imports
+if "remote_function" not in dir():
+    from modin.config import Engine
+
+    if Engine.get() == "Ray":
+        from modin.core.execution.ray.common import RayWrapper
+
+        _remote_function_wrapper = RayWrapper.put
+    elif Engine.get() == "Unidist":
+        from modin.core.execution.unidist.common import UnidistWrapper
+
+        _remote_function_wrapper = UnidistWrapper.put
+    elif Engine.get() == "Dask":
+        from modin.core.execution.dask.common import DaskWrapper
+
+        # The function cache is not supported for Dask
+        def remote_function(func):
+            return DaskWrapper.put(func)
+
+    else:
+
+        def remote_function(func):
+            return func
+
+    if "remote_function" not in dir():
+        _remote_function_cache = {}
+
+        def remote_function(func):  # noqa: F811
+            func_id = id(func.__code__)
+            ref = _remote_function_cache.get(func_id, None)
+            if ref is None:
+                ref = _remote_function_wrapper(func)
+                _remote_function_cache[func_id] = ref
+            return ref
