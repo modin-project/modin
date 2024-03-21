@@ -88,7 +88,7 @@ elif Engine.get() == "Python":
     def put(x):
         return PythonWrapper.put(x, hash=False)
 
-    def deploy(func, args):
+    def deploy(func, args=[]):
         return func(*args)
 
     def materialize(arg):
@@ -2528,12 +2528,26 @@ def test_remote_function():
 
         return remote_func
 
+    def get_capturing_func(arg):
+        @remote_function
+        def remote_func():
+            return arg
+
+        return remote_func
+
     if Engine.get() in ("Ray", "Unidist"):
         from modin.core.execution.utils import _remote_function_cache
 
         cache_len = len(_remote_function_cache)
         assert get_func() is get_func()
         assert get_func() in _remote_function_cache.values()
+        assert get_capturing_func(1) not in _remote_function_cache.values()
         assert len(_remote_function_cache) == cache_len + 1
 
     assert materialize(deploy(get_func(), [123])) == 123
+    assert get_capturing_func(1) is not get_capturing_func(2)
+    assert (
+        materialize(deploy(get_capturing_func(1)))
+        + materialize(deploy(get_capturing_func(2)))
+        == 3
+    )

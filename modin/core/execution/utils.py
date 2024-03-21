@@ -16,6 +16,8 @@
 import contextlib
 import os
 
+from modin.error_message import ErrorMessage
+
 
 @contextlib.contextmanager
 def set_env(**environ):
@@ -59,6 +61,12 @@ if "remote_function" not in dir():
         _remote_function_cache = {}
 
         def remote_function(func):  # noqa: F811
+            if func.__closure__:
+                ErrorMessage.warn(
+                    f"The remote function {func} can not be cached, because "
+                    + "it captures objects from the outer scope."
+                )
+                return func
             func_id = id(func.__code__)
             ref = _remote_function_cache.get(func_id, None)
             if ref is None:
