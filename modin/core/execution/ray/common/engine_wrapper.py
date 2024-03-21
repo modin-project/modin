@@ -20,7 +20,7 @@ To be used as a piece of building a Ray-based engine.
 import asyncio
 import os
 from types import FunctionType
-from typing import Sequence
+from typing import Iterable, Sequence
 
 import ray
 from ray.util.client.common import ClientObjectRef
@@ -106,7 +106,7 @@ class RayWrapper:
 
         Parameters
         ----------
-        obj_id : ray.ObjectID
+        obj_id : ObjectRefTypes
             Ray object identifier to get the value by.
 
         Returns
@@ -214,7 +214,7 @@ class RayWrapper:
         num_returns : int, optional
         """
         if not isinstance(obj_ids, Sequence):
-            obj_ids = list(obj_ids)
+            obj_ids = list(obj_ids) if isinstance(obj_ids, Iterable) else [obj_ids]
 
         ids = set()
         for obj in obj_ids:

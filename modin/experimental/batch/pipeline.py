@@ -242,13 +242,14 @@ class PandasQueryPipeline(object):
                     )
                     new_dfs[-1].drain_call_queue(num_splits=1)
 
-                def reducer(df):
+                def reducer(df, reduce_fn, *parts):
                     df_inputs = [df]
-                    for df in new_dfs:
-                        df_inputs.append(df.to_pandas())
-                    return node.reduce_fn(df_inputs)
+                    df_inputs.extend(parts)
+                    return reduce_fn(df_inputs)
 
-                partitions = [partitions[0].add_to_apply_calls(reducer)]
+                args = [node.reduce_fn]
+                args.extend([dfs._data_ref for dfs in new_dfs])
+                partitions = [partitions[0].add_to_apply_calls(reducer, *args)]
             elif node.repartition_after:
                 if len(partitions) > 1:
                     ErrorMessage.not_implemented(
