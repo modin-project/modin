@@ -88,7 +88,7 @@ elif Engine.get() == "Python":
     def put(x):
         return PythonWrapper.put(x, hash=False)
 
-    def deploy(func, args=[]):
+    def deploy(func, args=tuple()):
         return func(*args)
 
     def materialize(arg):
