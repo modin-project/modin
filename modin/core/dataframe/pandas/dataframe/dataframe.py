@@ -2587,8 +2587,11 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             partition_indices = np.unique(
                 np.digitize(key_indices, np.cumsum(grouper.column_widths))
             )
-        else:
+        elif level is not None:
+            # each partition contains an index, so taking the first one
             partition_indices = [0]
+        else:
+            raise ValueError("Must specify either 'level' or 'key_columns'")
 
         new_partitions = grouper._partition_mgr_cls.shuffle_partitions(
             new_partitions,
