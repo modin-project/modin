@@ -2445,6 +2445,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         preserve_columns=False,
         data=None,
         data_key_columns=None,
+        level=None,
         **kwargs,
     ):
         """
@@ -2453,7 +2454,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         Parameters
         ----------
         key_columns : list of hashables
-            Columns to build the range partitioning for.
+            Columns to build the range partitioning for. Can't be specified along with `level`.
         func : callable(pandas.DataFrame) -> pandas.DataFrame
             Function to apply against partitions.
         ascending : bool, default: True
@@ -2466,6 +2467,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             ``df["grouper"] # self`` and ``df["data"] # data``.
         data_key_columns : list of hashables, optional
             Additional key columns from `data`. Will be combined with `key_columns`.
+        level : list of ints or labels, optional
+            Index level(s) to build the range partitioning for. Can't be specified along with `key_columns`.
         **kwargs : dict
             Additional arguments to forward to the range builder function.
 
@@ -2574,14 +2577,18 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             key_columns,
             ascending[0] if is_list_like(ascending) else ascending,
             ideal_num_new_partitions,
+            level=level,
             **kwargs,
         )
 
-        # here we want to get indices of those partitions that hold the key columns
-        key_indices = grouper.columns.get_indexer_for(key_columns)
-        partition_indices = np.unique(
-            np.digitize(key_indices, np.cumsum(grouper.column_widths))
-        )
+        if key_columns:
+            # here we want to get indices of those partitions that hold the key columns
+            key_indices = grouper.columns.get_indexer_for(key_columns)
+            partition_indices = np.unique(
+                np.digitize(key_indices, np.cumsum(grouper.column_widths))
+            )
+        else:
+            partition_indices = [0]
 
         new_partitions = grouper._partition_mgr_cls.shuffle_partitions(
             new_partitions,
@@ -4031,6 +4038,10 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         duplicated_suffix = "__duplicated_suffix__"
         duplicated_pattern = r"_[\d]*__duplicated_suffix__"
         kwargs["observed"] = True
+        level = kwargs.get("level")
+
+        if level is not None and not isinstance(level, list):
+            level = [level]
 
         def apply_func(df):  # pragma: no cover
             if has_external_grouper:
@@ -4074,6 +4085,12 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
 
             if series_groupby:
                 df = df.squeeze(axis=1)
+
+            if kwargs.get("level") is not None:
+                assert len(by) == 0
+                # passing an empty list triggers an error
+                by = None
+
             result = operator(df.groupby(by, **kwargs))
 
             if align_result_columns and df.empty and result.empty:
@@ -4128,6 +4145,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             func=apply_func,
             data=data,
             data_key_columns=data_key_columns,
+            level=level,
         )
         # no need aligning columns if there's only one row partition
         if add_missing_cats or align_result_columns and result._partitions.shape[0] > 1:
@@ -4286,7 +4304,11 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 row_lengths=result._row_lengths_cache,
             )
 
-        if not result.has_materialized_index and not has_external_grouper:
+        if (
+            not result.has_materialized_index
+            and not has_external_grouper
+            and level is None
+        ):
             by_dtypes = ModinDtypes(self._dtypes).lazy_get(internal_by)
             if by_dtypes.is_materialized:
                 new_index = ModinIndex(value=result, axis=0, dtypes=by_dtypes)

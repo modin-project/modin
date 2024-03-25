@@ -259,9 +259,7 @@ def test_mixed_dtypes_groupby(as_index):
             md_sorted_grpby,
             pd_sorted_grpby,
             lambda df: df.ffill(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         # FIXME: https://github.com/modin-project/modin/issues/7032
         eval_general(
@@ -309,18 +307,14 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.first(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_cummin(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(
             md_sorted_grpby,
             pd_sorted_grpby,
             lambda df: df.bfill(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         # numeric_only=False doesn't work
         eval_general(
@@ -366,9 +360,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.head(n),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_cumprod(modin_groupby, pandas_groupby, numeric_only=True)
         # numeric_only=False doesn't work
@@ -399,9 +391,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.tail(n),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_quantile(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
@@ -1346,15 +1336,33 @@ def test_multi_column_groupby():
         modin_df.groupby(by, axis=1).count()
 
 
-def sort_index_if_experimental_groupby(*dfs):
+def sort_if_experimental_groupby(*dfs):
     """
     This method should be applied before comparing results of ``groupby.transform`` as
     the experimental implementation changes the order of rows for that:
     https://github.com/modin-project/modin/issues/5924
     """
     if RangePartitioningGroupby.get():
-        return tuple(df.sort_index() for df in dfs)
-    return dfs
+        dfs = try_cast_to_pandas(dfs)
+        result = []
+        for df in dfs:
+            if df.ndim == 1:
+                # Series case
+                result.append(df.sort_index())
+                continue
+
+            cols_no_idx_names = df.columns.difference(
+                df.index.names, sort=False
+            ).tolist()
+            try:
+                df = df.sort_values(cols_no_idx_names, ignore_index=True)
+            # can raise in case of mixed dtypes
+            except TypeError:
+                cols = df.select_dtypes(include="number").columns
+                cols_no_idx_names = cols.difference(df.index.names, sort=False).tolist()
+                df = df.sort_values(cols_no_idx_names, ignore_index=True)
+            result.append(df)
+    return result
 
 
 def eval_ngroups(modin_groupby, pandas_groupby):
@@ -1389,7 +1397,7 @@ def eval_ndim(modin_groupby, pandas_groupby):
 
 def eval_cumsum(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumsum(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cumsum(axis=axis, numeric_only=numeric_only),
         )
@@ -1398,7 +1406,7 @@ def eval_cumsum(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only
 
 def eval_cummax(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cummax(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cummax(axis=axis, numeric_only=numeric_only),
         )
@@ -1407,7 +1415,7 @@ def eval_cummax(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only
 
 def eval_cummin(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cummin(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cummin(axis=axis, numeric_only=numeric_only),
         )
@@ -1486,13 +1494,13 @@ def eval_cumprod(
     modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False
 ):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumprod(numeric_only=numeric_only),
             pandas_groupby.cumprod(numeric_only=numeric_only),
         )
     )
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumprod(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cumprod(axis=axis, numeric_only=numeric_only),
         )
@@ -1501,7 +1509,7 @@ def eval_cumprod(
 
 def eval_transform(modin_groupby, pandas_groupby, func):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.transform(func), pandas_groupby.transform(func)
         )
     )
@@ -1509,7 +1517,7 @@ def eval_transform(modin_groupby, pandas_groupby, func):
 
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
         )
     )
@@ -1626,7 +1634,7 @@ def eval_groups(modin_groupby, pandas_groupby):
 
 def eval_shift(modin_groupby, pandas_groupby):
     def comparator(df1, df2):
-        df_equals(*sort_index_if_experimental_groupby(df1, df2))
+        df_equals(*sort_if_experimental_groupby(df1, df2))
 
     eval_general(
         modin_groupby,
@@ -1726,7 +1734,7 @@ def test_groupby_getitem_preserves_key_order_issue_6154():
     ],
 )
 def test_groupby_multiindex(groupby_kwargs):
-    frame_data = np.random.randint(0, 100, size=(2**6, 2**4))
+    frame_data = np.random.randint(0, 100, size=(2**6, 2**6))
     modin_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
@@ -2047,7 +2055,7 @@ def test_agg_exceptions(operation):
         from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 
         if GroupBy.is_transformation_kernel(operation):
-            df1, df2 = sort_index_if_experimental_groupby(df1, df2)
+            df1, df2 = sort_if_experimental_groupby(df1, df2)
 
         df_equals(df1, df2)
 
