@@ -489,6 +489,10 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     @classmethod
     def enable_api_only(cls) -> None:
         """Enable API level logging."""
+        warnings.warn(
+            "'enable_api_only' value for LogMode is deprecated and"
+            + "will be removed in a future version."
+        )
         cls.put("enable_api_only")
 
 
