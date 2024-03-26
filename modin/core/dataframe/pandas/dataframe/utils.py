@@ -132,7 +132,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         columns: Optional[Union[str, list]],
         ascending: Union[list, bool],
         ideal_num_new_partitions: int,
-        level: Optional[list[Union[str, int]]],
+        level: Optional[list[Union[str, int]]] = None,
         **kwargs: dict,
     ):
         self.frame_len = len(modin_frame)
@@ -321,7 +321,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         df: pandas.DataFrame,
         columns_info: "list[ColumnInfo]",
         ascending: bool,
-        keys_are_index_levels: bool,
+        keys_are_index_levels: bool = False,
         **kwargs: dict,
     ) -> "tuple[pandas.DataFrame, ...]":
         """
@@ -340,7 +340,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
             Information regarding keys and pivots for range partitioning.
         ascending : bool
             The ascending flag.
-        keys_are_index_levels : bool
+        keys_are_index_levels : bool, default: False
             Whether `columns_info` describes index levels or actual columns from `df`.
         **kwargs : dict
             Additional keyword arguments.

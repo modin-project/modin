@@ -1342,6 +1342,7 @@ def sort_if_experimental_groupby(*dfs):
     the experimental implementation changes the order of rows for that:
     https://github.com/modin-project/modin/issues/5924
     """
+    result = dfs
     if RangePartitioningGroupby.get():
         dfs = try_cast_to_pandas(dfs)
         result = []
