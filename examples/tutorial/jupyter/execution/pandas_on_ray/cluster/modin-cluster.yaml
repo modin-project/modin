@@ -49,7 +49,6 @@ provider:
 # How Ray will authenticate with newly launched nodes.
 auth:
     ssh_user: ubuntu
-    ssh_proxy_command: nc -X 5 -x proxy-ir.intel.com:1080 %h %p
 # By default Ray creates a new private keypair, but you can also use your own.
 # If you do so, make sure to also set "KeyName" in the head and worker node
 # configurations below.
