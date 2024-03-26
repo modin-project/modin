@@ -3005,13 +3005,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 copartition=False,
                 labels="drop",
             )
-            return self.__constructor__(result)
+            return self.__constructor__(result, shape_hint=self._shape_hint)
 
         return self.__constructor__(
             self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
                 lambda df: pandas.DataFrame.dropna(df, **kwargs),
-            )
+            ),
+            shape_hint=self._shape_hint,
         )
 
     def drop(self, index=None, columns=None, errors: str = "raise"):
