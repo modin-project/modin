@@ -43,7 +43,5 @@ runs:
         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
         use-only-tar-bz2: false
     - name: Install modin
-      run: ls
-      shell: bash
       run: cd modin && pip install . && cd ..
       shell: bash
