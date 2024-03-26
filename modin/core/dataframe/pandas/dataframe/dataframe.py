@@ -28,9 +28,9 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import IsRayCluster, NPartitions
+from modin.config import Engine, IsRayCluster, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType
+from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
     ShuffleSortFunctions,
     add_missing_categories_to_groupby,
@@ -1873,7 +1873,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         return dict(partition_ids_with_indices)
 
     @staticmethod
-    def _join_index_objects(axis, indexes, how, sort):
+    def _join_index_objects(axis, indexes, how, sort, fill_value=None):
         """
         Join the pair of index objects (columns or rows) by a given strategy.
 
@@ -1891,6 +1891,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             considered to be the first index in the `indexes` list.
         sort : boolean
             Whether or not to sort the joined index.
+        fill_value : any, default: None
+            Value to use for missing values.
 
         Returns
         -------
@@ -1953,8 +1955,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     {0: [joined_index, indexers[frame_idx]]},
                     copy=True,
                     allow_dups=True,
+                    fill_value=fill_value,
                 )
-            return lambda df: df.reindex(joined_index, axis=axis)
+            return lambda df: df.reindex(joined_index, axis=axis, fill_value=fill_value)
 
         return joined_index, make_reindexer
 
@@ -3528,7 +3531,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             other.get_axis(axis)
         ) and self._get_axis_lengths(axis) == other._get_axis_lengths(axis)
 
-    def _copartition(self, axis, other, how, sort, force_repartition=False):
+    def _copartition(
+        self, axis, other, how, sort, force_repartition=False, fill_value=None
+    ):
         """
         Copartition two Modin DataFrames.
 
@@ -3549,6 +3554,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             this method will skip repartitioning if it is possible. This is because
             reindexing is extremely inefficient. Because this method is used to
             `join` or `append`, it is vital that the internal indices match.
+        fill_value : any, default: None
+            Value to use for missing values.
 
         Returns
         -------
@@ -3577,7 +3584,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         self_index = self.get_axis(axis)
         others_index = [o.get_axis(axis) for o in other]
         joined_index, make_reindexer = self._join_index_objects(
-            axis, [self_index] + others_index, how, sort
+            axis, [self_index] + others_index, how, sort, fill_value
         )
 
         frames = [self] + other
@@ -4629,3 +4636,179 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         ErrorMessage.default_to_pandas(message="`from_dataframe`")
         pandas_df = from_dataframe_to_pandas(df)
         return cls.from_pandas(pandas_df)
+
+    def case_when(self, caselist):
+        """
+        Replace values where the conditions are True.
+
+        Parameters
+        ----------
+        caselist : list of tuples
+
+        Returns
+        -------
+        PandasDataframe
+        """
+        # For Dask the callables must be wrapped for each partition, otherwise
+        # the execution could fail with CancelledError.
+        single_wrap = Engine.get() != "Dask"
+        cls = type(self)
+        wrapper_put = self._partition_mgr_cls._execution_wrapper.put
+        if (
+            not single_wrap
+            or (remote_fn := getattr(cls, "_CASE_WHEN_FN", None)) is None
+        ):
+
+            def case_when(df, name, caselist):  # pragma: no cover
+                caselist = [
+                    tuple(
+                        (
+                            data.squeeze(axis=1)
+                            if isinstance(data, pandas.DataFrame)
+                            else data
+                        )
+                        for data in case_tuple
+                    )
+                    for case_tuple in caselist
+                ]
+                return pandas.DataFrame({name: df.squeeze(axis=1).case_when(caselist)})
+
+            if single_wrap:
+                cls._CASE_WHEN_FN = remote_fn = wrapper_put(case_when)
+            else:
+                remote_fn = case_when
+
+        name = self.columns[0]
+        use_map = single_wrap
+        is_trivial_idx = None
+        # Lists of modin frames: first for conditions, second for replacements
+        modin_lists = [[], []]
+        # Fill values for conditions and replacements respectively
+        fill_values = [True, None]
+        new_caselist = []
+        for case_tuple in caselist:
+            new_case = []
+            for data, modin_list, fill_value in zip(
+                case_tuple, modin_lists, fill_values
+            ):
+                if isinstance(data, cls):
+                    modin_list.append(data)
+                elif callable(data):
+                    if single_wrap:
+                        data = wrapper_put(data)
+                elif isinstance(data, pandas.Series):
+                    use_map = False
+                    if is_trivial_idx is None:
+                        self_idx = self.index
+                        length = len(self_idx)
+                        is_trivial_idx = is_trivial_index(self_idx)
+                    if is_trivial_idx and is_trivial_index(data.index):
+                        data = data[:length]
+                        diff = length - len(data)
+                        if diff > 0:
+                            data = pandas.concat(
+                                [data, pandas.Series([fill_value] * diff)]
+                            )
+                    else:
+                        data = data.reindex(self_idx, fill_value=fill_value)
+                elif use_map and is_list_like(data):
+                    use_map = False
+                new_case.append(data)
+            new_caselist.append(tuple(new_case))
+
+        if modin_lists[0] or modin_lists[1]:
+            # Copartition modin frames
+            use_map = False
+            columns = self.columns
+            column_widths = [1]
+            for modin_list, fill_value in zip(modin_lists, fill_values):
+                _, list_of_right_parts, joined_index, row_lengths = self._copartition(
+                    Axis.ROW_WISE.value,
+                    modin_list,
+                    how="left",
+                    sort=False,
+                    fill_value=fill_value,
+                )
+                modin_list.clear()
+                modin_list.extend(
+                    self.__constructor__(
+                        part,
+                        joined_index,
+                        columns,
+                        row_lengths,
+                        column_widths,
+                    )
+                    for part in list_of_right_parts
+                )
+
+            # Replace modin frames with copartitioned
+            caselist = new_caselist
+            new_caselist = []
+            for i in range(2):
+                modin_lists[i] = iter(modin_lists[i])
+            for case_tuple in caselist:
+                new_case = tuple(
+                    next(modin_list) if isinstance(data, cls) else data
+                    for data, modin_list in zip(case_tuple, modin_lists)
+                )
+                new_caselist.append(new_case)
+
+        # If all the conditions are callable and the replacements are either
+        # callable or scalar, use map().
+        if use_map:
+            return self.map(func=remote_fn, func_args=[name, new_caselist], lazy=True)
+
+        # Get the chunk of data corresponding the the specified partition
+        def map_data(
+            part_idx,
+            part_len,
+            data,
+            data_offset,
+            fill_value,
+        ):
+            if isinstance(data, cls):
+                return data._partitions[part_idx][0]._data
+            if isinstance(data, pandas.Series):
+                return data[data_offset : data_offset + part_len]
+            # As mentioned above, this is required for Dask
+            if not single_wrap and callable(data):
+                return wrapper_put(data)
+            return (
+                data[data_offset : data_offset + part_len]
+                if is_list_like(data)
+                else data
+            )
+
+        parts = [p[0] for p in self._partitions]
+        lengths = self._get_lengths(parts, Axis.ROW_WISE)
+        new_parts = []
+        data_offset = 0
+
+        # Split the data and apply the remote function to each partition
+        # with the corresponding chunk of data
+        for i, part, part_len in zip(range(0, len(parts)), parts, lengths):
+            cases = [
+                tuple(
+                    map_data(i, part_len, data, data_offset, fill_value)
+                    for data, fill_value in zip(c, (True, None))
+                )
+                for c in new_caselist
+            ]
+            new_parts.append(
+                part.add_to_apply_calls(
+                    remote_fn if single_wrap else wrapper_put(remote_fn),
+                    name,
+                    cases,
+                    length=part_len,
+                    width=1,
+                )
+            )
+            data_offset += part_len
+        new_parts = np.array([[p] for p in new_parts])
+        return self.__constructor__(
+            new_parts,
+            columns=self.columns,
+            index=self.index,
+            row_lengths=lengths,
+            column_widths=[1],
+        )

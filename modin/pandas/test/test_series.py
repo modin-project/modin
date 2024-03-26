@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import datetime
+import itertools
 import json
 import unittest.mock as mock
 
@@ -85,6 +86,11 @@ from .utils import (
     test_string_list_data_keys,
     test_string_list_data_values,
 )
+
+if StorageFormat.get() != "Hdk":
+    from modin.test.storage_formats.pandas.test_internals import (
+        construct_modin_df_by_scheme,
+    )
 
 # Our configuration in pytest.ini requires that we explicitly catch all
 # instances of defaulting to pandas, but some test modules, like this one,
@@ -4681,18 +4687,75 @@ def test_struct_general():
     )
 
 
-def test_case_when():
-    # Copied from pandas
-    c_md, c_pd = create_test_series([6, 7, 8, 9], name="c")
-    a_md, a_pd = create_test_series([0, 0, 1, 2])
-    b_md, b_pd = create_test_series([0, 3, 4, 5])
+def _case_when_caselists():
+    def permutations(values):
+        return [
+            p
+            for r in range(1, len(values) + 1)
+            for p in itertools.permutations(values, r)
+        ]
 
-    results = [None, None]
-    for idx, (c, a, b) in enumerate(((c_md, a_md, b_md), (c_pd, a_pd, b_pd))):
-        results[idx] = c.case_when(
-            caselist=[(a.gt(0), a), (b.gt(0), b)]  # condition, replacement
+    conditions = permutations(
+        [
+            [True, False, False, False] * 10,
+            pandas.Series([True, False, False, False] * 10),
+            pandas.Series([True, False, False, False] * 10, index=range(78, -2, -2)),
+            lambda df: df.gt(0),
+        ]
+    )
+    replacements = permutations([[0, 3, 4, 5] * 10, 0, lambda df: 1])
+    caselists = []
+    for c in conditions:
+        for r in replacements:
+            if len(c) == len(r):
+                caselists.append(list(zip(c, r)))
+    return caselists
+
+
+@pytest.mark.parametrize(
+    "base",
+    [
+        pandas.Series(range(40)),
+        pandas.Series([0, 7, 8, 9] * 10, name="c", index=range(0, 80, 2)),
+    ],
+)
+@pytest.mark.parametrize(
+    "caselist",
+    _case_when_caselists(),
+)
+def test_case_when(base, caselist):
+    pandas_result = base.case_when(caselist)
+    modin_bases = [pd.Series(base)]
+
+    # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
+    # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal
+    if StorageFormat.get() != "Hdk":  # HDK always uses a single partition.
+        modin_base_repart = construct_modin_df_by_scheme(
+            base.to_frame(),
+            partitioning_scheme={"row_lengths": [14, 14, 12], "column_widths": [1]},
+        ).squeeze(axis=1)
+        assert (
+            modin_bases[0]._query_compiler._modin_frame._partitions.shape
+            != modin_base_repart._query_compiler._modin_frame._partitions.shape
         )
-    df_equals(*results)
+        modin_base_repart.name = base.name
+        modin_bases.append(modin_base_repart)
+
+    for modin_base in modin_bases:
+        df_equals(pandas_result, modin_base.case_when(caselist))
+        if any(
+            isinstance(data, pandas.Series)
+            for case_tuple in caselist
+            for data in case_tuple
+        ):
+            caselist = [
+                tuple(
+                    pd.Series(data) if isinstance(data, pandas.Series) else data
+                    for data in case_tuple
+                )
+                for case_tuple in caselist
+            ]
+            df_equals(pandas_result, modin_base.case_when(caselist))
 
 
 @pytest.mark.parametrize("data", test_string_data_values, ids=test_string_data_keys)

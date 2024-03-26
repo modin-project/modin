@@ -31,7 +31,12 @@ from pandas.core.dtypes.common import (
 from pandas.core.indexes.api import Index, MultiIndex, RangeIndex
 from pyarrow.types import is_dictionary
 
-from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, join_columns
+from modin.core.dataframe.base.dataframe.utils import (
+    Axis,
+    JoinType,
+    is_trivial_index,
+    join_columns,
+)
 from modin.core.dataframe.base.interchange.dataframe_protocol.dataframe import (
     ProtocolDataframe,
 )
@@ -2948,7 +2953,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             len(new_index) == 0
             and not isinstance(new_index, MultiIndex)
             and new_index.name is None
-        ) or (len(new_columns) != 0 and cls._is_trivial_index(new_index)):
+        ) or (len(new_columns) != 0 and is_trivial_index(new_index)):
             index_cols = None
         else:
             orig_index_names = new_index.names
@@ -3080,31 +3085,4 @@ class HdkOnNativeDataframe(PandasDataframe):
             dtypes=pd.Series(data=new_dtypes, index=dtype_index),
             index_cols=index_cols,
             has_unsupported_data=len(unsupported_cols) > 0,
-        )
-
-    @classmethod
-    def _is_trivial_index(cls, index):
-        """
-        Check if an index is a trivial index, i.e. a sequence [0..n].
-
-        Parameters
-        ----------
-        index : pandas.Index
-            An index to check.
-
-        Returns
-        -------
-        bool
-        """
-        if len(index) == 0:
-            return True
-        if isinstance(index, pd.RangeIndex):
-            return index.start == 0 and index.step == 1
-        if not (isinstance(index, pd.Index) and index.dtype == np.int64):
-            return False
-        return (
-            index.is_monotonic_increasing
-            and index.is_unique
-            and index.min() == 0
-            and index.max() == len(index) - 1
         )
