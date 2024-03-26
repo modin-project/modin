@@ -43,8 +43,8 @@ runs:
         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
         use-only-tar-bz2: false
     - name: Install modin
-      run: pip install .
+      run: conda run -n ${{ inputs.activate-environment }} pip install .
       shell: bash
-    - name: check result
-      run: conda list
+    - name: View conda environment
+      run: conda list -n ${{ inputs.activate-environment }}
       shell: bash
