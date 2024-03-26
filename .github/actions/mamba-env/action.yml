@@ -46,5 +46,5 @@ runs:
       run: pip install .
       shell: bash
     - name: check result
-      run: conda env list
+      run: conda list
       shell: bash
