@@ -13,8 +13,7 @@ dependencies:
 
   # optional dependencies
   # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
-  - ray-core==2.4.0
-  - pydantic<2
+  - ray-core==2.6.1
   - pyarrow>=7.0.0
   # workaround for https://github.com/conda/conda/issues/11744
   - grpcio!=1.45.*
