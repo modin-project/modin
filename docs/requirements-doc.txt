@@ -13,7 +13,7 @@ recommonmark
 sphinx<6.0.0
 sphinx-click
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
-ray==2.2.0
+ray==2.4.0
 pydantic<2
 grpcio
 # Override to latest version of modin-spreadsheet
