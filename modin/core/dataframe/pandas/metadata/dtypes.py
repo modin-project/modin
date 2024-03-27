@@ -417,7 +417,7 @@ class DtypesDescriptor:
             )
 
         # we currently not guarantee for dtypes to be in a proper order:
-        # https://github.com/modin-project/modin/blob/8a332c1597c54d36f7ccbbd544e186b689f9ceb1/modin/pandas/test/utils.py#L644-L646
+        # https://github.com/modin-project/modin/blob/8a332c1597c54d36f7ccbbd544e186b689f9ceb1/modin/tests/pandas/utils.py#L644-L646
         # so restoring the order only if it's possible
         if self.columns_order is not None:
             assert len(self.columns_order) == len(self._known_dtypes)
