@@ -3448,13 +3448,20 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     kw["row_lengths"] = get_length_list(
                         axis_len=len(new_index), num_splits=new_partitions.shape[0]
                     )
+                    if (
+                        kw["column_widths"] is None
+                        and ModinIndex.is_materialized_index(new_columns)
+                        and len(new_partitions.shape) > 1
+                        and new_partitions.shape[1] == 1
+                    ):
+                        kw["column_widths"] = [len(new_columns)]
                 elif axis == 1:
                     if self._row_lengths_cache is not None and len(new_index) == sum(
                         self._row_lengths_cache
                     ):
                         kw["row_lengths"] = self._row_lengths_cache
-                    elif len(new_index) == 1 and new_partitions.shape[0] == 1:
-                        kw["row_lengths"] = [1]
+                    elif new_partitions.shape[0] == 1:
+                        kw["row_lengths"] = [len(new_index)]
             if kw["column_widths"] is None and ModinIndex.is_materialized_index(
                 new_columns
             ):
@@ -3463,13 +3470,19 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
                     )
+                    if (
+                        kw["row_lengths"] is None
+                        and ModinIndex.is_materialized_index(new_index)
+                        and new_partitions.shape[0] == 1
+                    ):
+                        kw["row_lengths"] = [len(new_index)]
                 elif axis == 0:
                     if self._column_widths_cache is not None and len(
                         new_columns
                     ) == sum(self._column_widths_cache):
                         kw["column_widths"] = self._column_widths_cache
-                    elif len(new_columns) == 1 and new_partitions.shape[1] == 1:
-                        kw["column_widths"] = [1]
+                    elif new_partitions.shape[1] == 1:
+                        kw["column_widths"] = [len(new_columns)]
         else:
             if axis == 0:
                 if (
