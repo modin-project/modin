@@ -3480,7 +3480,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 if (
                     kw["column_widths"] is None
                     and ModinIndex.is_materialized_index(new_columns)
-                    and len(new_partitions.shape[1]) > 1
+                    and len(new_partitions.shape) > 1
                     and new_partitions.shape[1] == 1
                 ):
                     kw["column_widths"] = [len(new_columns)]
