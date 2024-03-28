@@ -3701,12 +3701,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if groupby_kwargs.get("level") is not None:
-            raise NotImplementedError(
-                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
-                + "https://github.com/modin-project/modin/issues/5926"
-            )
-
+        grouping_on_level = groupby_kwargs.get("level") is not None
         if any(
             isinstance(obj, pandas.Grouper)
             for obj in (by if isinstance(by, list) else [by])
@@ -3716,7 +3711,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
+        if grouping_on_level:
+            external_by, internal_by, by_positions = [], [], []
+        else:
+            external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
 
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:

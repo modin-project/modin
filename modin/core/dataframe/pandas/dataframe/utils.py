@@ -114,12 +114,14 @@ class ShuffleSortFunctions(ShuffleFunctions):
     ----------
     modin_frame : PandasDataframe
         The frame to build the range-partitioning for.
-    columns : str or list of strings
-        The column/columns to use as a key.
+    columns : str, list of strings or None
+        The column/columns to use as a key. Can't be specified along with `level`.
     ascending : bool
         Whether the ranges should be in ascending or descending order.
     ideal_num_new_partitions : int
         The ideal number of new partitions.
+    level : list of strings or ints, or None
+        Index level(s) to use as a key. Can't be specified along with `columns`.
     **kwargs : dict
         Additional keyword arguments.
     """
@@ -127,9 +129,10 @@ class ShuffleSortFunctions(ShuffleFunctions):
     def __init__(
         self,
         modin_frame: "PandasDataframe",
-        columns: Union[str, list],
+        columns: Optional[Union[str, list]],
         ascending: Union[list, bool],
         ideal_num_new_partitions: int,
+        level: Optional[list[Union[str, int]]] = None,
         **kwargs: dict,
     ):
         self.frame_len = len(modin_frame)
@@ -137,11 +140,16 @@ class ShuffleSortFunctions(ShuffleFunctions):
         self.columns = columns if is_list_like(columns) else [columns]
         self.ascending = ascending
         self.kwargs = kwargs.copy()
+        self.level = level
         self.columns_info = None
 
     def sample_fn(self, partition: pandas.DataFrame) -> pandas.DataFrame:
+        if self.level is not None:
+            partition = self._index_to_df_zero_copy(partition, self.level)
+        else:
+            partition = partition[self.columns]
         return self.pick_samples_for_quantiles(
-            partition[self.columns], self.ideal_num_new_partitions, self.frame_len
+            partition, self.ideal_num_new_partitions, self.frame_len
         )
 
     def pivot_fn(self, samples: "list[pandas.DataFrame]") -> int:
@@ -181,6 +189,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
             partition,
             self.columns_info,
             self.ascending,
+            keys_are_index_levels=self.level is not None,
             **self.kwargs,
         )
 
@@ -312,6 +321,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         df: pandas.DataFrame,
         columns_info: "list[ColumnInfo]",
         ascending: bool,
+        keys_are_index_levels: bool = False,
         **kwargs: dict,
     ) -> "tuple[pandas.DataFrame, ...]":
         """
@@ -330,6 +340,8 @@ class ShuffleSortFunctions(ShuffleFunctions):
             Information regarding keys and pivots for range partitioning.
         ascending : bool
             The ascending flag.
+        keys_are_index_levels : bool, default: False
+            Whether `columns_info` describes index levels or actual columns from `df`.
         **kwargs : dict
             Additional keyword arguments.
 
@@ -342,9 +354,14 @@ class ShuffleSortFunctions(ShuffleFunctions):
             # We can return the dataframe with zero changes if there were no pivots passed
             return (df,)
 
-        na_index = (
-            df[[col_info.name for col_info in columns_info]].isna().squeeze(axis=1)
+        key_data = (
+            ShuffleSortFunctions._index_to_df_zero_copy(
+                df, [col_info.name for col_info in columns_info]
+            )
+            if keys_are_index_levels
+            else df[[col_info.name for col_info in columns_info]]
         )
+        na_index = key_data.isna().squeeze(axis=1)
         if na_index.ndim == 2:
             na_index = na_index.any(axis=1)
         na_rows = df[na_index]
@@ -373,12 +390,19 @@ class ShuffleSortFunctions(ShuffleFunctions):
                 pivots = pivots[::-1]
             group_keys.append(range(len(pivots) + 1))
             key = kwargs.pop("key", None)
-            cols_to_digitize = non_na_rows[col_info.name]
+            cols_to_digitize = (
+                non_na_rows.index.get_level_values(col_info.name)
+                if keys_are_index_levels
+                else non_na_rows[col_info.name]
+            )
             if key is not None:
                 cols_to_digitize = key(cols_to_digitize)
 
+            if cols_to_digitize.ndim == 2:
+                cols_to_digitize = cols_to_digitize.squeeze()
+
             if col_info.is_numeric:
-                groupby_col = np.digitize(cols_to_digitize.squeeze(), pivots)
+                groupby_col = np.digitize(cols_to_digitize, pivots)
                 # `np.digitize` returns results based off of the sort order of the pivots it is passed.
                 # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
                 # are sorted in ascending order, and gives us results based off of that assumption - so if
@@ -386,9 +410,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
                 if not ascending and len(np.unique(pivots)) == 1:
                     groupby_col = len(pivots) - groupby_col
             else:
-                groupby_col = np.searchsorted(
-                    pivots, cols_to_digitize.squeeze(), side="right"
-                )
+                groupby_col = np.searchsorted(pivots, cols_to_digitize, side="right")
                 # Since np.searchsorted requires the pivots to be in ascending order, if we want to sort
                 # in descending order, we need to swap the new indices.
                 if not ascending:
@@ -425,6 +447,36 @@ class ShuffleSortFunctions(ShuffleFunctions):
             [groups[index_to_insert_na_vals], na_rows]
         ).astype(df.dtypes)
         return tuple(groups)
+
+    @staticmethod
+    def _index_to_df_zero_copy(
+        df: pandas.DataFrame, levels: list[Union[str, int]]
+    ) -> pandas.DataFrame:
+        """
+        Convert index `level` of `df` to a ``pandas.DataFrame``.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        levels : list of labels or ints
+            Index level to convert to a dataframe.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The columns in the resulting dataframe use the same data arrays as the index levels
+            in the original `df`, so no copies.
+        """
+        # calling 'df.index.to_frame()' creates a copy of the index, so doing the conversion manually
+        # to avoid the copy
+        data = {
+            (
+                df.index.names[lvl] if isinstance(lvl, int) else lvl
+            ): df.index.get_level_values(lvl)
+            for lvl in levels
+        }
+        index_data = pandas.DataFrame(data, index=df.index, copy=False)
+        return index_data
 
 
 def lazy_metadata_decorator(apply_axis=None, axis_arg=-1, transpose=False):
