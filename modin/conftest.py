@@ -54,6 +54,7 @@ import uuid  # noqa: E402
 
 import modin  # noqa: E402
 import modin.config  # noqa: E402
+import modin.tests.config  # noqa: E402
 from modin.config import (  # noqa: E402
     AsyncReadMode,
     BenchmarkMode,
@@ -70,7 +71,7 @@ from modin.core.storage_formats import (  # noqa: E402
     BaseQueryCompiler,
     PandasQueryCompiler,
 )
-from modin.pandas.test.utils import (  # noqa: E402
+from modin.tests.pandas.utils import (  # noqa: E402
     NROWS,
     _make_csv_file,
     get_unique_filename,
@@ -99,7 +100,10 @@ def enforce_config():
     """
     orig_env = os.environ
     modin_start = os.path.dirname(modin.__file__)
-    modin_exclude = [os.path.dirname(modin.config.__file__)]
+    modin_exclude = [
+        os.path.dirname(modin.config.__file__),
+        os.path.dirname(modin.tests.config.__file__),
+    ]
 
     class PatchedEnv:
         @staticmethod
@@ -647,16 +651,16 @@ def s3_resource(s3_base):
     s3 = s3fs.S3FileSystem(client_kwargs={"endpoint_url": s3_base})
 
     test_s3_files = [
-        ("modin-bugs/multiple_csv/", "modin/pandas/test/data/multiple_csv/"),
+        ("modin-bugs/multiple_csv/", "modin/tests/pandas/data/multiple_csv/"),
         (
             "modin-bugs/test_data_dir.parquet/",
-            "modin/pandas/test/data/test_data_dir.parquet/",
+            "modin/tests/pandas/data/test_data_dir.parquet/",
         ),
-        ("modin-bugs/test_data.parquet", "modin/pandas/test/data/test_data.parquet"),
-        ("modin-bugs/test_data.json", "modin/pandas/test/data/test_data.json"),
-        ("modin-bugs/test_data.fwf", "modin/pandas/test/data/test_data.fwf"),
-        ("modin-bugs/test_data.feather", "modin/pandas/test/data/test_data.feather"),
-        ("modin-bugs/issue5159.parquet/", "modin/pandas/test/data/issue5159.parquet/"),
+        ("modin-bugs/test_data.parquet", "modin/tests/pandas/data/test_data.parquet"),
+        ("modin-bugs/test_data.json", "modin/tests/pandas/data/test_data.json"),
+        ("modin-bugs/test_data.fwf", "modin/tests/pandas/data/test_data.fwf"),
+        ("modin-bugs/test_data.feather", "modin/tests/pandas/data/test_data.feather"),
+        ("modin-bugs/issue5159.parquet/", "modin/tests/pandas/data/issue5159.parquet/"),
     ]
     for s3_key, file_name in test_s3_files:
         s3.put(file_name, f"{bucket}/{s3_key}", recursive=s3_key.endswith("/"))

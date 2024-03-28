@@ -13,9 +13,9 @@ runs:
   steps:
       - run: |
           echo "::group::Running dataframe tests (group 1)..."
-          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_binary.py \
-                                                      modin/pandas/test/dataframe/test_default.py \
-                                                      modin/pandas/test/dataframe/test_indexing.py \
-                                                      modin/pandas/test/dataframe/test_iter.py
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/dataframe/test_binary.py \
+                                                      modin/tests/pandas/dataframe/test_default.py \
+                                                      modin/tests/pandas/dataframe/test_indexing.py \
+                                                      modin/tests/pandas/dataframe/test_iter.py
           echo "::endgroup::"
         shell: bash -l {0}

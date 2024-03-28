@@ -13,15 +13,15 @@ runs:
   steps:
       - run: |
           echo "::group::Running tests (group 4)..."
-          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_rolling.py \
-                                                      modin/pandas/test/test_expanding.py \
-                                                      modin/pandas/test/test_groupby.py \
-                                                      modin/pandas/test/test_reshape.py \
-                                                      modin/pandas/test/test_general.py
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/test_rolling.py \
+                                                      modin/tests/pandas/test_expanding.py \
+                                                      modin/tests/pandas/test_groupby.py \
+                                                      modin/tests/pandas/test_reshape.py \
+                                                      modin/tests/pandas/test_general.py
           echo "::endgroup::"
         shell: bash -l {0}
       - run: |
           echo "::group::Running concat tests (group 4)..."
-          ${{ inputs.runner }} modin/pandas/test/test_concat.py # Ray and Dask versions fails with -n 2
+          ${{ inputs.runner }} modin/tests/pandas/test_concat.py # Ray and Dask versions fails with -n 2
           echo "::endgroup::"
         shell: bash -l {0}

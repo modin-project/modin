@@ -13,10 +13,10 @@ runs:
   steps:
       - run: |
           echo "::group::Running dataframe tests (group 2)..."
-          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_join_sort.py \
-                                                      modin/pandas/test/dataframe/test_reduce.py \
-                                                      modin/pandas/test/dataframe/test_udf.py \
-                                                      modin/pandas/test/dataframe/test_window.py \
-                                                      modin/pandas/test/dataframe/test_pickle.py
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/dataframe/test_join_sort.py \
+                                                      modin/tests/pandas/dataframe/test_reduce.py \
+                                                      modin/tests/pandas/dataframe/test_udf.py \
+                                                      modin/tests/pandas/dataframe/test_window.py \
+                                                      modin/tests/pandas/dataframe/test_pickle.py
           echo "::endgroup::"
         shell: bash -l {0}

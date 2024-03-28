@@ -39,7 +39,7 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
       - name: test-fuzzydata (engine ${{matrix.engine}}, python ${{matrix.python-version}})
-        run: python -m pytest modin/experimental/fuzzydata/test/test_fuzzydata.py -Wignore::UserWarning --log-file=/tmp/fuzzydata-test-wf-${{matrix.engine}}/run.log --log-file-level=INFO
+        run: python -m pytest modin/tests/experimental/test_fuzzydata.py -Wignore::UserWarning --log-file=/tmp/fuzzydata-test-wf-${{matrix.engine}}/run.log --log-file-level=INFO
         env:
           MODIN_ENGINE: ${{matrix.engine}}
       - uses: actions/upload-artifact@v3

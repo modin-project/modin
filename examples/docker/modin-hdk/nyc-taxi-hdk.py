@@ -17,7 +17,7 @@ from utils import measure
 
 import modin.pandas as pd
 from modin.experimental.sql import query
-from modin.pandas.test.utils import df_equals
+from modin.tests.pandas.utils import df_equals
 
 
 def read(filename):
