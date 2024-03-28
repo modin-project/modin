@@ -409,6 +409,11 @@ def test_astype():
     expected_df_casted = expected_df.astype(str)
     df_equals(modin_df_casted, expected_df_casted)
 
+    # pandas nullable dtype
+    modin_df_casted = modin_df.astype("Float64")
+    expected_df_casted = expected_df.astype("Float64")
+    df_equals(modin_df_casted, expected_df_casted)
+
     modin_df_casted = modin_df.astype("category")
     expected_df_casted = expected_df.astype("category")
     df_equals(modin_df_casted, expected_df_casted)

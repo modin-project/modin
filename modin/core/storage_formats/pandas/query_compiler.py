@@ -2734,7 +2734,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # we would like to convert it and get its proper internal dtype
                 item_type = item.to_numpy().dtype
             else:
-                item_type = np.dtype(type(item))
+                item_type = pandas.api.types.pandas_dtype(type(item))
 
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
@@ -3062,7 +3062,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             hashed_modin_frame = self._modin_frame.reduce(
                 axis=1,
                 function=_compute_hash,
-                dtypes=np.dtype("O"),
+                dtypes=pandas.api.types.pandas_dtype("O"),
             )
         else:
             hashed_modin_frame = self._modin_frame

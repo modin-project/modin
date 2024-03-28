@@ -1590,7 +1590,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
@@ -2107,7 +2109,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(
@@ -2991,8 +2995,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
@@ -3024,7 +3028,10 @@ class DataFrame(BasePandasDataset):
         if (
             not axis
             and numeric_only is False
-            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
+            and any(
+                dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
+                for dtype in self.dtypes
+            )
         ):
             raise TypeError("Cannot add Timestamp Types")
 
@@ -3042,8 +3049,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")

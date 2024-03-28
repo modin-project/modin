@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.test.utils import (
     arg_keys,
     assert_dtypes_equal,
@@ -316,7 +316,6 @@ def test_sum(data, axis, skipna, is_transposed, request):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(Engine.get() == "Native", reason="Fails on HDK")
 @pytest.mark.parametrize("dtype", ["int64", "Int64"])
 def test_dtype_consistency(dtype):
     # test for issue #6781

@@ -504,7 +504,7 @@ class DtypesDescriptor:
                         # meaning that we shouldn't try computing a new dtype for this column,
                         # so marking it as 'unknown'
                         i: (
-                            np.dtype(float)
+                            pandas.api.types.pandas_dtype(float)
                             if val._know_all_names and val._remaining_dtype is None
                             else "unknown"
                         )
@@ -531,7 +531,7 @@ class DtypesDescriptor:
         def combine_dtypes(row):
             if (row == "unknown").any():
                 return "unknown"
-            row = row.fillna(np.dtype("float"))
+            row = row.fillna(pandas.api.types.pandas_dtype("float"))
             return find_common_type(list(row.values))
 
         dtypes = dtypes_matrix.apply(combine_dtypes, axis=1)
@@ -1238,6 +1238,9 @@ def extract_dtype(value):
     elif hasattr(value, "dtypes"):
         return value.dtypes
     elif is_scalar(value):
-        return np.dtype(type(value))
+        if value is None:
+            # previous type was object instead of 'float64'
+            return pandas.api.types.pandas_dtype(value)
+        return pandas.api.types.pandas_dtype(type(value))
     else:
         return np.array(value).dtype
