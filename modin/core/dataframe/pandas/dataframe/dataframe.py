@@ -3450,7 +3450,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 kw["column_widths"] = [len(new_columns)]
         elif axis == 1:
             if is_index_materialized and new_partitions.shape[0] == 1:
-                kw["row_lengths"] = [len(new_columns)]
+                kw["row_lengths"] = [len(new_index)]
         if not keep_partitioning:
             if kw["row_lengths"] is None and is_index_materialized:
                 if axis == 0:
