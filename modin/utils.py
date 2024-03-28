@@ -82,7 +82,7 @@ class SupportsPrivateToNumPy(Protocol):  # noqa: PR01
         pass
 
 
-MIN_RAY_VERSION = version.parse("1.13.0")
+MIN_RAY_VERSION = version.parse("2.1.0")
 MIN_DASK_VERSION = version.parse("2.22.0")
 MIN_UNIDIST_VERSION = version.parse("0.2.1")
 
