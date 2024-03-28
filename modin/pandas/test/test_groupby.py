@@ -42,6 +42,7 @@ from modin.utils import (
 )
 
 from .utils import (
+    assert_set_of_rows_identical,
     check_df_columns_have_nans,
     create_test_dfs,
     create_test_series,
@@ -280,7 +281,19 @@ def test_mixed_dtypes_groupby(as_index):
                 "Cannot aggregate non-numeric type: object"
             ),
         )
-        eval_shift(modin_groupby, pandas_groupby)
+        eval_shift(
+            modin_groupby,
+            pandas_groupby,
+            comparator=(
+                # We should sort the result before comparison for transform functions
+                # in case of range-partitioning groupby (https://github.com/modin-project/modin/issues/5924).
+                # This test though produces so much NaN values in the result, so it's impossible to sort,
+                # using manual comparison of set of rows instead
+                assert_set_of_rows_identical
+                if RangePartitioningGroupby.get()
+                else None
+            ),
+        )
         eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -1352,16 +1365,12 @@ def sort_if_experimental_groupby(*dfs):
                 result.append(df.sort_index())
                 continue
 
+            # filtering out index names in order to avoid:
+            # ValueError: 'col' is both an index level and a column label, which is ambiguous.
             cols_no_idx_names = df.columns.difference(
                 df.index.names, sort=False
             ).tolist()
-            try:
-                df = df.sort_values(cols_no_idx_names, ignore_index=True)
-            # can raise in case of mixed dtypes
-            except TypeError:
-                cols = df.select_dtypes(include="number").columns
-                cols_no_idx_names = cols.difference(df.index.names, sort=False).tolist()
-                df = df.sort_values(cols_no_idx_names, ignore_index=True)
+            df = df.sort_values(cols_no_idx_names)
             result.append(df)
     return result
 
@@ -1633,9 +1642,11 @@ def eval_groups(modin_groupby, pandas_groupby):
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
-def eval_shift(modin_groupby, pandas_groupby):
-    def comparator(df1, df2):
-        df_equals(*sort_if_experimental_groupby(df1, df2))
+def eval_shift(modin_groupby, pandas_groupby, comparator=None):
+    if comparator is None:
+
+        def comparator(df1, df2):
+            df_equals(*sort_if_experimental_groupby(df1, df2))
 
     eval_general(
         modin_groupby,
