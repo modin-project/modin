@@ -1180,12 +1180,6 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
-        """
-        Whether elements in `Series` are contained in `values`.
-        """
-        return super(Series, self).isin(values, shape_hint="column")
-
     def isna(self):
         """
         Detect missing values.
@@ -1409,7 +1403,9 @@ class Series(BasePandasDataset):
                 + f"{type(self).__name__}.shift"
             )
         if axis == 1:
-            raise ValueError(f"No axis named {axis} for object type {type(self)}")
+            raise ValueError(
+                f"No axis named {axis} for object type {type(self).__name__}"
+            )
         return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )

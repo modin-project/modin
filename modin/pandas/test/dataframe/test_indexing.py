@@ -11,6 +11,7 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import os
 import sys
 
 import matplotlib
@@ -18,7 +19,6 @@ import numpy as np
 import pandas
 import pytest
 from pandas._testing import ensure_clean
-from pandas.testing import assert_index_equal
 
 import modin.pandas as pd
 from modin.config import MinPartitionSize, NPartitions, StorageFormat
@@ -42,6 +42,7 @@ from modin.pandas.test.utils import (
     test_data_keys,
     test_data_values,
 )
+from modin.pandas.testing import assert_index_equal
 from modin.utils import get_current_execution
 
 NPartitions.put(4)
@@ -57,14 +58,18 @@ matplotlib.use("Agg")
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 
-def eval_setitem(md_df, pd_df, value, col=None, loc=None):
+def eval_setitem(md_df, pd_df, value, col=None, loc=None, expected_exception=None):
     if loc is not None:
         col = pd_df.columns[loc]
 
     value_getter = value if callable(value) else (lambda *args, **kwargs: value)
 
     eval_general(
-        md_df, pd_df, lambda df: df.__setitem__(col, value_getter(df)), __inplace__=True
+        md_df,
+        pd_df,
+        lambda df: df.__setitem__(col, value_getter(df)),
+        __inplace__=True,
+        expected_exception=expected_exception,
     )
 
 
@@ -297,7 +302,7 @@ def test_indexing_duplicate_axis(data):
     "key_func",
     [
         # test for the case from https://github.com/modin-project/modin/issues/4308
-        "non_existing_column",
+        lambda df: "non_existing_column",
         lambda df: df.columns[0],
         lambda df: df.index,
         lambda df: [df.index, df.columns[0]],
@@ -328,8 +333,15 @@ def test_set_index(data, key_func, drop_kwargs, request):
         pytest.xfail(
             reason="KeyError: https://github.com/modin-project/modin/issues/5636"
         )
+    expected_exception = None
+    if "non_existing_column" in request.node.callspec.id:
+        expected_exception = KeyError(
+            "None of ['non_existing_column'] are in the columns"
+        )
     eval_general(
-        *create_test_dfs(data), lambda df: df.set_index(key_func(df), **drop_kwargs)
+        *create_test_dfs(data),
+        lambda df: df.set_index(key_func(df), **drop_kwargs),
+        expected_exception=expected_exception,
     )
 
 
@@ -707,12 +719,21 @@ def test_loc_empty():
 @pytest.mark.parametrize("locator_name", ["iloc", "loc"])
 def test_loc_iloc_2064(locator_name):
     modin_df, pandas_df = create_test_dfs(columns=["col1", "col2"])
-
+    if locator_name == "iloc":
+        expected_exception = IndexError(
+            "index 1 is out of bounds for axis 0 with size 0"
+        )
+    else:
+        _type = "int32" if os.name == "nt" else "int64"
+        expected_exception = KeyError(
+            f"None of [Index([1], dtype='{_type}')] are in the [index]"
+        )
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df, locator_name).__setitem__([1], [11, 22]),
         __inplace__=True,
+        expected_exception=expected_exception,
     )
 
 
@@ -739,7 +760,12 @@ def test_loc_insert_row(left, right):
         df.loc[left] = df.loc[right]
         return df
 
-    eval_general(modin_df, pandas_df, _test_loc_rows)
+    expected_exception = None
+    if right == 70:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7024")
+    eval_general(
+        modin_df, pandas_df, _test_loc_rows, expected_exception=expected_exception
+    )
 
 
 @pytest.mark.parametrize(
@@ -870,10 +896,20 @@ def test_iloc_empty():
     df_equals(pandas_df, modin_df)
 
 
-def test_iloc_loc_key_length():
+def test_iloc_loc_key_length_except():
     modin_ser, pandas_ser = pd.Series(0), pandas.Series(0)
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.iloc[0, 0])
-    eval_general(modin_ser, pandas_ser, lambda ser: ser.loc[0, 0])
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.iloc[0, 0],
+        expected_exception=pandas.errors.IndexingError("Too many indexers"),
+    )
+    eval_general(
+        modin_ser,
+        pandas_ser,
+        lambda ser: ser.loc[0, 0],
+        expected_exception=pandas.errors.IndexingError("Too many indexers"),
+    )
 
 
 def test_loc_series():
@@ -2114,7 +2150,7 @@ def test___setitem__(data):
     arr = np.arange(nrows * 2).reshape(-1, 2)
 
     eval_setitem(*create_test_dfs(data), loc=-1, value=arr)
-    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr)
+    eval_setitem(*create_test_dfs(data), col="___NON EXISTENT COLUMN", value=arr.T[0])
     eval_setitem(*create_test_dfs(data), loc=0, value=np.arange(nrows))
 
     modin_df = pd.DataFrame(columns=data.keys())
@@ -2281,6 +2317,14 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         df[new_col_id] = converted_value
         return df
 
+    expected_exception = None
+    if not convert_to_series:
+        values_length = len(value)
+        index_length = len(pandas_df.index)
+        expected_exception = ValueError(
+            f"Length of values ({values_length}) does not match length of index ({index_length})"
+        )
+
     eval_general(
         modin_df,
         pandas_df,
@@ -2289,6 +2333,7 @@ def test_setitem_on_empty_df(data, value, convert_to_series, new_col_id):
         comparator_kwargs={
             "check_dtypes": not (len(pandas_df) == 0 and len(pandas_df.columns) != 0)
         },
+        expected_exception=expected_exception,
     )
 
 
@@ -2347,12 +2392,24 @@ def test_setitem_unhashable_key():
         # pandas Series case
         value = df_value["value_col1"]
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key[:1])
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            value,
+            key[:1],
+            expected_exception=ValueError("Columns must be same length as key"),
+        )
 
         # pandas Index case
         value = df_value.index
         modin_df, pandas_df = _make_copy(source_modin_df, source_pandas_df)
-        eval_setitem(modin_df, pandas_df, value, key[:1])
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            value,
+            key[:1],
+            expected_exception=ValueError("Columns must be same length as key"),
+        )
 
         # scalar case
         value = 3
@@ -2360,7 +2417,13 @@ def test_setitem_unhashable_key():
         eval_setitem(modin_df, pandas_df, value, key)
 
         # test failed case: ValueError('Columns must be same length as key')
-        eval_setitem(modin_df, pandas_df, df_value[["value_col1"]], key)
+        eval_setitem(
+            modin_df,
+            pandas_df,
+            df_value[["value_col1"]],
+            key,
+            expected_exception=ValueError("Columns must be same length as key"),
+        )
 
 
 def test_setitem_2d_insertion():
@@ -2411,6 +2474,7 @@ def test_setitem_2d_insertion():
         pandas_df,
         build_value_picker(modin_value.iloc[:, [0]], pandas_value.iloc[:, [0]]),
         col=["new_value7", "new_value8"],
+        expected_exception=ValueError("Columns must be same length as key"),
     )
 
 
@@ -2445,8 +2509,18 @@ def test_setitem_2d_update(does_value_have_different_columns):
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, -2)
     )  # (start=None, stop=-2)
-    eval_general(modin_dfs, pandas_dfs, test, iloc=[0, 1, 5, 6, 9, 10, -2, -1])
-    eval_general(modin_dfs, pandas_dfs, test, iloc=[5, 4, 0, 10, 1, -1])
+    eval_general(
+        modin_dfs,
+        pandas_dfs,
+        test,
+        iloc=[0, 1, 5, 6, 9, 10, -2, -1],
+    )
+    eval_general(
+        modin_dfs,
+        pandas_dfs,
+        test,
+        iloc=[5, 4, 0, 10, 1, -1],
+    )
     eval_general(
         modin_dfs, pandas_dfs, test, iloc=slice(None, None, 2)
     )  # (start=None, stop=None, step=2)

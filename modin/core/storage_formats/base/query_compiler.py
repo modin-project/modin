@@ -99,7 +99,7 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(ClassLogger, abc.ABC):
+class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
     """
     Abstract class that handles the queries to Modin dataframes.
 
@@ -1567,11 +1567,10 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             Boolean mask for self of whether an element at the corresponding
             position is contained in `values`.
         """
-        shape_hint = kwargs.pop("shape_hint", None)
         if isinstance(values, type(self)) and ignore_indices:
             # Pandas logic is that it ignores indexing if 'values' is a 1D object
             values = values.to_pandas().squeeze(axis=1)
-        if shape_hint == "column":
+        if self._shape_hint == "column":
             return SeriesDefault.register(pandas.Series.isin)(self, values, **kwargs)
         else:
             return DataFrameDefault.register(pandas.DataFrame.isin)(
@@ -1769,24 +1768,34 @@ class BaseQueryCompiler(ClassLogger, abc.ABC):
             self, unit=unit, errors=errors
         )
 
-    # FIXME: get rid of `**kwargs` parameter (Modin issue #3108).
-    @doc_utils.add_one_column_warning
-    @doc_utils.add_refer_to("Series.unique")
-    def unique(self, **kwargs):
+    # 'qc.unique()' uses most of the arguments from 'df.drop_duplicates()', so refering to this method
+    @doc_utils.add_refer_to("DataFrame.drop_duplicates")
+    def unique(self, keep="first", ignore_index=True, subset=None):
         """
-        Get unique values of `self`.
+        Get unique rows of `self`.
 
         Parameters
         ----------
-        **kwargs : dict
-            Serves compatibility purpose. Does not affect the result.
+        keep : {"first", "last", False}, default: "first"
+            Which duplicates to keep.
+        ignore_index : bool, default: True
+            If ``True``, the resulting axis will be labeled ``0, 1, …, n - 1``.
+        subset : list, optional
+            Only consider certain columns for identifying duplicates, if `None`, use all of the columns.
 
         Returns
         -------
         BaseQueryCompiler
             New QueryCompiler with unique values.
         """
-        return SeriesDefault.register(pandas.Series.unique)(self, **kwargs)
+        if subset is not None:
+            mask = self.getitem_column_array(subset, ignore_order=True)
+        else:
+            mask = self
+        without_duplicates = self.getitem_array(mask.duplicated(keep=keep).invert())
+        if ignore_index:
+            without_duplicates = without_duplicates.reset_index(drop=True)
+        return without_duplicates
 
     @doc_utils.add_one_column_warning
     @doc_utils.add_refer_to("Series.searchsorted")

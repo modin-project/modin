@@ -13,7 +13,6 @@
 
 import datetime
 
-import numpy as np
 import pandas
 import pytest
 from pandas.core.dtypes.common import is_datetime64_any_dtype, is_object_dtype
@@ -21,7 +20,6 @@ from pandas.core.dtypes.common import is_datetime64_any_dtype, is_object_dtype
 import modin.pandas as pd
 from modin.pandas.test.utils import df_equals
 from modin.pandas.test.utils import eval_io as general_eval_io
-from modin.pandas.test.utils import io_ops_bad_exc
 from modin.utils import try_cast_to_pandas
 
 
@@ -29,7 +27,7 @@ def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    raising_exceptions=io_ops_bad_exc,
+    expected_exception=None,
     check_kwargs_callable=True,
     modin_warning=None,
     md_extra_kwargs=None,
@@ -74,7 +72,7 @@ def eval_io(
         fn_name,
         comparator=hdk_comparator,
         cast_to_str=cast_to_str,
-        raising_exceptions=raising_exceptions,
+        expected_exception=expected_exception,
         check_kwargs_callable=check_kwargs_callable,
         modin_warning=modin_warning,
         md_extra_kwargs=md_extra_kwargs,
@@ -109,7 +107,7 @@ def align_datetime_dtypes(*dfs):
             # datetime.time is considered to be an 'object' dtype in pandas that's why
             # we have to explicitly check the values type in the column
             elif (
-                dtype == np.dtype("O")
+                dtype == pandas.api.types.pandas_dtype("O")
                 and col not in time_cols
                 # HDK has difficulties with empty frames, so explicitly skip them
                 # https://github.com/modin-project/modin/issues/3428

@@ -414,7 +414,7 @@ class BasePandasDataset(ClassLogger):
             if isinstance(fn, str):
                 if not (hasattr(self, fn) or hasattr(np, fn)):
                     on_invalid(
-                        f"{fn} is not valid function for {type(self)} object.",
+                        f"'{fn}' is not a valid function for '{type(self).__name__}' object",
                         AttributeError,
                     )
             elif not callable(fn):
@@ -1005,11 +1005,7 @@ class BasePandasDataset(ClassLogger):
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:
-                raise ValueError(
-                    "The new Series of types must have a unique index, i.e. "
-                    + "it must be one-to-one mapping from column names to "
-                    + " their new dtypes."
-                )
+                raise ValueError("cannot reindex on an axis with duplicate labels")
             dtype = {column: dtype for column, dtype in dtype.items()}
         # If we got a series or dict originally, dtype is a dict now. Its keys
         # must be column names.
@@ -1515,13 +1511,12 @@ class BasePandasDataset(ClassLogger):
                     subset = list(subset)
             else:
                 subset = [subset]
-            df = self[subset]
-        else:
-            df = self
-        duplicated = df.duplicated(keep=keep)
-        result = self[~duplicated]
-        if ignore_index:
-            result.index = pandas.RangeIndex(stop=len(result))
+            if len(diff := pandas.Index(subset).difference(self.columns)) > 0:
+                raise KeyError(diff)
+        result_qc = self._query_compiler.unique(
+            keep=keep, ignore_index=ignore_index, subset=subset
+        )
+        result = self.__constructor__(query_compiler=result_qc)
         if inplace:
             self._update_inplace(result._query_compiler)
         else:
@@ -1869,7 +1864,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of maximum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1882,7 +1877,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of minimum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1923,7 +1918,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
+    def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
@@ -1933,7 +1928,7 @@ class BasePandasDataset(ClassLogger):
         values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, ignore_indices=ignore_indices, **kwargs
+                values=values, ignore_indices=ignore_indices
             )
         )
 
@@ -2366,6 +2361,10 @@ class BasePandasDataset(ClassLogger):
         ascending: bool = True,
         pct: bool = False,
     ):
+        if axis is None:
+            raise ValueError(
+                f"No axis named None for object type {type(self).__name__}"
+            )
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(

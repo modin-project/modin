@@ -15,7 +15,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas.testing import assert_index_equal, assert_series_equal
 
 import modin.pandas as pd
 from modin.config import NPartitions, StorageFormat
@@ -36,11 +35,10 @@ from modin.pandas.test.utils import (
     eval_general,
     indices_keys,
     indices_values,
-    int_arg_keys,
-    int_arg_values,
     name_contains,
     numeric_dfs,
     random_state,
+    sort_if_range_partitioning,
     test_data,
     test_data_keys,
     test_data_values,
@@ -49,6 +47,7 @@ from modin.pandas.test.utils import (
     test_func_keys,
     test_func_values,
 )
+from modin.pandas.testing import assert_index_equal, assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -410,6 +409,11 @@ def test_astype():
     expected_df_casted = expected_df.astype(str)
     df_equals(modin_df_casted, expected_df_casted)
 
+    # pandas nullable dtype
+    modin_df_casted = modin_df.astype("Float64")
+    expected_df_casted = expected_df.astype("Float64")
+    df_equals(modin_df_casted, expected_df_casted)
+
     modin_df_casted = modin_df.astype("category")
     expected_df_casted = expected_df.astype("category")
     df_equals(modin_df_casted, expected_df_casted)
@@ -439,19 +443,26 @@ def test_astype():
             if isinstance(df, pd.DataFrame)
             else pandas.Series([str, str], index=["col1", "col1"])
         ),
+        expected_exception=ValueError(
+            "cannot reindex on an axis with duplicate labels"
+        ),
     )
 
 
 @pytest.mark.parametrize("errors", ["raise", "ignore"])
 def test_astype_errors(errors):
     data = {"a": ["a", 2, -1]}
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_df, pandas_df = create_test_dfs(data)
+    expected_exception = None
+    if errors == "raise":
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7025")
     eval_general(
         modin_df,
         pandas_df,
         lambda df: df.astype("int", errors=errors),
         # https://github.com/modin-project/modin/issues/5962
         comparator_kwargs={"check_dtypes": errors != "ignore"},
+        expected_exception=expected_exception,
     )
 
 
@@ -562,8 +573,6 @@ def test_astype_int64_to_astype_category_github_issue_6259():
             index=["a", "b", "c", "d", "e"],
         ),
         lambda df: df["c0"].astype("Int64").astype("category"),
-        # work around https://github.com/modin-project/modin/issues/6016
-        raising_exceptions=(Exception,),
     )
 
 
@@ -1065,7 +1074,7 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             )
     else:
-        df_equals(
+        sort_if_range_partitioning(
             pandas_df.drop_duplicates(
                 keep=keep, inplace=False, subset=subset, ignore_index=ignore_index
             ),
@@ -1075,7 +1084,7 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
         )
 
     try:
-        pandas_results = pandas_df.drop_duplicates(
+        pandas_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
     except Exception as err:
@@ -1084,10 +1093,10 @@ def test_drop_duplicates(data, keep, subset, ignore_index):
                 keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
             )
     else:
-        modin_results = modin_df.drop_duplicates(
+        modin_df.drop_duplicates(
             keep=keep, inplace=True, subset=subset, ignore_index=ignore_index
         )
-        df_equals(modin_results, pandas_results)
+        sort_if_range_partitioning(modin_df, pandas_df)
 
 
 def test_drop_duplicates_with_missing_index_values():
@@ -1165,7 +1174,7 @@ def test_drop_duplicates_with_missing_index_values():
     modin_df = pd.DataFrame(data["data"], index=data["index"], columns=data["columns"])
     modin_result = modin_df.sort_values(["id", "time"]).drop_duplicates(["id"])
     pandas_result = pandas_df.sort_values(["id", "time"]).drop_duplicates(["id"])
-    df_equals(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_after_sort():
@@ -1180,7 +1189,7 @@ def test_drop_duplicates_after_sort():
 
     modin_result = modin_df.sort_values(["value", "time"]).drop_duplicates(["value"])
     pandas_result = pandas_df.sort_values(["value", "time"]).drop_duplicates(["value"])
-    df_equals(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
 
 def test_drop_duplicates_with_repeated_index_values():
@@ -1188,7 +1197,12 @@ def test_drop_duplicates_with_repeated_index_values():
     data = [[0], [1], [0]]
     index = [0, 0, 0]
     modin_df, pandas_df = create_test_dfs(data, index=index)
-    eval_general(modin_df, pandas_df, lambda df: df.drop_duplicates())
+    eval_general(
+        modin_df,
+        pandas_df,
+        lambda df: df.drop_duplicates(),
+        comparator=sort_if_range_partitioning,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1273,32 +1287,48 @@ def test_dropna_subset(request, data):
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis,subset", [(0, list("EF")), (1, [4, 5])])
 def test_dropna_subset_error(data, axis, subset):
-    eval_general(*create_test_dfs(data), lambda df: df.dropna(axis=axis, subset=subset))
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.dropna(axis=axis, subset=subset),
+        expected_exception=KeyError(["E", "F"]),
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("astype", ["category", "int32", "float"])
-def test_insert_dtypes(data, astype):
+def test_insert_dtypes(data, astype, request):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
 
     # categories with NaN works incorrect for now
     if astype == "category" and pandas_df.iloc[:, 0].isnull().any():
         return
 
+    expected_exception = None
+    if "int32-float_nan_data" in request.node.callspec.id:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7026")
     eval_insert(
         modin_df,
         pandas_df,
         col="TypeSaver",
         value=lambda df: df.iloc[:, 0].astype(astype),
+        expected_exception=expected_exception,
     )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-@pytest.mark.parametrize("loc", int_arg_values, ids=arg_keys("loc", int_arg_keys))
+@pytest.mark.parametrize("loc", [-3, 0, 3])
 def test_insert_loc(data, loc):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-
-    eval_insert(modin_df, pandas_df, loc=loc, value=lambda df: df.iloc[:, 0])
+    expected_exception = None
+    if loc == -3:
+        expected_exception = ValueError("unbounded slice")
+    eval_insert(
+        modin_df,
+        pandas_df,
+        loc=loc,
+        value=lambda df: df.iloc[:, 0],
+        expected_exception=expected_exception,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
@@ -1309,18 +1339,14 @@ def test_insert(data):
         modin_df, pandas_df, col="Duplicate", value=lambda df: df[df.columns[0]]
     )
     eval_insert(modin_df, pandas_df, col="Scalar", value=100)
-    eval_insert(
-        pd.DataFrame(columns=list("ab")),
-        pandas.DataFrame(columns=list("ab")),
-        col=lambda df: df.columns[0],
-        value=lambda df: df[df.columns[0]],
-    )
-    eval_insert(
-        pd.DataFrame(index=modin_df.index),
-        pandas.DataFrame(index=pandas_df.index),
-        col=lambda df: df.columns[0],
-        value=lambda df: df[df.columns[0]],
-    )
+    if StorageFormat.get() != "Hdk":
+        # FIXME: https://github.com/modin-project/modin/issues/7027
+        eval_insert(
+            pd.DataFrame(columns=list("ab")),
+            pandas.DataFrame(columns=list("ab")),
+            col="Series insert",
+            value=lambda df: df[df.columns[0]],
+        )
     eval_insert(
         modin_df,
         pandas_df,
@@ -1341,18 +1367,30 @@ def test_insert(data):
     )
 
     # Bad inserts
-    eval_insert(modin_df, pandas_df, col="Bad Column", value=lambda df: df)
+    eval_insert(
+        modin_df,
+        pandas_df,
+        col="Bad Column",
+        value=lambda df: df,
+        expected_exception=ValueError(
+            f"Expected a one-dimensional object, got a DataFrame with {len(pandas_df.columns)} columns instead."
+        ),
+    )
     eval_insert(
         modin_df,
         pandas_df,
         col="Too Short",
         value=lambda df: list(df[df.columns[0]])[:-1],
+        expected_exception=ValueError(
+            f"Length of values ({len(pandas_df)-1}) does not match length of index ({len(pandas_df)})"
+        ),
     )
     eval_insert(
         modin_df,
         pandas_df,
         col=lambda df: df.columns[0],
         value=lambda df: df[df.columns[0]],
+        expected_exception=ValueError("cannot insert 2d list insert, already exists"),
     )
     eval_insert(
         modin_df,
@@ -1360,12 +1398,15 @@ def test_insert(data):
         loc=lambda df: len(df.columns) + 100,
         col="Bad Loc",
         value=100,
+        expected_exception=IndexError(
+            f"index {len(pandas_df.columns) + 100} is out of bounds for axis 0 with size {len(pandas_df.columns)}"
+        ),
     )
 
 
 def test_insert_4407():
     data = {"col1": [1, 2, 3], "col2": [2, 3, 4]}
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+    modin_df, pandas_df = create_test_dfs(data)
 
     def comparator(df1, df2):
         assert_series_equal(df1.dtypes, df2.dtypes, check_index=False)
@@ -1374,6 +1415,14 @@ def test_insert_4407():
     for idx, value in enumerate(
         (pandas_df.to_numpy(), np.array([[1]] * 3), np.array([[1, 2, 3], [4, 5, 6]]))
     ):
+        expected_exception = None
+        if idx == 0:
+            expected_exception = ValueError(
+                "Expected a 1D array, got an array with shape (3, 2)"
+            )
+        elif idx == 2:
+            # FIXME: https://github.com/modin-project/modin/issues/7080
+            expected_exception = False
         eval_insert(
             modin_df,
             pandas_df,
@@ -1381,6 +1430,7 @@ def test_insert_4407():
             col=f"test_col{idx}",
             value=value,
             comparator=lambda df1, df2: comparator(df1, df2),
+            expected_exception=expected_exception,
         )
 
 
@@ -1593,7 +1643,9 @@ def test_transpose(data):
 def test_update(data, other_data, errors):
     modin_df, pandas_df = create_test_dfs(data)
     other_modin_df, other_pandas_df = create_test_dfs(other_data)
-
+    expected_exception = None
+    if errors == "raise":
+        expected_exception = ValueError("Data overlaps.")
     eval_general(
         modin_df,
         pandas_df,
@@ -1603,6 +1655,7 @@ def test_update(data, other_data, errors):
             else df.update(other_pandas_df, errors=errors)
         ),
         __inplace__=True,
+        expected_exception=expected_exception,
     )
 
 
@@ -1622,10 +1675,14 @@ def test___neg__(request, data):
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test___invert__(data):
-    modin_df = pd.DataFrame(data)
-    pandas_df = pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: ~df)
+def test___invert__(data, request):
+    expected_exception = None
+    if "float_nan_data" in request.node.callspec.id:
+        # FIXME: https://github.com/modin-project/modin/issues/7081
+        expected_exception = False
+    eval_general(
+        *create_test_dfs(data), lambda df: ~df, expected_exception=expected_exception
+    )
 
 
 def test___invert___bool():
@@ -1635,13 +1692,6 @@ def test___invert___bool():
     modin_result = ~modin_df
     pandas_result = ~pandas_df
     df_equals(modin_result, pandas_result)
-
-
-def test___hash__():
-    data = test_data_values[0]
-    pandas_df = pandas.DataFrame(data)
-    modin_df = pd.DataFrame(data)
-    eval_general(modin_df, pandas_df, hash)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

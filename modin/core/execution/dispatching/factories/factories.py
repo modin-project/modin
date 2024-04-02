@@ -206,10 +206,20 @@ class BaseFactory(object):
         _doc_io_method_template,
         source="a Ray Dataset",
         params="ray_obj : ray.data.Dataset",
-        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray_dataset",
+        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray",
     )
-    def _from_ray_dataset(cls, ray_obj):
-        return cls.io_cls.from_ray_dataset(ray_obj)
+    def _from_ray(cls, ray_obj):
+        return cls.io_cls.from_ray(ray_obj)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Dask DataFrame",
+        params="dask_obj : dask.dataframe.DataFrame",
+        method="modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO.from_dask",
+    )
+    def _from_dask(cls, dask_obj):
+        return cls.io_cls.from_dask(dask_obj)
 
     @classmethod
     @doc(
@@ -466,7 +476,7 @@ class BaseFactory(object):
         return cls.io_cls.to_parquet(*args, **kwargs)
 
     @classmethod
-    def _to_ray_dataset(cls, modin_obj):
+    def _to_ray(cls, modin_obj):
         """
         Write query compiler content to a Ray Dataset.
 
@@ -484,7 +494,28 @@ class BaseFactory(object):
         -----
         Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
         """
-        return cls.io_cls.to_ray_dataset(modin_obj)
+        return cls.io_cls.to_ray(modin_obj)
+
+    @classmethod
+    def _to_dask(cls, modin_obj):
+        """
+        Write query compiler content to a Dask DataFrame/Series.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            A Dask DataFrame/Series object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+        """
+        return cls.io_cls.to_dask(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod

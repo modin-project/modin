@@ -30,7 +30,7 @@ from modin.core.execution.ray.common.deferred_execution import (
     MetaListHook,
 )
 from modin.core.execution.ray.common.utils import ObjectIDType
-from modin.logging import get_logger
+from modin.logging import disable_logging, get_logger
 from modin.pandas.indexing import compute_sliced_len
 from modin.utils import _inherit_docstrings
 
@@ -93,6 +93,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
             )
         )
 
+    @disable_logging
     def __del__(self):
         """Unsubscribe from DeferredExecution."""
         if isinstance(self._data_ref, DeferredExecution):

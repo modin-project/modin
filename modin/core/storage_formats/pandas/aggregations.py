@@ -65,7 +65,8 @@ class CorrCovBuilder:
                     qc._modin_frame.copy_columns_cache(),
                 )
                 new_dtypes = pandas.Series(
-                    np.repeat(np.dtype("float"), len(new_columns)), index=new_columns
+                    np.repeat(pandas.api.types.pandas_dtype("float"), len(new_columns)),
+                    index=new_columns,
                 )
             elif numeric_only and qc._modin_frame.has_materialized_dtypes:
                 old_dtypes = qc._modin_frame.dtypes
@@ -73,7 +74,8 @@ class CorrCovBuilder:
                 new_columns = old_dtypes[old_dtypes.map(is_numeric_dtype)].index
                 new_index = new_columns.copy()
                 new_dtypes = pandas.Series(
-                    np.repeat(np.dtype("float"), len(new_columns)), index=new_columns
+                    np.repeat(pandas.api.types.pandas_dtype("float"), len(new_columns)),
+                    index=new_columns,
                 )
             else:
                 new_index, new_columns, new_dtypes = None, None, None
