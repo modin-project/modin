@@ -1418,7 +1418,6 @@ def test_pyarrow_array_retrieve():
         modin_series,
         pandas_series,
         lambda ser: pa.array(ser),
-        raising_exceptions=(Exception,),
     )
 
 
@@ -1439,7 +1438,6 @@ def test_pyarrow_functions():
         lambda ser: ser
         + (modin_series if isinstance(ser, pd.Series) else pandas_series),
         comparator=comparator,
-        raising_exceptions=(Exception,),
     )
 
     eval_general(
@@ -1447,7 +1445,6 @@ def test_pyarrow_functions():
         pandas_series,
         lambda ser: ser > (ser + 1),
         comparator=comparator,
-        raising_exceptions=(Exception,),
     )
 
     eval_general(
@@ -1455,7 +1452,6 @@ def test_pyarrow_functions():
         pandas_series,
         lambda ser: ser.dropna(),
         comparator=comparator,
-        raising_exceptions=(Exception,),
     )
 
     eval_general(
@@ -1463,7 +1459,6 @@ def test_pyarrow_functions():
         pandas_series,
         lambda ser: ser.isna(),
         comparator=comparator,
-        raising_exceptions=(Exception,),
     )
 
     eval_general(
@@ -1471,7 +1466,6 @@ def test_pyarrow_functions():
         pandas_series,
         lambda ser: ser.fillna(0),
         comparator=comparator,
-        raising_exceptions=(Exception,),
     )
 
 
