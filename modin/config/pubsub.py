@@ -194,6 +194,15 @@ class Parameter(object):
     """
     Base class describing interface for configuration entities.
 
+    To set the parameter's value you can use both ``Parameter.put(val)`` and ``Parameter(val)``,
+    the latter also supports a context-manager use-case. Exiting the context will result into
+    resetting the parameter's value to the previous value.
+
+    Parameters
+    ----------
+    value : object
+        A value to set to this parameter.
+
     Attributes
     ----------
     choices : Optional[Sequence[str]]
@@ -209,6 +218,18 @@ class Parameter(object):
         ``ValueSource``.
     _deprecation_descriptor : Optional[DeprecationDescriptor]
         Indicate whether this parameter is deprecated.
+
+    Examples
+    --------
+    >>> class MyParameter(Parameter, type=bool):
+    ...     default = False
+    >>> MyParameter.get()
+    False
+    >>> with MyParameter(True):
+    ...     print(MyParameter.get()) # True
+    True
+    >>> MyParameter.get()
+    False
     """
 
     choices: Optional[Tuple[str, ...]] = None
@@ -220,6 +241,16 @@ class Parameter(object):
     _subs: list = []
     _once: DefaultDict[Any, list] = defaultdict(list)
     _deprecation_descriptor: Optional[DeprecationDescriptor] = None
+
+    def __init__(self, value):
+        self._previous_val = self.get()
+        self.put(value)
+
+    def __enter__(self, *args, **kwargs):  # noqa: GL08
+        return self
+
+    def __exit__(self, *args, **kwargs):  # noqa: GL08
+        self.put(self._previous_val)
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
