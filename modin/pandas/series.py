@@ -31,6 +31,7 @@ from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
@@ -89,6 +90,7 @@ class Series(BasePandasDataset):
 
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
+    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
@@ -2044,7 +2046,10 @@ class Series(BasePandasDataset):
         """
         Return unique values of Series object.
         """
-        return self._query_compiler.unique()
+        res = self._query_compiler.unique()
+        if isinstance(res, BaseQueryCompiler):
+            res = res.to_numpy()
+        return res
 
     def update(self, other):  # noqa: PR01, D200
         """

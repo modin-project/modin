@@ -1961,12 +1961,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
         else:
-            new_modin_frame = self._modin_frame.apply_full_axis(
-                0,
-                lambda x: x.squeeze(axis=1).unique(),
-                num_splits=1,
-            )
-            return new_modin_frame._partitions[0][0].get()
+            res = self.to_pandas().squeeze(axis=1)
+            return res.unique()
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):
