@@ -80,7 +80,10 @@ def maybe_compute_dtypes_common_cast(
         # belong to the intersection, these will be NaN columns in the result
         mismatch_columns = columns_first ^ columns_second
     elif isinstance(second, dict):
-        dtypes_second = {key: np.dtype(type(value)) for key, value in second.items()}
+        dtypes_second = {
+            key: pandas.api.types.pandas_dtype(type(value))
+            for key, value in second.items()
+        }
         columns_first = set(first.columns)
         columns_second = set(second.keys())
         common_columns = columns_first.intersection(columns_second)
@@ -90,16 +93,21 @@ def maybe_compute_dtypes_common_cast(
     else:
         if isinstance(second, (list, tuple)):
             second_dtypes_list = (
-                [np.dtype(type(value)) for value in second]
+                [pandas.api.types.pandas_dtype(type(value)) for value in second]
                 if axis == 1
                 # Here we've been given a column so it has only one dtype,
                 # Infering the dtype using `np.array`, TODO: maybe there's more efficient way?
                 else [np.array(second).dtype] * len(dtypes_first)
             )
         elif is_scalar(second) or isinstance(second, np.ndarray):
-            second_dtypes_list = [
-                getattr(second, "dtype", np.dtype(type(second)))
-            ] * len(dtypes_first)
+            try:
+                dtype = getattr(second, "dtype", None) or pandas.api.types.pandas_dtype(
+                    type(second)
+                )
+            except TypeError:
+                # For example, dtype '<class 'datetime.datetime'>' not understood
+                dtype = pandas.Series(second).dtype
+            second_dtypes_list = [dtype] * len(dtypes_first)
         else:
             raise NotImplementedError(
                 f"Can't compute common type for {type(first)} and {type(second)}."
@@ -117,7 +125,7 @@ def maybe_compute_dtypes_common_cast(
         mismatch_columns = []
 
     # If at least one column doesn't match, the result of the non matching column would be nan.
-    nan_dtype = np.dtype(type(np.nan))
+    nan_dtype = pandas.api.types.pandas_dtype(type(np.nan))
     dtypes = None
     if func is not None:
         try:
@@ -242,7 +250,9 @@ def try_compute_new_dtypes(
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
-            dtypes = maybe_build_dtypes_series(first, second, dtype=np.dtype(bool))
+            dtypes = maybe_build_dtypes_series(
+                first, second, dtype=pandas.api.types.pandas_dtype(bool)
+            )
         elif infer_dtypes == "common_cast":
             dtypes = maybe_compute_dtypes_common_cast(
                 first, second, axis=axis, func=None

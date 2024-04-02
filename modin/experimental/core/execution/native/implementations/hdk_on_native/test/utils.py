@@ -13,7 +13,6 @@
 
 import datetime
 
-import numpy as np
 import pandas
 import pytest
 from pandas.core.dtypes.common import is_datetime64_any_dtype, is_object_dtype
@@ -108,7 +107,7 @@ def align_datetime_dtypes(*dfs):
             # datetime.time is considered to be an 'object' dtype in pandas that's why
             # we have to explicitly check the values type in the column
             elif (
-                dtype == np.dtype("O")
+                dtype == pandas.api.types.pandas_dtype("O")
                 and col not in time_cols
                 # HDK has difficulties with empty frames, so explicitly skip them
                 # https://github.com/modin-project/modin/issues/3428

@@ -915,5 +915,5 @@ _SUPPORTED_NUM_TYPE_CODES = set(
 
 def _check_int_or_float(op, dtypes):  # noqa: GL08
     for t in dtypes:
-        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
+        if not isinstance(t, np.dtype) or t.char not in _SUPPORTED_NUM_TYPE_CODES:
             raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")
