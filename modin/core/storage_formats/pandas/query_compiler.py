@@ -1936,7 +1936,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def unique(self, keep="first", ignore_index=True, subset=None):
         # kernels with 'pandas.Series.unique()' work faster
         can_use_unique_kernel = (
-            subset is None and ignore_index and len(self.columns) == 1 and keep
+            subset is None
+            and ignore_index
+            and len(self.columns) == 1
+            and keep is not False
         )
 
         if not can_use_unique_kernel and not RangePartitioning.get():
@@ -1956,6 +1959,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ),
                 preserve_columns=True,
             )
+            return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
         else:
             new_modin_frame = self._modin_frame.apply_full_axis(
                 0,
@@ -1963,7 +1967,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 num_splits=1,
             )
             return new_modin_frame._partitions[0][0].get()
-        return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):
