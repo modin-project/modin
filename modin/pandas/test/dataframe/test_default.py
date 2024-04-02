@@ -1003,7 +1003,10 @@ def test_resample_specific(rule, closed, label, on, level):
 
     if on is None and level is not None:
         index = pandas.MultiIndex.from_product(
-            [["a", "b", "c"], pandas.date_range("31/12/2000", periods=4, freq="h")]
+            [
+                ["a", "b", "c", "d"],
+                pandas.date_range("31/12/2000", periods=len(pandas_df) // 4, freq="h"),
+            ]
         )
         pandas_df.index = index
         modin_df.index = index
@@ -1011,8 +1014,12 @@ def test_resample_specific(rule, closed, label, on, level):
         level = None
 
     if on is not None:
-        pandas_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
-        modin_df[on] = pandas.date_range("22/06/1941", periods=12, freq="min")
+        pandas_df[on] = pandas.date_range(
+            "22/06/1941", periods=len(pandas_df), freq="min"
+        )
+        modin_df[on] = pandas.date_range(
+            "22/06/1941", periods=len(modin_df), freq="min"
+        )
 
     pandas_resampler = pandas_df.resample(
         rule,
