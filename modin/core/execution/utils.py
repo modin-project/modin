@@ -81,7 +81,8 @@ elif "remote_function" not in dir():
                         + "default values. Use `ignore_defaults` to forcibly enable caching."
                     )
                     return func
-                # For the nested functions, use __code__ as the key
+                # For the nested functions, use __code__ as the key, because it's the same
+                # object for each instance of the function.
                 key = id(func.__code__)
             else:
                 key = func
