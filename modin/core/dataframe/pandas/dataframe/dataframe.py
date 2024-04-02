@@ -1998,7 +1998,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 # DataFrame from a Series.
                 result = pandas.DataFrame(series_result).T
                 result.index = [MODIN_UNNAMED_SERIES_LABEL]
-            elif isinstance(series_result, (pandas.Series, pandas.DataFrame)):
+            elif isinstance(series_result, pandas.Series):
                 result = pandas.DataFrame(series_result)
                 if isinstance(series_result, pandas.Series):
                     result.columns = [MODIN_UNNAMED_SERIES_LABEL]
