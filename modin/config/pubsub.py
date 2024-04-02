@@ -242,14 +242,14 @@ class Parameter(object):
     _once: DefaultDict[Any, list] = defaultdict(list)
     _deprecation_descriptor: Optional[DeprecationDescriptor] = None
 
-    def __init__(self, value):
+    def __init__(self, value: Any):
         self._previous_val = self.get()
         self.put(value)
 
-    def __enter__(self, *args, **kwargs):  # noqa: GL08
+    def __enter__(self) -> "Parameter":  # noqa: GL08
         return self
 
-    def __exit__(self, *args, **kwargs):  # noqa: GL08
+    def __exit__(self, *args: tuple, **kwargs: dict) -> None:  # noqa: GL08
         self.put(self._previous_val)
 
     @classmethod
