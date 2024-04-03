@@ -490,10 +490,12 @@ def update(
     >>> MyParameter2.get()
     True
     """
-    if value is None:
-        assert isinstance(config, dict)
-    else:
+    if value is not None:
         config = {cast(Parameter, config): value}
+    elif not isinstance(config, dict):
+        raise ValueError(
+            f"Expected to get a dictionary as a 'config' when 'value is None', got {type(config)}"
+        )
 
     old_values = {}
     for cfg, val in config.items():
