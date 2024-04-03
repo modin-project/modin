@@ -1028,7 +1028,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         func_name,
         new_columns=None,
         df_op=None,
-        use_range_impl=True,
+        allow_range_impl=True,
         *args,
         **kwargs,
     ):
@@ -1046,8 +1046,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Modin frame. If not specified will be computed automaticly.
         df_op : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series], optional
             Preprocessor function to apply to the passed frame before resampling.
-        use_range_impl : bool, default: True
-            Whether to use range-partitioning or full-column implementation.
+        allow_range_impl : bool, default: True
+            Whether to use range-partitioning if ``RangePartitioning.get() is True``.
         *args : args
             Arguments to pass to the aggregation function.
         **kwargs : kwargs
@@ -1116,7 +1116,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             level = None
             key_columns = [resample_kwargs["on"]]
 
-        if not use_range_impl or resample_kwargs["axis"] not in (0, "index"):
+        if (
+            not allow_range_impl
+            or resample_kwargs["axis"] not in (0, "index")
+            or not RangePartitioning.get()
+        ):
             new_modin_frame = self._modin_frame.apply_full_axis(
                 axis=0, func=map_func, new_columns=new_columns
             )
@@ -1132,7 +1136,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_get_group(self, resample_kwargs, name, obj):
         return self._resample_func(
-            resample_kwargs, "get_group", name=name, use_range_impl=False, obj=obj
+            resample_kwargs, "get_group", name=name, allow_range_impl=False, obj=obj
         )
 
     def resample_app_ser(self, resample_kwargs, func, *args, **kwargs):
@@ -1165,7 +1169,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "transform", arg=arg, use_range_impl=False, *args, **kwargs
+            resample_kwargs,
+            "transform",
+            arg=arg,
+            allow_range_impl=False,
+            *args,
+            **kwargs,
         )
 
     def resample_pipe(self, resample_kwargs, func, *args, **kwargs):
@@ -1173,17 +1182,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_ffill(self, resample_kwargs, limit):
         return self._resample_func(
-            resample_kwargs, "ffill", limit=limit, use_range_impl=False
+            resample_kwargs, "ffill", limit=limit, allow_range_impl=False
         )
 
     def resample_bfill(self, resample_kwargs, limit):
         return self._resample_func(
-            resample_kwargs, "bfill", limit=limit, use_range_impl=False
+            resample_kwargs, "bfill", limit=limit, allow_range_impl=False
         )
 
     def resample_nearest(self, resample_kwargs, limit):
         return self._resample_func(
-            resample_kwargs, "nearest", limit=limit, use_range_impl=False
+            resample_kwargs, "nearest", limit=limit, allow_range_impl=False
         )
 
     def resample_fillna(self, resample_kwargs, method, limit):
@@ -1192,7 +1201,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             "fillna",
             method=method,
             limit=limit,
-            use_range_impl=method is None,
+            allow_range_impl=method is None,
         )
 
     def resample_asfreq(self, resample_kwargs, fill_value):
@@ -1219,7 +1228,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
-            use_range_impl=False,
+            allow_range_impl=False,
             **kwargs,
         )
 
@@ -1231,12 +1240,12 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_first(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "first", use_range_impl=False, *args, **kwargs
+            resample_kwargs, "first", allow_range_impl=False, *args, **kwargs
         )
 
     def resample_last(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "last", use_range_impl=False, *args, **kwargs
+            resample_kwargs, "last", allow_range_impl=False, *args, **kwargs
         )
 
     def resample_max(self, resample_kwargs, *args, **kwargs):
@@ -1277,7 +1286,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             resample_kwargs,
             "size",
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
-            use_range_impl=False,
+            allow_range_impl=False,
         )
 
     def resample_sem(self, resample_kwargs, *args, **kwargs):
