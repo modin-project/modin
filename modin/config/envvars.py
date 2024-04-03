@@ -34,7 +34,7 @@ from modin.config.pubsub import (
 )
 
 
-class EnvironmentVariable(Parameter, type=str, abstract=True):  # noqa: PR01
+class EnvironmentVariable(Parameter, type=str, abstract=True):
     """Base class for environment variables-based configuration."""
 
     varname: Optional[str] = None
@@ -80,7 +80,7 @@ class EnvWithSibilings(
     # 'type' is a mandatory parameter for '__init_subclasses__', so we have to pass something here,
     # this doesn't force child classes to have 'str' type though, they actually can be any type
     type=str,
-):  # noqa: PR01
+):
     """Ensure values synchronization between sibling parameters."""
 
     _update_sibling = True
@@ -165,13 +165,13 @@ class EnvWithSibilings(
                 cls._update_sibling = True
 
 
-class IsDebug(EnvironmentVariable, type=bool):  # noqa: PR01
+class IsDebug(EnvironmentVariable, type=bool):
     """Force Modin engine to be "Python" unless specified by $MODIN_ENGINE."""
 
     varname = "MODIN_DEBUG"
 
 
-class Engine(EnvironmentVariable, type=str):  # noqa: PR01
+class Engine(EnvironmentVariable, type=str):
     """Distribution engine to run queries by."""
 
     varname = "MODIN_ENGINE"
@@ -262,7 +262,7 @@ class Engine(EnvironmentVariable, type=str):  # noqa: PR01
         return choice
 
 
-class StorageFormat(EnvironmentVariable, type=str):  # noqa: PR01
+class StorageFormat(EnvironmentVariable, type=str):
     """Engine to run on a single node of distribution."""
 
     varname = "MODIN_STORAGE_FORMAT"
@@ -270,32 +270,32 @@ class StorageFormat(EnvironmentVariable, type=str):  # noqa: PR01
     choices = ("Pandas", "Hdk", "Cudf")
 
 
-class IsExperimental(EnvironmentVariable, type=bool):  # noqa: PR01
+class IsExperimental(EnvironmentVariable, type=bool):
     """Whether to Turn on experimental features."""
 
     varname = "MODIN_EXPERIMENTAL"
 
 
-class IsRayCluster(EnvironmentVariable, type=bool):  # noqa: PR01
+class IsRayCluster(EnvironmentVariable, type=bool):
     """Whether Modin is running on pre-initialized Ray cluster."""
 
     varname = "MODIN_RAY_CLUSTER"
 
 
-class RayRedisAddress(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class RayRedisAddress(EnvironmentVariable, type=ExactStr):
     """Redis address to connect to when running in Ray cluster."""
 
     varname = "MODIN_REDIS_ADDRESS"
 
 
-class RayRedisPassword(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class RayRedisPassword(EnvironmentVariable, type=ExactStr):
     """What password to use for connecting to Redis."""
 
     varname = "MODIN_REDIS_PASSWORD"
     default = secrets.token_hex(32)
 
 
-class CpuCount(EnvironmentVariable, type=int):  # noqa: PR01
+class CpuCount(EnvironmentVariable, type=int):
     """How many CPU cores to use during initialization of the Modin engine."""
 
     varname = "MODIN_CPUS"
@@ -314,13 +314,13 @@ class CpuCount(EnvironmentVariable, type=int):  # noqa: PR01
         return multiprocessing.cpu_count()
 
 
-class GpuCount(EnvironmentVariable, type=int):  # noqa: PR01
+class GpuCount(EnvironmentVariable, type=int):
     """How may GPU devices to utilize across the whole distribution."""
 
     varname = "MODIN_GPUS"
 
 
-class Memory(EnvironmentVariable, type=int):  # noqa: PR01
+class Memory(EnvironmentVariable, type=int):
     """
     How much memory (in bytes) give to an execution engine.
 
@@ -333,7 +333,7 @@ class Memory(EnvironmentVariable, type=int):  # noqa: PR01
     varname = "MODIN_MEMORY"
 
 
-class NPartitions(EnvironmentVariable, type=int):  # noqa: PR01
+class NPartitions(EnvironmentVariable, type=int):
     """How many partitions to use for a Modin DataFrame (along each axis)."""
 
     varname = "MODIN_NPARTITIONS"
@@ -371,27 +371,27 @@ class NPartitions(EnvironmentVariable, type=int):  # noqa: PR01
             return CpuCount.get()
 
 
-class HdkFragmentSize(EnvironmentVariable, type=int):  # noqa: PR01
+class HdkFragmentSize(EnvironmentVariable, type=int):
     """How big a fragment in HDK should be when creating a table (in rows)."""
 
     varname = "MODIN_HDK_FRAGMENT_SIZE"
 
 
-class DoUseCalcite(EnvironmentVariable, type=bool):  # noqa: PR01
+class DoUseCalcite(EnvironmentVariable, type=bool):
     """Whether to use Calcite for HDK queries execution."""
 
     varname = "MODIN_USE_CALCITE"
     default = True
 
 
-class TestDatasetSize(EnvironmentVariable, type=str):  # noqa: PR01
+class TestDatasetSize(EnvironmentVariable, type=str):
     """Dataset size for running some tests."""
 
     varname = "MODIN_TEST_DATASET_SIZE"
     choices = ("Small", "Normal", "Big")
 
 
-class TrackFileLeaks(EnvironmentVariable, type=bool):  # noqa: PR01
+class TrackFileLeaks(EnvironmentVariable, type=bool):
     """Whether to track for open file handles leakage during testing."""
 
     varname = "MODIN_TEST_TRACK_FILE_LEAKS"
@@ -401,7 +401,7 @@ class TrackFileLeaks(EnvironmentVariable, type=bool):  # noqa: PR01
     default = sys.platform != "win32"
 
 
-class AsvImplementation(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class AsvImplementation(EnvironmentVariable, type=ExactStr):
     """Allows to select a library that we will use for testing performance."""
 
     varname = "MODIN_ASV_USE_IMPL"
@@ -410,14 +410,14 @@ class AsvImplementation(EnvironmentVariable, type=ExactStr):  # noqa: PR01
     default = "modin"
 
 
-class AsvDataSizeConfig(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class AsvDataSizeConfig(EnvironmentVariable, type=ExactStr):
     """Allows to override default size of data (shapes)."""
 
     varname = "MODIN_ASV_DATASIZE_CONFIG"
     default = None
 
 
-class ProgressBar(EnvironmentVariable, type=bool):  # noqa: PR01
+class ProgressBar(EnvironmentVariable, type=bool):
     """Whether or not to show the progress bar."""
 
     varname = "MODIN_PROGRESS_BAR"
@@ -448,7 +448,7 @@ class ProgressBar(EnvironmentVariable, type=bool):  # noqa: PR01
         super().put(value)
 
 
-class BenchmarkMode(EnvironmentVariable, type=bool):  # noqa: PR01
+class BenchmarkMode(EnvironmentVariable, type=bool):
     """Whether or not to perform computations synchronously."""
 
     varname = "MODIN_BENCHMARK_MODE"
@@ -469,7 +469,7 @@ class BenchmarkMode(EnvironmentVariable, type=bool):  # noqa: PR01
         super().put(value)
 
 
-class LogMode(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class LogMode(EnvironmentVariable, type=ExactStr):
     """Set ``LogMode`` value if users want to opt-in."""
 
     varname = "MODIN_LOG_MODE"
@@ -496,7 +496,7 @@ class LogMode(EnvironmentVariable, type=ExactStr):  # noqa: PR01
         cls.put("enable_api_only")
 
 
-class LogMemoryInterval(EnvironmentVariable, type=int):  # noqa: PR01
+class LogMemoryInterval(EnvironmentVariable, type=int):
     """Interval (in seconds) to profile memory utilization for logging."""
 
     varname = "MODIN_LOG_MEMORY_INTERVAL"
@@ -530,7 +530,7 @@ class LogMemoryInterval(EnvironmentVariable, type=int):  # noqa: PR01
         return log_memory_interval
 
 
-class LogFileSize(EnvironmentVariable, type=int):  # noqa: PR01
+class LogFileSize(EnvironmentVariable, type=int):
     """Max size of logs (in MBs) to store per Modin job."""
 
     varname = "MODIN_LOG_FILE_SIZE"
@@ -564,7 +564,7 @@ class LogFileSize(EnvironmentVariable, type=int):  # noqa: PR01
         return log_file_size
 
 
-class PersistentPickle(EnvironmentVariable, type=bool):  # noqa: PR01
+class PersistentPickle(EnvironmentVariable, type=bool):
     """Whether serialization should be persistent."""
 
     varname = "MODIN_PERSISTENT_PICKLE"
@@ -575,7 +575,7 @@ class PersistentPickle(EnvironmentVariable, type=bool):  # noqa: PR01
     default = False
 
 
-class HdkLaunchParameters(EnvironmentVariable, type=dict):  # noqa: PR01
+class HdkLaunchParameters(EnvironmentVariable, type=dict):
     """
     Additional command line options for the HDK engine.
 
@@ -638,7 +638,7 @@ class HdkLaunchParameters(EnvironmentVariable, type=dict):  # noqa: PR01
         return default
 
 
-class MinPartitionSize(EnvironmentVariable, type=int):  # noqa: PR01
+class MinPartitionSize(EnvironmentVariable, type=int):
     """
     Minimum number of rows/columns in a single pandas partition split.
 
@@ -677,28 +677,28 @@ class MinPartitionSize(EnvironmentVariable, type=int):  # noqa: PR01
         return min_partition_size
 
 
-class TestReadFromSqlServer(EnvironmentVariable, type=bool):  # noqa: PR01
+class TestReadFromSqlServer(EnvironmentVariable, type=bool):
     """Set to true to test reading from SQL server."""
 
     varname = "MODIN_TEST_READ_FROM_SQL_SERVER"
     default = False
 
 
-class TestReadFromPostgres(EnvironmentVariable, type=bool):  # noqa: PR01
+class TestReadFromPostgres(EnvironmentVariable, type=bool):
     """Set to true to test reading from Postgres."""
 
     varname = "MODIN_TEST_READ_FROM_POSTGRES"
     default = False
 
 
-class GithubCI(EnvironmentVariable, type=bool):  # noqa: PR01
+class GithubCI(EnvironmentVariable, type=bool):
     """Set to true when running Modin in GitHub CI."""
 
     varname = "MODIN_GITHUB_CI"
     default = False
 
 
-class ModinNumpy(EnvWithSibilings, type=bool):  # noqa: PR01
+class ModinNumpy(EnvWithSibilings, type=bool):
     """Set to true to use Modin's implementation of NumPy API."""
 
     varname = "MODIN_NUMPY"
@@ -710,7 +710,7 @@ class ModinNumpy(EnvWithSibilings, type=bool):  # noqa: PR01
         return ExperimentalNumPyAPI
 
 
-class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):  # noqa: PR01
+class ExperimentalNumPyAPI(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's implementation of NumPy API.
 
@@ -733,7 +733,7 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioningGroupby(EnvWithSibilings, type=bool):  # noqa: PR01
+class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
@@ -752,7 +752,7 @@ class RangePartitioningGroupby(EnvWithSibilings, type=bool):  # noqa: PR01
         return ExperimentalGroupbyImpl
 
 
-class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):  # noqa: PR01
+class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
@@ -775,7 +775,7 @@ ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioning(EnvironmentVariable, type=bool):  # noqa: PR01
+class RangePartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's range-partitioning implementation where possible.
 
@@ -787,21 +787,21 @@ class RangePartitioning(EnvironmentVariable, type=bool):  # noqa: PR01
     default = False
 
 
-class CIAWSSecretAccessKey(EnvironmentVariable, type=str):  # noqa: PR01
+class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
     """Set to AWS_SECRET_ACCESS_KEY when running mock S3 tests for Modin in GitHub CI."""
 
     varname = "AWS_SECRET_ACCESS_KEY"
     default = "foobar_secret"
 
 
-class CIAWSAccessKeyID(EnvironmentVariable, type=str):  # noqa: PR01
+class CIAWSAccessKeyID(EnvironmentVariable, type=str):
     """Set to AWS_ACCESS_KEY_ID when running mock S3 tests for Modin in GitHub CI."""
 
     varname = "AWS_ACCESS_KEY_ID"
     default = "foobar_key"
 
 
-class AsyncReadMode(EnvironmentVariable, type=bool):  # noqa: PR01
+class AsyncReadMode(EnvironmentVariable, type=bool):
     """
     It does not wait for the end of reading information from the source.
 
@@ -825,7 +825,7 @@ class AsyncReadMode(EnvironmentVariable, type=bool):  # noqa: PR01
     default = False
 
 
-class ReadSqlEngine(EnvironmentVariable, type=str):  # noqa: PR01
+class ReadSqlEngine(EnvironmentVariable, type=str):
     """Engine to run `read_sql`."""
 
     varname = "MODIN_READ_SQL_ENGINE"
@@ -833,7 +833,7 @@ class ReadSqlEngine(EnvironmentVariable, type=str):  # noqa: PR01
     choices = ("Pandas", "Connectorx")
 
 
-class LazyExecution(EnvironmentVariable, type=str):  # noqa: PR01
+class LazyExecution(EnvironmentVariable, type=str):
     """
     Lazy execution mode.
 
@@ -848,7 +848,7 @@ class LazyExecution(EnvironmentVariable, type=str):  # noqa: PR01
     default = "Auto"
 
 
-class DocModule(EnvironmentVariable, type=ExactStr):  # noqa: PR01
+class DocModule(EnvironmentVariable, type=ExactStr):
     """
     The module to use that will be used for docstrings.
 
@@ -890,7 +890,7 @@ class DocModule(EnvironmentVariable, type=ExactStr):  # noqa: PR01
         importlib.reload(pd)
 
 
-class DaskThreadsPerWorker(EnvironmentVariable, type=int):  # noqa: PR01
+class DaskThreadsPerWorker(EnvironmentVariable, type=int):
     """Number of threads per Dask worker."""
 
     varname = "MODIN_DASK_THREADS_PER_WORKER"

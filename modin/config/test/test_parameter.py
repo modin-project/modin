@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import pytest
 
-from modin.config import Parameter
+from modin.config import Parameter, update
 
 
 def make_prefilled(vartype, varinit):
@@ -103,23 +103,56 @@ def test_init_validation(vartype):
         parameter.get()
 
 
-def test_context_manager():
-    parameter = make_prefilled(vartype=bool, varinit="False")
+def test_context_manager_update():
+    parameter1 = make_prefilled(vartype=bool, varinit="False")
 
-    # simple case
-    assert parameter.get() is False
-    with parameter(True):
-        assert parameter.get() is True
-    assert parameter.get() is False
+    # simple case, 1 parameter
+    assert parameter1.get() is False
+    with update(parameter1, True):
+        assert parameter1.get() is True
+    assert parameter1.get() is False
 
-    # nested case
-    assert parameter.get() is False
-    with parameter(True):
-        assert parameter.get() is True
-        with parameter(False):
-            assert parameter.get() is False
-            with parameter(False):
-                assert parameter.get() is False
-            assert parameter.get() is False
-        assert parameter.get() is True
-    assert parameter.get() is False
+    # nested case, 1 parameter
+    assert parameter1.get() is False
+    with update(parameter1, True):
+        assert parameter1.get() is True
+        with update(parameter1, False):
+            assert parameter1.get() is False
+            with update(parameter1, False):
+                assert parameter1.get() is False
+            assert parameter1.get() is False
+        assert parameter1.get() is True
+    assert parameter1.get() is False
+
+    parameter2 = make_prefilled(vartype=bool, varinit="True")
+
+    # simple case, 2 parameters
+    assert parameter1.get() is False
+    assert parameter2.get() is True
+    with update({parameter1: True, parameter2: False}):
+        assert parameter1.get() is True
+        assert parameter2.get() is False
+    assert parameter1.get() is False
+    assert parameter2.get() is True
+
+    # nested case, 2 parameters
+    with update({parameter1: True, parameter2: False}):
+        assert parameter1.get() is True
+        assert parameter2.get() is False
+        with update(parameter1, False):
+            assert parameter1.get() is False
+            assert parameter2.get() is False
+            with update(parameter2, True):
+                assert parameter1.get() is False
+                assert parameter2.get() is True
+                with update({parameter1: True, parameter2: False}):
+                    assert parameter1.get() is True
+                    assert parameter2.get() is False
+                assert parameter1.get() is False
+                assert parameter2.get() is True
+            assert parameter1.get() is False
+            assert parameter2.get() is False
+        assert parameter1.get() is True
+        assert parameter2.get() is False
+    assert parameter1.get() is False
+    assert parameter2.get() is True

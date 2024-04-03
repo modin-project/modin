@@ -68,9 +68,18 @@ some config only for a certain part of the code:
     print(cfg.RangePartitioning.get()) # False
 
     # Set the config to 'True' inside of the context-manager
-    with cfg.RangePartitioning(True):
+    with cfg.update(cfg.RangePartitioning, True):
         print(cfg.RangePartitioning.get()) # True
         df.merge(...) # will use range-partitioning impl
 
     # Once the context is over, the config gets back to its previous value
     print(cfg.RangePartitioning.get()) # False
+
+    # You can also set multiple config at once when you pass a dictionary to 'cfg.update'
+    print(cfg.AsyncReadMode.get()) # False
+
+    with cfg.update({cfg.RangePartitioning: True, cfg.AsyncReadMode: True}):
+        print(cfg.RangePartitioning.get()) # True
+        print(cfg.AsyncReadMode.get()) # True
+    print(cfg.RangePartitioning.get()) # False
+    print(cfg.AsyncReadMode.get()) # False

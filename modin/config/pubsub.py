@@ -13,6 +13,7 @@
 
 """Module houses ``Parameter`` class - base class for all configs."""
 
+import contextlib
 import warnings
 from collections import defaultdict
 from enum import IntEnum
@@ -21,9 +22,11 @@ from typing import (
     Any,
     Callable,
     DefaultDict,
+    Iterator,
     NamedTuple,
     Optional,
     Tuple,
+    Union,
     cast,
 )
 
@@ -194,15 +197,6 @@ class Parameter(object):
     """
     Base class describing interface for configuration entities.
 
-    To set the parameter's value you can use both ``Parameter.put(val)`` and ``Parameter(val)``,
-    the latter also supports a context-manager use-case. Exiting the context will result into
-    resetting the parameter's value to the previous value.
-
-    Parameters
-    ----------
-    value : object
-        A value to set to this parameter.
-
     Attributes
     ----------
     choices : Optional[Sequence[str]]
@@ -218,18 +212,6 @@ class Parameter(object):
         ``ValueSource``.
     _deprecation_descriptor : Optional[DeprecationDescriptor]
         Indicate whether this parameter is deprecated.
-
-    Examples
-    --------
-    >>> class MyParameter(Parameter, type=bool):
-    ...     default = False
-    >>> MyParameter.get()
-    False
-    >>> with MyParameter(True):
-    ...     print(MyParameter.get()) # True
-    True
-    >>> MyParameter.get()
-    False
     """
 
     choices: Optional[Tuple[str, ...]] = None
@@ -241,16 +223,6 @@ class Parameter(object):
     _subs: list = []
     _once: DefaultDict[Any, list] = defaultdict(list)
     _deprecation_descriptor: Optional[DeprecationDescriptor] = None
-
-    def __init__(self, value: Any):
-        self._previous_val = self.get()
-        self.put(value)
-
-    def __enter__(self) -> "Parameter":  # noqa: GL08
-        return self
-
-    def __exit__(self, *args: tuple, **kwargs: dict) -> None:  # noqa: GL08
-        self.put(self._previous_val)
 
     @classmethod
     def _get_raw_from_config(cls) -> str:
@@ -480,4 +452,58 @@ class Parameter(object):
         raise TypeError("Cannot add a choice to a parameter where choices is None")
 
 
-__all__ = ["Parameter"]
+@contextlib.contextmanager
+def update(
+    config: Union[Parameter, dict[Parameter, Any]], value: Optional[Any] = None
+) -> Iterator[None]:
+    """
+    Set a value(s) for the specified config(s) in the scope of the context.
+
+    Parameters
+    ----------
+    config : Parameter or dict[Parameter, Any]
+        A Parameter class to set the `value` for. May be a dictionary describing multiple parameters
+        with its values.
+    value : Any, optional
+        A value to set to the config. Must be ``None`` if `config` is a dictionary.
+
+    Examples
+    --------
+    >>> class MyParameter1(Parameter, type=bool):
+    ...     default = False
+    >>> MyParameter1.get()
+    False
+    >>> with update(MyParameter1, True):
+    ...     print(MyParameter1.get()) # True
+    True
+    >>> MyParameter1.get()
+    False
+    >>> class MyParameter2(Parameter, type=bool):
+    ...     default = True
+    >>> with update({MyParameter1: True, MyParameter2: False}):
+    ...     print(MyParameter1.get()) # True
+    ...     print(MyParameter2.get()) # False
+    True
+    False
+    >>> MyParameter1.get()
+    False
+    >>> MyParameter2.get()
+    True
+    """
+    if value is None:
+        assert isinstance(config, dict)
+    else:
+        config = {cast(Parameter, config): value}
+
+    old_values = {}
+    for cfg, val in config.items():
+        old_values[cfg] = cfg.get()
+        cfg.put(val)
+    try:
+        yield
+    finally:
+        for cfg, val in old_values.items():
+            cfg.put(val)
+
+
+__all__ = ["Parameter", "update"]
