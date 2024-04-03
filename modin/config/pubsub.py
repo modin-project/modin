@@ -30,6 +30,8 @@ from typing import (
     cast,
 )
 
+from pandas._libs import lib
+
 if TYPE_CHECKING:
     from modin.config.envvars import EnvironmentVariable
 
@@ -454,7 +456,7 @@ class Parameter(object):
 
 @contextlib.contextmanager
 def update(
-    config: Union[Parameter, dict[Parameter, Any]], value: Optional[Any] = None
+    config: Union[Parameter, dict[Parameter, Any]], value: Any = lib.no_default
 ) -> Iterator[None]:
     """
     Set a value(s) for the specified config(s) in the scope of the context.
@@ -464,8 +466,8 @@ def update(
     config : Parameter or dict[Parameter, Any]
         A Parameter class to set the `value` for. May be a dictionary describing multiple parameters
         with its values.
-    value : Any, optional
-        A value to set to the config. Must be ``None`` if `config` is a dictionary.
+    value : Any, default: lib.no_default
+        A value to set to the config. Ignored if `config` is a dictionary.
 
     Examples
     --------
@@ -490,11 +492,11 @@ def update(
     >>> MyParameter2.get()
     True
     """
-    if value is not None:
+    if value is not lib.no_default:
         config = {cast(Parameter, config): value}
     elif not isinstance(config, dict):
         raise ValueError(
-            f"Expected to get a dictionary as a 'config' when 'value is None', got {type(config)}"
+            f"Expected to get a dictionary as a 'config' when 'value' is not specified, got {type(config)}"
         )
 
     old_values = {}

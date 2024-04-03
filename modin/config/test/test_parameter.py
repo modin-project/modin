@@ -16,6 +16,7 @@ from collections import defaultdict
 import pytest
 
 from modin.config import Parameter, update
+from modin.config.pubsub import ExactStr
 
 
 def make_prefilled(vartype, varinit):
@@ -156,3 +157,16 @@ def test_context_manager_update():
         assert parameter2.get() is False
     assert parameter1.get() is False
     assert parameter2.get() is True
+
+    # simple case, None value
+    parameter3 = make_prefilled(vartype=ExactStr, varinit="42")
+
+    assert parameter3.get() == "42"
+    with update(parameter3, None):
+        assert parameter3.get() is None
+    assert parameter3.get() == "42"
+
+    # test that raises if no value
+    with pytest.raises(ValueError):
+        with update(parameter3):
+            pass
