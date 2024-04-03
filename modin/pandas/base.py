@@ -16,7 +16,7 @@ from __future__ import annotations
 import pickle as pkl
 import re
 import warnings
-from typing import Any, Hashable, Literal, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Hashable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -66,6 +66,9 @@ from modin.pandas.utils import is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
 from .utils import _doc_binary_op, is_full_grab_slice
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -174,6 +177,7 @@ class BasePandasDataset(ClassLogger):
     # Pandas class that we pretend to be; usually it has the same name as our class
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
+    _query_compiler: BaseQueryCompiler
 
     @pandas.util.cache_readonly
     def _is_dataframe(self) -> bool:
@@ -577,7 +581,7 @@ class BasePandasDataset(ClassLogger):
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     @pandas.util.cache_readonly
-    def __constructor__(self):
+    def __constructor__(self) -> BasePandasDataset:
         """
         Construct DataFrame or Series object depending on self type.
 

@@ -23,7 +23,7 @@ import pandas
 from pandas._libs.lib import no_default
 from pandas.util._decorators import doc
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.pandas.io import ExcelFile

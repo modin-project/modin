@@ -48,6 +48,8 @@ from .series_utils import (
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
+
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
@@ -98,7 +100,7 @@ class Series(BasePandasDataset):
         name=None,
         copy=None,
         fastpath=lib.no_default,
-        query_compiler=None,
+        query_compiler: BaseQueryCompiler = None,
     ):
         from modin.numpy import array
 
