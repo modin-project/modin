@@ -1083,8 +1083,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     df.index = df.index.droplevel(to_drop)
                     resample_kwargs = resample_kwargs.copy()
                     resample_kwargs["level"] = None
-                for ts in timestamps:
-                    df.loc[ts] = np.NaN
+                filler = pandas.DataFrame(
+                    np.NaN, index=pandas.Index(timestamps), columns=df.columns
+                )
+                df = pandas.concat([df, filler], copy=False)
             if df_op is not None:
                 df = df_op(df)
             resampled_val = df.resample(**resample_kwargs)

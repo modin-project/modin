@@ -124,7 +124,10 @@ class ShuffleSortFunctions(ShuffleFunctions):
         The ideal number of new partitions.
     level : list of strings or ints, or None
         Index level(s) to use as a key. Can't be specified along with `columns`.
-    closed_on_right : bool, default: True
+    closed_on_right : bool, default: False
+        Whether to include the right limit in range-partitioning.
+            True:  bins[i - 1] < x <= bins[i]
+            False: bins[i - 1] <= x < bins[i]
     **kwargs : dict
         Additional keyword arguments.
     """
@@ -136,7 +139,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
         ascending: Union[list, bool],
         ideal_num_new_partitions: int,
         level: Optional[list[Union[str, int]]] = None,
-        closed_on_right: bool = True,
+        closed_on_right: bool = False,
         **kwargs: dict,
     ):
         self.frame_len = len(modin_frame)
@@ -179,7 +182,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
             )
             columns_info.append(
                 ColumnInfo(
-                    self.level[i] if col is None and self.level is not None else col,
+                    self.level[i] if self.level is not None else col,
                     pivots,
                     is_numeric,
                 )
@@ -334,9 +337,9 @@ class ShuffleSortFunctions(ShuffleFunctions):
         columns_info: "list[ColumnInfo]",
         ascending: bool,
         keys_are_index_levels: bool = False,
-        closed_on_right: bool = True,
+        closed_on_right: bool = False,
         **kwargs: dict,
-    ) -> "tuple[pandas.DataFrame, ...]":  # noqa
+    ) -> "tuple[pandas.DataFrame, ...]":
         """
         Split the given dataframe into the partitions specified by `pivots` in `columns_info`.
 
@@ -355,6 +358,10 @@ class ShuffleSortFunctions(ShuffleFunctions):
             The ascending flag.
         keys_are_index_levels : bool, default: False
             Whether `columns_info` describes index levels or actual columns from `df`.
+        closed_on_right : bool, default: False
+            Whether to include the right limit in range-partitioning.
+                True:  bins[i - 1] < x <= bins[i]
+                False: bins[i - 1] <= x < bins[i]
         **kwargs : dict
             Additional keyword arguments.
 
@@ -416,7 +423,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
 
             if col_info.is_numeric:
                 groupby_col = np.digitize(
-                    cols_to_digitize, pivots, right=not closed_on_right
+                    cols_to_digitize, pivots, right=closed_on_right
                 )
                 # `np.digitize` returns results based off of the sort order of the pivots it is passed.
                 # When we only have one unique value in our pivots, `np.digitize` assumes that the pivots
@@ -428,7 +435,7 @@ class ShuffleSortFunctions(ShuffleFunctions):
                 groupby_col = np.searchsorted(
                     pivots,
                     cols_to_digitize,
-                    side="right" if closed_on_right else "left",
+                    side="left" if closed_on_right else "right",
                 )
                 # Since np.searchsorted requires the pivots to be in ascending order, if we want to sort
                 # in descending order, we need to swap the new indices.
@@ -498,7 +505,8 @@ class ShuffleSortFunctions(ShuffleFunctions):
         return index_data
 
 
-class ShuffleResample(ShuffleSortFunctions):  # noqa
+@_inherit_docstrings(ShuffleSortFunctions)
+class ShuffleResample(ShuffleSortFunctions):
     def __init__(
         self,
         modin_frame: "PandasDataframe",
@@ -508,25 +516,25 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         resample_kwargs: dict,
         **kwargs: dict,
     ):
-        super().__init__(
-            modin_frame,
-            columns,
-            ascending,
-            ideal_num_new_partitions,
-            closed_on_right=False,
-            **kwargs,
-        )
-
         resample_kwargs = resample_kwargs.copy()
         rule = resample_kwargs.pop("rule")
 
         if resample_kwargs["closed"] is None:
+            # this rule regarding the default value of 'closed' is inherited
+            # from pandas documentation for 'pandas.DataFrame.resample'
             if rule in ("ME", "YE", "QE", "BME", "BA", "BQE", "W"):
                 resample_kwargs["closed"] = "right"
             else:
                 resample_kwargs["closed"] = "left"
 
-        self.closed_on_right = resample_kwargs["closed"] != "right"
+        super().__init__(
+            modin_frame,
+            columns,
+            ascending,
+            ideal_num_new_partitions,
+            closed_on_right=resample_kwargs["closed"] == "right",
+            **kwargs,
+        )
 
         resample_kwargs["freq"] = to_offset(rule)
         self.resample_kwargs = resample_kwargs
@@ -536,7 +544,9 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         df: pandas.DataFrame,
         num_partitions: int,
         length: int,
-    ) -> pandas.DataFrame:  # noqa
+    ) -> pandas.DataFrame:
+        # to build proper bins we need min and max timestamp of the whole DatetimeIndex,
+        # so computing it in each partition
         return pandas.concat([df.min().to_frame().T, df.max().to_frame().T])
 
     def pick_pivots_from_samples_for_sort(
@@ -545,7 +555,7 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         ideal_num_new_partitions: int,
         method: str = "linear",
         key: Optional[Callable] = None,
-    ) -> np.ndarray:  # noqa
+    ) -> np.ndarray:
         if key is not None:
             raise NotImplementedError(key)
 
@@ -577,6 +587,7 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
             closed=self.resample_kwargs["closed"],
         )
 
+        # take pivot values with an even interval
         step = 1 / ideal_num_new_partitions
         bins = [
             all_bins[int(len(all_bins) * i * step)]
@@ -590,8 +601,24 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         end_timestamp,
         freq,
         closed,
-    ) -> tuple[pandas.DatetimeIndex, np.ndarray[np.int64]]:  # noqa
-        # Some hacks for > daily data, see #1471, #1458, #1483
+    ) -> pandas.DatetimeIndex:
+        """
+        Adjust bin edges.
+
+        This function was copied & simplified from ``pandas.core.resample.TimeGrouper._adjuct_bin_edges()``.
+
+        Parameters
+        ----------
+        binner : pandas.DatetimeIndex
+        end_timestamp : pandas.Timestamp
+        freq : str
+        closed : bool
+
+        Returns
+        -------
+        pandas.DatetimeIndex
+        """
+        # Some hacks for > daily data, see pandas-dev/pandas#1471, pandas-dev/pandas#1458, pandas-dev/pandas#1483
 
         if freq.name not in ("BME", "ME", "W") and freq.name.split("-")[0] not in (
             "BQE",
@@ -628,7 +655,7 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         ascending: bool,
         closed_on_right: bool = True,
         **kwargs: dict,
-    ) -> "tuple[pandas.DataFrame, ...]":  # noqa
+    ) -> "tuple[pandas.DataFrame, ...]":
         def add_attr(df, timestamp):
             if "bin_bounds" in df.attrs:
                 df.attrs["bin_bounds"] = (*df.attrs["bin_bounds"], timestamp)
@@ -639,6 +666,10 @@ class ShuffleResample(ShuffleSortFunctions):  # noqa
         result = ShuffleSortFunctions.split_partitions_using_pivots_for_sort(
             df, columns_info, ascending, **kwargs
         )
+        # it's required for each bin to know its bounds in order for resampling to work
+        # properly when down-sampling occurs. Reach here for an example:
+        # https://github.com/modin-project/modin/pull/7140#discussion_r1549246505
+        # We're writing the bounds as 'attrs' to avoid duplications in the final partition
         for i, pivot in enumerate(columns_info[0].pivots):
             add_attr(result[i], pivot - pandas.Timedelta(1, unit="ns"))
             if i + 1 <= len(result):
