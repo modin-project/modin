@@ -21,29 +21,29 @@ stratagies = [1, 2, 3]
 # stratagies = ["pandas"]
 
 iteration_number = 2
-files = {
-    stratagy: open(f"perf_{CpuCount.get()}_{stratagy}.csv", "w")
-    for stratagy in stratagies
-}
-
-# write header
-for stratagy in stratagies:
-    files[stratagy].write(
-        ",".join(
-            [
-                "Row parts",
-                "Column parts",
-                "Part size",
-                "Stratagy",
-                *[f"time_{i}" for i in range(iteration_number)],
-                "Min time",
-            ]
-        )
-    )
-    files[stratagy].write("\n")
-
 
 try:
+    files = {
+        stratagy: open(f"perf_{CpuCount.get()}_{stratagy}.csv", "w")
+        for stratagy in stratagies
+    }
+
+    # write header
+    for stratagy in stratagies:
+        files[stratagy].write(
+            ",".join(
+                [
+                    "Row parts",
+                    "Column parts",
+                    "Part size",
+                    "Stratagy",
+                    *[f"time_{i}" for i in range(iteration_number)],
+                    "Min time",
+                ]
+            )
+        )
+        files[stratagy].write("\n")
+
     for part_size in [MinPartitionSize.get(), 100]:
         MinPartitionSize.put(part_size)
         for col_parts in range(1, 2 * CpuCount.get(), max(int(CpuCount.get() / 10), 1)):
@@ -98,3 +98,6 @@ try:
 except Exception as ex:
     logger.exception(ex)
     print("ERROR!")  # noqa: T201
+finally:
+    for f in files.values():
+        f.close()
