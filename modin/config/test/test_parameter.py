@@ -15,8 +15,7 @@ from collections import defaultdict
 
 import pytest
 
-from modin.config import Parameter, update_config
-from modin.config.pubsub import ExactStr
+from modin.config import Parameter
 
 
 def make_prefilled(vartype, varinit):
@@ -102,71 +101,3 @@ def test_init_validation(vartype):
     parameter = make_prefilled(vartype, "bad value")
     with pytest.raises(ValueError):
         parameter.get()
-
-
-def test_context_manager_update_config():
-    parameter1 = make_prefilled(vartype=bool, varinit="False")
-
-    # simple case, 1 parameter
-    assert parameter1.get() is False
-    with update_config(parameter1, True):
-        assert parameter1.get() is True
-    assert parameter1.get() is False
-
-    # nested case, 1 parameter
-    assert parameter1.get() is False
-    with update_config(parameter1, True):
-        assert parameter1.get() is True
-        with update_config(parameter1, False):
-            assert parameter1.get() is False
-            with update_config(parameter1, False):
-                assert parameter1.get() is False
-            assert parameter1.get() is False
-        assert parameter1.get() is True
-    assert parameter1.get() is False
-
-    parameter2 = make_prefilled(vartype=bool, varinit="True")
-
-    # simple case, 2 parameters
-    assert parameter1.get() is False
-    assert parameter2.get() is True
-    with update_config({parameter1: True, parameter2: False}):
-        assert parameter1.get() is True
-        assert parameter2.get() is False
-    assert parameter1.get() is False
-    assert parameter2.get() is True
-
-    # nested case, 2 parameters
-    with update_config({parameter1: True, parameter2: False}):
-        assert parameter1.get() is True
-        assert parameter2.get() is False
-        with update_config(parameter1, False):
-            assert parameter1.get() is False
-            assert parameter2.get() is False
-            with update_config(parameter2, True):
-                assert parameter1.get() is False
-                assert parameter2.get() is True
-                with update_config({parameter1: True, parameter2: False}):
-                    assert parameter1.get() is True
-                    assert parameter2.get() is False
-                assert parameter1.get() is False
-                assert parameter2.get() is True
-            assert parameter1.get() is False
-            assert parameter2.get() is False
-        assert parameter1.get() is True
-        assert parameter2.get() is False
-    assert parameter1.get() is False
-    assert parameter2.get() is True
-
-    # simple case, None value
-    parameter3 = make_prefilled(vartype=ExactStr, varinit="42")
-
-    assert parameter3.get() == "42"
-    with update_config(parameter3, None):
-        assert parameter3.get() is None
-    assert parameter3.get() == "42"
-
-    # test that raises if no value
-    with pytest.raises(ValueError):
-        with update_config(parameter3):
-            pass

@@ -26,11 +26,8 @@ from typing import (
     NamedTuple,
     Optional,
     Tuple,
-    Union,
     cast,
 )
-
-from pandas._libs import lib
 
 if TYPE_CHECKING:
     from modin.config.envvars import EnvironmentVariable
@@ -455,59 +452,48 @@ class Parameter(object):
 
 
 @contextlib.contextmanager
-def update_config(
-    config: Union[Parameter, dict[Parameter, Any]], value: Any = lib.no_default
-) -> Iterator[None]:
+def context(**config: dict[str, Any]) -> Iterator[None]:
     """
-    Set a value(s) for the specified config(s) in the scope of the context.
+    Set a value(s) for the specified config(s) from ``modin.config`` in the scope of the context.
 
     Parameters
     ----------
-    config : Parameter or dict[Parameter, Any]
-        A Parameter class to set the `value` for. May be a dictionary describing multiple parameters
-        with its values.
-    value : Any, default: lib.no_default
-        A value to set to the config. Ignored if `config` is a dictionary.
+    **config : dict[Parameter, Any]
+        Keyword describing a name of a config variable from ``modin.config`` as a key
+        and a new value as a value.
 
     Examples
     --------
-    >>> class MyParameter1(Parameter, type=bool):
-    ...     default = False
-    >>> MyParameter1.get()
+    >>> RangePartitioning.get()
     False
-    >>> with update_config(MyParameter1, True):
-    ...     print(MyParameter1.get()) # True
-    True
-    >>> MyParameter1.get()
-    False
-    >>> class MyParameter2(Parameter, type=bool):
-    ...     default = True
-    >>> with update_config({MyParameter1: True, MyParameter2: False}):
-    ...     print(MyParameter1.get()) # True
-    ...     print(MyParameter2.get()) # False
+    >>> with context(RangePartitioning=True):
+    ...     print(RangePartitioning.get()) # True
     True
     False
-    >>> MyParameter1.get()
+    >>> RangePartitioning.get()
     False
-    >>> MyParameter2.get()
+    >>> with context(RangePartitioning=True, AsyncReadMode=True):
+    ...     print(RangePartitioning.get()) # True
+    ...     print(AsyncReadMode.get()) # True
     True
+    True
+    >>> RangePartitioning.get()
+    False
+    >>> AsyncReadMode.get()
+    False
     """
-    if value is not lib.no_default:
-        config = {cast(Parameter, config): value}
-    elif not isinstance(config, dict):
-        raise ValueError(
-            f"Expected to get a dictionary as a 'config' when 'value' is not specified, got {type(config)}"
-        )
+    import modin.config as cfg
 
     old_values = {}
-    for cfg, val in config.items():
-        old_values[cfg] = cfg.get()
-        cfg.put(val)
+    for name, val in config.items():
+        var = getattr(cfg, name)
+        old_values[var] = var.get()
+        var.put(val)
     try:
         yield
     finally:
-        for cfg, val in old_values.items():
-            cfg.put(val)
+        for var, val in old_values.items():
+            var.put(val)
 
 
-__all__ = ["Parameter", "update_config"]
+__all__ = ["Parameter", "context"]
