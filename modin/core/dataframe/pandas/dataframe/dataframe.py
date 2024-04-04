@@ -4673,6 +4673,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         """
         Replace values where the conditions are True.
 
+        This is Series.case_when() implementation and, thus, it's designed to work
+        only with single-column DataFrames.
+
         Parameters
         ----------
         caselist : list of tuples
@@ -4681,38 +4684,30 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         -------
         PandasDataframe
         """
-        # For Dask the callables must be wrapped for each partition, otherwise
-        # the execution could fail with CancelledError.
-        single_wrap = Engine.get() != "Dask"
-        cls = type(self)
-        wrapper_put = self._partition_mgr_cls._execution_wrapper.put
-        if (
-            not single_wrap
-            or (remote_fn := getattr(cls, "_CASE_WHEN_FN", None)) is None
-        ):
+        # The import is here to avoid an incorrect module initialization when running tests.
+        # This module is loaded before `pytest_configure()` is called. If `pytest_configure()`
+        # changes the engine, the `remote_function` decorator will not be valid.
+        from modin.core.execution.utils import remote_function
 
-            def case_when(df, name, caselist):  # pragma: no cover
-                caselist = [
-                    tuple(
-                        (
-                            data.squeeze(axis=1)
-                            if isinstance(data, pandas.DataFrame)
-                            else data
-                        )
-                        for data in case_tuple
+        @remote_function
+        def remote_fn(df, name, caselist):  # pragma: no cover
+            caselist = [
+                tuple(
+                    (
+                        data.squeeze(axis=1)
+                        if isinstance(data, pandas.DataFrame)
+                        else data
                     )
-                    for case_tuple in caselist
-                ]
-                return pandas.DataFrame({name: df.squeeze(axis=1).case_when(caselist)})
+                    for data in case_tuple
+                )
+                for case_tuple in caselist
+            ]
+            return pandas.DataFrame({name: df.squeeze(axis=1).case_when(caselist)})
 
-            if single_wrap:
-                cls._CASE_WHEN_FN = remote_fn = wrapper_put(case_when)
-            else:
-                remote_fn = case_when
-
-        name = self.columns[0]
-        use_map = single_wrap
+        cls = type(self)
+        use_map = True
         is_trivial_idx = None
+        name = self.columns[0]
         # Lists of modin frames: first for conditions, second for replacements
         modin_lists = [[], []]
         # Fill values for conditions and replacements respectively
@@ -4726,8 +4721,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 if isinstance(data, cls):
                     modin_list.append(data)
                 elif callable(data):
-                    if single_wrap:
-                        data = wrapper_put(data)
+                    data = remote_function(data)
                 elif isinstance(data, pandas.Series):
                     use_map = False
                     if is_trivial_idx is None:
@@ -4739,7 +4733,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                         diff = length - len(data)
                         if diff > 0:
                             data = pandas.concat(
-                                [data, pandas.Series([fill_value] * diff)]
+                                [data, pandas.Series([fill_value] * diff)],
+                                ignore_index=True,
                             )
                     else:
                         data = data.reindex(self_idx, fill_value=fill_value)
@@ -4802,9 +4797,6 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 return data._partitions[part_idx][0]._data
             if isinstance(data, pandas.Series):
                 return data[data_offset : data_offset + part_len]
-            # As mentioned above, this is required for Dask
-            if not single_wrap and callable(data):
-                return wrapper_put(data)
             return (
                 data[data_offset : data_offset + part_len]
                 if is_list_like(data)
@@ -4812,13 +4804,13 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             )
 
         parts = [p[0] for p in self._partitions]
-        lengths = self._get_lengths(parts, Axis.ROW_WISE)
+        lengths = self.row_lengths
         new_parts = []
         data_offset = 0
 
         # Split the data and apply the remote function to each partition
         # with the corresponding chunk of data
-        for i, part, part_len in zip(range(0, len(parts)), parts, lengths):
+        for i, part, part_len in zip(range(len(parts)), parts, lengths):
             cases = [
                 tuple(
                     map_data(i, part_len, data, data_offset, fill_value)
@@ -4828,7 +4820,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             ]
             new_parts.append(
                 part.add_to_apply_calls(
-                    remote_fn if single_wrap else wrapper_put(remote_fn),
+                    remote_fn,
                     name,
                     cases,
                     length=part_len,

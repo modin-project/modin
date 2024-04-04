@@ -28,7 +28,7 @@ from pandas.core.indexing import IndexingError
 from pandas.errors import SpecificationError
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import Engine, NPartitions, StorageFormat
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import assert_series_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
@@ -4723,13 +4723,21 @@ def _case_when_caselists():
     "caselist",
     _case_when_caselists(),
 )
+@pytest.mark.skipif(
+    Engine.get() == "Dask",
+    reason="https://github.com/modin-project/modin/issues/7148",
+)
 def test_case_when(base, caselist):
     pandas_result = base.case_when(caselist)
     modin_bases = [pd.Series(base)]
 
     # 'base' and serieses from 'caselist' must have equal lengths, however in this test we want
-    # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal
-    if StorageFormat.get() != "Hdk":  # HDK always uses a single partition.
+    # to verify that 'case_when' works correctly even if partitioning of 'base' and 'caselist' isn't equal.
+    # HDK and BaseOnPython always use a single partition, thus skipping this test for them.
+    if (
+        StorageFormat.get() != "Hdk"
+        and f"{StorageFormat.get()}On{Engine.get()}" != "BaseOnPython"
+    ):
         modin_base_repart = construct_modin_df_by_scheme(
             base.to_frame(),
             partitioning_scheme={"row_lengths": [14, 14, 12], "column_widths": [1]},
