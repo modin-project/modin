@@ -453,6 +453,8 @@ class PandasDataframePartitionManager(
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
+            # to reduce peak memory consumption
+            del others
             return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
