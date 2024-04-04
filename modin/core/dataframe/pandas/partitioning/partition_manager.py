@@ -765,7 +765,7 @@ class PandasDataframePartitionManager(
             )
             column_splits = (
                 parts.shape[0] // (CpuCount.get() // parts.shape[1])
-                if axis == 0 and CpuCount.get() > parts.shape[1]
+                if CpuCount.get() > parts.shape[1]
                 else 1
             )
 
@@ -784,7 +784,7 @@ class PandasDataframePartitionManager(
                 # column_splits <= 1 is not expected in final version
                 if column_splits < 1:
                     column_splits = 1
-                
+
                 new_partitions = np.array(
                     [
                         cls.column_partitions(
@@ -800,7 +800,7 @@ class PandasDataframePartitionManager(
                 )
                 preprocessed_map_func = cls.preprocess_func(func)
 
-                # In some cases we can better split the parts, 
+                # In some cases we can better split the parts,
                 # but we must change the metadata in the modin frame
                 # num_splits = math.ceil(NPartitions.get() / column_splits)
                 kw = {

@@ -45,26 +45,38 @@ for stratagy in stratagies:
 
 try:
     for part_size in [MinPartitionSize.get(), 100]:
-        for col_parts in range(1, 2 * CpuCount.get(), max(int(CpuCount.get() / 2), 1)):
+        MinPartitionSize.put(part_size)
+        for col_parts in range(1, 2 * CpuCount.get(), max(int(CpuCount.get() / 10), 1)):
             for row_parts in range(
                 int(CpuCount.get() / 2),
-                2 * CpuCount.get(),
-                max(int(CpuCount.get() / 2), 1),
+                10 * CpuCount.get(),
+                max(int(CpuCount.get() / 10), 1),
             ):
                 NPartitions.put(max(col_parts, row_parts))
-                df = generate_dataframe(
-                    "int", row_parts * part_size, col_parts * part_size, -100, 0
-                )
                 for stratagy in stratagies:
                     if stratagy == "pandas":
-                        data = df.modin.to_pandas()
+                        df = generate_dataframe(
+                            "int",
+                            row_parts * part_size,
+                            col_parts * part_size,
+                            -100,
+                            0,
+                            impl="pandas",
+                        )
                     else:
-                        data = df
+                        df = generate_dataframe(
+                            "int",
+                            row_parts * part_size,
+                            col_parts * part_size,
+                            -100,
+                            0,
+                            impl="modin",
+                        )
                     os.environ["MY_STRATAGY"] = str(stratagy)
                     times = []
                     for _ in range(iteration_number):
                         t0 = time.perf_counter()
-                        data.abs()
+                        df.abs()
                         t1 = time.perf_counter()
                         times.append(t1 - t0)
                     files[stratagy].write(
