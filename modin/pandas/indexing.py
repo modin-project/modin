@@ -29,7 +29,10 @@ An illustration is available at
 https://github.com/ray-project/ray/pull/1955#issuecomment-386781826
 """
 
+from __future__ import annotations
+
 import itertools
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas
@@ -43,6 +46,9 @@ from modin.logging import ClassLogger
 from .dataframe import DataFrame
 from .series import Series
 from .utils import is_scalar
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 
 def is_slice(x):
@@ -273,11 +279,14 @@ class _LocationIndexerBase(ClassLogger):
 
     Parameters
     ----------
-    modin_df : modin.pandas.DataFrame
+    modin_df : Union[DataFrame, Series]
         DataFrame to operate on.
     """
 
-    def __init__(self, modin_df):
+    df: Union[DataFrame, Series]
+    qc: BaseQueryCompiler
+
+    def __init__(self, modin_df: Union[DataFrame, Series]):
         self.df = modin_df
         self.qc = modin_df._query_compiler
 
@@ -612,7 +621,7 @@ class _LocIndexer(_LocationIndexerBase):
 
     Parameters
     ----------
-    modin_df : modin.pandas.DataFrame
+    modin_df : Union[DataFrame, Series]
         DataFrame to operate on.
     """
 
@@ -967,7 +976,7 @@ class _iLocIndexer(_LocationIndexerBase):
 
     Parameters
     ----------
-    modin_df : modin.pandas.DataFrame
+    modin_df : Union[DataFrame, Series]
         DataFrame to operate on.
     """
 

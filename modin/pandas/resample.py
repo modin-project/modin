@@ -13,7 +13,9 @@
 
 """Implement Resampler public API."""
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 import pandas
@@ -25,12 +27,19 @@ from modin.logging import ClassLogger
 from modin.pandas.utils import cast_function_modin2pandas
 from modin.utils import _inherit_docstrings
 
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
+    from modin.pandas import DataFrame, Series
+
 
 @_inherit_docstrings(pandas.core.resample.Resampler)
 class Resampler(ClassLogger):
+    _dataframe: Union[DataFrame, Series]
+    _query_compiler: BaseQueryCompiler
+
     def __init__(
         self,
-        dataframe,
+        dataframe: Union[DataFrame, Series],
         rule,
         axis=0,
         closed=None,

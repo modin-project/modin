@@ -63,7 +63,7 @@ from modin.core.dataframe.pandas.metadata import (
     ModinIndex,
     extract_dtype,
 )
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
