@@ -458,7 +458,7 @@ def context(**config: dict[str, Any]) -> Iterator[None]:
 
     Parameters
     ----------
-    **config : dict[Parameter, Any]
+    **config : dict[str, Any]
         Keyword describing a name of a config variable from ``modin.config`` as a key
         and a new value as a value.
 
