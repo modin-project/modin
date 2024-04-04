@@ -1023,7 +1023,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Reduce operations
 
     def _resample_func(
-        self, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
+        self,
+        resample_kwargs,
+        func_name,
+        new_columns=None,
+        df_op=None,
+        allow_range_impl=True,
+        *args,
+        **kwargs,
     ):
         """
         Resample underlying time-series data and apply aggregation on it.
@@ -1039,6 +1046,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Modin frame. If not specified will be computed automaticly.
         df_op : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series], optional
             Preprocessor function to apply to the passed frame before resampling.
+        allow_range_impl : bool, default: True
+            Whether to use range-partitioning if ``RangePartitioning.get() is True``.
         *args : args
             Arguments to pass to the aggregation function.
         **kwargs : kwargs
@@ -1049,9 +1058,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             New QueryCompiler containing the result of resample aggregation.
         """
+        from modin.core.dataframe.pandas.dataframe.utils import ShuffleResample
 
         def map_func(df, resample_kwargs=resample_kwargs):  # pragma: no cover
             """Resample time-series data of the passed frame and apply aggregation function on it."""
+            if len(df) == 0:
+                if resample_kwargs["on"] is not None:
+                    df = df.set_index(resample_kwargs["on"])
+                return df
+            if "bin_bounds" in df.attrs:
+                timestamps = df.attrs["bin_bounds"]
+                if isinstance(df.index, pandas.MultiIndex):
+                    level_to_keep = resample_kwargs["level"]
+                    if isinstance(level_to_keep, int):
+                        to_drop = [
+                            lvl
+                            for lvl in range(df.index.nlevels)
+                            if lvl != level_to_keep
+                        ]
+                    else:
+                        to_drop = [
+                            lvl for lvl in df.index.names if lvl != level_to_keep
+                        ]
+                    df.index = df.index.droplevel(to_drop)
+                    resample_kwargs = resample_kwargs.copy()
+                    resample_kwargs["level"] = None
+                filler = pandas.DataFrame(
+                    np.NaN, index=pandas.Index(timestamps), columns=df.columns
+                )
+                df = pandas.concat([df, filler], copy=False)
             if df_op is not None:
                 df = df_op(df)
             resampled_val = df.resample(**resample_kwargs)
@@ -1072,13 +1107,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return val
 
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis=0, func=map_func, new_columns=new_columns
-        )
+        if resample_kwargs["on"] is None:
+            level = [
+                0 if resample_kwargs["level"] is None else resample_kwargs["level"]
+            ]
+            key_columns = []
+        else:
+            level = None
+            key_columns = [resample_kwargs["on"]]
+
+        if (
+            not allow_range_impl
+            or resample_kwargs["axis"] not in (0, "index")
+            or not RangePartitioning.get()
+        ):
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                axis=0, func=map_func, new_columns=new_columns
+            )
+        else:
+            new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+                key_columns=key_columns,
+                level=level,
+                func=map_func,
+                shuffle_func_cls=ShuffleResample,
+                resample_kwargs=resample_kwargs,
+            )
         return self.__constructor__(new_modin_frame)
 
     def resample_get_group(self, resample_kwargs, name, obj):
-        return self._resample_func(resample_kwargs, "get_group", name=name, obj=obj)
+        return self._resample_func(
+            resample_kwargs, "get_group", name=name, allow_range_impl=False, obj=obj
+        )
 
     def resample_app_ser(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
@@ -1110,24 +1169,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "transform", arg=arg, *args, **kwargs
+            resample_kwargs,
+            "transform",
+            arg=arg,
+            allow_range_impl=False,
+            *args,
+            **kwargs,
         )
 
     def resample_pipe(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(resample_kwargs, "pipe", func=func, *args, **kwargs)
 
     def resample_ffill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "ffill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "ffill", limit=limit, allow_range_impl=False
+        )
 
     def resample_bfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "bfill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "bfill", limit=limit, allow_range_impl=False
+        )
 
     def resample_nearest(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "nearest", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "nearest", limit=limit, allow_range_impl=False
+        )
 
     def resample_fillna(self, resample_kwargs, method, limit):
         return self._resample_func(
-            resample_kwargs, "fillna", method=method, limit=limit
+            resample_kwargs,
+            "fillna",
+            method=method,
+            limit=limit,
+            allow_range_impl=method is None,
         )
 
     def resample_asfreq(self, resample_kwargs, fill_value):
@@ -1154,6 +1228,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
+            allow_range_impl=False,
             **kwargs,
         )
 
@@ -1164,16 +1239,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._resample_func(resample_kwargs, "nunique", *args, **kwargs)
 
     def resample_first(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "first", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "first", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_last(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "last", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "last", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_max(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "max", *args, **kwargs)
 
     def resample_mean(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
+        return self._resample_func(resample_kwargs, "mean", *args, **kwargs)
 
     def resample_median(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "median", *args, **kwargs)
@@ -1204,7 +1283,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_size(self, resample_kwargs):
         return self._resample_func(
-            resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+            resample_kwargs,
+            "size",
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
+            allow_range_impl=False,
         )
 
     def resample_sem(self, resample_kwargs, *args, **kwargs):

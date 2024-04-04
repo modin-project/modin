@@ -2438,6 +2438,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             dtypes=new_dtypes,
         )
 
+    @lazy_metadata_decorator(apply_axis="both")
     def _apply_func_to_range_partitioning(
         self,
         key_columns,
@@ -2447,6 +2448,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         data=None,
         data_key_columns=None,
         level=None,
+        shuffle_func_cls=ShuffleSortFunctions,
         **kwargs,
     ):
         """
@@ -2470,6 +2472,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             Additional key columns from `data`. Will be combined with `key_columns`.
         level : list of ints or labels, optional
             Index level(s) to build the range partitioning for. Can't be specified along with `key_columns`.
+        shuffle_func_cls : cls, default: ShuffleSortFunctions
+            A class implementing ``modin.core.dataframe.pandas.utils.ShuffleFunctions`` to be used
+            as a shuffle function.
         **kwargs : dict
             Additional arguments to forward to the range builder function.
 
@@ -2573,7 +2578,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         else:
             new_partitions = grouper._partitions
 
-        shuffling_functions = ShuffleSortFunctions(
+        shuffling_functions = shuffle_func_cls(
             grouper,
             key_columns,
             ascending[0] if is_list_like(ascending) else ascending,

@@ -175,8 +175,11 @@ test_bool_data = {
 test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
 
 test_data_resample = {
-    "data": {"A": range(12), "B": range(12)},
-    "index": pandas.date_range("31/12/2000", periods=12, freq="h"),
+    "data": {
+        f"col{i}": random_state.randint(RAND_LOW, RAND_HIGH, size=NROWS)
+        for i in range(10)
+    },
+    "index": pandas.date_range("31/12/2000", periods=NROWS, freq="h"),
 }
 
 test_data_with_duplicates = {

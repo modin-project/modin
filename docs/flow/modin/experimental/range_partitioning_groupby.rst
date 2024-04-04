@@ -95,3 +95,13 @@ Range-partitioning implementation of '.unique()'/'.drop_duplicates()' works best
 
 Range-partitioning implementation of '.nunique()'' works best when the input data size is big (more than
 5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).
+
+Resample
+""""""""
+
+.. note::
+
+    Range-partitioning approach doesn't support transform-like functions (like `.interpolate()`, `.ffill()`, `.bfill()`, ...)
+
+It is recommended to use range-partitioning for resampling if you're dealing with a dataframe that has more than
+5_000_000 rows and the expected output is also expected to be big (more than 500_000 rows).
