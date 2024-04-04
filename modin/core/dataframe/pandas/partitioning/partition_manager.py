@@ -800,8 +800,9 @@ class PandasDataframePartitionManager(
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        return create_pandas_df_from_partitions(retrieved_objects, partitions.shape)
+        return create_pandas_df_from_partitions(
+            cls.get_objects_from_partitions(partitions.flatten()), partitions.shape
+        )
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):

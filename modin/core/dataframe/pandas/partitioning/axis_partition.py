@@ -377,6 +377,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             A list of pandas DataFrames.
         """
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+        # to reduce peak memory consumption
+        del partitions
         return split_func(dataframe, *f_args, **f_kwargs)
 
     @classmethod
@@ -426,7 +428,15 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         list | Generator
             A list or generator of pandas DataFrames.
         """
+        len_partitions = len(partitions)
+        lengths_partitions = [len(part) for part in partitions]
+        widths_partitions = [len(part.columns) for part in partitions]
+
         dataframe = pandas.concat(list(partitions), axis=axis, copy=False)
+
+        # to reduce peak memory consumption
+        del partitions
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             try:
@@ -436,6 +446,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     result = func(dataframe.copy(), *f_args, **f_kwargs)
                 else:
                     raise err
+
+        # to reduce peak memory consumption
+        del dataframe
 
         if num_splits == 1:
             # If we're not going to split the result, we don't need to specify
@@ -447,15 +460,15 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         # We set lengths to None so we don't use the old lengths for the resulting partition
         # layout. This is done if the number of splits is changing or we are told not to
         # keep the old partitioning.
-        elif num_splits != len(partitions) or not maintain_partitioning:
+        elif num_splits != len_partitions or not maintain_partitioning:
             lengths = None
         else:
             if axis == 0:
-                lengths = [len(part) for part in partitions]
+                lengths = lengths_partitions
                 if sum(lengths) != len(result):
                     lengths = None
             else:
-                lengths = [len(part.columns) for part in partitions]
+                lengths = widths_partitions
                 if sum(lengths) != len(result.columns):
                     lengths = None
         if return_generator:
@@ -513,6 +526,9 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
 
         rt_parts = partitions[len_of_left:]
 
+        # to reduce peak memory consumption
+        del partitions
+
         # reshaping flattened `rt_parts` array into a frame with shape `other_shape`
         combined_axis = [
             pandas.concat(
@@ -522,10 +538,22 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             )
             for i in range(1, len(other_shape))
         ]
+
+        # to reduce peak memory consumption
+        del rt_parts
+
         rt_frame = pandas.concat(combined_axis, axis=axis ^ 1, copy=False)
+
+        # to reduce peak memory consumption
+        del combined_axis
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning)
             result = func(lt_frame, rt_frame, *f_args, **f_kwargs)
+
+        # to reduce peak memory consumption
+        del lt_frame, rt_frame
+
         if return_generator:
             return generate_result_of_axis_func_pandas(
                 axis,
