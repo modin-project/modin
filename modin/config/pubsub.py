@@ -455,7 +455,7 @@ class Parameter(object):
 
 
 @contextlib.contextmanager
-def update(
+def update_config(
     config: Union[Parameter, dict[Parameter, Any]], value: Any = lib.no_default
 ) -> Iterator[None]:
     """
@@ -475,14 +475,14 @@ def update(
     ...     default = False
     >>> MyParameter1.get()
     False
-    >>> with update(MyParameter1, True):
+    >>> with update_config(MyParameter1, True):
     ...     print(MyParameter1.get()) # True
     True
     >>> MyParameter1.get()
     False
     >>> class MyParameter2(Parameter, type=bool):
     ...     default = True
-    >>> with update({MyParameter1: True, MyParameter2: False}):
+    >>> with update_config({MyParameter1: True, MyParameter2: False}):
     ...     print(MyParameter1.get()) # True
     ...     print(MyParameter2.get()) # False
     True
@@ -510,4 +510,4 @@ def update(
             cfg.put(val)
 
 
-__all__ = ["Parameter", "update"]
+__all__ = ["Parameter", "update_config"]

@@ -15,7 +15,7 @@ from collections import defaultdict
 
 import pytest
 
-from modin.config import Parameter, update
+from modin.config import Parameter, update_config
 from modin.config.pubsub import ExactStr
 
 
@@ -104,22 +104,22 @@ def test_init_validation(vartype):
         parameter.get()
 
 
-def test_context_manager_update():
+def test_context_manager_update_config():
     parameter1 = make_prefilled(vartype=bool, varinit="False")
 
     # simple case, 1 parameter
     assert parameter1.get() is False
-    with update(parameter1, True):
+    with update_config(parameter1, True):
         assert parameter1.get() is True
     assert parameter1.get() is False
 
     # nested case, 1 parameter
     assert parameter1.get() is False
-    with update(parameter1, True):
+    with update_config(parameter1, True):
         assert parameter1.get() is True
-        with update(parameter1, False):
+        with update_config(parameter1, False):
             assert parameter1.get() is False
-            with update(parameter1, False):
+            with update_config(parameter1, False):
                 assert parameter1.get() is False
             assert parameter1.get() is False
         assert parameter1.get() is True
@@ -130,23 +130,23 @@ def test_context_manager_update():
     # simple case, 2 parameters
     assert parameter1.get() is False
     assert parameter2.get() is True
-    with update({parameter1: True, parameter2: False}):
+    with update_config({parameter1: True, parameter2: False}):
         assert parameter1.get() is True
         assert parameter2.get() is False
     assert parameter1.get() is False
     assert parameter2.get() is True
 
     # nested case, 2 parameters
-    with update({parameter1: True, parameter2: False}):
+    with update_config({parameter1: True, parameter2: False}):
         assert parameter1.get() is True
         assert parameter2.get() is False
-        with update(parameter1, False):
+        with update_config(parameter1, False):
             assert parameter1.get() is False
             assert parameter2.get() is False
-            with update(parameter2, True):
+            with update_config(parameter2, True):
                 assert parameter1.get() is False
                 assert parameter2.get() is True
-                with update({parameter1: True, parameter2: False}):
+                with update_config({parameter1: True, parameter2: False}):
                     assert parameter1.get() is True
                     assert parameter2.get() is False
                 assert parameter1.get() is False
@@ -162,11 +162,11 @@ def test_context_manager_update():
     parameter3 = make_prefilled(vartype=ExactStr, varinit="42")
 
     assert parameter3.get() == "42"
-    with update(parameter3, None):
+    with update_config(parameter3, None):
         assert parameter3.get() is None
     assert parameter3.get() == "42"
 
     # test that raises if no value
     with pytest.raises(ValueError):
-        with update(parameter3):
+        with update_config(parameter3):
             pass
