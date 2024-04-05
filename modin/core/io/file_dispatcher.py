@@ -112,7 +112,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher(ClassLogger):
+class FileDispatcher(ClassLogger, modin_layer="CORE-IO"):
     """
     Class handles util functions for reading data from different kinds of files.
 

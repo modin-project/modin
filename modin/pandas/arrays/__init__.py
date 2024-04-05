@@ -11,14 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
-"""Common utilities for Ray execution engine."""
 
-from .engine_wrapper import MaterializationHook, RayWrapper, SignalActor
-from .utils import initialize_ray
+"""The module is needed to allow the following import `import modin.pandas.arrays`."""
 
-__all__ = [
-    "initialize_ray",
-    "RayWrapper",
-    "MaterializationHook",
-    "SignalActor",
-]
+from pandas.arrays import *  # noqa: F403, F401
+from pandas.arrays import __all__  # noqa: F401

@@ -16,7 +16,7 @@ from __future__ import annotations
 import pickle as pkl
 import re
 import warnings
-from typing import Any, Hashable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Hashable, Literal, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -61,10 +61,14 @@ from pandas.util._validators import (
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, disable_logging
+from modin.pandas.accessor import CachedAccessor, ModinAPI
 from modin.pandas.utils import is_scalar
 from modin.utils import _inherit_docstrings, expanduser_path_arg, try_cast_to_pandas
 
 from .utils import _doc_binary_op, is_full_grab_slice
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Similar to pandas, sentinel value to use as kwarg in place of None when None has
 # special meaning and needs to be distinguished from a user explicitly passing None.
@@ -173,6 +177,7 @@ class BasePandasDataset(ClassLogger):
     # Pandas class that we pretend to be; usually it has the same name as our class
     # but lives in "pandas" namespace.
     _pandas_class = pandas.core.generic.NDFrame
+    _query_compiler: BaseQueryCompiler
 
     @pandas.util.cache_readonly
     def _is_dataframe(self) -> bool:
@@ -413,7 +418,7 @@ class BasePandasDataset(ClassLogger):
             if isinstance(fn, str):
                 if not (hasattr(self, fn) or hasattr(np, fn)):
                     on_invalid(
-                        f"{fn} is not valid function for {type(self)} object.",
+                        f"'{fn}' is not a valid function for '{type(self).__name__}' object",
                         AttributeError,
                     )
             elif not callable(fn):
@@ -576,7 +581,7 @@ class BasePandasDataset(ClassLogger):
         return cls._pandas_class._get_axis_number(axis) if axis is not None else 0
 
     @pandas.util.cache_readonly
-    def __constructor__(self):
+    def __constructor__(self) -> BasePandasDataset:
         """
         Construct DataFrame or Series object depending on self type.
 
@@ -1004,11 +1009,7 @@ class BasePandasDataset(ClassLogger):
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:
-                raise ValueError(
-                    "The new Series of types must have a unique index, i.e. "
-                    + "it must be one-to-one mapping from column names to "
-                    + " their new dtypes."
-                )
+                raise ValueError("cannot reindex on an axis with duplicate labels")
             dtype = {column: dtype for column, dtype in dtype.items()}
         # If we got a series or dict originally, dtype is a dict now. Its keys
         # must be column names.
@@ -1514,13 +1515,12 @@ class BasePandasDataset(ClassLogger):
                     subset = list(subset)
             else:
                 subset = [subset]
-            df = self[subset]
-        else:
-            df = self
-        duplicated = df.duplicated(keep=keep)
-        result = self[~duplicated]
-        if ignore_index:
-            result.index = pandas.RangeIndex(stop=len(result))
+            if len(diff := pandas.Index(subset).difference(self.columns)) > 0:
+                raise KeyError(diff)
+        result_qc = self._query_compiler.unique(
+            keep=keep, ignore_index=ignore_index, subset=subset
+        )
+        result = self.__constructor__(query_compiler=result_qc)
         if inplace:
             self._update_inplace(result._query_compiler)
         else:
@@ -1868,7 +1868,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of maximum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmax' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1881,7 +1881,7 @@ class BasePandasDataset(ClassLogger):
         """
         Return index of first occurrence of minimum over requested axis.
         """
-        if not all(d != np.dtype("O") for d in self._get_dtypes()):
+        if not all(d != pandas.api.types.pandas_dtype("O") for d in self._get_dtypes()):
             raise TypeError("reduce operation 'argmin' not allowed for this dtype")
         axis = self._get_axis_number(axis)
         return self._reduce_dimension(
@@ -1922,7 +1922,7 @@ class BasePandasDataset(ClassLogger):
             )
         )
 
-    def isin(self, values, **kwargs):  # noqa: PR01, RT01, D200
+    def isin(self, values):  # noqa: PR01, RT01, D200
         """
         Whether elements in `BasePandasDataset` are contained in `values`.
         """
@@ -1932,7 +1932,7 @@ class BasePandasDataset(ClassLogger):
         values = getattr(values, "_query_compiler", values)
         return self.__constructor__(
             query_compiler=self._query_compiler.isin(
-                values=values, ignore_indices=ignore_indices, **kwargs
+                values=values, ignore_indices=ignore_indices
             )
         )
 
@@ -2365,6 +2365,10 @@ class BasePandasDataset(ClassLogger):
         ascending: bool = True,
         pct: bool = False,
     ):
+        if axis is None:
+            raise ValueError(
+                f"No axis named None for object type {type(self).__name__}"
+            )
         axis = self._get_axis_number(axis)
         return self.__constructor__(
             query_compiler=self._query_compiler.rank(
@@ -3238,13 +3242,41 @@ class BasePandasDataset(ClassLogger):
 
     @expanduser_path_arg("path_or_buf")
     def to_hdf(
-        self, path_or_buf, key, format="table", **kwargs
-    ):  # pragma: no cover  # noqa: PR01, RT01, D200
+        self,
+        path_or_buf,
+        key: str,
+        mode: Literal["a", "w", "r+"] = "a",
+        complevel: int | None = None,
+        complib: Literal["zlib", "lzo", "bzip2", "blosc"] | None = None,
+        append: bool = False,
+        format: Literal["fixed", "table"] | None = None,
+        index: bool = True,
+        min_itemsize: int | dict[str, int] | None = None,
+        nan_rep=None,
+        dropna: bool | None = None,
+        data_columns: Literal[True] | list[str] | None = None,
+        errors: str = "strict",
+        encoding: str = "UTF-8",
+    ) -> None:  # pragma: no cover  # noqa: PR01, RT01, D200
         """
         Write the contained data to an HDF5 file using HDFStore.
         """
         return self._default_to_pandas(
-            "to_hdf", path_or_buf, key, format=format, **kwargs
+            "to_hdf",
+            path_or_buf,
+            key=key,
+            mode=mode,
+            complevel=complevel,
+            complib=complib,
+            append=append,
+            format=format,
+            index=index,
+            min_itemsize=min_itemsize,
+            nan_rep=nan_rep,
+            dropna=dropna,
+            data_columns=data_columns,
+            errors=errors,
+            encoding=encoding,
         )
 
     @expanduser_path_arg("path_or_buf")
@@ -4251,3 +4283,6 @@ class BasePandasDataset(ClassLogger):
 
             return Series(pandas_result)
         return pandas_result
+
+    # namespace for additional Modin functions that are not available in Pandas
+    modin: ModinAPI = CachedAccessor("modin", ModinAPI)

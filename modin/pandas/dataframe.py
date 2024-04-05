@@ -22,12 +22,18 @@ import os
 import re
 import sys
 import warnings
-from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+from typing import IO, TYPE_CHECKING, Hashable, Iterator, Optional, Sequence, Union
 
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import CompressionOptions, FilePath, StorageOptions, WriteBuffer
+from pandas._typing import (
+    CompressionOptions,
+    FilePath,
+    IndexLabel,
+    StorageOptions,
+    WriteBuffer,
+)
 from pandas.core.common import apply_if_callable, get_cython_func
 from pandas.core.computation.eval import _check_engine
 from pandas.core.dtypes.common import (
@@ -53,7 +59,7 @@ from modin.utils import (
     try_cast_to_pandas,
 )
 
-from .accessor import CachedAccessor, ExperimentalFunctions, SparseFrameAccessor
+from .accessor import CachedAccessor, SparseFrameAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
 from .groupby import DataFrameGroupBy
 from .iterator import PartitionIterator
@@ -63,6 +69,9 @@ from .utils import (
     _doc_binary_op,
     cast_function_modin2pandas,
 )
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Dictionary of extensions assigned to this class
 _DATAFRAME_EXTENSIONS_ = {}
@@ -123,7 +132,7 @@ class DataFrame(BasePandasDataset):
         columns=None,
         dtype=None,
         copy=None,
-        query_compiler=None,
+        query_compiler: BaseQueryCompiler = None,
     ):
         from modin.numpy import array
 
@@ -966,26 +975,28 @@ class DataFrame(BasePandasDataset):
         )
 
     def hist(
-        self,
-        column=None,
+        data,
+        column: IndexLabel | None = None,
         by=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
         ax=None,
-        sharex=False,
-        sharey=False,
-        figsize=None,
-        layout=None,
-        bins=10,
-        **kwds,
+        sharex: bool = False,
+        sharey: bool = False,
+        figsize: tuple[int, int] | None = None,
+        layout: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Make a histogram of the ``DataFrame``.
         """
-        return self._default_to_pandas(
+        return data._default_to_pandas(
             pandas.DataFrame.hist,
             column=column,
             by=by,
@@ -1000,7 +1011,9 @@ class DataFrame(BasePandasDataset):
             figsize=figsize,
             layout=layout,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
     def info(
@@ -1038,9 +1051,16 @@ class DataFrame(BasePandasDataset):
             or isinstance(value, (array, np.ndarray))
             and len(value.shape) > 1
         ):
-            if value.shape[1] != 1:
+            if isinstance(value, (array, np.ndarray)) and value.shape[1] != 1:
                 raise ValueError(
                     f"Expected a 1D array, got an array with shape {value.shape}"
+                )
+            elif (
+                isinstance(value, (DataFrame, pandas.DataFrame)) and value.shape[1] != 1
+            ):
+                raise ValueError(
+                    "Expected a one-dimensional object, got a DataFrame with "
+                    + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
@@ -1090,11 +1110,25 @@ class DataFrame(BasePandasDataset):
 
         self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
+    def isna(self):
         """
-        Whether elements in `DataFrame` are contained in `values`.
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
         """
-        return super(DataFrame, self).isin(values)
+        return super(DataFrame, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(DataFrame, self).isnull()
 
     def iterrows(self):  # noqa: D200
         """
@@ -1432,9 +1466,9 @@ class DataFrame(BasePandasDataset):
         # index or columns
         if values is None:
             values = list(self.columns)
-            if index:
+            if index is not None:
                 values = [v for v in values if v not in index]
-            if columns:
+            if columns is not None:
                 values = [v for v in values if v not in columns]
 
         return self.__constructor__(
@@ -1559,7 +1593,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
@@ -2076,7 +2112,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(
@@ -2960,8 +2998,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
@@ -2993,7 +3031,10 @@ class DataFrame(BasePandasDataset):
         if (
             not axis
             and numeric_only is False
-            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
+            and any(
+                dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
+                for dtype in self.dtypes
+            )
         ):
             raise TypeError("Cannot add Timestamp Types")
 
@@ -3011,8 +3052,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
@@ -3023,13 +3064,13 @@ class DataFrame(BasePandasDataset):
         """
         Convert Modin ``DataFrame`` to pandas ``DataFrame``.
 
+        Recommended conversion method: `dataframe.modin.to_pandas()`.
+
         Returns
         -------
         pandas.DataFrame
         """
         return self._query_compiler.to_pandas()
-
-    to_pandas = _to_pandas
 
     def _validate_eval_query(self, expr, **kwargs):
         """
@@ -3212,6 +3253,3 @@ class DataFrame(BasePandasDataset):
         return self._inflate_light, (self._query_compiler, pid)
 
     # Persistance support methods - END
-
-    # Namespace for experimental functions
-    modin: ExperimentalFunctions = CachedAccessor("modin", ExperimentalFunctions)

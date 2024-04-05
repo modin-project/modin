@@ -63,7 +63,7 @@ from modin.core.dataframe.pandas.metadata import (
     ModinIndex,
     extract_dtype,
 )
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import get_logger
 from modin.utils import (
@@ -75,7 +75,7 @@ from modin.utils import (
 )
 
 from .aggregations import CorrCovBuilder
-from .groupby import GroupbyReduceImpl
+from .groupby import GroupbyReduceImpl, PivotTableImpl
 from .merge import MergeImpl
 from .utils import get_group_names, merge_partitioning
 
@@ -954,7 +954,40 @@ class PandasQueryCompiler(BaseQueryCompiler):
             return self.default_to_pandas(pandas.DataFrame.median, axis=axis, **kwargs)
         return Reduce.register(pandas.DataFrame.median)(self, axis=axis, **kwargs)
 
-    nunique = Reduce.register(pandas.DataFrame.nunique)
+    def nunique(self, axis=0, dropna=True):
+        if not RangePartitioning.get():
+            return Reduce.register(pandas.DataFrame.nunique)(
+                self, axis=axis, dropna=dropna
+            )
+
+        unsupported_message = ""
+        if axis != 0:
+            unsupported_message += (
+                "Range-partitioning 'nunique()' is only supported for 'axis=0'.\n"
+            )
+
+        if len(self.columns) > 1:
+            unsupported_message += "Range-partitioning 'nunique()' is only supported for a signle-column dataframe.\n"
+
+        if len(unsupported_message) > 0:
+            message = (
+                f"Can't use range-partitioning implementation for 'nunique' because:\n{unsupported_message}"
+                + "Falling back to a full-axis reduce implementation."
+            )
+            get_logger().info(message)
+            ErrorMessage.warn(message)
+            return Reduce.register(pandas.DataFrame.nunique)(
+                self, axis=axis, dropna=dropna
+            )
+
+        # compute '.nunique()' for each row partitions
+        new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+            key_columns=self.columns.tolist(),
+            func=lambda df: df.nunique(dropna=dropna).to_frame(),
+        )
+        # sum the results of each row part to get the final value
+        new_modin_frame = new_modin_frame.reduce(axis=0, function=lambda df: df.sum())
+        return self.__constructor__(new_modin_frame, shape_hint="column")
 
     def skew(self, axis, **kwargs):
         if axis is None:
@@ -990,7 +1023,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
     # END Reduce operations
 
     def _resample_func(
-        self, resample_kwargs, func_name, new_columns=None, df_op=None, *args, **kwargs
+        self,
+        resample_kwargs,
+        func_name,
+        new_columns=None,
+        df_op=None,
+        allow_range_impl=True,
+        *args,
+        **kwargs,
     ):
         """
         Resample underlying time-series data and apply aggregation on it.
@@ -1006,6 +1046,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
             Modin frame. If not specified will be computed automaticly.
         df_op : callable(pandas.DataFrame) -> [pandas.DataFrame, pandas.Series], optional
             Preprocessor function to apply to the passed frame before resampling.
+        allow_range_impl : bool, default: True
+            Whether to use range-partitioning if ``RangePartitioning.get() is True``.
         *args : args
             Arguments to pass to the aggregation function.
         **kwargs : kwargs
@@ -1016,9 +1058,35 @@ class PandasQueryCompiler(BaseQueryCompiler):
         PandasQueryCompiler
             New QueryCompiler containing the result of resample aggregation.
         """
+        from modin.core.dataframe.pandas.dataframe.utils import ShuffleResample
 
         def map_func(df, resample_kwargs=resample_kwargs):  # pragma: no cover
             """Resample time-series data of the passed frame and apply aggregation function on it."""
+            if len(df) == 0:
+                if resample_kwargs["on"] is not None:
+                    df = df.set_index(resample_kwargs["on"])
+                return df
+            if "bin_bounds" in df.attrs:
+                timestamps = df.attrs["bin_bounds"]
+                if isinstance(df.index, pandas.MultiIndex):
+                    level_to_keep = resample_kwargs["level"]
+                    if isinstance(level_to_keep, int):
+                        to_drop = [
+                            lvl
+                            for lvl in range(df.index.nlevels)
+                            if lvl != level_to_keep
+                        ]
+                    else:
+                        to_drop = [
+                            lvl for lvl in df.index.names if lvl != level_to_keep
+                        ]
+                    df.index = df.index.droplevel(to_drop)
+                    resample_kwargs = resample_kwargs.copy()
+                    resample_kwargs["level"] = None
+                filler = pandas.DataFrame(
+                    np.NaN, index=pandas.Index(timestamps), columns=df.columns
+                )
+                df = pandas.concat([df, filler], copy=False)
             if df_op is not None:
                 df = df_op(df)
             resampled_val = df.resample(**resample_kwargs)
@@ -1039,13 +1107,37 @@ class PandasQueryCompiler(BaseQueryCompiler):
             else:
                 return val
 
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            axis=0, func=map_func, new_columns=new_columns
-        )
+        if resample_kwargs["on"] is None:
+            level = [
+                0 if resample_kwargs["level"] is None else resample_kwargs["level"]
+            ]
+            key_columns = []
+        else:
+            level = None
+            key_columns = [resample_kwargs["on"]]
+
+        if (
+            not allow_range_impl
+            or resample_kwargs["axis"] not in (0, "index")
+            or not RangePartitioning.get()
+        ):
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                axis=0, func=map_func, new_columns=new_columns
+            )
+        else:
+            new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+                key_columns=key_columns,
+                level=level,
+                func=map_func,
+                shuffle_func_cls=ShuffleResample,
+                resample_kwargs=resample_kwargs,
+            )
         return self.__constructor__(new_modin_frame)
 
     def resample_get_group(self, resample_kwargs, name, obj):
-        return self._resample_func(resample_kwargs, "get_group", name=name, obj=obj)
+        return self._resample_func(
+            resample_kwargs, "get_group", name=name, allow_range_impl=False, obj=obj
+        )
 
     def resample_app_ser(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(
@@ -1077,24 +1169,39 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_transform(self, resample_kwargs, arg, *args, **kwargs):
         return self._resample_func(
-            resample_kwargs, "transform", arg=arg, *args, **kwargs
+            resample_kwargs,
+            "transform",
+            arg=arg,
+            allow_range_impl=False,
+            *args,
+            **kwargs,
         )
 
     def resample_pipe(self, resample_kwargs, func, *args, **kwargs):
         return self._resample_func(resample_kwargs, "pipe", func=func, *args, **kwargs)
 
     def resample_ffill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "ffill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "ffill", limit=limit, allow_range_impl=False
+        )
 
     def resample_bfill(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "bfill", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "bfill", limit=limit, allow_range_impl=False
+        )
 
     def resample_nearest(self, resample_kwargs, limit):
-        return self._resample_func(resample_kwargs, "nearest", limit=limit)
+        return self._resample_func(
+            resample_kwargs, "nearest", limit=limit, allow_range_impl=False
+        )
 
     def resample_fillna(self, resample_kwargs, method, limit):
         return self._resample_func(
-            resample_kwargs, "fillna", method=method, limit=limit
+            resample_kwargs,
+            "fillna",
+            method=method,
+            limit=limit,
+            allow_range_impl=method is None,
         )
 
     def resample_asfreq(self, resample_kwargs, fill_value):
@@ -1121,6 +1228,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             limit_direction=limit_direction,
             limit_area=limit_area,
             downcast=downcast,
+            allow_range_impl=False,
             **kwargs,
         )
 
@@ -1131,16 +1239,20 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._resample_func(resample_kwargs, "nunique", *args, **kwargs)
 
     def resample_first(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "first", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "first", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_last(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "last", *args, **kwargs)
+        return self._resample_func(
+            resample_kwargs, "last", allow_range_impl=False, *args, **kwargs
+        )
 
     def resample_max(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "max", *args, **kwargs)
 
     def resample_mean(self, resample_kwargs, *args, **kwargs):
-        return self._resample_func(resample_kwargs, "median", *args, **kwargs)
+        return self._resample_func(resample_kwargs, "mean", *args, **kwargs)
 
     def resample_median(self, resample_kwargs, *args, **kwargs):
         return self._resample_func(resample_kwargs, "median", *args, **kwargs)
@@ -1171,7 +1283,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     def resample_size(self, resample_kwargs):
         return self._resample_func(
-            resample_kwargs, "size", new_columns=[MODIN_UNNAMED_SERIES_LABEL]
+            resample_kwargs,
+            "size",
+            new_columns=[MODIN_UNNAMED_SERIES_LABEL],
+            allow_range_impl=False,
         )
 
     def resample_sem(self, resample_kwargs, *args, **kwargs):
@@ -1702,7 +1817,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Map partitions operations
     # These operations are operations that apply a function to every partition.
-    def isin(self, values, ignore_indices=False, shape_hint=None):
+    def isin(self, values, ignore_indices=False):
+        shape_hint = self._shape_hint
         if isinstance(values, type(self)):
             # HACK: if we don't cast to pandas, then the execution engine will try to
             # propagate the distributed Series to workers and most likely would have
@@ -1899,13 +2015,36 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # END String map partitions operations
 
-    def unique(self):
-        new_modin_frame = self._modin_frame.apply_full_axis(
-            0,
-            lambda x: x.squeeze(axis=1).unique(),
-            new_columns=self.columns,
+    def unique(self, keep="first", ignore_index=True, subset=None):
+        # kernels with 'pandas.Series.unique()' work faster
+        can_use_unique_kernel = (
+            subset is None and ignore_index and len(self.columns) == 1 and keep
         )
-        return self.__constructor__(new_modin_frame)
+
+        if not can_use_unique_kernel and not RangePartitioning.get():
+            return super().unique(keep=keep, ignore_index=ignore_index, subset=subset)
+
+        if RangePartitioning.get():
+            new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
+                key_columns=self.columns.tolist() if subset is None else subset,
+                func=(
+                    (lambda df: pandas.DataFrame(df.squeeze(axis=1).unique()))
+                    if can_use_unique_kernel
+                    else (
+                        lambda df: df.drop_duplicates(
+                            keep=keep, ignore_index=ignore_index, subset=subset
+                        )
+                    )
+                ),
+                preserve_columns=True,
+            )
+        else:
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                0,
+                lambda x: x.squeeze(axis=1).unique(),
+                new_columns=self.columns,
+            )
+        return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):
@@ -1975,7 +2114,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
         # other query compilers may not take care of error handling at the API
         # layer. This query compiler assumes there won't be any errors due to
         # invalid type keys.
-        return self.__constructor__(self._modin_frame.astype(col_dtypes, errors=errors))
+        return self.__constructor__(
+            self._modin_frame.astype(col_dtypes, errors=errors),
+            shape_hint=self._shape_hint,
+        )
 
     def infer_objects(self):
         return self.__constructor__(self._modin_frame.infer_objects())
@@ -2674,7 +2816,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 # we would like to convert it and get its proper internal dtype
                 item_type = item.to_numpy().dtype
             else:
-                item_type = np.dtype(type(item))
+                item_type = pandas.api.types.pandas_dtype(type(item))
 
             if isinstance(old_dtypes, pandas.Series):
                 new_dtypes[col_loc] = [
@@ -2945,13 +3087,14 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 copartition=False,
                 labels="drop",
             )
-            return self.__constructor__(result)
+            return self.__constructor__(result, shape_hint=self._shape_hint)
 
         return self.__constructor__(
             self._modin_frame.filter(
                 kwargs.get("axis", 0) ^ 1,
                 lambda df: pandas.DataFrame.dropna(df, **kwargs),
-            )
+            ),
+            shape_hint=self._shape_hint,
         )
 
     def drop(self, index=None, columns=None, errors: str = "raise"):
@@ -3001,7 +3144,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             hashed_modin_frame = self._modin_frame.reduce(
                 axis=1,
                 function=_compute_hash,
-                dtypes=np.dtype("O"),
+                dtypes=pandas.api.types.pandas_dtype("O"),
             )
         else:
             hashed_modin_frame = self._modin_frame
@@ -3640,12 +3783,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 by, agg_func, axis, groupby_kwargs, agg_args, agg_kwargs, how, drop
             )
 
-        if groupby_kwargs.get("level") is not None:
-            raise NotImplementedError(
-                "Grouping on an index level is not yet supported by range-partitioning groupby implementation: "
-                + "https://github.com/modin-project/modin/issues/5926"
-            )
-
+        grouping_on_level = groupby_kwargs.get("level") is not None
         if any(
             isinstance(obj, pandas.Grouper)
             for obj in (by if isinstance(by, list) else [by])
@@ -3655,7 +3793,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 + "https://github.com/modin-project/modin/issues/5926"
             )
 
-        external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
+        if grouping_on_level:
+            external_by, internal_by, by_positions = [], [], []
+        else:
+            external_by, internal_by, by_positions = self._groupby_separate_by(by, drop)
 
         all_external_are_qcs = all(isinstance(obj, type(self)) for obj in external_by)
         if not all_external_are_qcs:
@@ -4187,62 +4328,6 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
         return unstacked
 
-    def _pivot_table_tree_reduce(
-        self, grouper, aggfunc, drop_column_level, fill_value, dropna, to_unstack=None
-    ):
-        """
-        Build a pivot table using TreeReduce implementation.
-
-        Parameters
-        ----------
-        grouper : PandasQueryCompiler
-            QueryCompiler holding columns to group on.
-        aggfunc : str
-            Aggregation to perform against the values of the pivot table. Note that ``GroupbyReduceImpl``
-            has to be able to build implementation for this aggregation.
-        drop_column_level : bool
-            Whether to drop the top level of the columns.
-        fill_value : object
-            Fill value for None values in the result.
-        dropna : bool
-            Whether to drop NaN columns.
-        to_unstack : list, optional
-            A list of column names to pass to the `.unstack()` when building the pivot table.
-            If `None` was passed perform regular transpose instead of unstacking.
-
-        Returns
-        -------
-        PandasQueryCompiler
-            A query compiler holding a pivot table.
-        """
-
-        def make_pivot_table(df):
-            if df.index.nlevels > 1 and to_unstack is not None:
-                df = df.unstack(level=to_unstack)
-            if drop_column_level and df.columns.nlevels > 1:
-                df = df.droplevel(0, axis=1)
-            if dropna:
-                df = df.dropna(axis=1, how="all")
-            if fill_value is not None:
-                df = df.fillna(fill_value, downcast="infer")
-            return df
-
-        result = GroupbyReduceImpl.build_qc_method(
-            aggfunc, finalizer_fn=make_pivot_table
-        )(
-            self,
-            by=grouper,
-            axis=0,
-            groupby_kwargs={},
-            agg_args=(),
-            agg_kwargs={},
-            drop=True,
-        )
-
-        if to_unstack is None:
-            result = result.transpose()
-        return result
-
     def pivot_table(
         self,
         index,
@@ -4269,94 +4354,62 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 return list(by)
             return _convert_by(by)
 
-        drop_column_level = values is not None and not is_list_like(values)
-        index, columns, values = map(__convert_by, [index, columns, values])
+        is_1d_values = values is not None and not is_list_like(values)
+        index, columns = map(__convert_by, [index, columns])
 
-        unique_keys = np.unique(index + columns)
-        unique_values = np.unique(values)
+        if len(index) + len(columns) == 0:
+            raise ValueError("No group keys passed!")
 
-        if len(values):
-            to_group = self.getitem_column_array(unique_values, ignore_order=True)
+        if is_1d_values and len(index) > 0 and len(columns) > 0:
+            drop_column_level = 1 if isinstance(aggfunc, list) else 0
         else:
-            to_group = self.drop(columns=unique_keys)
+            drop_column_level = None
 
-        keys_columns = self.getitem_column_array(unique_keys, ignore_order=True)
+        # if the value is 'None' it will be converted to an empty list (no columns to aggregate),
+        # which is invalid for 'values', as 'None' means aggregate ALL columns instead
+        if values is not None:
+            values = __convert_by(values)
 
-        # Here we can use TreeReduce implementation that tends to be more efficient rather full-axis one
-        if (
-            not margins
-            and GroupbyReduceImpl.has_impl_for(aggfunc)
-            and len(set(index).intersection(columns)) == 0
-        ):
-            return to_group._pivot_table_tree_reduce(
-                keys_columns,
-                aggfunc,
-                drop_column_level=drop_column_level,
-                fill_value=fill_value,
-                dropna=dropna,
-                to_unstack=columns if index else None,
+        # using 'pandas.unique' instead of 'numpy' as it guarantees to not change the original order
+        unique_keys = pandas.Series(index + columns).unique()
+
+        kwargs = {
+            "qc": self,
+            "unique_keys": unique_keys,
+            "drop_column_level": drop_column_level,
+            "pivot_kwargs": {
+                "index": index,
+                "values": values,
+                "columns": columns,
+                "aggfunc": aggfunc,
+                "fill_value": fill_value,
+                "margins": margins,
+                "dropna": dropna,
+                "margins_name": margins_name,
+                "observed": observed,
+                "sort": sort,
+            },
+        }
+
+        try:
+            return PivotTableImpl.map_reduce_impl(**kwargs)
+        except NotImplementedError as e:
+            message = (
+                f"Can't use MapReduce 'pivot_table' implementation because of: {e}"
+                + "\nFalling back to a range-partitioning implementation."
             )
+            get_logger().info(message)
 
-        len_values = len(values)
-        if len_values == 0:
-            len_values = len(self.columns.drop(unique_keys))
-
-        def applyier(df, other):  # pragma: no cover
-            """
-            Build pivot table for a single partition.
-
-            Parameters
-            ----------
-            df : pandas.DataFrame
-                Partition of the self frame.
-            other : pandas.DataFrame
-                Broadcasted partition that contains `value` columns
-                of the self frame.
-
-            Returns
-            -------
-            pandas.DataFrame
-                Pivot table for this particular partition.
-            """
-            concated = pandas.concat([df, other], axis=1, copy=False)
-            result = pandas.pivot_table(
-                concated,
-                index=index,
-                values=values if len(values) > 0 else None,
-                columns=columns,
-                aggfunc=aggfunc,
-                fill_value=fill_value,
-                margins=margins,
-                dropna=dropna,
-                margins_name=margins_name,
-                observed=observed,
-                sort=sort,
+        try:
+            return PivotTableImpl.range_partition_impl(**kwargs)
+        except NotImplementedError as e:
+            message = (
+                f"Can't use range-partitioning 'pivot_table' implementation because of: {e}"
+                + "\nFalling back to a full-axis implementation."
             )
+            get_logger().info(message)
 
-            # if only one value is specified, removing level that maps
-            # columns from `values` to the actual values
-            if len(index) > 0 and len_values == 1 and result.columns.nlevels > 1:
-                result.columns = result.columns.droplevel(int(margins))
-
-            # in that case Pandas transposes the result of `pivot_table`,
-            # transposing it back to be consistent with column axis values along
-            # different partitions
-            if len(index) == 0 and len(columns) > 0:
-                result = result.T
-
-            return result
-
-        result = self.__constructor__(
-            to_group._modin_frame.broadcast_apply_full_axis(
-                axis=0, func=applyier, other=keys_columns._modin_frame
-            )
-        )
-
-        # transposing the result again, to be consistent with Pandas result
-        if len(index) == 0 and len(columns) > 0:
-            result = result.transpose()
-
-        return result
+        return PivotTableImpl.full_axis_impl(**kwargs)
 
     # Get_dummies
     def get_dummies(self, columns, **kwargs):

@@ -28,6 +28,7 @@ from modin.core.dataframe.pandas.metadata import (
     LazyProxyCategoricalDtype,
     ModinDtypes,
 )
+from modin.core.execution.utils import remote_function
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.distributed.dataframe.pandas import from_partitions
 from modin.pandas.test.utils import (
@@ -41,7 +42,10 @@ from modin.utils import try_cast_to_pandas
 NPartitions.put(4)
 
 if Engine.get() == "Ray":
+    import ray
+
     from modin.core.execution.ray.common import RayWrapper
+    from modin.core.execution.ray.common.deferred_execution import MetaList
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframePartition,
@@ -52,6 +56,8 @@ if Engine.get() == "Ray":
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
     put = RayWrapper.put
+    deploy = RayWrapper.deploy
+    materialize = RayWrapper.materialize
 elif Engine.get() == "Dask":
     from modin.core.execution.dask.common import DaskWrapper
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
@@ -69,6 +75,8 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+    deploy = DaskWrapper.deploy
+    materialize = DaskWrapper.materialize
 elif Engine.get() == "Python":
     from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
@@ -79,6 +87,12 @@ elif Engine.get() == "Python":
 
     def put(x):
         return PythonWrapper.put(x, hash=False)
+
+    def deploy(func, args=tuple()):
+        return func(*args)
+
+    def materialize(arg):
+        return arg
 
     block_partition_class = PandasOnPythonDataframePartition
     virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
@@ -2490,3 +2504,50 @@ def test_ray_lazy_exec_mode(mode):
             pytest.fail(f"Invalid value: {mode}")
     finally:
         LazyExecution.put(orig_mode)
+
+
+@pytest.mark.skipif(Engine.get() != "Ray", reason="Ray specific")
+def test_materialization_hook_serialization():
+    @ray.remote(num_returns=1)
+    def f1():
+        return [1, 2, 3]
+
+    @ray.remote(num_returns=1)
+    def f2(i):
+        return i
+
+    hook = MetaList(f1.remote())[2]
+    assert ray.get(f2.remote(hook)) == 3
+
+
+def test_remote_function():
+    def get_func():
+        @remote_function
+        def remote_func(arg):
+            return arg
+
+        return remote_func
+
+    def get_capturing_func(arg):
+        @remote_function
+        def remote_func():
+            return arg
+
+        return remote_func
+
+    if Engine.get() in ("Ray", "Unidist"):
+        from modin.core.execution.utils import _remote_function_cache
+
+        cache_len = len(_remote_function_cache)
+        assert get_func() is get_func()
+        assert get_func() in _remote_function_cache.values()
+        assert get_capturing_func(1) not in _remote_function_cache.values()
+        assert len(_remote_function_cache) == cache_len + 1
+
+    assert materialize(deploy(get_func(), [123])) == 123
+    assert get_capturing_func(1) is not get_capturing_func(2)
+    assert (
+        materialize(deploy(get_capturing_func(1)))
+        + materialize(deploy(get_capturing_func(2)))
+        == 3
+    )

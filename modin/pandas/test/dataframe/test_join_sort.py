@@ -34,6 +34,7 @@ from modin.pandas.test.utils import (
     generate_multiindex,
     random_state,
     rotate_decimal_digits_or_symbols,
+    sort_if_range_partitioning,
     test_data,
     test_data_keys,
     test_data_values,
@@ -247,10 +248,6 @@ def test_join_6602():
     ],
 )
 def test_merge(test_data, test_data2):
-    # RangePartitioning merge always produces sorted result, so we have to sort
-    # pandas' result as well in order them to match
-    comparator = df_equals_and_sort if RangePartitioning.get() else df_equals
-
     modin_df = pd.DataFrame(
         test_data,
         columns=["col{}".format(i) for i in range(test_data.shape[1])],
@@ -283,7 +280,7 @@ def test_merge(test_data, test_data2):
             pandas_result = pandas_df.merge(
                 pandas_df2, how=hows[i], on=ons[j], sort=sorts[j]
             )
-            comparator(modin_result, pandas_result)
+            sort_if_range_partitioning(modin_result, pandas_result)
 
             modin_result = modin_df.merge(
                 modin_df2,
@@ -299,7 +296,7 @@ def test_merge(test_data, test_data2):
                 right_on="key",
                 sort=sorts[j],
             )
-            comparator(modin_result, pandas_result)
+            sort_if_range_partitioning(modin_result, pandas_result)
 
     # Test for issue #1771
     modin_df = pd.DataFrame({"name": np.arange(40)})
@@ -308,7 +305,7 @@ def test_merge(test_data, test_data2):
     pandas_df2 = pandas.DataFrame({"name": [39], "position": [0]})
     modin_result = modin_df.merge(modin_df2, on="name", how="inner")
     pandas_result = pandas_df.merge(pandas_df2, on="name", how="inner")
-    comparator(modin_result, pandas_result)
+    sort_if_range_partitioning(modin_result, pandas_result)
 
     frame_data = {
         "col1": [0, 1, 2, 3],
@@ -329,7 +326,7 @@ def test_merge(test_data, test_data2):
         # Defaults
         modin_result = modin_df.merge(modin_df2, how=how)
         pandas_result = pandas_df.merge(pandas_df2, how=how)
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
         # left_on and right_index
         modin_result = modin_df.merge(
@@ -338,7 +335,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_index=True
         )
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
         # left_index and right_on
         modin_result = modin_df.merge(
@@ -347,7 +344,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_on="col1"
         )
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
         # left_on and right_on col1
         modin_result = modin_df.merge(
@@ -356,7 +353,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col1", right_on="col1"
         )
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
         # left_on and right_on col2
         modin_result = modin_df.merge(
@@ -365,7 +362,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_on="col2", right_on="col2"
         )
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
         # left_index and right_index
         modin_result = modin_df.merge(
@@ -374,7 +371,7 @@ def test_merge(test_data, test_data2):
         pandas_result = pandas_df.merge(
             pandas_df2, how=how, left_index=True, right_index=True
         )
-        comparator(modin_result, pandas_result)
+        sort_if_range_partitioning(modin_result, pandas_result)
 
     # Cannot merge a Series without a name
     ps = pandas.Series(frame_data2.get("col1"))
@@ -383,7 +380,8 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
-        comparator=comparator,
+        comparator=sort_if_range_partitioning,
+        expected_exception=ValueError("Cannot merge a Series without a name"),
     )
 
     # merge a Series with a name
@@ -393,7 +391,7 @@ def test_merge(test_data, test_data2):
         modin_df,
         pandas_df,
         lambda df: df.merge(ms if isinstance(df, pd.DataFrame) else ps),
-        comparator=comparator,
+        comparator=sort_if_range_partitioning,
     )
 
     with pytest.raises(TypeError):
@@ -538,9 +536,7 @@ def test_merge_on_single_index(left_index, right_index):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "ascending", bool_arg_values, ids=arg_keys("ascending", bool_arg_keys)
-)
+@pytest.mark.parametrize("ascending", [False, True])
 @pytest.mark.parametrize("na_position", ["first", "last"], ids=["first", "last"])
 def test_sort_index(axis, ascending, na_position):
     data = test_data["float_nan_data"]
@@ -620,8 +616,10 @@ def test_sort_multiindex(sort_remaining):
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize(
     "ascending",
-    bool_arg_values + ["list_first_True", "list_first_False"],
-    ids=arg_keys("ascending", bool_arg_keys + ["list_first_True", "list_first_False"]),
+    [False, True] + ["list_first_True", "list_first_False"],
+    ids=arg_keys(
+        "ascending", ["False", "True"] + ["list_first_True", "list_first_False"]
+    ),
 )
 @pytest.mark.parametrize(
     "inplace", bool_arg_values, ids=arg_keys("inplace", bool_arg_keys)

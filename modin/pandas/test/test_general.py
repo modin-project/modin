@@ -17,11 +17,11 @@ import numpy as np
 import pandas
 import pytest
 from numpy.testing import assert_array_equal
-from pandas.testing import assert_frame_equal
 
 import modin.pandas as pd
 from modin.config import StorageFormat
 from modin.pandas.io import to_pandas
+from modin.pandas.testing import assert_frame_equal
 from modin.test.test_utils import warns_that_defaulting_to_pandas
 from modin.utils import get_current_execution
 
@@ -32,6 +32,7 @@ from .utils import (
     default_to_pandas_ignore_string,
     df_equals,
     eval_general,
+    sort_if_range_partitioning,
     sort_index_for_equal_values,
     test_data_keys,
     test_data_values,
@@ -566,14 +567,18 @@ def test_pivot_table():
 
 
 def test_unique():
+    comparator = lambda *args: sort_if_range_partitioning(  # noqa: E731
+        *args, comparator=assert_array_equal
+    )
+
     modin_result = pd.unique([2, 1, 3, 3])
     pandas_result = pandas.unique([2, 1, 3, 3])
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series([2] + [1] * 5))
     pandas_result = pandas.unique(pandas.Series([2] + [1] * 5))
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -582,7 +587,7 @@ def test_unique():
     pandas_result = pandas.unique(
         pandas.Series([pandas.Timestamp("20160101"), pandas.Timestamp("20160101")])
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -601,7 +606,7 @@ def test_unique():
             ]
         )
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(
@@ -620,12 +625,12 @@ def test_unique():
             ]
         )
     )
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
     modin_result = pd.unique(pd.Series(pd.Categorical(list("baabc"))))
     pandas_result = pandas.unique(pandas.Series(pandas.Categorical(list("baabc"))))
-    assert_array_equal(modin_result, pandas_result)
+    comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
 
 
@@ -946,10 +951,20 @@ def test_empty_series():
     [[1, 2], ["a"], 1, "a"],
     ids=["list_of_ints", "list_of_invalid_strings", "scalar", "invalid_scalar"],
 )
-def test_to_timedelta(arg):
+def test_to_timedelta(arg, request):
     # This test case comes from
     # https://github.com/modin-project/modin/issues/4966
-    eval_general(pd, pandas, lambda lib: lib.to_timedelta(arg))
+    expected_exception = None
+    if request.node.callspec.id == "list_of_invalid_strings":
+        expected_exception = ValueError("Could not convert 'a' to NumPy timedelta")
+    elif request.node.callspec.id == "invalid_scalar":
+        expected_exception = ValueError("unit abbreviation w/o a number")
+    eval_general(
+        pd,
+        pandas,
+        lambda lib: lib.to_timedelta(arg),
+        expected_exception=expected_exception,
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

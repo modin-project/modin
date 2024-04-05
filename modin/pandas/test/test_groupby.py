@@ -42,6 +42,7 @@ from modin.utils import (
 )
 
 from .utils import (
+    assert_set_of_rows_identical,
     check_df_columns_have_nans,
     create_test_dfs,
     create_test_series,
@@ -167,8 +168,13 @@ def modin_groupby_equals_pandas(modin_groupby, pandas_groupby):
     eval_general(
         modin_groupby, pandas_groupby, lambda grp: grp.indices, comparator=dict_equals
     )
+    # FIXME: https://github.com/modin-project/modin/issues/7032
     eval_general(
-        modin_groupby, pandas_groupby, lambda grp: grp.groups, comparator=dict_equals
+        modin_groupby,
+        pandas_groupby,
+        lambda grp: grp.groups,
+        comparator=dict_equals,
+        expected_exception=False,
     )
 
     for g1, g2 in itertools.zip_longest(modin_groupby, pandas_groupby):
@@ -254,21 +260,40 @@ def test_mixed_dtypes_groupby(as_index):
             md_sorted_grpby,
             pd_sorted_grpby,
             lambda df: df.ffill(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
+        # FIXME: https://github.com/modin-project/modin/issues/7032
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.sem(),
             modin_df_almost_equals_pandas,
+            expected_exception=False,
         )
         eval_general(
             modin_groupby, pandas_groupby, lambda df: df.sample(random_state=1)
         )
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.ewm(com=0.5).std())
-        eval_shift(modin_groupby, pandas_groupby)
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.ewm(com=0.5).std(),
+            expected_exception=pandas.errors.DataError(
+                "Cannot aggregate non-numeric type: object"
+            ),
+        )
+        eval_shift(
+            modin_groupby,
+            pandas_groupby,
+            comparator=(
+                # We should sort the result before comparison for transform functions
+                # in case of range-partitioning groupby (https://github.com/modin-project/modin/issues/5924).
+                # This test though produces so much NaN values in the result, so it's impossible to sort,
+                # using manual comparison of set of rows instead
+                assert_set_of_rows_identical
+                if RangePartitioningGroupby.get()
+                else None
+            ),
+        )
         eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
         eval_any(modin_groupby, pandas_groupby)
         eval_min(modin_groupby, pandas_groupby)
@@ -280,6 +305,8 @@ def test_mixed_dtypes_groupby(as_index):
             pandas_groupby,
             lambda df: df.pct_change(),
             modin_df_almost_equals_pandas,
+            # FIXME: https://github.com/modin-project/modin/issues/7032
+            expected_exception=False,
         )
         eval_cummax(modin_groupby, pandas_groupby, numeric_only=True)
 
@@ -293,18 +320,14 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.first(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_cummin(modin_groupby, pandas_groupby, numeric_only=True)
         eval_general(
             md_sorted_grpby,
             pd_sorted_grpby,
             lambda df: df.bfill(),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         # numeric_only=False doesn't work
         eval_general(
@@ -334,7 +357,6 @@ def test_mixed_dtypes_groupby(as_index):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_max(modin_groupby, pandas_groupby)
@@ -351,9 +373,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.head(n),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_cumprod(modin_groupby, pandas_groupby, numeric_only=True)
         # numeric_only=False doesn't work
@@ -384,9 +404,7 @@ def test_mixed_dtypes_groupby(as_index):
             modin_groupby,
             pandas_groupby,
             lambda df: df.tail(n),
-            comparator=lambda *dfs: df_equals(
-                *sort_index_if_experimental_groupby(*dfs)
-            ),
+            comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         eval_quantile(modin_groupby, pandas_groupby)
         eval_general(modin_groupby, pandas_groupby, lambda df: df.take([0]))
@@ -402,6 +420,14 @@ class GetColumn:
 
     def __call__(self, df):
         return df[self.name]
+
+
+def test_aggregate_alias():
+    # It's optimization. If failed, groupby().aggregate should be tested explicitly
+    from modin.pandas.groupby import DataFrameGroupBy, SeriesGroupBy
+
+    assert DataFrameGroupBy.aggregate == DataFrameGroupBy.agg
+    assert SeriesGroupBy.aggregate == SeriesGroupBy.agg
 
 
 @pytest.mark.parametrize(
@@ -503,24 +529,85 @@ def test_simple_row_groupby(by, as_index, col1_category):
                 pandas_groupby,
                 lambda df: df.nth(0).sort_values("col1").reset_index(drop=True),
             )
+
+    expected_exception = None
+    if col1_category:
+        expected_exception = TypeError(
+            "category dtype does not support aggregation 'sem'"
+        )
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.sem(),
         modin_df_almost_equals_pandas,
+        expected_exception=expected_exception,
     )
     eval_mean(modin_groupby, pandas_groupby, numeric_only=True)
     eval_any(modin_groupby, pandas_groupby)
     eval_min(modin_groupby, pandas_groupby)
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmax())
+    # FIXME: https://github.com/modin-project/modin/issues/7033
+    eval_general(
+        modin_groupby, pandas_groupby, lambda df: df.idxmax(), expected_exception=False
+    )
     eval_ndim(modin_groupby, pandas_groupby)
     if not check_df_columns_have_nans(modin_df, by):
         # cum* functions produce undefined results for columns with NaNs so we run them only when "by" columns contain no NaNs
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumsum())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummax())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cummin())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumprod())
-        eval_general(modin_groupby, pandas_groupby, lambda df: df.cumcount())
+
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support cumsum operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumsum(),
+            expected_exception=expected_exception,
+        )
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support cummax operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cummax(),
+            expected_exception=expected_exception,
+        )
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support cummin operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cummin(),
+            expected_exception=expected_exception,
+        )
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support cumprod operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumprod(),
+            expected_exception=expected_exception,
+        )
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support cumcount operations"
+            )
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.cumcount(),
+            expected_exception=expected_exception,
+        )
 
     eval_general(
         modin_groupby,
@@ -542,12 +629,18 @@ def test_simple_row_groupby(by, as_index, col1_category):
     eval_dtypes(modin_groupby, pandas_groupby)
     eval_general(modin_groupby, pandas_groupby, lambda df: df.first())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.bfill())
-    eval_general(modin_groupby, pandas_groupby, lambda df: df.idxmin())
-    # TypeError: category type does not support prod operations
+    # FIXME: https://github.com/modin-project/modin/issues/7033
+    eval_general(
+        modin_groupby, pandas_groupby, lambda df: df.idxmin(), expected_exception=False
+    )
+    expected_exception = None
+    if col1_category:
+        expected_exception = TypeError("category type does not support prod operations")
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda grp: grp.prod(),
+        expected_exception=expected_exception,
     )
 
     if as_index:
@@ -569,49 +662,56 @@ def test_simple_row_groupby(by, as_index, col1_category):
     for func in agg_functions:
         # Pandas raises an exception when 'by' contains categorical key and `as_index=False`
         # because of this bug: https://github.com/pandas-dev/pandas/issues/36698
-        # Modin correctly processes the result, that's why `check_exception_type=None` in some cases
+        # Modin correctly processes the result
         is_pandas_bug_case = not as_index and col1_category and isinstance(func, dict)
-
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda grp: grp.agg(func),
-            check_exception_type=None if is_pandas_bug_case else True,
-        )
-        eval_general(
-            modin_groupby,
-            pandas_groupby,
-            lambda grp: grp.aggregate(func),
-            check_exception_type=None if is_pandas_bug_case else True,
-        )
+        expected_exception = None
+        if col1_category:
+            # FIXME: https://github.com/modin-project/modin/issues/7033
+            expected_exception = False
+        if not is_pandas_bug_case:
+            eval_general(
+                modin_groupby,
+                pandas_groupby,
+                lambda grp: grp.agg(func),
+                expected_exception=expected_exception,
+            )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_general(modin_groupby, pandas_groupby, lambda df: df.rank())
     eval_max(modin_groupby, pandas_groupby)
     eval_len(modin_groupby, pandas_groupby)
-    # TypeError: category type does not support sum operations
+    expected_exception = None
+    if col1_category:
+        expected_exception = TypeError("category type does not support sum operations")
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.sum(),
+        expected_exception=expected_exception,
     )
 
     eval_ngroup(modin_groupby, pandas_groupby)
     # Pandas raising exception when 'by' contains categorical key and `as_index=False`
     # because of a bug: https://github.com/pandas-dev/pandas/issues/36698
-    # Modin correctly processes the result, so that's why `check_exception_type=None` in some cases
-    eval_general(
-        modin_groupby,
-        pandas_groupby,
-        lambda df: df.nunique(),
-        check_exception_type=None if (col1_category and not as_index) else True,
-    )
+    # Modin correctly processes the result
+    if not (col1_category and not as_index):
+        eval_general(
+            modin_groupby,
+            pandas_groupby,
+            lambda df: df.nunique(),
+        )
+    expected_exception = None
+    if col1_category:
+        expected_exception = TypeError(
+            "category dtype does not support aggregation 'median'"
+        )
     # TypeError: category type does not support median operations
     eval_general(
         modin_groupby,
         pandas_groupby,
         lambda df: df.median(),
         modin_df_almost_equals_pandas,
+        expected_exception=expected_exception,
     )
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.head(n))
@@ -625,21 +725,36 @@ def test_simple_row_groupby(by, as_index, col1_category):
     if not check_df_columns_have_nans(modin_df, by):
         # Pandas groupby.transform does not work correctly with NaN values in grouping columns. See Pandas bug 17093.
         transform_functions = [lambda df: df + 4, lambda df: -df - 10]
-        for func in transform_functions:
+        for idx, func in enumerate(transform_functions):
+            expected_exception = None
+            if col1_category:
+                if idx == 0:
+                    expected_exception = TypeError(
+                        "unsupported operand type(s) for +: 'Categorical' and 'int'"
+                    )
+                elif idx == 1:
+                    expected_exception = TypeError(
+                        "bad operand type for unary -: 'Categorical'"
+                    )
             eval_general(
                 modin_groupby,
                 pandas_groupby,
                 lambda df: df.transform(func),
-                check_exception_type=None,
+                expected_exception=expected_exception,
             )
 
     pipe_functions = [lambda dfgb: dfgb.sum()]
     for func in pipe_functions:
-        # TypeError: category type does not support sum operations
+        expected_exception = None
+        if col1_category:
+            expected_exception = TypeError(
+                "category type does not support sum operations"
+            )
         eval_general(
             modin_groupby,
             pandas_groupby,
             lambda df: df.pipe(func),
+            expected_exception=expected_exception,
         )
 
     eval_general(
@@ -655,7 +770,6 @@ def test_simple_row_groupby(by, as_index, col1_category):
             modin_groupby,
             pandas_groupby,
             lambda df: df.size(),
-            check_exception_type=None,
         )
     eval_general(modin_groupby, pandas_groupby, lambda df: df.tail(n))
     eval_quantile(modin_groupby, pandas_groupby)
@@ -665,7 +779,10 @@ def test_simple_row_groupby(by, as_index, col1_category):
     ):
         # Not yet supported for non-original-column-from-dataframe Series in by:
         eval___getattr__(modin_groupby, pandas_groupby, "col3")
-        eval___getitem__(modin_groupby, pandas_groupby, "col3")
+        # FIXME: https://github.com/modin-project/modin/issues/7033
+        eval___getitem__(
+            modin_groupby, pandas_groupby, "col3", expected_exception=False
+        )
     eval_groups(modin_groupby, pandas_groupby)
     # Intersection of the selection and 'by' columns is not yet supported
     non_by_cols = (
@@ -675,7 +792,10 @@ def test_simple_row_groupby(by, as_index, col1_category):
         if isinstance(by, list)
         else ["col3", "col4"]
     )
-    eval___getitem__(modin_groupby, pandas_groupby, non_by_cols)
+    # FIXME: https://github.com/modin-project/modin/issues/7033
+    eval___getitem__(
+        modin_groupby, pandas_groupby, non_by_cols, expected_exception=False
+    )
     # When GroupBy.__getitem__ meets an intersection of the selection and 'by' columns
     # it throws a warning with the suggested workaround. The following code tests
     # that this workaround works as expected.
@@ -771,7 +891,6 @@ def test_single_group_row_groupby():
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -900,7 +1019,6 @@ def test_large_row_groupby(is_by_category):
     ]
     for func in agg_functions:
         eval_agg(modin_groupby, pandas_groupby, func)
-        eval_aggregate(modin_groupby, pandas_groupby, func)
 
     eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
     eval_rank(modin_groupby, pandas_groupby)
@@ -1157,7 +1275,6 @@ def test_series_groupby(by, as_index_series_or_dataframe):
         ]
         for func in agg_functions:
             eval_agg(modin_groupby, pandas_groupby, func)
-            eval_aggregate(modin_groupby, pandas_groupby, func)
 
         eval_general(modin_groupby, pandas_groupby, lambda df: df.last())
         eval_rank(modin_groupby, pandas_groupby)
@@ -1232,15 +1349,30 @@ def test_multi_column_groupby():
         modin_df.groupby(by, axis=1).count()
 
 
-def sort_index_if_experimental_groupby(*dfs):
+def sort_if_experimental_groupby(*dfs):
     """
     This method should be applied before comparing results of ``groupby.transform`` as
     the experimental implementation changes the order of rows for that:
     https://github.com/modin-project/modin/issues/5924
     """
+    result = dfs
     if RangePartitioningGroupby.get():
-        return tuple(df.sort_index() for df in dfs)
-    return dfs
+        dfs = try_cast_to_pandas(dfs)
+        result = []
+        for df in dfs:
+            if df.ndim == 1:
+                # Series case
+                result.append(df.sort_index())
+                continue
+
+            # filtering out index names in order to avoid:
+            # ValueError: 'col' is both an index level and a column label, which is ambiguous.
+            cols_no_idx_names = df.columns.difference(
+                df.index.names, sort=False
+            ).tolist()
+            df = df.sort_values(cols_no_idx_names)
+            result.append(df)
+    return result
 
 
 def eval_ngroups(modin_groupby, pandas_groupby):
@@ -1275,7 +1407,7 @@ def eval_ndim(modin_groupby, pandas_groupby):
 
 def eval_cumsum(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumsum(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cumsum(axis=axis, numeric_only=numeric_only),
         )
@@ -1284,7 +1416,7 @@ def eval_cumsum(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only
 
 def eval_cummax(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cummax(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cummax(axis=axis, numeric_only=numeric_only),
         )
@@ -1293,7 +1425,7 @@ def eval_cummax(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only
 
 def eval_cummin(modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cummin(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cummin(axis=axis, numeric_only=numeric_only),
         )
@@ -1320,10 +1452,6 @@ def eval_std(modin_groupby, pandas_groupby, numeric_only=False):
         modin_groupby.std(numeric_only=numeric_only),
         pandas_groupby.std(numeric_only=numeric_only),
     )
-
-
-def eval_aggregate(modin_groupby, pandas_groupby, func):
-    df_equals(modin_groupby.aggregate(func), pandas_groupby.aggregate(func))
 
 
 def eval_agg(modin_groupby, pandas_groupby, func):
@@ -1376,13 +1504,13 @@ def eval_cumprod(
     modin_groupby, pandas_groupby, axis=lib.no_default, numeric_only=False
 ):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumprod(numeric_only=numeric_only),
             pandas_groupby.cumprod(numeric_only=numeric_only),
         )
     )
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.cumprod(axis=axis, numeric_only=numeric_only),
             pandas_groupby.cumprod(axis=axis, numeric_only=numeric_only),
         )
@@ -1391,7 +1519,7 @@ def eval_cumprod(
 
 def eval_transform(modin_groupby, pandas_groupby, func):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.transform(func), pandas_groupby.transform(func)
         )
     )
@@ -1399,7 +1527,7 @@ def eval_transform(modin_groupby, pandas_groupby, func):
 
 def eval_fillna(modin_groupby, pandas_groupby):
     df_equals(
-        *sort_index_if_experimental_groupby(
+        *sort_if_experimental_groupby(
             modin_groupby.fillna(method="ffill"), pandas_groupby.fillna(method="ffill")
         )
     )
@@ -1442,18 +1570,20 @@ def eval___getattr__(modin_groupby, pandas_groupby, item):
     )
 
 
-def eval___getitem__(md_grp, pd_grp, item):
+def eval___getitem__(md_grp, pd_grp, item, expected_exception=None):
     eval_general(
         md_grp,
         pd_grp,
         lambda grp: grp[item].mean(),
         comparator=build_types_asserter(df_equals),
+        expected_exception=expected_exception,
     )
     eval_general(
         md_grp,
         pd_grp,
         lambda grp: grp[item].count(),
         comparator=build_types_asserter(df_equals),
+        expected_exception=expected_exception,
     )
 
     def build_list_agg(fns):
@@ -1476,12 +1606,14 @@ def eval___getitem__(md_grp, pd_grp, item):
         pd_grp,
         build_list_agg(["mean"]),
         comparator=build_types_asserter(df_equals),
+        expected_exception=expected_exception,
     )
     eval_general(
         md_grp,
         pd_grp,
         build_list_agg(["mean", "count"]),
         comparator=build_types_asserter(df_equals),
+        expected_exception=expected_exception,
     )
 
     # Explicit default-to-pandas test
@@ -1495,6 +1627,7 @@ def eval___getitem__(md_grp, pd_grp, item):
             else grp[item]._default_to_pandas(lambda df: df.sum())
         ),
         comparator=build_types_asserter(df_equals),
+        expected_exception=expected_exception,
     )
 
 
@@ -1509,9 +1642,11 @@ def eval_groups(modin_groupby, pandas_groupby):
         df_equals(modin_groupby.get_group(name), pandas_groupby.get_group(name))
 
 
-def eval_shift(modin_groupby, pandas_groupby):
-    def comparator(df1, df2):
-        df_equals(*sort_index_if_experimental_groupby(df1, df2))
+def eval_shift(modin_groupby, pandas_groupby, comparator=None):
+    if comparator is None:
+
+        def comparator(df1, df2):
+            df_equals(*sort_if_experimental_groupby(df1, df2))
 
     eval_general(
         modin_groupby,
@@ -1553,7 +1688,7 @@ def eval_shift(modin_groupby, pandas_groupby):
             eval_general(
                 modin_groupby,
                 pandas_groupby,
-                lambda groupby: groupby.shift(axis=1, fill_value=777),
+                lambda groupby: groupby.shift(fill_value=777),
                 comparator=comparator,
             )
 
@@ -1611,7 +1746,7 @@ def test_groupby_getitem_preserves_key_order_issue_6154():
     ],
 )
 def test_groupby_multiindex(groupby_kwargs):
-    frame_data = np.random.randint(0, 100, size=(2**6, 2**4))
+    frame_data = np.random.randint(0, 100, size=(2**6, 2**6))
     modin_df = pd.DataFrame(frame_data)
     pandas_df = pandas.DataFrame(frame_data)
 
@@ -1879,7 +2014,6 @@ def test_agg_4604():
         "mean",
         "sum",
         "median",
-        "unique",
         "cumprod",
     ],
 )
@@ -1933,11 +2067,25 @@ def test_agg_exceptions(operation):
         from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 
         if GroupBy.is_transformation_kernel(operation):
-            df1, df2 = sort_index_if_experimental_groupby(df1, df2)
+            df1, df2 = sort_if_experimental_groupby(df1, df2)
 
         df_equals(df1, df2)
 
-    eval_aggregation(*create_test_dfs(data), operation=operation, comparator=comparator)
+    expected_exception = None
+    if operation == "sum":
+        expected_exception = TypeError(
+            "datetime64 type does not support sum operations"
+        )
+    elif operation == "cumprod":
+        expected_exception = TypeError(
+            "datetime64 type does not support cumprod operations"
+        )
+    eval_aggregation(
+        *create_test_dfs(data),
+        operation=operation,
+        comparator=comparator,
+        expected_exception=expected_exception,
+    )
 
 
 @pytest.mark.skip(
@@ -2281,8 +2429,12 @@ def test_multi_column_groupby_different_partitions(
         # using a custom comparator that allows slight numeric deviations.
         comparator=try_modin_df_almost_equals_compare,
     )
-    eval___getitem__(md_grp, pd_grp, md_df.columns[1])
-    eval___getitem__(md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]])
+    # FIXME: https://github.com/modin-project/modin/issues/7034
+    eval___getitem__(md_grp, pd_grp, md_df.columns[1], expected_exception=False)
+    # FIXME: https://github.com/modin-project/modin/issues/7034
+    eval___getitem__(
+        md_grp, pd_grp, [md_df.columns[1], md_df.columns[2]], expected_exception=False
+    )
 
 
 @pytest.mark.parametrize(
@@ -2527,17 +2679,6 @@ def test_groupby_sort(sort, is_categorical_by):
     eval_general(md_grp, pd_grp, lambda grp: grp.first())
 
 
-def test_sum_with_level():
-    data = {
-        "A": ["0.0", "1.0", "2.0", "3.0", "4.0"],
-        "B": ["0.0", "1.0", "0.0", "1.0", "0.0"],
-        "C": ["foo1", "foo2", "foo3", "foo4", "foo5"],
-        "D": pandas.bdate_range("1/1/2009", periods=5),
-    }
-    modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
-    eval_general(modin_df, pandas_df, lambda df: df.set_index("C").groupby("C").sum())
-
-
 def test_groupby_with_frozenlist():
     pandas_df = pandas.DataFrame(data={"a": [1, 2, 3], "b": [1, 2, 3], "c": [1, 2, 3]})
     pandas_df = pandas_df.set_index(["a", "b"])
@@ -2648,7 +2789,6 @@ def test_groupby_on_empty_data(modin_df_recipe):
     run_test(eval___getattr__, item="b")
     run_test(eval___getitem__, item="b")
     run_test(eval_agg, func=lambda df: df.mean())
-    run_test(eval_aggregate, func=lambda df: df.mean())
     run_test(eval_any)
     run_test(eval_apply, func=lambda df: df.mean())
     run_test(eval_count)
@@ -2741,6 +2881,8 @@ def test_groupby_with_grouper(by):
         modin_df,
         pandas_df,
         lambda df: df.groupby(by).mean(),
+        # FIXME: https://github.com/modin-project/modin/issues/7033
+        expected_exception=False,
     )
 
 
@@ -2797,9 +2939,6 @@ def test_groupby_agg_with_empty_column_partition_6175(method):
         df,
         df._to_pandas(),
         lambda df: getattr(df.groupby(["col33", "index"]), method)(),
-        # work around https://github.com/modin-project/modin/issues/6016: we don't
-        # expect any exceptions.
-        raising_exceptions=(Exception,),
     )
 
 
@@ -2847,8 +2986,23 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.std())
     eval_general(md_window, pd_window, lambda window: window.min())
     eval_general(md_window, pd_window, lambda window: window.max())
-    eval_general(md_window, pd_window, lambda window: window.corr())
-    eval_general(md_window, pd_window, lambda window: window.cov())
+    expected_exception = None
+    if pd_window.on == "col4":
+        expected_exception = ValueError(
+            "Length mismatch: Expected axis has 450 elements, new values have 600 elements"
+        )
+    eval_general(
+        md_window,
+        pd_window,
+        lambda window: window.corr(),
+        expected_exception=expected_exception,
+    )
+    eval_general(
+        md_window,
+        pd_window,
+        lambda window: window.cov(),
+        expected_exception=expected_exception,
+    )
     eval_general(md_window, pd_window, lambda window: window.skew())
     eval_general(md_window, pd_window, lambda window: window.kurt())
     eval_general(
@@ -2858,6 +3012,13 @@ def eval_rolling(md_window, pd_window):
     eval_general(md_window, pd_window, lambda window: window.quantile(0.2))
     eval_general(md_window, pd_window, lambda window: window.rank())
 
+    expected_exception = None
+    if pd_window.on == "col4":
+        expected_exception = TypeError(
+            "Addition/subtraction of integers and integer-arrays with DatetimeArray is no longer supported."
+            + "  Instead of adding/subtracting `n`, use `n * obj.freq`"
+        )
+
     if not md_window._as_index:
         # There's a mismatch in group columns when 'as_index=False'
         # see: https://github.com/modin-project/modin/issues/6291
@@ -2866,12 +3027,14 @@ def eval_rolling(md_window, pd_window):
             md_window,
             pd_window,
             lambda window: window.sem().drop(columns=by_cols, errors="ignore"),
+            expected_exception=expected_exception,
         )
     else:
         eval_general(
             md_window,
             pd_window,
             lambda window: window.sem(),
+            expected_exception=expected_exception,
         )
 
 
@@ -3058,7 +3221,7 @@ def test_reshuffling_groupby_on_strings(modify_config):
     pd_grp = pandas_df.groupby("col1")
 
     eval_general(md_grp, pd_grp, lambda grp: grp.mean())
-    eval_general(md_grp, pd_grp, lambda grp: grp.nth())
+    eval_general(md_grp, pd_grp, lambda grp: grp.nth(2))
     eval_general(md_grp, pd_grp, lambda grp: grp.head(10))
     eval_general(md_grp, pd_grp, lambda grp: grp.tail(10))
 

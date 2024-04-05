@@ -15,10 +15,9 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._testing import assert_series_equal
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import NPartitions, StorageFormat
 from modin.pandas.test.utils import (
     arg_keys,
     assert_dtypes_equal,
@@ -39,6 +38,7 @@ from modin.pandas.test.utils import (
     test_data_large_categorical_dataframe,
     test_data_values,
 )
+from modin.pandas.testing import assert_series_equal
 
 NPartitions.put(4)
 
@@ -53,9 +53,7 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
 @pytest.mark.parametrize("method", ["all", "any"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_all_any(data, axis, skipna, is_transposed, method):
@@ -89,7 +87,17 @@ def test_count(data, axis):
     )
 
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
+@pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
+@pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
+@pytest.mark.parametrize("dropna", [True, False])
+def test_nunique(data, axis, dropna):
+    eval_general(
+        *create_test_dfs(data),
+        lambda df: df.nunique(axis=axis, dropna=dropna),
+    )
+
+
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_count_specific(numeric_only):
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
@@ -115,6 +123,8 @@ def test_count_dtypes(data):
 @pytest.mark.parametrize("percentiles", [None, 0.10, 0.11, 0.44, 0.78, 0.99])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_describe(data, percentiles):
+    if percentiles is not None:
+        percentiles = [percentiles]
     eval_general(
         *create_test_dfs(data),
         lambda df: df.describe(percentiles=percentiles),
@@ -198,9 +208,7 @@ def test_describe_dtypes():
 
 @pytest.mark.parametrize("method", ["idxmin", "idxmax"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_idxmin_idxmax(data, axis, skipna, is_transposed, method):
@@ -226,12 +234,8 @@ def test_memory_usage(data, index):
 
 @pytest.mark.parametrize("method", ["min", "max", "mean"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
@@ -245,9 +249,7 @@ def test_min_max_mean(data, axis, skipna, numeric_only, is_transposed, method):
 
 @pytest.mark.parametrize("method", ["prod", "product"])
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
 def test_prod(
@@ -279,12 +281,20 @@ def test_prod(
 
 
 @pytest.mark.parametrize("is_transposed", [False, True])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
 @pytest.mark.parametrize("data", [test_data["float_nan_data"]])
-def test_sum(data, axis, skipna, is_transposed):
+def test_sum(data, axis, skipna, is_transposed, request):
+    if (
+        StorageFormat.get() == "Hdk"
+        and is_transposed
+        and skipna
+        and (
+            "over_rows_int" in request.node.callspec.id
+            or "over_rows_str" in request.node.callspec.id
+        )
+    ):
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7028")
     eval_general(
         *create_test_dfs(data),
         lambda df: (df.T if is_transposed else df).sum(
@@ -306,7 +316,6 @@ def test_sum(data, axis, skipna, is_transposed):
     df_equals(modin_result, pandas_result)
 
 
-@pytest.mark.skipif(Engine.get() == "Native", reason="Fails on HDK")
 @pytest.mark.parametrize("dtype", ["int64", "Int64"])
 def test_dtype_consistency(dtype):
     # test for issue #6781
@@ -314,17 +323,27 @@ def test_dtype_consistency(dtype):
     assert res_dtype == pandas.api.types.pandas_dtype(dtype)
 
 
-@pytest.mark.parametrize("fn", ["prod, sum"])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("fn", ["prod", "sum"])
+@pytest.mark.parametrize("numeric_only", [False, True])
 @pytest.mark.parametrize(
     "min_count", int_arg_values, ids=arg_keys("min_count", int_arg_keys)
 )
 def test_sum_prod_specific(fn, min_count, numeric_only):
+    expected_exception = None
+    if not numeric_only and fn == "prod":
+        # FIXME: https://github.com/modin-project/modin/issues/7029
+        expected_exception = False
+    elif not numeric_only and fn == "sum":
+        expected_exception = TypeError('can only concatenate str (not "int") to str')
+    if numeric_only and fn == "sum":
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7029")
+    if min_count == 5 and not numeric_only:
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7029")
+
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(min_count=min_count, numeric_only=numeric_only),
+        expected_exception=expected_exception,
     )
 
 
@@ -340,13 +359,30 @@ def test_sum_single_column(data):
     "fn", ["max", "min", "median", "mean", "skew", "kurt", "sem", "std", "var"]
 )
 @pytest.mark.parametrize("axis", [0, 1, None])
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
+@pytest.mark.parametrize("numeric_only", [False, True])
 def test_reduce_specific(fn, numeric_only, axis):
+    expected_exception = None
+    if not numeric_only:
+        if fn in ("max", "min"):
+            if axis == 0:
+                operator = ">=" if fn == "max" else "<="
+                expected_exception = TypeError(
+                    f"'{operator}' not supported between instances of 'str' and 'float'"
+                )
+                if StorageFormat.get() == "Hdk":
+                    # FIXME: https://github.com/modin-project/modin/issues/7030
+                    expected_exception = False
+            else:
+                # FIXME: https://github.com/modin-project/modin/issues/7030
+                expected_exception = False
+        elif fn in ("skew", "kurt", "sem", "std", "var", "median", "mean"):
+            # FIXME: https://github.com/modin-project/modin/issues/7030
+            expected_exception = False
+
     eval_general(
         *create_test_dfs(test_data_diff_dtype),
         lambda df: getattr(df, fn)(numeric_only=numeric_only, axis=axis),
+        expected_exception=expected_exception,
     )
 
 
@@ -354,7 +390,7 @@ def test_reduce_specific(fn, numeric_only, axis):
 @pytest.mark.parametrize("sort", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("normalize", bool_arg_values, ids=bool_arg_keys)
 @pytest.mark.parametrize("dropna", bool_arg_values, ids=bool_arg_keys)
-@pytest.mark.parametrize("ascending", bool_arg_values, ids=bool_arg_keys)
+@pytest.mark.parametrize("ascending", [False, True])
 def test_value_counts(subset_len, sort, normalize, dropna, ascending):
     def comparator(md_res, pd_res):
         if subset_len == 1:
@@ -389,10 +425,6 @@ def test_value_counts(subset_len, sort, normalize, dropna, ascending):
             ascending=ascending,
         ),
         comparator=comparator,
-        # Modin's `sort_values` does not validate `ascending` type and so
-        # does not raise an exception when it isn't a bool, when pandas do so,
-        # visit modin-issue#3388 for more info.
-        check_exception_type=None if sort and ascending is None else True,
     )
 
 

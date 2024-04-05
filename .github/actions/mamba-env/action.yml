@@ -42,3 +42,7 @@ runs:
         # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
         use-only-tar-bz2: false
+    - shell: bash -l {0}
+      run: |
+        conda run -n ${{ inputs.activate-environment }} pip install .
+        conda list -n ${{ inputs.activate-environment }}

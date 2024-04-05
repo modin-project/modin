@@ -49,7 +49,7 @@ pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 @pytest.mark.parametrize(
     "other",
     [
-        lambda df: 4,
+        lambda df, axis: 4,
         lambda df, axis: df.iloc[0] if axis == "columns" else list(df[df.columns[0]]),
         lambda df, axis: {
             label: idx + 1
@@ -114,14 +114,19 @@ def test___rdivmod__():
         *("truediv", "rtruediv", "mul", "rmul", "floordiv", "rfloordiv"),
     ],
 )
-def test_math_functions_fill_value(other, fill_value, op):
+def test_math_functions_fill_value(other, fill_value, op, request):
     data = test_data["int_data"]
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
+
+    expected_exception = None
+    if "check_different_index" in request.node.callspec.id and fill_value == 3.0:
+        expected_exception = NotImplementedError("fill_value 3.0 not supported.")
 
     eval_general(
         modin_df,
         pandas_df,
         lambda df: getattr(df, op)(other(df), axis=0, fill_value=fill_value),
+        expected_exception=expected_exception,
         # This test causes an empty slice to be generated thus triggering:
         # https://github.com/modin-project/modin/issues/5974
         comparator_kwargs={"check_dtypes": get_current_execution() != "BaseOnPython"},
@@ -178,7 +183,7 @@ def test_math_alias(math_op, alias):
 @pytest.mark.parametrize("other", ["as_left", 4, 4.0, "a"])
 @pytest.mark.parametrize("op", ["eq", "ge", "gt", "le", "lt", "ne"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_comparison(data, op, other):
+def test_comparison(data, op, other, request):
     def operation(df):
         df = getattr(df, op)(df if other == "as_left" else other)
         if other == "as_left" and StorageFormat.get() == "Hdk":
@@ -187,9 +192,20 @@ def test_comparison(data, op, other):
             df = df.sort_index(axis=1)
         return df
 
+    expected_exception = None
+    if "int_data" in request.node.callspec.id and other == "a":
+        pytest.xfail(reason="https://github.com/modin-project/modin/issues/7019")
+    elif "float_nan_data" in request.node.callspec.id and other == "a":
+        expected_exception = TypeError(
+            "Invalid comparison between dtype=float64 and str"
+        )
+        if StorageFormat.get() == "Hdk":
+            pytest.xfail(reason="https://github.com/modin-project/modin/issues/7019")
+
     eval_general(
         *create_test_dfs(data),
         operation=operation,
+        expected_exception=expected_exception,
     )
 
 
@@ -344,6 +360,9 @@ def test_mismatched_row_partitions(is_idx_aligned, op_type, is_more_other_partit
             lambda df: (
                 df / modin_df1.a if isinstance(df, pd.DataFrame) else df / pandas_df1.a
             ),
+            expected_exception=ValueError(
+                "cannot reindex on an axis with duplicate labels"
+            ),
         )
         return
 
@@ -492,13 +511,40 @@ def test_non_commutative_multiply():
         pytest.param(3.5, id="float scalar"),
     ],
 )
-def test_arithmetic_with_tricky_dtypes(val1, val2, op):
+def test_arithmetic_with_tricky_dtypes(val1, val2, op, request):
     modin_df1, pandas_df1 = create_test_dfs(val1)
     modin_df2, pandas_df2 = (
         create_test_dfs(val2) if isinstance(val2, list) else (val2, val2)
     )
+
+    expected_exception = None
+    if (
+        "bool-bool" in request.node.callspec.id
+        or "bool scalar-bool" in request.node.callspec.id
+    ) and op in [
+        "pow",
+        "rpow",
+        "truediv",
+        "rtruediv",
+        "floordiv",
+        "rfloordiv",
+    ]:
+        op_name = op[1:] if op.startswith("r") else op
+        expected_exception = NotImplementedError(
+            f"operator '{op_name}' not implemented for bool dtypes"
+        )
+    elif (
+        "bool-bool" in request.node.callspec.id
+        or "bool scalar-bool" in request.node.callspec.id
+    ) and op in ["sub", "rsub"]:
+        expected_exception = TypeError(
+            "numpy boolean subtract, the `-` operator, is not supported, "
+            + "use the bitwise_xor, the `^` operator, or the logical_xor function instead."
+        )
+
     eval_general(
         (modin_df1, modin_df2),
         (pandas_df1, pandas_df2),
         lambda dfs: getattr(dfs[0], op)(dfs[1]),
+        expected_exception=expected_exception,
     )

@@ -36,7 +36,6 @@ from modin.pandas.test.utils import (
     quantiles_values,
     random_state,
     test_data,
-    test_data_diff_dtype,
     test_data_keys,
     test_data_values,
     test_data_with_duplicates_keys,
@@ -53,9 +52,7 @@ if StorageFormat.get() == "Hdk":
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("method", ["cumprod", "cummin", "cummax", "cumsum"])
 def test_cumprod_cummin_cummax_cumsum(axis, skipna, method):
     eval_general(
@@ -498,9 +495,7 @@ def test_fillna_datetime_columns():
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("method", ["median", "skew"])
 def test_median_skew(axis, skipna, method):
     eval_general(
@@ -518,15 +513,6 @@ def test_median_skew_transposed(axis, method):
     )
 
 
-@pytest.mark.parametrize("numeric_only", [True, False, None])
-@pytest.mark.parametrize("method", ["median", "skew", "std", "var", "rank", "sem"])
-def test_median_skew_std_var_rank_sem_specific(numeric_only, method):
-    eval_general(
-        *create_test_dfs(test_data_diff_dtype),
-        lambda df: getattr(df, method)(numeric_only=numeric_only),
-    )
-
-
 @pytest.mark.parametrize("method", ["median", "skew", "std", "var", "sem"])
 def test_median_skew_std_var_sem_1953(method):
     # See #1953 for details
@@ -540,10 +526,8 @@ def test_median_skew_std_var_sem_1953(method):
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize("axis", axis_values, ids=axis_keys)
-@pytest.mark.parametrize(
-    "numeric_only", bool_arg_values, ids=arg_keys("numeric_only", bool_arg_keys)
-)
-def test_mode(request, data, axis, numeric_only):
+@pytest.mark.parametrize("numeric_only", [False, True])
+def test_mode(data, axis, numeric_only):
     modin_df = pd.DataFrame(data)
     pandas_df = pandas.DataFrame(data)
 
@@ -696,9 +680,7 @@ def test_rank_transposed(axis, na_option):
     )
 
 
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
+@pytest.mark.parametrize("skipna", [False, True])
 @pytest.mark.parametrize("ddof", int_arg_values, ids=arg_keys("ddof", int_arg_keys))
 def test_sem_float_nan_only(skipna, ddof):
     eval_general(
@@ -717,14 +699,24 @@ def test_sem_int_only(axis, ddof):
 
 
 @pytest.mark.parametrize("axis", [0, 1])
-@pytest.mark.parametrize(
-    "skipna", bool_arg_values, ids=arg_keys("skipna", bool_arg_keys)
-)
-@pytest.mark.parametrize("method", ["std", "var", "rank"])
-def test_std_var_rank(axis, skipna, method):
+@pytest.mark.parametrize("skipna", [False, True])
+@pytest.mark.parametrize("method", ["std", "var"])
+def test_std_var(axis, skipna, method):
     eval_general(
         *create_test_dfs(test_data["float_nan_data"]),
         lambda df: getattr(df, method)(axis=axis, skipna=skipna),
+    )
+
+
+@pytest.mark.parametrize("axis", [0, 1, None])
+def test_rank(axis):
+    expected_exception = None
+    if axis is None:
+        expected_exception = ValueError("No axis named None for object type DataFrame")
+    eval_general(
+        *create_test_dfs(test_data["float_nan_data"]),
+        lambda df: df.rank(axis=axis),
+        expected_exception=expected_exception,
     )
 
 

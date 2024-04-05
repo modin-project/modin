@@ -21,7 +21,6 @@ from typing import Optional
 import psutil
 import ray
 from packaging import version
-from ray.util.client.common import ClientObjectRef
 
 from modin.config import (
     CIAWSAccessKeyID,
@@ -40,7 +39,7 @@ from modin.config import (
 from modin.core.execution.utils import set_env
 from modin.error_message import ErrorMessage
 
-from .engine_wrapper import RayWrapper
+from .engine_wrapper import ObjectRefTypes, RayWrapper
 
 _OBJECT_STORE_TO_SYSTEM_MEMORY_RATIO = 0.6
 # This constant should be in sync with the limit in ray, which is private,
@@ -50,7 +49,7 @@ _MAC_OBJECT_STORE_LIMIT_BYTES = 2 * 2**30
 
 _RAY_IGNORE_UNHANDLED_ERRORS_VAR = "RAY_IGNORE_UNHANDLED_ERRORS"
 
-ObjectIDType = (ray.ObjectRef, ClientObjectRef)
+ObjectIDType = ObjectRefTypes
 
 
 def initialize_ray(

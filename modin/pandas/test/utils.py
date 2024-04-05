@@ -35,22 +35,30 @@ from pandas.core.dtypes.common import (
     is_string_dtype,
     is_timedelta64_dtype,
 )
-from pandas.testing import (
+
+import modin.pandas as pd
+from modin.config import (
+    Engine,
+    MinPartitionSize,
+    NPartitions,
+    RangePartitioning,
+    RangePartitioningGroupby,
+    TestDatasetSize,
+    TrackFileLeaks,
+)
+from modin.pandas.io import to_pandas
+from modin.pandas.testing import (
     assert_extension_array_equal,
     assert_frame_equal,
     assert_index_equal,
     assert_series_equal,
 )
-
-import modin.pandas as pd
-from modin.config import MinPartitionSize, NPartitions, TestDatasetSize, TrackFileLeaks
-from modin.pandas.io import to_pandas
 from modin.utils import try_cast_to_pandas
 
 random_state = np.random.RandomState(seed=42)
 
 DATASET_SIZE_DICT = {
-    "Small": (2**2, 2**3),
+    "Small": (2**6, 2**6),
     "Normal": (2**6, 2**8),
     "Big": (2**7, 2**12),
 }
@@ -167,8 +175,11 @@ test_bool_data = {
 test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
 
 test_data_resample = {
-    "data": {"A": range(12), "B": range(12)},
-    "index": pandas.date_range("31/12/2000", periods=12, freq="h"),
+    "data": {
+        f"col{i}": random_state.randint(RAND_LOW, RAND_HIGH, size=NROWS)
+        for i in range(10)
+    },
+    "index": pandas.date_range("31/12/2000", periods=NROWS, freq="h"),
 }
 
 test_data_with_duplicates = {
@@ -273,7 +284,7 @@ test_string_list_data = {"simple string": [["a"], ["CdE"], ["jDf"], ["werB"]]}
 test_string_list_data_values = list(test_string_list_data.values())
 test_string_list_data_keys = list(test_string_list_data.keys())
 
-string_seperators = {"empty sep": "", "comma sep": ",", "None sep": None}
+string_seperators = {"comma sep": ","}
 
 string_sep_values = list(string_seperators.values())
 string_sep_keys = list(string_seperators.keys())
@@ -325,7 +336,7 @@ agg_func = {
     "sum of certain elements": lambda axis: (
         axis.iloc[0] + axis.iloc[-1] if isinstance(axis, pandas.Series) else axis + axis
     ),
-    "should raise TypeError": 1,
+    "should raise AssertionError": 1,
 }
 agg_func_keys = list(agg_func.keys())
 agg_func_values = list(agg_func.values())
@@ -478,11 +489,6 @@ encoding_types = [
     "utf_8",
     "utf_8_sig",
 ]
-
-# raising of this exceptions can be caused by unexpected behavior
-# of I/O operation test, but can passed by eval_io function since
-# the type of this exceptions are the same
-io_ops_bad_exc = [TypeError, FileNotFoundError]
 
 default_to_pandas_ignore_string = "default:.*defaulting to pandas.*:UserWarning"
 
@@ -662,6 +668,44 @@ def assert_dtypes_equal(df1, df2):
                 break
 
 
+def assert_set_of_rows_identical(df1, df2):
+    """
+    Assert that the set of rows for the passed dataframes is identical.
+
+    Works much slower than ``df1.equals(df2)``, so it's recommended to use this
+    function only in exceptional cases.
+    """
+    # replacing NaN with None to pass the comparison: 'NaN == NaN -> false; None == None -> True'
+    df1, df2 = map(
+        lambda df: (df.to_frame() if df.ndim == 1 else df).replace({np.nan: None}),
+        (df1, df2),
+    )
+    rows1 = set((idx, *row.tolist()) for idx, row in df1.iterrows())
+    rows2 = set((idx, *row.tolist()) for idx, row in df2.iterrows())
+    assert rows1 == rows2
+
+
+def sort_data(data):
+    """Sort the passed sequence."""
+    if isinstance(data, (pandas.DataFrame, pd.DataFrame)):
+        return data.sort_values(data.columns.to_list(), ignore_index=True)
+    elif isinstance(data, (pandas.Series, pd.Series)):
+        return data.sort_values()
+    else:
+        return np.sort(data)
+
+
+def sort_if_range_partitioning(df1, df2, comparator=None):
+    """Sort the passed objects if 'RangePartitioning' is enabled and compare the sorted results."""
+    if comparator is None:
+        comparator = df_equals
+
+    if RangePartitioning.get() or RangePartitioningGroupby.get():
+        df1, df2 = sort_data(df1), sort_data(df2)
+
+    comparator(df1, df2)
+
+
 def df_equals(df1, df2, check_dtypes=True):
     """Tests if df1 and df2 are equal.
 
@@ -757,7 +801,8 @@ def df_equals(df1, df2, check_dtypes=True):
     elif isinstance(df1, np.recarray) and isinstance(df2, np.recarray):
         np.testing.assert_array_equal(df1, df2)
     else:
-        if df1 != df2:
+        res = df1 != df2
+        if res.any() if isinstance(res, np.ndarray) else res:
             np.testing.assert_almost_equal(df1, df2)
 
 
@@ -863,32 +908,29 @@ def check_df_columns_have_nans(df, cols):
     )
 
 
+class NoModinException(Exception):
+    pass
+
+
 def eval_general(
     modin_df,
     pandas_df,
     operation,
     comparator=df_equals,
     __inplace__=False,
-    check_exception_type=True,
-    raising_exceptions=None,
+    expected_exception=None,
     check_kwargs_callable=True,
     md_extra_kwargs=None,
     comparator_kwargs=None,
     **kwargs,
 ):
-    if raising_exceptions:
-        assert (
-            check_exception_type
-        ), "if raising_exceptions is not None or False, check_exception_type should be True"
     md_kwargs, pd_kwargs = {}, {}
 
     def execute_callable(fn, inplace=False, md_kwargs={}, pd_kwargs={}):
         try:
             pd_result = fn(pandas_df, **pd_kwargs)
         except Exception as pd_e:
-            if check_exception_type is None:
-                return None
-            with pytest.raises(Exception) as md_e:
+            try:
                 if inplace:
                     _ = fn(modin_df, **md_kwargs)
                     try_cast_to_pandas(modin_df)  # force materialization
@@ -896,16 +938,40 @@ def eval_general(
                     try_cast_to_pandas(
                         fn(modin_df, **md_kwargs)
                     )  # force materialization
-            if check_exception_type:
+            except Exception as md_e:
                 assert isinstance(
-                    md_e.value, type(pd_e)
+                    md_e, type(pd_e)
                 ), "Got Modin Exception type {}, but pandas Exception type {} was expected".format(
-                    type(md_e.value), type(pd_e)
+                    type(md_e), type(pd_e)
                 )
-                if raising_exceptions:
-                    assert not isinstance(
-                        md_e.value, tuple(raising_exceptions)
-                    ), f"not acceptable exception type: {md_e.value}"
+                if expected_exception:
+                    if Engine.get() == "Ray":
+                        from ray.exceptions import RayTaskError
+
+                        # unwrap ray exceptions from remote worker
+                        if isinstance(md_e, RayTaskError):
+                            md_e = md_e.args[0]
+                    assert (
+                        type(md_e) is type(expected_exception)
+                        and md_e.args == expected_exception.args
+                    ), f"not acceptable Modin's exception: [{repr(md_e)}]"
+                    assert (
+                        pd_e.args == expected_exception.args
+                    ), f"not acceptable Pandas' exception: [{repr(pd_e)}]"
+                elif expected_exception is False:
+                    # The only way to disable exception message checking.
+                    pass
+                else:
+                    # It’s not enough that Modin and pandas have the same types of exceptions;
+                    # we need to explicitly specify the instance of an exception
+                    # (using `expected_exception`) in tests so that we can check exception messages.
+                    # This allows us to eliminate situations where exceptions are thrown
+                    # that we don't expect, which could hide different bugs.
+                    raise pd_e
+            else:
+                raise NoModinException(
+                    f"Modin doesn't throw an exception, while pandas does: [{repr(pd_e)}]"
+                )
         else:
             md_result = fn(modin_df, **md_kwargs)
             return (md_result, pd_result) if not inplace else (modin_df, pandas_df)
@@ -939,8 +1005,7 @@ def eval_io(
     fn_name,
     comparator=df_equals,
     cast_to_str=False,
-    check_exception_type=True,
-    raising_exceptions=io_ops_bad_exc,
+    expected_exception=None,
     check_kwargs_callable=True,
     modin_warning=None,
     modin_warning_str_match=None,
@@ -960,13 +1025,9 @@ def eval_io(
         There could be some mismatches in dtypes, so we're
         casting the whole frame to `str` before comparison.
         See issue #1931 for details.
-    check_exception_type: bool
-        Check or not exception types in the case of operation fail
-        (compare exceptions types raised by Pandas and Modin).
-    raising_exceptions: Exception or list of Exceptions
-        Exceptions that should be raised even if they are raised
-        both by Pandas and Modin (check evaluated only if
-        `check_exception_type` passed as `True`).
+    expected_exception: Exception
+        Exception that should be raised even if it is raised
+        both by Pandas and Modin.
     modin_warning: obj
         Warning that should be raised by Modin.
     modin_warning_str_match: str
@@ -987,8 +1048,7 @@ def eval_io(
             pandas,
             applyier,
             comparator=comparator,
-            check_exception_type=check_exception_type,
-            raising_exceptions=raising_exceptions,
+            expected_exception=expected_exception,
             check_kwargs_callable=check_kwargs_callable,
             md_extra_kwargs=md_extra_kwargs,
             *args,
@@ -1396,7 +1456,7 @@ def _make_csv_file(data_dir):
                     value=[char if (x + 2) == 0 else x for x in range(row_size)],
                 )
 
-            if thousands_separator:
+            if thousands_separator is not None:
                 for col_id in ["col1", "col3"]:
                     df[col_id] = df[col_id].apply(
                         lambda x: f"{x:,d}".replace(",", thousands_separator)

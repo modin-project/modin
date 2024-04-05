@@ -22,7 +22,7 @@ from typing import IO, TYPE_CHECKING, Hashable, Optional, Union
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import Axis, IndexKeyFunc
+from pandas._typing import Axis, IndexKeyFunc, Sequence
 from pandas.api.types import is_integer
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like
@@ -48,6 +48,8 @@ from .series_utils import (
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
+
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
@@ -98,7 +100,7 @@ class Series(BasePandasDataset):
         name=None,
         copy=None,
         fastpath=lib.no_default,
-        query_compiler=None,
+        query_compiler: BaseQueryCompiler = None,
     ):
         from modin.numpy import array
 
@@ -1123,14 +1125,16 @@ class Series(BasePandasDataset):
         self,
         by=None,
         ax=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
-        figsize=None,
-        bins=10,
-        **kwds,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
+        figsize: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Draw histogram of the input series using matplotlib.
@@ -1146,23 +1150,21 @@ class Series(BasePandasDataset):
             yrot=yrot,
             figsize=figsize,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
     def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the maximum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
     def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
         """
         Return the row label of the minimum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def info(
@@ -1180,11 +1182,25 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
+    def isna(self):
         """
-        Whether elements in `Series` are contained in `values`.
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
         """
-        return super(Series, self).isin(values, shape_hint="column")
+        return super(Series, self).isna()
+
+    def isnull(self):
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isnull()
 
     def item(self):  # noqa: RT01, D200
         """
@@ -1389,7 +1405,9 @@ class Series(BasePandasDataset):
                 + f"{type(self).__name__}.shift"
             )
         if axis == 1:
-            raise ValueError(f"No axis named {axis} for object type {type(self)}")
+            raise ValueError(
+                f"No axis named {axis} for object type {type(self).__name__}"
+            )
         return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )
@@ -2224,6 +2242,8 @@ class Series(BasePandasDataset):
         """
         Convert Modin Series to pandas Series.
 
+        Recommended conversion method: `series.modin.to_pandas()`.
+
         Returns
         -------
         pandas.Series
@@ -2233,8 +2253,6 @@ class Series(BasePandasDataset):
         if self._query_compiler.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
             series.name = None
         return series
-
-    to_pandas = _to_pandas
 
     def _to_datetime(self, **kwargs):
         """
