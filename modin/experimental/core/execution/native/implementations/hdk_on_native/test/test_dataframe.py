@@ -18,7 +18,6 @@ import numpy as np
 import pandas
 import pyarrow
 import pytest
-from pandas._testing import ensure_clean
 from pandas.core.dtypes.common import is_list_like
 from pyhdk import __version__ as hdk_version
 
@@ -26,6 +25,7 @@ from modin.config import StorageFormat
 from modin.pandas.test.utils import (
     create_test_dfs,
     default_to_pandas_ignore_string,
+    get_unique_filename,
     random_state,
     test_data,
 )
@@ -341,17 +341,17 @@ class TestCSV:
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize("parse_dates", [None, True, False])
-    def test_read_csv_datetime_tz(self, engine, parse_dates):
-        with ensure_clean(".csv") as file:
-            with open(file, "w") as f:
-                f.write("test\n2023-01-01T00:00:00.000-07:00")
+    def test_read_csv_datetime_tz(self, engine, parse_dates, tmp_path):
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        with open(unique_filename, "w") as f:
+            f.write("test\n2023-01-01T00:00:00.000-07:00")
 
-            eval_io(
-                fn_name="read_csv",
-                filepath_or_buffer=file,
-                md_extra_kwargs={"engine": engine},
-                parse_dates=parse_dates,
-            )
+        eval_io(
+            fn_name="read_csv",
+            filepath_or_buffer=unique_filename,
+            md_extra_kwargs={"engine": engine},
+            parse_dates=parse_dates,
+        )
 
     @pytest.mark.parametrize("engine", [None, "arrow"])
     @pytest.mark.parametrize(
@@ -399,26 +399,26 @@ class TestCSV:
             "c1.1,c1,c1.1,c1,c1.1,c1.2,c1.2,c2",
         ],
     )
-    def test_read_csv_duplicate_cols(self, cols):
+    def test_read_csv_duplicate_cols(self, cols, tmp_path):
         def test(df, lib, **kwargs):
             data = f"{cols}\n"
-            with ensure_clean(".csv") as fname:
-                with open(fname, "w") as f:
-                    f.write(data)
-                return lib.read_csv(fname)
+            unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+            with open(unique_filename, "w") as f:
+                f.write(data)
+            return lib.read_csv(unique_filename)
 
         run_and_compare(test, data={})
 
-    def test_read_csv_dtype_object(self):
+    def test_read_csv_dtype_object(self, tmp_path):
         with pytest.warns(UserWarning) as warns:
-            with ensure_clean(".csv") as file:
-                with open(file, "w") as f:
-                    f.write("test\ntest")
+            unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+            with open(unique_filename, "w") as f:
+                f.write("test\ntest")
 
-                def test(**kwargs):
-                    return pd.read_csv(file, dtype={"test": "object"})
+            def test(**kwargs):
+                return pd.read_csv(unique_filename, dtype={"test": "object"})
 
-                run_and_compare(test, data={})
+            run_and_compare(test, data={})
             for warn in warns.list:
                 assert not re.match(r".*defaulting to pandas.*", str(warn))
 
@@ -892,30 +892,30 @@ class TestConcat:
     @pytest.mark.parametrize("transform", [True, False])
     @pytest.mark.parametrize("sort_last", [True, False])
     # RecursionError in case of concatenation of big number of frames
-    def test_issue_5889(self, transform, sort_last):
-        with ensure_clean(".csv") as file:
-            data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
-            pandas.DataFrame(data).to_csv(file, index=False)
+    def test_issue_5889(self, transform, sort_last, tmp_path):
+        unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+        data = {"a": [1, 2, 3], "b": [1, 2, 3]} if transform else {"a": [1, 2, 3]}
+        pandas.DataFrame(data).to_csv(unique_filename, index=False)
 
-            def test_concat(lib, **kwargs):
-                if transform:
+        def test_concat(lib, **kwargs):
+            if transform:
 
-                    def read_csv():
-                        return lib.read_csv(file)["b"]
+                def read_csv():
+                    return lib.read_csv(unique_filename)["b"]
 
-                else:
+            else:
 
-                    def read_csv():
-                        return lib.read_csv(file)
+                def read_csv():
+                    return lib.read_csv(unique_filename)
 
-                df = read_csv()
-                for _ in range(100):
-                    df = lib.concat([df, read_csv()])
-                if sort_last:
-                    df = lib.concat([df, read_csv()], sort=True)
-                return df
+            df = read_csv()
+            for _ in range(100):
+                df = lib.concat([df, read_csv()])
+            if sort_last:
+                df = lib.concat([df, read_csv()], sort=True)
+            return df
 
-            run_and_compare(test_concat, data={})
+        run_and_compare(test_concat, data={})
 
 
 class TestGroupby:

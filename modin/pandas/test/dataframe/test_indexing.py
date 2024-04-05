@@ -18,7 +18,6 @@ import matplotlib
 import numpy as np
 import pandas
 import pytest
-from pandas._testing import ensure_clean
 
 import modin.pandas as pd
 from modin.config import MinPartitionSize, NPartitions, StorageFormat
@@ -35,6 +34,7 @@ from modin.pandas.test.utils import (
     df_equals,
     eval_general,
     generate_multiindex,
+    get_unique_filename,
     int_arg_keys,
     int_arg_values,
     name_contains,
@@ -2243,14 +2243,16 @@ def test___setitem__partitions_aligning():
     df_equals(md_df, pd_df)
 
 
-def test___setitem__with_mismatched_partitions():
-    with ensure_clean(".csv") as fname:
-        np.savetxt(fname, np.random.randint(0, 100, size=(200_000, 99)), delimiter=",")
-        modin_df = pd.read_csv(fname)
-        pandas_df = pandas.read_csv(fname)
-        modin_df["new"] = pd.Series(list(range(len(modin_df))))
-        pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
-        df_equals(modin_df, pandas_df)
+def test___setitem__with_mismatched_partitions(tmp_path):
+    unique_filename = get_unique_filename(extension="csv", data_dir=tmp_path)
+    np.savetxt(
+        unique_filename, np.random.randint(0, 100, size=(200_000, 99)), delimiter=","
+    )
+    modin_df = pd.read_csv(unique_filename)
+    pandas_df = pandas.read_csv(unique_filename)
+    modin_df["new"] = pd.Series(list(range(len(modin_df))))
+    pandas_df["new"] = pandas.Series(list(range(len(pandas_df))))
+    df_equals(modin_df, pandas_df)
 
 
 def test___setitem__mask():
