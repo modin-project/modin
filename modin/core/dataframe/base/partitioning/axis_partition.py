@@ -17,10 +17,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Iterable, Optional, Tuple, Union
 
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 
 
 class BaseDataframeAxisPartition(
-    ABC, ClassLogger, modin_layer="VIRTUAL-PARTITION"
+    ABC, ClassLogger, modin_layer="VIRTUAL-PARTITION", log_level=LogLevel.DEBUG
 ):  # pragma: no cover
     """
     An abstract class that represents the parent class for any axis partition class.

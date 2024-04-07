@@ -60,6 +60,7 @@ from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pa
 from modin.db_conn import ModinDatabaseConnection
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 from modin.utils import ModinAssumptionError
 
 _doc_pandas_parser_class = """
@@ -153,7 +154,7 @@ def find_common_type_cat(types):
         return find_common_type(list(types))
 
 
-class PandasParser(ClassLogger, modin_layer="PARSER"):
+class PandasParser(ClassLogger, modin_layer="PARSER", log_level=LogLevel.DEBUG):
     """Base class for parser classes with pandas storage format."""
 
     @staticmethod
