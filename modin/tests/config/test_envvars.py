@@ -298,3 +298,61 @@ def test_deprecated_bool_vars_equals(deprecated_var, new_var, get_depr_first):
     finally:
         deprecated_var.put(old_depr_val)
         new_var.put(old_new_var)
+
+
+@pytest.mark.parametrize(
+    "modify_config",
+    [{cfg.RangePartitioning: False, cfg.LazyExecution: "Auto"}],
+    indirect=True,
+)
+def test_context_manager_update_config(modify_config):
+    # simple case, 1 parameter
+    assert cfg.RangePartitioning.get() is False
+    with cfg.context(RangePartitioning=True):
+        assert cfg.RangePartitioning.get() is True
+    assert cfg.RangePartitioning.get() is False
+
+    # nested case, 1 parameter
+    assert cfg.RangePartitioning.get() is False
+    with cfg.context(RangePartitioning=True):
+        assert cfg.RangePartitioning.get() is True
+        with cfg.context(RangePartitioning=False):
+            assert cfg.RangePartitioning.get() is False
+            with cfg.context(RangePartitioning=False):
+                assert cfg.RangePartitioning.get() is False
+            assert cfg.RangePartitioning.get() is False
+        assert cfg.RangePartitioning.get() is True
+    assert cfg.RangePartitioning.get() is False
+
+    # simple case, 2 parameters
+    assert cfg.RangePartitioning.get() is False
+    assert cfg.LazyExecution.get() == "Auto"
+    with cfg.context(RangePartitioning=True, LazyExecution="Off"):
+        assert cfg.RangePartitioning.get() is True
+        assert cfg.LazyExecution.get() == "Off"
+    assert cfg.RangePartitioning.get() is False
+    assert cfg.LazyExecution.get() == "Auto"
+
+    # nested case, 2 parameters
+    assert cfg.RangePartitioning.get() is False
+    assert cfg.LazyExecution.get() == "Auto"
+    with cfg.context(RangePartitioning=True, LazyExecution="Off"):
+        assert cfg.RangePartitioning.get() is True
+        assert cfg.LazyExecution.get() == "Off"
+        with cfg.context(RangePartitioning=False):
+            assert cfg.RangePartitioning.get() is False
+            assert cfg.LazyExecution.get() == "Off"
+            with cfg.context(LazyExecution="On"):
+                assert cfg.RangePartitioning.get() is False
+                assert cfg.LazyExecution.get() == "On"
+                with cfg.context(RangePartitioning=True, LazyExecution="Off"):
+                    assert cfg.RangePartitioning.get() is True
+                    assert cfg.LazyExecution.get() == "Off"
+                assert cfg.RangePartitioning.get() is False
+                assert cfg.LazyExecution.get() == "On"
+            assert cfg.RangePartitioning.get() is False
+            assert cfg.LazyExecution.get() == "Off"
+        assert cfg.RangePartitioning.get() is True
+        assert cfg.LazyExecution.get() == "Off"
+    assert cfg.RangePartitioning.get() is False
+    assert cfg.LazyExecution.get() == "Auto"

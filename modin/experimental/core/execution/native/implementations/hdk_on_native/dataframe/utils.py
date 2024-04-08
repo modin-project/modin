@@ -289,6 +289,8 @@ def build_categorical_from_at(table, column_name):
     """
     chunks = table.column(column_name).chunks
     cat = pandas.concat([chunk.dictionary.to_pandas() for chunk in chunks])
+    # to reduce peak memory consumption
+    del chunks
     return pandas.CategoricalDtype(cat.unique())
 
 

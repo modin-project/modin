@@ -63,8 +63,8 @@ or ``--signoff`` to your usual ``git commit`` commands:
 
 .. code-block:: bash
 
-   git commit --signoff
-   git commit -s
+   git commit --signoff -m "This is my commit message"
+   git commit -s -m "This is my commit message"
 
 This will use your default git configuration which is found in .git/config. To change
 this, you can use the following commands:

@@ -22,7 +22,7 @@ from pandas._libs.lib import NoDefault, no_default
 from pandas._typing import DtypeBackend
 from pandas.core.dtypes.common import is_list_like
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.error_message import ErrorMessage
 from modin.logging import enable_logging
 from modin.pandas.io import to_pandas

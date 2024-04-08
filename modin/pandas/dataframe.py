@@ -22,7 +22,7 @@ import os
 import re
 import sys
 import warnings
-from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+from typing import IO, TYPE_CHECKING, Hashable, Iterator, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -69,6 +69,9 @@ from .utils import (
     _doc_binary_op,
     cast_function_modin2pandas,
 )
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Dictionary of extensions assigned to this class
 _DATAFRAME_EXTENSIONS_ = {}
@@ -129,7 +132,7 @@ class DataFrame(BasePandasDataset):
         columns=None,
         dtype=None,
         copy=None,
-        query_compiler=None,
+        query_compiler: BaseQueryCompiler = None,
     ):
         from modin.numpy import array
 

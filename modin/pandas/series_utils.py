@@ -16,6 +16,9 @@ Implement Series's accessors public API as pandas does.
 
 Accessors: `Series.cat`, `Series.str`, `Series.dt`
 """
+
+from __future__ import annotations
+
 import re
 from typing import TYPE_CHECKING
 
@@ -30,10 +33,16 @@ if TYPE_CHECKING:
 
     from pandas._typing import npt
 
+    from modin.core.storage_formats import BaseQueryCompiler
+    from modin.pandas import Series
+
 
 @_inherit_docstrings(pandas.core.arrays.arrow.ListAccessor)
 class ListAccessor(ClassLogger):
-    def __init__(self, data=None):
+    _series: Series
+    _query_compiler: BaseQueryCompiler
+
+    def __init__(self, data: Series = None):
         self._series = data
         self._query_compiler = data._query_compiler
 
@@ -58,7 +67,10 @@ class ListAccessor(ClassLogger):
 
 @_inherit_docstrings(pandas.core.arrays.arrow.StructAccessor)
 class StructAccessor(ClassLogger):
-    def __init__(self, data=None):
+    _series: Series
+    _query_compiler: BaseQueryCompiler
+
+    def __init__(self, data: Series = None):
         self._series = data
         self._query_compiler = data._query_compiler
 
@@ -88,7 +100,10 @@ class StructAccessor(ClassLogger):
 
 @_inherit_docstrings(pandas.core.arrays.categorical.CategoricalAccessor)
 class CategoryMethods(ClassLogger):
-    def __init__(self, data):
+    _series: Series
+    _query_compiler: BaseQueryCompiler
+
+    def __init__(self, data: Series):
         self._series = data
         self._query_compiler = data._query_compiler
 
@@ -178,7 +193,10 @@ class CategoryMethods(ClassLogger):
 
 @_inherit_docstrings(pandas.core.strings.accessor.StringMethods)
 class StringMethods(ClassLogger):
-    def __init__(self, data):
+    _series: Series
+    _query_compiler: BaseQueryCompiler
+
+    def __init__(self, data: Series):
         # Check if dtypes is objects
 
         self._series = data
@@ -559,7 +577,10 @@ class StringMethods(ClassLogger):
 
 @_inherit_docstrings(pandas.core.indexes.accessors.CombinedDatetimelikeProperties)
 class DatetimeProperties(ClassLogger):
-    def __init__(self, data):
+    _series: Series
+    _query_compiler: BaseQueryCompiler
+
+    def __init__(self, data: Series):
         self._series = data
         self._query_compiler = data._query_compiler
 

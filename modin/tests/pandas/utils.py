@@ -175,8 +175,11 @@ test_bool_data = {
 test_groupby_data = {f"col{i}": np.arange(NCOLS) % NGROUPS for i in range(NROWS)}
 
 test_data_resample = {
-    "data": {"A": range(12), "B": range(12)},
-    "index": pandas.date_range("31/12/2000", periods=12, freq="h"),
+    "data": {
+        f"col{i}": random_state.randint(RAND_LOW, RAND_HIGH, size=NROWS)
+        for i in range(10)
+    },
+    "index": pandas.date_range("31/12/2000", periods=NROWS, freq="h"),
 }
 
 test_data_with_duplicates = {
@@ -663,6 +666,23 @@ def assert_dtypes_equal(df1, df2):
                 # We met a dtype that both types satisfy, so we can stop iterating
                 # over comparators and compare next dtypes
                 break
+
+
+def assert_set_of_rows_identical(df1, df2):
+    """
+    Assert that the set of rows for the passed dataframes is identical.
+
+    Works much slower than ``df1.equals(df2)``, so it's recommended to use this
+    function only in exceptional cases.
+    """
+    # replacing NaN with None to pass the comparison: 'NaN == NaN -> false; None == None -> True'
+    df1, df2 = map(
+        lambda df: (df.to_frame() if df.ndim == 1 else df).replace({np.nan: None}),
+        (df1, df2),
+    )
+    rows1 = set((idx, *row.tolist()) for idx, row in df1.iterrows())
+    rows2 = set((idx, *row.tolist()) for idx, row in df2.iterrows())
+    assert rows1 == rows2
 
 
 def sort_data(data):

@@ -25,7 +25,7 @@ from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler import (
     _get_axis as default_axis_getter,
 )

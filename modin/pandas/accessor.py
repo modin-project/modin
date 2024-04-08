@@ -21,8 +21,11 @@ SparseAccessor implements API of pandas.Series.sparse accessor.
 CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
+from __future__ import annotations
+
 import pickle
 import warnings
+from typing import TYPE_CHECKING, Union
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
@@ -33,6 +36,9 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
 from modin.pandas.io import to_dask, to_ray
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame, Series
 
 
 class BaseSparseAccessor(ClassLogger):
@@ -45,20 +51,21 @@ class BaseSparseAccessor(ClassLogger):
         Object to operate on.
     """
 
+    _parent: Union[DataFrame, Series]
     _validation_msg = "Can only use the '.sparse' accessor with Sparse data."
 
-    def __init__(self, data=None):
+    def __init__(self, data: Union[DataFrame, Series] = None):
         self._parent = data
         self._validate(data)
 
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: Union[DataFrame, Series]):
         """
         Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
         Parameters
         ----------
-        data : DataFrame
+        data : DataFrame or Series
             Object to check.
 
         Raises
@@ -94,7 +101,7 @@ class BaseSparseAccessor(ClassLogger):
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
 class SparseFrameAccessor(BaseSparseAccessor):
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: DataFrame):
         """
         Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
@@ -133,7 +140,7 @@ class SparseFrameAccessor(BaseSparseAccessor):
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
 class SparseAccessor(BaseSparseAccessor):
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: Series):
         """
         Verify that `data` dtype is compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
@@ -208,7 +215,9 @@ class ModinAPI:
         Object to operate on.
     """
 
-    def __init__(self, data):
+    _data: Union[DataFrame, Series]
+
+    def __init__(self, data: Union[DataFrame, Series]):
         self._data = data
 
     def to_pandas(self):
