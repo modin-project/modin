@@ -56,12 +56,13 @@ from modin.config.envvars import (
     TestReadFromSqlServer,
     TrackFileLeaks,
 )
-from modin.config.pubsub import Parameter, ValueSource
+from modin.config.pubsub import Parameter, ValueSource, context
 
 __all__ = [
     "EnvironmentVariable",
     "Parameter",
     "ValueSource",
+    "context",
     # General settings
     "IsDebug",
     "Engine",

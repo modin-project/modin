@@ -13,7 +13,9 @@
 
 """Implement Window and Rolling public API."""
 
-from typing import Optional
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union
 
 import pandas.core.window.rolling
 from pandas.core.dtypes.common import is_list_like
@@ -23,12 +25,19 @@ from modin.logging import ClassLogger
 from modin.pandas.utils import cast_function_modin2pandas
 from modin.utils import _inherit_docstrings
 
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
+    from modin.pandas import DataFrame, Series
+
 
 @_inherit_docstrings(pandas.core.window.rolling.Window)
 class Window(ClassLogger):
+    _dataframe: Union[DataFrame, Series]
+    _query_compiler: BaseQueryCompiler
+
     def __init__(
         self,
-        dataframe,
+        dataframe: Union[DataFrame, Series],
         window=None,
         min_periods=None,
         center=False,
