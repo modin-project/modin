@@ -313,6 +313,7 @@ jobs:
 
   test-all-unidist:
     needs: [lint-flake8, execution-filter]
+    if: github.event_name == 'push' || needs.execution-filter.outputs.unidist == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -393,7 +394,7 @@ jobs:
           - ubuntu
           - windows
         python-version: ["3.9"]
-        engine: ["python", "ray", "dask"]
+        engine: ${{ fromJSON( github.event_name == 'push' && '["python", "ray", "dask"]' || needs.execution-filter.outputs.engines ) }}
         test_task:
           - group_1
           - group_2
