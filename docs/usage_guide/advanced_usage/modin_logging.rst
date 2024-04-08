@@ -53,3 +53,28 @@ Disable Modin logging like so:
   LogMode.disable()
 
   # User code goes here
+
+Debugging from user defined functions:
+
+
+.. warning:: 
+  If developer attempts to use modin logging in the remote function/UDF for logging lower-level operators as below, multiple log directories(.modin/logs/job_**) would be created for each worker executing the remote function.
+.. code-block:: python
+
+  def Udf(df, partition_shape, *dfs):
+      from modin.config import LogMode, LogMemoryInterval, LogFileSize
+      LogMode.enable()
+      # User code goes here
+      return
+
+So recommended approach would be to use a different logger as in below snipet, to log from user defined functions that execute on ray workers.
+Below is an an example with ray to log from UDF by just declaring the logger config inside the remote function, Developers can log from UDFs and ray remote functions called in lower level functions as in the below example.
+
+.. code-block:: python
+
+  @ray.remote
+  def remote_function(log_level=logging.INFO):
+      logging.basicConfig(filename='modin_udf.log', level=logging.INFO)
+      logging.info("This log message will be written to modin_udf.log ")
+      # User code goes here
+      return
