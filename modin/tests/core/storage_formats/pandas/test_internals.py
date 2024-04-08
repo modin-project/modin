@@ -77,6 +77,18 @@ elif Engine.get() == "Dask":
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
     deploy = DaskWrapper.deploy
     materialize = DaskWrapper.materialize
+elif Engine.get() == "Unidist":
+    from modin.core.execution.unidist.common import UnidistWrapper
+    from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
+        PandasOnUnidistDataframeColumnPartition,
+        PandasOnUnidistDataframePartition,
+        PandasOnUnidistDataframeRowPartition,
+    )
+
+    block_partition_class = PandasOnUnidistDataframePartition
+    virtual_column_partition_class = PandasOnUnidistDataframeColumnPartition
+    virtual_row_partition_class = PandasOnUnidistDataframeRowPartition
+    put = UnidistWrapper.put
 elif Engine.get() == "Python":
     from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
@@ -116,24 +128,38 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
     -------
     modin.pandas.DataFrame
     """
+    index = pandas_df.index
+    columns = pandas_df.columns
+    row_lengths = partitioning_scheme["row_lengths"]
+    column_widths = partitioning_scheme["column_widths"]
+    new_length = sum(row_lengths)
+    new_width = sum(column_widths)
+    new_index = index if len(index) == new_length else index[:new_length]
+    new_columns = columns if len(columns) == new_width else columns[:new_width]
+
     row_partitions = split_result_of_axis_func_pandas(
         axis=0,
-        num_splits=len(partitioning_scheme["row_lengths"]),
+        num_splits=len(row_lengths),
         result=pandas_df,
-        length_list=partitioning_scheme["row_lengths"],
+        length_list=row_lengths,
     )
     partitions = [
         split_result_of_axis_func_pandas(
             axis=1,
-            num_splits=len(partitioning_scheme["column_widths"]),
+            num_splits=len(column_widths),
             result=row_part,
-            length_list=partitioning_scheme["column_widths"],
+            length_list=column_widths,
         )
         for row_part in row_partitions
     ]
 
     md_df = from_partitions(
-        [[put(part) for part in row_parts] for row_parts in partitions], axis=None
+        [[put(part) for part in row_parts] for row_parts in partitions],
+        axis=None,
+        index=new_index,
+        columns=new_columns,
+        row_lengths=row_lengths,
+        column_widths=column_widths,
     )
     return md_df
 

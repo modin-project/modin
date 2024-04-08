@@ -6715,6 +6715,15 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
         """
         Replace values where the conditions are True.
         """
+        # A workaround for https://github.com/modin-project/modin/issues/7041
+        qc_type = type(self)
+        caselist = [
+            tuple(
+                data.to_pandas().squeeze(axis=1) if isinstance(data, qc_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
         return SeriesDefault.register(pandas.Series.case_when)(self, caselist=caselist)
 
     def repartition(self, axis=None):
