@@ -88,7 +88,7 @@ from .utils import (
 )
 
 if StorageFormat.get() != "Hdk":
-    from modin.test.storage_formats.pandas.test_internals import (
+    from modin.tests.core.storage_formats.pandas.test_internals import (
         construct_modin_df_by_scheme,
     )
 
