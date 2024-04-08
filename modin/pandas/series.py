@@ -1024,6 +1024,14 @@ class Series(BasePandasDataset):
         """
         Replace values where the conditions are True.
         """
+        modin_type = type(self)
+        caselist = [
+            tuple(
+                data._query_compiler if isinstance(data, modin_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
         return self.__constructor__(
             query_compiler=self._query_compiler.case_when(caselist=caselist)
         )

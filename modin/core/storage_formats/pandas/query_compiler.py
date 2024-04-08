@@ -4582,3 +4582,17 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 other._modin_frame,
             )
         )
+
+    def case_when(self, caselist):
+        qc_type = type(self)
+        caselist = [
+            tuple(
+                data._modin_frame if isinstance(data, qc_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
+        return self.__constructor__(
+            self._modin_frame.case_when(caselist),
+            shape_hint=self._shape_hint,
+        )
