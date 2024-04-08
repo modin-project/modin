@@ -1005,7 +1005,7 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        # dtype can be a series, a dict, or a scalar. If it's series.
+        # dtype can be a series, a dict, or a scalar. If it's series,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:

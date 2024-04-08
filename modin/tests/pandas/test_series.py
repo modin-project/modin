@@ -1079,7 +1079,7 @@ def test_astype(data, request):
     eval_general(modin_series, pandas_series, lambda df: df.astype(str))
     expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
-        expected_exception = pandas.errors.IntCastingNaNError(
+        expected_exception = pd.errors.IntCastingNaNError(
             "Cannot convert non-finite values (NA or inf) to integer"
         )
     eval_general(
