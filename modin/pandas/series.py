@@ -49,8 +49,6 @@ from .series_utils import (
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
-    from modin.core.storage_formats import BaseQueryCompiler
-
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
@@ -92,7 +90,6 @@ class Series(BasePandasDataset):
 
     _pandas_class = pandas.Series
     __array_priority__ = pandas.Series.__array_priority__
-    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
@@ -2050,7 +2047,7 @@ class Series(BasePandasDataset):
         """
         res = self._query_compiler.unique()
         if isinstance(res, BaseQueryCompiler):
-            res = self.__constructor__(query_compiler=res).to_numpy()
+            res = self.__constructor__(query_compiler=res).values
         return res
 
     def update(self, other):  # noqa: PR01, D200

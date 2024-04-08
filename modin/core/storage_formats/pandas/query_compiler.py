@@ -2043,8 +2043,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
         else:
-            res = self.to_pandas().squeeze(axis=1)
-            return res.unique()
+            return self.to_pandas().squeeze(axis=1).unique()
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):
