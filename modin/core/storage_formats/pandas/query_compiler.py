@@ -4510,4 +4510,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
             for case_tuple in caselist
         ]
-        return self.__constructor__(self._modin_frame.case_when(caselist))
+        return self.__constructor__(
+            self._modin_frame.case_when(caselist),
+            shape_hint=self._shape_hint,
+        )
