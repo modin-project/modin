@@ -2031,7 +2031,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
                 key_columns=self.columns.tolist() if subset is None else subset,
                 func=(
-                    (lambda df: pandas.DataFrame(df.squeeze(axis=1).unique()))
+                    (
+                        lambda df: pandas.DataFrame(
+                            df.squeeze(axis=1).unique(), columns=["__reduced__"]
+                        )
+                    )
                     if can_use_unique_kernel
                     else (
                         lambda df: df.drop_duplicates(

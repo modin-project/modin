@@ -2055,7 +2055,7 @@ class Series(BasePandasDataset):
         """
         res = self._query_compiler.unique()
         if isinstance(res, BaseQueryCompiler):
-            res = self.__constructor__(query_compiler=res).values
+            res = self.__constructor__(query_compiler=res).array
         return res
 
     def update(self, other):  # noqa: PR01, D200
