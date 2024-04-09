@@ -733,14 +733,28 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
+class RangePartitioning(EnvWithSibilings, type=bool):
+    """
+    Set to true to use Modin's range-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING"
+    default = False
+
+    @classmethod
+    def _sibling(cls) -> type[EnvWithSibilings]:
+        """Get a parameter sibling."""
+        return RangePartitioningGroupby
+
+
 class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    Experimental groupby is implemented using a range-partitioning technique,
-    note that it may not always work better than the original Modin's TreeReduce
-    and FullAxis implementations. For more information visit the according section
-    of Modin's documentation: TODO: add a link to the section once it's written.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
@@ -752,11 +766,18 @@ class RangePartitioningGroupby(EnvWithSibilings, type=bool):
         return ExperimentalGroupbyImpl
 
 
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+RangePartitioningGroupby._deprecation_descriptor = DeprecationDescriptor(
+    RangePartitioningGroupby, RangePartitioning
+)
+
+
 class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
@@ -773,18 +794,6 @@ class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
 ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
     ExperimentalGroupbyImpl, RangePartitioningGroupby
 )
-
-
-class RangePartitioning(EnvironmentVariable, type=bool):
-    """
-    Set to true to use Modin's range-partitioning implementation where possible.
-
-    Please refer to documentation for cases where enabling this options would be beneficial:
-    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
-    """
-
-    varname = "MODIN_RANGE_PARTITIONING"
-    default = False
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
