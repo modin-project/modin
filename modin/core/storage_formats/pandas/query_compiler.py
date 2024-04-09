@@ -2588,7 +2588,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q")
         numeric_only = kwargs.get("numeric_only", True)
-        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
+        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple))
 
         if numeric_only:
             new_columns = self._modin_frame.numeric_columns()

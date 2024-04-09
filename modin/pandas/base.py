@@ -2304,6 +2304,7 @@ class BasePandasDataset(ClassLogger):
         def check_dtype(t):
             return is_numeric_dtype(t) or lib.is_np_dtype(t, "mM")
 
+        numeric_only_df = self
         if not numeric_only:
             # If not numeric_only and columns, then check all columns are either
             # numeric, timestamp, or timedelta
@@ -2322,31 +2323,31 @@ class BasePandasDataset(ClassLogger):
                             )
                         )
         else:
-            # Normally pandas returns this near the end of the quantile, but we
-            # can't afford the overhead of running the entire operation before
-            # we error.
-            if not any(is_numeric_dtype(t) for t in self._get_dtypes()):
-                raise ValueError("need at least one array to concatenate")
+            numeric_only_df = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
 
         # check that all qs are between 0 and 1
         validate_percentile(q)
-        axis = self._get_axis_number(axis)
-        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
-            return self.__constructor__(
-                query_compiler=self._query_compiler.quantile_for_list_of_values(
+        axis = numeric_only_df._get_axis_number(axis)
+        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple)):
+            return numeric_only_df.__constructor__(
+                query_compiler=numeric_only_df._query_compiler.quantile_for_list_of_values(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )
             )
         else:
-            result = self._reduce_dimension(
-                self._query_compiler.quantile_for_single_value(
+            result = numeric_only_df._reduce_dimension(
+                numeric_only_df._query_compiler.quantile_for_single_value(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )
