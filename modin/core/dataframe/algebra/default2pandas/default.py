@@ -123,7 +123,6 @@ class DefaultMethod(Operator):
                 not isinstance(result, pandas.Series)
                 and not isinstance(result, pandas.DataFrame)
                 and func not in ("to_numpy", pandas.DataFrame.to_numpy)
-                and func not in ("unique", pandas.Series.unique)
                 and func not in ("align", pandas.DataFrame.align)
                 and func not in ("divmod", pandas.Series.divmod)
                 and func not in ("rdivmod", pandas.Series.rdivmod)

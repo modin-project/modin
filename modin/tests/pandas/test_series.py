@@ -3689,11 +3689,13 @@ def test_unique(data):
     pandas_result = pandas_series.unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
     modin_result = pd.Series([2, 1, 3, 3], name="A").unique()
     pandas_result = pandas.Series([2, 1, 3, 3], name="A").unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
     modin_result = pd.Series([pd.Timestamp("2016-01-01") for _ in range(3)]).unique()
     pandas_result = pandas.Series(
@@ -3701,6 +3703,7 @@ def test_unique(data):
     ).unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
     modin_result = pd.Series(
         [pd.Timestamp("2016-01-01", tz="US/Eastern") for _ in range(3)]
@@ -3710,11 +3713,13 @@ def test_unique(data):
     ).unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
     modin_result = pandas.Series(pd.Categorical(list("baabc"))).unique()
     pandas_result = pd.Series(pd.Categorical(list("baabc"))).unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
     modin_result = pd.Series(
         pd.Categorical(list("baabc"), categories=list("abc"), ordered=True)
@@ -3724,6 +3729,7 @@ def test_unique(data):
     ).unique()
     comparator(modin_result, pandas_result)
     assert modin_result.shape == pandas_result.shape
+    assert type(modin_result) is type(pandas_result)
 
 
 def test_unique_pyarrow_dtype():

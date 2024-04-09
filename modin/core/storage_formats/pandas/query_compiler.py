@@ -2045,9 +2045,15 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 ),
                 preserve_columns=True,
             )
-            return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
         else:
-            return self.to_pandas().squeeze(axis=1).unique()
+            # return self.to_pandas().squeeze(axis=1).unique() works faster
+            # but returns pandas type instead of query compiler
+            new_modin_frame = self._modin_frame.apply_full_axis(
+                0,
+                lambda x: x.squeeze(axis=1).unique(),
+                new_columns=self.columns,
+            )
+        return self.__constructor__(new_modin_frame, shape_hint=self._shape_hint)
 
     def searchsorted(self, **kwargs):
         def searchsorted(df):

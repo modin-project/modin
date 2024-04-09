@@ -31,7 +31,6 @@ from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
 from modin.config import PersistentPickle
-from modin.core.storage_formats import BaseQueryCompiler
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
@@ -49,6 +48,8 @@ from .series_utils import (
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
+
     from .dataframe import DataFrame
 
 # Dictionary of extensions assigned to this class
@@ -2053,10 +2054,13 @@ class Series(BasePandasDataset):
         """
         Return unique values of Series object.
         """
-        res = self._query_compiler.unique()
-        if isinstance(res, BaseQueryCompiler):
-            res = self.__constructor__(query_compiler=res).array
-        return res
+        # `values` can't be used here because it performs unnecessary conversion,
+        # after which the result type does not match the pandas
+        return (
+            self.__constructor__(query_compiler=self._query_compiler.unique())
+            .modin.to_pandas()
+            ._values
+        )
 
     def update(self, other):  # noqa: PR01, D200
         """
