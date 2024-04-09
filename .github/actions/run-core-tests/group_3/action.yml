@@ -13,17 +13,17 @@ runs:
   steps:
       - run: |
           echo "::group::Running tests (group 3)..."
-          ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_series.py \
-                                                      modin/pandas/test/dataframe/test_map_metadata.py
+          ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/test_series.py \
+                                                      modin/tests/pandas/dataframe/test_map_metadata.py
           echo "::endgroup::"
         shell: bash -l {0}
       - run: |
           echo "::group::Running range-partitioning tests (group 3)..."
-          MODIN_RANGE_PARTITIONING_GROUPBY=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_groupby.py
-          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_series.py -k "test_unique or test_nunique or drop_duplicates or test_resample"
-          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/test_general.py -k "test_unique"
-          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_map_metadata.py -k "drop_duplicates"
-          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_join_sort.py -k "merge"
-          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/pandas/test/dataframe/test_default.py -k "resample"
+          MODIN_RANGE_PARTITIONING_GROUPBY=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/test_groupby.py
+          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/test_series.py -k "test_unique or test_nunique or drop_duplicates or test_resample"
+          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/test_general.py -k "test_unique"
+          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/dataframe/test_map_metadata.py -k "drop_duplicates"
+          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/dataframe/test_join_sort.py -k "merge"
+          MODIN_RANGE_PARTITIONING=1 ${{ inputs.runner }} ${{ inputs.parallel }} modin/tests/pandas/dataframe/test_default.py -k "resample"
           echo "::endgroup::"
         shell: bash -l {0}

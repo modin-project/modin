@@ -41,33 +41,33 @@ jobs:
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Run Modin tests
         run: |
-          python -m pytest modin/pandas/test/dataframe/test_binary.py
-          python -m pytest modin/pandas/test/dataframe/test_default.py
-          python -m pytest modin/pandas/test/dataframe/test_indexing.py
-          python -m pytest modin/pandas/test/dataframe/test_iter.py
-          python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-          python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
-          python -m pytest modin/pandas/test/dataframe/test_reduce.py
-          python -m pytest modin/pandas/test/dataframe/test_udf.py
-          python -m pytest modin/pandas/test/dataframe/test_window.py
-          python -m pytest modin/pandas/test/test_series.py
-          python -m pytest modin/numpy/test/test_array.py
-          python -m pytest modin/numpy/test/test_array_creation.py
-          python -m pytest modin/numpy/test/test_array_arithmetic.py
-          python -m pytest modin/numpy/test/test_array_axis_functions.py
-          python -m pytest modin/numpy/test/test_array_logic.py
-          python -m pytest modin/numpy/test/test_array_linalg.py
-          python -m pytest modin/numpy/test/test_array_indexing.py
-          python -m pytest modin/numpy/test/test_array_math.py
-          python -m pytest modin/numpy/test/test_array_shaping.py
-          python -m pytest modin/pandas/test/test_rolling.py
-          python -m pytest modin/pandas/test/test_expanding.py
-          python -m pytest modin/pandas/test/test_concat.py
-          python -m pytest modin/pandas/test/test_groupby.py
-          python -m pytest modin/pandas/test/test_reshape.py
-          python -m pytest modin/pandas/test/test_general.py
-          python -m pytest modin/pandas/test/test_io.py
-          python -m pytest modin/experimental/pandas/test/test_io_exp.py
+          python -m pytest modin/tests/pandas/dataframe/test_binary.py
+          python -m pytest modin/tests/pandas/dataframe/test_default.py
+          python -m pytest modin/tests/pandas/dataframe/test_indexing.py
+          python -m pytest modin/tests/pandas/dataframe/test_iter.py
+          python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
+          python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
+          python -m pytest modin/tests/pandas/dataframe/test_reduce.py
+          python -m pytest modin/tests/pandas/dataframe/test_udf.py
+          python -m pytest modin/tests/pandas/dataframe/test_window.py
+          python -m pytest modin/tests/pandas/test_series.py
+          python -m pytest modin/tests/numpy/test_array.py
+          python -m pytest modin/tests/numpy/test_array_creation.py
+          python -m pytest modin/tests/numpy/test_array_arithmetic.py
+          python -m pytest modin/tests/numpy/test_array_axis_functions.py
+          python -m pytest modin/tests/numpy/test_array_logic.py
+          python -m pytest modin/tests/numpy/test_array_linalg.py
+          python -m pytest modin/tests/numpy/test_array_indexing.py
+          python -m pytest modin/tests/numpy/test_array_math.py
+          python -m pytest modin/tests/numpy/test_array_shaping.py
+          python -m pytest modin/tests/pandas/test_rolling.py
+          python -m pytest modin/tests/pandas/test_expanding.py
+          python -m pytest modin/tests/pandas/test_concat.py
+          python -m pytest modin/tests/pandas/test_groupby.py
+          python -m pytest modin/tests/pandas/test_reshape.py
+          python -m pytest modin/tests/pandas/test_general.py
+          python -m pytest modin/tests/pandas/test_io.py
+          python -m pytest modin/tests/experimental/test_io_exp.py
 
   test-docs:
     runs-on: ubuntu-latest
@@ -82,4 +82,4 @@ jobs:
           environment-file: environment-dev.yml
       - run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Docstring URL validity check
-        run: python -m pytest modin/test/test_docstring_urls.py
+        run: python -m pytest modin/tests/test_docstring_urls.py
