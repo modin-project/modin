@@ -341,11 +341,14 @@ class PivotTableImpl:
                 Pivot table for this particular partition.
             """
             concated = pandas.concat([df, other], axis=1, copy=False)
+            # to reduce peak memory consumption
+            del df, other
             result = pandas.pivot_table(
                 concated,
                 **pivot_kwargs,
             )
-
+            # to reduce peak memory consumption
+            del concated
             # if only one value is specified, removing level that maps
             # columns from `values` to the actual values
             if drop_column_level is not None:

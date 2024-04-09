@@ -59,10 +59,10 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/requirements-no-engine.yml
-      - run: python -m pytest modin/pandas/test/test_api.py
-      - run: python -m pytest modin/test/test_executions_api.py
-      - run: python -m pytest modin/test/test_headers.py
-      - run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py::test_add_option
+      - run: python -m pytest modin/tests/pandas/test_api.py
+      - run: python -m pytest modin/tests/test_executions_api.py
+      - run: python -m pytest modin/tests/test_headers.py
+      - run: python -m pytest modin/tests/core/test_dispatcher.py::test_add_option
       - uses: ./.github/actions/upload-coverage
 
   test-clean-install:
@@ -106,16 +106,16 @@ jobs:
         with:
           environment-file: environment-dev.yml
       - name: Internals tests
-        run: python -m pytest modin/core/execution/dispatching/factories/test/test_dispatcher.py
-      - run: python -m pytest modin/config/test
-      - run: python -m pytest modin/test/test_envvar_catcher.py
-      - run: python -m pytest modin/test/storage_formats/base/test_internals.py
-      - run: python -m pytest modin/test/storage_formats/pandas/test_internals.py
-      - run: python -m pytest modin/test/test_envvar_npartitions.py
-      - run: python -m pytest modin/test/test_utils.py
+        run: python -m pytest modin/tests/core/test_dispatcher.py
+      - run: python -m pytest modin/tests/config
+      - run: python -m pytest modin/tests/test_envvar_catcher.py
+      - run: python -m pytest modin/tests/core/storage_formats/base/test_internals.py
+      - run: python -m pytest modin/tests/core/storage_formats/pandas/test_internals.py
+      - run: python -m pytest modin/tests/test_envvar_npartitions.py
+      - run: python -m pytest modin/tests/test_utils.py
       - run: python -m pytest asv_bench/test/test_utils.py
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/base
-      - run: python -m pytest modin/test/test_logging.py
+      - run: python -m pytest modin/tests/interchange/dataframe_protocol/base
+      - run: python -m pytest modin/tests/test_logging.py
       - uses: ./.github/actions/upload-coverage
 
   test-defaults:
@@ -142,8 +142,8 @@ jobs:
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
           # when we use collective instead of rabit.
           mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
-          python -m pytest modin/experimental/xgboost/test/test_default.py --execution=${{ matrix.execution }}
-      - run: python -m pytest -n 2 modin/test/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
+          python -m pytest modin/tests/experimental/xgboost/test_default.py --execution=${{ matrix.execution }}
+      - run: python -m pytest -n 2 modin/tests/core/storage_formats/base/test_internals.py --execution=${{ matrix.execution }}
       - uses: ./.github/actions/run-core-tests
         with:
           runner: python -m pytest --execution=${{ matrix.execution }}
@@ -176,24 +176,24 @@ jobs:
           activate-environment: modin_on_hdk
       - name: Install HDF5
         run: sudo apt update && sudo apt install -y libhdf5-dev
-      - run: python -m pytest modin/test/storage_formats/hdk/test_internals.py
-      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_init.py
-      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_dataframe.py
-      - run: python -m pytest modin/experimental/core/execution/native/implementations/hdk_on_native/test/test_utils.py
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/hdk
-      - run: python -m pytest modin/experimental/sql/test/test_sql.py
-      - run: python -m pytest modin/pandas/test/test_concat.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_binary.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_reduce.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_join_sort.py
-      - run: python -m pytest modin/pandas/test/test_general.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_indexing.py
-      - run: python -m pytest modin/pandas/test/test_series.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_map_metadata.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_window.py
-      - run: python -m pytest modin/pandas/test/dataframe/test_default.py
+      - run: python -m pytest modin/tests/core/storage_formats/hdk/test_internals.py
+      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_init.py
+      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_dataframe.py
+      - run: python -m pytest modin/tests/experimental/hdk_on_native/test_utils.py
+      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
+      - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/tests/interchange/dataframe_protocol/hdk
+      - run: python -m pytest modin/tests/experimental/test_sql.py
+      - run: python -m pytest modin/tests/pandas/test_concat.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/test_general.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/test_series.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
       - run: python examples/docker/modin-hdk/census-hdk.py examples/data/census_1k.csv -no-ml
       - run: python examples/docker/modin-hdk/nyc-taxi-hdk.py examples/data/nyc-taxi_1k.csv
       - run: |
@@ -354,14 +354,14 @@ jobs:
         run: |
           sudo docker pull postgres
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
-      - run: mpiexec -n 1 python -m pytest modin/pandas/test/internals/test_repartition.py
-      - run: mpiexec -n 1 python -m pytest modin/test/test_partition_api.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/pandas/internals/test_repartition.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/test_partition_api.py
       - uses: ./.github/actions/run-core-tests
         with:
           runner: mpiexec -n 1 python -m pytest
           parallel: ""
-      - run: mpiexec -n 1 python -m pytest modin/numpy/test
+      - run: mpiexec -n 1 python -m pytest modin/tests/numpy
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
@@ -374,16 +374,16 @@ jobs:
           max_attempts: 3
           command: |
             conda run --no-capture-output -n modin_on_unidist mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key \
-              -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/pandas/test/test_io.py --verbose
+              -genv AWS_SECRET_ACCESS_KEY foobar_secret python -m pytest modin/tests/pandas/test_io.py --verbose
       - run: |
           mpiexec -n 1 -genv AWS_ACCESS_KEY_ID foobar_key -genv AWS_SECRET_ACCESS_KEY foobar_secret \
-            python -m pytest modin/experimental/pandas/test/test_io_exp.py
-      - run: mpiexec -n 1 python -m pytest modin/experimental/sql/test/test_sql.py
-      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
-      - run: mpiexec -n 1 python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+            python -m pytest modin/tests/experimental/test_io_exp.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/experimental/test_sql.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
+      - run: mpiexec -n 1 python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
       - run: |
           python -m pip install lazy_import
-          mpiexec -n 1 python -m pytest modin/pandas/test/integrations/
+          mpiexec -n 1 python -m pytest modin/tests/pandas/integrations/
       - uses: ./.github/actions/upload-coverage
 
   test-all:
@@ -461,11 +461,11 @@ jobs:
           sudo docker run --name some-postgres -e POSTGRES_USER=sa -e POSTGRES_PASSWORD=Strong.Pwd-123 -e POSTGRES_DB=postgres -d -p 2345:5432 postgres
         if: matrix.os == 'ubuntu'
 
-      - run: python -m pytest modin/pandas/test/internals/test_benchmark_mode.py
+      - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest modin/pandas/test/internals/test_repartition.py
+      - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
-      - run: python -m pytest modin/test/test_partition_api.py
+      - run: python -m pytest modin/tests/test_partition_api.py
         if: matrix.engine != 'python' && matrix.test_task == 'group_1'
       - name: xgboost tests
         run: |
@@ -473,11 +473,11 @@ jobs:
           # when we use collective instead of rabit.
           mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
           python -m pytest -n 2 \
-                  modin/experimental/xgboost/test/test_default.py \
-                  modin/experimental/xgboost/test/test_xgboost.py \
-                  modin/experimental/xgboost/test/test_dmatrix.py
+                  modin/tests/experimental/xgboost/test_default.py \
+                  modin/tests/experimental/xgboost/test_xgboost.py \
+                  modin/tests/experimental/xgboost/test_dmatrix.py
         if: matrix.os != 'windows' && matrix.test_task == 'group_1'
-      - run: python -m pytest -n 2 modin/experimental/batch/test/test_pipeline.py
+      - run: python -m pytest -n 2 modin/tests/experimental/test_pipeline.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
       - uses: ./.github/actions/run-core-tests/group_1
         if: matrix.engine == 'python' || matrix.test_task == 'group_1'
@@ -487,27 +487,27 @@ jobs:
         if: matrix.engine == 'python' || matrix.test_task == 'group_3'
       - uses: ./.github/actions/run-core-tests/group_4
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest -n 2 modin/numpy/test
+      - run: python -m pytest -n 2 modin/tests/numpy
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: chmod +x ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
         if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
         timeout-minutes: 60
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/experimental/pandas/test/test_io_exp.py
+      - run: python -m pytest modin/tests/experimental/test_io_exp.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/experimental/sql/test/test_sql.py
+      - run: python -m pytest modin/tests/experimental/test_sql.py
         if: matrix.os == 'ubuntu' && (matrix.engine == 'python' || matrix.test_task == 'group_4')
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/test_general.py
+      - run: python -m pytest modin/tests/interchange/dataframe_protocol/test_general.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
-      - run: python -m pytest modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: python -m pytest modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
       - run: |
           python -m pip install lazy_import
-          python -m pytest modin/pandas/test/integrations/
+          python -m pytest modin/tests/pandas/integrations/
         if: matrix.engine == 'python' || matrix.test_task == 'group_4'
 
       - uses: ./.github/actions/upload-coverage
@@ -581,56 +581,56 @@ jobs:
           max_attempts: 5
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
-      - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/pandas/test/internals/test_benchmark_mode.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/pandas/test/internals/test_repartition.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/test_partition_api.py
-      - run: ${{ matrix.execution.shell-ex }} modin/pandas/api/extensions/test
+      - run: MODIN_BENCHMARK_MODE=True ${{ matrix.execution.shell-ex }} modin/tests/pandas/internals/test_benchmark_mode.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/pandas/internals/test_repartition.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/test_partition_api.py
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/extensions
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
           # when we use collective instead of rabit.
           mamba install "xgboost>=1.7.1,<2.0.0" scikit-learn -c conda-forge
           ${{ matrix.execution.shell-ex }} $PARALLEL \
-                  modin/experimental/xgboost/test/test_default.py \
-                  modin/experimental/xgboost/test/test_xgboost.py \
-                  modin/experimental/xgboost/test/test_dmatrix.py
+                  modin/tests/experimental/xgboost/test_default.py \
+                  modin/tests/experimental/xgboost/test_xgboost.py \
+                  modin/tests/experimental/xgboost/test_dmatrix.py
         if: matrix.os != 'windows' && needs.execution-filter.experimental == 'true'
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/experimental/batch/test/test_pipeline.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/experimental/test_pipeline.py
         if: matrix.os != 'windows' && matrix.execution.name != 'unidist' && needs.execution-filter.experimental == 'true'
       - name: "test DF: binary, default, iter"
         run: |
           ${{ matrix.execution.shell-ex }} $PARALLEL \
-                  modin/pandas/test/dataframe/test_binary.py \
-                  modin/pandas/test/dataframe/test_default.py \
-                  modin/pandas/test/dataframe/test_iter.py
+                  modin/tests/pandas/dataframe/test_binary.py \
+                  modin/tests/pandas/dataframe/test_default.py \
+                  modin/tests/pandas/dataframe/test_iter.py
         if: matrix.os != 'windows'
       - name: "test DF: reduce, udf, window, pickle"
         run: |
           ${{ matrix.execution.shell-ex }} $PARALLEL \
-                  modin/pandas/test/dataframe/test_reduce.py \
-                  modin/pandas/test/dataframe/test_udf.py \
-                  modin/pandas/test/dataframe/test_window.py \
-                  modin/pandas/test/dataframe/test_pickle.py
+                  modin/tests/pandas/dataframe/test_reduce.py \
+                  modin/tests/pandas/dataframe/test_udf.py \
+                  modin/tests/pandas/dataframe/test_window.py \
+                  modin/tests/pandas/dataframe/test_pickle.py
         if: matrix.os != 'windows'
-      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/test_series.py
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/test_series.py
         if: matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_series.py
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_series.py
         if: matrix.execution.name != 'ray'
-      - run: ${{ matrix.execution.shell-ex }} modin/pandas/test/dataframe/test_map_metadata.py
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/pandas/dataframe/test_map_metadata.py
         if: matrix.execution.name == 'ray'
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/dataframe/test_map_metadata.py
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/dataframe/test_map_metadata.py
         if: matrix.execution.name != 'ray'
       - name: "test rolling, expanding, reshape, general, concat"
         run: |
           ${{ matrix.execution.shell-ex }} $PARALLEL \
-                  modin/pandas/test/test_rolling.py \
-                  modin/pandas/test/test_expanding.py \
-                  modin/pandas/test/test_reshape.py \
-                  modin/pandas/test/test_general.py \
-                  modin/pandas/test/test_concat.py
+                  modin/tests/pandas/test_rolling.py \
+                  modin/tests/pandas/test_expanding.py \
+                  modin/tests/pandas/test_reshape.py \
+                  modin/tests/pandas/test_general.py \
+                  modin/tests/pandas/test_concat.py
         if: matrix.os != 'windows'
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/numpy/test
-      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/numpy
+      - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
         if: matrix.execution.name != 'unidist'
       - uses: nick-fields/retry@v2
         # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
@@ -638,11 +638,11 @@ jobs:
         with:
           timeout_minutes: 15
           max_attempts: 3
-          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/pandas/test/test_io.py --verbose
+          command: conda run --no-capture-output -n modin_on_unidist ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
         if: matrix.execution.name == 'unidist'
-      - run: ${{ matrix.execution.shell-ex }} modin/experimental/pandas/test/test_io_exp.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/test_general.py
-      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/test/interchange/dataframe_protocol/pandas/test_protocol.py
+      - run: ${{ matrix.execution.shell-ex }} modin/tests/experimental/test_io_exp.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/test_general.py
+      - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/interchange/dataframe_protocol/pandas/test_protocol.py
       - name: Stop local ray cluster
         run: ray stop
         if: matrix.os == 'windows' && matrix.execution.name == 'ray'
@@ -676,10 +676,10 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
-      - run: python -m pytest -n 2 modin/pandas/test/dataframe/test_map_metadata.py
-      - run: python -m pytest -n 2 modin/pandas/test/test_series.py
+      - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
-      - run: python -m pytest modin/pandas/test/test_io.py --verbose
+      - run: python -m pytest modin/tests/pandas/test_io.py --verbose
       - uses: ./.github/actions/upload-coverage
 
   test-spreadsheet:
@@ -702,7 +702,7 @@ jobs:
         with:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
-      - run: python -m pytest modin/experimental/spreadsheet/test/test_general.py
+      - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
   upload-coverage:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-sanity]
