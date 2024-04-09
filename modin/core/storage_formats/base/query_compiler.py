@@ -698,6 +698,21 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
         """
         return DataFrameDefault.register(pandas.DataFrame.corr)(self, **kwargs)
 
+    @doc_utils.add_refer_to("Series.corr")
+    def series_corr(self, **kwargs):  # noqa: PR01
+        """
+        Compute correlation with `other` Series, excluding missing values.
+
+        The two `Series` objects are not required to be the same length and will be
+        aligned internally before the correlation function is applied.
+
+        Returns
+        -------
+        float
+            Correlation with other.
+        """
+        return SeriesDefault.register(pandas.Series.corr)(self, **kwargs)
+
     @doc_utils.add_refer_to("DataFrame.corrwith")
     def corrwith(self, **kwargs):  # noqa: PR01
         """

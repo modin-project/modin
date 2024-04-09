@@ -1400,11 +1400,12 @@ def test_copy_empty_series():
     assert res.dtype == ser.dtype
 
 
+@pytest.mark.parametrize("method", ["pearson", "kendall"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_corr(data):
+def test_corr(data, method):
     modin_series, pandas_series = create_test_series(data)
-    modin_result = modin_series.corr(modin_series)
-    pandas_result = pandas_series.corr(pandas_series)
+    modin_result = modin_series.corr(modin_series, method=method)
+    pandas_result = pandas_series.corr(pandas_series, method=method)
     df_equals(modin_result, pandas_result)
 
 

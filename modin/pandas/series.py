@@ -823,8 +823,8 @@ class Series(BasePandasDataset):
                 np.clip(result.imag, -1, 1, out=result.imag)
             return result[0]
 
-        return self.__constructor__(
-            query_compiler=self._query_compiler.series_corr(other, method, min_periods)
+        return self._query_compiler.series_corr(
+            other=other, method=method, min_periods=min_periods
         )
 
     def count(self):  # noqa: PR01, RT01, D200
