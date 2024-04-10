@@ -28,7 +28,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import Engine, IsRayCluster, MinPartitionSize, NPartitions
+from modin.config import CpuCount, Engine, IsRayCluster, MinPartitionSize, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -2202,9 +2202,44 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         PandasDataframe
             A new dataframe.
         """
-        new_partitions = self._partition_mgr_cls.new_map(
-            self._partitions, lazy, func, func_args, func_kwargs
-        )
+        if self.num_parts <= 1.5 * CpuCount.get():
+            map_fn = (
+                self._partition_mgr_cls.lazy_map_partitions
+                if lazy
+                else self._partition_mgr_cls.map_partitions
+            )
+            # old way
+            new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
+        else:
+            axis = (
+                1
+                if abs(self._partitions.shape[0] - CpuCount.get())
+                < abs(self._partitions.shape[1] - CpuCount.get())
+                else 0
+            )
+            column_splits = (
+                self._partitions.shape[0]
+                // (CpuCount.get() // self._partitions.shape[1])
+                if CpuCount.get() > self._partitions.shape[1]
+                else 1
+            )
+
+            if axis == 1 or column_splits <= 1:
+                # splitting by full_axis rows
+                new_partitions = self._partition_mgr_cls.map_axis_partitions(
+                    axis,
+                    self._partitions,
+                    func,
+                    keep_partitioning=True,
+                    map_func_args=func_args,
+                    **func_kwargs if func_kwargs is not None else {},
+                )
+            else:
+                new_partitions = (
+                    self._partition_mgr_cls.map_partitions_splitting_by_column(
+                        self._partitions, column_splits, func, func_args, func_kwargs
+                    )
+                )
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns

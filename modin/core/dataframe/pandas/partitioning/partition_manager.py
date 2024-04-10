@@ -29,7 +29,6 @@ from pandas._libs.lib import no_default
 
 from modin.config import (
     BenchmarkMode,
-    CpuCount,
     Engine,
     MinPartitionSize,
     NPartitions,
@@ -751,82 +750,69 @@ class PandasDataframePartitionManager(
         )
 
     @classmethod
-    def new_map(cls, parts, lazy, func, func_args, func_kwargs):
-        map_fn = cls.lazy_map_partitions if lazy else cls.map_partitions
-        if os.environ["MY_STRATAGY"] == "1":  # np.prod(parts.shape) <= CpuCount.get():
-            # old way
-            result_partitions = map_fn(parts, func, func_args, func_kwargs)
-        else:
-            axis = (
-                1
-                if abs(parts.shape[0] - CpuCount.get())
-                < abs(parts.shape[1] - CpuCount.get())
-                else 0
-            )
-            column_splits = (
-                parts.shape[0] // (CpuCount.get() // parts.shape[1])
-                if CpuCount.get() > parts.shape[1]
-                else 1
-            )
+    def map_partitions_splitting_by_column(
+        cls,
+        partitions,
+        column_splits,
+        map_func,
+        map_func_args=None,
+        map_func_kwargs=None,
+    ):
+        """
+        Combine several blocks by column into one virtual partition and apply “map_funk” to them.
 
-            if os.environ["MY_STRATAGY"] == "2":  # axis == 1 or column_splits <= 1:
-                # previous way
-                result_partitions = cls.map_axis_partitions(
-                    axis,
-                    parts,
-                    func,
-                    keep_partitioning=True,
-                    map_func_args=func_args,
-                    **func_kwargs if func_kwargs is not None else {},
+        Parameters
+        ----------
+        partitions : NumPy 2D array
+            Partitions of Modin Frame.
+        column_splits : int
+            The number of splits by column.
+        map_func : callable
+            Function to apply.
+        func_args : iterable, optional
+            Positional arguments for the 'map_func'.
+        func_kwargs : dict, optional
+            Keyword arguments for the 'map_func'.
+
+        Returns
+        -------
+        NumPy array
+            An array of new partitions for Modin Frame.
+        """
+        new_partitions = np.array(
+            [
+                cls.column_partitions(
+                    partitions[i : i + column_splits],
+                    # full_axis=False,
                 )
-            elif os.environ["MY_STRATAGY"] == "3":  # just else
-                # it is a trick using only for check perfomance
-                # column_splits <= 1 is not expected in final version
-                if column_splits < 1:
-                    column_splits = 1
-
-                new_partitions = np.array(
+                for i in range(
+                    0,
+                    partitions.shape[0],
+                    column_splits,
+                )
+            ]
+        )
+        preprocessed_map_func = cls.preprocess_func(map_func)
+        kw = {
+            "num_splits": column_splits,
+        }
+        return np.concatenate(
+            [
+                np.stack(
                     [
-                        cls.column_partitions(
-                            parts[i : i + column_splits],
-                            full_axis=False,
+                        part.apply(
+                            preprocessed_map_func,
+                            *map_func_args if map_func_args is not None else (),
+                            **kw,
+                            **map_func_kwargs if map_func_kwargs is not None else {},
                         )
-                        for i in range(
-                            0,
-                            parts.shape[0],
-                            column_splits,
-                        )
-                    ]
+                        for part in row_of_parts
+                    ],
+                    axis=-1,
                 )
-                preprocessed_map_func = cls.preprocess_func(func)
-
-                # In some cases we can better split the parts,
-                # but we must change the metadata in the modin frame
-                # num_splits = math.ceil(NPartitions.get() / column_splits)
-                kw = {
-                    "num_splits": column_splits,
-                }
-                result_partitions = np.concatenate(
-                    [
-                        np.stack(
-                            [
-                                part.apply(
-                                    preprocessed_map_func,
-                                    *func_args if func_args is not None else (),
-                                    **kw,
-                                    **func_kwargs if func_kwargs is not None else {},
-                                )
-                                for part in row_of_parts
-                            ],
-                            axis=-1,
-                        )
-                        for row_of_parts in new_partitions
-                    ]
-                )
-            else:
-                raise ValueError("Inccorect MY_STRATAGY")
-
-        return result_partitions
+                for row_of_parts in new_partitions
+            ]
+        )
 
     @classmethod
     def concat(cls, axis, left_parts, right_parts):
