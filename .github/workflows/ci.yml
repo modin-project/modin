@@ -136,7 +136,7 @@ jobs:
         with:
           environment-file: environment-dev.yml
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: xgboost tests
         run: |
           # TODO(https://github.com/modin-project/modin/issues/5194): Uncap xgboost
@@ -175,7 +175,7 @@ jobs:
           environment-file: requirements/env_hdk.yml
           activate-environment: modin_on_hdk
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest modin/tests/core/storage_formats/hdk/test_internals.py
       - run: python -m pytest modin/tests/experimental/hdk_on_native/test_init.py
       - run: python -m pytest modin/tests/experimental/hdk_on_native/test_dataframe.py
@@ -347,7 +347,7 @@ jobs:
           activate-environment: modin_on_unidist
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - name: Set up postgres
         # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
         # https://stackoverflow.com/questions/36415654/cant-connect-docker-postgresql-9-3
@@ -451,7 +451,7 @@ jobs:
           command: ray start --head --port=6379 --object-store-memory=1000000000
         if: matrix.os == 'windows' && matrix.engine == 'ray'
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
         if: matrix.os == 'ubuntu'
       - name: Set up postgres
         # Locally, specifying port 2345:5432 works, but 2345:2345 and 5432:5432 do not. This solution is from
@@ -564,7 +564,7 @@ jobs:
           activate-environment: ${{ matrix.execution.name == 'unidist' && 'modin_on_unidist' || 'modin' }}
           python-version: ${{matrix.python-version}}
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
         if: matrix.os != 'windows'
       - name: Limit ray memory
         run: echo "MODIN_MEMORY=1000000000" >> $GITHUB_ENV
@@ -677,7 +677,7 @@ jobs:
         with:
           environment-file: environment-dev.yml
       - name: Install HDF5
-        run: sudo apt update && sudo apt install -y libhdf5-dev libfuse2
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
