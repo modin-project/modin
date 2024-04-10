@@ -21,7 +21,13 @@ import pandas._libs.lib as lib
 import pytest
 
 import modin.pandas as pd
-from modin.config import IsRayCluster, NPartitions, RangePartitioning, StorageFormat
+from modin.config import (
+    IsRayCluster,
+    NPartitions,
+    RangePartitioning,
+    StorageFormat,
+    use_range_partitioning_groupby,
+)
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
@@ -285,7 +291,7 @@ def test_mixed_dtypes_groupby(as_index):
                 # This test though produces so much NaN values in the result, so it's impossible to sort,
                 # using manual comparison of set of rows instead
                 assert_set_of_rows_identical
-                if RangePartitioning.get()
+                if use_range_partitioning_groupby()
                 else None
             ),
         )
@@ -357,7 +363,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
-        if not RangePartitioning.get():
+        if not use_range_partitioning_groupby():
             # `.group` fails with experimental groupby
             # https://github.com/modin-project/modin/issues/6083
             eval_ngroup(modin_groupby, pandas_groupby)
@@ -1351,7 +1357,7 @@ def sort_if_experimental_groupby(*dfs):
     https://github.com/modin-project/modin/issues/5924
     """
     result = dfs
-    if RangePartitioning.get():
+    if use_range_partitioning_groupby():
         dfs = try_cast_to_pandas(dfs)
         result = []
         for df in dfs:
@@ -1629,7 +1635,7 @@ def eval___getitem__(md_grp, pd_grp, item, expected_exception=None):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
-    if RangePartitioning.get():
+    if use_range_partitioning_groupby():
         # `.get_group()` doesn't work correctly with experimental groupby:
         # https://github.com/modin-project/modin/issues/6093
         return
@@ -1941,7 +1947,8 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
         pytest.param(
             False,
             marks=pytest.mark.skipif(
-                get_current_execution() == "BaseOnPython" or RangePartitioning.get(),
+                get_current_execution() == "BaseOnPython"
+                or use_range_partitioning_groupby(),
                 reason="See Pandas issue #39103",
             ),
         ),

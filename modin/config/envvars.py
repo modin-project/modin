@@ -733,7 +733,7 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
-class RangePartitioning(EnvWithSibilings, type=bool):
+class RangePartitioning(EnvironmentVariable, type=bool):
     """
     Set to true to use Modin's range-partitioning implementation where possible.
 
@@ -743,11 +743,6 @@ class RangePartitioning(EnvWithSibilings, type=bool):
 
     varname = "MODIN_RANGE_PARTITIONING"
     default = False
-
-    @classmethod
-    def _sibling(cls) -> type[EnvWithSibilings]:
-        """Get a parameter sibling."""
-        return RangePartitioningGroupby
 
 
 class RangePartitioningGroupby(EnvWithSibilings, type=bool):
@@ -794,6 +789,26 @@ class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
 ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
     ExperimentalGroupbyImpl, RangePartitioningGroupby
 )
+
+
+def use_range_partitioning_groupby() -> bool:
+    """
+    Determine whether range-partitioning implementation for groupby was enabled by a user.
+
+    This is a temporary helper function that queries ``RangePartitioning`` and deprecated
+    ``RangePartitioningGroupby`` config variables in order to determine whether to range-part
+    impl for groupby is enabled. Eventially this function should be removed together with
+    ``RangePartitioningGroupby`` variable.
+
+    Returns
+    -------
+    bool
+    """
+    with warnings.catch_warnings():
+        # filter deprecation warning, it was already showed when a user set the variable
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        old_range_part_var = RangePartitioningGroupby.get()
+    return RangePartitioning.get() or old_range_part_var
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):

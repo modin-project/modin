@@ -13,12 +13,10 @@
 
 """Contains implementations for GroupbyReduce functions."""
 
-import warnings
-
 import numpy as np
 import pandas
 
-from modin.config import RangePartitioning, RangePartitioningGroupby
+from modin.config import use_range_partitioning_groupby
 from modin.core.dataframe.algebra import GroupByReduce
 from modin.error_message import ErrorMessage
 from modin.utils import hashable
@@ -95,11 +93,7 @@ class GroupbyReduceImpl:
         )
 
         def method(query_compiler, *args, **kwargs):
-            with warnings.catch_warnings():
-                # filter deprecation warning, it was already showed when a user set the variable
-                warnings.filterwarnings("ignore", category=FutureWarning)
-                old_range_part_var = RangePartitioningGroupby.get()
-            if RangePartitioning.get() or old_range_part_var:
+            if use_range_partitioning_groupby():
                 try:
                     if finalizer_fn is not None:
                         raise NotImplementedError(

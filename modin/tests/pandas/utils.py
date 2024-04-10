@@ -44,6 +44,7 @@ from modin.config import (
     RangePartitioning,
     TestDatasetSize,
     TrackFileLeaks,
+    use_range_partitioning_groupby,
 )
 from modin.pandas.io import to_pandas
 from modin.pandas.testing import (
@@ -699,7 +700,7 @@ def sort_if_range_partitioning(df1, df2, comparator=None):
     if comparator is None:
         comparator = df_equals
 
-    if RangePartitioning.get() or RangePartitioning.get():
+    if RangePartitioning.get() or use_range_partitioning_groupby():
         df1, df2 = sort_data(df1), sort_data(df2)
 
     comparator(df1, df2)
