@@ -1653,7 +1653,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                         # FIXME: https://github.com/dask/distributed/issues/8585
                         _ = dtype._materialize_categories()
 
-                    # We cannot infer without computing the dtype if
+                    # We cannot infer without computing the dtype if new dtype is categorical
                     if isinstance(new_dtype, pandas.CategoricalDtype):
                         new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
                             # Actual parent will substitute `None` at `.set_dtypes_cache`
@@ -1675,18 +1675,20 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
 
         else:
             # Assume that the dtype is a scalar.
-            if not np.all(col_dtypes == self_dtypes):
+            if not (col_dtypes == self_dtypes).all():
                 new_dtypes = self_dtypes.copy()
                 new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
                 if isinstance(new_dtype, pandas.CategoricalDtype):
-                    new_dtypes[:] = LazyProxyCategoricalDtype._build_proxy(
-                        # Actual parent will substitute `None` at `.set_dtypes_cache`
-                        parent=None,
-                        column_name=new_dtypes.index,
-                        materializer=lambda parent, column: parent._compute_dtypes(
-                            columns=[column]
-                        )[column],
-                    )
+                    new_dtypes[:] = new_dtypes.to_frame().apply(
+                        lambda column: LazyProxyCategoricalDtype._build_proxy(
+                            # Actual parent will substitute `None` at `.set_dtypes_cache`
+                            parent=None,
+                            column_name=column.index[0],
+                            materializer=lambda parent, column: parent._compute_dtypes(
+                                columns=[column]
+                            )[column],
+                        )
+                    )[0]
                     use_full_axis_cast = True
                 else:
                     new_dtypes[:] = new_dtype
