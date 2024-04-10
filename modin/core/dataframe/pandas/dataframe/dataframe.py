@@ -2232,7 +2232,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     func,
                     keep_partitioning=True,
                     map_func_args=func_args,
-                    **func_kwargs if func_kwargs is not None else {},
+                    map_func_kwargs=func_kwargs,
                 )
             else:
                 new_partitions = (
