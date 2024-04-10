@@ -56,36 +56,39 @@ Disable Modin logging like so:
 
 Debugging from user defined functions:
 
-
 .. warning:: 
-  When attempting to use Modin logging in user defined functions that execute in workers for logging lower-level operators
-  as in example below, multiple log directories ``.modin/logs/job_**`` would be created for each worker executing the UDF.
+    When attempting to use Modin logging in user defined functions that execute in workers for logging lower-level operators
+    as in example below, multiple log directories ``.modin/logs/job_**`` would be created for each worker executing the UDF.
 
 .. code-block:: python
 
   import modin.pandas as pd
+
   def udf(x):
-      from modin.config import LogMode, LogMemoryInterval, LogFileSize
+      from modin.config import LogMode
+      
       LogMode.enable()
-      # User code with modin operations
-      return x+1
+      
+      return x + 1
   
-  modin_df = pd.DataFrame([0,1,2,3])
-  modin_df.map(udf)
+  modin_df = pd.DataFrame([0, 1, 2, 3])
+  print(modin_df.map(udf))
 
 So the **recommended** approach would be to use a different logger as in the below snipet
-to log from user defined functions that execute on Ray workers.
+to log from user defined functions that execute on workers.
 Below is an an example to log from UDF. For this the logger config has to be specified inside the UDF that would execute on a remote worker.
 
 .. code-block:: python
 
-  import modin.pandas as pd
   import logging
+  import modin.pandas as pd
+  
   def udf(x):
       logging.basicConfig(filename='modin_udf.log', level=logging.INFO)
       logging.info("This log message will be written to modin_udf.log ")
-      # User code goes here
-      return x+1
 
-  modin_df = pd.DataFrame([0,1,2,3])
+      # User code goes here
+      return x + 1
+
+  modin_df = pd.DataFrame([0, 1, 2, 3])
   print(modin_df.map(udf))
