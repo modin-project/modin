@@ -1,5 +1,33 @@
+
+Modin utilizes a range-partitioning approach for specific operations, significantly enhancing
+parallelism and reducing memory consumption in certain scenarios.
+
+You can enable range-partitioning by specifying ``cfg.RangePartitioning`` :doc:`configuration variable: </flow/modin/config>`:
+
+.. code-block:: python
+    import modin.pandas as pd
+    import modin.config as cfg
+
+    cfg.RangePartitioning.put(True) # past this point methods that support range-partitioning
+                                    # will use engage it
+
+    pd.DataFrame(...).groupby(...).mean() # use range-partitioning for groupby.mean()
+
+    cfg.Range-partitioning.put(False)
+
+    pd.DataFrame(...).groupby(...).mean() # use MapReduce implementation for groupby.mean()
+
+Building range-partitioning assumes data reshuffling, which may result into order of rows different from
+pandas in certain operations.
+
+Range-partitioning is not a silver bullet, meaning that enabling it is not always beneficial. Below you find
+a list of operations that have support for range-partitioning and practical advices on when one should
+enable it.
+
 Range-partitioning GroupBy
 """"""""""""""""""""""""""
+
+TODO: rewrite this section
 
 The range-partitioning GroupBy implementation utilizes Modin's reshuffling mechanism that gives an
 ability to build range partitioning over a Modin DataFrame.
@@ -76,14 +104,23 @@ implementation with the respective warning if it meets an unsupported case:
 Range-partitioning Merge
 """"""""""""""""""""""""
 
-It is recommended to use this implementation if the right dataframe in merge is as big as
-the left dataframe. In this case, range-partitioning implementation works faster and consumes less RAM.
+.. note::
+    Range-partitioning approach is implemented only for "left" and "inner" merge and only
+    when merging on a single column using `on` argument.
+
+Range-partitioning merge replaces broadcast merge. It is recommended to use range-partitioning implementation
+if the right dataframe in merge is as big as the left dataframe. In this case, range-partitioning
+implementation works faster and consumes less RAM.
+
+TODO: add perf measurements from https://github.com/modin-project/modin/pull/6966
 
 '.unique()' and '.drop_duplicates()'
 """"""""""""""""""""""""""""""""""""
 
 Range-partitioning implementation of '.unique()'/'.drop_duplicates()' works best when the input data size is big (more than
 5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).
+
+TODO: add perf measurements from https://github.com/modin-project/modin/pull/7091
 
 '.nunique()'
 """"""""""""""""""""""""""""""""""""
@@ -96,6 +133,8 @@ Range-partitioning implementation of '.unique()'/'.drop_duplicates()' works best
 Range-partitioning implementation of '.nunique()'' works best when the input data size is big (more than
 5_000_000 rows) and when the output size is also expected to be big (no more than 80% values are duplicates).
 
+TODO: add perf measurements from https://github.com/modin-project/modin/pull/7101
+
 Resample
 """"""""
 
@@ -105,3 +144,11 @@ Resample
 
 It is recommended to use range-partitioning for resampling if you're dealing with a dataframe that has more than
 5_000_000 rows and the expected output is also expected to be big (more than 500_000 rows).
+
+TODO: add perf measurements from https://github.com/modin-project/modin/pull/7140
+
+pivot_table
+"""""""""""
+
+Range-partitioning implementation is automatically applied for `df.pivot_table`
+whenever possible, users can't control this.
