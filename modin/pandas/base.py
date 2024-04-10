@@ -2337,6 +2337,7 @@ class BasePandasDataset(ClassLogger):
                 query_compiler=numeric_only_df._query_compiler.quantile_for_list_of_values(
                     q=q,
                     axis=axis,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
                     numeric_only=False,
                     interpolation=interpolation,
                     method=method,
@@ -2347,6 +2348,7 @@ class BasePandasDataset(ClassLogger):
                 numeric_only_df._query_compiler.quantile_for_single_value(
                     q=q,
                     axis=axis,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
                     numeric_only=False,
                     interpolation=interpolation,
                     method=method,
