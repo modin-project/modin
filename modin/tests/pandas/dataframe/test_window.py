@@ -676,7 +676,7 @@ def test_quantile_7157():
     n_mcols = 5
 
     df1_md, df1_pd = create_test_dfs(
-        random_state.rand(n_rows, n_fcols), columns=[f"feat_{i}" for i in range(10)]
+        random_state.rand(n_rows, n_fcols), columns=[f"feat_{i}" for i in range(n_fcols)]
     )
     df2_md, df2_pd = create_test_dfs(
         {
