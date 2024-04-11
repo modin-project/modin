@@ -8,9 +8,10 @@ runs:
     - run: |
         COVERAGE_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
         mv .coverage .coverage.${COVERAGE_UUID}
+        echo "COVERAGE_UUID=${COVERAGE_UUID}" >> $GITHUB_ENV
       id: coverage-uuid
       shell: bash
-    - uses: actions/upload-artifact@v3.1.2
+    - uses: actions/upload-artifact@v4
       with:
-        name: coverage-data
+        name: coverage-data-${{ env.COVERAGE_UUID }}
         path: .coverage*
