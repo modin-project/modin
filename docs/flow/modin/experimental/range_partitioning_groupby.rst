@@ -4,16 +4,16 @@ Range-partitioning GroupBy
 The range-partitioning GroupBy implementation utilizes Modin's reshuffling mechanism that gives an
 ability to build range partitioning over a Modin DataFrame.
 
-In order to enable/disable the range-partitiong implementation you have to specify ``cfg.RangePartitioningGroupby``
+In order to enable/disable the range-partitiong implementation you have to specify ``cfg.RangePartitioning``
 :doc:`configuration variable: </flow/modin/config>`
 
 .. code-block:: ipython
 
-    In [4]: import modin.config as cfg; cfg.RangePartitioningGroupby.put(True)
+    In [4]: import modin.config as cfg; cfg.RangePartitioning.put(True)
 
     In [5]: # past this point, Modin will always use the range-partitiong groupby implementation
 
-    In [6]: cfg.RangePartitioningGroupby.put(False)
+    In [6]: cfg.RangePartitioning.put(False)
 
     In [7]: # past this point, Modin won't use range-partitiong groupby implementation anymore
 
@@ -32,7 +32,7 @@ The range-partitiong implementation appears to be quite efficient when compared 
     In [6]: %timeit df.groupby("col0").nunique() # full-axis implementation
     Out[6]: # 2.73 s ± 28.8 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
-    In [7]: import modin.config as cfg; cfg.RangePartitioningGroupby.put(True)
+    In [7]: import modin.config as cfg; cfg.RangePartitioning.put(True)
 
     In [8]: %timeit df.groupby("col0").nunique() # range-partitiong implementation
     Out[8]: # 595 ms ± 61.3 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
@@ -51,7 +51,7 @@ have too few unique values (and thus fewer units of parallelization):
     In [6]: %timeit df.groupby("col0").sum() # TreeReduce implementation
     Out[6]: # 155 ms ± 5.02 ms per loop (mean ± std. dev. of 7 runs, 10 loops each)
 
-    In [7]: import modin.config as cfg; cfg.RangePartitioningGroupby.put(True)
+    In [7]: import modin.config as cfg; cfg.RangePartitioning.put(True)
 
     In [8]: %timeit df.groupby("col0").sum() # range-partitiong implementation
     Out[8]: # 230 ms ± 22.2 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
@@ -65,7 +65,7 @@ implementation with the respective warning if it meets an unsupported case:
 
 .. code-block:: python
 
-    In [14]: import modin.config as cfg; cfg.RangePartitioningGroupby.put(True)
+    In [14]: import modin.config as cfg; cfg.RangePartitioning.put(True)
 
     In [15]: df.groupby(level=0).sum()
     Out[15]: # UserWarning: Can't use range-partitiong groupby implementation because of:
