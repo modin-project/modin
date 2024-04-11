@@ -24,8 +24,9 @@ import modin.pandas as pd
 from modin.config import (
     IsRayCluster,
     NPartitions,
-    RangePartitioningGroupby,
+    RangePartitioning,
     StorageFormat,
+    use_range_partitioning_groupby,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
@@ -290,7 +291,7 @@ def test_mixed_dtypes_groupby(as_index):
                 # This test though produces so much NaN values in the result, so it's impossible to sort,
                 # using manual comparison of set of rows instead
                 assert_set_of_rows_identical
-                if RangePartitioningGroupby.get()
+                if use_range_partitioning_groupby()
                 else None
             ),
         )
@@ -362,7 +363,7 @@ def test_mixed_dtypes_groupby(as_index):
         eval_max(modin_groupby, pandas_groupby)
         eval_len(modin_groupby, pandas_groupby)
         eval_sum(modin_groupby, pandas_groupby)
-        if not RangePartitioningGroupby.get():
+        if not use_range_partitioning_groupby():
             # `.group` fails with experimental groupby
             # https://github.com/modin-project/modin/issues/6083
             eval_ngroup(modin_groupby, pandas_groupby)
@@ -1356,7 +1357,7 @@ def sort_if_experimental_groupby(*dfs):
     https://github.com/modin-project/modin/issues/5924
     """
     result = dfs
-    if RangePartitioningGroupby.get():
+    if use_range_partitioning_groupby():
         dfs = try_cast_to_pandas(dfs)
         result = []
         for df in dfs:
@@ -1634,7 +1635,7 @@ def eval___getitem__(md_grp, pd_grp, item, expected_exception=None):
 def eval_groups(modin_groupby, pandas_groupby):
     for k, v in modin_groupby.groups.items():
         assert v.equals(pandas_groupby.groups[k])
-    if RangePartitioningGroupby.get():
+    if use_range_partitioning_groupby():
         # `.get_group()` doesn't work correctly with experimental groupby:
         # https://github.com/modin-project/modin/issues/6093
         return
@@ -1947,7 +1948,7 @@ def test_agg_func_None_rename(by_and_agg_dict, as_index):
             False,
             marks=pytest.mark.skipif(
                 get_current_execution() == "BaseOnPython"
-                or RangePartitioningGroupby.get(),
+                or use_range_partitioning_groupby(),
                 reason="See Pandas issue #39103",
             ),
         ),
@@ -3142,8 +3143,8 @@ def test_groupby_deferred_index(func):
 @pytest.mark.parametrize(
     "modify_config",
     [
-        {RangePartitioningGroupby: True, IsRayCluster: True},
-        {RangePartitioningGroupby: True, IsRayCluster: False},
+        {RangePartitioning: True, IsRayCluster: True},
+        {RangePartitioning: True, IsRayCluster: False},
     ],
     indirect=True,
 )
@@ -3205,9 +3206,7 @@ def test_shape_changing_udf(modify_config):
     )
 
 
-@pytest.mark.parametrize(
-    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
-)
+@pytest.mark.parametrize("modify_config", [{RangePartitioning: True}], indirect=True)
 def test_reshuffling_groupby_on_strings(modify_config):
     # reproducer from https://github.com/modin-project/modin/issues/6509
     modin_df, pandas_df = create_test_dfs(
@@ -3226,9 +3225,7 @@ def test_reshuffling_groupby_on_strings(modify_config):
     eval_general(md_grp, pd_grp, lambda grp: grp.tail(10))
 
 
-@pytest.mark.parametrize(
-    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
-)
+@pytest.mark.parametrize("modify_config", [{RangePartitioning: True}], indirect=True)
 def test_groupby_apply_series_result(modify_config):
     # reproducer from the issue:
     # https://github.com/modin-project/modin/issues/6632
@@ -3467,9 +3464,7 @@ def test_groupby_agg_provided_callable_warning():
             pandas_groupby.agg(func)
 
 
-@pytest.mark.parametrize(
-    "modify_config", [{RangePartitioningGroupby: True}], indirect=True
-)
+@pytest.mark.parametrize("modify_config", [{RangePartitioning: True}], indirect=True)
 @pytest.mark.parametrize("observed", [False])
 @pytest.mark.parametrize("as_index", [True])
 @pytest.mark.parametrize(

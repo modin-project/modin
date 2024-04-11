@@ -26,7 +26,7 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
@@ -76,7 +76,7 @@ jobs:
         shell: bash -l {0}
     name: test docs
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml

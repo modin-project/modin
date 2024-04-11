@@ -43,7 +43,7 @@ from pandas.core.indexes.api import ensure_index_from_sequences
 from pandas.core.indexing import check_bool_indexer
 from pandas.errors import DataError
 
-from modin.config import CpuCount, RangePartitioning, RangePartitioningGroupby
+from modin.config import CpuCount, RangePartitioning, use_range_partitioning_groupby
 from modin.core.dataframe.algebra import (
     Binary,
     Fold,
@@ -2588,7 +2588,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         axis = kwargs.get("axis", 0)
         q = kwargs.get("q")
         numeric_only = kwargs.get("numeric_only", True)
-        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list))
+        assert isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple))
 
         if numeric_only:
             new_columns = self._modin_frame.numeric_columns()
@@ -2908,7 +2908,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
-        if axis == 1:
+        if axis == 0:
             value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
@@ -3537,7 +3537,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return result
 
     def groupby_mean(self, by, axis, groupby_kwargs, agg_args, agg_kwargs, drop=False):
-        if RangePartitioningGroupby.get():
+        if use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -3608,7 +3608,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         agg_kwargs,
         drop=False,
     ):
-        if RangePartitioningGroupby.get():
+        if use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -4027,9 +4027,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
             )
 
         # 'group_wise' means 'groupby.apply()'. We're certain that range-partitioning groupby
-        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioningGroupby'
+        # always works better for '.apply()', so we're using it regardless of the 'RangePartitioning'
         # value
-        if how == "group_wise" or RangePartitioningGroupby.get():
+        if how == "group_wise" or use_range_partitioning_groupby():
             try:
                 return self._groupby_shuffle(
                     by=by,
@@ -4050,7 +4050,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                     + "\nFalling back to a full-axis implementation."
                 )
                 get_logger().info(message)
-                if RangePartitioningGroupby.get():
+                if use_range_partitioning_groupby():
                     ErrorMessage.warn(message)
 
         if isinstance(agg_func, dict) and GroupbyReduceImpl.has_impl_for(agg_func):

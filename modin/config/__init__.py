@@ -55,6 +55,7 @@ from modin.config.envvars import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
+    use_range_partitioning_groupby,
 )
 from modin.config.pubsub import Parameter, ValueSource, context
 
@@ -96,6 +97,7 @@ __all__ = [
     "ExperimentalNumPyAPI",
     "RangePartitioningGroupby",
     "RangePartitioning",
+    "use_range_partitioning_groupby",
     "ExperimentalGroupbyImpl",
     "AsyncReadMode",
     "ReadSqlEngine",

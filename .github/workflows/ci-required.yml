@@ -23,10 +23,10 @@ jobs:
     name: build docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.9.x"
           architecture: "x64"
@@ -39,7 +39,7 @@ jobs:
     name: lint (pydocstyle)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       # The `numpydoc` version here MUST match the versions in the dev requirements files.
       - run: pip install pytest pytest-cov pydocstyle numpydoc==1.1.0
@@ -110,7 +110,7 @@ jobs:
     name: lint (black and isort)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       - run: pip install black>=24.1.0 isort>=5.12
       # NOTE: keep the black command here in sync with the pre-commit hook in
