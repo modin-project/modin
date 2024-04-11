@@ -1625,7 +1625,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
 
         Parameters
         ----------
-        col_dtypes : dictionary of {col: dtype,...}
+        col_dtypes : dictionary of {col: dtype,...} or str
             Where col is the column name and dtype is a NumPy dtype.
         errors : {'raise', 'ignore'}, default: 'raise'
             Control raising of exceptions on invalid data for provided dtype.
@@ -1642,39 +1642,66 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
         # will store the encoded table. That can lead to higher memory footprint.
         # TODO: Revisit if this hurts users.
         use_full_axis_cast = False
-        for column, dtype in col_dtypes.items():
-            if not is_dtype_equal(dtype, self_dtypes[column]):
-                if new_dtypes is None:
-                    new_dtypes = self_dtypes.copy()
-                # Update the new dtype series to the proper pandas dtype
-                new_dtype = pandas.api.types.pandas_dtype(dtype)
-                if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
-                    # FIXME: https://github.com/dask/distributed/issues/8585
-                    _ = dtype._materialize_categories()
+        if isinstance(col_dtypes, dict):
+            for column, dtype in col_dtypes.items():
+                if not is_dtype_equal(dtype, self_dtypes[column]):
+                    if new_dtypes is None:
+                        new_dtypes = self_dtypes.copy()
+                    # Update the new dtype series to the proper pandas dtype
+                    new_dtype = pandas.api.types.pandas_dtype(dtype)
+                    if Engine.get() == "Dask" and hasattr(dtype, "_is_materialized"):
+                        # FIXME: https://github.com/dask/distributed/issues/8585
+                        _ = dtype._materialize_categories()
 
-                # We cannot infer without computing the dtype if
+                    # We cannot infer without computing the dtype if new dtype is categorical
+                    if isinstance(new_dtype, pandas.CategoricalDtype):
+                        new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
+                            # Actual parent will substitute `None` at `.set_dtypes_cache`
+                            parent=None,
+                            column_name=column,
+                            materializer=lambda parent, column: parent._compute_dtypes(
+                                columns=[column]
+                            )[column],
+                        )
+                        use_full_axis_cast = True
+                    else:
+                        new_dtypes[column] = new_dtype
+
+            def astype_builder(df):
+                """Compute new partition frame with dtypes updated."""
+                return df.astype(
+                    {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
+                )
+
+        else:
+            # Assume that the dtype is a scalar.
+            if not (col_dtypes == self_dtypes).all():
+                new_dtypes = self_dtypes.copy()
+                new_dtype = pandas.api.types.pandas_dtype(col_dtypes)
+                if Engine.get() == "Dask" and hasattr(new_dtype, "_is_materialized"):
+                    # FIXME: https://github.com/dask/distributed/issues/8585
+                    _ = new_dtype._materialize_categories()
                 if isinstance(new_dtype, pandas.CategoricalDtype):
-                    new_dtypes[column] = LazyProxyCategoricalDtype._build_proxy(
-                        # Actual parent will substitute `None` at `.set_dtypes_cache`
-                        parent=None,
-                        column_name=column,
-                        materializer=lambda parent, column: parent._compute_dtypes(
-                            columns=[column]
-                        )[column],
-                    )
+                    new_dtypes[:] = new_dtypes.to_frame().apply(
+                        lambda column: LazyProxyCategoricalDtype._build_proxy(
+                            # Actual parent will substitute `None` at `.set_dtypes_cache`
+                            parent=None,
+                            column_name=column.index[0],
+                            materializer=lambda parent, column: parent._compute_dtypes(
+                                columns=[column]
+                            )[column],
+                        )
+                    )[0]
                     use_full_axis_cast = True
                 else:
-                    new_dtypes[column] = new_dtype
+                    new_dtypes[:] = new_dtype
+
+            def astype_builder(df):
+                """Compute new partition frame with dtypes updated."""
+                return df.astype(col_dtypes, errors=errors)
 
         if new_dtypes is None:
             return self.copy()
-
-        def astype_builder(df):
-            """Compute new partition frame with dtypes updated."""
-            return df.astype(
-                {k: v for k, v in col_dtypes.items() if k in df}, errors=errors
-            )
-
         if use_full_axis_cast:
             new_frame = self._partition_mgr_cls.map_axis_partitions(
                 0, self._partitions, astype_builder, keep_partitioning=True

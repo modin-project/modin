@@ -1005,7 +1005,7 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        # dtype can be a series, a dict, or a scalar. If it's series or scalar,
+        # dtype can be a series, a dict, or a scalar. If it's series,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:
@@ -1026,24 +1026,24 @@ class BasePandasDataset(ClassLogger):
                     "Only a column name can be used for the key in "
                     + "a dtype mappings argument."
                 )
-            col_dtypes = dtype
-        else:
-            # Assume that the dtype is a scalar.
-            col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
         if not copy:
             # If the new types match the old ones, then copying can be avoided
             if self._query_compiler._modin_frame.has_materialized_dtypes:
                 frame_dtypes = self._query_compiler._modin_frame.dtypes
-                for col in col_dtypes:
-                    if col_dtypes[col] != frame_dtypes[col]:
+                if isinstance(dtype, dict):
+                    for col in dtype:
+                        if dtype[col] != frame_dtypes[col]:
+                            copy = True
+                            break
+                else:
+                    if not (frame_dtypes == dtype).all():
                         copy = True
-                        break
             else:
                 copy = True
 
         if copy:
-            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            new_query_compiler = self._query_compiler.astype(dtype, errors=errors)
             return self._create_or_update_from_compiler(new_query_compiler)
         return self
 

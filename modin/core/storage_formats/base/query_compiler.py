@@ -1860,7 +1860,7 @@ class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
 
         Parameters
         ----------
-        col_dtypes : dict
+        col_dtypes : dict or str
             Map for column names and new dtypes.
         errors : {'raise', 'ignore'}, default: 'raise'
             Control raising of exceptions on invalid data for provided dtype.
