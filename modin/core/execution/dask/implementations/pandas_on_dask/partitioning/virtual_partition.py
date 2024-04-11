@@ -17,6 +17,7 @@ import pandas
 from distributed import Future
 from distributed.utils import get_ip
 
+from modin.config import MinPartitionSize
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -161,6 +162,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             f_kwargs={
                 "lengths": lengths,
                 "manual_partition": manual_partition,
+                "min_block_size": MinPartitionSize.get(),
             },
             num_returns=result_num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,

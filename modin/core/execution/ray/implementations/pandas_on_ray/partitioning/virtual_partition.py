@@ -17,6 +17,7 @@ import pandas
 import ray
 from ray.util import get_node_ip_address
 
+from modin.config import MinPartitionSize
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -189,6 +190,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             f_kwargs=f_kwargs,
             manual_partition=manual_partition,
             lengths=lengths,
+            min_block_size=MinPartitionSize.get(),
             return_generator=True,
         )
 

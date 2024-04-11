@@ -125,6 +125,7 @@ def generate_result_of_axis_func_pandas(
             length_list = get_length_list(
                 result.shape[axis], num_splits, min_block_size
             )
+        # print(f"{length_list=}")
         # Inserting the first "zero" to properly compute cumsum indexing slices
         length_list = np.insert(length_list, obj=0, values=[0])
         sums = np.cumsum(length_list)

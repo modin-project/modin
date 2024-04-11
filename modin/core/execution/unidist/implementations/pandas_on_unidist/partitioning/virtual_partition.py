@@ -18,6 +18,7 @@ import warnings
 import pandas
 import unidist
 
+from modin.config import MinPartitionSize
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -189,6 +190,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             *partitions,
             manual_partition=manual_partition,
             lengths=lengths,
+            min_block_size=MinPartitionSize.get(),
         )
 
     @classmethod

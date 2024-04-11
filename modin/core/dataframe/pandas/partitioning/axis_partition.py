@@ -18,6 +18,7 @@ import warnings
 import numpy as np
 import pandas
 
+from modin.config import MinPartitionSize
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
@@ -392,6 +393,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         maintain_partitioning,
         *partitions,
         lengths=None,
+        min_block_size=None,
         manual_partition=False,
         return_generator=False,
     ):
@@ -473,10 +475,16 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                     lengths = None
         if return_generator:
             return generate_result_of_axis_func_pandas(
-                axis, num_splits, result, lengths
+                axis,
+                num_splits,
+                result,
+                lengths,
+                min_block_size=min_block_size,
             )
         else:
-            return split_result_of_axis_func_pandas(axis, num_splits, result, lengths)
+            return split_result_of_axis_func_pandas(
+                axis, num_splits, result, lengths, min_block_size=min_block_size
+            )
 
     @classmethod
     def deploy_func_between_two_axis_partitions(
