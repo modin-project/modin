@@ -676,6 +676,8 @@ jobs:
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
