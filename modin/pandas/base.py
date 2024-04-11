@@ -1037,7 +1037,7 @@ class BasePandasDataset(ClassLogger):
                             copy = True
                             break
                 else:
-                    if not np.all(frame_dtypes == dtype):
+                    if not (frame_dtypes == dtype).all():
                         copy = True
             else:
                 copy = True
