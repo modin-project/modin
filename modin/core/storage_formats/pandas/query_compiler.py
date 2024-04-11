@@ -2908,7 +2908,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         )
 
     def setitem(self, axis, key, value):
-        if axis == 1:
+        if axis == 0:
             value = self._wrap_column_data(value)
         return self._setitem(axis=axis, key=key, value=value, how=None)
 
