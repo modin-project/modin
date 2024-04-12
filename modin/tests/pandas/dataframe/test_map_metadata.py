@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions, StorageFormat
+from modin.config import MinPartitionSize, NPartitions, StorageFormat
 from modin.core.dataframe.pandas.metadata import LazyProxyCategoricalDtype
 from modin.core.storage_formats.pandas.utils import split_result_of_axis_func_pandas
 from modin.pandas.testing import assert_index_equal, assert_series_equal
@@ -598,7 +598,11 @@ class TestCategoricalProxyDtype:
         original_dtype = pandas_df.astype({"a": "category"}).dtypes["a"]
 
         chunks = split_result_of_axis_func_pandas(
-            axis=0, num_splits=nchunks, result=pandas_df, length_list=[2, 2, 2]
+            axis=0,
+            num_splits=nchunks,
+            result=pandas_df,
+            min_block_size=MinPartitionSize.get(),
+            length_list=[2, 2, 2],
         )
 
         if StorageFormat.get() == "Pandas":

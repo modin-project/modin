@@ -391,8 +391,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         num_splits,
         maintain_partitioning,
         *partitions,
+        min_block_size,
         lengths=None,
-        min_block_size=None,
         manual_partition=False,
         return_generator=False,
     ):
@@ -416,6 +416,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         lengths : list, optional
             The list of lengths to shuffle the object.
         manual_partition : bool, default: False
@@ -477,12 +479,12 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 axis,
                 num_splits,
                 result,
+                min_block_size,
                 lengths,
-                min_block_size=min_block_size,
             )
         else:
             return split_result_of_axis_func_pandas(
-                axis, num_splits, result, lengths, min_block_size=min_block_size
+                axis, num_splits, result, min_block_size, lengths
             )
 
     @classmethod
@@ -496,6 +498,7 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
         len_of_left,
         other_shape,
         *partitions,
+        min_block_size,
         return_generator=False,
     ):
         """
@@ -520,6 +523,8 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         return_generator : bool, default: False
             Return a generator from the function, set to `True` for Ray backend
             as Ray remote functions can return Generators.
@@ -566,12 +571,14 @@ class PandasDataframeAxisPartition(BaseDataframeAxisPartition):
                 axis,
                 num_splits,
                 result,
+                min_block_size,
             )
         else:
             return split_result_of_axis_func_pandas(
                 axis,
                 num_splits,
                 result,
+                min_block_size,
             )
 
     @classmethod
