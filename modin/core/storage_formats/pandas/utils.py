@@ -22,7 +22,7 @@ from typing import Generator, Hashable, List, Optional
 import numpy as np
 import pandas
 
-from modin.config import NPartitions
+from modin.config import MinPartitionSize, NPartitions
 
 
 def compute_chunksize(axis_len: int, num_splits: int, min_block_size: int) -> int:
@@ -251,7 +251,11 @@ def merge_partitioning(left, right, axis=1):
 
     if lshape is not None and rshape is not None:
         res_shape = sum(lshape) + sum(rshape)
-        chunk_size = compute_chunksize(axis_len=res_shape, num_splits=NPartitions.get())
+        chunk_size = compute_chunksize(
+            axis_len=res_shape,
+            num_splits=NPartitions.get(),
+            min_block_size=MinPartitionSize.get(),
+        )
         return ceil(res_shape / chunk_size)
     else:
         lsplits = left._partitions.shape[axis]

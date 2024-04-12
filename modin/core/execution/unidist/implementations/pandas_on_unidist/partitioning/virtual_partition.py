@@ -189,8 +189,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             maintain_partitioning,
             *partitions,
             manual_partition=manual_partition,
-            lengths=lengths,
             min_block_size=MinPartitionSize.get(),
+            lengths=lengths,
         )
 
     @classmethod

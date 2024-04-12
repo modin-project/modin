@@ -189,8 +189,8 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             f_len_args=len(f_args),
             f_kwargs=f_kwargs,
             manual_partition=manual_partition,
-            lengths=lengths,
             min_block_size=MinPartitionSize.get(),
+            lengths=lengths,
             return_generator=True,
         )
 
