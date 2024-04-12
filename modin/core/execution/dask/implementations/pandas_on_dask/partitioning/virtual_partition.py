@@ -17,7 +17,6 @@ import pandas
 from distributed import Future
 from distributed.utils import get_ip
 
-from modin.config import MinPartitionSize
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -113,6 +112,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits,
         maintain_partitioning,
         *partitions,
+        min_block_size,
         lengths=None,
         manual_partition=False,
     ):
@@ -136,6 +136,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         lengths : iterable, default: None
             The list of lengths to shuffle the partition into.
         manual_partition : bool, default: False
@@ -160,7 +162,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 *partitions,
             ),
             f_kwargs={
-                "min_block_size": MinPartitionSize.get(),
+                "min_block_size": min_block_size,
                 "lengths": lengths,
                 "manual_partition": manual_partition,
             },
@@ -179,6 +181,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
         len_of_left,
         other_shape,
         *partitions,
+        min_block_size,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -202,6 +205,8 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
 
         Returns
         -------
@@ -220,7 +225,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 len_of_left,
                 other_shape,
                 *partitions,
-                MinPartitionSize.get(),
+                min_block_size,
             ),
             num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,
