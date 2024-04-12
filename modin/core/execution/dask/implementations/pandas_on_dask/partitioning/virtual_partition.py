@@ -220,6 +220,7 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 len_of_left,
                 other_shape,
                 *partitions,
+                MinPartitionSize.get(),
             ),
             num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,

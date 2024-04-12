@@ -245,6 +245,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             len_of_left,
             other_shape,
             *partitions,
+            MinPartitionSize.get(),
         )
 
     def wait(self):
