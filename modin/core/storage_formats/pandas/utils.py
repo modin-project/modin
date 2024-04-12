@@ -43,6 +43,13 @@ def compute_chunksize(axis_len, num_splits, min_block_size=None):
     -------
     int
         Integer number of rows/columns to split the DataFrame will be returned.
+
+    Notes
+    -----
+    To use this function in remote kernels, it is necessary to always explicitly
+    pass `min_block_size` parameter, since it is unsafe to use `MinPartitionSize`
+    configuration variable due to the fact that changes in its value in the main
+    process are not propagated to worker processes.
     """
     if min_block_size is None:
         min_block_size = MinPartitionSize.get()
