@@ -18,7 +18,6 @@ import warnings
 import numpy as np
 import pandas
 
-from modin.config import MinPartitionSize
 from modin.core.dataframe.base.partitioning.axis_partition import (
     BaseDataframeAxisPartition,
 )
