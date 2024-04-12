@@ -30,7 +30,7 @@ jobs:
     name: lint (mypy)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       - run: pip install -r requirements-dev.txt
       - run: mypy --config-file mypy.ini
@@ -39,7 +39,7 @@ jobs:
     name: lint (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       # NOTE: If you are changing the set of packages installed here, make sure that
       # the dev requirements match them.
@@ -55,7 +55,7 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/requirements-no-engine.yml
@@ -78,7 +78,7 @@ jobs:
         shell: bash -l {0}
     name: test-clean-install-${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       - run: python -m pip install -e ".[all]"
       - name: Ensure Ray and Dask engines start up
@@ -101,7 +101,7 @@ jobs:
         shell: bash -l {0}
     name: test-internals
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
@@ -131,7 +131,7 @@ jobs:
       MODIN_TEST_DATASET_SIZE: "small"
     name: Test ${{ matrix.execution }} execution, Python 3.9
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
@@ -169,7 +169,7 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/env_hdk.yml
@@ -218,10 +218,10 @@ jobs:
       MODIN_TEST_DATASET_SIZE: small
     name: test-asv-benchmarks
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - uses: conda-incubator/setup-miniconda@v2
+      - uses: conda-incubator/setup-miniconda@v3
         with:
           auto-activate-base: true
           activate-environment: ""
@@ -271,7 +271,7 @@ jobs:
         if: always()
 
       - name: Publish benchmarks artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: Benchmarks log
           path: asv_bench/benchmarks.log
@@ -287,8 +287,8 @@ jobs:
       engines: ${{ steps.engines.outputs.engines }}
       experimental: ${{ steps.experimental.outputs.experimental }}
     steps:
-    - uses: actions/checkout@v3
-    - uses: dorny/paths-filter@v2
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
       id: filter
       with:
         filters: |
@@ -305,7 +305,7 @@ jobs:
             - 'modin/core/execution/unidist/**'
           experimental:
             - 'modin/experimental/**'
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
     - id: engines
       run: |
         python -c "import sys, json; print('engines=' + json.dumps(['python'] + (sys.argv[1] == 'true' and ['ray'] or []) + (sys.argv[2] == 'true' and ['dask'] or []) ))" \
@@ -340,7 +340,7 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: requirements/env_unidist_linux.yml
@@ -366,7 +366,7 @@ jobs:
       - run: ./.github/workflows/sql_server/set_up_sql_server.sh
       # need an extra argument "genv" to set environment variables for mpiexec. We need
       # these variables to test writing to the mock s3 filesystem.
-      - uses: nick-fields/retry@v2
+      - uses: nick-fields/retry@v3
         # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
         # for details see: https://github.com/modin-project/modin/pull/6776
         with:
@@ -436,7 +436,7 @@ jobs:
       - name: Tell Modin to use existing ray cluster
         run: echo "MODIN_RAY_CLUSTER=True" >> $GITHUB_ENV
         if: matrix.os == 'windows' && matrix.engine == 'ray'
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
@@ -444,7 +444,7 @@ jobs:
       - name: Start local ray cluster
         # Try a few times to start ray to work around
         # https://github.com/modin-project/modin/issues/4562
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -557,7 +557,7 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: ${{ matrix.os == 'ubuntu' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_linux.yml' || matrix.os == 'windows' && matrix.execution.name == 'unidist' && 'requirements/env_unidist_win.yml' || 'environment-dev.yml' }}
@@ -575,7 +575,7 @@ jobs:
       - name: Start local ray cluster
         # Try a few times to start ray to work around
         # https://github.com/modin-project/modin/issues/4562
-        uses: nick-fields/retry@v2
+        uses: nick-fields/retry@v3
         with:
           timeout_minutes: 5
           max_attempts: 5
@@ -632,7 +632,7 @@ jobs:
       - run: ${{ matrix.execution.shell-ex }} $PARALLEL modin/tests/numpy
       - run: ${{ matrix.execution.shell-ex }} -m "not exclude_in_sanity" modin/tests/pandas/test_io.py --verbose
         if: matrix.execution.name != 'unidist'
-      - uses: nick-fields/retry@v2
+      - uses: nick-fields/retry@v3
         # to avoid issues with non-stable `to_csv` tests for unidist on MPI backend.
         # for details see: https://github.com/modin-project/modin/pull/6776
         with:
@@ -672,10 +672,12 @@ jobs:
           AWS_ACCESS_KEY_ID: foobar_key
           AWS_SECRET_ACCESS_KEY: foobar_secret
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
+      - name: Install HDF5
+        run: sudo apt update && sudo apt install -y libhdf5-dev
       - run: python -m pytest -n 2 modin/tests/pandas/dataframe/test_map_metadata.py
       - run: python -m pytest -n 2 modin/tests/pandas/test_series.py
       # Do not add parallelism (`-n` argument) here - it will cause mock S3 service to fail.
@@ -697,14 +699,14 @@ jobs:
       MODIN_ENGINE: ${{matrix.engine}}
     name: test-spreadsheet (engine ${{matrix.engine}}, python ${{matrix.python-version}})
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
 
-  upload-coverage:
+  merge-coverage-artifacts:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-hdk, test-all-unidist, test-all, test-experimental, test-sanity]
     if: always()  # we need to run it regardless of some job being skipped, like in PR
     runs-on: ubuntu-latest
@@ -712,10 +714,25 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - uses: actions/checkout@v3
+      - name: Merge Artifacts
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: coverage-data
+          pattern: coverage-data-*
+          delete-merged: true
+
+  upload-coverage:
+    needs: [merge-coverage-artifacts]
+    if: always()  # we need to run it regardless of some job being skipped, like in PR
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
       - name: Download coverage data
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@v4
         with:
           name: coverage-data
       - run: pip install coverage
@@ -723,6 +740,7 @@ jobs:
         run: python -m coverage combine
       - name: Generate coverage report in xml format
         run: python -m coverage xml
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: ${{ github.event_name == 'push' }}  # do not care about uploads in PR
+          token: ${{ secrets.CODECOV_TOKEN }} # this token is available at https://app.codecov.io/account/github/modin-project/

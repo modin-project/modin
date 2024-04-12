@@ -33,7 +33,7 @@ jobs:
         python-version: ["3.9"]
         engine: ["ray", "dask"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/mamba-env
         with:
           environment-file: environment-dev.yml
@@ -42,7 +42,7 @@ jobs:
         run: python -m pytest modin/tests/experimental/test_fuzzydata.py -Wignore::UserWarning --log-file=/tmp/fuzzydata-test-wf-${{matrix.engine}}/run.log --log-file-level=INFO
         env:
           MODIN_ENGINE: ${{matrix.engine}}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: success() || failure()
         with:
            name: fuzzydata-test-workflow-${{matrix.engine}}

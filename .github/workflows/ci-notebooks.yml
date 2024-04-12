@@ -27,7 +27,7 @@ jobs:
       matrix:
         execution: [pandas_on_ray, pandas_on_dask, pandas_on_unidist, hdk_on_native]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/python-only
         if: matrix.execution != 'hdk_on_native' && matrix.execution != 'pandas_on_unidist'
       - uses: ./.github/actions/mamba-env

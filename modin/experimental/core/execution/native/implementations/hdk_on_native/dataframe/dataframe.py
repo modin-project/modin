@@ -1041,7 +1041,7 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         Parameters
         ----------
-        col_dtypes : dict
+        col_dtypes : dict or str
             Maps column names to new data types.
         **kwargs : dict
             Keyword args. Not used.
@@ -1051,6 +1051,8 @@ class HdkOnNativeDataframe(PandasDataframe):
         HdkOnNativeDataframe
             The new frame.
         """
+        if not isinstance(col_dtypes, dict):
+            col_dtypes = {column: col_dtypes for column in self.columns}
         columns = col_dtypes.keys()
         new_dtypes = self.copy_dtypes_cache()
         for column in columns:

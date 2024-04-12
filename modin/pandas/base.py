@@ -1005,7 +1005,7 @@ class BasePandasDataset(ClassLogger):
         """
         if copy is None:
             copy = True
-        # dtype can be a series, a dict, or a scalar. If it's series or scalar,
+        # dtype can be a series, a dict, or a scalar. If it's series,
         # convert it to a dict before passing it to the query compiler.
         if isinstance(dtype, (pd.Series, pandas.Series)):
             if not dtype.index.is_unique:
@@ -1026,24 +1026,24 @@ class BasePandasDataset(ClassLogger):
                     "Only a column name can be used for the key in "
                     + "a dtype mappings argument."
                 )
-            col_dtypes = dtype
-        else:
-            # Assume that the dtype is a scalar.
-            col_dtypes = {column: dtype for column in self._query_compiler.columns}
 
         if not copy:
             # If the new types match the old ones, then copying can be avoided
             if self._query_compiler._modin_frame.has_materialized_dtypes:
                 frame_dtypes = self._query_compiler._modin_frame.dtypes
-                for col in col_dtypes:
-                    if col_dtypes[col] != frame_dtypes[col]:
+                if isinstance(dtype, dict):
+                    for col in dtype:
+                        if dtype[col] != frame_dtypes[col]:
+                            copy = True
+                            break
+                else:
+                    if not (frame_dtypes == dtype).all():
                         copy = True
-                        break
             else:
                 copy = True
 
         if copy:
-            new_query_compiler = self._query_compiler.astype(col_dtypes, errors=errors)
+            new_query_compiler = self._query_compiler.astype(dtype, errors=errors)
             return self._create_or_update_from_compiler(new_query_compiler)
         return self
 
@@ -2304,6 +2304,7 @@ class BasePandasDataset(ClassLogger):
         def check_dtype(t):
             return is_numeric_dtype(t) or lib.is_np_dtype(t, "mM")
 
+        numeric_only_df = self
         if not numeric_only:
             # If not numeric_only and columns, then check all columns are either
             # numeric, timestamp, or timedelta
@@ -2322,31 +2323,33 @@ class BasePandasDataset(ClassLogger):
                             )
                         )
         else:
-            # Normally pandas returns this near the end of the quantile, but we
-            # can't afford the overhead of running the entire operation before
-            # we error.
-            if not any(is_numeric_dtype(t) for t in self._get_dtypes()):
-                raise ValueError("need at least one array to concatenate")
+            numeric_only_df = self.drop(
+                columns=[
+                    i for i in self.dtypes.index if not is_numeric_dtype(self.dtypes[i])
+                ]
+            )
 
         # check that all qs are between 0 and 1
         validate_percentile(q)
-        axis = self._get_axis_number(axis)
-        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list)):
-            return self.__constructor__(
-                query_compiler=self._query_compiler.quantile_for_list_of_values(
+        axis = numeric_only_df._get_axis_number(axis)
+        if isinstance(q, (pandas.Series, np.ndarray, pandas.Index, list, tuple)):
+            return numeric_only_df.__constructor__(
+                query_compiler=numeric_only_df._query_compiler.quantile_for_list_of_values(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )
             )
         else:
-            result = self._reduce_dimension(
-                self._query_compiler.quantile_for_single_value(
+            result = numeric_only_df._reduce_dimension(
+                numeric_only_df._query_compiler.quantile_for_single_value(
                     q=q,
                     axis=axis,
-                    numeric_only=numeric_only,
+                    # `numeric_only=True` has already been processed by using `self.drop` function
+                    numeric_only=False,
                     interpolation=interpolation,
                     method=method,
                 )

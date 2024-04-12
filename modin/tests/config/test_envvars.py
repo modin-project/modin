@@ -156,8 +156,9 @@ def test_hdk_envvar():
 @pytest.mark.parametrize(
     "deprecated_var, new_var",
     [
-        (cfg.ExperimentalGroupbyImpl, cfg.RangePartitioningGroupby),
+        (cfg.ExperimentalGroupbyImpl, cfg.RangePartitioning),
         (cfg.ExperimentalNumPyAPI, cfg.ModinNumpy),
+        (cfg.RangePartitioningGroupby, cfg.RangePartitioning),
     ],
 )
 def test_deprecated_bool_vars_warnings(deprecated_var, new_var):

@@ -565,6 +565,18 @@ def test_loc_5829():
     )
 
 
+def test_loc_7135():
+    data = np.random.randint(0, 100, size=(2**16, 2**8))
+    modin_df, pandas_df = create_test_dfs(data)
+    key = len(pandas_df)
+    eval_loc(
+        modin_df,
+        pandas_df,
+        value=list(range(2**8)),
+        key=key,
+    )
+
+
 # This tests the bug from https://github.com/modin-project/modin/issues/3736
 def test_loc_setting_single_categorical_column():
     modin_df = pd.DataFrame({"status": ["a", "b", "c"]}, dtype="category")

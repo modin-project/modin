@@ -1079,8 +1079,9 @@ def test_astype(data, request):
     eval_general(modin_series, pandas_series, lambda df: df.astype(str))
     expected_exception = None
     if "float_nan_data" in request.node.callspec.id:
-        # FIXME: https://github.com/modin-project/modin/issues/7039
-        expected_exception = False
+        expected_exception = pd.errors.IntCastingNaNError(
+            "Cannot convert non-finite values (NA or inf) to integer"
+        )
     eval_general(
         modin_series,
         pandas_series,
@@ -1400,11 +1401,12 @@ def test_copy_empty_series():
     assert res.dtype == ser.dtype
 
 
+@pytest.mark.parametrize("method", ["pearson", "kendall"])
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
-def test_corr(data):
+def test_corr(data, method):
     modin_series, pandas_series = create_test_series(data)
-    modin_result = modin_series.corr(modin_series)
-    pandas_result = pandas_series.corr(pandas_series)
+    modin_result = modin_series.corr(modin_series, method=method)
+    pandas_result = pandas_series.corr(pandas_series, method=method)
     df_equals(modin_result, pandas_result)
 
 
