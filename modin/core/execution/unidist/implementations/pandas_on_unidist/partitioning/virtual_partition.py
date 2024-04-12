@@ -250,7 +250,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             len_of_left,
             other_shape,
             *partitions,
-            min_block_size,
+            min_block_size=min_block_size,
         )
 
     def wait(self):

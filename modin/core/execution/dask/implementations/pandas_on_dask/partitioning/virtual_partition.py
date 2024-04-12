@@ -225,8 +225,10 @@ class PandasOnDaskDataframeVirtualPartition(PandasDataframeAxisPartition):
                 len_of_left,
                 other_shape,
                 *partitions,
-                min_block_size,
             ),
+            f_kwargs={
+                "min_block_size": min_block_size,
+            },
             num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
             pure=False,
         )
