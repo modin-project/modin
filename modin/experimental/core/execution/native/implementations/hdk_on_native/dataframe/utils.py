@@ -595,7 +595,7 @@ def arrow_to_pandas(
     at : pyarrow.Table
         The table to convert.
     dtypes : Union[ModinDtypes, pandas.Series], optional
-        Dtypes are used to correctly map Pyarrow types to pandas.
+        Dtypes are used to correctly map PyArrow types to pandas.
 
     Returns
     -------
