@@ -3744,7 +3744,7 @@ def test_unique_pyarrow_dtype():
 
     df_equals(modin_result, pandas_result)
     # to be sure `unique` return `ArrowExtensionArray`
-    assert type(pandas_result) is type(modin_result)
+    assert type(modin_result) is type(pandas_result)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
