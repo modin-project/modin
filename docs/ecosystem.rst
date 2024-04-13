@@ -45,19 +45,32 @@ where NumPy can be used and what libraries it powers.
 
     numpy_arr = to_numpy(modin_df)
 
-to_ray_dataset
---------------
+to_ray
+------
 
 You can refer to `Ray Data`_ page to get more details on
 where Ray Dataset can be used and what libraries it powers.
 
 .. code-block:: python
 
-    from modin.pandas.io import to_ray_dataset
+    from modin.pandas.io import to_ray
 
-    ray_dataset = to_ray_dataset(modin_df)
+    ray_dataset = to_ray(modin_df)
+
+to_dask
+-------
+
+You can refer to `Dask DataFrame`_ page to get more details on
+where Dask DataFrame can be used and what libraries it powers.
+
+.. code-block:: python
+
+    from modin.pandas.io import to_dask
+
+    dask_df = to_dask(modin_df)
 
 .. _pandas ecosystem: https://pandas.pydata.org/community/ecosystem.html
 .. _NumPy ecosystem: https://numpy.org
 .. _Ray Data: https://docs.ray.io/en/latest/data/data.html
+.. _Dask DataFrame: https://docs.dask.org/en/stable/dataframe.html
 

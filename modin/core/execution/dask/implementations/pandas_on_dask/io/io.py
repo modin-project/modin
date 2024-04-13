@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
+from distributed.client import default_client
+
 from modin.core.execution.dask.common import DaskWrapper
 from modin.core.execution.dask.implementations.pandas_on_dask.dataframe import (
     PandasOnDaskDataframe,
@@ -40,6 +42,10 @@ from modin.core.storage_formats.pandas.parsers import (
     PandasSQLParser,
 )
 from modin.core.storage_formats.pandas.query_compiler import PandasQueryCompiler
+from modin.distributed.dataframe.pandas.partitions import (
+    from_partitions,
+    unwrap_partitions,
+)
 from modin.experimental.core.io import (
     ExperimentalCSVGlobDispatcher,
     ExperimentalCustomTextDispatcher,
@@ -54,6 +60,8 @@ from modin.experimental.core.storage_formats.pandas.parsers import (
     ExperimentalPandasPickleParser,
     ExperimentalPandasXmlParser,
 )
+from modin.pandas.series import Series
+from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
 class PandasOnDaskIO(BaseIO):
@@ -127,3 +135,56 @@ class PandasOnDaskIO(BaseIO):
 
     del __make_read  # to not pollute class namespace
     del __make_write  # to not pollute class namespace
+
+    @classmethod
+    def from_dask(cls, dask_obj):
+        """
+        Create a Modin `query_compiler` from a Dask DataFrame.
+
+        Parameters
+        ----------
+        dask_obj : dask.dataframe.DataFrame
+            The Dask DataFrame to convert from.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data from the Dask DataFrame.
+        """
+        client = default_client()
+        dask_fututures = client.compute(dask_obj.to_delayed())
+        modin_df = from_partitions(dask_fututures, axis=0)._query_compiler
+        return modin_df
+
+    @classmethod
+    def to_dask(cls, modin_obj):
+        """
+        Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to convert.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            Converted object with type depending on input.
+        """
+        from dask.dataframe import from_delayed
+
+        partitions = unwrap_partitions(modin_obj, axis=0)
+
+        # partiotions must be converted to pandas Series
+        if isinstance(modin_obj, Series):
+            client = default_client()
+
+            def df_to_series(df):
+                series = df[df.columns[0]]
+                if df.columns[0] == MODIN_UNNAMED_SERIES_LABEL:
+                    series.name = None
+                return series
+
+            partitions = [client.submit(df_to_series, part) for part in partitions]
+
+        return from_delayed(partitions)

@@ -151,7 +151,7 @@ def pandas_dtype_to_arrow_c(dtype: Union[np.dtype, pandas.CategoricalDtype]) -> 
     """
     if isinstance(dtype, pandas.CategoricalDtype):
         return ArrowCTypes.INT64
-    elif dtype == np.dtype("O"):
+    elif dtype == pandas.api.types.pandas_dtype("O"):
         return ArrowCTypes.STRING
 
     format_str = getattr(ArrowCTypes, dtype.name.upper(), None)

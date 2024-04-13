@@ -13,9 +13,12 @@
 
 """Implement GroupBy public API as pandas does."""
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Iterable
 from types import BuiltinFunctionType
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas
@@ -49,6 +52,9 @@ from modin.utils import (
 from .series import Series
 from .utils import is_label
 from .window import RollingGroupby
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame
 
 _DEFAULT_BEHAVIOUR = {
     "__class__",
@@ -85,10 +91,12 @@ _DEFAULT_BEHAVIOUR = {
 class DataFrameGroupBy(ClassLogger):
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
+    _df: Union[DataFrame, Series]
+    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
-        df,
+        df: Union[DataFrame, Series],
         by,
         axis,
         level,

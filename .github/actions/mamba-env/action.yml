@@ -23,14 +23,14 @@ runs:
       shell: bash
     - name: Cache conda
       id: cache-conda
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: |
           ~/conda_pkgs_dir
           ~/.cache/pip
         key:
           ${{ runner.os }}-conda-${{ steps.get-week.outputs.thisweek }}-${{ hashFiles(inputs.environment-file) }}
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v3
       with:
         miniforge-variant: Mambaforge
         miniforge-version: latest
@@ -42,3 +42,7 @@ runs:
         # we set use-only-tar-bz2 to false in order for conda to properly find new packages to be installed
         # for more info see https://github.com/conda-incubator/setup-miniconda/issues/264
         use-only-tar-bz2: false
+    - shell: bash -l {0}
+      run: |
+        conda run -n ${{ inputs.activate-environment }} pip install .
+        conda list -n ${{ inputs.activate-environment }}

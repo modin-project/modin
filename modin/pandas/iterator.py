@@ -13,7 +13,13 @@
 
 """Place to define the Modin iterator."""
 
+from __future__ import annotations
+
 from collections.abc import Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame
 
 
 class PartitionIterator(Iterator):
@@ -30,7 +36,9 @@ class PartitionIterator(Iterator):
         The function to get inner iterables from each partition.
     """
 
-    def __init__(self, df, axis, func):
+    df: DataFrame
+
+    def __init__(self, df: DataFrame, axis, func):
         self.df = df
         self.axis = axis
         self.index_iter = (

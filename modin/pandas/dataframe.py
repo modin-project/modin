@@ -22,7 +22,7 @@ import os
 import re
 import sys
 import warnings
-from typing import IO, Hashable, Iterator, Optional, Sequence, Union
+from typing import IO, TYPE_CHECKING, Hashable, Iterator, Optional, Sequence, Union
 
 import numpy as np
 import pandas
@@ -69,6 +69,9 @@ from .utils import (
     _doc_binary_op,
     cast_function_modin2pandas,
 )
+
+if TYPE_CHECKING:
+    from modin.core.storage_formats import BaseQueryCompiler
 
 # Dictionary of extensions assigned to this class
 _DATAFRAME_EXTENSIONS_ = {}
@@ -129,7 +132,7 @@ class DataFrame(BasePandasDataset):
         columns=None,
         dtype=None,
         copy=None,
-        query_compiler=None,
+        query_compiler: BaseQueryCompiler = None,
     ):
         from modin.numpy import array
 
@@ -1048,9 +1051,16 @@ class DataFrame(BasePandasDataset):
             or isinstance(value, (array, np.ndarray))
             and len(value.shape) > 1
         ):
-            if value.shape[1] != 1:
+            if isinstance(value, (array, np.ndarray)) and value.shape[1] != 1:
                 raise ValueError(
                     f"Expected a 1D array, got an array with shape {value.shape}"
+                )
+            elif (
+                isinstance(value, (DataFrame, pandas.DataFrame)) and value.shape[1] != 1
+            ):
+                raise ValueError(
+                    "Expected a one-dimensional object, got a DataFrame with "
+                    + f"{len(value.columns)} columns instead."
                 )
             value = value.squeeze(axis=1)
         if not self._query_compiler.lazy_execution and len(self.index) == 0:
@@ -1099,12 +1109,6 @@ class DataFrame(BasePandasDataset):
             new_query_compiler = self._query_compiler.insert(loc, column, value)
 
         self._update_inplace(new_query_compiler=new_query_compiler)
-
-    def isin(self, values):  # noqa: PR01, RT01, D200
-        """
-        Whether elements in `DataFrame` are contained in `values`.
-        """
-        return super(DataFrame, self).isin(values)
 
     def isna(self):
         """
@@ -1462,9 +1466,9 @@ class DataFrame(BasePandasDataset):
         # index or columns
         if values is None:
             values = list(self.columns)
-            if index:
+            if index is not None:
                 values = [v for v in values if v not in index]
-            if columns:
+            if columns is not None:
                 values = [v for v in values if v not in columns]
 
         return self.__constructor__(
@@ -1589,7 +1593,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(axis, numeric_only, ignore_axis=True)
@@ -2106,7 +2112,9 @@ class DataFrame(BasePandasDataset):
         ):
             new_index = self.columns if not axis else self.index
             return Series(
-                [np.nan] * len(new_index), index=new_index, dtype=np.dtype("object")
+                [np.nan] * len(new_index),
+                index=new_index,
+                dtype=pandas.api.types.pandas_dtype("object"),
             )
 
         data = self._validate_dtypes_sum_prod_mean(
@@ -2990,8 +2998,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot compare Numeric and Non-Numeric Types")
@@ -3023,7 +3031,10 @@ class DataFrame(BasePandasDataset):
         if (
             not axis
             and numeric_only is False
-            and any(dtype == np.dtype("datetime64[ns]") for dtype in self.dtypes)
+            and any(
+                dtype == pandas.api.types.pandas_dtype("datetime64[ns]")
+                for dtype in self.dtypes
+            )
         ):
             raise TypeError("Cannot add Timestamp Types")
 
@@ -3041,8 +3052,8 @@ class DataFrame(BasePandasDataset):
         ):
             # check if there are columns with dtypes datetime or timedelta
             if all(
-                dtype != np.dtype("datetime64[ns]")
-                and dtype != np.dtype("timedelta64[ns]")
+                dtype != pandas.api.types.pandas_dtype("datetime64[ns]")
+                and dtype != pandas.api.types.pandas_dtype("timedelta64[ns]")
                 for dtype in self.dtypes
             ):
                 raise TypeError("Cannot operate on Numeric and Non-Numeric Types")
