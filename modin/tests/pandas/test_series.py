@@ -3739,12 +3739,16 @@ def test_unique_pyarrow_dtype():
     modin_series, pandas_series = create_test_series(
         [1, 0, pd.NA], dtype="uint8[pyarrow]"
     )
-    modin_result = modin_series.unique()
-    pandas_result = pandas_series.unique()
 
-    df_equals(modin_result, pandas_result)
-    # to be sure `unique` return `ArrowExtensionArray`
-    assert type(modin_result) is type(pandas_result)
+    def comparator(df1, df2):
+        # Perform our own non-strict version of dtypes equality check
+        df_equals(df1, df2)
+        # to be sure `unique` return `ArrowExtensionArray`
+        assert type(df1) is type(df2)
+
+    eval_general(
+        modin_series, pandas_series, lambda df: df.unique(), comparator=comparator
+    )
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

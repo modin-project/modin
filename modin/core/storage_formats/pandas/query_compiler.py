@@ -2048,6 +2048,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         else:
             # return self.to_pandas().squeeze(axis=1).unique() works faster
             # but returns pandas type instead of query compiler
+            # TODO: https://github.com/modin-project/modin/issues/7182
             new_modin_frame = self._modin_frame.apply_full_axis(
                 0,
                 lambda x: x.squeeze(axis=1).unique(),
