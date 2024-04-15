@@ -722,7 +722,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     for i in range(num_splits):
                         new_parts[offset + i].append(split[i])
 
-                new_row_lengths.extend(get_length_list(part_len, num_splits))
+                new_row_lengths.extend(
+                    get_length_list(part_len, num_splits, MinPartitionSize.get())
+                )
 
             remote_parts = np.array(new_parts)
             row_lengths = new_row_lengths
@@ -746,7 +748,9 @@ class ParquetDispatcher(ColumnStoreDispatcher):
                     for row_parts in remote_parts
                 ]
             )
-            column_widths = get_length_list(sum(column_widths), desired_col_nparts)
+            column_widths = get_length_list(
+                sum(column_widths), desired_col_nparts, MinPartitionSize.get()
+            )
 
         return remote_parts, row_lengths, column_widths
 

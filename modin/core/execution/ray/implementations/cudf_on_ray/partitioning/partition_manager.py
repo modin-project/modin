@@ -16,7 +16,7 @@
 import numpy as np
 import ray
 
-from modin.config import GpuCount
+from modin.config import GpuCount, MinPartitionSize
 from modin.core.execution.ray.common import RayWrapper
 from modin.core.execution.ray.generic.partitioning import (
     GenericRayDataframePartitionManager,
@@ -125,7 +125,9 @@ class cuDFOnRayDataframePartitionManager(GenericRayDataframePartitionManager):
         num_splits = GpuCount.get()
         put_func = cls._partition_class.put
         # For now, we default to row partitioning
-        pandas_dfs = split_result_of_axis_func_pandas(0, num_splits, df)
+        pandas_dfs = split_result_of_axis_func_pandas(
+            0, num_splits, df, min_block_size=MinPartitionSize.get()
+        )
         keys = [
             put_func(cls._get_gpu_managers()[i], pandas_dfs[i])
             for i in range(num_splits)

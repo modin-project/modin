@@ -141,6 +141,7 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
         axis=0,
         num_splits=len(row_lengths),
         result=pandas_df,
+        min_block_size=MinPartitionSize.get(),
         length_list=row_lengths,
     )
     partitions = [
@@ -148,6 +149,7 @@ def construct_modin_df_by_scheme(pandas_df, partitioning_scheme):
             axis=1,
             num_splits=len(column_widths),
             result=row_part,
+            min_block_size=MinPartitionSize.get(),
             length_list=column_widths,
         )
         for row_part in row_partitions
