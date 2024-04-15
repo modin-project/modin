@@ -138,6 +138,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         num_splits,
         maintain_partitioning,
         *partitions,
+        min_block_size,
         lengths=None,
         manual_partition=False,
         max_retries=None,
@@ -162,6 +163,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             If False, create a new partition layout.
         *partitions : iterable
             All partitions that make up the full axis (row or column).
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
         lengths : list, optional
             The list of lengths to shuffle the object.
         manual_partition : bool, default: False
@@ -188,6 +191,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             maintain_partitioning,
             *partitions,
             manual_partition=manual_partition,
+            min_block_size=min_block_size,
             lengths=lengths,
         )
 
@@ -202,6 +206,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
         len_of_left,
         other_shape,
         *partitions,
+        min_block_size,
     ):
         """
         Deploy a function along a full axis between two data sets.
@@ -225,6 +230,8 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             (other_shape[i-1], other_shape[i]) will indicate slice to restore i-1 axis partition.
         *partitions : iterable
             All partitions that make up the full axis (row or column) for both data sets.
+        min_block_size : int
+            Minimum number of rows/columns in a single split.
 
         Returns
         -------
@@ -243,6 +250,7 @@ class PandasOnUnidistDataframeVirtualPartition(PandasDataframeAxisPartition):
             len_of_left,
             other_shape,
             *partitions,
+            min_block_size=min_block_size,
         )
 
     def wait(self):

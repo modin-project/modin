@@ -28,7 +28,7 @@ from pandas.api.types import is_object_dtype
 from pandas.core.dtypes.common import is_dtype_equal, is_list_like, is_numeric_dtype
 from pandas.core.indexes.api import Index, RangeIndex
 
-from modin.config import Engine, IsRayCluster, NPartitions
+from modin.config import Engine, IsRayCluster, MinPartitionSize, NPartitions
 from modin.core.dataframe.base.dataframe.dataframe import ModinDataframe
 from modin.core.dataframe.base.dataframe.utils import Axis, JoinType, is_trivial_index
 from modin.core.dataframe.pandas.dataframe.utils import (
@@ -1549,7 +1549,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new row lengths.
                 new_lengths = get_length_list(
-                    axis_len=len(row_idx), num_splits=ordered_rows.shape[0]
+                    axis_len=len(row_idx),
+                    num_splits=ordered_rows.shape[0],
+                    min_block_size=MinPartitionSize.get(),
                 )
             else:
                 # If the frame's partitioning was preserved then
@@ -1585,7 +1587,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 # the "standard" partitioning. Knowing the standard partitioning scheme
                 # we are able to compute new column widths.
                 new_widths = get_length_list(
-                    axis_len=len(col_idx), num_splits=ordered_cols.shape[1]
+                    axis_len=len(col_idx),
+                    num_splits=ordered_cols.shape[1],
+                    min_block_size=MinPartitionSize.get(),
                 )
             else:
                 # If the frame's partitioning was preserved then
@@ -3500,7 +3504,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             if kw["row_lengths"] is None and is_index_materialized:
                 if axis == 0:
                     kw["row_lengths"] = get_length_list(
-                        axis_len=len(new_index), num_splits=new_partitions.shape[0]
+                        axis_len=len(new_index),
+                        num_splits=new_partitions.shape[0],
+                        min_block_size=MinPartitionSize.get(),
                     )
                 elif axis == 1:
                     if self._row_lengths_cache is not None and len(new_index) == sum(
@@ -3512,6 +3518,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     kw["column_widths"] = get_length_list(
                         axis_len=len(new_columns),
                         num_splits=new_partitions.shape[1],
+                        min_block_size=MinPartitionSize.get(),
                     )
                 elif axis == 0:
                     if self._column_widths_cache is not None and len(

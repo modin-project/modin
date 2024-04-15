@@ -30,7 +30,7 @@ import pandas._libs.lib as lib
 from pandas.core.dtypes.common import is_list_like
 from pandas.io.common import stringify_path
 
-from modin.config import NPartitions
+from modin.config import MinPartitionSize, NPartitions
 from modin.core.io.file_dispatcher import FileDispatcher, OpenFile
 from modin.core.io.text.utils import CustomNewlineIterator
 from modin.core.storage_formats.pandas.utils import compute_chunksize
@@ -571,7 +571,8 @@ class TextFileDispatcher(FileDispatcher):
         """
         # This is the number of splits for the columns
         num_splits = min(len(column_names) or 1, NPartitions.get())
-        column_chunksize = compute_chunksize(df.shape[1], num_splits)
+        min_block_size = MinPartitionSize.get()
+        column_chunksize = compute_chunksize(df.shape[1], num_splits, min_block_size)
         if column_chunksize > len(column_names):
             column_widths = [len(column_names)]
             # This prevents us from unnecessarily serializing a bunch of empty

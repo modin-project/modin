@@ -11,10 +11,11 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+import numpy as np
 import pytest
 
 import modin.pandas as pd
-from modin.config import NPartitions
+from modin.config import NPartitions, context
 
 NPartitions.put(4)
 
@@ -58,3 +59,9 @@ def test_repartition(axis, dtype):
         }
 
     assert obj._query_compiler._modin_frame._partitions.shape == results[axis]
+
+
+def test_repartition_7170():
+    with context(MinPartitionSize=102, NPartitions=5):
+        df = pd.DataFrame(np.random.rand(10000, 100))
+        _ = df._repartition(axis=1).to_numpy()
