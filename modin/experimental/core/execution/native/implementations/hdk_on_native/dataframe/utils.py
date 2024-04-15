@@ -13,9 +13,11 @@
 
 """Utilities for internal use by the ``HdkOnNativeDataframe``."""
 
+from __future__ import annotations
+
 import re
 from functools import lru_cache
-from typing import Any, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas
@@ -26,6 +28,9 @@ from pyarrow.types import is_dictionary
 
 from modin.pandas.indexing import is_range_like
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
+
+if TYPE_CHECKING:
+    from modin.core.dataframe.pandas.metadata import ModinDtypes
 
 EMPTY_ARROW_TABLE = pa.Table.from_pandas(pandas.DataFrame({}))
 
@@ -579,7 +584,9 @@ def ensure_supported_dtype(dtype):
         raise NotImplementedError(f"Type {dtype}")
 
 
-def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
+def arrow_to_pandas(
+    at: pa.Table, dtypes: Optional[Union[ModinDtypes, pandas.Series]] = None
+) -> pandas.DataFrame:
     """
     Convert the specified arrow table to pandas.
 
@@ -587,6 +594,8 @@ def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
     ----------
     at : pyarrow.Table
         The table to convert.
+    dtypes : Union[ModinDtypes, pandas.Series], optional
+        Dtypes are used to correctly map PyArrow types to pandas.
 
     Returns
     -------
@@ -597,6 +606,28 @@ def arrow_to_pandas(at: pa.Table) -> pandas.DataFrame:
         if is_dictionary(at) and isinstance(at.value_type, ArrowIntervalType):
             # The default mapper fails with TypeError: unhashable type: 'dict'
             return _CategoricalDtypeMapper
+        elif dtypes is not None and any(
+            (
+                isinstance(dtype, pandas.core.dtypes.dtypes.ArrowDtype)
+                for dtype in dtypes
+            )
+        ):
+            # for pandas types that are backed by pyarrow, for example: uint8[pyarrow]
+            dtype_mapping = {
+                pa.int8(): pandas.ArrowDtype(pa.int8()),
+                pa.int16(): pandas.ArrowDtype(pa.int16()),
+                pa.int32(): pandas.ArrowDtype(pa.int32()),
+                pa.int64(): pandas.ArrowDtype(pa.int64()),
+                pa.uint8(): pandas.ArrowDtype(pa.uint8()),
+                pa.uint16(): pandas.ArrowDtype(pa.uint16()),
+                pa.uint32(): pandas.ArrowDtype(pa.uint32()),
+                pa.uint64(): pandas.ArrowDtype(pa.uint64()),
+                pa.bool_(): pandas.ArrowDtype(pa.bool_()),
+                pa.float32(): pandas.ArrowDtype(pa.float32()),
+                pa.float64(): pandas.ArrowDtype(pa.float64()),
+                pa.string(): pandas.ArrowDtype(pa.string()),
+            }
+            return dtype_mapping.get(at, None)
         return None
 
     df = at.to_pandas(types_mapper=mapper)

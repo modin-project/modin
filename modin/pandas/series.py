@@ -2107,9 +2107,13 @@ class Series(BasePandasDataset):
         """
         Return unique values of Series object.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.unique()
-        ).to_numpy()
+        # `values` can't be used here because it performs unnecessary conversion,
+        # after which the result type does not match the pandas
+        return (
+            self.__constructor__(query_compiler=self._query_compiler.unique())
+            .modin.to_pandas()
+            ._values
+        )
 
     def update(self, other) -> None:  # noqa: PR01, D200
         """

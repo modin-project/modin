@@ -2018,7 +2018,10 @@ class PandasQueryCompiler(BaseQueryCompiler):
     def unique(self, keep="first", ignore_index=True, subset=None):
         # kernels with 'pandas.Series.unique()' work faster
         can_use_unique_kernel = (
-            subset is None and ignore_index and len(self.columns) == 1 and keep
+            subset is None
+            and ignore_index
+            and len(self.columns) == 1
+            and keep is not False
         )
 
         if not can_use_unique_kernel and not RangePartitioning.get():
@@ -2028,7 +2031,11 @@ class PandasQueryCompiler(BaseQueryCompiler):
             new_modin_frame = self._modin_frame._apply_func_to_range_partitioning(
                 key_columns=self.columns.tolist() if subset is None else subset,
                 func=(
-                    (lambda df: pandas.DataFrame(df.squeeze(axis=1).unique()))
+                    (
+                        lambda df: pandas.DataFrame(
+                            df.squeeze(axis=1).unique(), columns=["__reduced__"]
+                        )
+                    )
                     if can_use_unique_kernel
                     else (
                         lambda df: df.drop_duplicates(
@@ -2039,6 +2046,9 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 preserve_columns=True,
             )
         else:
+            # return self.to_pandas().squeeze(axis=1).unique() works faster
+            # but returns pandas type instead of query compiler
+            # TODO: https://github.com/modin-project/modin/issues/7182
             new_modin_frame = self._modin_frame.apply_full_axis(
                 0,
                 lambda x: x.squeeze(axis=1).unique(),

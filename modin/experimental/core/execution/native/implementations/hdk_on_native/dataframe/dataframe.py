@@ -2862,7 +2862,7 @@ class HdkOnNativeDataframe(PandasDataframe):
                 obj = obj.cast(schema)
             # concatenate() is called by _partition_mgr_cls.to_pandas
             # to preserve the categorical dtypes
-            df = concatenate([arrow_to_pandas(obj)])
+            df = concatenate([arrow_to_pandas(obj, self._dtypes)])
         else:
             df = obj.copy()
 
