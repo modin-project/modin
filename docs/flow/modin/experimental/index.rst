@@ -15,7 +15,6 @@ and provides a limited set of functionality:
 * :doc:`xgboost <xgboost>`
 * :doc:`sklearn <sklearn>`
 * :doc:`batch <batch>`
-* :doc:`Range-partitioning implementations <range_partitioning_groupby>`
 
 
 .. toctree::
@@ -24,4 +23,3 @@ and provides a limited set of functionality:
     sklearn
     xgboost
     batch
-    range_partitioning_groupby

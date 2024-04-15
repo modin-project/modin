@@ -4,5 +4,5 @@
 .. raw:: html
 
     <script type="text/javascript">
-        window.location.href = 'range_partitioning_groupby.html';
+        window.location.href = '../../../usage_guide/optimization_notes/index.html#range-partitioning-in-modin';
     </script>
