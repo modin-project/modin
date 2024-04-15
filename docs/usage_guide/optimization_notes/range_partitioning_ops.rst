@@ -3,7 +3,7 @@
 Operations that support range-partitioning in Modin
 ###################################################
 
-The following operations change their behavior once ``cfg.RangePartitioning`` variable is set to True.
+The following operations change their behavior once ``cfg.RangePartitioning`` variable is set to ``True``.
 Go through the list find out when it could be beneficial to engage range-partitioning for a certain method.
 
 GroupBy

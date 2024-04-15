@@ -11,7 +11,7 @@ Range-partitioning in Modin
 
 Modin utilizes a range-partitioning approach for specific operations, significantly enhancing
 parallelism and reducing memory consumption in certain scenarios. Range-partitioning is typically
-engaged for operations that has key columns (to group on, to merge on, ...).
+engaged for operations that has key columns (to group on, to merge on, etc).
 
 You can enable `range-partitioning`_ by specifying ``cfg.RangePartitioning`` :doc:`configuration variable: </flow/modin/config>`
 
@@ -21,7 +21,7 @@ You can enable `range-partitioning`_ by specifying ``cfg.RangePartitioning`` :do
     import modin.config as cfg
 
     cfg.RangePartitioning.put(True) # past this point methods that support range-partitioning
-                                    # will use engage it
+                                    # will use it
 
     pd.DataFrame(...).groupby(...).mean() # use range-partitioning for groupby.mean()
 
