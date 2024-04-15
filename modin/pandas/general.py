@@ -13,13 +13,15 @@
 
 """Implement pandas general API."""
 
+from __future__ import annotations
+
 import warnings
 from typing import Hashable, Iterable, Mapping, Optional, Union
 
 import numpy as np
 import pandas
 from pandas._libs.lib import NoDefault, no_default
-from pandas._typing import DtypeBackend
+from pandas._typing import ArrayLike, DtypeBackend, Scalar, npt
 from pandas.core.dtypes.common import is_list_like
 
 from modin.core.storage_formats import BaseQueryCompiler
@@ -35,7 +37,9 @@ from .series import Series
 
 @_inherit_docstrings(pandas.isna, apilink="pandas.isna")
 @enable_logging
-def isna(obj):  # noqa: PR01, RT01, D200
+def isna(
+    obj,
+) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
     Detect missing values for an array-like object.
     """
@@ -50,7 +54,9 @@ isnull = isna
 
 @_inherit_docstrings(pandas.notna, apilink="pandas.notna")
 @enable_logging
-def notna(obj):  # noqa: PR01, RT01, D200
+def notna(
+    obj,
+) -> bool | npt.NDArray[np.bool_] | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
     Detect non-missing values for an array-like object.
     """
@@ -79,7 +85,7 @@ def merge(
     copy: Optional[bool] = None,
     indicator: bool = False,
     validate=None,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Merge DataFrame or named Series objects with a database-style join.
     """
@@ -232,7 +238,7 @@ def pivot_table(
     margins_name="All",
     observed=no_default,
     sort=True,
-):
+) -> DataFrame:
     if not isinstance(data, DataFrame):
         raise ValueError(
             "can not create pivot table with instance of type {}".format(type(data))
@@ -256,7 +262,7 @@ def pivot_table(
 @enable_logging
 def pivot(
     data, *, columns, index=no_default, values=no_default
-):  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Return reshaped DataFrame organized by given index / column values.
     """
@@ -272,7 +278,7 @@ def to_numeric(
     errors="raise",
     downcast=None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-):  # noqa: PR01, RT01, D200
+) -> Scalar | np.ndarray | Series:  # noqa: PR01, RT01, D200
     """
     Convert argument to a numeric type.
     """
@@ -360,7 +366,7 @@ def cut(
 
 @_inherit_docstrings(pandas.unique, apilink="pandas.unique")
 @enable_logging
-def unique(values):  # noqa: PR01, RT01, D200
+def unique(values) -> ArrayLike:  # noqa: PR01, RT01, D200
     """
     Return unique values based on a hash table.
     """
@@ -371,7 +377,7 @@ def unique(values):  # noqa: PR01, RT01, D200
 @enable_logging
 def value_counts(
     values, sort=True, ascending=False, normalize=False, bins=None, dropna=True
-):
+) -> Series:
     """
     Compute a histogram of the counts of non-null values.
 
@@ -423,7 +429,7 @@ def concat(
     verify_integrity: bool = False,
     sort: bool = False,
     copy: Optional[bool] = None,
-) -> "DataFrame | Series":  # noqa: PR01, RT01, D200
+) -> DataFrame | Series:  # noqa: PR01, RT01, D200
     """
     Concatenate Modin objects along a particular axis.
     """
@@ -572,7 +578,7 @@ def to_datetime(
     infer_datetime_format=no_default,
     origin="unix",
     cache=True,
-):  # noqa: PR01, RT01, D200
+) -> Scalar | ArrayLike | Series | DataFrame:  # noqa: PR01, RT01, D200
     """
     Convert argument to datetime.
     """
@@ -615,7 +621,7 @@ def get_dummies(
     sparse=False,
     drop_first=False,
     dtype=None,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Convert categorical variable into dummy/indicator variables.
     """
@@ -663,7 +669,7 @@ def melt(
     value_name="value",
     col_level=None,
     ignore_index: bool = True,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Unpivot a DataFrame from wide to long format, optionally leaving identifiers set.
     """
@@ -712,7 +718,7 @@ def crosstab(
 
 # Adding docstring since pandas docs don't have web section for this function.
 @enable_logging
-def lreshape(data: DataFrame, groups, dropna=True):
+def lreshape(data: DataFrame, groups, dropna=True) -> DataFrame:
     """
     Reshape wide-format data to long. Generalized inverse of ``DataFrame.pivot``.
 
@@ -796,7 +802,9 @@ def _determine_name(objs: Iterable[BaseQueryCompiler], axis: Union[int, str]):
 
 @_inherit_docstrings(pandas.to_datetime, apilink="pandas.to_timedelta")
 @enable_logging
-def to_timedelta(arg, unit=None, errors="raise"):  # noqa: PR01, RT01, D200
+def to_timedelta(
+    arg, unit=None, errors="raise"
+) -> Scalar | pandas.Index | Series:  # noqa: PR01, RT01, D200
     """
     Convert argument to timedelta.
 
