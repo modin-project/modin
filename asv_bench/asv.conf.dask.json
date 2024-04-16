@@ -13,6 +13,10 @@
     // project being benchmarked
     "repo": "..",
 
+    // List of branches to benchmark. If not provided, defaults to "master"
+    // (for git) or "default" (for mercurial).
+    "branches": ["main"],
+
     // Customizable commands for building, installing, and
     // uninstalling the project. See asv.conf.json documentation.
     "install_command": ["in-dir={env_dir} python -mpip install {wheel_file}[dask]"],
