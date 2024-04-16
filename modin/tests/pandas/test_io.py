@@ -2679,7 +2679,7 @@ class TestSql:
         table_name = "test_1000x256"
         query = f"SELECT * FROM {table_name}"
         sqlalchemy_connection_string = (
-            "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/main"
+            "mssql+pymssql://sa:Strong.Pwd-123@0.0.0.0:1433/master"
         )
         pandas_df_to_read = pandas.DataFrame(
             np.arange(
