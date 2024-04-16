@@ -29,8 +29,8 @@ from modin.config import (
     use_range_partitioning_groupby,
 )
 from modin.core.dataframe.algebra.default2pandas.groupby import GroupBy
-from modin.core.dataframe.pandas.partitioning.axis_partition import (
-    PandasDataframeAxisPartition,
+from modin.core.dataframe.base.partitioning.axis_partition import (
+    BaseDataframeAxisPartition,
 )
 from modin.pandas.io import from_pandas
 from modin.pandas.utils import is_scalar
@@ -264,6 +264,9 @@ def test_mixed_dtypes_groupby(as_index):
             comparator=lambda *dfs: df_equals(*sort_if_experimental_groupby(*dfs)),
         )
         # FIXME: https://github.com/modin-project/modin/issues/7032
+        # Triger execution of deferred operations. If not executed, eval_shift() below fails with
+        # `could not convert string to float: '\x94'`. Probably, this is also related to #7032.
+        modin_groupby.shift()
         eval_general(
             modin_groupby,
             pandas_groupby,
@@ -2647,7 +2650,7 @@ def test_groupby_with_virtual_partitions():
     # Check that the constructed Modin DataFrame has virtual partitions when
     assert issubclass(
         type(big_modin_df._query_compiler._modin_frame._partitions[0][0]),
-        PandasDataframeAxisPartition,
+        BaseDataframeAxisPartition,
     )
     eval_general(
         big_modin_df, big_pandas_df, lambda df: df.groupby(df.columns[0]).count()

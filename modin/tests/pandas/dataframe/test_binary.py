@@ -18,8 +18,8 @@ import pytest
 
 import modin.pandas as pd
 from modin.config import Engine, NPartitions, StorageFormat
-from modin.core.dataframe.pandas.partitioning.axis_partition import (
-    PandasDataframeAxisPartition,
+from modin.core.dataframe.base.partitioning.axis_partition import (
+    BaseDataframeAxisPartition,
 )
 from modin.tests.pandas.utils import (
     CustomIntegerForAddition,
@@ -228,7 +228,7 @@ def test_virtual_partitions(left_virtual: bool, right_virtual: bool):
         # Modin should rebalance the partitions after the concat, producing virtual partitions.
         assert isinstance(
             result._query_compiler._modin_frame._partitions[0][0],
-            PandasDataframeAxisPartition,
+            BaseDataframeAxisPartition,
         )
         return result
 
