@@ -313,6 +313,20 @@ class CpuCount(EnvironmentVariable, type=int):
 
         return multiprocessing.cpu_count()
 
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``CpuCount`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        cpu_count = super().get()
+        if cpu_count <= 0:
+            raise ValueError(f"`CpuCount` should be > 0; current value: {cpu_count}")
+        return cpu_count
+
 
 class GpuCount(EnvironmentVariable, type=int):
     """How may GPU devices to utilize across the whole distribution."""
@@ -369,6 +383,20 @@ class NPartitions(EnvironmentVariable, type=int):
             return GpuCount.get()
         else:
             return CpuCount.get()
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``NPartitions`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        nparts = super().get()
+        if nparts <= 0:
+            raise ValueError(f"`NPartitions` should be > 0; current value: {nparts}")
+        return nparts
 
 
 class HdkFragmentSize(EnvironmentVariable, type=int):
@@ -526,7 +554,10 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         int
         """
         log_memory_interval = super().get()
-        assert log_memory_interval > 0, "`LogMemoryInterval` should be > 0"
+        if log_memory_interval <= 0:
+            raise ValueError(
+                f"`LogMemoryInterval` should be > 0; current value: {log_memory_interval}"
+            )
         return log_memory_interval
 
 
@@ -560,7 +591,10 @@ class LogFileSize(EnvironmentVariable, type=int):
         int
         """
         log_file_size = super().get()
-        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        if log_file_size <= 0:
+            raise ValueError(
+                f"`LogFileSize` should be > 0; current value: {log_file_size}"
+            )
         return log_file_size
 
 
@@ -673,7 +707,10 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         int
         """
         min_partition_size = super().get()
-        assert min_partition_size > 0, "`min_partition_size` should be > 0"
+        if min_partition_size <= 0:
+            raise ValueError(
+                f"`MinPartitionSize` should be > 0; current value: {min_partition_size}"
+            )
         return min_partition_size
 
 
