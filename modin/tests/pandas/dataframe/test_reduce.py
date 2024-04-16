@@ -220,6 +220,14 @@ def test_idxmin_idxmax(data, axis, skipna, is_transposed, method):
     )
 
 
+@pytest.mark.parametrize("axis", [0, 1])
+def test_idxmin_idxmax_string_columns(axis):
+    # https://github.com/modin-project/modin/issues/7093
+    modin_df, pandas_df = create_test_dfs([["a", "b"]])
+    eval_general(modin_df, pandas_df, lambda df: df.idxmax(axis=axis))
+    eval_general(modin_df, pandas_df, lambda df: df.idxmin(axis=axis))
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_last_valid_index(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)

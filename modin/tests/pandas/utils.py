@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from __future__ import annotations
+
 import csv
 import functools
 import itertools
@@ -1084,14 +1086,14 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
     )
 
 
-def create_test_dfs(*args, **kwargs):
+def create_test_dfs(*args, **kwargs) -> tuple[pd.DataFrame, pandas.DataFrame]:
     post_fn = kwargs.pop("post_fn", lambda df: df)
-    return map(
-        post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)]
+    return tuple(
+        map(post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)])
     )
 
 
-def create_test_series(vals, sort=False, **kwargs):
+def create_test_series(vals, sort=False, **kwargs) -> tuple[pd.Series, pandas.Series]:
     if isinstance(vals, dict):
         modin_series = pd.Series(vals[next(iter(vals.keys()))], **kwargs)
         pandas_series = pandas.Series(vals[next(iter(vals.keys()))], **kwargs)
