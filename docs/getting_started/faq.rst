@@ -184,7 +184,7 @@ How can I contribute to Modin?
 If you are interested in contributing please check out the :doc:`Contributing Guide</development/contributing>`
 and then refer to the :doc:`Development Documentation</development/index>`,
 where you can find system architecture, internal implementation details, and other useful information.
-Also check out the `Github`_ to view open issues and make contributionss.
+Also check out the `Github`_ to view open issues and make contributions.
 
 .. _issue: https://github.com/modin-project/modin/issues
 .. _Slack: https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA
