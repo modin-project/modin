@@ -110,8 +110,8 @@ class GitWrapper:
     def __init__(self):
         self.repo = pygit2.Repository(Path(__file__).parent)
 
-    def is_on_master(self):
-        return self.repo.references["refs/heads/master"] == self.repo.head
+    def is_on_main(self):
+        return self.repo.references["refs/heads/main"] == self.repo.head
 
     @staticmethod
     def __get_tag_version(entry):
@@ -160,7 +160,7 @@ class GitWrapper:
 
 def make_notes(args):
     wrapper = GitWrapper()
-    release_type = "minor" if wrapper.is_on_master() else "patch"
+    release_type = "minor" if wrapper.is_on_main() else "patch"
     sys.stderr.write(f"Detected release type: {release_type}\n")
 
     prev_ref, prev_commit, prev_ver = wrapper.get_previous_release(release_type)

@@ -3,7 +3,7 @@ Getting Started
 
 .. note:: 
   | *Estimated Reading Time: 10 minutes*
-  | You can follow along this tutorial in a Jupyter notebook `here <https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb>`_. 
+  | You can follow along this tutorial in a Jupyter notebook `here <https://github.com/modin-project/modin/tree/main/examples/quickstart.ipynb>`_. 
 
 .. toctree::
     :hidden:
@@ -182,5 +182,5 @@ provides.
 
 Note that in this quickstart example, we've only shown ``read_csv``, ``concat``, 
 ``apply``, but these are not the only pandas operations that Modin optimizes for. In 
-fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/master/README.md#pandas-api-coverage>`_, yielding considerable speedups for 
+fact, Modin covers `more than 90\% of the pandas API <https://github.com/modin-project/modin/blob/main/README.md#pandas-api-coverage>`_, yielding considerable speedups for 
 many common operations.

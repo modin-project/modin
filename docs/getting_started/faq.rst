@@ -194,4 +194,4 @@ Also check out the `Github`_ to view open issues and make contributions.
 .. _Unidist: https://github.com/modin-project/unidist
 .. _papers: https://people.eecs.berkeley.edu/~totemtang/paper/Modin.pdf
 .. _guide: https://modin.readthedocs.io/en/latest/getting_started/installation.html#installing-on-google-colab
-.. _tutorial: https://github.com/modin-project/modin/tree/master/examples/tutorial
+.. _tutorial: https://github.com/modin-project/modin/tree/main/examples/tutorial

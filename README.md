@@ -11,9 +11,9 @@
 
 <p align="center">
 <a href="https://pepy.tech/project/modin"><img src="https://static.pepy.tech/personalized-badge/modin?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads" align="center"></a>
-<a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
-<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
-<a href="https://github.com/modin-project/modin/actions/workflows/ci.yml?query=event%3Apush"><img src="https://github.com/modin-project/modin/actions/workflows/ci.yml/badge.svg?branch=master" align="center"></a>
+<a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/main/graph/badge.svg" align="center"/></a>
+<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/main/badge.svg" align="center"></a>
+<a href="https://github.com/modin-project/modin/actions/workflows/ci.yml?query=event%3Apush"><img src="https://github.com/modin-project/modin/actions/workflows/ci.yml/badge.svg?branch=main" align="center"></a>
 <a href="https://pypi.org/project/modin/"><img src="https://badge.fury.io/py/modin.svg" alt="PyPI version" align="center"></a>
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
@@ -29,7 +29,7 @@ to improve user experience.
 
 By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-<img src="https://github.com/modin-project/modin/raw/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/main/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 

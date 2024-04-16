@@ -10,9 +10,9 @@ patch release (assuming previous release was versioned `X.Y.Z`):
 
 ### Major and Minor releases
 
-A major (`xx.0.0`) or minor (`0.xx.0`) release could be done by branching from `master`:
+A major (`xx.0.0`) or minor (`0.xx.0`) release could be done by branching from `main`:
 
-        git checkout -b release-X.Y.0 master
+        git checkout -b release-X.Y.0 main
 
 ## Preparing the release
 
@@ -24,7 +24,7 @@ as reviewing them again would not add a lot of value but would add lots of exces
 Hence non-cherry-pick commits should happen in a separate branch in your own fork, and
 be delivered to the release branch by using a PR.
 
-Note that Modin uses fully signed commits, so you have to have GPG keys set up. See [onboarding instructions](https://github.com/modin-project/modin/blob/master/contributing/contributing.md) on where to get started.
+Note that Modin uses fully signed commits, so you have to have GPG keys set up. See [onboarding instructions](https://github.com/modin-project/modin/blob/main/contributing/contributing.md) on where to get started.
 
 To update Modin version, follow the instructions below.
 
@@ -32,8 +32,8 @@ To update Modin version, follow the instructions below.
 
 **Note**: this should be done in your fork of Modin.
 
-First, update your fork of Modin's master with the main repo's master. From your master, create a new
-branch called `release-X.Y.0` off of master. Create an empty commit in your new branch with the message
+First, update your fork of Modin's main with the main repo's main. From your main, create a new
+branch called `release-X.Y.0` off of main. Create an empty commit in your new branch with the message
 `Release version X.Y.0`. Make sure to sign this commit with both your GPG key
 and with the conventional `git commit -s` (so `git commit -s -S`). Open a PR against modin-project/modin with just this commit.
 
@@ -66,7 +66,7 @@ original Modin repo.
 After the PR has been merged, clone a clean copy of the Modin repo from the modin-project organization.
 You now need to tag the commit that corresponds to the above PR with the appropriate tag for this release.
 
-**Note**: from now on you work on the `master` branch (in `upstream`) for a major or minor release,
+**Note**: from now on you work on the `main` branch (in `upstream`) for a major or minor release,
 or the `release-X.Y.Z` branch (in `upstream`) for a patch release.
 
         git tag -as X.Y.Z
@@ -77,7 +77,7 @@ or the `release-X.Y.Z` branch (in `upstream`) for a patch release.
     * Please look into PR sections and split them if necessary into smaller but better fitting ones, as the script only categorizes by prefix (`FIX-`, `TEST-`, etc.)
     * Make sure to correctly resolve contributors whom script failed to transform to GitHub usernames if there are any!
   * Include release documentation in the annotation and make sure it is signed.
-  * Push the tag to `master` or `release-X.Y.Z` branch: `git push upstream X.Y.Z`
+  * Push the tag to `main` or `release-X.Y.Z` branch: `git push upstream X.Y.Z`
     * If you're re-pushing a tag (beware! you shouldn't be doing that, no, _really_!), you can remove remote tag and push a local one by `git push upstream :refs/tags/X.Y.Z`
 
 

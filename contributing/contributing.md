@@ -19,9 +19,9 @@ you should reopen your terminal to find "(base)" next to your prompt: ![](conda_
     ```
     git fetch upstream
     ```
-1. Set the default remote branch for your local master branch. 
+1. Set the default remote branch for your local main branch. 
     ```
-     git branch --set-upstream-to=upstream/master master
+     git branch --set-upstream-to=upstream/main main
     ```
 1. Install modin from local source code, and install all its dependencies:
     ```

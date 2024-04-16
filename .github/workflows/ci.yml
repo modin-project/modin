@@ -6,7 +6,7 @@ on:
       # fuzzydata Github Actions in .github/workflows/fuzzydata-test.yml
       - .github/workflows/**
       - .github/actions/**
-      - '!.github/workflows/push-to-master.yml'
+      - '!.github/workflows/push-to-main.yml'
       - asv_bench/**
       - modin/**
       - requirements/**
