@@ -357,3 +357,15 @@ def test_context_manager_update_config(modify_config):
         assert cfg.LazyExecution.get() == "Off"
     assert cfg.RangePartitioning.get() is False
     assert cfg.LazyExecution.get() == "Auto"
+
+
+@pytest.mark.parametrize(
+    "config_name",
+    ["NPartitions", "CpuCount", "LogMemoryInterval", "LogFileSize", "MinPartitionSize"],
+)
+def test_wrong_values(config_name):
+    config: cfg.EnvironmentVariable = getattr(cfg, config_name)
+    new_value = -1
+    with pytest.raises(ValueError):
+        with cfg.context(**{config_name: new_value}):
+            _ = config.get()
