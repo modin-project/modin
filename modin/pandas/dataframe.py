@@ -620,7 +620,7 @@ class DataFrame(BasePandasDataset):
             query_compiler=self._query_compiler.transpose(*args)
         )
 
-    T = property(transpose)
+    T: DataFrame = property(transpose)
 
     def add(
         self, other, axis="columns", level=None, fill_value=None

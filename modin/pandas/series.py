@@ -2088,7 +2088,7 @@ class Series(BasePandasDataset):
         """
         return self
 
-    T = property(transpose)
+    T: Series = property(transpose)
 
     def truediv(
         self, other, level=None, fill_value=None, axis=0
