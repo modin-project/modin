@@ -42,7 +42,7 @@ from typing import Any
 import pytest
 
 import modin.pandas as pd
-from modin.dataframe_api_standard.tests.utils import BaseHandler, integer_dataframe_3
+from modin.tests.dataframe_api_standard.utils import BaseHandler, integer_dataframe_3
 from modin.pandas.test.utils import df_equals
 
 

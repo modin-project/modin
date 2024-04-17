@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import pytest
 
-from modin.dataframe_api_standard.tests.utils import (
+from modin.tests.dataframe_api_standard.utils import (
     BaseHandler,
     bool_dataframe_1,
     compare_dataframe_with_reference,

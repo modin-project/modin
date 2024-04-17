@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from modin.dataframe_api_standard.tests.utils import ModinHandler
+from modin.tests.dataframe_api_standard.utils import ModinHandler
 
 
 def pytest_generate_tests(metafunc: Any) -> None:

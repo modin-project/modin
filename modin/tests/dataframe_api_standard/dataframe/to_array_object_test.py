@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from modin.dataframe_api_standard.tests.utils import BaseHandler, integer_dataframe_1
+from modin.tests.dataframe_api_standard.utils import BaseHandler, integer_dataframe_1
 
 
 def test_to_array_object(library: BaseHandler) -> None:

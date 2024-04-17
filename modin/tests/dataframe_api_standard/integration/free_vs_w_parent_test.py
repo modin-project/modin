@@ -37,7 +37,7 @@
 
 import numpy as np
 
-from modin.dataframe_api_standard.tests.utils import BaseHandler, integer_dataframe_1
+from modin.tests.dataframe_api_standard.utils import BaseHandler, integer_dataframe_1
 
 
 def test_free_vs_w_parent(library: BaseHandler) -> None:

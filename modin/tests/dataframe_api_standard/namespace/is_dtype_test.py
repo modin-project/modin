@@ -39,7 +39,7 @@ from __future__ import annotations
 
 import pytest
 
-from modin.dataframe_api_standard.tests.utils import BaseHandler, mixed_dataframe_1
+from modin.tests.dataframe_api_standard.utils import BaseHandler, mixed_dataframe_1
 
 
 @pytest.mark.parametrize(

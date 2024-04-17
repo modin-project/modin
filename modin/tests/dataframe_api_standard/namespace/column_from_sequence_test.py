@@ -42,7 +42,7 @@ from typing import Any
 
 import pytest
 
-from modin.dataframe_api_standard.tests.utils import (
+from modin.tests.dataframe_api_standard.utils import (
     BaseHandler,
     compare_column_with_reference,
     integer_dataframe_1,
