@@ -2220,11 +2220,8 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 axis = 1
 
             column_splits = (
-                self._partitions.shape[0]
-                // (CpuCount.get() // self._partitions.shape[1])
-                if CpuCount.get() > self._partitions.shape[1]
-                else 1
-            )
+                self._partitions.shape[0] * self._partitions.shape[1]
+            ) // CpuCount.get()
 
             if axis == 1 or column_splits <= 1:
                 # splitting by full axis partitions
