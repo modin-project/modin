@@ -122,8 +122,11 @@ def create_pandas_df_from_partitions(
         for row in partition_data
         if not all(is_part_empty(part) for part in row)
     ]
-    copy = not called_from_remote
+
+    # to reduce peak memory consumption
+    del partition_data
+
     if len(df_rows) == 0:
         return pandas.DataFrame()
     else:
-        return concatenate(df_rows, copy)
+        return concatenate(df_rows, copy=not called_from_remote)

@@ -13,6 +13,7 @@
 
 """Module houses Modin configs originated from environment variables."""
 
+import importlib
 import os
 import secrets
 import sys
@@ -312,6 +313,20 @@ class CpuCount(EnvironmentVariable, type=int):
 
         return multiprocessing.cpu_count()
 
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``CpuCount`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        cpu_count = super().get()
+        if cpu_count <= 0:
+            raise ValueError(f"`CpuCount` should be > 0; current value: {cpu_count}")
+        return cpu_count
+
 
 class GpuCount(EnvironmentVariable, type=int):
     """How may GPU devices to utilize across the whole distribution."""
@@ -368,6 +383,20 @@ class NPartitions(EnvironmentVariable, type=int):
             return GpuCount.get()
         else:
             return CpuCount.get()
+
+    @classmethod
+    def get(cls) -> int:
+        """
+        Get ``NPartitions`` with extra checks.
+
+        Returns
+        -------
+        int
+        """
+        nparts = super().get()
+        if nparts <= 0:
+            raise ValueError(f"`NPartitions` should be > 0; current value: {nparts}")
+        return nparts
 
 
 class HdkFragmentSize(EnvironmentVariable, type=int):
@@ -472,7 +501,7 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     """Set ``LogMode`` value if users want to opt-in."""
 
     varname = "MODIN_LOG_MODE"
-    choices = ("enable", "disable", "enable_api_only")
+    choices = ("enable", "disable")
     default = "disable"
 
     @classmethod
@@ -484,11 +513,6 @@ class LogMode(EnvironmentVariable, type=ExactStr):
     def disable(cls) -> None:
         """Disable logging feature."""
         cls.put("disable")
-
-    @classmethod
-    def enable_api_only(cls) -> None:
-        """Enable API level logging."""
-        cls.put("enable_api_only")
 
 
 class LogMemoryInterval(EnvironmentVariable, type=int):
@@ -521,7 +545,10 @@ class LogMemoryInterval(EnvironmentVariable, type=int):
         int
         """
         log_memory_interval = super().get()
-        assert log_memory_interval > 0, "`LogMemoryInterval` should be > 0"
+        if log_memory_interval <= 0:
+            raise ValueError(
+                f"`LogMemoryInterval` should be > 0; current value: {log_memory_interval}"
+            )
         return log_memory_interval
 
 
@@ -555,7 +582,10 @@ class LogFileSize(EnvironmentVariable, type=int):
         int
         """
         log_file_size = super().get()
-        assert log_file_size > 0, "`LogFileSize` should be > 0"
+        if log_file_size <= 0:
+            raise ValueError(
+                f"`LogFileSize` should be > 0; current value: {log_file_size}"
+            )
         return log_file_size
 
 
@@ -668,7 +698,10 @@ class MinPartitionSize(EnvironmentVariable, type=int):
         int
         """
         min_partition_size = super().get()
-        assert min_partition_size > 0, "`min_partition_size` should be > 0"
+        if min_partition_size <= 0:
+            raise ValueError(
+                f"`MinPartitionSize` should be > 0; current value: {min_partition_size}"
+            )
         return min_partition_size
 
 
@@ -728,14 +761,23 @@ ExperimentalNumPyAPI._deprecation_descriptor = DeprecationDescriptor(
 )
 
 
+class RangePartitioning(EnvironmentVariable, type=bool):
+    """
+    Set to true to use Modin's range-partitioning implementation where possible.
+
+    Please refer to documentation for cases where enabling this options would be beneficial:
+    https://modin.readthedocs.io/en/stable/flow/modin/experimental/range_partitioning_groupby.html
+    """
+
+    varname = "MODIN_RANGE_PARTITIONING"
+    default = False
+
+
 class RangePartitioningGroupby(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    Experimental groupby is implemented using a range-partitioning technique,
-    note that it may not always work better than the original Modin's TreeReduce
-    and FullAxis implementations. For more information visit the according section
-    of Modin's documentation: TODO: add a link to the section once it's written.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_RANGE_PARTITIONING_GROUPBY"
@@ -747,11 +789,18 @@ class RangePartitioningGroupby(EnvWithSibilings, type=bool):
         return ExperimentalGroupbyImpl
 
 
+# Let the parameter's handling logic know that this variable is deprecated and that
+# we should raise respective warnings
+RangePartitioningGroupby._deprecation_descriptor = DeprecationDescriptor(
+    RangePartitioningGroupby, RangePartitioning
+)
+
+
 class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
     """
     Set to true to use Modin's range-partitioning group by implementation.
 
-    This parameter is deprecated. Use ``RangePartitioningGroupby`` instead.
+    This parameter is deprecated. Use ``RangePartitioning`` instead.
     """
 
     varname = "MODIN_EXPERIMENTAL_GROUPBY"
@@ -768,6 +817,26 @@ class ExperimentalGroupbyImpl(EnvWithSibilings, type=bool):
 ExperimentalGroupbyImpl._deprecation_descriptor = DeprecationDescriptor(
     ExperimentalGroupbyImpl, RangePartitioningGroupby
 )
+
+
+def use_range_partitioning_groupby() -> bool:
+    """
+    Determine whether range-partitioning implementation for groupby was enabled by a user.
+
+    This is a temporary helper function that queries ``RangePartitioning`` and deprecated
+    ``RangePartitioningGroupby`` config variables in order to determine whether to range-part
+    impl for groupby is enabled. Eventially this function should be removed together with
+    ``RangePartitioningGroupby`` variable.
+
+    Returns
+    -------
+    bool
+    """
+    with warnings.catch_warnings():
+        # filter deprecation warning, it was already showed when a user set the variable
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        old_range_part_var = RangePartitioningGroupby.get()
+    return RangePartitioning.get() or old_range_part_var
 
 
 class CIAWSSecretAccessKey(EnvironmentVariable, type=str):
@@ -829,6 +898,48 @@ class LazyExecution(EnvironmentVariable, type=str):
     varname = "MODIN_LAZY_EXECUTION"
     choices = ("Auto", "On", "Off")
     default = "Auto"
+
+
+class DocModule(EnvironmentVariable, type=ExactStr):
+    """
+    The module to use that will be used for docstrings.
+
+    The value set here must be a valid, importable module. It should have
+    a `DataFrame`, `Series`, and/or several APIs directly (e.g. `read_csv`).
+    """
+
+    varname = "MODIN_DOC_MODULE"
+    default = "pandas"
+
+    @classmethod
+    def put(cls, value: str) -> None:
+        """
+        Assign a value to the DocModule config.
+
+        Parameters
+        ----------
+        value : str
+            Config value to set.
+        """
+        super().put(value)
+        # Reload everything to apply the documentation. This is required since the
+        # docs might already have been created and the implementation will assume
+        # that the new docs are applied when the config is set. This set of operations
+        # does this.
+        import modin.pandas as pd
+
+        importlib.reload(pd.accessor)
+        importlib.reload(pd.base)
+        importlib.reload(pd.dataframe)
+        importlib.reload(pd.general)
+        importlib.reload(pd.groupby)
+        importlib.reload(pd.io)
+        importlib.reload(pd.iterator)
+        importlib.reload(pd.series)
+        importlib.reload(pd.series_utils)
+        importlib.reload(pd.utils)
+        importlib.reload(pd.window)
+        importlib.reload(pd)
 
 
 class DaskThreadsPerWorker(EnvironmentVariable, type=int):

@@ -75,4 +75,4 @@ improve the performance (and might end up hurting the performance of the system)
    Modin will opt for the default setting.
 
 
-.. _`Jupyter notebook`: https://github.com/modin-project/modin/tree/master/examples/quickstart.ipynb
+.. _`Jupyter notebook`: https://github.com/modin-project/modin/tree/main/examples/quickstart.ipynb

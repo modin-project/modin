@@ -13,15 +13,19 @@
 
 """Implement GroupBy public API as pandas does."""
 
+from __future__ import annotations
+
 import warnings
 from collections.abc import Iterable
 from types import BuiltinFunctionType
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 import pandas
 import pandas.core.common as com
 import pandas.core.groupby
 from pandas._libs import lib
+from pandas.api.types import is_scalar
 from pandas.core.apply import reconstruct_func
 from pandas.core.dtypes.common import (
     is_datetime64_any_dtype,
@@ -48,6 +52,9 @@ from modin.utils import (
 from .series import Series
 from .utils import is_label
 from .window import RollingGroupby
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame
 
 _DEFAULT_BEHAVIOUR = {
     "__class__",
@@ -84,10 +91,12 @@ _DEFAULT_BEHAVIOUR = {
 class DataFrameGroupBy(ClassLogger):
     _pandas_class = pandas.core.groupby.DataFrameGroupBy
     _return_tuple_when_iterating = False
+    _df: Union[DataFrame, Series]
+    _query_compiler: BaseQueryCompiler
 
     def __init__(
         self,
-        df,
+        df: Union[DataFrame, Series],
         by,
         axis,
         level,
@@ -646,16 +655,6 @@ class DataFrameGroupBy(ClassLogger):
         )
 
     def apply(self, func, *args, include_groups=True, **kwargs):
-        if not include_groups:
-            return self._default_to_pandas(
-                lambda df: df.apply(
-                    func,
-                    *args,
-                    include_groups=include_groups,
-                    **kwargs,
-                )
-            )
-
         func = cast_function_modin2pandas(func)
         if not isinstance(func, BuiltinFunctionType):
             func = wrap_udf_function(func)
@@ -665,7 +664,7 @@ class DataFrameGroupBy(ClassLogger):
             numeric_only=False,
             agg_func=func,
             agg_args=args,
-            agg_kwargs=kwargs,
+            agg_kwargs={**kwargs, "include_groups": include_groups},
             how="group_wise",
         )
         reduced_index = pandas.Index([MODIN_UNNAMED_SERIES_LABEL])
@@ -691,17 +690,17 @@ class DataFrameGroupBy(ClassLogger):
             )
         )
 
-    def first(self, numeric_only=False, min_count=-1):
+    def first(self, numeric_only=False, min_count=-1, skipna=True):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_first,
-            agg_kwargs=dict(min_count=min_count),
+            agg_kwargs=dict(min_count=min_count, skipna=skipna),
             numeric_only=numeric_only,
         )
 
-    def last(self, numeric_only=False, min_count=-1):
+    def last(self, numeric_only=False, min_count=-1, skipna=True):
         return self._wrap_aggregation(
             type(self._query_compiler).groupby_last,
-            agg_kwargs=dict(min_count=min_count),
+            agg_kwargs=dict(min_count=min_count, skipna=skipna),
             numeric_only=numeric_only,
         )
 
@@ -904,19 +903,40 @@ class DataFrameGroupBy(ClassLogger):
 
         do_relabel = None
         if isinstance(func, dict) or func is None:
-            relabeling_required, func_dict, new_columns, order = reconstruct_func(
+            # the order from `reconstruct_func` cannot be used correctly if there
+            # is more than one columnar partition, since for correct use all columns
+            # must be available within one partition.
+            old_kwargs = dict(kwargs)
+            relabeling_required, func_dict, new_columns, _ = reconstruct_func(
                 func, **kwargs
             )
 
             if relabeling_required:
 
                 def do_relabel(obj_to_relabel):  # noqa: F811
-                    new_order, new_columns_idx = order, pandas.Index(new_columns)
+                    # unwrap nested labels into one level tuple
+                    result_labels = [None] * len(old_kwargs)
+                    for idx, labels in enumerate(old_kwargs.values()):
+                        if is_scalar(labels) or callable(labels):
+                            result_labels[idx] = (
+                                labels if not callable(labels) else labels.__name__
+                            )
+                            continue
+                        new_elem = []
+                        for label in labels:
+                            if is_scalar(label) or callable(label):
+                                new_elem.append(
+                                    label if not callable(label) else label.__name__
+                                )
+                            else:
+                                new_elem.extend(label)
+                        result_labels[idx] = tuple(new_elem)
+
+                    new_order = obj_to_relabel.columns.get_indexer(result_labels)
+                    new_columns_idx = pandas.Index(new_columns)
                     if not self._as_index:
                         nby_cols = len(obj_to_relabel.columns) - len(new_columns_idx)
-                        new_order = np.concatenate(
-                            [np.arange(nby_cols), new_order + nby_cols]
-                        )
+                        new_order = np.concatenate([np.arange(nby_cols), new_order])
                         by_cols = obj_to_relabel.columns[:nby_cols]
                         if by_cols.nlevels != new_columns_idx.nlevels:
                             by_cols = by_cols.remove_unused_levels()

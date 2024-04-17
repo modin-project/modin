@@ -182,6 +182,16 @@ class FactoryDispatcher(object):
         return cls.get_factory()._from_dataframe(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_ray)
+    def from_ray(cls, ray_obj):
+        return cls.get_factory()._from_ray(ray_obj)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._from_dask)
+    def from_dask(cls, dask_obj):
+        return cls.get_factory()._from_dask(dask_obj)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_parquet)
     def read_parquet(cls, **kwargs):
         return cls.get_factory()._read_parquet(**kwargs)
@@ -197,9 +207,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._read_csv_glob(**kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_distributed)
-    def read_pickle_distributed(cls, **kwargs):
-        return cls.get_factory()._read_pickle_distributed(**kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_pickle_glob)
+    def read_pickle_glob(cls, **kwargs):
+        return cls.get_factory()._read_pickle_glob(**kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.BaseFactory._read_json)
@@ -292,9 +302,9 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_pickle(*args, **kwargs)
 
     @classmethod
-    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_distributed)
-    def to_pickle_distributed(cls, *args, **kwargs):
-        return cls.get_factory()._to_pickle_distributed(*args, **kwargs)
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_pickle_glob)
+    def to_pickle_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_pickle_glob(*args, **kwargs)
 
     @classmethod
     @_inherit_docstrings(factories.PandasOnRayFactory._read_parquet_glob)
@@ -317,6 +327,16 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_json_glob(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._read_xml_glob)
+    def read_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._read_xml_glob(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.PandasOnRayFactory._to_xml_glob)
+    def to_xml_glob(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml_glob(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.PandasOnRayFactory._read_custom_text)
     def read_custom_text(cls, **kwargs):
         return cls.get_factory()._read_custom_text(**kwargs)
@@ -332,6 +352,21 @@ class FactoryDispatcher(object):
         return cls.get_factory()._to_json(*args, **kwargs)
 
     @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_xml)
+    def to_xml(cls, *args, **kwargs):
+        return cls.get_factory()._to_xml(*args, **kwargs)
+
+    @classmethod
     @_inherit_docstrings(factories.BaseFactory._to_parquet)
     def to_parquet(cls, *args, **kwargs):
         return cls.get_factory()._to_parquet(*args, **kwargs)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_ray)
+    def to_ray(cls, modin_obj):
+        return cls.get_factory()._to_ray(modin_obj)
+
+    @classmethod
+    @_inherit_docstrings(factories.BaseFactory._to_dask)
+    def to_dask(cls, modin_obj):
+        return cls.get_factory()._to_dask(modin_obj)

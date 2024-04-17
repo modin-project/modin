@@ -121,7 +121,6 @@ class ColumnStoreDispatcher(FileDispatcher):
         row_lengths : list
             List with lengths of index chunks.
         """
-        num_partitions = NPartitions.get()
         index_len = (
             0 if len(partition_ids) == 0 else cls.materialize(partition_ids[-2][0])
         )
@@ -130,7 +129,9 @@ class ColumnStoreDispatcher(FileDispatcher):
         else:
             index = index_len
             index_len = len(index)
-        index_chunksize = compute_chunksize(index_len, num_partitions)
+        num_partitions = NPartitions.get()
+        min_block_size = MinPartitionSize.get()
+        index_chunksize = compute_chunksize(index_len, num_partitions, min_block_size)
         if index_chunksize > index_len:
             row_lengths = [index_len] + [0 for _ in range(num_partitions - 1)]
         else:

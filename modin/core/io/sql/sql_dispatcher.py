@@ -33,6 +33,17 @@ class SQLDispatcher(FileDispatcher):
     """Class handles utils for reading SQL queries or database tables."""
 
     @classmethod
+    def _is_supported_sqlalchemy_object(cls, obj):  # noqa: GL08
+        supported = None
+        try:
+            import sqlalchemy as sa
+
+            supported = isinstance(obj, (sa.engine.Engine, sa.engine.Connection))
+        except ImportError:
+            supported = False
+        return supported
+
+    @classmethod
     def _read(cls, sql, con, index_col=None, **kwargs):
         """
         Read a SQL query or database table into a query compiler.
@@ -55,6 +66,12 @@ class SQLDispatcher(FileDispatcher):
         """
         if isinstance(con, str):
             con = ModinDatabaseConnection("sqlalchemy", con)
+
+        if cls._is_supported_sqlalchemy_object(con):
+            con = ModinDatabaseConnection(
+                "sqlalchemy", con.engine.url.render_as_string(hide_password=False)
+            )
+
         if not isinstance(con, ModinDatabaseConnection):
             return cls.single_worker_read(
                 sql,
@@ -62,7 +79,7 @@ class SQLDispatcher(FileDispatcher):
                 index_col=index_col,
                 read_sql_engine=ReadSqlEngine.get(),
                 reason="To use the parallel implementation of `read_sql`, pass either "
-                + "the SQL connection string or a ModinDatabaseConnection "
+                + "a SQLAlchemy connectable, the SQL connection string, or a ModinDatabaseConnection "
                 + "with the arguments required to make a connection, instead "
                 + f"of {type(con)}. For documentation on the ModinDatabaseConnection, see "
                 + "https://modin.readthedocs.io/en/latest/supported_apis/io_supported.html#connecting-to-a-database-for-read-sql",
@@ -112,17 +129,6 @@ class SQLDispatcher(FileDispatcher):
         return cls.query_compiler_cls(new_frame)
 
     @classmethod
-    def _is_supported_sqlalchemy_object(cls, obj):  # noqa: GL08
-        supported = None
-        try:
-            import sqlalchemy as sa
-
-            supported = isinstance(obj, (sa.engine.Engine, sa.engine.Connection))
-        except ImportError:
-            supported = False
-        return supported
-
-    @classmethod
     def write(cls, qc, **kwargs):
         """
         Write records stored in the `qc` to a SQL database.
@@ -149,7 +155,9 @@ class SQLDispatcher(FileDispatcher):
         # are not pickleable. We have to convert it to the URL string and connect from
         # each of the workers.
         if cls._is_supported_sqlalchemy_object(kwargs["con"]):
-            kwargs["con"] = str(kwargs["con"].engine.url)
+            kwargs["con"] = kwargs["con"].engine.url.render_as_string(
+                hide_password=False
+            )
 
         empty_df = qc.getitem_row_array([0]).to_pandas().head(0)
         empty_df.to_sql(**kwargs)

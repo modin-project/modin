@@ -21,7 +21,11 @@ SparseAccessor implements API of pandas.Series.sparse accessor.
 CachedAccessor implements API of pandas.core.accessor.CachedAccessor
 """
 
+from __future__ import annotations
+
 import pickle
+import warnings
+from typing import TYPE_CHECKING, Union
 
 import pandas
 from pandas._typing import CompressionOptions, StorageOptions
@@ -30,7 +34,11 @@ from pandas.core.dtypes.dtypes import SparseDtype
 from modin import pandas as pd
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.pandas.io import to_dask, to_ray
 from modin.utils import _inherit_docstrings
+
+if TYPE_CHECKING:
+    from modin.pandas import DataFrame, Series
 
 
 class BaseSparseAccessor(ClassLogger):
@@ -43,20 +51,21 @@ class BaseSparseAccessor(ClassLogger):
         Object to operate on.
     """
 
+    _parent: Union[DataFrame, Series]
     _validation_msg = "Can only use the '.sparse' accessor with Sparse data."
 
-    def __init__(self, data=None):
+    def __init__(self, data: Union[DataFrame, Series] = None):
         self._parent = data
         self._validate(data)
 
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: Union[DataFrame, Series]):
         """
         Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
         Parameters
         ----------
-        data : DataFrame
+        data : DataFrame or Series
             Object to check.
 
         Raises
@@ -92,7 +101,7 @@ class BaseSparseAccessor(ClassLogger):
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseFrameAccessor)
 class SparseFrameAccessor(BaseSparseAccessor):
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: DataFrame):
         """
         Verify that `data` dtypes are compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
@@ -131,7 +140,7 @@ class SparseFrameAccessor(BaseSparseAccessor):
 @_inherit_docstrings(pandas.core.arrays.sparse.accessor.SparseAccessor)
 class SparseAccessor(BaseSparseAccessor):
     @classmethod
-    def _validate(cls, data):
+    def _validate(cls, data: Series):
         """
         Verify that `data` dtype is compatible with `pandas.core.dtypes.dtypes.SparseDtype`.
 
@@ -196,9 +205,9 @@ class CachedAccessor(ClassLogger):
         return accessor_obj
 
 
-class ExperimentalFunctions:
+class ModinAPI:
     """
-    Namespace class for accessing experimental Modin functions.
+    Namespace class for accessing additional Modin functions that are not available in pandas.
 
     Parameters
     ----------
@@ -206,10 +215,74 @@ class ExperimentalFunctions:
         Object to operate on.
     """
 
-    def __init__(self, data):
+    _data: Union[DataFrame, Series]
+
+    def __init__(self, data: Union[DataFrame, Series]):
         self._data = data
 
-    def to_pickle_distributed(
+    def to_pandas(self):
+        """
+        Convert a Modin DataFrame/Series object to a pandas DataFrame/Series object.
+
+        Returns
+        -------
+        pandas.Series or pandas.DataFrame
+        """
+        return self._data._to_pandas()
+
+    def to_ray_dataset(self):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Deprecated.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        warnings.warn(
+            "`DataFrame.modin.to_ray_dataset` is deprecated and will be removed in a future version. "
+            + "Please use `DataFrame.modin.to_ray` instead.",
+            category=FutureWarning,
+        )
+        return to_ray(self._data)
+
+    def to_ray(self):
+        """
+        Convert a Modin DataFrame/Series to a Ray Dataset.
+
+        Returns
+        -------
+        ray.data.Dataset
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return to_ray(self._data)
+
+    def to_dask(self):
+        """
+        Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            Converted object with type depending on input.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+        """
+        return to_dask(self._data)
+
+    def to_pickle_glob(
         self,
         filepath_or_buffer,
         compression: CompressionOptions = "infer",
@@ -248,14 +321,30 @@ class ExperimentalFunctions:
             this argument with a non-fsspec URL. See the fsspec and backend storage
             implementation docs for the set of allowed keys and values.
         """
-        from modin.experimental.pandas.io import to_pickle_distributed
+        from modin.experimental.pandas.io import to_pickle_glob
 
-        to_pickle_distributed(
+        to_pickle_glob(
             self._data,
             filepath_or_buffer=filepath_or_buffer,
             compression=compression,
             protocol=protocol,
             storage_options=storage_options,
+        )
+
+    def to_pickle_distributed(
+        self,
+        filepath_or_buffer,
+        compression: CompressionOptions = "infer",
+        protocol: int = pickle.HIGHEST_PROTOCOL,
+        storage_options: StorageOptions = None,
+    ) -> None:  # noqa
+        warnings.warn(
+            "`DataFrame.modin.to_pickle_distributed` is deprecated and will be removed in a future version. "
+            + "Please use `DataFrame.modin.to_pickle_glob` instead.",
+            category=FutureWarning,
+        )
+        return self.to_pickle_glob(
+            filepath_or_buffer, compression, protocol, storage_options
         )
 
     def to_parquet_glob(
@@ -343,4 +432,58 @@ class ExperimentalFunctions:
             indent=indent,
             storage_options=storage_options,
             mode=mode,
+        )
+
+    def to_xml_glob(
+        self,
+        path_or_buffer=None,
+        index=True,
+        root_name="data",
+        row_name="row",
+        na_rep=None,
+        attr_cols=None,
+        elem_cols=None,
+        namespaces=None,
+        prefix=None,
+        encoding="utf-8",
+        xml_declaration=True,
+        pretty_print=True,
+        parser="lxml",
+        stylesheet=None,
+        compression="infer",
+        storage_options=None,
+    ) -> None:  # noqa: PR01
+        """
+        Render a DataFrame to an XML document.
+
+        Notes
+        -----
+        * Only string type supported for `path_or_buffer` argument.
+        * The rest of the arguments are the same as for `pandas.to_xml`.
+        """
+        from modin.experimental.pandas.io import to_xml_glob
+
+        if path_or_buffer is None:
+            raise NotImplementedError(
+                "`to_xml_glob` doesn't support path_or_buffer=None, use `to_xml` in that case."
+            )
+
+        to_xml_glob(
+            self._data,
+            path_or_buffer=path_or_buffer,
+            index=index,
+            root_name=root_name,
+            row_name=row_name,
+            na_rep=na_rep,
+            attr_cols=attr_cols,
+            elem_cols=elem_cols,
+            namespaces=namespaces,
+            prefix=prefix,
+            encoding=encoding,
+            xml_declaration=xml_declaration,
+            pretty_print=pretty_print,
+            parser=parser,
+            stylesheet=stylesheet,
+            compression=compression,
+            storage_options=storage_options,
         )

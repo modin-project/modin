@@ -25,7 +25,7 @@ from pandas._libs.lib import no_default
 from pandas.core.common import is_bool_indexer
 from pandas.core.dtypes.common import is_bool_dtype, is_integer_dtype
 
-from modin.core.storage_formats.base.query_compiler import BaseQueryCompiler
+from modin.core.storage_formats import BaseQueryCompiler
 from modin.core.storage_formats.base.query_compiler import (
     _get_axis as default_axis_getter,
 )
@@ -814,7 +814,7 @@ class DFAlgQueryCompiler(BaseQueryCompiler):
             )
         return self.__constructor__(
             self._modin_frame.astype(col_dtypes),
-            self._shape_hint,
+            shape_hint=self._shape_hint,
         )
 
     def setitem(self, axis, key, value):
@@ -915,5 +915,5 @@ _SUPPORTED_NUM_TYPE_CODES = set(
 
 def _check_int_or_float(op, dtypes):  # noqa: GL08
     for t in dtypes:
-        if t.char not in _SUPPORTED_NUM_TYPE_CODES:
+        if not isinstance(t, np.dtype) or t.char not in _SUPPORTED_NUM_TYPE_CODES:
             raise NotImplementedError(f"Operation '{op}' on type '{t.name}'")

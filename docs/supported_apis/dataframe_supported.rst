@@ -414,6 +414,10 @@ default to pandas.
 |                            |                           |                        | Experimental implementation:                       |
 |                            |                           |                        | DataFrame.modin.to_json_glob                       |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
+| ``to_xml``                 | `to_xml`_                 | D                      |                                                    |
+|                            |                           |                        | Experimental implementation:                       |
+|                            |                           |                        | DataFrame.modin.to_xml_glob                        |
++----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_latex``               | `to_latex`_               | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_orc``                 | `to_orc`_                 | D                      |                                                    |
@@ -429,7 +433,7 @@ default to pandas.
 | ``to_period``              | `to_period`_              | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_pickle``              | `to_pickle`_              | D                      | Experimental implementation:                       |
-|                            |                           |                        | DataFrame.modin.to_pickle_distributed              |
+|                            |                           |                        | DataFrame.modin.to_pickle_glob                     |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
 | ``to_records``             | `to_records`_             | D                      |                                                    |
 +----------------------------+---------------------------+------------------------+----------------------------------------------------+
@@ -651,6 +655,7 @@ default to pandas.
 .. _`to_hdf`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_hdf.html#pandas.DataFrame.to_hdf
 .. _`to_html`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_html.html#pandas.DataFrame.to_html
 .. _`to_json`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_json.html#pandas.DataFrame.to_json
+.. _`to_xml`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_xml.html#pandas.DataFrame.to_xml
 .. _`to_latex`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_latex.html#pandas.DataFrame.to_latex
 .. _`to_orc`: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_orc.html#pandas.DataFrame.to_orc
 .. _`to_parquet`: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_parquet.html#pandas.DataFrame.to_parquet

@@ -22,7 +22,6 @@
 import math
 
 import numpy as np
-import pandas._testing as tm
 
 from .utils import (
     GROUPBY_NGROUPS,
@@ -139,8 +138,10 @@ class TimeJoinStringIndex:
 
     def setup(self, shapes, sort):
         assert shapes[0] % 100 == 0, "implementation restriction"
-        level1 = tm.makeStringIndex(10).values
-        level2 = tm.makeStringIndex(shapes[0] // 100).values
+        level1 = IMPL.Index([f"i-{i}" for i in range(10)], dtype=object).values
+        level2 = IMPL.Index(
+            [f"i-{i}" for i in range(shapes[0] // 100)], dtype=object
+        ).values
         codes1 = np.arange(10).repeat(shapes[0] // 100)
         codes2 = np.tile(np.arange(shapes[0] // 100), 10)
         index2 = IMPL.MultiIndex(levels=[level1, level2], codes=[codes1, codes2])
@@ -897,8 +898,12 @@ class TimeReindex:
         self.df2 = IMPL.DataFrame(
             index=range(rows), data=np.random.rand(rows, cols), columns=range(cols)
         )
-        level1 = tm.makeStringIndex(rows // 10).values.repeat(10)
-        level2 = np.tile(tm.makeStringIndex(10).values, rows // 10)
+        level1 = IMPL.Index(
+            [f"i-{i}" for i in range(rows // 10)], dtype=object
+        ).values.repeat(10)
+        level2 = np.tile(
+            IMPL.Index([f"i-{i}" for i in range(10)], dtype=object).values, rows // 10
+        )
         index = IMPL.MultiIndex.from_arrays([level1, level2])
         self.s = IMPL.Series(np.random.randn(rows), index=index)
         self.s_subset = self.s[::2]
@@ -1024,18 +1029,17 @@ class TimeDropDuplicatesDataframe:
     param_names = ["shape"]
 
     def setup(self, shape):
-        from pandas import DataFrame
-
         rows, cols = shape
         N = rows // 10
         K = 10
-        # Assigning a large number of columns - inefficient in Modin, so use pandas
-        temp_df = DataFrame()
-        # dataframe would  have cols-1 keys(strings) and one value(int) column
+        data = {}
+        # dataframe would have cols-1 keys(strings) and one value(int) column
         for col in range(cols - 1):
-            temp_df["key" + str(col + 1)] = tm.makeStringIndex(N).values.repeat(K)
-        self.df = IMPL.DataFrame(temp_df)
-        self.df["value"] = np.random.randn(N * K)
+            data["key" + str(col + 1)] = IMPL.Index(
+                [f"i-{i}" for i in range(N)], dtype=object
+            ).values.repeat(K)
+        data["value"] = np.random.randn(N * K)
+        self.df = IMPL.DataFrame(data)
         execute(self.df)
 
     def time_drop_dups(self, shape):
@@ -1052,7 +1056,12 @@ class TimeDropDuplicatesSeries:
 
     def setup(self, shape):
         rows = shape[0]
-        self.series = IMPL.Series(np.tile(tm.makeStringIndex(rows // 10).values, 10))
+        self.series = IMPL.Series(
+            np.tile(
+                IMPL.Index([f"i-{i}" for i in range(rows // 10)], dtype=object).values,
+                10,
+            )
+        )
         execute(self.series)
 
     def time_drop_dups(self, shape):

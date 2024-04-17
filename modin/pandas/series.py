@@ -17,13 +17,14 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing import IO, TYPE_CHECKING, Hashable, Optional, Union
+from typing import IO, TYPE_CHECKING, Any, Hashable, Iterable, Optional, Union
 
 import numpy as np
 import pandas
 from pandas._libs import lib
-from pandas._typing import Axis, IndexKeyFunc
+from pandas._typing import ArrayLike, Axis, DtypeObj, IndexKeyFunc, Scalar, Sequence
 from pandas.api.types import is_integer
+from pandas.core.arrays import ExtensionArray
 from pandas.core.common import apply_if_callable, is_bool_indexer
 from pandas.core.dtypes.common import is_dict_like, is_list_like
 from pandas.core.series import _coerce_method
@@ -48,7 +49,14 @@ from .series_utils import (
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
 
 if TYPE_CHECKING:
+    import numpy.typing as npt
+
+    from modin.core.storage_formats import BaseQueryCompiler
+
     from .dataframe import DataFrame
+
+# Dictionary of extensions assigned to this class
+_SERIES_EXTENSIONS_ = {}
 
 
 @_inherit_docstrings(
@@ -95,8 +103,8 @@ class Series(BasePandasDataset):
         name=None,
         copy=None,
         fastpath=lib.no_default,
-        query_compiler=None,
-    ):
+        query_compiler: BaseQueryCompiler = None,
+    ) -> None:
         from modin.numpy import array
 
         # Siblings are other dataframes that share the same query compiler. We
@@ -149,7 +157,7 @@ class Series(BasePandasDataset):
         if name is not None:
             self.name = name
 
-    def _get_name(self):
+    def _get_name(self) -> Hashable:
         """
         Get the value of the `name` property.
 
@@ -162,7 +170,7 @@ class Series(BasePandasDataset):
             return None
         return name
 
-    def _set_name(self, name):
+    def _set_name(self, name: Hashable) -> None:
         """
         Set the value of the `name` property.
 
@@ -175,7 +183,7 @@ class Series(BasePandasDataset):
             name = MODIN_UNNAMED_SERIES_LABEL
         self._query_compiler.columns = [name]
 
-    name = property(_get_name, _set_name)
+    name: Hashable = property(_get_name, _set_name)
     _parent = None
     # Parent axis denotes axis that was used to select series in a parent dataframe.
     # If _parent_axis == 0, then it means that index axis was used via df.loc[row]
@@ -185,22 +193,22 @@ class Series(BasePandasDataset):
     _parent_axis = 0
 
     @_doc_binary_op(operation="addition", bin_op="add")
-    def __add__(self, right):
+    def __add__(self, right) -> Series:
         return self.add(right)
 
     @_doc_binary_op(operation="addition", bin_op="radd", right="left")
-    def __radd__(self, left):
+    def __radd__(self, left) -> Series:
         return self.radd(left)
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
-    def __and__(self, other):
+    def __and__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__and__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__and__(new_other)
 
     @_doc_binary_op(operation="union", bin_op="and", right="other")
-    def __rand__(self, other):
+    def __rand__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rand__, other)
         new_self, new_other = self._prepare_inter_op(other)
@@ -208,7 +216,7 @@ class Series(BasePandasDataset):
 
     # add `_inherit_docstrings` decorator to force method link addition.
     @_inherit_docstrings(pandas.Series.__array__, apilink="pandas.Series.__array__")
-    def __array__(self, dtype=None):  # noqa: PR01, RT01, D200
+    def __array__(self, dtype=None) -> np.ndarray:  # noqa: PR01, RT01, D200
         """
         Return the values as a NumPy array.
         """
@@ -224,7 +232,7 @@ class Series(BasePandasDataset):
             self, api_version=api_version
         )
 
-    def __contains__(self, key):
+    def __contains__(self, key: Hashable) -> bool:
         """
         Check if `key` in the `Series.index`.
 
@@ -239,7 +247,7 @@ class Series(BasePandasDataset):
         """
         return key in self.index
 
-    def __copy__(self, deep=True):
+    def __copy__(self, deep: bool = True) -> Series:
         """
         Return the copy of the Series.
 
@@ -254,7 +262,7 @@ class Series(BasePandasDataset):
         """
         return self.copy(deep=deep)
 
-    def __deepcopy__(self, memo=None):
+    def __deepcopy__(self, memo=None) -> Series:
         """
         Return the deep copy of the Series.
 
@@ -269,7 +277,7 @@ class Series(BasePandasDataset):
         """
         return self.copy(deep=True)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: Hashable) -> None:
         """
         Delete item identified by `key` label.
 
@@ -287,7 +295,7 @@ class Series(BasePandasDataset):
         bin_op="divmod",
         returns="tuple of two Series",
     )
-    def __divmod__(self, right):
+    def __divmod__(self, right) -> tuple[Series, Series]:
         return self.divmod(right)
 
     @_doc_binary_op(
@@ -296,19 +304,19 @@ class Series(BasePandasDataset):
         right="left",
         returns="tuple of two Series",
     )
-    def __rdivmod__(self, left):
+    def __rdivmod__(self, left) -> tuple[Series, Series]:
         return self.rdivmod(left)
 
     @_doc_binary_op(operation="integer division", bin_op="floordiv")
-    def __floordiv__(self, right):
+    def __floordiv__(self, right) -> Series:
         return self.floordiv(right)
 
     @_doc_binary_op(operation="integer division", bin_op="floordiv")
-    def __rfloordiv__(self, right):
+    def __rfloordiv__(self, right) -> Series:
         return self.rfloordiv(right)
 
     @disable_logging
-    def __getattr__(self, key):
+    def __getattr__(self, key: Hashable) -> Any:
         """
         Return item identified by `key`.
 
@@ -327,7 +335,7 @@ class Series(BasePandasDataset):
         try to get `key` from `Series` fields.
         """
         try:
-            return object.__getattribute__(self, key)
+            return _SERIES_EXTENSIONS_.get(key, object.__getattribute__(self, key))
         except AttributeError as err:
             if key not in _ATTRS_NO_LOOKUP and key in self.index:
                 return self[key]
@@ -347,58 +355,58 @@ class Series(BasePandasDataset):
         return self._to_pandas().__iter__()
 
     @_doc_binary_op(operation="modulo", bin_op="mod")
-    def __mod__(self, right):
+    def __mod__(self, right) -> Series:
         return self.mod(right)
 
     @_doc_binary_op(operation="modulo", bin_op="mod", right="left")
-    def __rmod__(self, left):
+    def __rmod__(self, left) -> Series:
         return self.rmod(left)
 
     @_doc_binary_op(operation="multiplication", bin_op="mul")
-    def __mul__(self, right):
+    def __mul__(self, right) -> Series:
         return self.mul(right)
 
     @_doc_binary_op(operation="multiplication", bin_op="mul", right="left")
-    def __rmul__(self, left):
+    def __rmul__(self, left) -> Series:
         return self.rmul(left)
 
     @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
-    def __or__(self, other):
+    def __or__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__or__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__or__(new_other)
 
     @_doc_binary_op(operation="disjunction", bin_op="or", right="other")
-    def __ror__(self, other):
+    def __ror__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__ror__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__ror__(new_other)
 
     @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
-    def __xor__(self, other):
+    def __xor__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__xor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__xor__(new_other)
 
     @_doc_binary_op(operation="exclusive or", bin_op="xor", right="other")
-    def __rxor__(self, other):
+    def __rxor__(self, other) -> Series:
         if isinstance(other, (list, np.ndarray, pandas.Series)):
             return self._default_to_pandas(pandas.Series.__rxor__, other)
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).__rxor__(new_other)
 
     @_doc_binary_op(operation="exponential power", bin_op="pow")
-    def __pow__(self, right):
+    def __pow__(self, right) -> Series:
         return self.pow(right)
 
     @_doc_binary_op(operation="exponential power", bin_op="pow", right="left")
-    def __rpow__(self, left):
+    def __rpow__(self, left) -> Series:
         return self.rpow(left)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Return a string representation for a particular Series.
 
@@ -443,7 +451,7 @@ class Series(BasePandasDataset):
             freq_str, name_str, len_str, dtype_str
         )
 
-    def __round__(self, decimals=0):
+    def __round__(self, decimals=0) -> Series:
         """
         Round each value in a Series to the given number of decimals.
 
@@ -460,7 +468,7 @@ class Series(BasePandasDataset):
             self._query_compiler.round(decimals=decimals)
         )
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Hashable, value: Any) -> None:
         """
         Set `value` identified by `key` in the Series.
 
@@ -477,19 +485,19 @@ class Series(BasePandasDataset):
             self.loc[key] = value
 
     @_doc_binary_op(operation="subtraction", bin_op="sub")
-    def __sub__(self, right):
+    def __sub__(self, right) -> Series:
         return self.sub(right)
 
     @_doc_binary_op(operation="subtraction", bin_op="sub", right="left")
-    def __rsub__(self, left):
+    def __rsub__(self, left) -> Series:
         return self.rsub(left)
 
     @_doc_binary_op(operation="floating division", bin_op="truediv")
-    def __truediv__(self, right):
+    def __truediv__(self, right) -> Series:
         return self.truediv(right)
 
     @_doc_binary_op(operation="floating division", bin_op="truediv", right="left")
-    def __rtruediv__(self, left):
+    def __rtruediv__(self, left) -> Series:
         return self.rtruediv(left)
 
     __iadd__ = __add__
@@ -519,7 +527,9 @@ class Series(BasePandasDataset):
             data = pd.Categorical(data, dtype=self.dtype)
         return data
 
-    def add(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def add(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return Addition of series and other, element-wise (binary operator add).
         """
@@ -530,7 +540,7 @@ class Series(BasePandasDataset):
 
     def radd(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return Addition of series and other, element-wise (binary operator radd).
         """
@@ -539,7 +549,9 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=fill_value, axis=axis
         )
 
-    def add_prefix(self, prefix, axis=None):  # noqa: PR01, RT01, D200
+    def add_prefix(
+        self, prefix, axis=None
+    ) -> Union[DataFrame, Series]:  # noqa: PR01, RT01, D200
         """
         Prefix labels with string `prefix`.
         """
@@ -548,7 +560,9 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.add_prefix(prefix, axis=axis)
         )
 
-    def add_suffix(self, suffix, axis=None):  # noqa: PR01, RT01, D200
+    def add_suffix(
+        self, suffix, axis=None
+    ) -> Union[DataFrame, Series]:  # noqa: PR01, RT01, D200
         """
         Suffix labels with string `suffix`.
         """
@@ -557,7 +571,9 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.add_suffix(suffix, axis=axis)
         )
 
-    def aggregate(self, func=None, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def aggregate(
+        self, func=None, axis=0, *args, **kwargs
+    ) -> Union[Series, Scalar]:  # noqa: PR01, RT01, D200
         """
         Aggregate using one or more operations over the specified axis.
         """
@@ -576,7 +592,7 @@ class Series(BasePandasDataset):
 
     def apply(
         self, func, convert_dtype=lib.no_default, args=(), by_row="compat", **kwargs
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[DataFrame, Series]:  # noqa: PR01, RT01, D200
         """
         Invoke function on values of Series.
         """
@@ -678,7 +694,9 @@ class Series(BasePandasDataset):
             return result.to_pandas().squeeze()
         return result
 
-    def transform(self, func, axis=0, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def transform(
+        self, func, axis=0, *args, **kwargs
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Call ``func`` on self producing a `BasePandasDataset` with the same axis shape as self.
         """
@@ -698,7 +716,9 @@ class Series(BasePandasDataset):
             func = unique_func
         return super(Series, self).transform(func, axis, *args, **kwargs)
 
-    def argmax(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def argmax(
+        self, axis=None, skipna=True, *args, **kwargs
+    ) -> int:  # noqa: PR01, RT01, D200
         """
         Return int position of the largest value in the Series.
         """
@@ -707,7 +727,9 @@ class Series(BasePandasDataset):
             result = -1
         return result
 
-    def argmin(self, axis=None, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def argmin(
+        self, axis=None, skipna=True, *args, **kwargs
+    ) -> int:  # noqa: PR01, RT01, D200
         """
         Return int position of the smallest value in the Series.
         """
@@ -716,23 +738,31 @@ class Series(BasePandasDataset):
             result = -1
         return result
 
-    def argsort(self, axis=0, kind="quicksort", order=None):  # noqa: PR01, RT01, D200
+    def argsort(
+        self, axis=0, kind="quicksort", order=None, stable=None
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return the integer indices that would sort the Series values.
         """
         return self.__constructor__(
             query_compiler=self._query_compiler.argsort(
-                axis=axis, kind=kind, order=order
+                # 'stable' parameter has no effect in Pandas and is only accepted
+                # for compatibility with NumPy, so we're not passing it forward on purpose
+                axis=axis,
+                kind=kind,
+                order=order,
             )
         )
 
-    def autocorr(self, lag=1):  # noqa: PR01, RT01, D200
+    def autocorr(self, lag=1) -> float:  # noqa: PR01, RT01, D200
         """
         Compute the lag-N autocorrelation.
         """
         return self.corr(self.shift(lag))
 
-    def between(self, left, right, inclusive: str = "both"):  # noqa: PR01, RT01, D200
+    def between(
+        self, left, right, inclusive: str = "both"
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return boolean Series equivalent to left <= series <= right.
         """
@@ -740,7 +770,7 @@ class Series(BasePandasDataset):
         # so passing a Modin Series there is safe
         return pandas.Series.between(self, left, right, inclusive)
 
-    def combine(self, other, func, fill_value=None):  # noqa: PR01, RT01, D200
+    def combine(self, other, func, fill_value=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Combine the Series with a Series or scalar according to `func`.
         """
@@ -755,7 +785,7 @@ class Series(BasePandasDataset):
         keep_shape: bool = False,
         keep_equal: bool = False,
         result_names: tuple = ("self", "other"),
-    ) -> "Series":  # noqa: PR01, RT01, D200
+    ) -> Union[DataFrame, Series]:  # noqa: PR01, RT01, D200
         """
         Compare to another Series and show the differences.
         """
@@ -776,7 +806,9 @@ class Series(BasePandasDataset):
             result = result.squeeze().rename(None)
         return result
 
-    def corr(self, other, method="pearson", min_periods=None):  # noqa: PR01, RT01, D200
+    def corr(
+        self, other, method="pearson", min_periods=None
+    ) -> float:  # noqa: PR01, RT01, D200
         """
         Compute correlation with `other` Series, excluding missing values.
         """
@@ -822,11 +854,11 @@ class Series(BasePandasDataset):
                 np.clip(result.imag, -1, 1, out=result.imag)
             return result[0]
 
-        return self.__constructor__(
-            query_compiler=self._query_compiler.series_corr(other, method, min_periods)
+        return self._query_compiler.series_corr(
+            other=other, method=method, min_periods=min_periods
         )
 
-    def count(self):  # noqa: PR01, RT01, D200
+    def count(self) -> int:  # noqa: PR01, RT01, D200
         """
         Return number of non-NA/null observations in the Series.
         """
@@ -834,7 +866,7 @@ class Series(BasePandasDataset):
 
     def cov(
         self, other, min_periods=None, ddof: Optional[int] = 1
-    ):  # noqa: PR01, RT01, D200
+    ) -> float:  # noqa: PR01, RT01, D200
         """
         Compute covariance with Series, excluding missing values.
         """
@@ -874,7 +906,7 @@ class Series(BasePandasDataset):
         percentiles=None,
         include=None,
         exclude=None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[DataFrame, Series]:  # noqa: PR01, RT01, D200
         """
         Generate descriptive statistics.
         """
@@ -885,7 +917,7 @@ class Series(BasePandasDataset):
             exclude=None,
         )
 
-    def diff(self, periods=1):  # noqa: PR01, RT01, D200
+    def diff(self, periods=1) -> Series:  # noqa: PR01, RT01, D200
         """
         First discrete difference of element.
         """
@@ -893,7 +925,7 @@ class Series(BasePandasDataset):
 
     def divmod(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> tuple[Series, Series]:  # noqa: PR01, RT01, D200
         """
         Return Integer division and modulo of series and `other`, element-wise (binary operator `divmod`).
         """
@@ -904,7 +936,7 @@ class Series(BasePandasDataset):
             query_compiler=modulo
         )
 
-    def dot(self, other):  # noqa: PR01, RT01, D200
+    def dot(self, other) -> Union[Series, np.ndarray]:  # noqa: PR01, RT01, D200
         """
         Compute the dot product between the Series and the columns of `other`.
         """
@@ -944,7 +976,7 @@ class Series(BasePandasDataset):
 
     def drop_duplicates(
         self, *, keep="first", inplace=False, ignore_index=False
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Return Series with duplicate values removed.
         """
@@ -954,7 +986,7 @@ class Series(BasePandasDataset):
 
     def dropna(
         self, *, axis=0, inplace=False, how=None, ignore_index=False
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Return a new Series with missing values removed.
         """
@@ -962,20 +994,22 @@ class Series(BasePandasDataset):
             axis=axis, inplace=inplace, ignore_index=ignore_index
         )
 
-    def duplicated(self, keep="first"):  # noqa: PR01, RT01, D200
+    def duplicated(self, keep="first") -> Series:  # noqa: PR01, RT01, D200
         """
         Indicate duplicate Series values.
         """
         return self.to_frame().duplicated(keep=keep)
 
-    def eq(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def eq(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return Equal to of series and `other`, element-wise (binary operator `eq`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).eq(new_other, level=level, axis=axis)
 
-    def equals(self, other):  # noqa: PR01, RT01, D200
+    def equals(self, other) -> bool:  # noqa: PR01, RT01, D200
         """
         Test whether two objects contain the same elements.
         """
@@ -1000,7 +1034,7 @@ class Series(BasePandasDataset):
             other.name = old_name_other
         return res.all()
 
-    def explode(self, ignore_index: bool = False):  # noqa: PR01, RT01, D200
+    def explode(self, ignore_index: bool = False) -> Series:  # noqa: PR01, RT01, D200
         """
         Transform each element of a list-like to a row.
         """
@@ -1019,10 +1053,18 @@ class Series(BasePandasDataset):
             use_na_sentinel=use_na_sentinel,
         )
 
-    def case_when(self, caselist):  # noqa: PR01, RT01, D200
+    def case_when(self, caselist) -> Series:  # noqa: PR01, RT01, D200
         """
         Replace values where the conditions are True.
         """
+        modin_type = type(self)
+        caselist = [
+            tuple(
+                data._query_compiler if isinstance(data, modin_type) else data
+                for data in case_tuple
+            )
+            for case_tuple in caselist
+        ]
         return self.__constructor__(
             query_compiler=self._query_compiler.case_when(caselist=caselist)
         )
@@ -1036,7 +1078,7 @@ class Series(BasePandasDataset):
         inplace=False,
         limit=None,
         downcast=lib.no_default,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Fill NaNs inside of a Series object.
         """
@@ -1058,16 +1100,18 @@ class Series(BasePandasDataset):
 
     def floordiv(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
-        Get Integer division of dataframe and `other`, element-wise (binary operator `floordiv`).
+        Get Integer division of series and `other`, element-wise (binary operator `floordiv`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).floordiv(
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    def ge(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def ge(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return greater than or equal to of series and `other`, element-wise (binary operator `ge`).
         """
@@ -1113,7 +1157,9 @@ class Series(BasePandasDataset):
             dropna=dropna,
         )
 
-    def gt(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def gt(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return greater than of series and `other`, element-wise (binary operator `gt`).
         """
@@ -1124,14 +1170,16 @@ class Series(BasePandasDataset):
         self,
         by=None,
         ax=None,
-        grid=True,
-        xlabelsize=None,
-        xrot=None,
-        ylabelsize=None,
-        yrot=None,
-        figsize=None,
-        bins=10,
-        **kwds,
+        grid: bool = True,
+        xlabelsize: int | None = None,
+        xrot: float | None = None,
+        ylabelsize: int | None = None,
+        yrot: float | None = None,
+        figsize: tuple[int, int] | None = None,
+        bins: int | Sequence[int] = 10,
+        backend: str | None = None,
+        legend: bool = False,
+        **kwargs,
     ):  # noqa: PR01, RT01, D200
         """
         Draw histogram of the input series using matplotlib.
@@ -1147,23 +1195,25 @@ class Series(BasePandasDataset):
             yrot=yrot,
             figsize=figsize,
             bins=bins,
-            **kwds,
+            backend=backend,
+            legend=legend,
+            **kwargs,
         )
 
-    def idxmax(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmax(
+        self, axis=0, skipna=True, *args, **kwargs
+    ) -> Hashable:  # noqa: PR01, RT01, D200
         """
         Return the row label of the maximum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmax(axis=axis, skipna=skipna, *args, **kwargs)
 
-    def idxmin(self, axis=0, skipna=True, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def idxmin(
+        self, axis=0, skipna=True, *args, **kwargs
+    ) -> Hashable:  # noqa: PR01, RT01, D200
         """
         Return the row label of the minimum value.
         """
-        if skipna is None:
-            skipna = True
         return super(Series, self).idxmin(axis=axis, skipna=skipna, *args, **kwargs)
 
     def info(
@@ -1173,7 +1223,7 @@ class Series(BasePandasDataset):
         max_cols: int | None = None,
         memory_usage: bool | str | None = None,
         show_counts: bool = True,
-    ):
+    ) -> None:
         return SeriesInfo(self, memory_usage).render(
             buf=buf,
             max_cols=max_cols,
@@ -1181,19 +1231,33 @@ class Series(BasePandasDataset):
             show_counts=show_counts,
         )
 
-    def isin(self, values):  # noqa: PR01, RT01, D200
+    def isna(self) -> Series:
         """
-        Whether elements in `Series` are contained in `values`.
-        """
-        return super(Series, self).isin(values, shape_hint="column")
+        Detect missing values.
 
-    def item(self):  # noqa: RT01, D200
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isna()
+
+    def isnull(self) -> Series:
+        """
+        Detect missing values.
+
+        Returns
+        -------
+        The result of detecting missing values.
+        """
+        return super(Series, self).isnull()
+
+    def item(self) -> Scalar:  # noqa: RT01, D200
         """
         Return the first element of the underlying data as a Python scalar.
         """
         return self[0]
 
-    def items(self):  # noqa: D200
+    def items(self) -> Iterable[tuple[Hashable, Any]]:  # noqa: D200
         """
         Lazily iterate over (index, value) tuples.
         """
@@ -1205,27 +1269,31 @@ class Series(BasePandasDataset):
         for v in partition_iterator:
             yield v
 
-    def keys(self):  # noqa: RT01, D200
+    def keys(self) -> pandas.Index:  # noqa: RT01, D200
         """
         Return alias for index.
         """
         return self.index
 
-    def le(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def le(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return less than or equal to of series and `other`, element-wise (binary operator `le`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).le(new_other, level=level, axis=axis)
 
-    def lt(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def lt(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return less than of series and `other`, element-wise (binary operator `lt`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).lt(new_other, level=level, axis=axis)
 
-    def map(self, arg, na_action=None):  # noqa: PR01, RT01, D200
+    def map(self, arg, na_action=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Map values of Series according to input correspondence.
         """
@@ -1258,7 +1326,7 @@ class Series(BasePandasDataset):
         ddof: int = 1,
         numeric_only=False,
         **kwargs,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[float, Series]:  # noqa: PR01, RT01, D200
         """
         Return unbiased standard error of the mean over requested axis.
         """
@@ -1273,7 +1341,7 @@ class Series(BasePandasDataset):
         ddof: int = 1,
         numeric_only=False,
         **kwargs,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[float, Series]:  # noqa: PR01, RT01, D200
         """
         Return sample standard deviation over requested axis.
         """
@@ -1288,7 +1356,7 @@ class Series(BasePandasDataset):
         ddof: int = 1,
         numeric_only=False,
         **kwargs,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[float, Series]:  # noqa: PR01, RT01, D200
         """
         Return unbiased variance over requested axis.
         """
@@ -1296,13 +1364,15 @@ class Series(BasePandasDataset):
             "var", axis, skipna, numeric_only, ddof=ddof, **kwargs
         )
 
-    def memory_usage(self, index=True, deep=False):  # noqa: PR01, RT01, D200
+    def memory_usage(self, index=True, deep=False) -> int:  # noqa: PR01, RT01, D200
         """
         Return the memory usage of the Series.
         """
         return super(Series, self).memory_usage(index=index, deep=deep).sum()
 
-    def mod(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def mod(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return Modulo of series and `other`, element-wise (binary operator `mod`).
         """
@@ -1311,13 +1381,15 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    def mode(self, dropna=True):  # noqa: PR01, RT01, D200
+    def mode(self, dropna=True) -> Series:  # noqa: PR01, RT01, D200
         """
         Return the mode(s) of the Series.
         """
         return super(Series, self).mode(numeric_only=False, dropna=dropna)
 
-    def mul(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def mul(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return multiplication of series and `other`, element-wise (binary operator `mul`).
         """
@@ -1330,7 +1402,7 @@ class Series(BasePandasDataset):
 
     def rmul(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return multiplication of series and `other`, element-wise (binary operator `mul`).
         """
@@ -1339,14 +1411,16 @@ class Series(BasePandasDataset):
             new_other, level=level, fill_value=None, axis=axis
         )
 
-    def ne(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def ne(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return not equal to of series and `other`, element-wise (binary operator `ne`).
         """
         new_self, new_other = self._prepare_inter_op(other)
         return super(Series, new_self).ne(new_other, level=level, axis=axis)
 
-    def nlargest(self, n=5, keep="first"):  # noqa: PR01, RT01, D200
+    def nlargest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200
         """
         Return the largest `n` elements.
         """
@@ -1359,7 +1433,7 @@ class Series(BasePandasDataset):
             )
         )
 
-    def nsmallest(self, n=5, keep="first"):  # noqa: PR01, RT01, D200
+    def nsmallest(self, n=5, keep="first") -> Series:  # noqa: PR01, RT01, D200
         """
         Return the smallest `n` elements.
         """
@@ -1379,7 +1453,7 @@ class Series(BasePandasDataset):
         axis=0,
         fill_value=lib.no_default,
         suffix=None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Shift index by desired number of periods with an optional time `freq`.
         """
@@ -1390,12 +1464,16 @@ class Series(BasePandasDataset):
                 + f"{type(self).__name__}.shift"
             )
         if axis == 1:
-            raise ValueError(f"No axis named {axis} for object type {type(self)}")
+            raise ValueError(
+                f"No axis named {axis} for object type {type(self).__name__}"
+            )
         return super(type(self), self).shift(
             periods=periods, freq=freq, axis=axis, fill_value=fill_value
         )
 
-    def unstack(self, level=-1, fill_value=None, sort=True):  # noqa: PR01, RT01, D200
+    def unstack(
+        self, level=-1, fill_value=None, sort=True
+    ) -> DataFrame:  # noqa: PR01, RT01, D200
         """
         Unstack, also known as pivot, Series with MultiIndex to produce DataFrame.
         """
@@ -1452,7 +1530,9 @@ class Series(BasePandasDataset):
         """
         return self._to_pandas().plot
 
-    def pow(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def pow(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return exponential power of series and `other`, element-wise (binary operator `pow`).
         """
@@ -1469,7 +1549,7 @@ class Series(BasePandasDataset):
         numeric_only=False,
         min_count=0,
         **kwargs,
-    ):
+    ) -> Scalar:
         validate_bool_kwarg(skipna, "skipna", none_allowed=False)
         axis = self._get_axis_number(axis)
         new_index = self.columns if axis else self.index
@@ -1499,7 +1579,7 @@ class Series(BasePandasDataset):
 
     product = prod
 
-    def ravel(self, order="C"):  # noqa: PR01, RT01, D200
+    def ravel(self, order="C") -> ArrayLike:  # noqa: PR01, RT01, D200
         """
         Return the flattened underlying data as an ndarray.
         """
@@ -1521,7 +1601,7 @@ class Series(BasePandasDataset):
         fill_value=None,
         limit: int = None,
         tolerance=None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         if fill_value is None:
             fill_value = np.nan
         return super(Series, self).reindex(
@@ -1543,7 +1623,7 @@ class Series(BasePandasDataset):
         axis=0,
         copy=True,
         inplace=False,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Set the name of the axis for the index or columns.
         """
@@ -1560,7 +1640,7 @@ class Series(BasePandasDataset):
         inplace=False,
         level=None,
         errors="ignore",
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Alter Series index labels or name.
         """
@@ -1581,7 +1661,7 @@ class Series(BasePandasDataset):
             result.name = self.name
             return result
 
-    def repeat(self, repeats, axis=None):  # noqa: PR01, RT01, D200
+    def repeat(self, repeats, axis=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Repeat elements of a Series.
         """
@@ -1600,7 +1680,7 @@ class Series(BasePandasDataset):
         name=lib.no_default,
         inplace=False,
         allow_duplicates=False,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[DataFrame, Series, None]:  # noqa: PR01, RT01, D200
         """
         Generate a new Series with the index reset.
         """
@@ -1640,7 +1720,7 @@ class Series(BasePandasDataset):
 
     def rdivmod(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return integer division and modulo of series and `other`, element-wise (binary operator `rdivmod`).
         """
@@ -1653,7 +1733,7 @@ class Series(BasePandasDataset):
 
     def rfloordiv(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return integer division of series and `other`, element-wise (binary operator `rfloordiv`).
         """
@@ -1664,7 +1744,7 @@ class Series(BasePandasDataset):
 
     def rmod(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return modulo of series and `other`, element-wise (binary operator `rmod`).
         """
@@ -1675,7 +1755,7 @@ class Series(BasePandasDataset):
 
     def rpow(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return exponential power of series and `other`, element-wise (binary operator `rpow`).
         """
@@ -1686,7 +1766,7 @@ class Series(BasePandasDataset):
 
     def rsub(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return subtraction of series and `other`, element-wise (binary operator `rsub`).
         """
@@ -1697,7 +1777,7 @@ class Series(BasePandasDataset):
 
     def rtruediv(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return floating division of series and `other`, element-wise (binary operator `rtruediv`).
         """
@@ -1708,7 +1788,9 @@ class Series(BasePandasDataset):
 
     rdiv = rtruediv
 
-    def quantile(self, q=0.5, interpolation="linear"):  # noqa: PR01, RT01, D200
+    def quantile(
+        self, q=0.5, interpolation="linear"
+    ) -> Union[float, Series]:  # noqa: PR01, RT01, D200
         """
         Return value at the given quantile.
         """
@@ -1720,7 +1802,7 @@ class Series(BasePandasDataset):
             method="single",
         )
 
-    def reorder_levels(self, order):  # noqa: PR01, RT01, D200
+    def reorder_levels(self, order) -> Series:  # noqa: PR01, RT01, D200
         """
         Rearrange index levels using input order.
         """
@@ -1735,7 +1817,7 @@ class Series(BasePandasDataset):
         limit=None,
         regex=False,
         method: str | lib.NoDefault = lib.no_default,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Replace values given in `to_replace` with `value`.
         """
@@ -1750,7 +1832,9 @@ class Series(BasePandasDataset):
         )
         return self._create_or_update_from_compiler(new_query_compiler, inplace)
 
-    def searchsorted(self, value, side="left", sorter=None):  # noqa: PR01, RT01, D200
+    def searchsorted(
+        self, value, side="left", sorter=None
+    ) -> Union[npt.NDArray[np.intp], np.intp]:  # noqa: PR01, RT01, D200
         """
         Find indices where elements should be inserted to maintain order.
         """
@@ -1793,7 +1877,7 @@ class Series(BasePandasDataset):
         na_position="last",
         ignore_index: bool = False,
         key: Optional[IndexKeyFunc] = None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Sort by the values.
         """
@@ -1827,7 +1911,7 @@ class Series(BasePandasDataset):
     list = CachedAccessor("list", ListAccessor)
     struct = CachedAccessor("struct", StructAccessor)
 
-    def squeeze(self, axis=None):  # noqa: PR01, RT01, D200
+    def squeeze(self, axis=None) -> Union[Series, Scalar]:  # noqa: PR01, RT01, D200
         """
         Squeeze 1 dimensional axis objects into scalars.
         """
@@ -1839,7 +1923,9 @@ class Series(BasePandasDataset):
         else:
             return self.copy()
 
-    def sub(self, other, level=None, fill_value=None, axis=0):  # noqa: PR01, RT01, D200
+    def sub(
+        self, other, level=None, fill_value=None, axis=0
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return subtraction of Series and `other`, element-wise (binary operator `sub`).
         """
@@ -1857,7 +1943,7 @@ class Series(BasePandasDataset):
         numeric_only=False,
         min_count=0,
         **kwargs,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Scalar:  # noqa: PR01, RT01, D200
         """
         Return the sum of the values.
         """
@@ -1891,7 +1977,7 @@ class Series(BasePandasDataset):
             )
         )
 
-    def swaplevel(self, i=-2, j=-1, copy=None):  # noqa: PR01, RT01, D200
+    def swaplevel(self, i=-2, j=-1, copy=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Swap levels `i` and `j` in a `MultiIndex`.
         """
@@ -1899,13 +1985,13 @@ class Series(BasePandasDataset):
         obj = self.copy() if copy else self
         return super(Series, obj).swaplevel(i, j, axis=0)
 
-    def take(self, indices, axis=0, **kwargs):  # noqa: PR01, RT01, D200
+    def take(self, indices, axis=0, **kwargs) -> Series:  # noqa: PR01, RT01, D200
         """
         Return the elements in the given positional indices along an axis.
         """
         return super(Series, self).take(indices, axis=axis, **kwargs)
 
-    def to_dict(self, into=dict):  # pragma: no cover # noqa: PR01, RT01, D200
+    def to_dict(self, into=dict) -> dict:  # pragma: no cover # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
@@ -1913,7 +1999,7 @@ class Series(BasePandasDataset):
 
     def to_frame(
         self, name: Hashable = lib.no_default
-    ) -> "DataFrame":  # noqa: PR01, RT01, D200
+    ) -> DataFrame:  # noqa: PR01, RT01, D200
         """
         Convert Series to {label -> value} dict or dict-like object.
         """
@@ -1928,7 +2014,7 @@ class Series(BasePandasDataset):
 
         return DataFrame(self_cp)
 
-    def to_list(self):  # noqa: RT01, D200
+    def to_list(self) -> list:  # noqa: RT01, D200
         """
         Return a list of the values.
         """
@@ -1936,7 +2022,7 @@ class Series(BasePandasDataset):
 
     def to_numpy(
         self, dtype=None, copy=False, na_value=lib.no_default, **kwargs
-    ):  # noqa: PR01, RT01, D200
+    ) -> np.ndarray:  # noqa: PR01, RT01, D200
         """
         Return the NumPy ndarray representing the values in this Series or Index.
         """
@@ -1961,7 +2047,7 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_period(self, freq=None, copy=None):  # noqa: PR01, RT01, D200
+    def to_period(self, freq=None, copy=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Cast to PeriodArray/Index at a particular frequency.
         """
@@ -1979,7 +2065,7 @@ class Series(BasePandasDataset):
         name=False,
         max_rows=None,
         min_rows=None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[str, None]:  # noqa: PR01, RT01, D200
         """
         Render a string representation of the Series.
         """
@@ -1998,23 +2084,25 @@ class Series(BasePandasDataset):
 
     # TODO(williamma12): When we implement to_timestamp, have this call the version
     # in base.py
-    def to_timestamp(self, freq=None, how="start", copy=None):  # noqa: PR01, RT01, D200
+    def to_timestamp(
+        self, freq=None, how="start", copy=None
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Cast to DatetimeIndex of Timestamps, at beginning of period.
         """
         return self._default_to_pandas("to_timestamp", freq=freq, how=how, copy=copy)
 
-    def transpose(self, *args, **kwargs):  # noqa: PR01, RT01, D200
+    def transpose(self, *args, **kwargs) -> Series:  # noqa: PR01, RT01, D200
         """
         Return the transpose, which is by definition `self`.
         """
         return self
 
-    T = property(transpose)
+    T: Series = property(transpose)
 
     def truediv(
         self, other, level=None, fill_value=None, axis=0
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return floating division of series and `other`, element-wise (binary operator `truediv`).
         """
@@ -2025,15 +2113,19 @@ class Series(BasePandasDataset):
 
     div = divide = truediv
 
-    def unique(self):  # noqa: RT01, D200
+    def unique(self) -> ArrayLike:  # noqa: RT01, D200
         """
         Return unique values of Series object.
         """
-        return self.__constructor__(
-            query_compiler=self._query_compiler.unique()
-        ).to_numpy()
+        # `values` can't be used here because it performs unnecessary conversion,
+        # after which the result type does not match the pandas
+        return (
+            self.__constructor__(query_compiler=self._query_compiler.unique())
+            .modin.to_pandas()
+            ._values
+        )
 
-    def update(self, other):  # noqa: PR01, D200
+    def update(self, other) -> None:  # noqa: PR01, D200
         """
         Modify Series in place using values from passed Series.
         """
@@ -2044,7 +2136,7 @@ class Series(BasePandasDataset):
 
     def value_counts(
         self, normalize=False, sort=True, ascending=False, bins=None, dropna=True
-    ):  # noqa: PR01, RT01, D200
+    ) -> Series:  # noqa: PR01, RT01, D200
         """
         Return a Series containing counts of unique values.
         """
@@ -2069,7 +2161,7 @@ class Series(BasePandasDataset):
         )
         return counted_values
 
-    def view(self, dtype=None):  # noqa: PR01, RT01, D200
+    def view(self, dtype=None) -> Series:  # noqa: PR01, RT01, D200
         """
         Create a new view of the Series.
         """
@@ -2085,7 +2177,7 @@ class Series(BasePandasDataset):
         inplace=False,
         axis=None,
         level=None,
-    ):  # noqa: PR01, RT01, D200
+    ) -> Union[Series, None]:  # noqa: PR01, RT01, D200
         """
         Replace values where the condition is False.
         """
@@ -2104,7 +2196,7 @@ class Series(BasePandasDataset):
         )
 
     @property
-    def attrs(self):  # noqa: RT01, D200
+    def attrs(self) -> dict:  # noqa: RT01, D200
         """
         Return dictionary of global attributes of this dataset.
         """
@@ -2115,7 +2207,7 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(attrs)
 
     @property
-    def array(self):  # noqa: RT01, D200
+    def array(self) -> ExtensionArray:  # noqa: RT01, D200
         """
         Return the ExtensionArray of the data backing this Series or Index.
         """
@@ -2126,14 +2218,14 @@ class Series(BasePandasDataset):
         return self._default_to_pandas(array)
 
     @property
-    def axes(self):  # noqa: RT01, D200
+    def axes(self) -> list[pandas.Index]:  # noqa: RT01, D200
         """
         Return a list of the row axis labels.
         """
         return [self.index]
 
     @property
-    def dtype(self):  # noqa: RT01, D200
+    def dtype(self) -> DtypeObj:  # noqa: RT01, D200
         """
         Return the dtype object of the underlying data.
         """
@@ -2142,75 +2234,75 @@ class Series(BasePandasDataset):
     dtypes = dtype
 
     @property
-    def empty(self):  # noqa: RT01, D200
+    def empty(self) -> bool:  # noqa: RT01, D200
         """
         Indicate whether Series is empty.
         """
         return len(self.index) == 0
 
     @property
-    def hasnans(self):  # noqa: RT01, D200
+    def hasnans(self) -> bool:  # noqa: RT01, D200
         """
         Return True if Series has any nans.
         """
         return self.isna().sum() > 0
 
     @property
-    def is_monotonic_increasing(self):  # noqa: RT01, D200
+    def is_monotonic_increasing(self) -> bool:  # noqa: RT01, D200
         """
         Return True if values in the Series are monotonic_increasing.
         """
         return self._reduce_dimension(self._query_compiler.is_monotonic_increasing())
 
     @property
-    def is_monotonic_decreasing(self):  # noqa: RT01, D200
+    def is_monotonic_decreasing(self) -> bool:  # noqa: RT01, D200
         """
         Return True if values in the Series are monotonic_decreasing.
         """
         return self._reduce_dimension(self._query_compiler.is_monotonic_decreasing())
 
     @property
-    def is_unique(self):  # noqa: RT01, D200
+    def is_unique(self) -> bool:  # noqa: RT01, D200
         """
         Return True if values in the Series are unique.
         """
         return self.nunique(dropna=False) == len(self)
 
     @property
-    def nbytes(self):  # noqa: RT01, D200
+    def nbytes(self) -> int:  # noqa: RT01, D200
         """
         Return the number of bytes in the underlying data.
         """
         return self.memory_usage(index=False)
 
     @property
-    def ndim(self):  # noqa: RT01, D200
+    def ndim(self) -> int:  # noqa: RT01, D200
         """
         Return the number of dimensions of the underlying data, by definition 1.
         """
         return 1
 
-    def nunique(self, dropna=True):  # noqa: PR01, RT01, D200
+    def nunique(self, dropna=True) -> int:  # noqa: PR01, RT01, D200
         """
         Return number of unique elements in the object.
         """
         return super(Series, self).nunique(dropna=dropna)
 
     @property
-    def shape(self):  # noqa: RT01, D200
+    def shape(self) -> tuple[int]:  # noqa: RT01, D200
         """
         Return a tuple of the shape of the underlying data.
         """
         return (len(self),)
 
     def reindex_like(
-        self: "Series",
+        self,
         other,
         method=None,
         copy: Optional[bool] = None,
         limit=None,
         tolerance=None,
-    ) -> "Series":
+    ) -> Series:
         # docs say "Same as calling .reindex(index=other.index, columns=other.columns,...).":
         # https://pandas.pydata.org/pandas-docs/version/1.4/reference/api/pandas.Series.reindex_like.html
         return self.reindex(
@@ -2221,9 +2313,11 @@ class Series(BasePandasDataset):
             tolerance=tolerance,
         )
 
-    def _to_pandas(self):
+    def _to_pandas(self) -> pandas.Series:
         """
         Convert Modin Series to pandas Series.
+
+        Recommended conversion method: `series.modin.to_pandas()`.
 
         Returns
         -------
@@ -2235,7 +2329,7 @@ class Series(BasePandasDataset):
             series.name = None
         return series
 
-    def _to_datetime(self, **kwargs):
+    def _to_datetime(self, **kwargs) -> Series:
         """
         Convert `self` to datetime.
 
@@ -2254,7 +2348,7 @@ class Series(BasePandasDataset):
             query_compiler=self._query_compiler.to_datetime(**kwargs)
         )
 
-    def _to_numeric(self, **kwargs):
+    def _to_numeric(self, **kwargs) -> Series:
         """
         Convert `self` to numeric.
 
@@ -2279,7 +2373,7 @@ class Series(BasePandasDataset):
         """
         return self._default_to_pandas(pandas.qcut, q, **kwargs)
 
-    def _reduce_dimension(self, query_compiler):
+    def _reduce_dimension(self, query_compiler) -> Union[Series, None]:
         """
         Try to reduce the dimension of data from the `query_compiler`.
 
@@ -2290,11 +2384,13 @@ class Series(BasePandasDataset):
 
         Returns
         -------
-        pandas.Series or pandas.DataFrame.
+        pandas.Series or scalar.
         """
         return query_compiler.to_pandas().squeeze()
 
-    def _validate_dtypes_sum_prod_mean(self, axis, numeric_only, ignore_axis=False):
+    def _validate_dtypes_sum_prod_mean(
+        self, axis, numeric_only, ignore_axis=False
+    ) -> Series:
         """
         Validate data dtype for `sum`, `prod` and `mean` methods.
 
@@ -2320,7 +2416,7 @@ class Series(BasePandasDataset):
         """
         return self
 
-    def _validate_dtypes_min_max(self, axis, numeric_only):
+    def _validate_dtypes_min_max(self, axis, numeric_only) -> Series:
         """
         Validate data dtype for `min` and `max` methods.
 
@@ -2343,7 +2439,7 @@ class Series(BasePandasDataset):
         """
         return self
 
-    def _validate_dtypes(self, numeric_only=False):
+    def _validate_dtypes(self, numeric_only=False) -> None:
         """
         Check that all the dtypes are the same.
 
@@ -2360,7 +2456,7 @@ class Series(BasePandasDataset):
         """
         pass
 
-    def _get_numeric_data(self, axis: int):
+    def _get_numeric_data(self, axis: int) -> Series:
         """
         Grab only numeric data from Series.
 
@@ -2380,7 +2476,7 @@ class Series(BasePandasDataset):
         """
         return self
 
-    def _update_inplace(self, new_query_compiler):
+    def _update_inplace(self, new_query_compiler) -> None:
         """
         Update the current Series in-place using `new_query_compiler`.
 
@@ -2397,7 +2493,9 @@ class Series(BasePandasDataset):
             else:
                 self._parent[self.name] = self
 
-    def _create_or_update_from_compiler(self, new_query_compiler, inplace=False):
+    def _create_or_update_from_compiler(
+        self, new_query_compiler, inplace=False
+    ) -> Union[Series, None]:
         """
         Return or update a Series with given `new_query_compiler`.
 
@@ -2410,8 +2508,8 @@ class Series(BasePandasDataset):
 
         Returns
         -------
-        Series, DataFrame or None
-            None if update was done, Series or DataFrame otherwise.
+        Series or None
+            None if update was done, Series otherwise.
         """
         assert (
             isinstance(new_query_compiler, type(self._query_compiler))
@@ -2427,7 +2525,7 @@ class Series(BasePandasDataset):
         else:
             self._update_inplace(new_query_compiler=new_query_compiler)
 
-    def _prepare_inter_op(self, other):
+    def _prepare_inter_op(self, other) -> tuple[Series, Series]:
         """
         Prepare `self` and `other` for further interaction.
 
@@ -2459,7 +2557,7 @@ class Series(BasePandasDataset):
             new_other = other
         return new_self, new_other
 
-    def _getitem(self, key):
+    def _getitem(self, key) -> Union[Series, Scalar]:
         """
         Get the data specified by `key` for this Series.
 
@@ -2470,8 +2568,8 @@ class Series(BasePandasDataset):
 
         Returns
         -------
-        Series
-            Series with retrieved data.
+        Series or scalar
+            Retrieved data.
         """
         key = apply_if_callable(key, self)
         if isinstance(key, Series) and key.dtype == np.bool_:
@@ -2509,7 +2607,7 @@ class Series(BasePandasDataset):
             return self._reduce_dimension(result)
         return self.__constructor__(query_compiler=result)
 
-    def _repartition(self):
+    def _repartition(self) -> Series:
         """
         Repartitioning Series to get ideal partitions inside.
 
@@ -2525,7 +2623,7 @@ class Series(BasePandasDataset):
 
     # Persistance support methods - BEGIN
     @classmethod
-    def _inflate_light(cls, query_compiler, name, source_pid):
+    def _inflate_light(cls, query_compiler, name, source_pid) -> Series:
         """
         Re-creates the object from previously-serialized lightweight representation.
 
@@ -2559,7 +2657,7 @@ class Series(BasePandasDataset):
         return cls(query_compiler=query_compiler, name=name)
 
     @classmethod
-    def _inflate_full(cls, pandas_series, source_pid):
+    def _inflate_full(cls, pandas_series, source_pid) -> Series:
         """
         Re-creates the object from previously-serialized disk-storable representation.
 

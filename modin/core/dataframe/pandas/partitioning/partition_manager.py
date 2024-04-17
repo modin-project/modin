@@ -30,6 +30,7 @@ from pandas._libs.lib import no_default
 from modin.config import (
     BenchmarkMode,
     Engine,
+    MinPartitionSize,
     NPartitions,
     PersistentPickle,
     ProgressBar,
@@ -86,7 +87,9 @@ def wait_computations_if_benchmark_mode(func):
     return wait
 
 
-class PandasDataframePartitionManager(ClassLogger, ABC):
+class PandasDataframePartitionManager(
+    ClassLogger, ABC, modin_layer="PARTITION-MANAGER"
+):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
 
@@ -158,6 +161,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         `map_func` if the `apply` method of the `PandasDataframePartition` object
         you are using does not require any modification to a given function.
         """
+        if cls._execution_wrapper.is_future(map_func):
+            return map_func  # Has already been preprocessed
+
         old_value = PersistentPickle.get()
         # When performing a function with Modin objects, it is more profitable to
         # do the conversion to pandas once on the main process than several times
@@ -174,6 +180,24 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         return result
 
     # END Abstract Methods
+
+    @classmethod
+    def create_partition_from_metadata(cls, **metadata):
+        """
+        Create NumPy array of partitions that holds an empty dataframe with given metadata.
+
+        Parameters
+        ----------
+        **metadata : dict
+            Metadata that has to be wrapped in a partition.
+
+        Returns
+        -------
+        np.ndarray
+            A NumPy 2D array of a single partition which contains the data.
+        """
+        metadata_dataframe = pandas.DataFrame(**metadata)
+        return np.array([[cls._partition_class.put(metadata_dataframe)]])
 
     @classmethod
     def column_partitions(cls, partitions, full_axis=True):
@@ -433,6 +457,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             other = (
                 pandas.concat(others, axis=axis ^ 1) if len(others) > 1 else others[0]
             )
+            # to reduce peak memory consumption
+            del others
             return apply_func(df, other)
 
         map_func = cls.preprocess_func(map_func)
@@ -780,8 +806,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         pandas.DataFrame
             A pandas DataFrame
         """
-        retrieved_objects = cls.get_objects_from_partitions(partitions.flatten())
-        return create_pandas_df_from_partitions(retrieved_objects, partitions.shape)
+        return create_pandas_df_from_partitions(
+            cls.get_objects_from_partitions(partitions.flatten()), partitions.shape
+        )
 
     @classmethod
     def to_numpy(cls, partitions, **kwargs):
@@ -864,8 +891,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             A NumPy array with partitions (with dimensions or not).
         """
         num_splits = NPartitions.get()
-        row_chunksize = compute_chunksize(df.shape[0], num_splits)
-        col_chunksize = compute_chunksize(df.shape[1], num_splits)
+        min_block_size = MinPartitionSize.get()
+        row_chunksize = compute_chunksize(df.shape[0], num_splits, min_block_size)
+        col_chunksize = compute_chunksize(df.shape[1], num_splits, min_block_size)
 
         bar_format = (
             "{l_bar}{bar}{r_bar}"
@@ -1113,6 +1141,8 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         np.ndarray
             A NumPy 2D array of a single partition.
         """
+        if partitions.size <= 1:
+            return partitions
 
         def to_pandas_remote(df, partition_shape, *dfs):
             """Copy of ``cls.to_pandas()`` method adapted for a remote function."""
@@ -1702,6 +1732,7 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
         index,
         shuffle_functions: "ShuffleFunctions",
         final_shuffle_func,
+        right_partitions=None,
     ):
         """
         Return shuffled partitions.
@@ -1716,6 +1747,9 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
             An object implementing the functions that we will be using to perform this shuffle.
         final_shuffle_func : Callable(pandas.DataFrame) -> pandas.DataFrame
             Function that shuffles the data within each new partition.
+        right_partitions : np.ndarray, optional
+            Partitions to broadcast to `self` partitions. If specified, the method builds range-partitioning
+            for `right_partitions` basing on bins calculated for `partitions`, then performs broadcasting.
 
         Returns
         -------
@@ -1754,18 +1788,57 @@ class PandasDataframePartitionManager(ClassLogger, ABC):
                     for partition in row_partitions
                 ]
             ).T
-            # We need to convert every partition that came from the splits into a full-axis column partition.
-            new_partitions = [
+
+            if right_partitions is None:
+                # We need to convert every partition that came from the splits into a column partition.
+                return np.array(
+                    [
+                        [
+                            cls._column_partitions_class(
+                                row_partition, full_axis=False
+                            ).apply(final_shuffle_func)
+                        ]
+                        for row_partition in split_row_partitions
+                    ]
+                )
+
+            right_row_parts = cls.row_partitions(right_partitions)
+            right_split_row_partitions = np.array(
+                [
+                    partition.split(
+                        shuffle_functions.split_fn,
+                        num_splits=num_bins,
+                        extract_metadata=False,
+                    )
+                    for partition in right_row_parts
+                ]
+            ).T
+            return np.array(
                 [
                     cls._column_partitions_class(row_partition, full_axis=False).apply(
-                        final_shuffle_func
+                        final_shuffle_func,
+                        other_axis_partition=cls._column_partitions_class(
+                            right_row_partitions
+                        ),
+                    )
+                    for right_row_partitions, row_partition in zip(
+                        right_split_row_partitions, split_row_partitions
                     )
                 ]
-                for row_partition in split_row_partitions
-            ]
-            return np.array(new_partitions)
+            )
+
         else:
             # If there are not pivots we can simply apply the function row-wise
+            if right_partitions is None:
+                return np.array(
+                    [row_part.apply(final_shuffle_func) for row_part in row_partitions]
+                )
+            right_row_parts = cls.row_partitions(right_partitions)
             return np.array(
-                [row_part.apply(final_shuffle_func) for row_part in row_partitions]
+                [
+                    row_part.apply(
+                        final_shuffle_func, other_axis_partition=right_row_part
+                    )
+                    for right_row_part, row_part in zip(right_row_parts, row_partitions)
+                ]
             )

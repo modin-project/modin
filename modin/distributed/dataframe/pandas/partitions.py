@@ -90,7 +90,7 @@ def unwrap_partitions(
             f"Only API Layer objects may be passed in here, got {type(api_layer_object)} instead."
         )
 
-    modin_frame = api_layer_object._query_compiler._modin_frame
+    modin_frame = api_layer_object._query_compiler._modin_frame  # type: ignore[attr-defined]
     modin_frame._propagate_index_objs(None)
     if axis is None:
 
@@ -122,7 +122,7 @@ def unwrap_partitions(
                 ]
 
         actual_engine = type(
-            api_layer_object._query_compiler._modin_frame._partitions[0][0]
+            api_layer_object._query_compiler._modin_frame._partitions[0][0]  # type: ignore[attr-defined]
         ).__name__
         if actual_engine in (
             "PandasOnRayDataframePartition",

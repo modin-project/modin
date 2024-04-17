@@ -3,7 +3,7 @@ Supported APIs
 
 For your convenience, we have compiled a list of currently implemented APIs and methods
 available in Modin. This documentation is updated as new methods and APIs are merged
-into the master branch, and not necessarily correct as of the most recent release. 
+into the main branch, and not necessarily correct as of the most recent release. 
 
 To view the docs for the most recent release, check that you're viewing the 
 `stable version`_ of the docs.

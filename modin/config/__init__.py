@@ -22,6 +22,7 @@ from modin.config.envvars import (
     CIAWSSecretAccessKey,
     CpuCount,
     DaskThreadsPerWorker,
+    DocModule,
     DoUseCalcite,
     Engine,
     EnvironmentVariable,
@@ -44,6 +45,7 @@ from modin.config.envvars import (
     NPartitions,
     PersistentPickle,
     ProgressBar,
+    RangePartitioning,
     RangePartitioningGroupby,
     RayRedisAddress,
     RayRedisPassword,
@@ -53,13 +55,15 @@ from modin.config.envvars import (
     TestReadFromPostgres,
     TestReadFromSqlServer,
     TrackFileLeaks,
+    use_range_partitioning_groupby,
 )
-from modin.config.pubsub import Parameter, ValueSource
+from modin.config.pubsub import Parameter, ValueSource, context
 
 __all__ = [
     "EnvironmentVariable",
     "Parameter",
     "ValueSource",
+    "context",
     # General settings
     "IsDebug",
     "Engine",
@@ -92,6 +96,8 @@ __all__ = [
     "ModinNumpy",
     "ExperimentalNumPyAPI",
     "RangePartitioningGroupby",
+    "RangePartitioning",
+    "use_range_partitioning_groupby",
     "ExperimentalGroupbyImpl",
     "AsyncReadMode",
     "ReadSqlEngine",
@@ -107,4 +113,6 @@ __all__ = [
     "LogMode",
     "LogMemoryInterval",
     "LogFileSize",
+    # Plugin settings
+    "DocModule",
 ]

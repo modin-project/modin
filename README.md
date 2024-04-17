@@ -11,9 +11,9 @@
 
 <p align="center">
 <a href="https://pepy.tech/project/modin"><img src="https://static.pepy.tech/personalized-badge/modin?period=total&units=international_system&left_color=black&right_color=blue&left_text=Downloads" align="center"></a>
-<a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/master/graph/badge.svg" align="center"/></a>
-<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/master/badge.svg" align="center"></a>
-<a href="https://github.com/modin-project/modin/actions/workflows/ci.yml?query=event%3Apush"><img src="https://github.com/modin-project/modin/actions/workflows/ci.yml/badge.svg?branch=master" align="center"></a>
+<a href="https://codecov.io/gh/modin-project/modin"><img src="https://codecov.io/gh/modin-project/modin/branch/main/graph/badge.svg" align="center"/></a>
+<a href="https://github.com/modin-project/modin/actions"><img src="https://github.com/modin-project/modin/workflows/main/badge.svg" align="center"></a>
+<a href="https://github.com/modin-project/modin/actions/workflows/ci.yml?query=event%3Apush"><img src="https://github.com/modin-project/modin/actions/workflows/ci.yml/badge.svg?branch=main" align="center"></a>
 <a href="https://pypi.org/project/modin/"><img src="https://badge.fury.io/py/modin.svg" alt="PyPI version" align="center"></a>
 <a href="https://modin.org/modin-bench/#/"><img src="https://img.shields.io/badge/benchmarked%20by-asv-blue.svg" align="center"></a>
 </p>
@@ -24,10 +24,12 @@ Modin is a drop-in replacement for [pandas](https://github.com/pandas-dev/pandas
 single-threaded, Modin lets you instantly speed up your workflows by scaling pandas so it uses all of your
 cores. Modin works especially well on larger datasets, where pandas becomes painfully slow or runs
 [out of memory](https://modin.readthedocs.io/en/latest/getting_started/why_modin/out_of_core.html).
+Also, Modin comes with the [additional APIs](https://modin.readthedocs.io/en/latest/usage_guide/advanced_usage/index.html#additional-apis)
+to improve user experience.
 
 By simply replacing the import statement, Modin offers users effortless speed and scale for their pandas workflows:
 
-<img src="https://github.com/modin-project/modin/raw/master/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
+<img src="https://github.com/modin-project/modin/raw/main/docs/img/Import.gif" style="display: block;margin-left: auto;margin-right: auto;" width="100%"></img>
 
 In the GIFs below, Modin (left) and pandas (right) perform *the same pandas operations* on a 2GB dataset. The only difference between the two notebook examples is the import statement. 
 
@@ -252,7 +254,6 @@ to be modular so we can plug in different components as they develop and improve
 #### Modin Community
 
 - [Slack](https://join.slack.com/t/modin-project/shared_invite/zt-yvk5hr3b-f08p_ulbuRWsAfg9rMY3uA)
-- [Discourse](https://discuss.modin.org)
 - [Twitter](https://twitter.com/modin_project)
 - [Mailing List](https://groups.google.com/g/modin-dev)
 - [GitHub Issues](https://github.com/modin-project/modin/issues)

@@ -25,6 +25,7 @@ import csv
 import inspect
 import pathlib
 import pickle
+import warnings
 from typing import (
     IO,
     TYPE_CHECKING,
@@ -69,8 +70,8 @@ from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger, enable_logging
 from modin.utils import (
     SupportsPrivateToNumPy,
-    SupportsPrivateToPandas,
     SupportsPublicToNumPy,
+    SupportsPublicToPandas,
     _inherit_docstrings,
     classproperty,
     expanduser_path_arg,
@@ -148,7 +149,7 @@ def read_xml(
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> "DataFrame":
+) -> DataFrame:
     ErrorMessage.default_to_pandas("read_xml")
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     return ModinObjects.DataFrame(pandas.read_xml(**kwargs))
@@ -216,7 +217,7 @@ def read_csv(
     float_precision: Literal["high", "legacy"] | None = None,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> "DataFrame" | TextFileReader:
+) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_csv_signature = {
         val.name for val in inspect.signature(pandas.read_csv).parameters.values()
@@ -288,7 +289,7 @@ def read_table(
     float_precision: str | None = None,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> "DataFrame" | TextFileReader:
+) -> DataFrame | TextFileReader:
     # ISSUE #2408: parse parameter shared with pandas read_csv and read_table and update with provided args
     _pd_read_table_signature = {
         val.name for val in inspect.signature(pandas.read_table).parameters.values()
@@ -313,7 +314,7 @@ def read_parquet(
     filesystem=None,
     filters=None,
     **kwargs,
-) -> "DataFrame":
+) -> DataFrame:
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
     if engine == "fastparquet" and dtype_backend is not no_default:
@@ -359,7 +360,7 @@ def read_json(
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     engine="ujson",
-) -> "DataFrame" | "Series" | pandas.io.json._json.JsonReader:
+) -> DataFrame | Series | pandas.io.json._json.JsonReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -383,7 +384,7 @@ def read_gbq(
     use_bqstorage_api: bool | None = None,
     max_results: int | None = None,
     progress_bar_type: str | None = None,
-) -> "DataFrame":
+) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
     kwargs.update(kwargs.pop("kwargs", {}))
 
@@ -415,7 +416,7 @@ def read_html(
     extract_links: Literal[None, "header", "footer", "body", "all"] = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     storage_options: StorageOptions = None,
-) -> list["DataFrame"]:  # noqa: PR01, RT01, D200
+) -> list[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read HTML tables into a ``DataFrame`` object.
     """
@@ -433,7 +434,7 @@ def read_clipboard(
     sep=r"\s+",
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     **kwargs,
-):  # pragma: no cover  # noqa: PR01, RT01, D200
+) -> DataFrame:  # pragma: no cover  # noqa: PR01, RT01, D200
     """
     Read text from clipboard and pass to read_csv.
     """
@@ -481,7 +482,7 @@ def read_excel(
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     engine_kwargs: Optional[dict] = None,
-) -> "DataFrame" | dict[IntStrT, "DataFrame"]:
+) -> DataFrame | dict[IntStrT, DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -532,7 +533,7 @@ def read_feather(
     use_threads: bool = True,
     storage_options: StorageOptions = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-):
+) -> DataFrame:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -559,7 +560,7 @@ def read_stata(
     iterator: bool = False,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
-) -> "DataFrame" | pandas.io.stata.StataReader:
+) -> DataFrame | pandas.io.stata.StataReader:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -579,7 +580,7 @@ def read_sas(
     chunksize: int | None = None,
     iterator: bool = False,
     compression: CompressionOptions = "infer",
-) -> "DataFrame" | pandas.io.sas.sasreader.ReaderBase:  # noqa: PR01, RT01, D200
+) -> DataFrame | pandas.io.sas.sasreader.ReaderBase:  # noqa: PR01, RT01, D200
     """
     Read SAS files stored as either XPORT or SAS7BDAT format files.
     """
@@ -605,7 +606,7 @@ def read_pickle(
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
     storage_options: StorageOptions = None,
-):
+) -> DataFrame | Series:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -628,7 +629,7 @@ def read_sql(
     chunksize=None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     dtype=None,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame | Iterator[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read SQL query or database table into a DataFrame.
     """
@@ -659,7 +660,7 @@ def read_fwf(
     iterator: bool = False,
     chunksize: Optional[int] = None,
     **kwds,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame | TextFileReader:  # noqa: PR01, RT01, D200
     """
     Read a table of fixed-width formatted lines into DataFrame.
     """
@@ -694,7 +695,7 @@ def read_sql_table(
     columns=None,
     chunksize=None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame | Iterator[DataFrame]:  # noqa: PR01, RT01, D200
     """
     Read SQL database table into a DataFrame.
     """
@@ -719,7 +720,7 @@ def read_sql_query(
     chunksize: int | None = None,
     dtype: DtypeArg | None = None,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-) -> "DataFrame" | Iterator["DataFrame"]:
+) -> DataFrame | Iterator[DataFrame]:
     _, _, _, kwargs = inspect.getargvalues(inspect.currentframe())
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
@@ -760,7 +761,7 @@ def read_spss(
     usecols: Optional[Sequence[str]] = None,
     convert_categoricals: bool = True,
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
-):  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load an SPSS file from the file path, returning a DataFrame.
     """
@@ -787,7 +788,7 @@ def json_normalize(
     errors: Optional[str] = "raise",
     sep: str = ".",
     max_level: Optional[int] = None,
-) -> "DataFrame":  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Normalize semi-structured JSON data into a flat table.
     """
@@ -808,7 +809,7 @@ def read_orc(
     dtype_backend: Union[DtypeBackend, NoDefault] = no_default,
     filesystem=None,
     **kwargs,
-) -> "DataFrame":  # noqa: PR01, RT01, D200
+) -> DataFrame:  # noqa: PR01, RT01, D200
     """
     Load an ORC object from the file path, returning a DataFrame.
     """
@@ -947,7 +948,7 @@ class ExcelFile(ClassLogger, pandas.ExcelFile):  # noqa: PR01, D200
         return method
 
 
-def from_non_pandas(df, index, columns, dtype):
+def from_non_pandas(df, index, columns, dtype) -> DataFrame | None:
     """
     Convert a non-pandas DataFrame into Modin DataFrame.
 
@@ -975,7 +976,7 @@ def from_non_pandas(df, index, columns, dtype):
     return new_qc
 
 
-def from_pandas(df):
+def from_pandas(df) -> DataFrame:
     """
     Convert a pandas DataFrame to a Modin DataFrame.
 
@@ -994,7 +995,7 @@ def from_pandas(df):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_pandas(df))
 
 
-def from_arrow(at):
+def from_arrow(at) -> DataFrame:
     """
     Convert an Arrow Table to a Modin DataFrame.
 
@@ -1013,7 +1014,7 @@ def from_arrow(at):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_arrow(at))
 
 
-def from_dataframe(df):
+def from_dataframe(df) -> DataFrame:
     """
     Convert a DataFrame implementing the dataframe exchange protocol to a Modin DataFrame.
 
@@ -1034,7 +1035,81 @@ def from_dataframe(df):
     return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dataframe(df))
 
 
-def to_pandas(modin_obj: SupportsPrivateToPandas) -> Any:
+def from_ray_dataset(ray_obj) -> DataFrame:
+    """
+    Convert a Ray Dataset into Modin DataFrame.
+
+    Deprecated.
+
+    Parameters
+    ----------
+    ray_obj : ray.data.Dataset
+        The Ray Dataset to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Ray Dataset can only be converted to Modin DataFrame if Modin uses a Ray engine.
+    """
+    warnings.warn(
+        "`modin.pandas.io.from_ray_dataset` is deprecated and will be removed in a future version. "
+        + "Please use `modin.pandas.io.from_ray` instead.",
+        category=FutureWarning,
+    )
+    from_ray(ray_obj)
+
+
+def from_ray(ray_obj) -> DataFrame:
+    """
+    Convert a Ray Dataset into Modin DataFrame.
+
+    Parameters
+    ----------
+    ray_obj : ray.data.Dataset
+        The Ray Dataset to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Ray Dataset can only be converted to Modin DataFrame if Modin uses a Ray engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_ray(ray_obj))
+
+
+def from_dask(dask_obj) -> DataFrame:
+    """
+    Convert a Dask DataFrame to a Modin DataFrame.
+
+    Parameters
+    ----------
+    dask_obj : dask.dataframe.DataFrame
+        The Dask DataFrame to convert from.
+
+    Returns
+    -------
+    DataFrame
+        A new Modin DataFrame object.
+
+    Notes
+    -----
+    Dask DataFrame can only be converted to Modin DataFrame if Modin uses a Dask engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return ModinObjects.DataFrame(query_compiler=FactoryDispatcher.from_dask(dask_obj))
+
+
+def to_pandas(modin_obj: SupportsPublicToPandas) -> DataFrame | Series:
     """
     Convert a Modin DataFrame/Series to a pandas DataFrame/Series.
 
@@ -1059,7 +1134,7 @@ def to_numpy(
 
     Parameters
     ----------
-    modin_obj : modin.DataFrame, modin."Series", modin.numpy.array
+    modin_obj : modin.DataFrame, modin.Series, modin.numpy.array
         The Modin distributed object to convert.
 
     Returns
@@ -1073,6 +1148,80 @@ def to_numpy(
     if ExperimentalNumPyAPI.get():
         array = array._to_numpy()
     return array
+
+
+def to_ray_dataset(modin_obj):
+    """
+    Convert a Modin DataFrame/Series to a Ray Dataset.
+
+    Deprecated.
+
+    Parameters
+    ----------
+    modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+        The DataFrame/Series to convert.
+
+    Returns
+    -------
+    ray.data.Dataset
+        Converted object with type depending on input.
+
+    Notes
+    -----
+    Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+    """
+    warnings.warn(
+        "`modin.pandas.io.to_ray_dataset` is deprecated and will be removed in a future version. "
+        + "Please use `modin.pandas.io.to_ray` instead.",
+        category=FutureWarning,
+    )
+    to_ray(modin_obj)
+
+
+def to_ray(modin_obj):
+    """
+    Convert a Modin DataFrame/Series to a Ray Dataset.
+
+    Parameters
+    ----------
+    modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+        The DataFrame/Series to convert.
+
+    Returns
+    -------
+    ray.data.Dataset
+        Converted object with type depending on input.
+
+    Notes
+    -----
+    Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return FactoryDispatcher.to_ray(modin_obj)
+
+
+def to_dask(modin_obj):
+    """
+    Convert a Modin DataFrame/Series to a Dask DataFrame/Series.
+
+    Parameters
+    ----------
+    modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+        The Modin DataFrame/Series to convert.
+
+    Returns
+    -------
+    dask.dataframe.DataFrame or dask.dataframe.Series
+        Converted object with type depending on input.
+
+    Notes
+    -----
+    Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return FactoryDispatcher.to_dask(modin_obj)
 
 
 __all__ = [

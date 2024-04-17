@@ -53,7 +53,7 @@ with this project or the open source license(s) involved."
 
 
 Code without a proper signoff cannot be merged into the
-master branch. Note: You must use your real name (sorry, no pseudonyms or anonymous
+main branch. Note: You must use your real name (sorry, no pseudonyms or anonymous
 contributions.)
 
 The text can either be manually added to your commit body, or you can add either ``-s``
@@ -63,8 +63,8 @@ or ``--signoff`` to your usual ``git commit`` commands:
 
 .. code-block:: bash
 
-   git commit --signoff
-   git commit -s
+   git commit --signoff -m "This is my commit message"
+   git commit -s -m "This is my commit message"
 
 This will use your default git configuration which is found in .git/config. To change
 this, you can use the following commands:
@@ -228,5 +228,5 @@ More docs on this coming soon...
 .. _Asv: https://github.com/airspeed-velocity/asv#airspeed-velocity
 .. _developer mailing list: https://groups.google.com/forum/#!forum/modin-dev
 .. _Asv dashboard: https://modin.org/modin-bench/#/
-.. _Asv readme: https://github.com/modin-project/modin/blob/master/asv_bench/README.md
-.. _the contributing instructions on GitHub: https://github.com/modin-project/modin/blob/master/contributing/contributing.md
+.. _Asv readme: https://github.com/modin-project/modin/blob/main/asv_bench/README.md
+.. _the contributing instructions on GitHub: https://github.com/modin-project/modin/blob/main/contributing/contributing.md

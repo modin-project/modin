@@ -457,7 +457,10 @@ class HdkOnNativeIO(BaseIO, TextFileDispatcher):
                     + "'infer' header values",
                 )
             if isinstance(parse_dates, list) and not set(parse_dates).issubset(names):
-                raise ValueError("Missing column provided to 'parse_dates'")
+                missing_columns = set(parse_dates) - set(names)
+                raise ValueError(
+                    f"Missing column provided to 'parse_dates': '{', '.join(missing_columns)}'"
+                )
 
             empty_pandas_df = pandas.read_csv(
                 **dict(

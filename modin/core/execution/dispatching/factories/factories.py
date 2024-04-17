@@ -204,6 +204,26 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a Ray Dataset",
+        params="ray_obj : ray.data.Dataset",
+        method="modin.core.execution.ray.implementations.pandas_on_ray.io.PandasOnRayIO.from_ray",
+    )
+    def _from_ray(cls, ray_obj):
+        return cls.io_cls.from_ray(ray_obj)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
+        source="a Dask DataFrame",
+        params="dask_obj : dask.dataframe.DataFrame",
+        method="modin.core.execution.dask.implementations.pandas_on_dask.io.PandasOnDaskIO.from_dask",
+    )
+    def _from_dask(cls, dask_obj):
+        return cls.io_cls.from_dask(dask_obj)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",
@@ -428,6 +448,20 @@ class BaseFactory(object):
         return cls.io_cls.to_json(*args, **kwargs)
 
     @classmethod
+    def _to_xml(cls, *args, **kwargs):
+        """
+        Write query compiler content to a XML file.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        return cls.io_cls.to_xml(*args, **kwargs)
+
+    @classmethod
     def _to_parquet(cls, *args, **kwargs):
         """
         Write query compiler content to a parquet file.
@@ -440,6 +474,48 @@ class BaseFactory(object):
             Arguments to pass to the writer method.
         """
         return cls.io_cls.to_parquet(*args, **kwargs)
+
+    @classmethod
+    def _to_ray(cls, modin_obj):
+        """
+        Write query compiler content to a Ray Dataset.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        ray.data.Dataset
+            A Ray Dataset object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Ray Dataset if Modin uses a Ray engine.
+        """
+        return cls.io_cls.to_ray(modin_obj)
+
+    @classmethod
+    def _to_dask(cls, modin_obj):
+        """
+        Write query compiler content to a Dask DataFrame/Series.
+
+        Parameters
+        ----------
+        modin_obj : modin.pandas.DataFrame, modin.pandas.Series
+            The Modin DataFrame/Series to write.
+
+        Returns
+        -------
+        dask.dataframe.DataFrame or dask.dataframe.Series
+            A Dask DataFrame/Series object.
+
+        Notes
+        -----
+        Modin DataFrame/Series can only be converted to a Dask DataFrame/Series if Modin uses a Dask engine.
+        """
+        return cls.io_cls.to_dask(modin_obj)
 
     # experimental methods that don't exist in pandas
     @classmethod
@@ -462,13 +538,13 @@ class BaseFactory(object):
         source="Pickle files",
         params=_doc_io_method_kwargs_params,
     )
-    def _read_pickle_distributed(cls, **kwargs):
+    def _read_pickle_glob(cls, **kwargs):
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
-                f"`_read_pickle_distributed()` is not implemented for {current_execution} execution."
+                f"`_read_pickle_glob()` is not implemented for {current_execution} execution."
             )
-        return cls.io_cls.read_pickle_distributed(**kwargs)
+        return cls.io_cls.read_pickle_glob(**kwargs)
 
     @classmethod
     @doc(
@@ -512,7 +588,7 @@ class BaseFactory(object):
         return cls.io_cls.read_custom_text(**kwargs)
 
     @classmethod
-    def _to_pickle_distributed(cls, *args, **kwargs):
+    def _to_pickle_glob(cls, *args, **kwargs):
         """
         Distributed pickle query compiler object.
 
@@ -526,9 +602,9 @@ class BaseFactory(object):
         current_execution = get_current_execution()
         if current_execution not in supported_executions:
             raise NotImplementedError(
-                f"`_to_pickle_distributed()` is not implemented for {current_execution} execution."
+                f"`_to_pickle_glob()` is not implemented for {current_execution} execution."
             )
-        return cls.io_cls.to_pickle_distributed(*args, **kwargs)
+        return cls.io_cls.to_pickle_glob(*args, **kwargs)
 
     @classmethod
     @doc(
@@ -595,6 +671,39 @@ class BaseFactory(object):
                 f"`_to_json_glob()` is not implemented for {current_execution} execution."
             )
         return cls.io_cls.to_json_glob(*args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_raw_template,
+        source="XML files",
+        params=_doc_io_method_kwargs_params,
+    )
+    def _read_xml_glob(cls, **kwargs):
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_read_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.read_xml_glob(**kwargs)
+
+    @classmethod
+    def _to_xml_glob(cls, *args, **kwargs):
+        """
+        Write query compiler content to several XML files.
+
+        Parameters
+        ----------
+        *args : args
+            Arguments to pass to the writer method.
+        **kwargs : kwargs
+            Arguments to pass to the writer method.
+        """
+        current_execution = get_current_execution()
+        if current_execution not in supported_executions:
+            raise NotImplementedError(
+                f"`_to_xml_glob()` is not implemented for {current_execution} execution."
+            )
+        return cls.io_cls.to_xml_glob(*args, **kwargs)
 
 
 @doc(_doc_factory_class, execution_name="PandasOnRay")

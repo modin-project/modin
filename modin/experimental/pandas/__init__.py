@@ -32,32 +32,22 @@ Examples
 >>> df = pd.read_csv_glob("data*.csv")
 """
 
-import functools
-import warnings
-
 from modin.pandas import *  # noqa F401, F403
+from modin.utils import func_from_deprecated_location
 
 from .io import (  # noqa F401
     read_csv_glob,
     read_custom_text,
     read_json_glob,
     read_parquet_glob,
-    read_pickle_distributed,
+    read_pickle_glob,
     read_sql,
-    to_pickle_distributed,
+    read_xml_glob,
 )
 
-old_to_pickle_distributed = to_pickle_distributed
-
-
-@functools.wraps(to_pickle_distributed)
-def to_pickle_distributed(*args, **kwargs):
-    warnings.warn(
-        "`DataFrame.to_pickle_distributed` is deprecated and will be removed in a future version. "
-        + "Please use `DataFrame.modin.to_pickle_distributed` instead.",
-        category=FutureWarning,
-    )
-    return old_to_pickle_distributed(*args, **kwargs)
-
-
-setattr(DataFrame, "to_pickle_distributed", to_pickle_distributed)  # noqa: F405
+read_pickle_distributed = func_from_deprecated_location(
+    "read_pickle_glob",
+    "modin.experimental.pandas.io",
+    "`modin.experimental.pandas.read_pickle_distributed` is deprecated and will be removed in a future version. "
+    + "Please use `modin.experimental.pandas.to_pickle_glob` instead.",
+)

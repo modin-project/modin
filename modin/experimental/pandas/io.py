@@ -303,7 +303,7 @@ read_csv_glob = _make_parser_func(sep=",", funcname="read_csv_glob")
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def read_pickle_distributed(
+def read_pickle_glob(
     filepath_or_buffer,
     compression: Optional[str] = "infer",
     storage_options: StorageOptions = None,
@@ -313,7 +313,7 @@ def read_pickle_distributed(
 
     This experimental feature provides parallel reading from multiple pickle files which are
     defined by glob pattern. The files must contain parts of one dataframe, which can be
-    obtained, for example, by `DataFrame.modin.to_pickle_distributed` function.
+    obtained, for example, by `DataFrame.modin.to_pickle_glob` function.
 
     Parameters
     ----------
@@ -344,11 +344,11 @@ def read_pickle_distributed(
 
     from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
 
-    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_distributed(**kwargs))
+    return DataFrame(query_compiler=FactoryDispatcher.read_pickle_glob(**kwargs))
 
 
 @expanduser_path_arg("filepath_or_buffer")
-def to_pickle_distributed(
+def to_pickle_glob(
     self,
     filepath_or_buffer,
     compression: CompressionOptions = "infer",
@@ -392,7 +392,7 @@ def to_pickle_distributed(
 
     if isinstance(self, DataFrame):
         obj = self._query_compiler
-    FactoryDispatcher.to_pickle_distributed(
+    FactoryDispatcher.to_pickle_glob(
         obj,
         filepath_or_buffer=filepath_or_buffer,
         compression=compression,
@@ -599,4 +599,118 @@ def to_json_glob(
         indent=indent,
         storage_options=storage_options,
         mode=mode,
+    )
+
+
+@expanduser_path_arg("path_or_buffer")
+def read_xml_glob(
+    path_or_buffer,
+    *,
+    xpath="./*",
+    namespaces=None,
+    elems_only=False,
+    attrs_only=False,
+    names=None,
+    dtype=None,
+    converters=None,
+    parse_dates=None,
+    encoding="utf-8",
+    parser="lxml",
+    stylesheet=None,
+    iterparse=None,
+    compression="infer",
+    storage_options: StorageOptions = None,
+    dtype_backend=lib.no_default,
+) -> DataFrame:  # noqa: PR01
+    """
+    Read XML document into a DataFrame object.
+
+    This experimental feature provides parallel reading from multiple XML files which are
+    defined by glob pattern. The files must contain parts of one dataframe, which can be
+    obtained, for example, by `DataFrame.modin.to_xml_glob` function.
+
+    Returns
+    -------
+    DataFrame
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buffer` argument.
+    * The rest of the arguments are the same as for `pandas.read_xml`.
+    """
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    return DataFrame(
+        query_compiler=FactoryDispatcher.read_xml_glob(
+            path_or_buffer=path_or_buffer,
+            xpath=xpath,
+            namespaces=namespaces,
+            elems_only=elems_only,
+            attrs_only=attrs_only,
+            names=names,
+            dtype=dtype,
+            converters=converters,
+            parse_dates=parse_dates,
+            encoding=encoding,
+            parser=parser,
+            stylesheet=stylesheet,
+            iterparse=iterparse,
+            compression=compression,
+            storage_options=storage_options,
+            dtype_backend=dtype_backend,
+        )
+    )
+
+
+@expanduser_path_arg("path_or_buffer")
+def to_xml_glob(
+    self,
+    path_or_buffer=None,
+    index=True,
+    root_name="data",
+    row_name="row",
+    na_rep=None,
+    attr_cols=None,
+    elem_cols=None,
+    namespaces=None,
+    prefix=None,
+    encoding="utf-8",
+    xml_declaration=True,
+    pretty_print=True,
+    parser="lxml",
+    stylesheet=None,
+    compression="infer",
+    storage_options=None,
+) -> None:  # noqa: PR01
+    """
+    Render a DataFrame to an XML document.
+
+    Notes
+    -----
+    * Only string type supported for `path_or_buffer` argument.
+    * The rest of the arguments are the same as for `pandas.to_xml`.
+    """
+    obj = self
+    from modin.core.execution.dispatching.factories.dispatcher import FactoryDispatcher
+
+    if isinstance(self, DataFrame):
+        obj = self._query_compiler
+    FactoryDispatcher.to_xml_glob(
+        obj,
+        path_or_buffer=path_or_buffer,
+        index=index,
+        root_name=root_name,
+        row_name=row_name,
+        na_rep=na_rep,
+        attr_cols=attr_cols,
+        elem_cols=elem_cols,
+        namespaces=namespaces,
+        prefix=prefix,
+        encoding=encoding,
+        xml_declaration=xml_declaration,
+        pretty_print=pretty_print,
+        parser=parser,
+        stylesheet=stylesheet,
+        compression=compression,
+        storage_options=storage_options,
     )

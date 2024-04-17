@@ -127,6 +127,7 @@ class DefaultMethod(Operator):
                 and func not in ("divmod", pandas.Series.divmod)
                 and func not in ("rdivmod", pandas.Series.rdivmod)
                 and func not in ("to_list", pandas.Series.to_list)
+                and func not in ("corr", pandas.Series.corr)
                 and func not in ("to_dict", pandas.Series.to_dict)
                 and func not in ("mean", pandas.DataFrame.mean)
                 and func not in ("median", pandas.DataFrame.median)
