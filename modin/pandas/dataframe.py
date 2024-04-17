@@ -3157,7 +3157,9 @@ class DataFrame(BasePandasDataset):
                     "'Not' nodes are not implemented."
                 )  # pragma: no cover
 
-    def _reduce_dimension(self, query_compiler) -> Series:
+    def _reduce_dimension(
+        self, query_compiler: BaseQueryCompiler
+    ) -> Union[Series, Scalar]:
         """
         Reduce the dimension of data from the `query_compiler`.
 
