@@ -4,7 +4,7 @@
 
 * Check the impact of the new patch on the performance of a certain set of operations:
 
-  `asv continuous -f 1.05 src/master HEAD -b TimeGroupBy --launch-method=spawn`
+  `asv continuous -f 1.05 src/main HEAD -b TimeGroupBy --launch-method=spawn`
 
 * Check for presence of errors inside of benchmarks after changing them or writing new ones:
 
@@ -61,13 +61,13 @@ the hash in the corresponding result files.
 
 Step 1: checking benchmarks for validity, runs in PRs CI.
   During the test, the benchmarks are run once on small data.
-  The implementation can be found in `test-asv-benchmarks` job of [ci.yml](https://github.com/modin-project/modin/blob/master/.github/workflows/ci.yml)
+  The implementation can be found in `test-asv-benchmarks` job of [ci.yml](https://github.com/modin-project/modin/blob/main/.github/workflows/ci.yml)
 
 Step 2: running benchmarks with saving the results in [modin-bench@master](https://github.com/modin-project/modin-bench).
   The launch takes place on internal server using specific TeamCity configuration.
   The description of the server can be found in the ["Benchmark list"](https://modin.org/modin-bench/#summarylist?sort=0&dir=asc) tab,
   on the left when you hover the mouse over the machine name. 
-  This step starts as scheduled (now every half hour), subject to the presence of new commits in the Modin `master` branch.
+  This step starts as scheduled (now every half hour), subject to the presence of new commits in the Modin `main` branch.
   Command to run benchmarks: `asv run HASHFILE:hashfile.txt --show-stderr --machine xeon-e5 --launch-method=spawn`.
   In the file `hashfile.txt` is the last modin commit hash.
   Writing to a `modin-bench@master` triggers 3 step of the pipeline.

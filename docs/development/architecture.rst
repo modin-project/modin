@@ -348,7 +348,7 @@ details. The documentation covers most modules, with more docs being added every
 .. _Ray: https://github.com/ray-project/ray
 .. _Unidist: https://github.com/modin-project/unidist
 .. _MPI: https://www.mpi-forum.org/
-.. _code: https://github.com/modin-project/modin/blob/master/modin/core/dataframe
+.. _code: https://github.com/modin-project/modin/blob/main/modin/core/dataframe
 .. _Dask: https://github.com/dask/dask
 .. _Dask Futures: https://docs.dask.org/en/latest/futures.html
 .. _issue: https://github.com/modin-project/modin/issues

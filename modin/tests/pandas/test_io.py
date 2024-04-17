@@ -1050,7 +1050,7 @@ class TestCsv:
         eval_io(
             fn_name="read_csv",
             # read_csv kwargs
-            filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/master/modin/tests/pandas/data/blah.csv",
+            filepath_or_buffer="https://raw.githubusercontent.com/modin-project/modin/main/modin/tests/pandas/data/blah.csv",
             # It takes about ~17Gb of RAM for HDK to import the whole table from this test
             # because of too many (~1000) string columns in it. Taking a subset of columns
             # to be able to run this test on low-RAM machines.

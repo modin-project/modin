@@ -4,7 +4,7 @@ coverage:
     project:
       default:
         branches:
-          - master
+          - main
         target: 85%
     patch:
       default:

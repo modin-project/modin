@@ -17,7 +17,7 @@ body:
           required: true
         - label: >
             I have confirmed this bug exists on the main branch of Modin. (In order to do this you
-            can follow [this guide](https://modin.readthedocs.io/en/stable/getting_started/installation.html#installing-from-the-github-master-branch).)
+            can follow [this guide](https://modin.readthedocs.io/en/stable/getting_started/installation.html#installing-from-the-github-main-branch).)
   - type: textarea
     id: example
     attributes:
