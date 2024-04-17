@@ -169,7 +169,7 @@ def configure_logging() -> None:
         "modin.logger.default",
         job_id,
         "trace",
-        LogLevel.INFO if LogMode.get() == "enable_api_only" else LogLevel.DEBUG,
+        LogLevel.INFO,
     )
 
     logger.info(f"OS Version: {platform.platform()}")
@@ -181,20 +181,17 @@ def configure_logging() -> None:
     logger.info(f"Physical Cores: {num_physical_cores}")
     logger.info(f"Total Cores: {num_total_cores}")
 
-    if LogMode.get() != "enable_api_only":
-        mem_sleep = LogMemoryInterval.get()
-        mem_logger = _create_logger(
-            "modin_memory.logger", job_id, "memory", LogLevel.DEBUG
-        )
+    mem_sleep = LogMemoryInterval.get()
+    mem_logger = _create_logger("modin_memory.logger", job_id, "memory", LogLevel.DEBUG)
 
-        svmem = psutil.virtual_memory()
-        mem_logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
-        mem_logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
-        mem_logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
-        mem = threading.Thread(
-            target=memory_thread, args=[mem_logger, mem_sleep], daemon=True
-        )
-        mem.start()
+    svmem = psutil.virtual_memory()
+    mem_logger.info(f"Memory Total: {bytes_int_to_str(svmem.total)}")
+    mem_logger.info(f"Memory Available: {bytes_int_to_str(svmem.available)}")
+    mem_logger.info(f"Memory Used: {bytes_int_to_str(svmem.used)}")
+    mem = threading.Thread(
+        target=memory_thread, args=[mem_logger, mem_sleep], daemon=True
+    )
+    mem.start()
 
     _create_logger("modin.logger.errors", job_id, "error", LogLevel.INFO)
 
