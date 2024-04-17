@@ -495,7 +495,6 @@ class PandasDataframePartitionManager(
         lengths=None,
         apply_func_args=None,
         apply_func_kwargs=None,
-        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -586,7 +585,6 @@ class PandasDataframePartitionManager(
                     **apply_func_kwargs if apply_func_kwargs is not None else {},
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
-                    **kwargs,
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -697,7 +695,6 @@ class PandasDataframePartitionManager(
         enumerate_partitions=False,
         map_func_args=None,
         map_func_kwargs=None,
-        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -754,11 +751,10 @@ class PandasDataframePartitionManager(
             enumerate_partitions=enumerate_partitions,
             apply_func_args=map_func_args,
             apply_func_kwargs=map_func_kwargs,
-            **kwargs,
         )
 
     @classmethod
-    def map_partitions_splitting_by_column(
+    def map_partitions_joined_by_column(
         cls,
         partitions,
         column_splits,
@@ -767,7 +763,7 @@ class PandasDataframePartitionManager(
         map_func_kwargs=None,
     ):
         """
-        Combine several blocks by column into one virtual partition and apply “map_funk” to them.
+        Combine several blocks by column into one virtual partition and apply "map_func" to them.
 
         Parameters
         ----------

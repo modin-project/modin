@@ -2203,20 +2203,22 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             A new dataframe.
         """
         if self.num_parts <= 1.5 * CpuCount.get():
+            # block-wise map
             map_fn = (
                 self._partition_mgr_cls.lazy_map_partitions
                 if lazy
                 else self._partition_mgr_cls.map_partitions
             )
-            # old way
             new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
         else:
-            axis = (
-                1
-                if abs(self._partitions.shape[0] - CpuCount.get())
-                < abs(self._partitions.shape[1] - CpuCount.get())
-                else 0
-            )
+            # axis-wise map
+            # we choose an axis for a combination of partitions whose size is closer to the number of CPUs
+            axis = 0
+            if abs(self._partitions.shape[0] - CpuCount.get()) < abs(
+                self._partitions.shape[1] - CpuCount.get()
+            ):
+                axis = 1
+
             column_splits = (
                 self._partitions.shape[0]
                 // (CpuCount.get() // self._partitions.shape[1])
@@ -2225,7 +2227,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             )
 
             if axis == 1 or column_splits <= 1:
-                # splitting by full_axis rows
+                # splitting by full axis partitions
                 new_partitions = self._partition_mgr_cls.map_axis_partitions(
                     axis,
                     self._partitions,
@@ -2235,8 +2237,9 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     map_func_kwargs=func_kwargs,
                 )
             else:
+                # splitting by parts of columnar partitions
                 new_partitions = (
-                    self._partition_mgr_cls.map_partitions_splitting_by_column(
+                    self._partition_mgr_cls.map_partitions_joined_by_column(
                         self._partitions, column_splits, func, func_args, func_kwargs
                     )
                 )
