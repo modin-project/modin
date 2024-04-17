@@ -39,12 +39,12 @@ from __future__ import annotations
 
 import pytest
 
+from modin.pandas.test.utils import default_to_pandas_ignore_string
 from modin.tests.dataframe_api_standard.utils import (
     BaseHandler,
     nan_dataframe_1,
     null_dataframe_2,
 )
-from modin.pandas.test.utils import default_to_pandas_ignore_string
 
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 
