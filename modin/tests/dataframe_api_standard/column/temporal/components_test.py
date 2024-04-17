@@ -41,12 +41,12 @@ from typing import Literal
 
 import pytest
 
-from modin.pandas.test.utils import default_to_pandas_ignore_string
 from modin.tests.dataframe_api_standard.utils import (
     BaseHandler,
     compare_column_with_reference,
     temporal_dataframe_1,
 )
+from modin.tests.pandas.utils import default_to_pandas_ignore_string
 
 pytestmark = pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 

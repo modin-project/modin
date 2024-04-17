@@ -38,12 +38,12 @@
 from __future__ import annotations
 
 import modin.pandas as pd
-from modin.pandas.test.utils import df_equals
 from modin.tests.dataframe_api_standard.utils import (
     BaseHandler,
     compare_column_with_reference,
     integer_dataframe_1,
 )
+from modin.tests.pandas.utils import df_equals
 
 
 def test_column_filter(library: BaseHandler) -> None:

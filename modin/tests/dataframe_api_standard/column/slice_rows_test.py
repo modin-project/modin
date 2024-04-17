@@ -42,8 +42,8 @@ from typing import Any
 import pytest
 
 import modin.pandas as pd
-from modin.pandas.test.utils import df_equals
 from modin.tests.dataframe_api_standard.utils import BaseHandler, integer_dataframe_3
+from modin.tests.pandas.utils import df_equals
 
 
 @pytest.mark.parametrize(

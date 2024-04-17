@@ -38,7 +38,7 @@
 from __future__ import annotations
 
 import modin.pandas as pd
-from modin.pandas.test.utils import df_equals
+from modin.tests.pandas.utils import df_equals
 
 
 def test_scale_column_modin() -> None:
