@@ -4,7 +4,8 @@ Optimization Notes
 Modin has chosen default values for a lot of the configurations here that provide excellent performance in most
 cases. This page is for those who love to optimize their code and those who are curious about existing optimizations
 within Modin. Here you can find more information about Modin's optimizations both for a pipeline of operations as
-well as for specific operations.
+well as for specific operations. If you want to go ahead and tune the Modin behavior on your own, refer to
+:doc:`Modin Configuration Settings </flow/modin/config>` page for the full set of configurations available in Modin.
 
 Range-partitioning in Modin
 """""""""""""""""""""""""""
