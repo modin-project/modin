@@ -33,13 +33,14 @@ class ClassLogger:
     """
 
     _modin_logging_layer = "PANDAS-API"
+    _log_level = LogLevel.INFO
 
     @classmethod
     def __init_subclass__(
         cls,
         modin_layer: Optional[str] = None,
         class_name: Optional[str] = None,
-        log_level: LogLevel = LogLevel.INFO,
+        log_level: Optional[LogLevel] = None,
         **kwargs: Dict,
     ) -> None:
         """
@@ -47,16 +48,18 @@ class ClassLogger:
 
         Parameters
         ----------
-        modin_layer : str, default: "PANDAS-API"
+        modin_layer : str, optional
             Specified by the logger (e.g. PANDAS-API).
         class_name : str, optional
             The name of the class the decorator is being applied to.
             Composed from the decorated class name if not specified.
-        log_level : LogLevel, default: LogLevel.INFO
+        log_level : LogLevel, optional
             The log level (LogLevel.INFO, LogLevel.DEBUG, LogLevel.WARNING, etc.).
         **kwargs : dict
         """
         modin_layer = modin_layer or cls._modin_logging_layer
+        log_level = log_level or cls._log_level
         super().__init_subclass__(**kwargs)
         enable_logging(modin_layer, class_name, log_level)(cls)
         cls._modin_logging_layer = modin_layer
+        cls._log_level = log_level
