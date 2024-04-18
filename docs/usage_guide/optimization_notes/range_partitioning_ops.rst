@@ -155,7 +155,7 @@ Measurements with 16 cores being allocated for Modin (``MODIN_CPUS=16``):
 .. image:: /img/range_partitioning_measurements/unique_16cpus.jpg
    :align: center
 
-Measurements with 44 cores being allocated for Modin (``MODIN_CPUS=4``):
+Measurements with 44 cores being allocated for Modin (``MODIN_CPUS=44``):
 
 .. image:: /img/range_partitioning_measurements/unique_44cpus.jpg
    :align: center
