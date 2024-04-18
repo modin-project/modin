@@ -56,12 +56,15 @@ if TYPE_CHECKING:
     from pandas._typing import npt
 
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 from modin.pandas.indexing import is_range_like
 from modin.pandas.utils import check_both_not_none, is_full_grab_slice
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL
 
 
-class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
+class PandasDataframe(
+    ClassLogger, modin_layer="CORE-DATAFRAME", log_level=LogLevel.DEBUG
+):
     """
     An abstract class that represents the parent class for any pandas storage format dataframe class.
 
