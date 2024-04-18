@@ -517,6 +517,14 @@ class Series(BasePandasDataset):
             data = pd.Categorical(data, dtype=self.dtype)
         return data
 
+    def __arrow_array__(self, type=None):  # noqa: GL08
+        # Although pandas.Series does not implement this method (true for version 2.2.*),
+        # however, pyarrow has support for it. This method emulates this behavior and
+        # allows pyarrow to work with modin.pandas.Series.
+        import pyarrow
+
+        return pyarrow.array(self._to_pandas(), type=type)
+
     def add(
         self, other, level=None, fill_value=None, axis=0
     ) -> Series:  # noqa: PR01, RT01, D200
