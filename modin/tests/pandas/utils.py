@@ -1087,14 +1087,12 @@ def eval_io_from_str(csv_str: str, unique_filename: str, **kwargs):
 
 
 def create_test_dfs(*args, **kwargs) -> tuple[pd.DataFrame, pandas.DataFrame]:
-    post_fn = kwargs.pop("post_fn", lambda df: df)
-    post_fn2 = lambda df: post_fn(df).convert_dtypes(
-        dtype_backend="dtype_backend"
-    )  # noqa: E731
+    post_fn = kwargs.pop("post_fn", None)
+
+    if post_fn is None:
+        post_fn = lambda df: df.convert_dtypes(dtype_backend="pyarrow")  # noqa: E731
     return tuple(
-        map(
-            post_fn2, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)]
-        )
+        map(post_fn, [pd.DataFrame(*args, **kwargs), pandas.DataFrame(*args, **kwargs)])
     )
 
 
@@ -1109,8 +1107,8 @@ def create_test_series(vals, sort=False, **kwargs) -> tuple[pd.Series, pandas.Se
         modin_series = modin_series.sort_values().reset_index(drop=True)
         pandas_series = pandas_series.sort_values().reset_index(drop=True)
 
-    modin_series = modin_series.convert_dtypes(dtype_backend="dtype_backend")
-    pandas_series = pandas_series.convert_dtypes(dtype_backend="dtype_backend")
+    modin_series = modin_series.convert_dtypes(dtype_backend="pyarrow")
+    pandas_series = pandas_series.convert_dtypes(dtype_backend="pyarrow")
     return modin_series, pandas_series
 
 
