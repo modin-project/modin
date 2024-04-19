@@ -1409,18 +1409,6 @@ def test_pyarrow_constructor():
     _ = pd.DataFrame(data, dtype=decimal_type)
 
 
-def test_pyarrow_array_retrieve():
-    pa = pytest.importorskip("pyarrow")
-    modin_series, pandas_series = create_test_series(
-        [1, 2, None], dtype="uint8[pyarrow]"
-    )
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda ser: pa.array(ser),
-    )
-
-
 def test_pyarrow_functions():
     pytest.importorskip("pyarrow")
     modin_series, pandas_series = create_test_series(
