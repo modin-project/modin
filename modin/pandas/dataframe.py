@@ -1311,7 +1311,7 @@ class DataFrame(BasePandasDataset):
         if not is_list_like(id_vars):
             id_vars = [id_vars]
         if value_vars is None:
-            value_vars = self.columns.difference(id_vars)
+            value_vars = self.columns.drop(id_vars)
         if var_name is None:
             columns_name = self._query_compiler.get_index_name(axis=1)
             var_name = columns_name if columns_name is not None else "variable"

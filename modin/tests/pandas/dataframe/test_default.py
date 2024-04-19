@@ -586,6 +586,21 @@ def test_melt(data, id_vars, value_vars):
     )
 
 
+# Functional test for BUG:7206
+def test_melt_duplicate_col_names():
+    if StorageFormat.get() == "Hdk":
+        pass
+    data = {"data": [[1, 2], [3, 4]], "columns": ["dupe", "dupe"]}
+
+    def melt(df, *args, **kwargs):
+        return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+
+    eval_general(
+        *create_test_dfs(**data),
+        lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "index",
