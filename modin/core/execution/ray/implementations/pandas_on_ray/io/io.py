@@ -228,11 +228,7 @@ class PandasOnRayIO(RayIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            RayWrapper.materialize(
-                signals.wait.options(resources=RayCustomResources.get()).remote(
-                    partition_idx
-                )
-            )
+            RayWrapper.materialize(signals.wait.remote(partition_idx))
 
             # preparing to write data from the buffer to a file
             with get_handle(
@@ -249,18 +245,12 @@ class PandasOnRayIO(RayIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            RayWrapper.materialize(
-                signals.send.options(resources=RayCustomResources.get()).remote(
-                    partition_idx + 1
-                )
-            )
+            RayWrapper.materialize(signals.send.remote(partition_idx + 1))
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        RayWrapper.materialize(
-            signals.send.options(resources=RayCustomResources.get()).remote(0)
-        )
+        RayWrapper.materialize(signals.send.remote(0))
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(
