@@ -11,6 +11,8 @@
 # ANY KIND, either express or implied. See the License for the specific language
 # governing permissions and limitations under the License.
 
+from decimal import Decimal
+
 import matplotlib
 import numpy as np
 import pandas
@@ -1795,6 +1797,13 @@ def test_constructor(data):
     pandas_df = pandas.DataFrame({k: pandas.Series(v) for k, v in data.items()})
     modin_df = pd.DataFrame({k: pd.Series(v) for k, v in data.items()})
     df_equals(pandas_df, modin_df)
+
+
+def test_pyarrow_constructor():
+    pa = pytest.importorskip("pyarrow")
+
+    data = [[Decimal("3.19"), None], [None, Decimal("-1.23")]]
+    df_equals(*create_test_dfs(data, dtype=pd.ArrowDtype(pa.decimal128(3, scale=2))))
 
 
 @pytest.mark.parametrize(

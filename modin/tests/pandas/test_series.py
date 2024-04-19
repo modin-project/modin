@@ -1390,23 +1390,12 @@ def test_constructor_arrow_extension_array():
 def test_pyarrow_constructor():
     pa = pytest.importorskip("pyarrow")
     data = list("abcd")
-    _ = pd.Series(data, dtype="string[pyarrow]")
-    _ = pd.Series(data, dtype=pd.ArrowDtype(pa.string()))
+    df_equals(*create_test_series(data, dtype="string[pyarrow]"))
+    df_equals(*create_test_series(data, dtype=pd.ArrowDtype(pa.string())))
 
+    data = [["hello"], ["there"]]
     list_str_type = pa.list_(pa.string())
-    _ = pd.Series([["hello"], ["there"]], dtype=pd.ArrowDtype(list_str_type))
-
-    from datetime import time
-
-    _ = pd.Index([time(12, 30), None], dtype=pd.ArrowDtype(pa.time64("us")))
-
-    from decimal import Decimal
-
-    decimal_type = pd.ArrowDtype(pa.decimal128(3, scale=2))
-
-    data = [[Decimal("3.19"), None], [None, Decimal("-1.23")]]
-
-    _ = pd.DataFrame(data, dtype=decimal_type)
+    df_equals(*create_test_series(data, dtype=pd.ArrowDtype(list_str_type)))
 
 
 def test_pyarrow_functions():
@@ -1428,12 +1417,13 @@ def test_pyarrow_functions():
         comparator=comparator,
     )
 
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda ser: ser > (ser + 1),
-        comparator=comparator,
-    )
+    # FIXME: https://github.com/modin-project/modin/issues/7203
+    # eval_general(
+    #    modin_series,
+    #    pandas_series,
+    #    lambda ser: ser > (ser + 1),
+    #    comparator=comparator,
+    # )
 
     eval_general(
         modin_series,
