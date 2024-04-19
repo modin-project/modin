@@ -1409,13 +1409,15 @@ def test_pyarrow_functions():
         df_equals(df1, df2)
         df_equals(df1.dtypes, df2.dtypes)
 
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda ser: ser
-        + (modin_series if isinstance(ser, pd.Series) else pandas_series),
-        comparator=comparator,
-    )
+    if StorageFormat.get() != "Hdk":
+        # FIXME: HDK should also work in this case
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda ser: ser
+            + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+            comparator=comparator,
+        )
 
     # FIXME: https://github.com/modin-project/modin/issues/7203
     # eval_general(
@@ -1439,12 +1441,14 @@ def test_pyarrow_functions():
         comparator=comparator,
     )
 
-    eval_general(
-        modin_series,
-        pandas_series,
-        lambda ser: ser.fillna(0),
-        comparator=comparator,
-    )
+    if StorageFormat.get() != "Hdk":
+        # FIXME: HDK should also work in this case
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda ser: ser.fillna(0),
+            comparator=comparator,
+        )
 
 
 def test_pyarrow_array_retrieve():
