@@ -67,6 +67,7 @@ class CalciteSerializer:
         "datetime64": "TIMESTAMP",
     }
 
+    # TODO: Is it necessary to use more general types here (not dependent on NumPy)?
     _INT_OPTS = {
         np.int8: ("TINYINT", 3),
         np.int16: ("SMALLINT", 5),

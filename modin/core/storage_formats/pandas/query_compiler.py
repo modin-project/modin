@@ -1840,7 +1840,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 )
             return res
 
-        return Map.register(isin_func, shape_hint=shape_hint, dtypes=np.bool_)(
+        return Map.register(isin_func, shape_hint=shape_hint, dtypes="bool")(
             self, values
         )
 
@@ -1849,7 +1849,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
     conj = Map.register(lambda df, *args, **kwargs: pandas.DataFrame(np.conj(df)))
     convert_dtypes = Fold.register(pandas.DataFrame.convert_dtypes)
     invert = Map.register(pandas.DataFrame.__invert__, dtypes="copy")
-    isna = Map.register(pandas.DataFrame.isna, dtypes=np.bool_)
+    isna = Map.register(pandas.DataFrame.isna, dtypes="bool")
     _isfinite = Map.register(
         lambda df, *args, **kwargs: pandas.DataFrame(np.isfinite(df, *args, **kwargs)),
         dtypes=np.bool_,
@@ -1889,7 +1889,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         lambda df, *args, **kwargs: pandas.DataFrame(np.exp(df, *args, **kwargs))
     )  # Needed for numpy API
     negative = Map.register(pandas.DataFrame.__neg__)
-    notna = Map.register(pandas.DataFrame.notna, dtypes=np.bool_)
+    notna = Map.register(pandas.DataFrame.notna, dtypes="bool")
     round = Map.register(pandas.DataFrame.round)
     replace = Map.register(pandas.DataFrame.replace)
     series_view = Map.register(
@@ -1915,24 +1915,24 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     str_capitalize = Map.register(_str_map("capitalize"), dtypes="copy")
     str_center = Map.register(_str_map("center"), dtypes="copy")
-    str_contains = Map.register(_str_map("contains"), dtypes=np.bool_)
-    str_count = Map.register(_str_map("count"), dtypes=int)
-    str_endswith = Map.register(_str_map("endswith"), dtypes=np.bool_)
-    str_find = Map.register(_str_map("find"), dtypes=np.int64)
+    str_contains = Map.register(_str_map("contains"), dtypes="bool")
+    str_count = Map.register(_str_map("count"), dtypes="int64")
+    str_endswith = Map.register(_str_map("endswith"), dtypes="bool")
+    str_find = Map.register(_str_map("find"), dtypes="int64")
     str_findall = Map.register(_str_map("findall"), dtypes="copy")
     str_get = Map.register(_str_map("get"), dtypes="copy")
-    str_index = Map.register(_str_map("index"), dtypes=np.int64)
-    str_isalnum = Map.register(_str_map("isalnum"), dtypes=np.bool_)
-    str_isalpha = Map.register(_str_map("isalpha"), dtypes=np.bool_)
-    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes=np.bool_)
-    str_isdigit = Map.register(_str_map("isdigit"), dtypes=np.bool_)
-    str_islower = Map.register(_str_map("islower"), dtypes=np.bool_)
-    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes=np.bool_)
-    str_isspace = Map.register(_str_map("isspace"), dtypes=np.bool_)
-    str_istitle = Map.register(_str_map("istitle"), dtypes=np.bool_)
-    str_isupper = Map.register(_str_map("isupper"), dtypes=np.bool_)
+    str_index = Map.register(_str_map("index"), dtypes="int64")
+    str_isalnum = Map.register(_str_map("isalnum"), dtypes="bool")
+    str_isalpha = Map.register(_str_map("isalpha"), dtypes="bool")
+    str_isdecimal = Map.register(_str_map("isdecimal"), dtypes="bool")
+    str_isdigit = Map.register(_str_map("isdigit"), dtypes="bool")
+    str_islower = Map.register(_str_map("islower"), dtypes="bool")
+    str_isnumeric = Map.register(_str_map("isnumeric"), dtypes="bool")
+    str_isspace = Map.register(_str_map("isspace"), dtypes="bool")
+    str_istitle = Map.register(_str_map("istitle"), dtypes="bool")
+    str_isupper = Map.register(_str_map("isupper"), dtypes="bool")
     str_join = Map.register(_str_map("join"), dtypes="copy")
-    str_len = Map.register(_str_map("len"), dtypes=int)
+    str_len = Map.register(_str_map("len"), dtypes="int64")
     str_ljust = Map.register(_str_map("ljust"), dtypes="copy")
     str_lower = Map.register(_str_map("lower"), dtypes="copy")
     str_lstrip = Map.register(_str_map("lstrip"), dtypes="copy")
@@ -1961,8 +1961,8 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return qc
 
     str_replace = Map.register(_str_map("replace"), dtypes="copy", shape_hint="column")
-    str_rfind = Map.register(_str_map("rfind"), dtypes=np.int64, shape_hint="column")
-    str_rindex = Map.register(_str_map("rindex"), dtypes=np.int64, shape_hint="column")
+    str_rfind = Map.register(_str_map("rfind"), dtypes="int64", shape_hint="column")
+    str_rindex = Map.register(_str_map("rindex"), dtypes="int64", shape_hint="column")
     str_rjust = Map.register(_str_map("rjust"), dtypes="copy", shape_hint="column")
     _str_rpartition = Map.register(
         _str_map("rpartition"), dtypes="copy", shape_hint="column"
@@ -1996,7 +1996,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
         return self._str_split(pat=pat, n=n, expand=False, regex=regex)
 
     str_startswith = Map.register(
-        _str_map("startswith"), dtypes=np.bool_, shape_hint="column"
+        _str_map("startswith"), dtypes="bool", shape_hint="column"
     )
     str_strip = Map.register(_str_map("strip"), dtypes="copy", shape_hint="column")
     str_swapcase = Map.register(
@@ -2068,51 +2068,49 @@ class PandasQueryCompiler(BaseQueryCompiler):
 
     # Dt map partitions operations
 
-    dt_date = Map.register(_dt_prop_map("date"), dtypes=np.object_)
-    dt_time = Map.register(_dt_prop_map("time"), dtypes=np.object_)
-    dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes=np.object_)
-    dt_year = Map.register(_dt_prop_map("year"), dtypes=np.int32)
-    dt_month = Map.register(_dt_prop_map("month"), dtypes=np.int32)
-    dt_day = Map.register(_dt_prop_map("day"), dtypes=np.int32)
-    dt_hour = Map.register(_dt_prop_map("hour"), dtypes=np.int64)
-    dt_minute = Map.register(_dt_prop_map("minute"), dtypes=np.int64)
-    dt_second = Map.register(_dt_prop_map("second"), dtypes=np.int64)
-    dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes=np.int64)
-    dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes=np.int64)
-    dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes=np.int64)
-    dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes=np.int64)
-    dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes=np.int64)
-    dt_quarter = Map.register(_dt_prop_map("quarter"), dtypes=np.int64)
-    dt_is_month_start = Map.register(_dt_prop_map("is_month_start"), dtypes=np.bool_)
-    dt_is_month_end = Map.register(_dt_prop_map("is_month_end"), dtypes=np.bool_)
-    dt_is_quarter_start = Map.register(
-        _dt_prop_map("is_quarter_start"), dtypes=np.bool_
-    )
-    dt_is_quarter_end = Map.register(_dt_prop_map("is_quarter_end"), dtypes=np.bool_)
-    dt_is_year_start = Map.register(_dt_prop_map("is_year_start"), dtypes=np.bool_)
-    dt_is_year_end = Map.register(_dt_prop_map("is_year_end"), dtypes=np.bool_)
-    dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"), dtypes=np.bool_)
-    dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"), dtypes=np.int64)
-    dt_days_in_month = Map.register(_dt_prop_map("days_in_month"), dtypes=np.int64)
+    dt_date = Map.register(_dt_prop_map("date"), dtypes="object")
+    dt_time = Map.register(_dt_prop_map("time"), dtypes="object")
+    dt_timetz = Map.register(_dt_prop_map("timetz"), dtypes="object")
+    dt_year = Map.register(_dt_prop_map("year"), dtypes="int32")
+    dt_month = Map.register(_dt_prop_map("month"), dtypes="int32")
+    dt_day = Map.register(_dt_prop_map("day"), dtypes="int32")
+    dt_hour = Map.register(_dt_prop_map("hour"), dtypes="int64")
+    dt_minute = Map.register(_dt_prop_map("minute"), dtypes="int64")
+    dt_second = Map.register(_dt_prop_map("second"), dtypes="int64")
+    dt_microsecond = Map.register(_dt_prop_map("microsecond"), dtypes="int64")
+    dt_nanosecond = Map.register(_dt_prop_map("nanosecond"), dtypes="int64")
+    dt_dayofweek = Map.register(_dt_prop_map("dayofweek"), dtypes="int64")
+    dt_weekday = Map.register(_dt_prop_map("weekday"), dtypes="int64")
+    dt_dayofyear = Map.register(_dt_prop_map("dayofyear"), dtypes="int64")
+    dt_quarter = Map.register(_dt_prop_map("quarter"), dtypes="int64")
+    dt_is_month_start = Map.register(_dt_prop_map("is_month_start"), dtypes="bool")
+    dt_is_month_end = Map.register(_dt_prop_map("is_month_end"), dtypes="bool")
+    dt_is_quarter_start = Map.register(_dt_prop_map("is_quarter_start"), dtypes="bool")
+    dt_is_quarter_end = Map.register(_dt_prop_map("is_quarter_end"), dtypes="bool")
+    dt_is_year_start = Map.register(_dt_prop_map("is_year_start"), dtypes="bool")
+    dt_is_year_end = Map.register(_dt_prop_map("is_year_end"), dtypes="bool")
+    dt_is_leap_year = Map.register(_dt_prop_map("is_leap_year"), dtypes="bool")
+    dt_daysinmonth = Map.register(_dt_prop_map("daysinmonth"), dtypes="int64")
+    dt_days_in_month = Map.register(_dt_prop_map("days_in_month"), dtypes="int64")
     dt_asfreq = Map.register(_dt_func_map("asfreq"))
     dt_to_period = Map.register(_dt_func_map("to_period"))
-    dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes=np.object_)
+    dt_to_pydatetime = Map.register(_dt_func_map("to_pydatetime"), dtypes="object")
     dt_tz_localize = Map.register(_dt_func_map("tz_localize"))
     dt_tz_convert = Map.register(_dt_func_map("tz_convert"))
     dt_normalize = Map.register(_dt_func_map("normalize"))
-    dt_strftime = Map.register(_dt_func_map("strftime"), dtypes=np.object_)
+    dt_strftime = Map.register(_dt_func_map("strftime"), dtypes="object")
     dt_round = Map.register(_dt_func_map("round"))
     dt_floor = Map.register(_dt_func_map("floor"))
     dt_ceil = Map.register(_dt_func_map("ceil"))
-    dt_month_name = Map.register(_dt_func_map("month_name"), dtypes=np.object_)
-    dt_day_name = Map.register(_dt_func_map("day_name"), dtypes=np.object_)
-    dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"), dtypes=np.object_)
-    dt_total_seconds = Map.register(_dt_func_map("total_seconds"), dtypes=np.float64)
-    dt_seconds = Map.register(_dt_prop_map("seconds"), dtypes=np.int64)
-    dt_days = Map.register(_dt_prop_map("days"), dtypes=np.int64)
-    dt_microseconds = Map.register(_dt_prop_map("microseconds"), dtypes=np.int64)
-    dt_nanoseconds = Map.register(_dt_prop_map("nanoseconds"), dtypes=np.int64)
-    dt_qyear = Map.register(_dt_prop_map("qyear"), dtypes=np.int64)
+    dt_month_name = Map.register(_dt_func_map("month_name"), dtypes="object")
+    dt_day_name = Map.register(_dt_func_map("day_name"), dtypes="object")
+    dt_to_pytimedelta = Map.register(_dt_func_map("to_pytimedelta"), dtypes="object")
+    dt_total_seconds = Map.register(_dt_func_map("total_seconds"), dtypes="float64")
+    dt_seconds = Map.register(_dt_prop_map("seconds"), dtypes="int64")
+    dt_days = Map.register(_dt_prop_map("days"), dtypes="int64")
+    dt_microseconds = Map.register(_dt_prop_map("microseconds"), dtypes="int64")
+    dt_nanoseconds = Map.register(_dt_prop_map("nanoseconds"), dtypes="int64")
+    dt_qyear = Map.register(_dt_prop_map("qyear"), dtypes="int64")
     dt_start_time = Map.register(_dt_prop_map("start_time"))
     dt_end_time = Map.register(_dt_prop_map("end_time"))
     dt_to_timestamp = Map.register(_dt_func_map("to_timestamp"))
@@ -2284,7 +2282,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             n_rows = df.shape[0]
             df_mask = np.isfinite(df)
 
-            result = np.empty((n_rows, n_cols), dtype=np.float64)
+            result = np.empty((n_rows, n_cols), dtype="float64")
 
             for i in range(n_rows):
                 df_ith_row = df[i]
@@ -2636,7 +2634,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             lambda df: quantile_builder(df, **kwargs),
             new_index=q_index,
             new_columns=new_columns,
-            dtypes=np.float64,
+            dtypes="float64",
         )
         result = self.__constructor__(new_modin_frame)
         return result.transpose() if axis == 1 else result
@@ -2653,7 +2651,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
                 if not numeric_only
                 else None
             ),
-            dtypes=np.float64,
+            dtypes="float64",
             sync_labels=False,
         )
         return self.__constructor__(new_modin_frame)
@@ -3163,7 +3161,7 @@ class PandasQueryCompiler(BaseQueryCompiler):
             func=_compute_duplicated,
             new_index=self._modin_frame.copy_index_cache(),
             new_columns=[MODIN_UNNAMED_SERIES_LABEL],
-            dtypes=np.bool_,
+            dtypes="bool",
             keep_partitioning=True,
         )
         return self.__constructor__(new_modin_frame, shape_hint="column")

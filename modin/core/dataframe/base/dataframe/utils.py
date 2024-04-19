@@ -21,7 +21,6 @@ JoinType is an enum that represents the `join_type` or `how` argument for the jo
 from enum import Enum
 from typing import Dict, List, Sequence, Tuple, cast
 
-import numpy as np
 import pandas
 from pandas._typing import IndexLabel
 from pandas.api.types import is_scalar
@@ -170,7 +169,7 @@ def is_trivial_index(index: pandas.Index) -> bool:
         return True
     if isinstance(index, pandas.RangeIndex):
         return index.start == 0 and index.step == 1
-    if not (isinstance(index, pandas.Index) and index.dtype == np.int64):
+    if not (isinstance(index, pandas.Index) and index.dtype == "int64"):
         return False
     return (
         index.is_monotonic_increasing
