@@ -19,6 +19,7 @@ import pandas
 from pandas.io.common import get_handle, stringify_path
 from ray.data import from_pandas_refs
 
+from modin.config import RayCustomResources
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
@@ -188,7 +189,9 @@ class PandasOnRayIO(RayIO):
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
-        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
+        signals = SignalActor.options(resources=RayCustomResources.get()).remote(
+            len(qc._modin_frame._partitions) + 1
+        )
 
         def func(df, **kw):  # pragma: no cover
             """
@@ -225,7 +228,11 @@ class PandasOnRayIO(RayIO):
             csv_kwargs["path_or_buf"].close()
 
             # each process waits for its turn to write to a file
-            RayWrapper.materialize(signals.wait.remote(partition_idx))
+            RayWrapper.materialize(
+                signals.wait.options(resources=RayCustomResources.get()).remote(
+                    partition_idx
+                )
+            )
 
             # preparing to write data from the buffer to a file
             with get_handle(
@@ -242,12 +249,18 @@ class PandasOnRayIO(RayIO):
                 handles.handle.write(content)
 
             # signal that the next process can start writing to the file
-            RayWrapper.materialize(signals.send.remote(partition_idx + 1))
+            RayWrapper.materialize(
+                signals.send.options(resources=RayCustomResources.get()).remote(
+                    partition_idx + 1
+                )
+            )
             # used for synchronization purposes
             return pandas.DataFrame()
 
         # signaling that the partition with id==0 can be written to the file
-        RayWrapper.materialize(signals.send.remote(0))
+        RayWrapper.materialize(
+            signals.send.options(resources=RayCustomResources.get()).remote(0)
+        )
         # Ensure that the metadata is syncrhonized
         qc._modin_frame._propagate_index_objs(axis=None)
         result = qc._modin_frame._partition_mgr_cls.map_axis_partitions(

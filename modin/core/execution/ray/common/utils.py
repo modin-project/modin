@@ -31,6 +31,7 @@ from modin.config import (
     IsRayCluster,
     Memory,
     NPartitions,
+    RayCustomResources,
     RayRedisAddress,
     RayRedisPassword,
     StorageFormat,
@@ -126,6 +127,7 @@ def initialize_ray(
                 "object_store_memory": object_store_memory,
                 "_redis_password": redis_password,
                 "_memory": object_store_memory,
+                "resources": RayCustomResources.get(),
                 **extra_init_kw,
             }
             # It should be enough to simply set the required variables for the main process

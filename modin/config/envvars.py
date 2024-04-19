@@ -295,6 +295,18 @@ class RayRedisPassword(EnvironmentVariable, type=ExactStr):
     default = secrets.token_hex(32)
 
 
+class RayCustomResources(EnvironmentVariable, type=dict):
+    """
+    Ray node's custom resources to request them in tasks or actors.
+
+    Visit Ray documentation for more details:
+    https://docs.ray.io/en/latest/ray-core/scheduling/resources.html#custom-resources
+    """
+
+    varname = "MODIN_RAY_CUSTOM_RESOURCES"
+    default = None
+
+
 class CpuCount(EnvironmentVariable, type=int):
     """How many CPU cores to use during initialization of the Modin engine."""
 

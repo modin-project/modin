@@ -47,6 +47,7 @@ from modin.config.envvars import (
     ProgressBar,
     RangePartitioning,
     RangePartitioningGroupby,
+    RayCustomResources,
     RayRedisAddress,
     RayRedisPassword,
     ReadSqlEngine,
@@ -75,6 +76,7 @@ __all__ = [
     "IsRayCluster",
     "RayRedisAddress",
     "RayRedisPassword",
+    "RayCustomResources",
     "LazyExecution",
     # Dask specific
     "DaskThreadsPerWorker",
