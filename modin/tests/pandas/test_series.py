@@ -1457,6 +1457,30 @@ def test_pyarrow_functions():
     )
 
 
+def test_pyarrow_array_retrieve():
+    pa = pytest.importorskip("pyarrow")
+    modin_series, pandas_series = create_test_series(
+        [1, 2, None], dtype="uint8[pyarrow]"
+    )
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: pa.array(ser),
+    )
+
+
+def test___arrow_array__():
+    # https://github.com/modin-project/modin/issues/6808
+    pa = pytest.importorskip("pyarrow")
+    mpd_df_1 = pd.DataFrame({"a": ["1", "2", "3"], "b": ["4", "5", "6"]})
+    mpd_df_2 = pd.DataFrame({"a": ["7", "8", "9"], "b": ["10", "11", "12"]})
+    test_df = pd.concat([mpd_df_1, mpd_df_2])
+
+    res_from_md = pa.Table.from_pandas(df=test_df)
+    res_from_pd = pa.Table.from_pandas(df=test_df._to_pandas())
+    assert res_from_md.equals(res_from_pd)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_copy(data):
     modin_series, pandas_series = create_test_series(data)

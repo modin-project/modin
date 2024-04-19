@@ -24,11 +24,12 @@ from pandas.util import cache_readonly
 
 from modin.core.storage_formats.pandas.utils import length_fn_pandas, width_fn_pandas
 from modin.logging import ClassLogger, get_logger
+from modin.logging.config import LogLevel
 from modin.pandas.indexing import compute_sliced_len
 
 
 class PandasDataframePartition(
-    ABC, ClassLogger, modin_layer="BLOCK-PARTITION"
+    ABC, ClassLogger, modin_layer="BLOCK-PARTITION", log_level=LogLevel.DEBUG
 ):  # pragma: no cover
     """
     An abstract class that is base for any partition class of ``pandas`` storage format.

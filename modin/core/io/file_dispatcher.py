@@ -26,6 +26,7 @@ from pandas.io.common import is_fsspec_url, is_url
 
 from modin.config import AsyncReadMode
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 from modin.utils import ModinAssumptionError
 
 NOT_IMPLEMENTED_MESSAGE = "Implement in children classes!"
@@ -112,7 +113,7 @@ class OpenFile:
         self.file.close()
 
 
-class FileDispatcher(ClassLogger, modin_layer="CORE-IO"):
+class FileDispatcher(ClassLogger, modin_layer="CORE-IO", log_level=LogLevel.DEBUG):
     """
     Class handles util functions for reading data from different kinds of files.
 

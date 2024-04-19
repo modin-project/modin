@@ -45,6 +45,7 @@ from modin.core.dataframe.algebra.default2pandas import (
 )
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 from modin.utils import MODIN_UNNAMED_SERIES_LABEL, try_cast_to_pandas
 
 from . import doc_utils
@@ -99,7 +100,9 @@ def _set_axis(axis):
 # Currently actual arguments are placed in the methods docstrings, but since they're
 # not presented in the function's signature it makes linter to raise `PR02: unknown parameters`
 # warning. For now, they're silenced by using `noqa` (Modin issue #3108).
-class BaseQueryCompiler(ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER"):
+class BaseQueryCompiler(
+    ClassLogger, abc.ABC, modin_layer="QUERY-COMPILER", log_level=LogLevel.DEBUG
+):
     """
     Abstract class that handles the queries to Modin dataframes.
 

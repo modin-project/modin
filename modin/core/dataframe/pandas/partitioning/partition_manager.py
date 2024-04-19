@@ -39,6 +39,7 @@ from modin.core.dataframe.pandas.utils import create_pandas_df_from_partitions
 from modin.core.storage_formats.pandas.utils import compute_chunksize
 from modin.error_message import ErrorMessage
 from modin.logging import ClassLogger
+from modin.logging.config import LogLevel
 
 if TYPE_CHECKING:
     from modin.core.dataframe.pandas.dataframe.utils import ShuffleFunctions
@@ -88,7 +89,7 @@ def wait_computations_if_benchmark_mode(func):
 
 
 class PandasDataframePartitionManager(
-    ClassLogger, ABC, modin_layer="PARTITION-MANAGER"
+    ClassLogger, ABC, modin_layer="PARTITION-MANAGER", log_level=LogLevel.DEBUG
 ):
     """
     Base class for managing the dataframe data layout and operators across the distribution of partitions.
