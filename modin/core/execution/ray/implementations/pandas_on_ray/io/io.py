@@ -257,7 +257,7 @@ class PandasOnRayIO(RayIO):
             keep_partitioning=True,
             lengths=None,
             enumerate_partitions=True,
-            map_func_kwargs={"max_retries": 0},
+            max_retries=0,
         )
         # pending completion
         RayWrapper.materialize(
