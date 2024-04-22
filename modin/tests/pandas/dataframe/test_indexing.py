@@ -2176,6 +2176,11 @@ def test___setitem__(data):
 
     df_equals(modin_df, pandas_df)
 
+    # Test df assignment to a columns selection
+    modin_df[modin_df.columns[[0, -1]]] = modin_df[modin_df.columns[[0, -1]]]
+    pandas_df[pandas_df.columns[[0, -1]]] = pandas_df[pandas_df.columns[[0, -1]]]
+    df_equals(modin_df, pandas_df)
+
     # Test series assignment to column
     modin_df = pd.DataFrame(columns=modin_df.columns)
     pandas_df = pandas.DataFrame(columns=pandas_df.columns)
