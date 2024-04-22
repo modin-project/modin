@@ -328,7 +328,7 @@ class RayTaskCustomResources(EnvironmentVariable, type=dict):
     This way each single remote task or actor will require 0.001 of "special_hardware" to run.
     You can also use this config to limit the parallelism for a certain operation
     by setting the config with context.
-    >>> with context(RayTaskCustomResources={"special_hardware": 1.0}):
+    >>> with context(RayTaskCustomResources={"special_hardware": 0.001}):
     ...     df.<op>
     This way each single remote task or actor will require 0.001 of "special_hardware" to run
     within the context only.
