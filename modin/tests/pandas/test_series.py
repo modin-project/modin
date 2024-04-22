@@ -1387,7 +1387,7 @@ def test_constructor_arrow_extension_array():
     df_equals(md_ser.dtypes, pd_ser.dtypes)
 
 
-def test_pyarrow_constructor():
+def test_pyarrow_backed_constructor():
     pa = pytest.importorskip("pyarrow")
     data = list("abcd")
     df_equals(*create_test_series(data, dtype="string[pyarrow]"))
@@ -1398,7 +1398,7 @@ def test_pyarrow_constructor():
     df_equals(*create_test_series(data, dtype=pd.ArrowDtype(list_str_type)))
 
 
-def test_pyarrow_functions():
+def test_pyarrow_backed_functions():
     pytest.importorskip("pyarrow")
     modin_series, pandas_series = create_test_series(
         [-1.545, 0.211, None], dtype="float32[pyarrow]"
