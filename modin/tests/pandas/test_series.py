@@ -1387,6 +1387,70 @@ def test_constructor_arrow_extension_array():
     df_equals(md_ser.dtypes, pd_ser.dtypes)
 
 
+def test_pyarrow_backed_constructor():
+    pa = pytest.importorskip("pyarrow")
+    data = list("abcd")
+    df_equals(*create_test_series(data, dtype="string[pyarrow]"))
+    df_equals(*create_test_series(data, dtype=pd.ArrowDtype(pa.string())))
+
+    data = [["hello"], ["there"]]
+    list_str_type = pa.list_(pa.string())
+    df_equals(*create_test_series(data, dtype=pd.ArrowDtype(list_str_type)))
+
+
+def test_pyarrow_backed_functions():
+    pytest.importorskip("pyarrow")
+    modin_series, pandas_series = create_test_series(
+        [-1.545, 0.211, None], dtype="float32[pyarrow]"
+    )
+    df_equals(modin_series.mean(), pandas_series.mean())
+
+    def comparator(df1, df2):
+        df_equals(df1, df2)
+        df_equals(df1.dtypes, df2.dtypes)
+
+    if StorageFormat.get() != "Hdk":
+        # FIXME: HDK should also work in this case
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda ser: ser
+            + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+            comparator=comparator,
+        )
+
+    # FIXME: https://github.com/modin-project/modin/issues/7203
+    # eval_general(
+    #    modin_series,
+    #    pandas_series,
+    #    lambda ser: ser > (ser + 1),
+    #    comparator=comparator,
+    # )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.dropna(),
+        comparator=comparator,
+    )
+
+    eval_general(
+        modin_series,
+        pandas_series,
+        lambda ser: ser.isna(),
+        comparator=comparator,
+    )
+
+    if StorageFormat.get() != "Hdk":
+        # FIXME: HDK should also work in this case
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda ser: ser.fillna(0),
+            comparator=comparator,
+        )
+
+
 def test_pyarrow_array_retrieve():
     pa = pytest.importorskip("pyarrow")
     modin_series, pandas_series = create_test_series(

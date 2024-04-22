@@ -250,6 +250,8 @@ def try_compute_new_dtypes(
 
     try:
         if infer_dtypes == "bool" or is_bool_dtype(result_dtype):
+            # FIXME: https://github.com/modin-project/modin/issues/7203
+            # can be `pandas.api.types.pandas_dtype("bool[pyarrow]")` depending on the data
             dtypes = maybe_build_dtypes_series(
                 first, second, dtype=pandas.api.types.pandas_dtype(bool)
             )
