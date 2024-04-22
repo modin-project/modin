@@ -18,8 +18,8 @@ import warnings
 import pytest
 from packaging import version
 
-import modin.pandas as pd
 import modin.config as cfg
+import modin.pandas as pd
 from modin.config.envvars import _check_vars
 from modin.config.pubsub import _UNSET, ExactStr
 
