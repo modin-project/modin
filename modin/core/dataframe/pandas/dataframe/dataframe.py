@@ -2228,10 +2228,11 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 new_partitions = self._partition_mgr_cls.map_axis_partitions(
                     axis,
                     self._partitions,
-                    func,
+                    lambda: func(
+                        *(func_args if func_args is not None else ()),
+                        **(func_kwargs if func_kwargs is not None else {}),
+                    ),
                     keep_partitioning=True,
-                    map_func_args=func_args,
-                    **(func_kwargs if func_kwargs is not None else {}),
                 )
             else:
                 # splitting by parts of columnar partitions

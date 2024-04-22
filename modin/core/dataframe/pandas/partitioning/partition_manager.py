@@ -691,7 +691,6 @@ class PandasDataframePartitionManager(
         num_splits=None,
         lengths=None,
         enumerate_partitions=False,
-        map_func_args=None,
         **kwargs,
     ):
         """
@@ -721,8 +720,6 @@ class PandasDataframePartitionManager(
         enumerate_partitions : bool, default: False
             Whether or not to pass partition index into `map_func`.
             Note that `map_func` must be able to accept `partition_idx` kwarg.
-        map_func_args : list-like, optional
-            Positional arguments to pass to the `map_func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -745,7 +742,6 @@ class PandasDataframePartitionManager(
             right=None,
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
-            apply_func_args=map_func_args,
             **kwargs,
         )
 
