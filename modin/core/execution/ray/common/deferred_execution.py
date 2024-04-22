@@ -32,7 +32,7 @@ import ray
 from ray._private.services import get_node_ip_address
 from ray.util.client.common import ClientObjectRef
 
-from modin.config import RayCustomResources
+from modin.config import RayTaskCustomResources
 from modin.core.execution.ray.common import MaterializationHook, RayWrapper
 from modin.logging import get_logger
 
@@ -157,7 +157,7 @@ class DeferredExecution:
             and self.num_returns == 1
         ):
             result, length, width, ip = remote_exec_func.options(
-                resources=RayCustomResources.get()
+                resources=RayTaskCustomResources.get()
             ).remote(self.func, self.data, *self.args, **self.kwargs)
             meta = MetaList([length, width, ip])
             self._set_result(result, meta, 0)
@@ -437,11 +437,11 @@ class DeferredExecution:
         # does not require the num_returns to be specified in options.
         if num_returns == 2:
             return _remote_exec_single_chain.options(
-                resources=RayCustomResources.get()
+                resources=RayTaskCustomResources.get()
             ).remote(*args)
         else:
             return _remote_exec_multi_chain.options(
-                num_returns=num_returns, resources=RayCustomResources.get()
+                num_returns=num_returns, resources=RayTaskCustomResources.get()
             ).remote(num_returns, *args)
 
     def _set_result(

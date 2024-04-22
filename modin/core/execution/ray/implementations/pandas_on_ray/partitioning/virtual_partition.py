@@ -17,7 +17,7 @@ import pandas
 import ray
 from ray.util import get_node_ip_address
 
-from modin.config import RayCustomResources
+from modin.config import RayTaskCustomResources
 from modin.core.dataframe.pandas.partitioning.axis_partition import (
     PandasDataframeAxisPartition,
 )
@@ -116,7 +116,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
                 if extract_metadata
                 else num_splits
             ),
-            resources=RayCustomResources.get(),
+            resources=RayTaskCustomResources.get(),
         ).remote(
             cls._get_deploy_split_func(),
             *f_args,
@@ -182,7 +182,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
             num_returns=(num_splits if lengths is None else len(lengths))
             * (1 + cls._PARTITIONS_METADATA_LEN),
             **({"max_retries": max_retries} if max_retries is not None else {}),
-            resources=RayCustomResources.get(),
+            resources=RayTaskCustomResources.get(),
         ).remote(
             cls._get_deploy_axis_func(),
             *f_args,
@@ -244,7 +244,7 @@ class PandasOnRayDataframeVirtualPartition(PandasDataframeAxisPartition):
         """
         return _deploy_ray_func.options(
             num_returns=num_splits * (1 + cls._PARTITIONS_METADATA_LEN),
-            resources=RayCustomResources.get(),
+            resources=RayTaskCustomResources.get(),
         ).remote(
             PandasDataframeAxisPartition.deploy_func_between_two_axis_partitions,
             *f_args,
