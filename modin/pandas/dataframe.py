@@ -2671,7 +2671,9 @@ class DataFrame(BasePandasDataset):
                     key = self.__constructor__(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            if isinstance(key, list) and all((x in self.columns for x in key)):
+            if isinstance(key, (list, pandas.Index)) and all(
+                (x in self.columns for x in key)
+            ):
                 if is_list_like(value):
                     if not (hasattr(value, "shape") and hasattr(value, "ndim")):
                         value = np.array(value)
