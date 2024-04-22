@@ -2231,7 +2231,7 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                     func,
                     keep_partitioning=True,
                     map_func_args=func_args,
-                    map_func_kwargs=func_kwargs,
+                    **(func_kwargs if func_kwargs is None else {}),
                 )
             else:
                 # splitting by parts of columnar partitions

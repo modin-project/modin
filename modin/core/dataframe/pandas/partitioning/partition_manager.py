@@ -494,7 +494,7 @@ class PandasDataframePartitionManager(
         enumerate_partitions=False,
         lengths=None,
         apply_func_args=None,
-        apply_func_kwargs=None,
+        **kwargs,
     ):
         """
         Broadcast the `right` partitions to `left` and apply `apply_func` along full `axis`.
@@ -529,8 +529,6 @@ class PandasDataframePartitionManager(
                 2. When passing lengths you must explicitly specify `keep_partitioning=False`.
         apply_func_args : list-like, optional
             Positional arguments to pass to the `func`.
-        apply_func_kwargs : dict, optional
-            Keyword arguments to pass to the `func`.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -582,9 +580,9 @@ class PandasDataframePartitionManager(
                 left_partitions[i].apply(
                     preprocessed_map_func,
                     *(apply_func_args if apply_func_args else []),
-                    **apply_func_kwargs if apply_func_kwargs is not None else {},
                     **kw,
                     **({"partition_idx": idx} if enumerate_partitions else {}),
+                    **kwargs,
                 )
                 for idx, i in enumerate(apply_indices)
             ]
@@ -694,7 +692,7 @@ class PandasDataframePartitionManager(
         lengths=None,
         enumerate_partitions=False,
         map_func_args=None,
-        map_func_kwargs=None,
+        **kwargs,
     ):
         """
         Apply `map_func` to every partition in `partitions` along given `axis`.
@@ -725,8 +723,6 @@ class PandasDataframePartitionManager(
             Note that `map_func` must be able to accept `partition_idx` kwarg.
         map_func_args : list-like, optional
             Positional arguments to pass to the `map_func`.
-        map_func_kwargs : dict, optional
-            Keyword arguments for the 'map_func'.
         **kwargs : dict
             Additional options that could be used by different engines.
 
@@ -750,7 +746,7 @@ class PandasDataframePartitionManager(
             lengths=lengths,
             enumerate_partitions=enumerate_partitions,
             apply_func_args=map_func_args,
-            apply_func_kwargs=map_func_kwargs,
+            **kwargs,
         )
 
     @classmethod
