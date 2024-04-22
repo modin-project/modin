@@ -775,6 +775,8 @@ class PandasDataframePartitionManager(
         NumPy array
             An array of new partitions for Modin Frame.
         """
+        if column_splits < 1:
+            raise ValueError("column_splits value must be more or equals 1")
         new_partitions = np.array(
             [
                 cls.column_partitions(
@@ -784,7 +786,7 @@ class PandasDataframePartitionManager(
                 for i in range(
                     0,
                     partitions.shape[0],
-                    column_splits,
+                    partitions.shape[0] // column_splits,
                 )
             ]
         )

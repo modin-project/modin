@@ -2218,29 +2218,28 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
                 self._partitions.shape[1] - CpuCount.get()
             ):
                 axis = 1
+            column_splits = CpuCount.get() // self._partitions.shape[1]
 
-            column_splits = (
-                self._partitions.shape[0] * self._partitions.shape[1]
-            ) // CpuCount.get()
-
-            if axis == 1 or column_splits <= 1:
-                # splitting by full axis partitions
-                new_partitions = self._partition_mgr_cls.map_axis_partitions(
-                    axis,
-                    self._partitions,
-                    lambda: func(
-                        *(func_args if func_args is not None else ()),
-                        **(func_kwargs if func_kwargs is not None else {}),
-                    ),
-                    keep_partitioning=True,
-                )
-            else:
+            if axis == 0 and column_splits > 1:
                 # splitting by parts of columnar partitions
                 new_partitions = (
                     self._partition_mgr_cls.map_partitions_joined_by_column(
                         self._partitions, column_splits, func, func_args, func_kwargs
                     )
                 )
+            else:
+                # splitting by full axis partitions
+                new_partitions = self._partition_mgr_cls.map_axis_partitions(
+                    axis,
+                    self._partitions,
+                    lambda df: func(
+                        df,
+                        *(func_args if func_args is not None else ()),
+                        **(func_kwargs if func_kwargs is not None else {}),
+                    ),
+                    keep_partitioning=True,
+                )
+
         if new_columns is not None and self.has_materialized_columns:
             assert len(new_columns) == len(
                 self.columns
