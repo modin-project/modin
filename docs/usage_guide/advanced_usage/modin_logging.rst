@@ -43,6 +43,23 @@ Disable Modin logging like so:
 
   # User code goes here
 
+In modin the lower-level functionality is logged in debug level, and higher level functionality in info level.
+By default when logging is enabled in modin both high level and low level functionality are logged. The below example script could be used to switch between logging all functions vs only logging higher level functions.
+Setting logger level to logging.INFO logs only higher level functions.
+
+.. code-block:: python
+
+  import modin.pandas as pd
+  from modin.logging.config import get_logger
+  from modin.config import LogMode
+  import logging
+  LogMode.enable()
+  logger = get_logger()
+  logger.setLevel(logging.INFO) # Replace with logger.setLevel(logging.DEBUG)  for lower level logs
+  df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
+  df = pd.concat([df,df])
+
+
 Debugging from user defined functions:
 
 .. warning:: 
