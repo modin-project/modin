@@ -3037,7 +3037,7 @@ class HdkOnNativeDataframe(PandasDataframe):
             Column labels to use for resulting frame.
         encode_col_names : bool, default: True
             Encode column names.
-        dtypes : pandas.Index or list, optional
+        new_dtypes : pandas.Index or list, optional
             Column data types.
 
         Returns
