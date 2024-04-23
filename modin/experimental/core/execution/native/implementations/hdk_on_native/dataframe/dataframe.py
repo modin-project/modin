@@ -1511,16 +1511,19 @@ class HdkOnNativeDataframe(PandasDataframe):
                 raise NotImplementedError("Duplicate column names")
             max_len = max(len(t) for t in tables)
             columns = [c for t in tables for c in t.columns]
+            new_dtypes = [dt for frame in frames for dt in frame.dtypes]
             # Make all columns of the same length, if required.
             for i, col in enumerate(columns):
                 if len(col) < max_len:
                     columns[i] = pyarrow.chunked_array(
                         col.chunks + [pyarrow.nulls(max_len - len(col), col.type)]
                     )
+                    new_dtypes[i] = arrow_type_to_pandas(columns[i].type)
             return self.from_arrow(
                 at=pyarrow.table(columns, column_names),
                 columns=[c for f in frames for c in f.columns],
                 encode_col_names=False,
+                new_dtypes=new_dtypes,
             )
         return None
 
@@ -3009,7 +3012,13 @@ class HdkOnNativeDataframe(PandasDataframe):
 
     @classmethod
     def from_arrow(
-        cls, at, index_cols=None, index=None, columns=None, encode_col_names=True
+        cls,
+        at,
+        index_cols=None,
+        index=None,
+        columns=None,
+        encode_col_names=True,
+        new_dtypes=None,
     ):
         """
         Build a frame from an Arrow table.
@@ -3028,6 +3037,8 @@ class HdkOnNativeDataframe(PandasDataframe):
             Column labels to use for resulting frame.
         encode_col_names : bool, default: True
             Encode column names.
+        dtypes : pandas.Index or list, optional
+            Column data types.
 
         Returns
         -------
@@ -3057,20 +3068,21 @@ class HdkOnNativeDataframe(PandasDataframe):
 
         dtype_index = [] if index_cols is None else list(index_cols)
         dtype_index.extend(new_columns)
-        new_dtypes = []
 
-        for col in at.columns:
-            if pyarrow.types.is_dictionary(col.type):
-                new_dtypes.append(
-                    LazyProxyCategoricalDtype._build_proxy(
-                        parent=at,
-                        column_name=col._name,
-                        materializer=build_categorical_from_at,
-                        dtype=arrow_type_to_pandas(col.type.value_type),
+        if new_dtypes is None:
+            new_dtypes = []
+            for col in at.columns:
+                if pyarrow.types.is_dictionary(col.type):
+                    new_dtypes.append(
+                        LazyProxyCategoricalDtype._build_proxy(
+                            parent=at,
+                            column_name=col._name,
+                            materializer=build_categorical_from_at,
+                            dtype=arrow_type_to_pandas(col.type.value_type),
+                        )
                     )
-                )
-            else:
-                new_dtypes.append(cls._arrow_type_to_dtype(col.type))
+                else:
+                    new_dtypes.append(cls._arrow_type_to_dtype(col.type))
 
         if len(unsupported_cols) > 0:
             ErrorMessage.single_warning(
