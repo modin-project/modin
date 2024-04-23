@@ -21,7 +21,7 @@ import ray
 if TYPE_CHECKING:
     from ray.util.client.common import ClientObjectRef
 
-from modin.config import LazyExecution
+from modin.config import LazyExecution, RayTaskCustomResources
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
 from modin.core.execution.ray.common import MaterializationHook, RayWrapper
 from modin.core.execution.ray.common.deferred_execution import (
@@ -270,9 +270,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if (length := self._length_cache) is None:
             self.drain_call_queue()
             if (length := self._length_cache) is None:
-                length, self._width_cache = _get_index_and_columns.remote(
-                    self._data_ref
-                )
+                length, self._width_cache = _get_index_and_columns.options(
+                    resources=RayTaskCustomResources.get()
+                ).remote(self._data_ref)
                 self._length_cache = length
         if materialize and isinstance(length, ObjectIDType):
             self._length_cache = length = RayWrapper.materialize(length)
@@ -297,9 +297,9 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         if (width := self._width_cache) is None:
             self.drain_call_queue()
             if (width := self._width_cache) is None:
-                self._length_cache, width = _get_index_and_columns.remote(
-                    self._data_ref
-                )
+                self._length_cache, width = _get_index_and_columns.options(
+                    resources=RayTaskCustomResources.get()
+                ).remote(self._data_ref)
                 self._width_cache = width
         if materialize and isinstance(width, ObjectIDType):
             self._width_cache = width = RayWrapper.materialize(width)

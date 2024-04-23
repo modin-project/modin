@@ -19,6 +19,7 @@ import pandas
 from pandas.io.common import get_handle, stringify_path
 from ray.data import from_pandas_refs
 
+from modin.config import RayTaskCustomResources
 from modin.core.execution.ray.common import RayWrapper, SignalActor
 from modin.core.execution.ray.generic.io import RayIO
 from modin.core.io import (
@@ -188,7 +189,9 @@ class PandasOnRayIO(RayIO):
         if not cls._to_csv_check_support(kwargs):
             return RayIO.to_csv(qc, **kwargs)
 
-        signals = SignalActor.remote(len(qc._modin_frame._partitions) + 1)
+        signals = SignalActor.options(resources=RayTaskCustomResources.get()).remote(
+            len(qc._modin_frame._partitions) + 1
+        )
 
         def func(df, **kw):  # pragma: no cover
             """

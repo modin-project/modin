@@ -25,6 +25,7 @@ from typing import Sequence
 import ray
 from ray.util.client.common import ClientObjectRef
 
+from modin.config import RayTaskCustomResources
 from modin.error_message import ErrorMessage
 
 
@@ -78,9 +79,9 @@ class RayWrapper:
         """
         args = [] if f_args is None else f_args
         kwargs = {} if f_kwargs is None else f_kwargs
-        return _deploy_ray_func.options(num_returns=num_returns).remote(
-            func, *args, **kwargs
-        )
+        return _deploy_ray_func.options(
+            num_returns=num_returns, resources=RayTaskCustomResources.get()
+        ).remote(func, *args, **kwargs)
 
     @classmethod
     def is_future(cls, item):
