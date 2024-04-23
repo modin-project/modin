@@ -46,18 +46,7 @@ def test_simple_export(data_has_nulls, from_hdk, n_chunks):
         has_nulls=data_has_nulls, exclude_dtypes=exclude_dtypes
     )
     md_df = pd.DataFrame(data)
-
     exported_df = export_frame(md_df, from_hdk, n_chunks=n_chunks)
-
-    # export_frame() splits the frame into multiple chunks. When it's
-    # split with HDK, each categorical column will have a different
-    # set of categories. When concatenating the chunks, the categorical
-    # column will be of type object.
-    cat_cols = md_df.select_dtypes(include=["category"]).columns
-    with warns_that_defaulting_to_pandas():
-        md_df[cat_cols] = md_df[cat_cols].astype(str)
-        exported_df[cat_cols] = exported_df[cat_cols].astype(str)
-
     df_equals(md_df, exported_df)
 
 
