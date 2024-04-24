@@ -15,7 +15,9 @@
 
 import io
 
+import numpy as np
 import pandas
+import ray
 from pandas.io.common import get_handle, stringify_path
 from ray.data import from_pandas_refs
 
@@ -68,6 +70,7 @@ class PandasOnRayIO(RayIO):
     """Factory providing methods for performing I/O operations using pandas as storage format on Ray as engine."""
 
     frame_cls = PandasOnRayDataframe
+    frame_partition_cls = PandasOnRayDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_partition_cls=PandasOnRayDataframePartition,
@@ -302,3 +305,48 @@ class PandasOnRayIO(RayIO):
         """
         parts = unwrap_partitions(modin_obj, axis=0)
         return from_pandas_refs(parts)
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        deploy_map_func.remote(func, obj, *args, **kwargs)
+                    )
+                ]
+                for obj in iterable
+            ]
+        )
+        return cls.query_compiler_cls(cls.frame_cls(partitions))
+
+
+@ray.remote
+def deploy_map_func(func, obj, *args, **kwargs):
+    result = func(obj, *args, **kwargs)
+    if not isinstance(result, pandas.DataFrame):
+        result = pandas.DataFrame(result)
+    return result

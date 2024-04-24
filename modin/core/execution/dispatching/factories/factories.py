@@ -224,6 +224,25 @@ class BaseFactory(object):
     @classmethod
     @doc(
         _doc_io_method_template,
+        source="a map function",
+        params="""
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+        """,
+        method="from_map",
+    )
+    def _from_map(cls, func, iterable, *args, **kwargs):
+        return cls.io_cls.from_map(func, iterable, *args, **kwargs)
+
+    @classmethod
+    @doc(
+        _doc_io_method_template,
         source="a Parquet file",
         params=_doc_io_method_kwargs_params,
         method="read_parquet",

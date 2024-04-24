@@ -13,6 +13,8 @@
 
 """Module houses class that implements ``BaseIO`` using Dask as an execution engine."""
 
+import numpy as np
+import pandas
 from distributed.client import default_client
 
 from modin.core.execution.dask.common import DaskWrapper
@@ -188,3 +190,47 @@ class PandasOnDaskIO(BaseIO):
             partitions = [client.submit(df_to_series, part) for part in partitions]
 
         return from_delayed(partitions)
+
+    @classmethod
+    def from_map(cls, func, iterable, *args, **kwargs):
+        """
+        Create a Modin `query_compiler` from a map function.
+
+        This method will construct a Modin `query_compiler` split by row partitions.
+        The number of row partitions matches the number of elements in the iterable object.
+
+        Parameters
+        ----------
+        func : callable
+            Function to map across the iterable object.
+        iterable : Iterable
+            An iterable object.
+        *args : tuple
+            Positional arguments to pass in `func`.
+        **kwargs : dict
+            Keyword arguments to pass in `func`.
+
+        Returns
+        -------
+        BaseQueryCompiler
+            QueryCompiler containing data returned by map function.
+        """
+        func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        partitions = np.array(
+            [
+                [
+                    cls.frame_partition_cls(
+                        deploy_map_func.remote(func, obj, *args, **kwargs)
+                    )
+                ]
+                for obj in iterable
+            ]
+        )
+        return cls.query_compiler_cls(cls.frame_cls(partitions))
+
+
+def deploy_map_func(func, obj, *args, **kwargs):
+    result = func(obj, *args, **kwargs)
+    if not isinstance(result, pandas.DataFrame):
+        result = pandas.DataFrame(result)
+    return result
