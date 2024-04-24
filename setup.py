@@ -9,7 +9,7 @@ dask_deps = ["dask>=2.22.0", "distributed>=2.22.0"]
 # ray==2.5.0 broken: https://github.com/conda-forge/ray-packages-feedstock/issues/100
 ray_deps = ["ray[default]>=2.1.0,!=2.5.0", "pyarrow>=7.0.0"]
 mpi_deps = ["unidist[mpi]>=0.2.1"]
-consortium_standard_deps = ['git+https://github.com/data-apis/dataframe-api-compat.git@42969958d4dada47dae318b470d9855ee8bbe3a5']
+consortium_standard_deps = ["dataframe-api-compat@git+https://github.com/data-apis/dataframe-api-compat.git@42969958d4dada47dae318b470d9855ee8bbe3a5"]
 spreadsheet_deps = ["modin-spreadsheet>=0.1.0"]
 # Currently, Modin does not include `mpi` option in `all`.
 # Otherwise, installation of modin[all] would fail because
