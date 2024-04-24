@@ -70,6 +70,7 @@ class PandasOnDaskIO(BaseIO):
     """The class implements interface in ``BaseIO`` using Dask as an execution engine."""
 
     frame_cls = PandasOnDaskDataframe
+    frame_partition_cls = PandasOnDaskDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_cls=PandasOnDaskDataframe,

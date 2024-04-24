@@ -64,6 +64,7 @@ class PandasOnUnidistIO(UnidistIO):
     """Factory providing methods for performing I/O operations using pandas as storage format on unidist as engine."""
 
     frame_cls = PandasOnUnidistDataframe
+    frame_partition_cls = PandasOnUnidistDataframePartition
     query_compiler_cls = PandasQueryCompiler
     build_args = dict(
         frame_partition_cls=PandasOnUnidistDataframePartition,
