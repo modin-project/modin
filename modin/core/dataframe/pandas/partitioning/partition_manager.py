@@ -776,23 +776,27 @@ class PandasDataframePartitionManager(
             An array of new partitions for Modin Frame.
         """
         if column_splits < 1:
-            raise ValueError("column_splits value must be more or equals 1")
+            raise ValueError(
+                "The value of columns_splits must be greater than or equal to 1."
+            )
+        # step cannot be less than 1
+        step = max(partitions.shape[0] // column_splits, 1)
         new_partitions = np.array(
             [
                 cls.column_partitions(
-                    partitions[i : i + column_splits],
+                    partitions[i : i + step],
                     # full_axis=False,
                 )
                 for i in range(
                     0,
                     partitions.shape[0],
-                    partitions.shape[0] // column_splits,
+                    step,
                 )
             ]
         )
         preprocessed_map_func = cls.preprocess_func(map_func)
         kw = {
-            "num_splits": column_splits,
+            "num_splits": step,
         }
         return np.concatenate(
             [
