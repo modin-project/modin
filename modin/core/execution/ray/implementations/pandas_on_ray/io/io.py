@@ -345,7 +345,25 @@ class PandasOnRayIO(RayIO):
 
 
 @ray.remote
-def deploy_map_func(func, obj, *args, **kwargs):
+def deploy_map_func(func, obj, *args, **kwargs):  # pragma: no cover
+    """
+    Deploy a func to apply to an object.
+
+    Parameters
+    ----------
+    func : callable
+        Function to map across the iterable object.
+    obj : object
+        An object to apply a function to.
+    *args : tuple
+        Positional arguments to pass in `func`.
+    **kwargs : dict
+        Keyword arguments to pass in `func`.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
     result = func(obj, *args, **kwargs)
     if not isinstance(result, pandas.DataFrame):
         result = pandas.DataFrame(result)
