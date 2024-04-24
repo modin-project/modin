@@ -35,7 +35,7 @@ tqdm>=4.60.0
 numexpr<2.8.5
 # Latest modin-spreadsheet with widget fix
 git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
-dataframe-api-compat>=0.2.6
+git+https://github.com/data-apis/dataframe-api-compat.git@42969958d4dada47dae318b470d9855ee8bbe3a5
 
 ## dependencies for making release
 PyGithub>=1.58.0
