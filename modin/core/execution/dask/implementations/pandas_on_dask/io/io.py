@@ -217,11 +217,12 @@ class PandasOnDaskIO(BaseIO):
             QueryCompiler containing data returned by map function.
         """
         func = cls.frame_cls._partition_mgr_cls.preprocess_func(func)
+        client = default_client()
         partitions = np.array(
             [
                 [
                     cls.frame_partition_cls(
-                        deploy_map_func.remote(func, obj, *args, **kwargs)
+                        client.submit(deploy_map_func, func, obj, *args, **kwargs)
                     )
                 ]
                 for obj in iterable
