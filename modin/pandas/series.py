@@ -185,7 +185,11 @@ class Series(BasePandasDataset):
         """
         if name is None:
             name = MODIN_UNNAMED_SERIES_LABEL
-        self._query_compiler.columns = [name]
+        if isinstance(name, tuple):
+            columns = pandas.MultiIndex.from_tuples(tuples=[name])
+        else:
+            columns = [name]
+        self._query_compiler.columns = columns
 
     name: Hashable = property(_get_name, _set_name)
     _parent = None
