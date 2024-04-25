@@ -1485,3 +1485,13 @@ def test_setattr_axes():
 def test_attrs(data):
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.attrs)
+
+
+def test_df_from_series_with_tuple_name():
+    # Tests that creating a DataFrame from a series with a tuple name results in
+    # a DataFrame with MultiIndex columns.
+    pandas_result = pandas.DataFrame(pandas.Series(name=("a", 1)))
+    # 1. Creating a Modin DF from native pandas Series
+    df_equals(pd.DataFrame(pandas.Series(name=("a", 1))), pandas_result)
+    # 2. Creating a Modin DF from Modin Series
+    df_equals(pd.DataFrame(pd.Series(name=("a", 1))), pandas_result)

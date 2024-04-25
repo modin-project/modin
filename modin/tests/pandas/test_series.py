@@ -2642,6 +2642,23 @@ def test_name(data):
     assert modin_series._query_compiler.columns == ["New_name"]
 
 
+def test_tuple_name():
+    names = [("a", 1), ("a", "b", "c"), "flat"]
+    s = pd.Series(name=names[0])
+    # The internal representation of the Series stores the name as a column label.
+    # When it is a tuple, this label is a MultiIndex object, and this test ensures that
+    # the Series's name property remains a tuple.
+    assert s.name == names[0]
+    assert isinstance(s.name, tuple)
+    # Setting the name to a tuple of a different level or a non-tuple should not error.
+    s.name = names[1]
+    assert s.name == names[1]
+    assert isinstance(s.name, tuple)
+    s.name = names[2]
+    assert s.name == names[2]
+    assert isinstance(s.name, str)
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_nbytes(data):
     modin_series, pandas_series = create_test_series(data)
