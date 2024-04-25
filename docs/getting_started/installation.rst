@@ -75,7 +75,7 @@ storage formats or for different functionalities of Modin. Here is a list of dep
   pip install "modin[mpi]" # If you want to use MPI through unidist execution engine
 
 
-Consortium Standard-compatible implementation based on modin
+Consortium Standard-compatible implementation based on Modin
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: bash

@@ -16,7 +16,7 @@ import pytest
 import modin.pandas
 
 
-def test_dataframe_consortium() -> None:
+def test_dataframe_api_standard() -> None:
     """
     Test some basic methods of the dataframe consortium standard.
 
