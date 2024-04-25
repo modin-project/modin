@@ -33,6 +33,11 @@ Uniformly apply a function argument to each partition in parallel.
 .. figure:: /img/map_evaluation.svg
     :align: center
 
+This operator performs best when the number of partitions equals to the number of CPUs
+so that each single partition gets processed in parallel. When the number of partitions is 1.5x greater than
+the number of CPUs, Modin applies a heuristic to join some partitions to get "ideal" partitioning so that
+each new partition gets processed in parallel.
+
 Reduce operator
 ---------------
 Applies an argument function that reduces each column or row on the specified axis into a scalar, but requires knowledge about the whole axis.
@@ -43,12 +48,18 @@ that the reduce function returns a one dimensional frame.
 .. figure:: /img/reduce_evaluation.svg
     :align: center
 
+This operator performs best when the number of partitions (row or column partitions in depend on the specified axis)
+equals to the number of CPUs so that each single axis partition gets processed in parallel.
+
 TreeReduce operator
 -------------------
 Applies an argument function that reduces specified axis into a scalar. First applies map function to each partition
 in parallel, then concatenates resulted partitions along the specified axis and applies reduce
 function. In contrast with `Map function` template, here you're allowed to change partition shape
 in the map phase. Note that the execution engine expects that the reduce function returns a one dimensional frame.
+
+This operator performs best when the number of partitions (including the initial and intermediate stages)
+equals to the number of CPUs so that each single axis partition gets processed in parallel.
 
 Binary operator
 ---------------
@@ -65,10 +76,16 @@ the right operand to the left.
     it automatically but note that this requires repartitioning, which is a much 
     more expensive operation than the binary function itself.
 
+This operator performs best when both operands have identical partitioning and the number of partitions of an operand
+equals to the number of CPUs so that each single partition gets processed in parallel.
+
 Fold operator
 -------------
 Applies an argument function that requires knowledge of the whole axis. Be aware that providing this knowledge may be
 expensive because the execution engine has to concatenate partitions along the specified axis.
+
+This operator performs best when the number of partitions (row or column partitions in depend on the specified axis)
+equals to the number of CPUs so that each single axis partition gets processed in parallel.
 
 GroupBy operator
 ----------------
@@ -78,6 +95,9 @@ To be able to form groups engine broadcasts ``by`` partitions to each partition 
 Default-to-pandas operator
 --------------------------
 Do :doc:`fallback to pandas </supported_apis/defaulting_to_pandas>` for passed function.
+
+This operator has a performance penalty for going from a partitioned Modin DataFrame to pandas because of
+the communication cost and single-threaded nature of pandas.
 
 
 How to register your own function
