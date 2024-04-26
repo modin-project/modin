@@ -2958,7 +2958,11 @@ class HdkOnNativeDataframe(PandasDataframe):
             len(new_index) == 0
             and not isinstance(new_index, MultiIndex)
             and new_index.name is None
-        ) or (len(new_columns) != 0 and is_trivial_index(new_index)):
+        ) or (
+            new_index.name is None
+            and len(new_columns) != 0
+            and is_trivial_index(new_index)
+        ):
             index_cols = None
         else:
             orig_index_names = new_index.names

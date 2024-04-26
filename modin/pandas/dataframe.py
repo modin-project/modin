@@ -2711,7 +2711,6 @@ class DataFrame(BasePandasDataset):
                         to_concat.append(src_obj[to_take])
 
                     new_qc = concat(to_concat, axis=1)._query_compiler
-                    new_qc.index = self.index
                 else:
                     new_qc = self._query_compiler.write_items(
                         slice(None),
