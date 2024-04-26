@@ -45,7 +45,7 @@ dependencies:
   - flake8-print>=5.0.0
 
   - pip:
-      - git+https://github.com/data-apis/dataframe-api-compat.git@main
+      - dataframe-api-compat>=0.2.7
       - asv==0.5.1
       # no conda package for windows
       - connectorx>=0.2.6a4

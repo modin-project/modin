@@ -54,7 +54,7 @@ dependencies:
   - pandas-stubs>=2.0.0
 
   - pip:
-      - git+https://github.com/data-apis/dataframe-api-compat.git@main
+      - dataframe-api-compat>=0.2.7
       # Fixes breaking ipywidgets changes, but didn't release yet.
       - git+https://github.com/modin-project/modin-spreadsheet.git@49ffd89f683f54c311867d602c55443fb11bf2a5
       - connectorx>=0.2.6a4
