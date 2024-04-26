@@ -92,6 +92,12 @@ GroupBy operator
 Evaluates GroupBy aggregation for that type of functions that can be executed via TreeReduce approach.
 To be able to form groups engine broadcasts ``by`` partitions to each partition of the source frame.
 
+This operator performs best when the cardinality of ``by`` columns is low (small number of output groups).
+At the ``Map`` stage, the operator computes the aggregation for each row partition individually, meaning,
+that the ``Reduce`` stage takes a dataframe with the following number of rows:
+``num_groups * n_row_parts``. If the number of groups is too high, there's a risk of getting a dataframe
+with even bigger than the initial shape at the ``Reduce`` stage.
+
 Default-to-pandas operator
 --------------------------
 Do :doc:`fallback to pandas </supported_apis/defaulting_to_pandas>` for passed function.
