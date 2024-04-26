@@ -129,6 +129,11 @@ class MergeImpl:
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
 
+            reverted = False
+            if how == "inner" and left._modin_frame._partitions.shape[0] == 1:
+                left, right = right, left
+                reverted = True
+
             def should_keep_index(left, right):
                 keep_index = False
                 if left_on is not None and right_on is not None:
@@ -147,7 +152,10 @@ class MergeImpl:
             def map_func(
                 left, right, *axis_lengths, kwargs=kwargs, **service_kwargs
             ):  # pragma: no cover
-                df = pandas.merge(left, right, **kwargs)
+                if reverted:
+                    df = pandas.merge(right, left, **kwargs)
+                else:
+                    df = pandas.merge(left, right, **kwargs)
 
                 if kwargs["how"] == "left":
                     partition_idx = service_kwargs["partition_idx"]
@@ -170,9 +178,24 @@ class MergeImpl:
                 on = list(on) if is_list_like(on) else [on]
 
             right_to_broadcast = right._modin_frame.combine()
-            new_columns, new_dtypes = cls._compute_result_metadata(
-                left, right, on, left_on, right_on, kwargs.get("suffixes", ("_x", "_y"))
-            )
+            if not reverted:
+                new_columns, new_dtypes = cls._compute_result_metadata(
+                    left,
+                    right,
+                    on,
+                    left_on,
+                    right_on,
+                    kwargs.get("suffixes", ("_x", "_y")),
+                )
+            else:
+                new_columns, new_dtypes = cls._compute_result_metadata(
+                    right,
+                    left,
+                    on,
+                    right_on,
+                    left_on,
+                    kwargs.get("suffixes", ("_x", "_y")),
+                )
 
             # We rebalance when the ratio of the number of existing partitions to
             # the ideal number of partitions is smaller than this threshold. The
