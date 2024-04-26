@@ -3961,7 +3961,7 @@ class PandasDataframe(
         ----------
         right : PandasDataframe
         func : callable(left : pandas.DataFrame, right : pandas.DataFrame) -> pandas.DataFrame
-        key : list of labels
+        key : list of labels, or tuple
             Columns to use to build range-partitioning. Must present in both dataframes.
         new_index : pandas.Index, optional
             Index values to write to the result's cache.
@@ -3984,6 +3984,12 @@ class PandasDataframe(
             )
             return result
 
+        right_key = None
+        if isinstance(key, tuple):
+            right_key = key[1]
+            assert isinstance(right_key, list)
+            key = key[0]
+
         if not isinstance(key, list):
             key = [key]
 
@@ -3992,6 +3998,7 @@ class PandasDataframe(
             key,
             ascending=True,
             ideal_num_new_partitions=self._partitions.shape[0],
+            right_columns=right_key,
         )
 
         # here we want to get indices of those partitions that hold the key columns

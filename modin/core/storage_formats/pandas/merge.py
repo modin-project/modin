@@ -46,8 +46,6 @@ class MergeImpl:
         if (
             kwargs.get("left_index", False)
             or kwargs.get("right_index", False)
-            or kwargs.get("left_on", None) is not None
-            or kwargs.get("left_on", None) is not None
             or kwargs.get("how", "left") not in ("left", "inner")
         ):
             raise NotImplementedError(
@@ -57,12 +55,41 @@ class MergeImpl:
         on = kwargs.get("on", None)
         if on is not None and not isinstance(on, list):
             on = [on]
-        if on is None or len(on) > 1:
+
+        left_on = kwargs.get("left_on", None)
+        if left_on is not None and not isinstance(left_on, list):
+            left_on = [left_on]
+
+        right_on = kwargs.get("right_on", None)
+        if right_on is not None and not isinstance(right_on, list):
+            right_on = [right_on]
+
+        if left_on is None and right_on is None and (on is None or len(on) > 1):
             raise NotImplementedError(
                 f"Merging on multiple columns is not yet supported by range-partitioning merge: {on=}"
             )
+        elif left_on is None or len(left_on) > 1:
+            raise NotImplementedError(
+                f"Merging on multiple columns is not yet supported by range-partitioning merge: {left_on=}"
+            )
+        elif right_on is None or len(right_on) > 1:
+            raise NotImplementedError(
+                f"Merging on multiple columns is not yet supported by range-partitioning merge: {right_on=}"
+            )
 
-        if any(col not in left.columns or col not in right.columns for col in on):
+        if on is not None and any(
+            col not in left.columns or col not in right.columns for col in on
+        ):
+            raise NotImplementedError(
+                "Merging on an index level is not yet supported by range-partitioning merge."
+            )
+
+        if left_on is not None and any(col not in left.columns for col in left_on):
+            raise NotImplementedError(
+                "Merging on an index level is not yet supported by range-partitioning merge."
+            )
+
+        if right_on is not None and any(col not in right.columns for col in right_on):
             raise NotImplementedError(
                 "Merging on an index level is not yet supported by range-partitioning merge."
             )
@@ -74,8 +101,8 @@ class MergeImpl:
             left,
             right,
             on,
-            left_on=None,
-            right_on=None,
+            left_on=left_on,
+            right_on=right_on,
             suffixes=kwargs.get("suffixes", ("_x", "_y")),
         )
 
@@ -83,7 +110,7 @@ class MergeImpl:
             left._modin_frame._apply_func_to_range_partitioning_broadcast(
                 right._modin_frame,
                 func=func,
-                key=on,
+                key=on or (left_on, right_on),
                 new_columns=new_columns,
                 new_dtypes=new_dtypes,
             )

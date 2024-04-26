@@ -140,11 +140,13 @@ class ShuffleSortFunctions(ShuffleFunctions):
         ideal_num_new_partitions: int,
         level: Optional[list[Union[str, int]]] = None,
         closed_on_right: bool = False,
+        right_columns=None,
         **kwargs: dict,
     ):
         self.frame_len = len(modin_frame)
         self.ideal_num_new_partitions = ideal_num_new_partitions
         self.columns = columns if is_list_like(columns) else [columns]
+        self.right_columns = right_columns
         self.ascending = ascending
         self.kwargs = kwargs.copy()
         self.level = level
@@ -180,9 +182,16 @@ class ShuffleSortFunctions(ShuffleFunctions):
             pivots = self.pick_pivots_from_samples_for_sort(
                 column_val, num_pivots, method, key
             )
+            if self.right_columns:
+                name = (
+                    self.level[i] if self.level is not None else col,
+                    self.right_columns[i],
+                )
+            else:
+                name = self.level[i] if self.level is not None else col
             columns_info.append(
                 ColumnInfo(
-                    self.level[i] if self.level is not None else col,
+                    name,
                     pivots,
                     is_numeric,
                 )
@@ -374,13 +383,37 @@ class ShuffleSortFunctions(ShuffleFunctions):
             # We can return the dataframe with zero changes if there were no pivots passed
             return (df,)
 
-        key_data = (
-            ShuffleSortFunctions._index_to_df_zero_copy(
-                df, [col_info.name for col_info in columns_info]
+        use_second_name = None
+        try:
+            col_names = [
+                (
+                    col_info.name
+                    if not isinstance(col_info.name, tuple)
+                    else col_info.name[0]
+                )
+                for col_info in columns_info
+            ]
+            key_data = (
+                ShuffleSortFunctions._index_to_df_zero_copy(df, col_names)
+                if keys_are_index_levels
+                else df[col_names]
             )
-            if keys_are_index_levels
-            else df[[col_info.name for col_info in columns_info]]
-        )
+        except KeyError:
+            use_second_name = True
+            col_names = [
+                (
+                    col_info.name
+                    if not isinstance(col_info.name, tuple)
+                    else col_info.name[1]
+                )
+                for col_info in columns_info
+            ]
+            key_data = (
+                ShuffleSortFunctions._index_to_df_zero_copy(df, col_names)
+                if keys_are_index_levels
+                else df[col_names]
+            )
+
         na_index = key_data.isna().squeeze(axis=1)
         if na_index.ndim == 2:
             na_index = na_index.any(axis=1)
@@ -410,10 +443,18 @@ class ShuffleSortFunctions(ShuffleFunctions):
                 pivots = pivots[::-1]
             group_keys.append(range(len(pivots) + 1))
             key = kwargs.pop("key", None)
+            if use_second_name:
+                name = col_info.name[1]
+            else:
+                name = (
+                    col_info.name
+                    if not isinstance(col_info.name, tuple)
+                    else col_info.name[0]
+                )
             cols_to_digitize = (
-                non_na_rows.index.get_level_values(col_info.name)
+                non_na_rows.index.get_level_values(name)
                 if keys_are_index_levels
-                else non_na_rows[col_info.name]
+                else non_na_rows[name]
             )
             if key is not None:
                 cols_to_digitize = key(cols_to_digitize)
