@@ -1771,19 +1771,7 @@ def test_reset_index_with_multi_index_drop(
     )
 
 
-@pytest.mark.parametrize(
-    "test_async_reset_index",
-    [
-        False,
-        pytest.param(
-            True,
-            marks=pytest.mark.xfail(
-                StorageFormat.get() == "Hdk",
-                reason="HDK does not store trivial indexes.",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("test_async_reset_index", [False, True])
 @pytest.mark.parametrize("index_levels_names_max_levels", [0, 1, 2])
 def test_reset_index_with_named_index(
     index_levels_names_max_levels, test_async_reset_index
