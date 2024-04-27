@@ -528,13 +528,13 @@ class PandasQueryCompiler(BaseQueryCompiler):
         on = kwargs.get("on", None)
         how = kwargs.get("how", "left")
         sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"]:
 
             def map_func(left, right, kwargs=kwargs):  # pragma: no cover
                 return pandas.DataFrame.join(left, right, **kwargs)
 
+            right_to_broadcast = right._modin_frame.combine()
             new_self = self.__constructor__(
                 self._modin_frame.broadcast_apply_full_axis(
                     axis=1,
