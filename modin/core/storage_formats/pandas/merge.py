@@ -115,7 +115,6 @@ class MergeImpl:
         left_index = kwargs.get("left_index", False)
         right_index = kwargs.get("right_index", False)
         sort = kwargs.get("sort", False)
-        right_to_broadcast = right._modin_frame.combine()
 
         if how in ["left", "inner"] and left_index is False and right_index is False:
             kwargs["sort"] = False
@@ -160,6 +159,7 @@ class MergeImpl:
             elif on is not None:
                 on = list(on) if is_list_like(on) else [on]
 
+            right_to_broadcast = right._modin_frame.combine()
             new_columns, new_dtypes = cls._compute_result_metadata(
                 left, right, on, left_on, right_on, kwargs.get("suffixes", ("_x", "_y"))
             )
