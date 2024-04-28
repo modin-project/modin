@@ -130,7 +130,9 @@ class MergeImpl:
             kwargs["sort"] = False
 
             reverted = False
-            if how == "inner":  # and left._modin_frame._partitions.shape[0] == 1:
+            if (
+                how == "inner" and right._modin_frame._partitions.size != 0
+            ):  # and left._modin_frame._partitions.shape[0] == 1:
                 left, right = right, left
                 reverted = True
 
