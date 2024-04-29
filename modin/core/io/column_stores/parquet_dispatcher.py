@@ -187,9 +187,7 @@ class PyArrowDataset(ColumnStoreDataset):
     def _init_dataset(self):  # noqa: GL08
         from pyarrow.parquet import ParquetDataset
 
-        return ParquetDataset(
-            self.fs_path, filesystem=self.fs, use_legacy_dataset=False
-        )
+        return ParquetDataset(self.fs_path, filesystem=self.fs)
 
     @property
     def pandas_metadata(self):
