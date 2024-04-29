@@ -21,7 +21,7 @@ import pytest
 from pandas._testing import ensure_clean
 
 import modin.pandas as pd
-from modin.config import MinRowPartitionSize, NPartitions
+from modin.config import MinRowPartitionSize, NPartitions, InitializeWithSmallQueryCompilers
 from modin.pandas.indexing import is_range_like
 from modin.pandas.testing import assert_index_equal
 from modin.tests.pandas.utils import (
@@ -585,7 +585,9 @@ def test_loc_setting_single_categorical_column():
     pandas_df.loc[1:3, "status"] = "a"
     df_equals(modin_df, pandas_df)
 
-
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not currently support IO functions.",)
 def test_loc_multi_index():
     modin_df = pd.read_csv(
         "modin/tests/pandas/data/blah.csv", header=[0, 1, 2, 3], index_col=0

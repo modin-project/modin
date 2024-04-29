@@ -22,7 +22,7 @@ import pytest
 from numpy.testing import assert_array_equal
 
 import modin.pandas as pd
-from modin.config import Engine, NPartitions, StorageFormat
+from modin.config import Engine, NPartitions, StorageFormat, InitializeWithSmallQueryCompilers
 from modin.pandas.io import to_pandas
 from modin.tests.pandas.utils import (
     axis_keys,
@@ -122,7 +122,10 @@ def test_to_numpy(data):
     modin_df, pandas_df = pd.DataFrame(data), pandas.DataFrame(data)
     assert_array_equal(modin_df.values, pandas_df.values)
 
-
+@pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
+)
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 def test_partition_to_numpy(data):
     frame = pd.DataFrame(data)
@@ -312,6 +315,10 @@ class TestCorr:
     @pytest.mark.skipif(
         StorageFormat.get() != "Pandas",
         reason="doesn't make sense for non-partitioned executions",
+    )
+    @pytest.mark.skipif(
+    InitializeWithSmallQueryCompilers.get(),
+    reason="SmallQueryCompiler does not contain partitions.",
     )
     def test_corr_nans_in_different_partitions(self):
         # NaN in the first partition

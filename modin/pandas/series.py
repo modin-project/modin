@@ -31,7 +31,10 @@ from pandas.core.series import _coerce_method
 from pandas.io.formats.info import SeriesInfo
 from pandas.util._validators import validate_bool_kwarg
 
-from modin.config import PersistentPickle
+from modin.config import PersistentPickle,InitializeWithSmallQueryCompilers
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
 from modin.utils import (
@@ -51,7 +54,7 @@ from .series_utils import (
     StructAccessor,
 )
 from .utils import _doc_binary_op, cast_function_modin2pandas, is_scalar
-
+from modin.core.storage_formats import BaseQueryCompiler
 if TYPE_CHECKING:
     import numpy.typing as npt
 
@@ -114,6 +117,8 @@ class Series(BasePandasDataset):
         # Siblings are other dataframes that share the same query compiler. We
         # use this list to update inplace when there is a shallow copy.
         self._siblings = []
+        #breakpoint()
+        print(f"+++++++{type(query_compiler)}+")
         if isinstance(data, type(self)):
             query_compiler = data._query_compiler.copy()
             if index is not None:
@@ -144,22 +149,37 @@ class Series(BasePandasDataset):
                 name = MODIN_UNNAMED_SERIES_LABEL
                 if isinstance(data, pandas.Series) and data.name is not None:
                     name = data.name
-
-            query_compiler = from_pandas(
-                pandas.DataFrame(
-                    pandas.Series(
-                        data=data,
-                        index=index,
-                        dtype=dtype,
-                        name=name,
-                        copy=copy,
-                        fastpath=fastpath,
+            if InitializeWithSmallQueryCompilers.get():
+                query_compiler = SmallQueryCompiler(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
                     )
                 )
-            )._query_compiler
+            else:
+                query_compiler = from_pandas(
+                    pandas.DataFrame(
+                        pandas.Series(
+                            data=data,
+                            index=index,
+                            dtype=dtype,
+                            name=name,
+                            copy=copy,
+                            fastpath=fastpath,
+                        )
+                    )
+                )._query_compiler
+        breakpoint()
         self._query_compiler = query_compiler.columnarize()
         if name is not None:
             self.name = name
+        
 
     def _get_name(self) -> Hashable:
         """

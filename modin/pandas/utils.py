@@ -22,8 +22,10 @@ import pandas
 from pandas._typing import AggFuncType, AggFuncTypeBase, AggFuncTypeDict, IndexLabel
 from pandas.util._decorators import doc
 
-from modin.utils import hashable
-
+from modin.config import InitializeWithSmallQueryCompilers
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 _doc_binary_operation = """
 Return {operation} of {left} and `{right}` (binary operator `{bin_op}`).
 

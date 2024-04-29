@@ -56,6 +56,9 @@ from pandas.core.dtypes.common import (
     is_numeric_dtype,
     is_object_dtype,
 )
+from modin.experimental.core.storage_formats.pandas.small_query_compiler import (
+    SmallQueryCompiler,
+)
 from pandas.core.indexes.api import ensure_index
 from pandas.core.methods.describe import _refine_percentiles
 from pandas.util._validators import (
@@ -283,6 +286,8 @@ class BasePandasDataset(ClassLogger):
             indexer = row_indexer, _get_repr_axis_label_indexer(self.columns, num_cols)
         else:
             indexer = row_indexer
+        if isinstance(self._query_compiler, SmallQueryCompiler):
+            return self._query_compiler.to_pandas().iloc[indexer]
         return self.iloc[indexer]._query_compiler.to_pandas()
 
     def _update_inplace(self, new_query_compiler: BaseQueryCompiler) -> None:

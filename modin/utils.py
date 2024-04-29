@@ -651,7 +651,7 @@ def hashable(obj: bool) -> bool:
     return True
 
 
-def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
+def try_cast_to_pandas(obj: Any, squeeze: bool = False, squeeze_df: bool = False) -> Any:
     """
     Convert `obj` and all nested objects from Modin to pandas if it is possible.
 
@@ -663,6 +663,8 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
         Object to convert from Modin to pandas.
     squeeze : bool, default: False
         Squeeze the converted object(s) before returning them.
+    squeeze_df : bool, default: False
+        Squeeze the converted DataFrame(s) if Series-like.
 
     Returns
     -------
@@ -673,7 +675,15 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
         result = obj.modin.to_pandas() if hasattr(obj, "modin") else obj.to_pandas()
         if squeeze:
             result = result.squeeze(axis=1)
-
+        if (
+            squeeze_df
+            and isinstance(result, pandas.DataFrame)
+            and len(result.columns) == 1
+            and result.columns[0] == MODIN_UNNAMED_SERIES_LABEL
+        ):
+            result = result.squeeze(axis=1)
+        
+        
         # QueryCompiler/low-level ModinFrame case, it doesn't have logic about convertion to Series
         if (
             isinstance(getattr(result, "name", None), str)
@@ -682,9 +692,11 @@ def try_cast_to_pandas(obj: Any, squeeze: bool = False) -> Any:
             result.name = None
         return result
     if isinstance(obj, (list, tuple)):
-        return type(obj)([try_cast_to_pandas(o, squeeze=squeeze) for o in obj])
+        return type(obj)(
+            [try_cast_to_pandas(o, squeeze=squeeze, squeeze_df=squeeze_df) for o in obj]
+        )
     if isinstance(obj, dict):
-        return {k: try_cast_to_pandas(v, squeeze=squeeze) for k, v in obj.items()}
+        return {k: try_cast_to_pandas(v, squeeze=squeeze, squeeze_df=squeeze_df) for k, v in obj.items()}
     if callable(obj):
         module_hierarchy = getattr(obj, "__module__", "").split(".")
         fn_name = getattr(obj, "__name__", None)

@@ -220,6 +220,10 @@ jobs:
       id: filter
       with:
         filters: |
+          test-small-query-compiler:
+            - 'modin/experimental/core/storage_formats/pandas/small_query_compiler.py'
+            - 'modin/core/storage_formats/pandas/query_compiler.py'
+            - 'modin/core/storage_formats/base/query_compiler.py'
           shared: &shared
             - 'modin/core/execution/dispatching/**'
           ray:
@@ -630,6 +634,54 @@ jobs:
           environment-file: environment-dev.yml
           python-version: ${{matrix.python-version}}
       - run: python -m pytest modin/tests/experimental/spreadsheet/test_general.py
+
+  test-small-query-compiler:
+    needs: [changes, lint-flake8, lint-black, test-api, test-headers]
+    if: ${{ needs.changes.outputs.test-small-query-compiler == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      matrix:
+        python-version: ["3.9"]
+    env:
+      MODIN_SMALL_QUERY_COMPILER: "True"
+    name: test-small-query-compiler python ${{matrix.python-version}})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/mamba-env
+        with:
+          environment-file: environment-dev.yml
+          python-version: ${{matrix.python-version}}
+      - run: python -m pytest modin/tests/config/test_envvars.py
+      - run: python -m pytest modin/tests/config/test_parameter.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_binary.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_default.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_indexing.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_iter.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_join_sort.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_map_metadata.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_pickle.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_reduce.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_udf.py
+      - run: python -m pytest modin/tests/pandas/dataframe/test_window.py
+      - run: python -m pytest modin/tests/pandas/extensions/test_dataframe_extensions.py
+      - run: python -m pytest modin/tests/pandas/extensions/test_pd_extensions.py
+      - run: python -m pytest modin/tests/pandas/extensions/test_series_extensions.py
+      - run: python -m pytest modin/tests/pandas/integrations/test_lazy_import.py
+      - run: python -m pytest modin/tests/pandas/internals/test_benchmark_mode.py
+      - run: python -m pytest modin/tests/pandas/internals/test_repartition.py
+      - run: python -m pytest modin/tests/pandas/test_api.py
+      - run: python -m pytest modin/tests/pandas/test_concat.py
+      - run: python -m pytest modin/tests/pandas/test_expanding.py
+      - run: python -m pytest modin/tests/pandas/test_general.py
+      - run: python -m pytest modin/tests/pandas/test_groupby.py
+      - run: python -m pytest modin/tests/pandas/test_io.py
+      - run: python -m pytest modin/tests/pandas/test_reshape.py
+      - run: python -m pytest modin/tests/pandas/test_rolling.py
+      - run: python -m pytest modin/tests/pandas/test_series.py
+      - uses: codecov/codecov-action@v2
 
   merge-coverage-artifacts:
     needs: [test-internals, test-api-and-no-engine, test-defaults, test-all-unidist, test-all, test-experimental, test-sanity]
