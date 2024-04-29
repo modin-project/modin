@@ -586,6 +586,21 @@ def test_melt(data, id_vars, value_vars):
     )
 
 
+# Functional test for BUG:7206
+def test_melt_duplicate_col_names():
+    if StorageFormat.get() == "Hdk":
+        pass
+    data = {"data": [[1, 2], [3, 4]], "columns": ["dupe", "dupe"]}
+
+    def melt(df, *args, **kwargs):
+        return df.melt(*args, **kwargs).sort_values(["variable", "value"])
+
+    eval_general(
+        *create_test_dfs(**data),
+        lambda df, *args, **kwargs: melt(df, *args, **kwargs).reset_index(drop=True),
+    )
+
+
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)
 @pytest.mark.parametrize(
     "index",
@@ -1470,3 +1485,13 @@ def test_setattr_axes():
 def test_attrs(data):
     modin_df, pandas_df = create_test_dfs(data)
     eval_general(modin_df, pandas_df, lambda df: df.attrs)
+
+
+def test_df_from_series_with_tuple_name():
+    # Tests that creating a DataFrame from a series with a tuple name results in
+    # a DataFrame with MultiIndex columns.
+    pandas_result = pandas.DataFrame(pandas.Series(name=("a", 1)))
+    # 1. Creating a Modin DF from native pandas Series
+    df_equals(pd.DataFrame(pandas.Series(name=("a", 1))), pandas_result)
+    # 2. Creating a Modin DF from Modin Series
+    df_equals(pd.DataFrame(pd.Series(name=("a", 1))), pandas_result)

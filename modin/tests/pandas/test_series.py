@@ -1387,7 +1387,7 @@ def test_constructor_arrow_extension_array():
     df_equals(md_ser.dtypes, pd_ser.dtypes)
 
 
-def test_pyarrow_constructor():
+def test_pyarrow_backed_constructor():
     pa = pytest.importorskip("pyarrow")
     data = list("abcd")
     df_equals(*create_test_series(data, dtype="string[pyarrow]"))
@@ -1398,7 +1398,7 @@ def test_pyarrow_constructor():
     df_equals(*create_test_series(data, dtype=pd.ArrowDtype(list_str_type)))
 
 
-def test_pyarrow_functions():
+def test_pyarrow_backed_functions():
     pytest.importorskip("pyarrow")
     modin_series, pandas_series = create_test_series(
         [-1.545, 0.211, None], dtype="float32[pyarrow]"
@@ -1409,21 +1409,22 @@ def test_pyarrow_functions():
         df_equals(df1, df2)
         df_equals(df1.dtypes, df2.dtypes)
 
+    if StorageFormat.get() != "Hdk":
+        # FIXME: HDK should also work in this case
+        eval_general(
+            modin_series,
+            pandas_series,
+            lambda ser: ser
+            + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+            comparator=comparator,
+        )
+
     eval_general(
         modin_series,
         pandas_series,
-        lambda ser: ser
-        + (modin_series if isinstance(ser, pd.Series) else pandas_series),
+        lambda ser: ser > (ser + 1),
         comparator=comparator,
     )
-
-    # FIXME: https://github.com/modin-project/modin/issues/7203
-    # eval_general(
-    #    modin_series,
-    #    pandas_series,
-    #    lambda ser: ser > (ser + 1),
-    #    comparator=comparator,
-    # )
 
     eval_general(
         modin_series,
@@ -2638,6 +2639,23 @@ def test_name(data):
     modin_series.name = pandas_series.name = "New_name"
     assert modin_series.name == pandas_series.name
     assert modin_series._query_compiler.columns == ["New_name"]
+
+
+def test_tuple_name():
+    names = [("a", 1), ("a", "b", "c"), "flat"]
+    s = pd.Series(name=names[0])
+    # The internal representation of the Series stores the name as a column label.
+    # When it is a tuple, this label is a MultiIndex object, and this test ensures that
+    # the Series's name property remains a tuple.
+    assert s.name == names[0]
+    assert isinstance(s.name, tuple)
+    # Setting the name to a tuple of a different level or a non-tuple should not error.
+    s.name = names[1]
+    assert s.name == names[1]
+    assert isinstance(s.name, tuple)
+    s.name = names[2]
+    assert s.name == names[2]
+    assert isinstance(s.name, str)
 
 
 @pytest.mark.parametrize("data", test_data_values, ids=test_data_keys)

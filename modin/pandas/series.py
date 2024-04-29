@@ -34,7 +34,11 @@ from pandas.util._validators import validate_bool_kwarg
 from modin.config import PersistentPickle
 from modin.logging import disable_logging
 from modin.pandas.io import from_pandas, to_pandas
-from modin.utils import MODIN_UNNAMED_SERIES_LABEL, _inherit_docstrings
+from modin.utils import (
+    MODIN_UNNAMED_SERIES_LABEL,
+    _inherit_docstrings,
+    import_optional_dependency,
+)
 
 from .accessor import CachedAccessor, SparseAccessor
 from .base import _ATTRS_NO_LOOKUP, BasePandasDataset
@@ -181,7 +185,11 @@ class Series(BasePandasDataset):
         """
         if name is None:
             name = MODIN_UNNAMED_SERIES_LABEL
-        self._query_compiler.columns = [name]
+        if isinstance(name, tuple):
+            columns = pandas.MultiIndex.from_tuples(tuples=[name])
+        else:
+            columns = [name]
+        self._query_compiler.columns = columns
 
     name: Hashable = property(_get_name, _set_name)
     _parent = None
@@ -221,6 +229,22 @@ class Series(BasePandasDataset):
         Return the values as a NumPy array.
         """
         return super(Series, self).__array__(dtype).flatten()
+
+    def __column_consortium_standard__(
+        self, *, api_version: str | None = None
+    ):  # noqa: PR01, RT01
+        """
+        Provide entry point to the Consortium DataFrame Standard API.
+
+        This is developed and maintained outside of Modin.
+        Please report any issues to https://github.com/data-apis/dataframe-api-compat.
+        """
+        dataframe_api_compat = import_optional_dependency(
+            "dataframe_api_compat", "implementation"
+        )
+        return dataframe_api_compat.modin_standard.convert_to_standard_compliant_column(
+            self, api_version=api_version
+        )
 
     def __contains__(self, key: Hashable) -> bool:
         """

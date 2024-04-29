@@ -19,6 +19,7 @@ import pytest
 from packaging import version
 
 import modin.config as cfg
+import modin.pandas as pd
 from modin.config.envvars import _check_vars
 from modin.config.pubsub import _UNSET, ExactStr
 
@@ -109,6 +110,16 @@ def test_doc_module():
     assert pd.read_csv.__doc__ == "Test override for functions on the module."
     # Test for pandas doc when function is not defined on module.
     assert pandas.read_table.__doc__ in pd.read_table.__doc__
+
+
+@pytest.mark.skipif(cfg.Engine.get() != "Ray", reason="Ray specific test")
+def test_ray_cluster_resources():
+    import ray
+
+    cfg.RayInitCustomResources.put({"special_hardware": 1.0})
+    # create a dummy df to initialize Ray engine
+    _ = pd.DataFrame([1, 2, 3])
+    assert ray.cluster_resources()["special_hardware"] == 1.0
 
 
 def test_hdk_envvar():

@@ -67,6 +67,7 @@ from modin.utils import (
     _inherit_docstrings,
     expanduser_path_arg,
     hashable,
+    import_optional_dependency,
     try_cast_to_pandas,
 )
 
@@ -1311,7 +1312,7 @@ class DataFrame(BasePandasDataset):
         if not is_list_like(id_vars):
             id_vars = [id_vars]
         if value_vars is None:
-            value_vars = self.columns.difference(id_vars)
+            value_vars = self.columns.drop(id_vars)
         if var_name is None:
             columns_name = self._query_compiler.get_index_name(axis=1)
             var_name = columns_name if columns_name is not None else "variable"
@@ -2671,7 +2672,9 @@ class DataFrame(BasePandasDataset):
                     key = self.__constructor__(key, columns=self.columns)
                 return self.mask(key, value, inplace=True)
 
-            if isinstance(key, list) and all((x in self.columns for x in key)):
+            if isinstance(key, (list, pandas.Index)) and all(
+                (x in self.columns for x in key)
+            ):
                 if is_list_like(value):
                     if not (hasattr(value, "shape") and hasattr(value, "ndim")):
                         value = np.array(value)
@@ -2891,6 +2894,23 @@ class DataFrame(BasePandasDataset):
         return self._query_compiler.to_dataframe(
             nan_as_null=nan_as_null, allow_copy=allow_copy
         )
+
+    def __dataframe_consortium_standard__(
+        self, *, api_version: str | None = None
+    ):  # noqa: PR01, RT01
+        """
+        Provide entry point to the Consortium DataFrame Standard API.
+
+        This is developed and maintained outside of Modin.
+        Please report any issues to https://github.com/data-apis/dataframe-api-compat.
+        """
+        dataframe_api_compat = import_optional_dependency(
+            "dataframe_api_compat", "implementation"
+        )
+        convert_to_standard_compliant_dataframe = (
+            dataframe_api_compat.modin_standard.convert_to_standard_compliant_dataframe
+        )
+        return convert_to_standard_compliant_dataframe(self, api_version=api_version)
 
     @property
     def attrs(self) -> dict:  # noqa: RT01, D200

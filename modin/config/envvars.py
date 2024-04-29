@@ -295,6 +295,49 @@ class RayRedisPassword(EnvironmentVariable, type=ExactStr):
     default = secrets.token_hex(32)
 
 
+class RayInitCustomResources(EnvironmentVariable, type=dict):
+    """
+    Ray node's custom resources to initialize with.
+
+    Visit Ray documentation for more details:
+    https://docs.ray.io/en/latest/ray-core/scheduling/resources.html#custom-resources
+
+    Notes
+    -----
+    Relying on Modin to initialize Ray, you should set this config
+    for the proper initialization with custom resources.
+    """
+
+    varname = "MODIN_RAY_INIT_CUSTOM_RESOURCES"
+    default = None
+
+
+class RayTaskCustomResources(EnvironmentVariable, type=dict):
+    """
+    Ray node's custom resources to request them in tasks or actors.
+
+    Visit Ray documentation for more details:
+    https://docs.ray.io/en/latest/ray-core/scheduling/resources.html#custom-resources
+
+    Notes
+    -----
+    You can use this config to limit the parallelism for the entire workflow
+    by setting the config at the very beginning.
+    >>> import modin.config as cfg
+    >>> cfg.RayTaskCustomResources.put({"special_hardware": 0.001})
+    This way each single remote task or actor will require 0.001 of "special_hardware" to run.
+    You can also use this config to limit the parallelism for a certain operation
+    by setting the config with context.
+    >>> with context(RayTaskCustomResources={"special_hardware": 0.001}):
+    ...     df.<op>
+    This way each single remote task or actor will require 0.001 of "special_hardware" to run
+    within the context only.
+    """
+
+    varname = "MODIN_RAY_TASK_CUSTOM_RESOURCES"
+    default = None
+
+
 class CpuCount(EnvironmentVariable, type=int):
     """How many CPU cores to use during initialization of the Modin engine."""
 
