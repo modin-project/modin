@@ -234,37 +234,35 @@ map_strtagies = ["map", "axis_map", "splitted_axis_map"]
 @pytest.mark.parametrize("map_strtagy", map_strtagies, ids=map_strtagies)
 def test_applymap(data, testfunc, na_action, map_strtagy):
     keys = list(data.keys())
-    match map_strtagy:
-        case "map":
-            epected_shape = (1, 1)
-            max_size = max(len(keys), len(data[keys[0]]))
-            MinPartitionSize.put(max_size)
-        case "axis_map":
-            epected_shape = (CpuCount.get(), CpuCount.get())
-            min_size = min(len(keys), len(data[keys[0]]))
-            required_size = min_size // CpuCount.get()
-            if required_size > 0:
-                MinPartitionSize.put(required_size)
-                data = {
-                    k: v[:min_size] for k, v in data.items() if k in keys[:min_size]
-                }
-            else:
-                pytest.skip(
-                    "The stratagy cannot be tested with the currect data if required_size less than 1"
-                )
-        case "splitted_axis_map":
-            epected_shape = (2 * CpuCount.get(), 1)
-            required_size = len(data[keys[0]]) // (CpuCount.get() * 2)
-            # the stratagy cannot be tested with the currect data if required_size less than 1
-            if required_size > 0:
-                MinPartitionSize.put(required_size)
-                data = {k: v for k, v in data.items() if k in keys[:required_size]}
-            else:
-                return
-                # pytest.skip("The stratagy cannot be tested with the currect data if required_size less than 1")
-
-        case _:
-            raise ValueError("Incorrect map_strtagy")
+    epected_shape = None
+    if map_strtagy == "map":
+        epected_shape = (1, 1)
+        max_size = max(len(keys), len(data[keys[0]]))
+        MinPartitionSize.put(max_size)
+    elif map_strtagy == "axis_map":
+        epected_shape = (CpuCount.get(), CpuCount.get())
+        min_size = min(len(keys), len(data[keys[0]]))
+        required_size = min_size // CpuCount.get()
+        if required_size > 0:
+            MinPartitionSize.put(required_size)
+            data = {k: v[:min_size] for k, v in data.items() if k in keys[:min_size]}
+        else:
+            pytest.skip(
+                "The stratagy cannot be tested with the currect data if required_size less than 1"
+            )
+    elif map_strtagy == "splitted_axis_map":
+        epected_shape = (2 * CpuCount.get(), 1)
+        required_size = len(data[keys[0]]) // (CpuCount.get() * 2)
+        # the stratagy cannot be tested with the currect data if required_size less than 1
+        if required_size > 0:
+            MinPartitionSize.put(required_size)
+            data = {k: v for k, v in data.items() if k in keys[:required_size]}
+        else:
+            pytest.skip(
+                "The stratagy cannot be tested with the currect data if required_size less than 1"
+            )
+    else:
+        raise ValueError("Incorrect map_strtagy")
 
     modin_df, pandas_df = create_test_dfs(data)
     assert (
