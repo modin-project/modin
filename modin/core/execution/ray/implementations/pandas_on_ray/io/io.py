@@ -17,7 +17,6 @@ import io
 
 import numpy as np
 import pandas
-import ray
 from pandas.io.common import get_handle, stringify_path
 from ray.data import from_pandas_refs
 
@@ -335,36 +334,12 @@ class PandasOnRayIO(RayIO):
             [
                 [
                     cls.frame_partition_cls(
-                        deploy_map_func.remote(func, obj, *args, **kwargs)
+                        RayWrapper.deploy(
+                            func, f_args=(obj,) + args, return_pandas_df=True, **kwargs
+                        )
                     )
                 ]
                 for obj in iterable
             ]
         )
         return cls.query_compiler_cls(cls.frame_cls(partitions))
-
-
-@ray.remote
-def deploy_map_func(func, obj, *args, **kwargs):  # pragma: no cover
-    """
-    Deploy a func to apply to an object.
-
-    Parameters
-    ----------
-    func : callable
-        Function to map across the iterable object.
-    obj : object
-        An object to apply a function to.
-    *args : tuple
-        Positional arguments to pass in `func`.
-    **kwargs : dict
-        Keyword arguments to pass in `func`.
-
-    Returns
-    -------
-    pandas.DataFrame
-    """
-    result = func(obj, *args, **kwargs)
-    if not isinstance(result, pandas.DataFrame):
-        result = pandas.DataFrame(result)
-    return result
