@@ -3465,7 +3465,7 @@ def test_from_dask():
 
 @pytest.mark.skipif(
     condition=Engine.get() not in ("Ray", "Dask", "Unidist"),
-    reason="Dask DataFrame can only be created if Modin uses Ray, Dask or MPI engine.",
+    reason="Modin DataFrame can only be created from map if Modin uses Ray, Dask or MPI engine.",
 )
 @pytest.mark.filterwarnings(default_to_pandas_ignore_string)
 def test_from_map():
