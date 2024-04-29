@@ -808,11 +808,11 @@ class PandasDataframePartitionManager(
                             **kw,
                             **map_func_kwargs if map_func_kwargs is not None else {},
                         )
-                        for part in row_of_parts
+                        for part in row_parts
                     ],
                     axis=-1,
                 )
-                for row_of_parts in new_partitions
+                for row_parts in new_partitions
             ]
         )
 

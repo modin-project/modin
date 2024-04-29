@@ -2212,12 +2212,15 @@ class PandasDataframe(ClassLogger, modin_layer="CORE-DATAFRAME"):
             new_partitions = map_fn(self._partitions, func, func_args, func_kwargs)
         else:
             # axis-wise map
-            # we choose an axis for a combination of partitions whose size is closer to the number of CPUs
-            axis = 0
+            # we choose an axis for a combination of partitions
+            # whose size is closer to the number of CPUs
             if abs(self._partitions.shape[0] - CpuCount.get()) < abs(
                 self._partitions.shape[1] - CpuCount.get()
             ):
                 axis = 1
+            else:
+                axis = 0
+
             column_splits = CpuCount.get() // self._partitions.shape[1]
 
             if axis == 0 and column_splits > 1:
