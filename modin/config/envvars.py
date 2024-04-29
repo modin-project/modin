@@ -941,6 +941,11 @@ def _check_vars() -> None:
             deprecated[depr_var].deprecation_message(use_envvar_names=True),
             FutureWarning,
         )
+class InitializeWithSmallQueryCompilers(EnvironmentVariable, type=str):
+    """Set to true to use implementation of SmallQueryCompiler."""
+
+    varname = "MODIN_SMALL_QUERY_COMPILER"
+    default = False
 
 
 class NativeDataframeMode(EnvironmentVariable, type=str):
