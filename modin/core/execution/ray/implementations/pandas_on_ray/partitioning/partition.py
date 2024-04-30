@@ -24,7 +24,7 @@ if TYPE_CHECKING:
         # https://docs.ray.io/en/master/cluster/running-applications/job-submission/ray-client.html
         from ray.util.client.common import ClientObjectRef
     except ImportError:
-        ClientObjectRef = None
+        ClientObjectRef = type(None)
 
 from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
