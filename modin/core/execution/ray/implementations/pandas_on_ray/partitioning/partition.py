@@ -13,18 +13,10 @@
 
 """Module houses class that wraps data (block partition) and its metadata."""
 
-from typing import TYPE_CHECKING, Callable, Union
+from typing import Callable, Union
 
 import pandas
 import ray
-
-if TYPE_CHECKING:
-    try:
-        # it's only need for ray client mode:
-        # https://docs.ray.io/en/master/cluster/running-applications/job-submission/ray-client.html
-        from ray.util.client.common import ClientObjectRef
-    except ImportError:
-        ClientObjectRef = type(None)
 
 from modin.config import LazyExecution, RayTaskCustomResources
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition
@@ -65,7 +57,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
 
     def __init__(
         self,
-        data: Union[ray.ObjectRef, "ClientObjectRef", DeferredExecution],
+        data: Union[ray.ObjectRef, DeferredExecution],
         length: int = None,
         width: int = None,
         ip: str = None,
@@ -333,7 +325,7 @@ class PandasOnRayDataframePartition(PandasDataframePartition):
         return ip
 
     @property
-    def _data(self) -> Union[ray.ObjectRef, "ClientObjectRef"]:  # noqa: GL08
+    def _data(self) -> Union[ray.ObjectRef]:  # noqa: GL08
         self.drain_call_queue()
         return self._data_ref
 

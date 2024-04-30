@@ -31,18 +31,11 @@ import pandas
 import ray
 from ray._private.services import get_node_ip_address
 
-try:
-    # it's only need for ray client mode:
-    # https://docs.ray.io/en/master/cluster/running-applications/job-submission/ray-client.html
-    from ray.util.client.common import ClientObjectRef
-except ImportError:
-    ClientObjectRef = type(None)
-
 from modin.config import RayTaskCustomResources
 from modin.core.execution.ray.common import MaterializationHook, RayWrapper
 from modin.logging import get_logger
 
-ObjectRefType = Union[ray.ObjectRef, ClientObjectRef, None]
+ObjectRefType = Union[ray.ObjectRef, None]
 ObjectRefOrListType = Union[ObjectRefType, List[ObjectRefType]]
 ListOrTuple = (list, tuple)
 
@@ -484,7 +477,7 @@ class MetaList:
     obj : ray.ObjectID or list
     """
 
-    def __init__(self, obj: Union[ray.ObjectID, ClientObjectRef, List]):
+    def __init__(self, obj: Union[ray.ObjectID, List]):
         self._obj = obj
 
     def __getitem__(self, index):
