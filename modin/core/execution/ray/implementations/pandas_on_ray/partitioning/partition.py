@@ -19,7 +19,12 @@ import pandas
 import ray
 
 if TYPE_CHECKING:
-    from ray.util.client.common import ClientObjectRef
+    try:
+        # it's only need for ray client mode:
+        # https://docs.ray.io/en/master/cluster/running-applications/job-submission/ray-client.html
+        from ray.util.client.common import ClientObjectRef
+    except ImportError:
+        ClientObjectRef = None
 
 from modin.config import LazyExecution
 from modin.core.dataframe.pandas.partitioning.partition import PandasDataframePartition

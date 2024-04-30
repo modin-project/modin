@@ -23,7 +23,13 @@ from types import FunctionType
 from typing import Sequence
 
 import ray
-from ray.util.client.common import ClientObjectRef
+
+try:
+    # it's only need for ray client mode:
+    # https://docs.ray.io/en/master/cluster/running-applications/job-submission/ray-client.html
+    from ray.util.client.common import ClientObjectRef
+except ImportError:
+    ClientObjectRef = None
 
 from modin.error_message import ErrorMessage
 
