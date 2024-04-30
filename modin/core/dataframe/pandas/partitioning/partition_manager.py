@@ -785,7 +785,6 @@ class PandasDataframePartitionManager(
             [
                 cls.column_partitions(
                     partitions[i : i + step],
-                    # full_axis=False,
                 )
                 for i in range(
                     0,
