@@ -20,7 +20,14 @@ import pandas
 import pytest
 
 import modin.pandas as pd
-from modin.config import Engine, MinPartitionSize, NPartitions, RangePartitioning
+from modin.config import (
+    CpuCount,
+    Engine,
+    MinPartitionSize,
+    NPartitions,
+    RangePartitioning,
+    context,
+)
 from modin.core.dataframe.pandas.dataframe.dataframe import PandasDataframe
 from modin.core.dataframe.pandas.dataframe.utils import ColumnInfo, ShuffleSortFunctions
 from modin.core.dataframe.pandas.metadata import (
@@ -49,12 +56,14 @@ if Engine.get() == "Ray":
     from modin.core.execution.ray.implementations.pandas_on_ray.partitioning import (
         PandasOnRayDataframeColumnPartition,
         PandasOnRayDataframePartition,
+        PandasOnRayDataframePartitionManager,
         PandasOnRayDataframeRowPartition,
     )
 
     block_partition_class = PandasOnRayDataframePartition
     virtual_column_partition_class = PandasOnRayDataframeColumnPartition
     virtual_row_partition_class = PandasOnRayDataframeRowPartition
+    partitional_manager_class = PandasOnRayDataframePartitionManager
     put = RayWrapper.put
     deploy = RayWrapper.deploy
     materialize = RayWrapper.materialize
@@ -63,6 +72,7 @@ elif Engine.get() == "Dask":
     from modin.core.execution.dask.implementations.pandas_on_dask.partitioning import (
         PandasOnDaskDataframeColumnPartition,
         PandasOnDaskDataframePartition,
+        PandasOnDaskDataframePartitionManager,
         PandasOnDaskDataframeRowPartition,
     )
 
@@ -75,6 +85,7 @@ elif Engine.get() == "Dask":
     block_partition_class = PandasOnDaskDataframePartition
     virtual_column_partition_class = PandasOnDaskDataframeColumnPartition
     virtual_row_partition_class = PandasOnDaskDataframeRowPartition
+    partitional_manager_class = PandasOnDaskDataframePartitionManager
     deploy = DaskWrapper.deploy
     materialize = DaskWrapper.materialize
 elif Engine.get() == "Unidist":
@@ -82,18 +93,21 @@ elif Engine.get() == "Unidist":
     from modin.core.execution.unidist.implementations.pandas_on_unidist.partitioning import (
         PandasOnUnidistDataframeColumnPartition,
         PandasOnUnidistDataframePartition,
+        PandasOnUnidistDataframePartitionManager,
         PandasOnUnidistDataframeRowPartition,
     )
 
     block_partition_class = PandasOnUnidistDataframePartition
     virtual_column_partition_class = PandasOnUnidistDataframeColumnPartition
     virtual_row_partition_class = PandasOnUnidistDataframeRowPartition
+    partitional_manager_class = PandasOnUnidistDataframePartitionManager
     put = UnidistWrapper.put
 elif Engine.get() == "Python":
     from modin.core.execution.python.common import PythonWrapper
     from modin.core.execution.python.implementations.pandas_on_python.partitioning import (
         PandasOnPythonDataframeColumnPartition,
         PandasOnPythonDataframePartition,
+        PandasOnPythonDataframePartitionManager,
         PandasOnPythonDataframeRowPartition,
     )
 
@@ -109,6 +123,7 @@ elif Engine.get() == "Python":
     block_partition_class = PandasOnPythonDataframePartition
     virtual_column_partition_class = PandasOnPythonDataframeColumnPartition
     virtual_row_partition_class = PandasOnPythonDataframeRowPartition
+    partitional_manager_class = PandasOnPythonDataframePartitionManager
 else:
     raise NotImplementedError(
         f"These test suites are not implemented for the '{Engine.get()}' engine"
@@ -2577,3 +2592,41 @@ def test_remote_function():
         + materialize(deploy(get_capturing_func(2)))
         == 3
     )
+
+
+def test_map_partitions_joined_by_column():
+    # Set the config to 'True' inside of the context-manager
+    with context(NPartitions=CpuCount.get() * 2):
+        ncols = MinPartitionSize.get()
+        nrows = MinPartitionSize.get() * CpuCount.get() * 2
+        data = {"col{}".format(i): np.ones(nrows) for i in range(ncols)}
+        df = pd.DataFrame(data)
+        partitions = df._query_compiler._modin_frame._partitions
+
+        def map_func(df, first_arg, extra_arg=0):
+            return df.map(lambda x: (x * first_arg) + extra_arg)
+
+        column_splits = 2
+        map_func_args = (2,)
+        map_func_kwargs = {"extra_arg": 1}
+
+        # this approach doesn't work if column_splits == 0
+        with pytest.raises(ValueError):
+            partitional_manager_class.map_partitions_joined_by_column(
+                partitions, 0, map_func, map_func_args, map_func_kwargs
+            )
+
+        result_partitions = partitional_manager_class.map_partitions_joined_by_column(
+            partitions,
+            column_splits,
+            map_func,
+            map_func_args,
+            map_func_kwargs,
+        )
+        assert (
+            result_partitions.shape == partitions.shape
+        ), "The result has a different split than the original."
+        for i in range(result_partitions.shape[0]):
+            assert np.all(
+                result_partitions[i][0].to_numpy() == 3
+            ), "Invalid map function result."
